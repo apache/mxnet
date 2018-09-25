@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,13 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-# pylint: disable=wildcard-import
-""" Data iterators for common data formats and utility functions."""
-from __future__ import absolute_import
-
-from . import io
-from .io import *
-
-from . import utils
-from .utils import *
+sudo add-apt-repository ppa:jonathonf/gcc-8.0
+sudo add-apt-repository ppa:jonathonf/gcc-7.3
+sudo apt-get update
+sudo apt-get install -y gcc-8 g++-8

@@ -109,16 +109,16 @@
                                         :label-name "softmax_label"
                                         :data-batch-size batch-size
                                         :last-batch-handle "pad"})
-        data-and-labels (merge (data-desc->map (mx-io/provide-data train-iter))
-                               (data-desc->map (mx-io/provide-label train-iter))
+        data-and-labels (merge (data-desc->map (mx-io/provide-data-desc train-iter))
+                               (data-desc->map (mx-io/provide-label-desc train-iter))
                                init-states)
         init-states-data (mapv (fn [[k v]] (ndarray/zeros v {:ctx ctx})) init-states)
         rnn-sym (sym-gen (first buckets))
 
         rnn-mod (-> (m/module rnn-sym {:contexts devs})
-                    (m/bind {:data-shapes (into (mx-io/provide-data train-iter)
+                    (m/bind {:data-shapes (into (mx-io/provide-data-desc train-iter)
                                                 (mapv (fn [[k v]] {:name k :shape v}) init-states))
-                             :label-shapes (mx-io/provide-label train-iter)})
+                             :label-shapes (mx-io/provide-label-desc train-iter)})
                     (m/init-params {:initializer (init/xavier {:factor-type "in" :magnitude 2.34})})
                     (m/init-optimizer {:optimizer (optimizer/adam {:learning-rate learning-rate :wd 0.0001})}))
         metric (eval-metric/custom-metric
@@ -141,8 +141,8 @@
 
                 "perplexity")]
 
-    ;; Train for 2 epochs and then show the results of 75
-    (doseq [epoch-num (range 2)]
+    ;; Train for 1 epochs and then show the results of 75
+    (doseq [epoch-num (range 1)]
       (println "Doing epoch " epoch-num)
       (mx-io/reduce-batches
        train-iter

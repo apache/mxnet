@@ -576,7 +576,8 @@ class RNNOp : public Operator{
                        req[rnn_enum::kData],
                        req[rnn_enum::kParams],
                        req[rnn_enum::kState],
-                       req[rnn_enum::kStateCell],
+                       // State cell should be present for LSTMs, but is absent for other RNNs.
+                       param_.mode == rnn_enum::kLstm ? req[rnn_enum::kStateCell] : kNullOp,
                        param_.p,
                        param_.mode);
   }

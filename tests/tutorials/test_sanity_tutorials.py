@@ -27,6 +27,7 @@ import re
 whitelist = ['basic/index.md',
              'c++/basics.md',
              'c++/index.md',
+             'control_flow/index.md',
              'embedded/index.md',
              'embedded/wine_detector.md',
              'gluon/index.md',
@@ -50,7 +51,9 @@ whitelist = ['basic/index.md',
              'sparse/index.md',
              'speech_recognition/index.md',
              'unsupervised_learning/index.md',
-             'vision/index.md']
+             'vision/index.md',
+             'tensorrt/index.md',
+             'tensorrt/inference_with_trt.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():

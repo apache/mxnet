@@ -749,7 +749,6 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.  https://github.com/apache/incubator-mxnet/issues/11839")
 @with_seed()
 def test_spatial_transformer_with_type():
     data = mx.sym.Variable('data')
@@ -758,9 +757,13 @@ def test_spatial_transformer_with_type():
     loc = mx.sym.Activation(data=loc, act_type='relu')
     loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
     sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
-                                    transform_type="affine", sampler_type="bilinear")
+                                    transform_type="affine", sampler_type="bilinear", cudnn_off=True)
     ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float64}},
                 {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float64}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+    sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
+                                    transform_type="affine", sampler_type="bilinear", cudnn_off=False)
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 

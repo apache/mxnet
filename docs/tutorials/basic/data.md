@@ -16,7 +16,8 @@ To complete this tutorial, we need:
 $ pip install opencv-python requests matplotlib jupyter
 ```
 
-## MXNet Data Iterator  
+## MXNet Data Iterator
+
 Data Iterators in *MXNet* are similar to Python iterator objects.
 In Python, the function `iter` allows fetching items sequentially by calling  `next()` on
  iterable objects such as a Python `list`.
@@ -312,8 +313,10 @@ print(mx.recordio.unpack_img(s))
 ```
 
 #### Using tools/im2rec.py
-You can also convert raw images into *RecordIO* format using the ``im2rec.py`` utility script that is provided in the MXNet [src/tools](https://github.com/dmlc/mxnet/tree/master/tools) folder.
+You can also convert raw images into *RecordIO* format using the [__im2rec.py__](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) utility script that is provided in the MXNet [src/tools](https://github.com/dmlc/mxnet/tree/master/tools) folder.
 An example of how to use the script for converting to *RecordIO* format is shown in the `Image IO` section below.
+
+* Note that there is a C++ API implementation of [im2rec](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc), please refer to [RecordIO FAQ](https://mxnet.incubator.apache.org/faq/recordio.html) for more information.
 
 ## Image IO
 

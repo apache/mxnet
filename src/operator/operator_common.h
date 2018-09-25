@@ -221,7 +221,7 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                       \
   {                                                                         \
-    if (!shape_assign(&(shape_array)[index], TShape(shape))) {              \
+    if (!::mxnet::op::shape_assign(&(shape_array)[index], TShape(shape))) { \
       std::ostringstream os;                                                \
       os << "Shape inconsistent, Provided = " << (shape_array)[index] << ','\
          << " inferred shape=" << shape;                                    \
@@ -238,11 +238,11 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define TYPE_ASSIGN_CHECK(type_array, index, type)                          \
   {                                                                         \
-    if (!type_assign(&(type_array)[index], type)) {                         \
+    if (!::mxnet::op::type_assign(&(type_array)[index], type)) {            \
       std::ostringstream os;                                                \
       os << "Type inconsistent, Provided = "                                \
-         << type_string((type_array)[index]) << ','                         \
-         << " inferred type = " << type_string(type);                       \
+         << ::mxnet::op::type_string((type_array)[index]) << ','            \
+         << " inferred type = " << ::mxnet::op::type_string(type);          \
       throw ::mxnet::op::InferTypeError(os.str(), index);                   \
     }                                                                       \
   }
@@ -291,8 +291,8 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
 #define UNIFORM_TYPE_CHECK(type, expected, arg)                         \
   {                                                                     \
     CHECK_EQ(type, expected) << "This layer requires uniform type. "    \
-                             << "Expected '" << type_string(expected)   \
-                             << "' v.s. given '" << type_string(type)   \
+                             << "Expected '" << ::mxnet::op::type_string(expected)   \
+                             << "' v.s. given '" << ::mxnet::op::type_string(type)   \
                              << "' at '" << arg << "'";                 \
   }
 

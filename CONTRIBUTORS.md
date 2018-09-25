@@ -178,4 +178,5 @@ List of Contributors
 * [Aaron Markham](https://github.com/aaronmarkham)
 * [Sam Skalicky](https://github.com/samskalicky)
 * [Per Goncalves da Silva](https://github.com/perdasilva)
+* [Zhijingcheng Yu](https://github.com/jasonyu1996)
 * [Cheng-Che Lee](https://github.com/stu1130)

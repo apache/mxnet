@@ -418,10 +418,10 @@ void RGB2HLSConvert(const float& src_r,
   float diff;
 
   vmax = vmin = r;
-  vmax = fmax(vmax, g);
-  vmax = fmax(vmax, b);
-  vmin = fmin(vmin, g);
-  vmin = fmin(vmin, b);
+  vmax = std::fmax(vmax, g);
+  vmax = std::fmax(vmax, b);
+  vmin = std::fmin(vmin, g);
+  vmin = std::fmin(vmin, b);
 
   diff = vmax - vmin;
   l = (vmax + vmin) * 0.5f;

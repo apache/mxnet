@@ -27,7 +27,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(L2NormalizationParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new L2NormalizationOp<gpu, DType>(param);
   });

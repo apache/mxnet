@@ -4339,7 +4339,7 @@ def test_where():
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
         where_sym = mx.sym.where(condition, x, y)
-	
+
         assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
                                                 y=mx.nd.array([[8,9],[10,11],[12,13]]),
                                                 condition=mx.nd.array([1,0])), MXNetError)
@@ -4516,6 +4516,30 @@ def test_ctc_loss():
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
 
+    # Test 3: check use integer type as label
+    labels3 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.int32)
+    true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
+    check_ctc_loss(acts2, labels3, true_loss)
+
+@with_seed()
+def test_ctc_loss_with_large_classes():
+    ctx = default_context()
+    num_classes = 6000
+    seq_len = 8
+    batch_size = 2
+    data = np.empty((num_classes, 0))
+    for i in range(seq_len * batch_size) :
+        row = np.roll(np.arange(num_classes, dtype=np.float32), i).reshape(num_classes, 1)
+        data = np.append(data, row/13, axis=1)
+    data = data.reshape(seq_len, batch_size, num_classes)
+    label = np.array([
+        [100, 200, 300, 400, 500, 0, 0, 0],
+        [1000, 2000, 3000, 4000, 0, 5000, 0, 0]], dtype=np.int32)
+    nd_data = mx.nd.array(data)
+    nd_label = mx.nd.array(label)
+    loss = mx.nd.contrib.ctc_loss(data=nd_data, label=nd_label)
+    expected_loss = np.array([688.02826, 145.34462])
+    assert_almost_equal(loss.asnumpy(), expected_loss)
 
 @with_seed()
 def test_ctc_loss_grad():
@@ -4958,7 +4982,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
                     trans_x = input_offset[roi_idx, class_id * 2, part_h, part_w] * trans_std
                     trans_y = input_offset[roi_idx, class_id * 2 + 1, part_h, part_w] * trans_std
                     bin_h_start, bin_w_start = ph * bin_size_h + roi_start_h, pw * bin_size_w + roi_start_w
-                    
+
                     need_check = True
                     while need_check:
                         pass_check = True
@@ -6788,6 +6812,50 @@ def test_diag():
     diag_sym = mx.sym.diag(data=data, k=-1)
     check_numeric_gradient(diag_sym, [a_np])
 
+    # Test 4d input
+    x1 = np.random.randint(3,9)
+    x2 = np.random.randint(3,9)
+    x3 = np.random.randint(3,9)
+    x4 = np.random.randint(3,9)
+    a_np = np.random.random((x1, x2, x3, x4)).astype(np.float32)
+    a = mx.nd.array(a_np).astype('float32')
+
+    # k = 0, axis1=0, axis2=1
+    r = mx.nd.diag(data=a, k=0, axis1=0, axis2=1)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=0, axis1=0, axis2=1))
+
+    # k = 1, axis1=1, axis2=0
+    r = mx.nd.diag(data=a, k=1, axis1=1, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=1, axis1=1, axis2=0))
+
+    # k = -1 axis1=1, axis3=3
+    r = mx.nd.diag(data=a, k=-1, axis1=1, axis2=3)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=-1, axis1=1, axis2=3))
+
+    # k = 2, axis1=-2, axis2=0
+    r = mx.nd.diag(data=a, k=2, axis1=-2, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=2, axis1=-2, axis2=0))
+
+    # Test 4d backward, k=0, axis1=3, axis2=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=0, axis1=3, axis2=0)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=1, axis1=1, axis2=2
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1, axis1=1, axis2=2)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=-1, axis1=2, axis2=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1, axis1=2, axis2=0)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=-2, axis1=1, axis2=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-2, axis1=1, axis2=-1)
+    check_numeric_gradient(diag_sym, [a_np])
+
 @with_seed()
 def test_depthtospace():
     def f(x, blocksize):
@@ -6888,6 +6956,24 @@ def test_spacetodepth():
     test_invalid_space_dim()
     test_invalid_block_size()
     test_invalid_depth_dim()
+
+@with_seed()
+def test_invalid_kernel_size():
+    invalid_kernel_size = 28
+    assert_exception(
+        mx.nd.Correlation,
+        MXNetError,
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        kernel_size=invalid_kernel_size)
+
+@with_seed()
+def test_valid_kernel_size():
+    valid_kernel_size = 9
+    mx.nd.Correlation(
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        kernel_size=valid_kernel_size)
 
 if __name__ == '__main__':
     import nose

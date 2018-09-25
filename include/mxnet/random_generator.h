@@ -22,16 +22,15 @@
  * \file random_generator.h
  * \brief Parallel random number generator.
  */
-#ifndef MXNET_COMMON_RANDOM_GENERATOR_H_
-#define MXNET_COMMON_RANDOM_GENERATOR_H_
+#ifndef MXNET_RANDOM_GENERATOR_H_
+#define MXNET_RANDOM_GENERATOR_H_
 
-#include <mxnet/base.h>
 #include <random>
 #include <new>
+#include "./base.h"
 
 #if MXNET_USE_CUDA
 #include <curand_kernel.h>
-#include "../common/cuda_utils.h"
 #endif  // MXNET_USE_CUDA
 
 namespace mxnet {
@@ -50,6 +49,7 @@ class RandGenerator<cpu, DType> {
   static const int kNumRandomStates;
 
   // implementation class for random number generator
+  // TODO(alexzai): move impl class to separate file - tracked in MXNET-948
   class Impl {
    public:
     typedef typename std::conditional<std::is_floating_point<DType>::value,
@@ -116,6 +116,7 @@ class RandGenerator<gpu, DType> {
   // by using 1.0-curand_uniform().
   // Needed as some samplers in sampler.h won't be able to deal with
   // one of the boundary cases.
+  // TODO(alexzai): move impl class to separate file - tracked in MXNET-948
   class Impl {
    public:
     Impl &operator=(const Impl &) = delete;
@@ -150,14 +151,9 @@ class RandGenerator<gpu, DType> {
     curandStatePhilox4_32_10_t state_;
   };  // class RandGenerator<gpu, DType>::Impl
 
-  static void AllocState(RandGenerator<gpu, DType> *inst) {
-    CUDA_CALL(cudaMalloc(&inst->states_,
-                         kNumRandomStates * sizeof(curandStatePhilox4_32_10_t)));
-  }
+  static void AllocState(RandGenerator<gpu, DType> *inst);
 
-  static void FreeState(RandGenerator<gpu, DType> *inst) {
-    CUDA_CALL(cudaFree(inst->states_));
-  }
+  static void FreeState(RandGenerator<gpu, DType> *inst);
 
   void Seed(mshadow::Stream<gpu> *s, uint32_t seed);
 
@@ -172,6 +168,7 @@ class RandGenerator<gpu, double> {
   // by using 1.0-curand_uniform().
   // Needed as some samplers in sampler.h won't be able to deal with
   // one of the boundary cases.
+  // TODO(alexzai): move impl class to separate file - tracked in MXNET-948
   class Impl {
    public:
     Impl &operator=(const Impl &) = delete;
@@ -215,4 +212,4 @@ class RandGenerator<gpu, double> {
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet
-#endif  // MXNET_COMMON_RANDOM_GENERATOR_H_
+#endif  // MXNET_RANDOM_GENERATOR_H_
