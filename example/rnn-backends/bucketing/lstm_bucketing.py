@@ -15,13 +15,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This file compares different RNN implementation on the Sherlock Holmes dataset
-# using the LSTM bucketing module.
-# Note that this file is not exactly the same with the original source file. 
-# Specifically, the following major changes have been made: 
-#     (1) ported FusedRNNCell (from cudnn_lstm_bucketing.py) and OpenLSTMRNNCell
-#     (2) replaced MXNet Speedometer with TensorboardSpeedometer
-#     (3) ported TensorboardLogValidationMetricsCallback
+"""
+Module: lstm_bucketing
+
+Description:
+This file compares different RNN implementation on the Sherlock Holmes dataset
+using the LSTM bucketing module.
+Note that this file is not exactly the same with the original source file.
+Specifically, the following major changes have been made:
+    (1) ported FusedRNNCell (from cudnn_lstm_bucketing.py) and OpenLSTMRNNCell
+    (2) replaced MXNet Speedometer with TensorboardSpeedometer
+    (3) ported TensorboardLogValidationMetricsCallback
+"""
 
 import os
 import argparse
@@ -56,12 +61,16 @@ parser.add_argument('--backend', type=str, default='open',
 
 
 def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
+    """
+    Tokenize the text file.
+    """
+    # pylint: disable=redefined-outer-name
     assert os.path.isfile(fname), \
         "Cannot find the dataset, please make sure that you have " \
         "run the download script in the dataset directory."
     lines = open(fname).readlines()
     lines = [filter(None, i.split(' ')) for i in lines]
-    sentences, vocab = mx.rnn.encode_sentences(sentences=lines, vocab=vocab, 
+    sentences, vocab = mx.rnn.encode_sentences(sentences=lines, vocab=vocab,
                                                start_label=start_label,
                                                invalid_label=invalid_label)
 
@@ -76,12 +85,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # Cannot set the upper bound of bucket size to be 
     buckets = [10, 20, 30, 40, 50, 60]
-    
+
     start_label, invalid_label = 1, 0
 
-    train_sentences, vocab = tokenize_text("./dataset/sherlockholmes/sherlockholmes.train.txt", 
+    train_sentences, vocab = tokenize_text("./dataset/sherlockholmes/sherlockholmes.train.txt",
                                            start_label=start_label,
                                            invalid_label=invalid_label)
     valid_sentences, _ = tokenize_text("./dataset/sherlockholmes/sherlockholmes.valid.txt", vocab=vocab,
@@ -97,12 +105,12 @@ if __name__ == '__main__':
     data_valid = mx.rnn.BucketSentenceIter(sentences=valid_sentences, batch_size=args.batch_size,
                                            buckets=buckets, invalid_label=invalid_label,
                                            layout=data_layout)
-    
+
     rnn = mx.rnn.BaseRNNCell()
 
     if backend == 'default':
         rnn = mx.rnn.SequentialRNNCell()
-    
+
         for i in range(args.num_layers):
             rnn.add(mx.rnn.LSTMCell(num_hidden=args.num_hidden, prefix='lstm_l%d_'%i))
     elif backend == 'cudnn':
@@ -118,13 +126,16 @@ if __name__ == '__main__':
                   "Valid ones are default/cudnn/open."
 
     def sym_gen(seq_len):
-        data  = mx.sym.Variable('data')
+        """
+        Symbol generator for sequences of different length.
+        """
+        data = mx.sym.Variable('data')
         label = mx.sym.Variable('softmax_label')
         embed = mx.sym.Embedding(data=data, input_dim=len(vocab),
                                  output_dim=args.num_embed, name='embed')
 
         rnn.reset()
-        
+
         if backend == 'default':
             output, _ = rnn.unroll(length=seq_len,
                                    inputs=embed,
@@ -141,18 +152,18 @@ if __name__ == '__main__':
         else:
             assert 0, "Invalid backend argument. " \
                       "Valid ones are default/cudnn/open."
-        
+
         pred = mx.sym.Reshape(output, shape=(-1, args.num_hidden))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')
 
         label = mx.sym.Reshape(label, shape=(-1,))
-        pred  = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
+        pred = mx.sym.SoftmaxOutput(data=pred, label=label, name='softmax')
 
         return pred, ('data',), ('softmax_label',)
 
-    model = mx.mod.BucketingModule(sym_gen = sym_gen,
-                                   default_bucket_key = data_train.default_bucket_key,
-                                   context = mx.gpu())
+    model = mx.mod.BucketingModule(sym_gen=sym_gen,
+                                   default_bucket_key=data_train.default_bucket_key,
+                                   context=mx.gpu())
 
     logging.info("MXNet will be training using the RNN backend: %s.", backend)
 
@@ -164,17 +175,17 @@ if __name__ == '__main__':
     summary_writer = mxboard.SummaryWriter('./log')
 
     model.fit(
-        train_data = data_train, 
-        eval_data = data_valid, 
-        eval_metric = mx.metric.Perplexity(invalid_label),
-        kvstore = args.kv_store,
-        optimizer = args.optimizer, 
-        optimizer_params = {'learning_rate': args.lr,
-                            'momentum': args.mom, 'wd': args.wd},
-        initializer = mx.init.Xavier(factor_type="in", magnitude=2.34),
-        num_epoch = args.num_epochs,
-        batch_end_callback = mx.callback.TensorboardSpeedometer(summary_writer=summary_writer,
-                                                                batch_size=args.batch_size, 
-                                                                frequent=args.disp_batches, 
-                                                                auto_reset=False),
-        eval_end_callback = mx.callback.TensorboardLogValidationMetricsCallback(summary_writer=summary_writer))
+        train_data=data_train,
+        eval_data=data_valid,
+        eval_metric=mx.metric.Perplexity(invalid_label),
+        kvstore=args.kv_store,
+        optimizer=args.optimizer,
+        optimizer_params={'learning_rate': args.lr,
+                          'momentum': args.mom, 'wd': args.wd},
+        initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
+        num_epoch=args.num_epochs,
+        batch_end_callback=mx.callback.TensorboardSpeedometer(summary_writer=summary_writer,
+                                                              batch_size=args.batch_size,
+                                                              frequent=args.disp_batches,
+                                                              auto_reset=False),
+        eval_end_callback=mx.callback.TensorboardLogValidationMetricsCallback(summary_writer=summary_writer))

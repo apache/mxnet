@@ -15,20 +15,27 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This file compares different RNN implementation on the Sherlock Holmes/Wikitext-2 dataset
-# using the word-level language modeling.
-# Note that this file is not exactly the same with the original source file.
-# Specifically, the following changes have been made:
-#     (1) fixed the UserWarning on inconsistent batch_size
-#     (2) ported MXNet Default and OpenLSTMRNN implementation
-#     (3) replaced MXNet Speedometer with TensorboardSpeedometer
-#     (4) added MXNet profiler for detailed performance analysis
+"""
+Module: train
+
+Description:
+This file compares different RNN implementation on the Sherlock Holmes/Wikitext-2 dataset
+using the word-level language modeling.
+Note that this file is not exactly the same with the original source file.
+Specifically, the following changes have been made:
+    (1) fixed the UserWarning on inconsistent batch_size
+    (2) ported MXNet Default and OpenLSTMRNN implementation
+    (3) replaced MXNet Speedometer with TensorboardSpeedometer
+    (4) added MXNet profiler for detailed performance analysis
+"""
 
 import math
 import argparse
 
 import mxnet as mx
 
+# pylint: disable=wildcard-import
+# pylint: disable=ungrouped-imports
 from model import *
 from module import *
 from data import Corpus, CorpusIter
@@ -80,6 +87,10 @@ def evaluate(valid_module, data_iter,
              epoch, mode,
              bptt, batch_size,
              summary_writer):
+             # pylint: disable=redefined-outer-name
+    """
+    Evaluate the validation scores and store to summary_writer.
+    """
     total_loss = 0.0
     nbatch = 0
     for batch in data_iter:
@@ -111,7 +122,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     logging.info(args)
-    
+
     batch_size = args.batch_size
     bptt = args.bptt
     backend = args.backend
@@ -127,7 +138,7 @@ if __name__ == '__main__':
 
     train_data = CorpusIter(source=corpus.train, batch_size=batch_size, bptt=bptt, layout=data_layout)
     valid_data = CorpusIter(source=corpus.valid, batch_size=batch_size, bptt=bptt, layout=data_layout)
-    test_data  = CorpusIter(source=corpus.test , batch_size=batch_size, bptt=bptt, layout=data_layout)
+    test_data = CorpusIter(source=corpus.test, batch_size=batch_size, bptt=bptt, layout=data_layout)
 
     # ==================================================================================================================
     # Training Model
@@ -171,7 +182,8 @@ if __name__ == '__main__':
 
     if args.profiling:
         mx.profiler.profiler_set_config(mode='symbolic', filename='./log/%s' % args.profiler_output_fname)
-        logging.info("Profiling has been enabled. MXNet will be profiling from iteration %s to %s." %
+        # pylint: disable=logging-not-lazy
+        logging.info("Profiling has been enabled. MXNet will be profiling from iteration %s to %s." % \
                      (args.profiling_start, args.profiling_end))
         assert args.profiling_end > args.profiling_start, \
             "Profiling start iteration must precede profiling end iteration."
@@ -207,7 +219,8 @@ if __name__ == '__main__':
             if nbatch % args.log_interval == 0 and nbatch > 0:
                 loss = total_loss / bptt / batch_size / args.log_interval
                 perplexity = math.exp(loss)
-                logging.info('Iter[%d] Batch [%d]\tLoss:  %.7f,\tPerplexity:\t%.7f' % \
+                # pylint: disable=logging-not-lazy
+                logging.info('Iter[%d] Batch [%d]\tLoss: %.7f,\tPerplexity: %.7f' % \
                              (epoch, nbatch, loss, perplexity))
                 summary_writer.add_scalar(tag="Loss",
                                           value=loss,

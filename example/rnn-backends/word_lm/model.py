@@ -15,11 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""
+Module: model
+
+Description: This file creates the computation graph for training purposes.
+"""
+
 import mxnet as mx
 
 
 def rnn(bptt, vocab_size, num_embed, nhid,
         num_layers, dropout, batch_size, tied, backend):
+    """
+    Creates the computation graph for training.
+    """
     # ==================================================================================================================
     # Encoder
     # ==================================================================================================================

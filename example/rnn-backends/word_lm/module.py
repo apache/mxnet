@@ -15,8 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""
+Module: module
+
+Description: StatefulModule records the hidden state values after training every iteration and
+restores those values before the start of the next round, this makes it different from MXNet
+default training module.
+"""
+
 import mxnet as mx
-import logging
 
 class CustomStatefulModule():
     """CustomStatefulModule is a module that takes a custom loss symbol and state symbols.

@@ -176,7 +176,7 @@ class OpenLSTMRNNProp : public OperatorProperty {
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
     for (index_t i = 0; i < in_type->size(); ++i) {
-      if (((*in_type)[i] == -1))
+      if ((*in_type)[i] == -1)
         (*in_type)[i] = dtype;
       else
         CHECK_EQ((*in_type)[i], dtype) << "This layer requires uniform type. " <<

@@ -15,12 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os, gzip
-import sys
-import mxnet as mx
+"""
+Module: data
+
+Description: The `data` module is responsible for loading the (Sherlockholmes/Wikitext-2) dataset.
+"""
+
+import os
 import numpy as np
+import mxnet as mx
 
 class Dictionary(object):
+    """
+    Dictionary is used to store the mappings between words and indices.
+    """
     def __init__(self):
         self.word2idx = {}
         self.idx2word = []
@@ -39,16 +47,19 @@ class Dictionary(object):
         return len(self.idx2word)
 
 class Corpus(object):
+    """
+    Corpus stores the tokenized dataset files.
+    """
     def __init__(self, path, name):
         self.dictionary = Dictionary()
         if name == 'sherlockholmes':
             self.train = self.tokenize(path + 'sherlockholmes/sherlockholmes.train.txt')
             self.valid = self.tokenize(path + 'sherlockholmes/sherlockholmes.valid.txt')
-            self.test  = self.tokenize(path + 'sherlockholmes/sherlockholmes.test.txt')
+            self.test = self.tokenize(path + 'sherlockholmes/sherlockholmes.test.txt')
         elif name == 'wikitext-2':
             self.train = self.tokenize(path + 'wikitext-2/wiki.train.tokens')
             self.valid = self.tokenize(path + 'wikitext-2/wiki.valid.tokens')
-            self.test  = self.tokenize(path + 'wikitext-2/wiki.test.tokens')
+            self.test = self.tokenize(path + 'wikitext-2/wiki.test.tokens')
         else:
             assert 0, "Invalid dataset name %s. " \
                       "Valid ones are sherlockholmes/wikitext-2." % name
@@ -90,7 +101,9 @@ def batchify(data, batch_size, layout):
     return data
 
 class CorpusIter(mx.io.DataIter):
-    "An iterator that returns the a batch of sequence each time"
+    """
+    CorpusIter is used to iterate through the corpus and returns the a batch of sequence each time.
+    """
     def __init__(self, source, batch_size, bptt, layout='NT'):
         super(CorpusIter, self).__init__()
         self._batch_size = batch_size
@@ -98,13 +111,13 @@ class CorpusIter(mx.io.DataIter):
         self._layout = layout
 
         if layout == 'NT':
-            self.provide_data  = [mx.io.DataDesc(name='data' , shape=(batch_size, bptt),
-                                                 dtype=np.  int32, layout=layout)]
+            self.provide_data = [mx.io.DataDesc(name='data', shape=(batch_size, bptt),
+                                                dtype=np.int32, layout=layout)]
             self.provide_label = [mx.io.DataDesc(name='label', shape=(batch_size, bptt),
                                                  dtype=np.float32, layout=layout)]
         elif layout == 'TN': # CuDNN implementation expects time-major layout.
-            self.provide_data  = [mx.io.DataDesc(name='data' , shape=(bptt, batch_size),
-                                                 dtype=np.  int32, layout=layout)]
+            self.provide_data = [mx.io.DataDesc(name='data', shape=(bptt, batch_size),
+                                                dtype=np.int32, layout=layout)]
             self.provide_label = [mx.io.DataDesc(name='label', shape=(bptt, batch_size),
                                                  dtype=np.float32, layout=layout)]
         else:
@@ -114,16 +127,19 @@ class CorpusIter(mx.io.DataIter):
         self._source = batchify(source, batch_size, layout)
 
     def iter_next(self):
+        """
+        Point next `data` and `label` to the next batch of sequence.
+        """
         layout = self._layout
         i = self._index
         if i+self._bptt > self._source.shape[1 if layout == 'NT' else 0] - 1:
             return False
 
         if layout == 'NT':
-            self._next_data  = self._source[:,i  :i  +self._bptt].astype(np.  int32)
-            self._next_label = self._source[:,i+1:i+1+self._bptt].astype(np.float32)
+            self._next_data = self._source[:, i:i+self._bptt].astype(np.int32)
+            self._next_label = self._source[:, i+1:i+1+self._bptt].astype(np.float32)
         else:
-            self._next_data  = self._source[i  :i  +self._bptt].astype(np.  int32)
+            self._next_data = self._source[i:i+self._bptt].astype(np.int32)
             self._next_label = self._source[i+1:i+1+self._bptt].astype(np.float32)
 
         self._index += self._bptt
@@ -137,7 +153,7 @@ class CorpusIter(mx.io.DataIter):
 
     def reset(self):
         self._index = 0
-        self._next_data  = None
+        self._next_data = None
         self._next_label = None
 
     def getdata(self):
@@ -145,4 +161,3 @@ class CorpusIter(mx.io.DataIter):
 
     def getlabel(self):
         return [self._next_label]
-
