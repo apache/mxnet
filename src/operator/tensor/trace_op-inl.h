@@ -62,7 +62,7 @@ struct TraceParam : public dmlc::Parameter<TraceParam> {
 };
 
 inline TShape TraceShapeImpl(const TShape& ishape, const int k,
-                            const int32_t axis1, const int32_t axis2) {
+                            const uint32_t axis1, const uint32_t axis2) {
   uint32_t n_dim, idim = ishape.ndim();
   if (idim > 2)  // for +3D we remove the two axis along the diagonal
     n_dim = idim - 2;
@@ -89,17 +89,22 @@ inline bool TraceOpShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(out_attrs->size(), 1U);
 
     const TShape& ishape = (*in_attrs)[0];
-    if (ishape.ndim() < 2) {
+
+    uint32_t idim = ishape.ndim();
+    if (idim < 2) {
       // trace is undefined for 1D arrays
       return false;
     }
 
     const TraceParam& param = nnvm::get<TraceParam>(attrs.parsed);
 
+    uint32_t x1 = CheckAxis(param.axis1, idim);
+    uint32_t x2 = CheckAxis(param.axis2, idim);
+
     TShape oshape = TraceShapeImpl(ishape,
                                   param.k,
-                                  param.axis1,
-                                  param.axis2);
+                                  x1,
+                                  x2);
 
     if (shape_is_none(oshape)) {
       LOG(FATAL) << "diagonal does not exist.";
