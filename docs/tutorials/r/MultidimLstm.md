@@ -43,6 +43,8 @@ Load in the data and preprocess it. It is assumed that the data has been downloa
 
 
  ```r
+
+    mx.set.seed(1234)
     ## Preprocessing steps
 
     Data <- read.csv(file="data.csv", header=TRUE, sep=",")
@@ -50,31 +52,34 @@ Load in the data and preprocess it. It is assumed that the data has been downloa
     ## Extracting specific features from the dataset as variables for time series
     ## We extract pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
 
-    df<-data.frame(Data$pm2.5, Data$DEWP,Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
+    df <- data.frame(Data$pm2.5, Data$DEWP,Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
     df[is.na(df)] <- 0
 
     ## Now we normalise each of the feature set to a range(0,1)
-    df<-matrix(as.matrix(df),ncol=ncol(df),dimnames=NULL)
+    df <- matrix(as.matrix(df),ncol=ncol(df),dimnames=NULL)
     rangenorm <- function(x){(x-min(x))/(max(x)-min(x))}
     df <- apply(df,2, rangenorm)
-    df<-t(df)
+    df <- t(df)
   ```
 For using multidimesional data with MXNetR. We need to convert training data to the form
 (n_dim x seq_len x num_samples) and label should be of the form (seq_len x num_samples) or (1 x num_samples)
 depending on the LSTM flavour to be used(one-to-one/ many-to-one). Please note that MXNetR currently supports only these two flavours of RNN.
-We have used n_dim =7, seq_len = 100  and num_samples= 430.
+We have used n_dim = 7, seq_len = 100  and num_samples = 430.
 
 ```r
+n_dim <- 7
+seq_len <- 100
+num_samples <- 430
 ## extract only required data from dataset
-trX<- df[1:n_dim, 25:(24+(seqlen* num_samples))]
-## the label data(next PM2.5 concentraion) should be one time step ahead of the current PM2.5 concentration
+trX<- df[1:n_dim, 25:(24+(seq_len * num_samples))]
+## the label data(next PM2.5 concentration) should be one time step ahead of the current PM2.5 concentration
 
 trY<- df[1,26:(25+(seqlen* num_samples))]
 ## reshape the matrices in the format acceptable by MXNetR RNNs
-trainX<- trX
-dim(trainX) <- c(7, 100,430)
-trainY<- trY
-dim(trainY)<- c(100,430)
+trainX <- trX
+dim(trainX) <- c(n_dim, seq_len, num_samples)
+trainY <- trY
+dim(trainY) <- c(seq_len, num_samples)
 
 ```
 
@@ -84,7 +89,7 @@ Defining and training the network
 ---------
 
 ```r
-batch.size = 32
+batch.size <- 32
 # take first 300 samples for train - remaining 100 for evaluation
 train_ids <- 1:300
 eval_ids<- 301:400
@@ -298,8 +303,8 @@ real<- trainY[ ,401]
 
 for (i in 1:pred_length) {
 
-  data = mx.nd.array(trainX[, i, 401, drop = F])
-  label = mx.nd.array(trainY[i,401, drop = F])
+  data <- mx.nd.array(trainX[, i, 401, drop = F])
+  label <- mx.nd.array(trainY[i,401, drop = F])
   infer.data <- mx.io.arrayiter(data = data, label = label,
                                 batch.size = 1, shuffle = FALSE)
   ## note that we use rnn state values from previous iterations here
@@ -350,4 +355,4 @@ Now predict contains the predicted 100 values
  [89] 0.07344064 0.09557344 0.07645875 0.10261569 0.07243461 0.06941650 0.05231388 0.05432596
  [97] 0.06740443 0.06338028 0.06740443 0.07444668
 ```
-The above tutorial is just for demonstration purposes and have not beeen tuned extensively for accuracy.
+The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
