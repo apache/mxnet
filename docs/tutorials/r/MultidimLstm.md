@@ -5,7 +5,7 @@ This tutorial shows how to use an LSTM model with multivariate data, and generat
 The tutorial is an illustration of how to use LSTM models with MXNetR. We are forecasting the air pollution with data recorded at the US embassy in Beijing, China for five years.
 
 Dataset Attribution:
-“PM2.5 data of US Embassy in Beijing” (https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
+"PM2.5 data of US Embassy in Beijing" (https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
 We want to predict pollution levels(PM2.5 concentration) in the city given the above dataset.
 
 ```r
