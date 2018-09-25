@@ -73,26 +73,39 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+def _dataset_transform_fn(x, y):
+    """Named transform function since lambda function cannot be pickled."""
+    return x, y
+
 @with_seed()
 def test_recordimage_dataset_with_data_loader_multiworker():
-    # This test is pointless on Windows because Windows doesn't fork
-    if platform.system() != 'Windows':
-        recfile = prepare_record()
-        dataset = gluon.data.vision.ImageRecordDataset(recfile)
-        loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+    recfile = prepare_record()
+    dataset = gluon.data.vision.ImageRecordDataset(recfile)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
 
-        for i, (x, y) in enumerate(loader):
-            assert x.shape[0] == 1 and x.shape[3] == 3
-            assert y.asscalar() == i
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
 
-        # with transform
-        fn = lambda x, y : (x, y)
-        dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(fn)
-        loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+    # with transform
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
 
-        for i, (x, y) in enumerate(loader):
-            assert x.shape[0] == 1 and x.shape[3] == 3
-            assert y.asscalar() == i
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
+
+    # try limit recursion depth
+    import sys
+    old_limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(500)  # this should be smaller than any default value used in python
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
+
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
+    sys.setrecursionlimit(old_limit)
 
 @with_seed()
 def test_sampler():

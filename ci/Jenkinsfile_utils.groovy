@@ -57,22 +57,32 @@ def init_git_win() {
 }
 
 // pack libraries for later use
-def pack_lib(name, libs) {
+def pack_lib(name, libs, include_gcov_data = false) {
   sh """
 echo "Packing ${libs} into ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
   stash includes: libs, name: name
+
+  if (include_gcov_data) {
+    // Store GCNO files that are required for GCOV to operate during runtime
+    sh "find . -name '*.gcno'"
+    stash name: "${name}_gcov_data", includes: "**/*.gcno"
+  }
 }
 
 // unpack libraries saved before
-def unpack_and_init(name, libs) {
+def unpack_and_init(name, libs, include_gcov_data = false) {
   init_git()
   unstash name
   sh """
 echo "Unpacked ${libs} from ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 """
+  if (include_gcov_data) {
+    // Restore GCNO files that are required for GCOV to operate during runtime
+    unstash "${name}_gcov_data"
+  }
 }
 
 def publish_test_coverage() {
@@ -86,16 +96,12 @@ def publish_test_coverage() {
         GIT_COMMIT_HASH = sh (script: "git rev-parse @", returnStdout: true)
     }
    
-    def codecovArgs = ""
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs += "-B ${env.CHANGE_TARGET} " +
-        "-C ${GIT_COMMIT_HASH} " +
-        "-P ${env.CHANGE_ID} "
+      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${GIT_COMMIT_HASH} -P ${env.CHANGE_ID}"
     } else {
       // Branch execution
-      codecovArgs += "-B ${env.BRANCH_NAME} " +
-        "-C ${GIT_COMMIT_HASH} "
+      codecovArgs = "-B ${env.BRANCH_NAME} -C ${GIT_COMMIT_HASH}"
     }
 
     // To make sure we never fail because test coverage reporting is not available

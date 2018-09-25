@@ -21,6 +21,10 @@ parsers:
       method: no
       macro: no
 
+ignore:
+ - "cpp-package/example/**/*"
+ - "tests/**/*"
+
 # Disable comments for now to gather data in the background
 comment: false
 #  layout: "header, diff"
