@@ -63,9 +63,9 @@ struct TraceParam : public dmlc::Parameter<TraceParam> {
 
 inline TShape TraceShapeImpl(const TShape& ishape, const int k,
                             const int32_t axis1, const int32_t axis2) {
-  int32_t n_dim;
-  if (ishape.ndim() > 2)  // for +3D we remove the two axis along the diagonal
-    n_dim = static_cast<int32_t>(ishape.ndim()) - 2;
+  uint32_t n_dim, idim=ishape.ndim();
+  if (idim > 2)  // for +3D we remove the two axis along the diagonal
+    n_dim = idim - 2;
   else  // if its 2D then the output will be a single result, so 1-dim 1 element output
     n_dim = 1;
 
@@ -73,7 +73,7 @@ inline TShape TraceShapeImpl(const TShape& ishape, const int k,
 
   // add all axes except the two specified along the diagonal
   uint32_t idx = 0;
-  for (int32_t i = 0; i < ishape.ndim(); ++i) {
+  for (uint32_t i = 0; i < idim; ++i) {
     if (i != axis1 && i != axis2) {
       oshape[idx++] = ishape[i];
     }
