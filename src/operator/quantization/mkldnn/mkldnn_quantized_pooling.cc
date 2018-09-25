@@ -46,6 +46,7 @@ static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const Op
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_pooling)
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedPoolingForward);
 
 }  // namespace op
