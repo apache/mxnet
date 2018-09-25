@@ -2029,7 +2029,6 @@ def convert_reciprocal(node, **kwargs):
     )
     return [node]
 
-
 @mx_op.register("_power")
 def convert_power(node, **kwargs):
     """Map MXNet's _power operator attributes to onnx's Pow operator
