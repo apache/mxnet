@@ -13,9 +13,9 @@ Currently, the following models are supported:
 
 Currently, the following datasets are supported:
 - MNIST
-- imagenet (only supported with synthetic for benchmark)
+- imagenet (only supported with synthetic data for benchmark)
 
-Additionally, the datasets can be replaced by synthetic random data generated at the appropriate size for the image for benchmarking
+Additionally, the datasets can be replaced by synthetic randomly data generated at the appropriate image size for the dataset for benchmarking
 
 
 ## Setup

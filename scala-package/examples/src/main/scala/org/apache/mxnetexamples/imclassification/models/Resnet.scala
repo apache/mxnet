@@ -20,6 +20,9 @@ package org.apache.mxnetexamples.imclassification.models
 import org.apache.mxnet._
 
 object Resnet {
+  /**
+    * Helper to produce individual residual unit
+    */
   def residualUnit(data: Symbol, numFilter: Int, stride: Shape, dimMatch: Boolean,
                    name: String = "", bottleNeck: Boolean = true, bnMom: Float = 0.9f,
                    workspace: Int = 256, memonger: Boolean = false): Symbol = {
@@ -69,6 +72,9 @@ object Resnet {
     operated + shortcut
   }
 
+  /**
+    * Helper for building the resnet Symbol
+    */
   def resnet(units: List[Int], numStages: Int, filterList: List[Int], numClasses: Int,
              imageShape: List[Int], bottleNeck: Boolean = true, bnMom: Float = 0.9f,
              workspace: Int = 256, dtype: String = "float32", memonger: Boolean = false): Symbol = {
@@ -118,6 +124,15 @@ object Resnet {
     Symbol.api.SoftmaxOutput(Some(fc1), name = "softmax")
   }
 
+  /**
+    * Gets the resnet model symbol
+    * @param numClasses Number of classes to classify into
+    * @param numLayers Number of residual layers
+    * @param imageShape The image shape as List(channels, height, width)
+    * @param convWorkspace Maximum temporary workspace allowed (MB) in convolutions
+    * @param dtype Type of data (float16, float32, etc) to use during computation
+    * @return Model symbol
+    */
   def getSymbol(numClasses: Int, numLayers: Int, imageShape: List[Int], convWorkspace: Int = 256,
                 dtype: String = "float32"): Symbol = {
     val List(channels, height, width) = imageShape

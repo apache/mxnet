@@ -21,6 +21,11 @@ import org.apache.mxnet._
 
 object MultiLayerPerceptron {
 
+  /**
+    * Gets MultiLayer Perceptron Model Symbol
+    * @param numClasses Number of classes to classify into
+    * @return model symbol
+    */
   def getSymbol(numClasses: Int): Symbol = {
     val data = Symbol.Variable("data")
 

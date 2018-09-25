@@ -19,10 +19,10 @@ package org.apache.mxnetexamples.imclassification
 
 import java.util.concurrent._
 
-import org.apache.mxnetexamples.imclassification.data.{MnistIter, SyntheticDataIter}
 import org.apache.mxnetexamples.imclassification.models._
 import org.apache.mxnetexamples.imclassification.util.{ModelTrain, PerformanceMonitor}
 import org.apache.mxnet._
+import org.apache.mxnetexamples.imclassification.data.{MnistIter, SyntheticDataIter}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -32,22 +32,80 @@ import scala.collection.mutable
 object TrainModel {
   private val logger = LoggerFactory.getLogger(classOf[TrainModel])
 
-  def test(dataPath : String) : Float = {
+  /**
+    * Simple model training and execution
+    * @param model The model identifying string
+    * @param dataPath Path to location of image data
+    * @param numExamples Number of image data examples
+    * @param numEpochs Number of epochs to train for
+    * @param benchmark Whether to use benchmark synthetic data instead of real image data
+    * @return The final test accuracy
+    */
+  def test(model: String, dataPath: String, numExamples: Int = 60000,
+           numEpochs: Int = 10, benchmark: Boolean = false): Float = {
     NDArrayCollector.auto().withScope {
-      val (dataShape, net) = (Shape(784), MultiLayerPerceptron.getSymbol(10))
       val devs = Array(Context.cpu(0))
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-      val dataLoader: (Int, KVStore) => (DataIter, DataIter) =
-        MnistIter.getIterator(dataShape, dataPath)
-      val Acc = ModelTrain.fit( batchSize = 128, numExamples = 60000, devs = devs,
+      val (dataLoader, net) = dataLoaderAndModel("mnist", model, dataPath,
+        numExamples = numExamples, benchmark = benchmark)
+      val Acc = ModelTrain.fit(batchSize = 128, numExamples, devs = devs,
         network = net, dataLoader = dataLoader,
-        kvStore = "local", numEpochs = 10)
+        kvStore = "local", numEpochs = numEpochs)
       logger.info("Finish test fit ...")
       val (_, num) = Acc.get
       num(0)
     }
   }
 
+  /**
+    * Gets dataset iterator and model symbol
+    * @param dataset The dataset identifying string
+    * @param model The model identifying string
+    * @param dataDir Path to location of image data
+    * @param numLayers The number of model layers (resnet only)
+    * @param numExamples The number of examples in the dataset
+    * @param benchmark Whether to use benchmark synthetic data instead of real image data
+    * @return Data iterator (partially applied function) and model symbol
+    */
+  def dataLoaderAndModel(dataset: String, model: String, dataDir: String = "",
+                         numLayers: Int = 50, numExamples: Int = 60000,
+                         benchmark: Boolean = false
+                        ): ((Int, KVStore) => (DataIter, DataIter), Symbol) = {
+    val (imageShape, numClasses) = dataset match {
+      case "mnist" => (List(1, 28, 28), 10)
+      case "imagenet" => (List(3, 224, 224), 1000)
+      case _ => throw new Exception("Invalid image data collection")
+    }
+
+    val List(channels, height, width) = imageShape
+    val dataSize: Int = channels * height * width
+    val (datumShape, net) = model match {
+      case "mlp" => (List(dataSize), MultiLayerPerceptron.getSymbol(numClasses))
+      case "lenet" => (List(channels, height, width), Lenet.getSymbol(numClasses))
+      case "resnet" => (List(channels, height, width), Resnet.getSymbol(numClasses,
+        numLayers, imageShape))
+      case _ => throw new Exception("Invalid model name")
+    }
+
+    val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (benchmark) {
+      (batchSize: Int, kv: KVStore) => {
+        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, numExamples)
+        (iter, iter)
+      }
+    } else {
+      dataset match {
+        case "mnist" => MnistIter.getIterator(Shape(datumShape), dataDir)
+        case _ => throw new Exception("This image data collection only supports the"
+          + "synthetic benchmark iterator.  Use --benchmark to enable")
+      }
+    }
+    (dataLoader, net)
+  }
+
+  /**
+    * Runs image classification training from CLI with various options
+    * @param args CLI args
+    */
   def main(args: Array[String]): Unit = {
     val inst = new TrainModel
     val parser: CmdLineParser = new CmdLineParser(inst)
@@ -60,34 +118,8 @@ object TrainModel {
       val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
       else inst.dataDir
 
-      val (imageShape, numClasses) = inst.dataset match {
-        case "mnist" => (List(1, 28, 28), 10)
-        case "imagenet" => (List(3, 224, 224), 1000)
-        case _ => throw new Exception("Invalid image data collection")
-      }
-
-      val List(channels, height, width) = imageShape
-      val dataSize: Int = channels * height * width
-      val (datumShape, net) = inst.network match {
-        case "mlp" => (List(dataSize), MultiLayerPerceptron.getSymbol(numClasses))
-        case "lenet" => (List(channels, height, width), Lenet.getSymbol(numClasses))
-        case "resnet" => (List(channels, height, width), Resnet.getSymbol(numClasses,
-          inst.numLayers, imageShape))
-        case _ => throw new Exception("Invalid model name")
-      }
-
-      val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (inst.benchmark) {
-        (batchSize: Int, kv: KVStore) => {
-          val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, inst.numExamples)
-          (iter, iter)
-        }
-      } else {
-        inst.dataset match {
-          case "mnist" => MnistIter.getIterator(Shape(datumShape), inst.dataDir)
-          case _ => throw new Exception("This image data collection only supports the"
-            + "synthetic benchmark iterator.  Use --benchmark to enable")
-        }
-      }
+      val (dataLoader, net) = dataLoaderAndModel(inst.dataset, inst.network, dataPath,
+        inst.numLayers, inst.numExamples, inst.benchmark)
 
       val devs =
         if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))

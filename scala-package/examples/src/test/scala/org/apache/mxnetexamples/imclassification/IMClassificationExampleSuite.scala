@@ -29,8 +29,8 @@ import scala.sys.process.Process
 /**
   * Integration test for MNIST example.
   */
-class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
-  private val logger = LoggerFactory.getLogger(classOf[MNISTExampleSuite])
+class IMClassificationExampleSuite extends FunSuite with BeforeAndAfterAll {
+  private val logger = LoggerFactory.getLogger(classOf[IMClassificationExampleSuite])
 
   test("Example CI: Test MNIST Training") {
 
@@ -47,9 +47,17 @@ class MNISTExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     var context = Context.cpu()
 
-    val output = TrainModel.test(modelDirPath)
+    val output = TrainModel.test("mlp", modelDirPath)
     Process("rm -rf " + modelDirPath) !
 
     assert(output >= 0.95f)
   }
+
+  for(model <- List("mlp", "lenet", "resnet")) {
+    test(s"Example CI: Test Image Classification Model ${model}") {
+      var context = Context.cpu()
+      val output = TrainModel.test(model, "", 10, 1, benchmark = true)
+    }
+  }
+
 }

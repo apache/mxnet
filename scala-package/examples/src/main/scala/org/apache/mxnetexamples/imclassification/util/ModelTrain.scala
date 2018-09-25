@@ -25,6 +25,24 @@ import org.slf4j.LoggerFactory
 object ModelTrain {
   private val logger = LoggerFactory.getLogger(classOf[ModelTrain])
 
+  /**
+    * Fits a model
+    * @param batchSize Number of images per training batch
+    * @param numExamples Total number of image examples
+    * @param devs List of device contexts to use
+    * @param network The model to train
+    * @param dataLoader Function to get data loaders for training and validation data
+    * @param kvStore KVStore to use
+    * @param numEpochs Number of times to train on each image
+    * @param modelPrefix Prefix to model identification
+    * @param loadEpoch Loads a saved checkpoint at this epoch when set
+    * @param lr The learning rate
+    * @param lrFactor Learning rate factor (see FactorScheduler)
+    * @param lrFactorEpoch Learning rate factor epoch (see FactorScheduler)
+    * @param clipGradient Maximum gradient during optimization
+    * @param monitorSize (See Monitor)
+    * @return Final accuracy
+    */
   // scalastyle:off parameterNum
   def fit(batchSize: Int, numExamples: Int, devs: Array[Context],
           network: Symbol, dataLoader: (Int, KVStore) => (DataIter, DataIter),
@@ -70,7 +88,7 @@ object ModelTrain {
     val lrScheduler =
       if (lrFactor < 1f) {
         new FactorScheduler(step = Math.max((epochSize * lrFactorEpoch).toInt, 1),
-          factor = lrFactor)
+                            factor = lrFactor)
       } else {
         null
       }
@@ -85,24 +103,24 @@ object ModelTrain {
     }
 
     val model = new FeedForward(ctx = devs,
-      symbol = network,
-      numEpoch = numEpochs,
-      optimizer = optimizer,
-      initializer = new Xavier(factorType = "in", magnitude = 2.34f),
-      argParams = argParams,
-      auxParams = auxParams,
-      beginEpoch = beginEpoch,
-      epochSize = epochSize)
+                                symbol = network,
+                                numEpoch = numEpochs,
+                                optimizer = optimizer,
+                                initializer = new Xavier(factorType = "in", magnitude = 2.34f),
+                                argParams = argParams,
+                                auxParams = auxParams,
+                                beginEpoch = beginEpoch,
+                                epochSize = epochSize)
     if (monitorSize > 0) {
       model.setMonitor(new Monitor(monitorSize))
     }
     val acc = new Accuracy()
     model.fit(trainData = train,
-      evalData = validation,
-      evalMetric = acc,
-      kvStore = kv,
-      batchEndCallback = new Speedometer(batchSize, 50),
-      epochEndCallback = checkpoint)
+              evalData = validation,
+              evalMetric = acc,
+              kvStore = kv,
+              batchEndCallback = new Speedometer(batchSize, 50),
+              epochEndCallback = checkpoint)
     if (kv != null) {
       kv.dispose()
     }

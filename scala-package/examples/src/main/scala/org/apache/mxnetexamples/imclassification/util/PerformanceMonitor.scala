@@ -34,10 +34,16 @@ class PerformanceMonitor(filename: String) extends Runnable {
   outputfile.write(csvSchema.mkString(",") + "\n")
 
 
+  /**
+    * Cleans up after thread has stopped monitoring
+    */
   def finish(): Unit = {
     outputfile.close()
   }
 
+  /**
+    * Runs a periodic measurement recording lines of performance and writing (buffered) to an output CSV file
+    */
   override def run(): Unit = {
     val time = new Date().getTime
     val processCpuLoad = bean.getProcessCpuLoad
