@@ -303,7 +303,7 @@ inline void ImageDetRecordIOParser<DType>::Init(
         dmlc::InputSplit::Blob blob;
         while (reader.NextRecord(&blob)) {
           rec.Load(blob.dptr, blob.size);
-          if (rec.label != NULL) {
+          if (rec.label != nullptr) {
             if (param_.label_width > 0) {
               CHECK_EQ(param_.label_width, rec.num_label)
                 << "rec file provide " << rec.num_label << "-dimensional label "
@@ -416,7 +416,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       std::vector<float> label_buf;
       if (this->label_map_ != nullptr) {
         label_buf = label_map_->FindCopy(rec.image_index());
-      } else if (rec.label != NULL) {
+      } else if (rec.label != nullptr) {
         if (param_.label_width > 0) {
           CHECK_EQ(param_.label_width, rec.num_label)
             << "rec file provide " << rec.num_label << "-dimensional label "

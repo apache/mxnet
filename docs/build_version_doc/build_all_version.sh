@@ -156,6 +156,7 @@ for key in ${!build_arr[@]}; do
     cp ../../settings.ini $tag/docs/
     cp ../../conf.py $tag/docs/
     cp ../../Doxyfile $tag/docs/
+    cp -a ../../_static $tag/docs/
 
     echo "Building $tag..."
     cd $tag/docs

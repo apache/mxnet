@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 require(mxnet)
 
 source("get_data.R")
@@ -79,7 +96,7 @@ get_unet <- function() {
   net <- convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     4, up_pool = TRUE)
   
-  net <- mx.symbol.Concat(c(pool2, net), num.args = 2)
+  net <- mx.symbol.concat(c(pool2, net), num.args = 2)
   net <- mx.symbol.Dropout(net)
   net <- convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     4)
@@ -87,7 +104,7 @@ get_unet <- function() {
     4, up_pool = TRUE)
   convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     4)
-  net <- mx.symbol.Concat(c(pool1, net), num.args = 2)
+  net <- mx.symbol.concat(c(pool1, net), num.args = 2)
   net <- mx.symbol.Dropout(net)
   net <- convolution_module(net, kernel_size, pad_size, filter_count = filter_count * 
     2)

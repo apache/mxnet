@@ -18,6 +18,7 @@
 from __future__ import print_function
 import sys
 import os
+import tempfile
 import time
 import multiprocessing as mp
 import unittest
@@ -201,6 +202,36 @@ def test_sync_batchnorm():
     for i in range(10):
         _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
+
+@with_seed()
+def test_symbol_block_fp16():
+    # Test case to verify if initializing the SymbolBlock from a model with params
+    # other than fp32 param dtype.
+
+    # 1. Load a resnet model, cast it to fp16 and export
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'resnet34_fp16')
+    ctx = mx.gpu(0)
+
+    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    net_fp32.cast('float16')
+    net_fp32.hybridize()
+    data = mx.nd.zeros((1,3,224,224), dtype='float16', ctx=ctx)
+    net_fp32.forward(data)
+    net_fp32.export(tmpfile, 0)
+
+    # 2. Load the saved model and verify if all the params are loaded correctly.
+    # and choose one of the param to verify the type if fp16.
+    sm = mx.sym.load(tmpfile + '-symbol.json')
+    inputs = mx.sym.var('data', dtype='float16')
+    net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
+    net_fp16.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
+    # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
+    # expected to be of dtype casted, fp16.
+    for param_name in net_fp16.params.keys():
+        if 'conv' in param_name and 'weight' in param_name:
+            break
+    assert np.dtype(net_fp16.params[param_name].dtype) == np.dtype(np.float16)
 
 if __name__ == '__main__':
     import nose

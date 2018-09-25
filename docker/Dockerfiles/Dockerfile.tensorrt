@@ -1,5 +1,4 @@
-#! /bin/sh
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,31 +15,31 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet with TensorRT Integration.
 
+FROM nvidia/cuda:9.0-cudnn7-devel
 
-echo "Running the check_regression.sh script"
-cat blc_output.txt | uniq | grep -Eo "(http|https).* " | sort| uniq > unique_current_urls.txt
+WORKDIR /work/deps
 
-cat url_list.txt unique_current_urls.txt | sort | uniq > new_url_list.txt
-regression=false
-while IFS= read -r line
-do
-	err=$(curl -Is $line | head -n 1 | grep 404)
-	if [ "$err" ]; then
-		if [ "$regression" = false ] ; then
-			echo "FAIL: REGRESSION"
-			regression=true
-		fi
-		echo "BROKEN $line $err"
-	fi
-	unset err
-done < new_url_list.txt
-mv new_url_list.txt url_list.txt
-rm -rf unique_current_urls.txt
-rm -rf blc_output.txt
-if [ $regression ]; then
-	echo "FAIL: Found Regression in broken link checker"
-	exit 1
-else
-	echo "SUCCESS: No Regression found"
-fi
+# Ubuntu-core
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends \
+    libopenblas-base \
+    python3 \
+    python3-pip \
+    wget
+
+RUN ln -s $(which python3) /usr/bin/python && \
+    ln -s $(which pip3) /usr/bin/pip
+
+RUN echo "Installing TensorRT." && \
+  wget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/nvinfer-runtime-trt-repo-ubuntu1604-4.0.1-ga-cuda9.0_1-1_amd64.deb && \
+  dpkg -i tensorrt.deb && \
+  apt-get update && \
+  apt-get install -y --allow-downgrades libnvinfer-dev && \
+  rm tensorrt.deb
+
+RUN pip install mxnet-tensorrt-cu90
+
+CMD python

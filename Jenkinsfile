@@ -33,6 +33,9 @@ mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-c
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
+mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/lenet, build/cpp-package/example/alexnet, build/cpp-package/example/googlenet, build/cpp-package/example/lenet_with_mxdataiter, build/cpp-package/example/resnet, build/cpp-package/example/mlp, build/cpp-package/example/mlp_cpu, build/cpp-package/example/mlp_gpu, build/cpp-package/example/test_score, build/cpp-package/example/test_optimizer'
+mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/mlp_cpu'
+
 // timeout in minutes
 max_time = 120
 
@@ -55,6 +58,13 @@ def python2_ut_cython(docker_container_name) {
 def python3_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu', false)
+  }
+}
+
+// Python 3
+def python3_ut_asan(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
   }
 }
 
@@ -128,7 +138,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_lib)
+            utils.pack_lib('centos7_cpu', mx_lib, true)
           }
         }
       }
@@ -139,7 +149,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn', mx_lib)
+            utils.pack_lib('centos7_mkldnn', mx_lib, true)
           }
         }
       }
@@ -150,7 +160,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_gpu', 'build_centos7_gpu', false)
-            utils.pack_lib('centos7_gpu', mx_lib)
+            utils.pack_lib('centos7_gpu', mx_lib, true)
           }
         }
       }
@@ -161,7 +171,18 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_dist_lib_cython)
+            utils.pack_lib('cpu', mx_dist_lib_cython, true)
+          }
+        }
+      }
+    },
+    'CPU: ASAN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-asan') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
+            utils.pack_lib('cpu_asan', mx_lib_cpp_examples_cpu)
           }
         }
       }
@@ -172,7 +193,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
-            utils.pack_lib('cpu_debug', mx_cmake_lib_debug)
+            utils.pack_lib('cpu_debug', mx_cmake_lib_debug, true)
           }
         }
       }
@@ -213,7 +234,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
+            utils.pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib, true)
           }
         }
       }
@@ -224,7 +245,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib)
+            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib, true)
           }
         }
       }
@@ -235,7 +256,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            utils.pack_lib('mkldnn_cpu', mx_mkldnn_lib, true)
           }
         }
       }
@@ -246,7 +267,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
-            utils.pack_lib('mkldnn_gpu', mx_mkldnn_lib)
+            utils.pack_lib('mkldnn_gpu', mx_mkldnn_lib, true)
           }
         }
       }
@@ -257,7 +278,7 @@ core_logic: {
            timeout(time: max_time, unit: 'MINUTES') {
              utils.init_git()
              utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn_nocudnn', false)
-             utils.pack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
+             utils.pack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib, true)
            }
          }
        }
@@ -268,17 +289,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda91_cudnn7', false)
-            utils.pack_lib('gpu', mx_dist_lib)
-            stash includes: 'build/cpp-package/example/lenet', name: 'cpp_lenet'
-            stash includes: 'build/cpp-package/example/alexnet', name: 'cpp_alexnet'
-            stash includes: 'build/cpp-package/example/googlenet', name: 'cpp_googlenet'
-            stash includes: 'build/cpp-package/example/lenet_with_mxdataiter', name: 'cpp_lenet_with_mxdataiter'
-            stash includes: 'build/cpp-package/example/resnet', name: 'cpp_resnet'
-            stash includes: 'build/cpp-package/example/mlp', name: 'cpp_mlp'
-            stash includes: 'build/cpp-package/example/mlp_cpu', name: 'cpp_mlp_cpu'
-            stash includes: 'build/cpp-package/example/mlp_gpu', name: 'cpp_mlp_gpu'
-            stash includes: 'build/cpp-package/example/test_score', name: 'cpp_test_score'
-            stash includes: 'build/cpp-package/example/test_optimizer', name: 'cpp_test_optimizer'
+            utils.pack_lib('gpu', mx_lib_cpp_examples, true)
           }
         }
       }
@@ -310,7 +321,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake_mkldnn', false)
-            utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
+            utils.pack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
           }
         }
       }
@@ -321,7 +332,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake', false)
-            utils.pack_lib('cmake_gpu', mx_cmake_lib_cython)
+            utils.pack_lib('cmake_gpu', mx_cmake_lib_cython, true)
           }
         }
       }
@@ -332,7 +343,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
-            utils.pack_lib('tensorrt', mx_tensorrt_lib)
+            utils.pack_lib('tensorrt', mx_tensorrt_lib, true)
           }
         }
       }
@@ -445,8 +456,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python2-cpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_dist_lib_cython)
+            utils.unpack_and_init('cpu', mx_lib_cython, true)
             python2_ut_cython('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -461,8 +471,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -472,12 +481,19 @@ core_logic: {
         }
       }
     },
+    'CPU ASAN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu-asan') {
+            utils.unpack_and_init('cpu_asan', mx_lib_cpp_examples_cpu)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
+        }
+      }
+    },
     'Python3: CPU debug': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-debug') {
           try {
-            utils.init_git()
-            utils.unpack_lib('cpu_debug', mx_cmake_lib_debug)
+            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug, true)
             python3_ut('ubuntu_cpu')
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
@@ -490,8 +506,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python2-gpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
+            utils.unpack_and_init('gpu', mx_lib, true)
             python2_gpu_ut('ubuntu_gpu')
             utils.publish_test_coverage()
           } finally {
@@ -504,8 +519,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-gpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('cmake_gpu', mx_cmake_lib_cython)
+            utils.unpack_and_init('cmake_gpu', mx_cmake_lib_cython, true)
             python3_gpu_ut_cython('ubuntu_gpu')
             utils.publish_test_coverage()
           } finally {
@@ -519,8 +533,7 @@ core_logic: {
         ws('workspace/ut-python2-quantize-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.init_git()
-              utils.unpack_lib('gpu', mx_lib)
+              utils.unpack_and_init('gpu', mx_lib, true)
               utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_python2_quantization_gpu', true)
               utils.publish_test_coverage()
             } finally {
@@ -535,8 +548,7 @@ core_logic: {
         ws('workspace/ut-python3-quantize-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.init_git()
-              utils.unpack_lib('gpu', mx_lib)
+              utils.unpack_and_init('gpu', mx_lib, true)
               utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_python3_quantization_gpu', true)
               utils.publish_test_coverage()
             } finally {
@@ -550,8 +562,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python2-mkldnn-cpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
             python2_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -566,8 +577,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python2-mkldnn-gpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib, true)
             python2_gpu_ut('ubuntu_gpu')
             utils.publish_test_coverage()
           } finally {
@@ -580,8 +590,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-cpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -595,8 +604,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
-            utils.init_git()
-            utils.unpack_lib('mkldnn_gpu', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib, true)
             python3_gpu_ut('ubuntu_gpu')
             utils.publish_test_coverage()
           } finally {
@@ -609,8 +617,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
-            utils.init_git()
-            utils.unpack_lib('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_gpu_nocudnn', mx_mkldnn_lib, true)
             python3_gpu_ut_nocudnn('ubuntu_gpu')
             utils.publish_test_coverage()
           } finally {
@@ -624,8 +631,7 @@ core_logic: {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.init_git()
-              utils.unpack_lib('centos7_cpu', mx_lib)
+              utils.unpack_and_init('centos7_cpu', mx_lib, true)
               utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
               utils.publish_test_coverage()
             } finally {
@@ -641,8 +647,7 @@ core_logic: {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.init_git()
-              utils.unpack_lib('centos7_gpu', mx_lib)
+              utils.unpack_and_init('centos7_gpu', mx_lib, true)
               utils.docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
               utils.publish_test_coverage()
             } finally {
@@ -657,8 +662,7 @@ core_logic: {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.init_git()
-              utils.unpack_lib('tensorrt', mx_tensorrt_lib)
+              utils.unpack_and_init('tensorrt', mx_tensorrt_lib, true)
               utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
               utils.publish_test_coverage()
             } finally {
@@ -672,8 +676,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_dist_lib)
+            utils.unpack_and_init('cpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
             utils.publish_test_coverage()
           }
@@ -684,8 +687,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-clojure-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_dist_lib)
+            utils.unpack_and_init('cpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
             utils.publish_test_coverage()
           }
@@ -696,8 +698,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-perl-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
             utils.publish_test_coverage()
           }
@@ -708,8 +709,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
+            utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
             utils.publish_test_coverage()
           }
@@ -720,8 +720,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cmake_gpu', mx_cmake_lib)
+            utils.unpack_and_init('cmake_gpu', mx_cmake_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
             utils.publish_test_coverage()
           }
@@ -732,8 +731,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-cpp-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib)
+            utils.unpack_and_init('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
             utils.publish_test_coverage()
           }
@@ -744,8 +742,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-r-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
             utils.publish_test_coverage()
           }
@@ -756,8 +753,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
+            utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
           }
@@ -847,8 +843,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-onnx-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx', false)
             utils.publish_test_coverage()
           }
@@ -859,9 +854,19 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
+            utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_python', true)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    },
+    'cpp-package GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/it-cpp-package') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('gpu', mx_lib_cpp_examples, true)
+            utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
             utils.publish_test_coverage()
           }
         }
@@ -880,34 +885,11 @@ core_logic: {
     //     }
     //   }
     // },
-    'cpp-package GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/it-cpp-package') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
-            unstash 'cpp_lenet'
-            unstash 'cpp_alexnet'
-            unstash 'cpp_googlenet'
-            unstash 'cpp_lenet_with_mxdataiter'
-            unstash 'cpp_resnet'
-            unstash 'cpp_mlp'
-            unstash 'cpp_mlp_cpu'
-            unstash 'cpp_mlp_gpu'
-            unstash 'cpp_test_score'
-            unstash 'cpp_test_optimizer'
-            utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_cpp_package', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
     'dist-kvstore tests GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_lib)
+            utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_dist_kvstore', true)
             utils.publish_test_coverage()
           }
@@ -922,8 +904,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
             utils.publish_test_coverage()
           }
@@ -934,8 +915,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.unpack_lib('gpu', mx_dist_lib)
+            utils.unpack_and_init('gpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_scala', true)
             utils.publish_test_coverage()
           }

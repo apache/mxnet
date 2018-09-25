@@ -246,6 +246,8 @@ def container_run(platform: str,
     docker_cmd_list = [
         get_docker_binary(nvidia_runtime),
         'run',
+        "--cap-add",
+        "SYS_PTRACE", # Required by ASAN
         '--rm',
         '--shm-size={}'.format(shared_memory_size),
         # mount mxnet root
@@ -287,6 +289,7 @@ def container_run(platform: str,
             command=command,
             shm_size=shared_memory_size,
             user='{}:{}'.format(os.getuid(), os.getgid()),
+            cap_add='SYS_PTRACE',
             volumes={
                 mx_root:
                     {'bind': '/work/mxnet', 'mode': 'rw'},

@@ -60,7 +60,7 @@ class LibraryInitializer {
         // Make children single threaded since they are typically workers
         dmlc::SetEnv("MXNET_CPU_WORKER_NTHREADS", 1);
         dmlc::SetEnv("OMP_NUM_THREADS", 1);
-#if MXNET_USE_OPENCV
+#if MXNET_USE_OPENCV && !__APPLE__
         cv::setNumThreads(0);  // disable opencv threading
 #endif  // MXNET_USE_OPENCV
         engine::OpenMP::Get()->set_enabled(false);

@@ -27,12 +27,12 @@
 #include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
+#include <mxnet/random_generator.h>
 #include <mxnet/resource.h>
 #include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
 #include "./common/lazy_alloc_array.h"
-#include "./common/random_generator.h"
 #include "./common/utils.h"
 
 namespace mxnet {

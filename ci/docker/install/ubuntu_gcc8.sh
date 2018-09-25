@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-fnames <- list.files("R-package/vignettes/", pattern="*.Rmd")
-sapply(fnames, function(x){
-	knitr::purl(paste0("R-package/vignettes/", x))
-	})
+sudo add-apt-repository ppa:jonathonf/gcc-8.0
+sudo add-apt-repository ppa:jonathonf/gcc-7.3
+sudo apt-get update
+sudo apt-get install -y gcc-8 g++-8

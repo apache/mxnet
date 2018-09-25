@@ -54,8 +54,7 @@ core_logic: {
   stage('MBCC Inference'){
     node(NODE_LINUX_CPU) {
       ws('workspace/modelBackwardsCompat') {
-        utils.init_git()
-        utils.unpack_lib('cpu', mx_lib)
+        utils.unpack_and_init('cpu', mx_lib)
         // Perform inference on the latest version of MXNet
         utils.docker_run('ubuntu_nightly_cpu', 'nightly_model_backwards_compat_test', false)
       }

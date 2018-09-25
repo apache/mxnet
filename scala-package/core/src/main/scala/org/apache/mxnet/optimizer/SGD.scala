@@ -73,7 +73,8 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
       weight += mom
       adder.dispose()
     } else {
-      require(momentum == 0f)
+      require(momentum == 0f,
+        s"momentum should be zero when state is provided.")
       // adder = -lr * (resdGrad + this.wd * weight)
       // we write in this way to get rid of memory leak
       val adder = this.wd * weight
