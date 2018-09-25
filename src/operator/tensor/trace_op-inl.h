@@ -64,14 +64,14 @@ struct TraceParam : public dmlc::Parameter<TraceParam> {
 inline TShape TraceShapeImpl(const TShape& ishape, const int k,
                             const int32_t axis1, const int32_t axis2) {
   int32_t n_dim;
-  if(ishape.ndim() > 2) //for +3D we remove the two axis along the diagonal
+  if(ishape.ndim() > 2)  // for +3D we remove the two axis along the diagonal
     n_dim = static_cast<int32_t>(ishape.ndim()) - 2;
-  else //if its 2D then the output will be a single result, so 1-dim 1 element output
+  else  // if its 2D then the output will be a single result, so 1-dim 1 element output
     n_dim = 1;
 
   TShape oshape(n_dim);
 
-  //add all axes except the two specified along the diagonal
+  // add all axes except the two specified along the diagonal
   uint32_t idx = 0;
   for (int32_t i = 0; i < ishape.ndim(); ++i) {
     if (i != axis1 && i != axis2) {
@@ -152,11 +152,10 @@ void TraceOpProcess(const TBlob& in_data,
   // input : (leading + i, body + i, trailing)
   uint32_t x1 = CheckAxis(param.axis1, ishape.ndim());
   uint32_t x2 = CheckAxis(param.axis2, ishape.ndim());
-  
+
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
 
   uint32_t idim = ishape.ndim();
-  
   uint32_t minx = x1, maxx = x2;
   if (minx > maxx) {
     std::swap(minx, maxx);
@@ -169,11 +168,11 @@ void TraceOpProcess(const TBlob& in_data,
   // (After this the input will have no more than
   // three axes, hence improving the ravel and
   // unravel efficiency)
-  
+
   index_t oleading = 1,
     obody = 1,
     otrailing = 1;
-  
+
   for (uint32_t i = 0; i < minx; ++i) {
     oleading *= ishape[i];
   }
@@ -183,20 +182,20 @@ void TraceOpProcess(const TBlob& in_data,
   for (uint32_t i = maxx + 1; i < idim; ++i) {
     otrailing *= ishape[i];
   }
-  
+
   index_t ileading = oleading,
     ibody = obody * ishape[minx],
     itrailing = otrailing * ishape[maxx];
-  
+
   index_t stride1 = itrailing * obody,
     stride2 = otrailing;
   // stride1 + stride2 is the stride for
   // iterating over the diagonal in question
-  
+
   if (x1 == maxx) {
     std::swap(stride1, stride2);
   }
-  
+
   // the extra index offset introduced by k
   index_t offset;
   int k = param.k;
@@ -221,25 +220,25 @@ void TraceOpProcess(const TBlob& in_data,
   if (diag_size < 0) {
     diag_size = 0;
   }
-  
+
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
-    std::memset(out_data.dptr<DType>(),0,sizeof(DType)*out_data.Size());
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-          if (ileading == 1) {
-            Kernel<trace<2, req_type, back>, xpu>::Launch(s, dsize*diag_size, out_data.dptr<DType>(),
-                                                          in_data.dptr<DType>(), Shape2(obody, otrailing),
-                                                          Shape2(ibody, itrailing),stride1 + stride2, 
-                                                          offset, diag_size);
-          } else {
-            Kernel<trace<3, req_type, back>, xpu>::Launch(s, dsize*diag_size, out_data.dptr<DType>(),
-                                                        in_data.dptr<DType>(), Shape3(oleading, obody, otrailing),
-                                                        Shape3(ileading, ibody, itrailing),stride1 + stride2, 
-                                                        offset, diag_size);
-          }
-        });
+    std::memset(out_data.dptr<DType>(), 0, sizeof(DType)*out_data.Size());
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      if (ileading == 1) {
+        Kernel<trace<2, req_type, back>, xpu>::Launch(s, dsize*diag_size,
+          out_data.dptr<DType>(), in_data.dptr<DType>(),
+          Shape2(obody, otrailing), Shape2(ibody, itrailing),
+          stride1 + stride2, offset, diag_size);
+      } else {
+        Kernel<trace<3, req_type, back>, xpu>::Launch(s, dsize*diag_size,
+          out_data.dptr<DType>(), in_data.dptr<DType>(),
+          Shape3(oleading, obody, otrailing), Shape3(ileading, ibody, itrailing),
+          stride1 + stride2, offset, diag_size);
+      }
     });
+  });
 }
- 
+
 template<typename xpu>
 void TraceOpForward(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
