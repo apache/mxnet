@@ -581,8 +581,8 @@ class BaseModule(object):
                                  score_end_callback=eval_end_callback,
                                  batch_end_callback=eval_batch_end_callback, epoch=epoch)
                 #TODO: pull this into default
-                for name, val in res:
-                    self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
+                #for name, val in res:
+                #    self.logger.info('Epoch[%d] Validation-%s=%f', epoch, name, val)
 
             # end of 1 epoch, reset the data-iter for another epoch
             train_data.reset()
@@ -625,7 +625,7 @@ class BaseModule(object):
     ################################################################################
     # Parameters of a module
     ################################################################################
-    def get_params(self):
+    def get_params(self, copy_to_cpu=True, context=None):
         """Gets parameters, those are potentially copies of the the actual parameters used
         to do computation on the device.
 

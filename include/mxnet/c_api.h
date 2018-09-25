@@ -2084,6 +2084,44 @@ MXNET_DLL int MXKVStorePullEx(KVStoreHandle handle,
                               int priority);
 
 /*!
+ * \brief broadcast a list of (key, value) pairs from root_rank to all other nodes. Note:
+ *        Currently only kvstore with type 'dist_sync_allreduce' support this api.
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys.
+ * \param vals on node with root rank, the list of (key, value) will be broadcast.
+ *             on other nodes, the list of (key, value) will be the place to store the result.
+ * \param root_rank the rank where the values will be broadcast.
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcast(KVStoreHandle handle,
+                                 mx_uint num,
+                                 const int *keys,
+                                 NDArrayHandle *vals,
+                                 int root_rank,
+                                 int priority);
+
+/*!
+ * \brief broadcast a list of (key, value) pairs from root_rank to all other nodes. Note:
+ *        Currently only kvstore with type 'dist_sync_allreduce' support this api.
+ * \param handle handle to the kvstore
+ * \param num the number of key-value pairs
+ * \param keys the list of keys in string.
+ * \param vals on node with root rank, the list of (key, value) will be broadcast.
+ *             on other nodes, the list of (key, value) will be the place to store the result.
+ * \param root_rank the rank where the values will be broadcast.
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                                   mx_uint num,
+                                   const char **keys,
+                                   NDArrayHandle *vals,
+                                   int root_rank,
+                                   int priority);
+
+/*!
  * \brief pull a list of (key, value) pairs from the kvstore, where each key is an integer.
  *        The NDArray pulled back will be in row_sparse storage with only the specified
  *        row_ids present based row_ids (others rows are zeros).
@@ -2189,7 +2227,17 @@ MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle,
                                int *ret);
 
 /**
- * \brief return The number of nodes in this group, which is
+ * \brief return The local rank of this node in its group, which is in [0, GroupSize).
+ *
+ * \param handle handle to the KVStore
+ * \param ret the node rank
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreGetLocalRank(KVStoreHandle handle,
+                                    int *ret);
+
+/**
+ * \brief return The number of machines in group, which is
  * - number of workers if if `IsWorkerNode() == true`,
  * - number of servers if if `IsServerNode() == true`,
  * - 1 if `IsSchedulerNode() == true`,
@@ -2198,6 +2246,18 @@ MXNET_DLL int MXKVStoreGetRank(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXKVStoreGetGroupSize(KVStoreHandle handle,
+                                    int *ret);
+
+/**
+ * \brief return the number of machines in this local group (node), which is
+ * - number of workers if if `IsWorkerNode() == true`,
+ * - number of servers if if `IsServerNode() == true`,
+ * - 1 if `IsSchedulerNode() == true`,
+ * \param handle handle to the KVStore
+ * \param ret the group size
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreGetLocalSize(KVStoreHandle handle,
                                     int *ret);
 
 /**

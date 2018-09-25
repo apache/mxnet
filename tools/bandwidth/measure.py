@@ -51,7 +51,7 @@ def parse_args():
                         help='input images shape')
     parser.add_argument('--num-classes', type=int, default=1000,
                         help='number of classes')
-    parser.add_argument('--optimizer', type=str, default='None',
+    parser.add_argument('--optimizer', type=str, default='sgd',
                         help='the optimizer set to kvstore. None means no optimizer')
     parser.add_argument('--gc-type', type=str, default='none',
                         help='type of gradient compression')
@@ -76,8 +76,8 @@ def error(gpu_res, cpu_res):
 def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
         num_batches, test_results, gc_type, **kwargs):
     # create kvstore and optimizer
-    devs = [mx.gpu(int(i)) for i in gpus.split(',')]
     kv = mx.kv.create(kv_store)
+    devs = [mx.gpu(kv.local_rank)] if 'horovod' in kv.type else [mx.gpu(int(i)) for i in gpus.split(',')]
     if gc_type != 'none':
         kv.set_gradient_compression({'type': gc_type})
     if optimizer is None or optimizer == 'None':
@@ -111,11 +111,20 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
     res = []
     for b in range(0, num_batches+1):
         tic = time.time()
-        for i,g in enumerate(grads):
-            kv.push(i, g, i)
+        if 'horovod' not in kv.type:
+            for i,g in enumerate(grads):
+                kv.push(i, g, i)
 
-        for i,w in enumerate(weights):
-            kv.pull(i, w, i)
+            for i,w in enumerate(weights):
+                kv.pull(i, w, i)
+        else:
+            for i,g in enumerate(grads):
+                kv.pushpull(i, g, g, i)
+            for i, pair in enumerate(zip(weights, grads)):
+                arg_list, grad_list = pair
+                for k, p in enumerate(zip(arg_list, grad_list)):
+                    w, g = p
+                    updater(i*kv.num_workers+k, g, w)
         for ws in weights:
             for w in ws:
                 w.wait_to_read()

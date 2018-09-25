@@ -104,11 +104,11 @@ def _create_kvstore(kvstore, num_device, arg_params):
                 max_size = max(np.prod(param.shape) for param in
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
-                    update_on_kvstore = False
+                   update_on_kvstore = False
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
-    if kv is None:
+    if (kv is None):
         update_on_kvstore = False
 
     return (kv, update_on_kvstore)

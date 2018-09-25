@@ -242,7 +242,7 @@ class Module(BaseModule):
         assert self.binded
         return self._exec_group.get_output_shapes()
 
-    def get_params(self):
+    def get_params(self, copy_to_cpu=True, context=None):
         """Gets current parameters.
 
         Returns
@@ -252,8 +252,8 @@ class Module(BaseModule):
         """
         assert self.binded and self.params_initialized
 
-        if self._params_dirty:
-            self._sync_params_from_devices()
+        if not copy_to_cpu or self._params_dirty:
+            self._sync_params_from_devices(copy_to_cpu, context)
         return (self._arg_params, self._aux_params)
 
     def init_params(self, initializer=Uniform(0.01), arg_params=None, aux_params=None,
@@ -772,7 +772,7 @@ class Module(BaseModule):
         """
         self._exec_group.update_metric(eval_metric, labels, pre_sliced)
 
-    def _sync_params_from_devices(self):
+    def _sync_params_from_devices(self, copy_to_cpu, context):
         """Synchronizes parameters from devices to CPU. This function should be called after
         calling `update` that updates the parameters on the devices, before one can read the
         latest parameters from ``self._arg_params`` and ``self._aux_params``.
@@ -780,7 +780,7 @@ class Module(BaseModule):
         For row_sparse parameters on devices, ther are pulled from KVStore with all row ids.
 
         """
-        self._exec_group.get_params(self._arg_params, self._aux_params)
+        self._exec_group.get_params(self._arg_params, self._aux_params, copy_to_cpu, context)
         if self._kvstore and self._update_on_kvstore:
             for param_name, param_val in sorted(self._arg_params.items()):
                 if param_val.stype == 'row_sparse':

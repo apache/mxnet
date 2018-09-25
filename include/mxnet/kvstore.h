@@ -199,6 +199,36 @@ class KVStore {
                     int priority = 0, bool ignore_sparse = true) = 0;
 
   /*!
+   * \brief broadcast a list of key-value pairs from root_rank node to all other nodes
+   * \param keys the list of keys
+   * \param values the list of buffers to be broadcast in root_rank node, for other nodes
+   *        it's the list of bufferes to store the result
+   * \param root_rank indicates the data of which node will be broadcasted.
+   * \param priority Priority of the action
+   */
+  virtual void Broadcast(const std::vector<int> &keys,
+                         const std::vector<NDArray*> &values,
+                         int root_rank,
+                         int priority = 0) {
+      LOG(FATAL) << "The api is not supported in kvstore with type " << type_;
+    }
+
+  /*!
+   * \brief broadcast a list of key-value pairs from root_rank node to all other nodes
+   * \param keys the list of keys
+   * \param values the list of buffers to be broadcast in root_rank node, for other nodes
+   *        it's the list of bufferes to store the result
+   * \param root_rank indicates the data of which node will be broadcasted.
+   * \param priority Priority of the action
+   */
+  virtual void Broadcast(const std::vector<std::string> &str_keys,
+                         const std::vector<NDArray*> &values,
+                         int root_rank,
+                         int priority = 0) {
+      LOG(FATAL) << "The api is not supported in kvstore with type " << type_;
+    }
+
+  /*!
    * \brief pull a list of key-value pairs from the store.
    *        The NDArray pulled back will be in row_sparse storage with only the
    *        specified row_ids present (others rows are zeros).
@@ -326,7 +356,7 @@ class KVStore {
   }
 
   /*!
-   * \return The rank of this node in its group, which is in [0,
+   * \return The global rank of this node in its group, which is in [0,
    * GroupSize).
    *
    * Always return 0 when type == "local"
@@ -336,9 +366,26 @@ class KVStore {
   }
 
   /*!
-   * \return The number of worker nodes
+   * \return The local rank of this node in its group, which is in [0,
+   * GroupSize).
+   *
+   * Always return 0 when type == "local"
+   */
+  virtual int get_local_rank() const {
+    return 0;
+  }
+
+  /*!
+   * \return The global number of worker nodes
    */
   virtual int get_group_size() const {
+    return 1;
+  }
+
+  /*!
+   * \return The global number of worker nodes
+   */
+  virtual int get_local_size() const {
     return 1;
   }
 

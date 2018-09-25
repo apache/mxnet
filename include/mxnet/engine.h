@@ -283,6 +283,7 @@ class MXNET_API Engine {
     ret.param_ = param;
     return ret;
   }
+
   // For each var vector, sort it and remove the duplicated vars.
   // Also remove vars from read_vars if it also appears in write_vars
   inline void DeduplicateVarHandle(std::vector<engine::VarHandle> *read_vars,

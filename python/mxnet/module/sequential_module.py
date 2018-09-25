@@ -149,7 +149,7 @@ class SequentialModule(BaseModule):
         assert self.binded
         return self._modules[-1].output_shapes
 
-    def get_params(self):
+    def get_params(self, copy_to_cpu=True, context=None):
         """Gets current parameters.
 
         Returns

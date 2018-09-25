@@ -956,6 +956,40 @@ int MXKVStorePullWithSparseEx(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStoreBroadcast(KVStoreHandle handle,
+                       mx_uint num,
+                       const int *keys,
+                       NDArrayHandle *vals,
+                       int root_rank,
+                       int priority) {
+  API_BEGIN();
+  std::vector<int> v_keys(num);
+  std::vector<NDArray*> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_keys, v_vals, root_rank, priority);
+  API_END();
+}
+
+int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                         mx_uint num,
+                         const char **keys,
+                         NDArrayHandle *vals,
+                         int root_rank,
+                         int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_keys(num);
+  std::vector<NDArray*> v_vals(num);
+  for (mx_uint i = 0; i < num; ++i) {
+    v_keys[i] = keys[i];
+    v_vals[i] = static_cast<NDArray*>(vals[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_keys, v_vals, root_rank, priority);
+  API_END();
+}
+
 int MXKVStorePullRowSparse(KVStoreHandle handle,
                            mx_uint num,
                            const int* keys,
@@ -1045,9 +1079,21 @@ int MXKVStoreGetRank(KVStoreHandle handle, int *rank) {
   API_END();
 }
 
+int MXKVStoreGetLocalRank(KVStoreHandle handle, int *rank) {
+  API_BEGIN();
+  *rank = static_cast<KVStore*>(handle)->get_local_rank();
+  API_END();
+}
+
 int MXKVStoreGetGroupSize(KVStoreHandle handle, int *size) {
   API_BEGIN();
   *size = static_cast<KVStore*>(handle)->get_group_size();
+  API_END();
+}
+
+int MXKVStoreGetLocalSize(KVStoreHandle handle, int *size) {
+  API_BEGIN();
+  *size = static_cast<KVStore*>(handle)->get_local_size();
   API_END();
 }
 
