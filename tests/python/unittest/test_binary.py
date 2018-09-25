@@ -1,3 +1,6 @@
+from functools import reduce
+from operator import mul
+
 import mxnet as mx
 import numpy as np
 from mxnet import autograd
@@ -16,14 +19,19 @@ def forward(x, *block_sequence):
     return x.grad.asnumpy(), hidden.asnumpy()
 
 
+# input_shape,test_conv,layer,args,kwargs
+TEST_PARAMS = [
+    ((1, 2, 5, 5), True, nn.QConv2D, [16], {"kernel_size": 3, "strides": 1, "padding": 1, "in_channels": 0}),
+    ((1, 2, 4, 4), True, nn.QConv2D, [16], {"kernel_size": 2, "strides": 2, "padding": 0, "in_channels": 0}),
+    ((1, 2, 25), False, nn.QDense, [16], {})
+]
+
+
 @pytest.mark.parametrize("threshold", [0.1, 0.5, 1.0])
 @pytest.mark.parametrize("bits_a", [1])
 @pytest.mark.parametrize("bits_w", [1])
-@pytest.mark.parametrize("input_shape,layer,args,kwargs", [
-    ((1, 2, 5, 5), nn.QConv2D, [16], {"kernel_size": 3, "strides": 1, "padding": 1, "in_channels": 0}),
-    ((1, 2, 25), nn.QDense, [16], {})
-])
-def test_qactivation_qconvolution(threshold, bits_a, bits_w, input_shape, layer, args, kwargs):
+@pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS)
+def test_qactivation_qconvolution(threshold, bits_a, bits_w, input_shape, test_conv, layer, args, kwargs):
     in_data = mx.nd.array(np.random.uniform(-1, 1, input_shape))
     in_data.attach_grad()
 
@@ -42,57 +50,69 @@ def test_qactivation_qconvolution(threshold, bits_a, bits_w, input_shape, layer,
     gradients3, result3 = forward(in_data, act3, layer3)
 
     assert_almost_equal(result1, result2)
-    assert_almost_equal(result2, result3)
+    assert_almost_equal(result1, result3)
     assert_almost_equal(gradients1, gradients2)
-    assert_almost_equal(gradients2, gradients3)
+    assert_almost_equal(gradients1, gradients3)
 
     fractions = result1 - np.fix(result1)
     assert_almost_equal(fractions, np.zeros_like(result1))
 
 
-def test_activation_in_qconv():
-    in_data = mx.nd.array(np.random.uniform(-1, 1, (1, 2, 5, 5)))
+@pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS)
+def test_activation_in_qconv(input_shape, test_conv, layer, args, kwargs):
+    in_data = mx.nd.array(np.random.uniform(-1, 1, input_shape))
     in_data.attach_grad()
 
-    conv = nn.QConv2D(16, kernel_size=3, strides=1, padding=1, in_channels=0, activation=1)
-    conv.initialize(mx.init.Xavier(magnitude=2))
+    binary_layer = layer(*args, activation=1, **kwargs)
+    binary_layer.initialize(mx.init.Xavier(magnitude=2))
     with autograd.record():
-        result2 = conv.forward(in_data)
-    result2.backward()
+        result1 = binary_layer.forward(in_data)
+    result1.backward()
     gradients1 = in_data.grad
 
     with autograd.record():
         sign_in = in_data.det_sign()
-        padded_in = mx.ndarray.pad(sign_in, mode="constant", pad_width=(0, 0, 0, 0, 1, 1, 1, 1), constant_value=-1)
-        binary_weight = conv.weight.data().det_sign()
-        direct_result = mx.ndarray.Convolution(padded_in, binary_weight, **conv._kwargs)
-        offset = 2 * 3 * 3
-        result1 = (direct_result + offset) / 2
-    result1.backward()
+        if test_conv:
+            p = kwargs["padding"]
+            padded_in = mx.ndarray.pad(sign_in, mode="constant", pad_width=(0, 0, 0, 0, p, p, p, p), constant_value=-1)
+        binary_weight = binary_layer.weight.data().det_sign()
+        if test_conv:
+            direct_result = mx.ndarray.Convolution(padded_in, binary_weight, **binary_layer._kwargs)
+        else:
+            direct_result = mx.ndarray.FullyConnected(sign_in, binary_weight, None, no_bias=True, num_hidden=binary_layer._units)
+        offset = reduce(mul, binary_weight.shape[1:], 1)
+        result2 = (direct_result + offset) / 2
+    result2.backward()
     gradients2 = in_data.grad
 
     assert_almost_equal(result1.asnumpy(), result2.asnumpy())
     assert_almost_equal(gradients1.asnumpy(), gradients2.asnumpy())
 
 
-def test_no_activation_in_qconv():
-    in_data = mx.nd.array(np.random.uniform(-1, 1, (2, 3, 5, 5)))
+@pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS)
+def test_no_activation_in_qconv(input_shape, test_conv, layer, args, kwargs):
+    in_data = mx.nd.array(np.random.uniform(-1, 1, input_shape))
     in_data.attach_grad()
 
-    conv = nn.QConv2D(16, kernel_size=3, strides=1, padding=1, in_channels=0)
-    conv.initialize(mx.init.Xavier(magnitude=2))
+    binary_layer = layer(*args, **kwargs)
+    binary_layer.initialize(mx.init.Xavier(magnitude=2))
     with autograd.record():
-        result2 = conv.forward(in_data)
-    result2.backward()
+        result1 = binary_layer.forward(in_data)
+    result1.backward()
     gradients1 = in_data.grad
 
     with autograd.record():
-        padded_in = mx.ndarray.pad(in_data, mode="constant", pad_width=(0, 0, 0, 0, 1, 1, 1, 1), constant_value=-1)
-        binary_weight = conv.weight.data().det_sign()
-        direct_result = mx.ndarray.Convolution(padded_in, binary_weight, **conv._kwargs)
-        offset = 3 * 3 * 3
-        result1 = (direct_result + offset) / 2
-    result1.backward()
+        if test_conv:
+            p = kwargs["padding"]
+            padded_in = mx.ndarray.pad(in_data, mode="constant", pad_width=(0, 0, 0, 0, p, p, p, p), constant_value=-1)
+        binary_weight = binary_layer.weight.data().det_sign()
+        if test_conv:
+            direct_result = mx.ndarray.Convolution(padded_in, binary_weight, **binary_layer._kwargs)
+        else:
+            direct_result = mx.ndarray.FullyConnected(in_data, binary_weight, None, no_bias=True, num_hidden=binary_layer._units)
+        offset = reduce(mul, binary_weight.shape[1:], 1)
+        result2 = (direct_result + offset) / 2
+    result2.backward()
     gradients2 = in_data.grad
 
     assert_almost_equal(result1.asnumpy(), result2.asnumpy())
@@ -127,7 +147,8 @@ def test_round_ste():
     assert_almost_equal(exp_grad, x.grad.asnumpy())
 
 
-def test_grad_cancel():
+@pytest.mark.parametrize("threshold", [0.01, 0.1, 0.5, 1.0, 2.0])
+def test_grad_cancel(threshold):
     npy = np.random.uniform(-2, 2, (2, 3, 4))
 
     x = mx.nd.array(npy)
@@ -135,12 +156,11 @@ def test_grad_cancel():
     with autograd.record():
         y = x ** 2
     y.backward()
-    exp_grad = x.grad.asnumpy()
+    exp_grad = x.grad.asnumpy().copy()
 
-    for threshold in [1.0, 0.5, 0.1]:
-        with autograd.record():
-            cancelled = mx.nd.contrib.gradcancel(x, threshold=threshold)
-            y = cancelled ** 2
-        y.backward()
-        exp_grad[np.abs(npy) > threshold] = 0
-        np.testing.assert_almost_equal(exp_grad, x.grad.asnumpy())
+    with autograd.record():
+        cancelled = mx.nd.contrib.gradcancel(x, threshold=threshold)
+        y = cancelled ** 2
+    y.backward()
+    exp_grad[np.abs(npy) > threshold] = 0
+    np.testing.assert_almost_equal(exp_grad, x.grad.asnumpy())

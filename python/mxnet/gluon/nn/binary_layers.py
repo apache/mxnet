@@ -1,3 +1,6 @@
+from functools import reduce
+from operator import mul
+
 from .basic_layers import Dense, HybridBlock
 from .conv_layers import _Conv
 from ...base import numeric_types
@@ -46,9 +49,7 @@ class QDense(Dense):
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
-            self._offset = 1
-            for dim_size in weight.shape[1:]:
-                self._offset *= dim_size
+            self._offset = reduce(mul, weight.shape[1:], 1)
         if self.activation > 0:
             x = quantize(F, x, self.activation)
         quantized_weight = quantize(F, weight, self.bits)
@@ -84,9 +85,7 @@ class _QConv(_Conv):
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
-            self._offset = 1
-            for dim_size in weight.shape[1:]:
-                self._offset *= dim_size
+            self._offset = reduce(mul, weight.shape[1:], 1)
         if self.activation > 0:
             x = quantize(F, x, self.activation)
         quantized_weight = quantize(F, weight, self.bits)
