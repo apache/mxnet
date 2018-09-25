@@ -42,14 +42,11 @@ static void MKLDNNQuantizedConvForward(const nnvm::NodeAttrs& attrs,
     << "mkldnn_quantized_conv op only supports uint8 as input type";
   TmpMemMgr::Get()->Init(ctx.requested[conv::kTempSpace]);
   NDArray weight = in_data[conv::kWeight];
-  MKLDNNConvFullParam full_param;
-  full_param.conv_param = nnvm::get<ConvolutionParam>(attrs.parsed);
-  full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
+  ConvolutionParam param = nnvm::get<ConvolutionParam>(attrs.parsed);
   auto &fwd = GetConvFwd(
-      full_param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
-      full_param.conv_param.no_bias ? nullptr : &in_data[conv::kBias],
+      param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
+      param.no_bias ? nullptr : &in_data[conv::kBias],
       out_data[conv::kOut]);
-  const ConvolutionParam& param = full_param.conv_param;
   auto data_mem = in_data[conv::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem;
   // For inference, we want to reorder the weight array so we don't need to

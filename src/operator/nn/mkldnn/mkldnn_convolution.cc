@@ -250,7 +250,7 @@ void MKLDNNConvForward::SetNewMem(const mkldnn::memory &data,
   }
 }
 
-MKLDNNConvForward &GetConvFwd(const MKLDNNConvFullParam &param,
+MKLDNNConvForward &GetConvFwd(const ConvolutionParam &param,
                               const bool is_train, const NDArray &data,
                               const NDArray &weights, const NDArray *bias,
                               const NDArray &output) {
@@ -259,7 +259,7 @@ MKLDNNConvForward &GetConvFwd(const MKLDNNConvFullParam &param,
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNConvSignature, MKLDNNConvForward, OpHash> fwds;
 #endif
-  MKLDNNConvSignature key(param.conv_param);
+  MKLDNNConvSignature key(param);
   key.AddSign(is_train);
   // Here we can sign the conv op with NDArray because conv primitive will
   // decide the right layout for the, so we only need to get the shape and the
@@ -272,7 +272,10 @@ MKLDNNConvForward &GetConvFwd(const MKLDNNConvFullParam &param,
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNConvForward fwd(param, is_train, data, weights, bias, output);
+    MKLDNNConvFullParam full_param;
+    full_param.conv_param = param;
+    full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
+    MKLDNNConvForward fwd(full_param, is_train, data, weights, bias, output);
     auto ins_ret = fwds.insert(
         std::pair<MKLDNNConvSignature, MKLDNNConvForward>(key, fwd));
     CHECK(ins_ret.second);
@@ -347,7 +350,7 @@ void MKLDNNConvolutionForward(const nnvm::NodeAttrs &attrs,
   param.conv_param = nnvm::get<ConvolutionParam>(attrs.parsed);
   param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
   auto &fwd = GetConvFwd(
-      param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
+      param.conv_param, ctx.is_train, in_data[conv::kData], in_data[conv::kWeight],
       param.conv_param.no_bias ? nullptr : &in_data[conv::kBias],
       out_data[conv::kOut]);
   MKLDNNConvolutionForwardFullFeature(param, ctx, &fwd, in_data, req, out_data);

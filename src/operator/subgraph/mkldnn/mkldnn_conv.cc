@@ -165,10 +165,7 @@ static void ConvolutionFusionComputeExCPU(const MKLDNNConvFullParam &full_param,
                                           const std::vector<OpReqType> &req,
                                           const std::vector<NDArray> &outputs) {
   if (SupportMKLDNNConv(full_param.conv_param, inputs[0])) {
-    // MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNConvolutionForwardFullFeature(full_param, ctx, fwd, inputs, req, outputs);
-    // MKLDNN_OPCHECK_RUN(ConvolutionCompute<cpu>, attrs, ctx, inputs, req,
-    // outputs);
     return;
   }
   ConvFusionFallBackCompute();
@@ -200,8 +197,6 @@ class SgMKLDNNConvOperator {
   std::shared_ptr<MKLDNNConvForward> fwd;
   NDArray cached_weight_;
   NDArray cached_bias_;
-  NDArray cached_data_;
-  NDArray cached_output_;
   float cached_data_min;
   float cached_data_max;
   float cached_sum_min;
@@ -252,13 +247,10 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       mkldnn_param.quantized ? outputs[kMax].data().dptr<float>() : nullptr;
   CHECK_EQ(input_size, idx);
   bool has_bias = mkldnn_param.with_bn || !conv_param.no_bias;
-  cached_data_ = inputs[in_data];
-  if (mkldnn_param.with_sum)
-    cached_output_ = inputs[in_sum];
-  else
-    cached_output_ = outputs[kOut];
+  NDArray data_ = inputs[in_data];
+  NDArray output_ = mkldnn_param.with_sum ? inputs[in_sum] : outputs[kOut];
 
-  // Check data change
+  // Check input change
   // TODO(zhennan): Only update cached_* changed.
   if (initalized) {
     if (mkldnn_param.with_bn) {
@@ -281,9 +273,12 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     if (mkldnn_param.min_calib_range.has_value() &&
         mkldnn_param.max_calib_range.has_value()) {
       post_requantize = true;
-      mkldnn_param.weight_channelwise_scale = false;
+      mkldnn_param.weight_channelwise_scale = true;
       *out_min_ptr = mkldnn_param.min_calib_range.value();
       *out_max_ptr = mkldnn_param.max_calib_range.value();
+    } else {
+      mkldnn_param.weight_channelwise_scale = false;
+
     }
   }
 
@@ -358,21 +353,21 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         full_conv_param.sum_scale = output_scale / sum_in_scale;
     }
     fwd.reset(new MKLDNNConvForward(
-        full_conv_param, ctx.is_train, cached_data_, cached_weight_,
-        has_bias ? &cached_bias_ : nullptr, cached_output_));
+        full_conv_param, ctx.is_train, data_, cached_weight_,
+        has_bias ? &cached_bias_ : nullptr, output_));
   }
   initalized = true;
   std::vector<NDArray> new_inputs;
   std::vector<OpReqType> new_req;
   if (has_bias) {
-    new_inputs = {cached_data_, cached_weight_, cached_bias_};
+    new_inputs = {data_, cached_weight_, cached_bias_};
     new_req = {req[in_data], req[in_weight], req[in_bias]};
   } else {
-    new_inputs = {cached_data_, cached_weight_};
+    new_inputs = {data_, cached_weight_};
     new_req = {req[in_data], req[in_weight]};
   }
   ConvolutionFusionComputeExCPU(full_conv_param, ctx, fwd.get(), new_inputs,
-                                new_req, {cached_output_});
+                                new_req, {output_});
 
   if (mkldnn_param.with_sum) {
     auto out = const_cast<NDArray &>(outputs[kOut]);
@@ -659,7 +654,6 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 .set_attr<nnvm::FInferShape>("FInferShape", SgMKLDNNConvInferShape)
 .set_attr<nnvm::FInferType>("FInferType", SgMKLDNNConvInferType)
 .set_attr<FInferStorageType>("FInferStorageType", SgMKLDNNConvOpStorageType)
-.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNConvOpForward)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};

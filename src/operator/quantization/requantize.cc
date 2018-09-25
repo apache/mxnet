@@ -65,7 +65,6 @@ inference accuracy.
 .set_attr<nnvm::FInferType>("FInferType", RequantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", RequantizeStorageType)
 #if MXNET_USE_MKLDNN == 1
-.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNRequantizeForward)
 #else
 .set_attr<FCompute>("FCompute<cpu>", RequantizeForward<cpu>)
