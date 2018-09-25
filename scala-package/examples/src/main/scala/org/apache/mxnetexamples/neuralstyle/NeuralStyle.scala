@@ -179,13 +179,13 @@ object NeuralStyle {
       val (gram, gScale) = styleGramSymbol(size, style)
       var modelExecutor = ModelVgg19.getExecutor(gram, content, modelPath, size, dev)
 
-    modelExecutor.data.set(styleNp)
-    modelExecutor.executor.forward()
+      modelExecutor.data.set(styleNp)
+      modelExecutor.executor.forward()
 
-    val styleArray = modelExecutor.style.map(_.copyTo(Context.cpu()))
-    modelExecutor.data.set(contentNp)
-    modelExecutor.executor.forward()
-    val contentArray = modelExecutor.content.copyTo(Context.cpu())
+      val styleArray = modelExecutor.style.map(_.copyTo(Context.cpu()))
+      modelExecutor.data.set(contentNp)
+      modelExecutor.executor.forward()
+      val contentArray = modelExecutor.content.copyTo(Context.cpu())
 
       // delete the executor
       modelExecutor.argDict.foreach(ele => ele._2.dispose())
@@ -208,8 +208,6 @@ object NeuralStyle {
         }
         tmpGA :+ NDArray.ones(Shape(1), dev) * contentWeight
       }
-      tmpGA :+ NDArray.ones(Shape(1), dev) * contentWeight
-    }
 
       modelExecutor.argDict("target_content").set(contentArray)
 
@@ -264,19 +262,7 @@ object NeuralStyle {
         if ((e + 1) % saveEpochs == 0) {
           saveImage(img, s"${outputDir}/tmp_${e + 1}.jpg", gaussianRadius)
         }
-        case None =>
-          optimizer.update(0, img, modelExecutor.dataGrad, optimState)
-      }
-      eps = (NDArray.norm(oldImg - img) / NDArray.norm(img)).toScalar
-      oldImg.set(img)
-      logger.info(s"epoch $e, relative change $eps")
-
-      if (eps < stopEps) {
-        logger.info("eps < args.stop_eps, training finished")
-        trainingDone = true
-      }
-      if ((e + 1) % saveEpochs == 0) {
-        saveImage(img, s"${outputDir}/tmp_${e + 1}.jpg", gaussianRadius)
+        e = e + 1
       }
       saveImage(img, s"${outputDir}/out.jpg", gaussianRadius)
       logger.info("Finish fit ...")
@@ -338,3 +324,4 @@ class NeuralStyle {
   @Option(name = "--gaussian-radius", usage = "the gaussian blur filter radius")
   private val gaussianRadius: Int = 1
 }
+

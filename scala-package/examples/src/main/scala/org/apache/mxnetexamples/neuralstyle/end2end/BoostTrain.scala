@@ -105,10 +105,10 @@ object BoostTrain {
       val numImage = filelist.length
       logger.info(s"Dataset size: $numImage")
 
-    val tvWeight = 1e-2f
+      val tvWeight = 1e-2f
 
-    val startEpoch = 0
-    val endEpoch = 3
+      val startEpoch = 0
+      val endEpoch = 3
 
       for (k <- 0 until gens.length) {
         val path = new File(s"${saveModelPath}/$k")
@@ -171,7 +171,6 @@ object BoostTrain {
             data.dispose()
           }
         }
-        data.dispose()
       }
     }
   }
@@ -210,3 +209,4 @@ class BoostTrain {
   @Option(name = "--gpu", usage = "which gpu card to use, default is -1, means using cpu")
   private val gpu: Int = -1
 }
+

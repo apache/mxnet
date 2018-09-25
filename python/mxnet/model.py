@@ -1010,3 +1010,4 @@ class FeedForward(BASE_ESTIMATOR):
                   eval_end_callback=eval_end_callback,
                   eval_batch_end_callback=eval_batch_end_callback)
         return model
+

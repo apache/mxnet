@@ -701,3 +701,4 @@ def create(name='local'):
     kv = KVStore(handle)
     set_kvstore_handle(kv.handle)
     return kv
+
