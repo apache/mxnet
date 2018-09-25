@@ -20,7 +20,7 @@ package org.apache.mxnetexamples.imclassification
 import java.util.concurrent._
 
 import org.apache.mxnetexamples.imclassification.models._
-import org.apache.mxnetexamples.imclassification.util.{ModelTrain, PerformanceMonitor}
+import org.apache.mxnetexamples.imclassification.util.ModelTrain
 import org.apache.mxnet._
 import org.apache.mxnetexamples.imclassification.data.{MnistIter, SyntheticDataIter}
 import org.kohsuke.args4j.{CmdLineParser, Option}
@@ -109,9 +109,6 @@ object TrainModel {
   def main(args: Array[String]): Unit = {
     val inst = new TrainModel
     val parser: CmdLineParser = new CmdLineParser(inst)
-    val ex = new ScheduledThreadPoolExecutor(1)
-    var performanceMonitorThread: PerformanceMonitor = null
-    var performanceMonitorTask: ScheduledFuture[_ <: Any] = null
     try {
       parser.parseArgument(args.toList.asJava)
 
@@ -140,12 +137,6 @@ object TrainModel {
         KVStoreServer.init(envs.toMap)
       }
 
-      if (inst.performanceLog != null) {
-        performanceMonitorThread = new PerformanceMonitor(inst.performanceLog)
-        performanceMonitorTask = ex.scheduleAtFixedRate(performanceMonitorThread, 1,
-          1, TimeUnit.SECONDS)
-      }
-
       if (inst.role != "worker") {
         logger.info("Start KVStoreServer for scheduler & servers")
         KVStoreServer.start()
@@ -162,16 +153,8 @@ object TrainModel {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)
         parser.printUsage(System.err)
-        if (performanceMonitorTask != null) {
-          performanceMonitorTask.cancel(false)
-          performanceMonitorThread.finish()
-        }
         sys.exit(1)
       }
-    }
-    if (performanceMonitorTask != null) {
-      performanceMonitorTask.cancel(false)
-      performanceMonitorThread.finish()
     }
   }
 }
@@ -189,8 +172,6 @@ class TrainModel {
   @Option(name = "--benchmark", usage = "Benchmark to use synthetic data to measure performance")
   private val benchmark: Boolean = false
 
-  @Option(name = "--performance-log", usage = "CSV filename for the performance log")
-  private val performanceLog: String = null
   @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
   private val gpus: String = null
   @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
