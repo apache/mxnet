@@ -145,4 +145,3 @@ def run(network, optimizer, gpus, kv_store, image_shape, disp_batches,
 if __name__ == "__main__":
     args = parse_args();
     run(**vars(args))
-

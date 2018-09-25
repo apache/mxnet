@@ -2482,4 +2482,3 @@ MXNET_DLL int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const 
 #endif  // __cplusplus
 
 #endif  // MXNET_C_API_H_
-

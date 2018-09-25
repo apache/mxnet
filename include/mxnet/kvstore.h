@@ -440,4 +440,3 @@ class KVStore {
 
 }  // namespace mxnet
 #endif  // MXNET_KVSTORE_H_
-

@@ -209,4 +209,3 @@ class BoostTrain {
   @Option(name = "--gpu", usage = "which gpu card to use, default is -1, means using cpu")
   private val gpu: Int = -1
 }
-

@@ -324,4 +324,3 @@ class NeuralStyle {
   @Option(name = "--gaussian-radius", usage = "the gaussian blur filter radius")
   private val gaussianRadius: Int = 1
 }
-

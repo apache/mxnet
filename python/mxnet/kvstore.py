@@ -511,54 +511,28 @@ class KVStore(object):
 
     @property
     def rank(self):
-        """ Returns the global rank of this worker node.
+        """ Returns the rank of this worker node.
 
         Returns
         -------
         rank : int
-            The global rank of this node, which is in range [0, num_workers())
+            The rank of this node, which is in range [0, num_workers())
         """
         rank = ctypes.c_int()
         check_call(_LIB.MXKVStoreGetRank(self.handle, ctypes.byref(rank)))
         return rank.value
 
     @property
-    def local_rank(self):
-        """ Returns the local rank of this worker node.
-
-        Returns
-        -------
-        rank : int
-            The local rank of this node, which is in range [0, num_local_workers())
-        """
-        rank = ctypes.c_int()
-        check_call(_LIB.MXKVStoreGetLocalRank(self.handle, ctypes.byref(rank)))
-        return rank.value
-
-    @property
     def num_workers(self):
-        """Returns the global number of worker nodes.
+        """Returns the number of worker nodes.
 
         Returns
         -------
         size :int
-            The number of global worker nodes.
+            The number of worker nodes.
         """
         size = ctypes.c_int()
         check_call(_LIB.MXKVStoreGetGroupSize(self.handle, ctypes.byref(size)))
-        return size.value
-
-    @property
-    def num_local_workers(self):
-        """Returns the local number of worker nodes.
-
-        Returns
-        -------
-        size :int
-            The number of local worker nodes.
-        """
-        size = ctypes.c_int()
-        check_call(_LIB.MXKVStoreGetLocalSize(self.handle, ctypes.byref(size)))
         return size.value
 
     def save_optimizer_states(self, fname, dump_optimizer=False):
@@ -701,4 +675,3 @@ def create(name='local'):
     kv = KVStore(handle)
     set_kvstore_handle(kv.handle)
     return kv
-
