@@ -412,7 +412,7 @@ class DataParallelExecutorGroup(object):
         for exec_ in self.execs:
             exec_.copy_params_from(arg_params, aux_params, allow_extra_params=allow_extra)
 
-    def get_params(self, arg_params, aux_params, copy_to_cpu, context):
+    def get_params(self, arg_params, aux_params, copy_to_cpu):
         """ Copy data from each executor to `arg_params` and `aux_params`.
 
         Parameters
@@ -437,14 +437,12 @@ class DataParallelExecutorGroup(object):
                 weight.astype(aux_params[name].dtype).copyto(aux_params[name])
         else:
             for name, block in zip(self.param_names, self.param_arrays):
-                if context is None:
-                    context = block[0].context
+                context = block[0].context
                 weight = sum(w.copyto(context) for w in block) / len(block)
                 weight.astype(arg_params[name].dtype).copyto(arg_params[name])
                 arg_params[name] = arg_params[name].as_in_context(context)
             for name, block in zip(self.aux_names, self.aux_arrays):
-                if context is None:
-                    context = block[0].context
+                context = block[0].context
                 weight = sum(w.copyto(context) for w in block) / len(block)
                 weight.astype(aux_params[name].dtype).copyto(aux_params[name])
                 aux_params[name] = aux_params[name].as_in_context(context)
