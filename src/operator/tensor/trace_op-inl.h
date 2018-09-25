@@ -64,7 +64,7 @@ struct TraceParam : public dmlc::Parameter<TraceParam> {
 inline TShape TraceShapeImpl(const TShape& ishape, const int k,
                             const int32_t axis1, const int32_t axis2) {
   int32_t n_dim;
-  if(ishape.ndim() > 2)  // for +3D we remove the two axis along the diagonal
+  if (ishape.ndim() > 2)  // for +3D we remove the two axis along the diagonal
     n_dim = static_cast<int32_t>(ishape.ndim()) - 2;
   else  // if its 2D then the output will be a single result, so 1-dim 1 element output
     n_dim = 1;
@@ -90,7 +90,7 @@ inline bool TraceOpShape(const nnvm::NodeAttrs& attrs,
 
     const TShape& ishape = (*in_attrs)[0];
     if (ishape.ndim() < 2) {
-      //trace is undefined for 1D arrays
+      // trace is undefined for 1D arrays
       return false;
     }
 
@@ -115,7 +115,7 @@ inline bool TraceOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  //propagate types from input to output (or vice-versa)
+  // propagate types from input to output (or vice-versa)
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return (*out_attrs)[0] != -1;
@@ -160,7 +160,7 @@ void TraceOpProcess(const TBlob& in_data,
   if (minx > maxx) {
     std::swap(minx, maxx);
   }
-  
+
   // merges contiguous axes that are not separated
   // by axis1 or axis2 since they can be directly
   // mapped to the output and there is no need
