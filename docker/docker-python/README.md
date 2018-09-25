@@ -31,4 +31,11 @@ For example:
 * `/mxnet/example/image-classification/train_mnist.py`
 * `/mxnet/docker/docker-python/test_mxnet.py`: This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter. 
 
-Dockerhub credentials will be required to upload images at the end of this script. 
+### Dockerhub Credentials
+Dockerhub credentials will be required to push images at the end of this script. 
+Credentials can be provided in the following ways:
+* **Interactive Login:** Run the script as is and it will ask you for credentials interactively.
+* **Be Already Logged in:** Login to the mxnet dockerhub account before you run the build script and the script will complete build, test and push.
+* **Set Environment Variables:** Set the following environment variables which the script will pick up to login to dockerhub at runtime -
+    * $MXNET_DOCKERHUB_PASSWORD
+    * $MXNET_DOCKERHUB_USERNAME
