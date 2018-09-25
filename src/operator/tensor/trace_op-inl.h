@@ -63,18 +63,21 @@ struct TraceParam : public dmlc::Parameter<TraceParam> {
 
 inline TShape TraceShapeImpl(const TShape& ishape, const int k,
                             const int32_t axis1, const int32_t axis2) {
-  int32_t n_dim = static_cast<int32_t>(ishape.ndim()) - 1;
+  int32_t n_dim;
+  if(ishape.ndim() > 2) //for +3D we remove the two axis along the diagonal
+    n_dim = static_cast<int32_t>(ishape.ndim()) - 2;
+  else //if its 2D then the output will be a single result, so 1-dim 1 element output
+    n_dim = 1;
+
   TShape oshape(n_dim);
 
-  // remove axis1 and axis2 and append the new axis to the end
+  //add all axes except the two specified along the diagonal
   uint32_t idx = 0;
-  for (int32_t i = 0; i <= n_dim; ++i) {
+  for (int32_t i = 0; i < ishape.ndim(); ++i) {
     if (i != axis1 && i != axis2) {
       oshape[idx++] = ishape[i];
     }
   }
-
-  //oshape[n_dim - 1] = s;
 
   return oshape;
 }
@@ -87,6 +90,7 @@ inline bool TraceOpShape(const nnvm::NodeAttrs& attrs,
 
     const TShape& ishape = (*in_attrs)[0];
     if (ishape.ndim() < 2) {
+      //trace is undefined for 1D arrays
       return false;
     }
 
@@ -96,6 +100,7 @@ inline bool TraceOpShape(const nnvm::NodeAttrs& attrs,
                                   param.k,
                                   param.axis1,
                                   param.axis2);
+
     if (shape_is_none(oshape)) {
       LOG(FATAL) << "diagonal does not exist.";
     }
@@ -110,6 +115,7 @@ inline bool TraceOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
+  //propagate types from input to output (or vice-versa)
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return (*out_attrs)[0] != -1;
@@ -122,19 +128,12 @@ struct trace {
                                   mshadow::Shape<ndim> oshape,
                                   mshadow::Shape<ndim> ishape,
                                   index_t stride, index_t offset,
-                                  index_t base, index_t diag_size) {
+                                  index_t base) {
     using namespace mxnet_op;
-    index_t out_idx = ((i / diag_size) * diag_size) / base;
-    out_idx = ravel(unravel((out_idx/base), oshape), ishape) + offset + stride * (out_idx - (out_idx/base) * base);
-    std::cout << i << " " << diag_size << " " << (i/diag_size) << " " << (i/diag_size)*diag_size << " " << out_idx << std::endl;
 
     index_t idx = i / base;
     index_t j = ravel(unravel(idx, oshape), ishape) + offset + stride * (i - idx * base);
-    if (back) {
-      KERNEL_ASSIGN(out[j], req, a[i]);
-    } else {
-      KERNEL_ASSIGN(out[out_idx], req, a[j]);
-    }
+    out[idx] += a[j];
   }
 };
 
@@ -156,7 +155,7 @@ void TraceOpProcess(const TBlob& in_data,
   
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the the same axis " << x1;
 
-  uint32_t idim = ishape.ndim(), odim = oshape.ndim();
+  uint32_t idim = ishape.ndim();
   
   uint32_t minx = x1, maxx = x2;
   if (minx > maxx) {
@@ -168,7 +167,7 @@ void TraceOpProcess(const TBlob& in_data,
   // mapped to the output and there is no need
   // to distinguish them
   // (After this the input will have no more than
-  // three axes, hence improving the rave and
+  // three axes, hence improving the ravel and
   // unravel efficiency)
   
   index_t oleading = 1,
@@ -224,17 +223,18 @@ void TraceOpProcess(const TBlob& in_data,
   }
   
   MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    std::memset(out_data.dptr<DType>(),0,sizeof(DType)*out_data.Size());
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
           if (ileading == 1) {
             Kernel<trace<2, req_type, back>, xpu>::Launch(s, dsize*diag_size, out_data.dptr<DType>(),
                                                           in_data.dptr<DType>(), Shape2(obody, otrailing),
                                                           Shape2(ibody, itrailing),stride1 + stride2, 
-                                                          offset, oshape[odim - 1], diag_size);
+                                                          offset, diag_size);
           } else {
-          Kernel<trace<3, req_type, back>, xpu>::Launch(s, dsize*diag_size, out_data.dptr<DType>(),
+            Kernel<trace<3, req_type, back>, xpu>::Launch(s, dsize*diag_size, out_data.dptr<DType>(),
                                                         in_data.dptr<DType>(), Shape3(oleading, obody, otrailing),
                                                         Shape3(ileading, ibody, itrailing),stride1 + stride2, 
-                                                        offset, oshape[odim - 1], diag_size);
+                                                        offset, diag_size);
           }
         });
     });
@@ -282,7 +282,6 @@ void TraceOpBackward(const nnvm::NodeAttrs& attrs,
 
   TraceOpProcess<xpu, true>(in_data, out_data, oshape, ishape, in_data.Size(), param, s, req);
 }
-
 
 }  // namespace op
 }  // namespace mxnet

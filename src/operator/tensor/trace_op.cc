@@ -77,14 +77,12 @@ Examples::
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(TraceParam::__FIELDS__());
 
-
 NNVM_REGISTER_OP(_backward_trace)
 .set_attr_parser(ParamParser<TraceParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", TraceOpBackward<cpu>);
-
 
 }  // namespace op
 }  // namespace mxnet
