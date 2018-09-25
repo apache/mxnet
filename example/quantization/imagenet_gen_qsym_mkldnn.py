@@ -114,9 +114,9 @@ if __name__ == '__main__':
     if calib_mode != 'none':
         download_calib_dataset('http://data.mxnet.io/data/val_256_q90.rec', args.calib_dataset)
 
-        # download model
-        prefix, epoch = download_model(model_name=args.model, logger=logger)
-        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
+    # download model
+    prefix, epoch = download_model(model_name=args.model, logger=logger)
+    sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
     out = SymbolHandle()
     backend = "MKLDNN"

@@ -32,9 +32,9 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
-    sFail = 0,
-    sStart,
-    sSuccess,
+    kFail = 0,
+    kStart,
+    kSuccess,
   };
 
  private:
@@ -50,7 +50,7 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
     if ((!disable_all) && n.op() && n.op()->name == "_sg_mkldnn_conv") {
       auto const &param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
       if (param.full_conv_param.mkldnn_param.quantized) {
-        status = sStart;
+        status = kStart;
         matched_list.clear();
         matched_list.push_back(&n);
         return true;
@@ -64,12 +64,12 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    if (status == sFail || status == sSuccess || new_node.is_variable())
+    if (status == kFail || status == kSuccess || new_node.is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
-      status = sFail;
+      status = kFail;
       return false;
     }
     if (new_node.op()->name == "_contrib_requantize") {
@@ -77,10 +77,10 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
       if (param.min_calib_range.has_value() &&
           param.max_calib_range.has_value()) {
         matched_list.push_back(&new_node);
-        status = sSuccess;
+        status = kSuccess;
         return true;
       } else {
-        status = sFail;
+        status = kFail;
       }
     }
     return false;
@@ -88,7 +88,7 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
 
   std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
-    if (status != sSuccess) {
+    if (status != kSuccess) {
       return std::vector<nnvm::Node *>(0);
     } else {
       return candidates;

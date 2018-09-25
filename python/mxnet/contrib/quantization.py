@@ -420,18 +420,6 @@ def _load_params(params, logger=logging):
         raise ValueError('Unsupported params provided. Must be either a path to the param file or'
                          ' a pair of dictionaries representing arg_params and aux_params')
 
-def save_params(fname, arg_params, aux_params, logger=None):
-    if logger is not None:
-        logger.info('Saving params into file at %s' % fname)
-    save_dict = {('arg:%s' % k): v.as_in_context(cpu()) for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k): v.as_in_context(cpu()) for k, v in aux_params.items()})
-    ndarray.save(fname, save_dict)
-
-def save_symbol(fname, sym, logger=None):
-    if logger is not None:
-        logger.info('Saving symbol into file at %s' % fname)
-    sym.save(fname)
-
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',

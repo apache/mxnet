@@ -26,6 +26,7 @@
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../quantization/quantization_utils.h"
+#include "../../../common/utils.h"
 #include "mkldnn_conv-inl.h"
 
 namespace mxnet {
@@ -41,20 +42,20 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
                                   weight->ctx(), true, weight->dtype());
   NDArray update_bias = NDArray(beta.storage_type(), beta.shape(), beta.ctx(),
                                 true, beta.dtype());
-  DType *weight_ptr = weight->data().dptr<DType>();
-  DType *bias_ptr = no_bias ? nullptr : bias->data().dptr<DType>();
-  DType *gamma_ptr = gamma.Reorder2Default().data().dptr<DType>();
-  DType *beta_ptr = beta.Reorder2Default().data().dptr<DType>();
-  DType *mean_ptr = mean.Reorder2Default().data().dptr<DType>();
-  DType *var_ptr = variance.Reorder2Default().data().dptr<DType>();
+  const DType *weight_ptr = weight->data().dptr<DType>();
+  const DType *bias_ptr = no_bias ? nullptr : bias->data().dptr<DType>();
+  const DType *gamma_ptr = gamma.Reorder2Default().data().dptr<DType>();
+  const DType *beta_ptr = beta.Reorder2Default().data().dptr<DType>();
+  const DType *mean_ptr = mean.Reorder2Default().data().dptr<DType>();
+  const DType *var_ptr = variance.Reorder2Default().data().dptr<DType>();
   DType *update_weight_ptr = update_weight.data().dptr<DType>();
   DType *update_bias_ptr = update_bias.data().dptr<DType>();
   size_t channel = gamma.shape()[0];
   size_t offset = weight->shape()[1] * weight->shape()[2] * weight->shape()[3];
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int c = 0; c < static_cast<int>(channel); ++c) {
-    DType *p1 = reinterpret_cast<DType *>(weight_ptr + c * offset);
-    DType *p2 = reinterpret_cast<DType *>(update_weight_ptr + c * offset);
+    const DType *p1 = weight_ptr + c * offset;
+    DType *p2 = update_weight_ptr + c * offset;
     DType alpha = (param->fix_gamma ? static_cast<DType>(1.0f) : gamma_ptr[c]) /
                   sqrt(var_ptr[c] + param->eps);
 
@@ -84,7 +85,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
                                    std::vector<float> *weight_scales) {
   using red::limits::MaxValue;
   using red::limits::MinValue;
-  DType *weight_ptr = weight->data().dptr<DType>();
+  const DType *weight_ptr = weight->data().dptr<DType>();
   NDArray quantized_weight = NDArray(weight->storage_type(), weight->shape(),
                                      weight->ctx(), true, mshadow::kInt8);
   int8_t *quan_weight_ptr = quantized_weight.data().dptr<int8_t>();
@@ -96,7 +97,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
   std::vector<DType> weight_c_max(channel, MinValue<DType>());
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int c = 0; c < static_cast<int>(channel); ++c) {
-    DType *p1 = weight_ptr + c * offset;
+    const DType *p1 = weight_ptr + c * offset;
     for (size_t k = 0; k < offset; ++k) {
       if (weight_c_min[c] > p1[k])
         weight_c_min[c] = p1[k];
@@ -111,7 +112,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       DType weight_range = MaxAbs(weight_c_min[c], weight_c_max[c]);
       weight_scales->at(c) = int8_range / weight_range;
-      DType *fp_ptr = weight_ptr + c * offset;
+      const DType *fp_ptr = weight_ptr + c * offset;
       int8_t *quan_ptr = quan_weight_ptr + c * offset;
       for (size_t k = 0; k < offset; ++k) {
         quan_ptr[k] = std::round(weight_scales->at(c) * fp_ptr[k]);
@@ -129,7 +130,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
     weight_scales->at(0) = int8_range / weight_range;
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int c = 0; c < static_cast<int>(channel); ++c) {
-      DType *fp_ptr = weight_ptr + c * offset;
+      const DType *fp_ptr = weight_ptr + c * offset;
       int8_t *quan_ptr = quan_weight_ptr + c * offset;
       for (size_t k = 0; k < offset; ++k) {
         quan_ptr[k] = std::round(weight_scales->at(0) * fp_ptr[k]);
@@ -139,7 +140,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
 
   *weight = quantized_weight;
   if (has_bias) {
-    DType *bias_ptr = bias->data().dptr<DType>();
+    const DType *bias_ptr = bias->data().dptr<DType>();
     NDArray quantized_bias = NDArray(bias->storage_type(), bias->shape(),
                                      bias->ctx(), true, mshadow::kInt32);
     int32_t *quan_bias_ptr = quantized_bias.data().dptr<int32_t>();
@@ -278,7 +279,6 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       *out_max_ptr = mkldnn_param.max_calib_range.value();
     } else {
       mkldnn_param.weight_channelwise_scale = false;
-
     }
   }
 
@@ -622,18 +622,12 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-static inline bool StringEndsWith(std::string const &str,
-                                  std::string const &suffix) {
-  if (suffix.size() > str.size()) return false;
-  return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
-}
-
 bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs,
                                 const NodeAttrs &input_attrs) {
   const std::vector<std::string> exclude_key{
       "weight", "bias", "gamma", "beta", "moving_mean", "moving_var"};
   for (auto i : exclude_key) {
-    if (StringEndsWith(input_attrs.name, i)) {
+    if (common::StringEndsWith(input_attrs.name, i)) {
       return true;
     }
   }

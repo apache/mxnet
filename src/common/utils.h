@@ -713,6 +713,14 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape
   }
 }
 
+/*!
+ * \brief Return true if str ends with suffix.
+ */
+inline bool StringEndsWith(std::string const& str, std::string const& suffix) {
+  if (suffix.size() > str.size()) return false;
+  return std::equal(suffix.rbegin(), suffix.rend(), str.rbegin());
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

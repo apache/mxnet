@@ -89,10 +89,8 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
   return outputs;
 }
 
-inline bool NeedQuantize(NodePtr node,
-                         const std::unordered_set<std::string> excluded_nodes) {
-  static auto& quantized_op_map =
-      Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
+inline bool NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes) {
+  static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   if (quantized_op_map.count(node->op())) {
     bool excluded = false;
     if (node->attrs.subgraphs.size()) {
