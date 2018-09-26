@@ -6434,13 +6434,13 @@ def test_quadratic_function():
                                 atol=1e-2 if dtype is np.float16 else 1e-5)
             # check forward
             check_symbolic_forward(quad_sym, [data_np], [expected],
-                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+                                   rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                   atol=1e-2 if dtype is np.float16 else 1e-5)
             # check backward
             check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
-                                        [backward_expected],
-                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                        atol=1e-2 if dtype is np.float16 else 1e-5)
+                                    [backward_expected],
+                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
