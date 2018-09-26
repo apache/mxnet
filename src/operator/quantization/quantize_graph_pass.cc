@@ -99,6 +99,7 @@ inline bool NeedQuantize(NodePtr node, const std::unordered_set<std::string>& ex
       if (excluded_nodes.count(node->attrs.name)) {
         excluded = true;
       } else {
+        // Assume index 0 holds subgraph symbol.
         auto subgraph_sym = node->attrs.subgraphs[0];
         DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& node) {
           if (node->is_variable()) return;

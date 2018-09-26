@@ -188,7 +188,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutput(
+  void ConnectSubgraphOutputs(
       const nnvm::NodePtr n,
       std::vector<nnvm::NodeEntry *> *output_entries) const override {
     // Connect all extern output entries to output[0]
@@ -197,7 +197,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     }
   }
 
-  void ConnectSubgraphInput(
+  void ConnectSubgraphInputs(
       const nnvm::NodePtr n, std::vector<nnvm::NodeEntry *> *input_entries,
       std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];

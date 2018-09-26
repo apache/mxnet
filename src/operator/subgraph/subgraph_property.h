@@ -94,7 +94,7 @@ class SubgraphProperty {
                                            const int subgraph_id = 0) const = 0;
   // Connect subgraph internal output with external output entries. By default,
   // each output entry will connect to an unique internal output.
-  virtual void ConnectSubgraphOutput(
+  virtual void ConnectSubgraphOutputs(
       const nnvm::NodePtr n,
       std::vector<nnvm::NodeEntry *> *output_entries) const {
     for (size_t i = 0; i < output_entries->size(); ++i) {
@@ -103,7 +103,7 @@ class SubgraphProperty {
   }
   // Connect subgraph internal input with external input entries. By default,
   // each input entry will connect in top sorted order.
-  virtual void ConnectSubgraphInput(
+  virtual void ConnectSubgraphInputs(
       const nnvm::NodePtr n, std::vector<nnvm::NodeEntry *> *input_entries,
       std::vector<nnvm::NodeEntry> *orig_input_entries) const {
     n->inputs = *orig_input_entries;

@@ -175,9 +175,9 @@ static void ConvolutionFusionComputeExCPU(const MKLDNNConvFullParam &full_param,
 class SgMKLDNNConvOperator {
  public:
   explicit SgMKLDNNConvOperator(const nnvm::NodeAttrs &attrs)
-      : initalized(false),
+      : initalized_(false),
         subgraph_sym_(*attrs.subgraphs[0]),
-        param(nnvm::get<MKLDNNConvFusionParam>(attrs.parsed)) {}
+        param_(nnvm::get<MKLDNNConvFusionParam>(attrs.parsed)) {}
 
   void Forward(const OpContext &ctx,
                const std::vector<NDArray> &inputs,
@@ -192,35 +192,33 @@ class SgMKLDNNConvOperator {
   }
 
  private:
-  bool initalized;
+  bool initalized_;
   nnvm::Symbol subgraph_sym_;
-  MKLDNNConvFusionParam param;
-  std::shared_ptr<MKLDNNConvForward> fwd;
+  MKLDNNConvFusionParam param_;
+  std::shared_ptr<MKLDNNConvForward> fwd_;
   NDArray cached_weight_;
   NDArray cached_bias_;
-  float cached_data_min;
-  float cached_data_max;
-  float cached_sum_min;
-  float cached_sum_max;
-  size_t weight_ver;
-  size_t bias_ver;
-  std::vector<float> weight_scales;
+  float cached_data_min_;
+  float cached_data_max_;
+  float cached_sum_min_;
+  float cached_sum_max_;
+  size_t weight_ver_;
+  size_t bias_ver_;
+  std::vector<float> weight_scales_;
 };
 
 void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
                                    const std::vector<NDArray> &inputs,
                                    const std::vector<OpReqType> &req,
                                    const std::vector<NDArray> &outputs) {
-  auto &full_conv_param = param.full_conv_param;
-  auto &mkldnn_param = param.full_conv_param.mkldnn_param;
-  auto &conv_param = param.full_conv_param.conv_param;
-  auto bn_param = param.bn_param.get();
+  auto &full_conv_param = param_.full_conv_param;
+  auto &mkldnn_param = param_.full_conv_param.mkldnn_param;
+  auto &conv_param = param_.full_conv_param.conv_param;
+  auto bn_param = param_.bn_param.get();
   size_t input_size =
       2 + (conv_param.no_bias ? 0 : 1) + (mkldnn_param.with_bn ? 4 : 0) +
       (mkldnn_param.with_sum ? 1 : 0) +
-      (mkldnn_param.quantized
-           ? 2 + (param.full_conv_param.mkldnn_param.with_sum ? 2 : 0)
-           : 0);
+      (mkldnn_param.quantized ? 2 + (full_conv_param.mkldnn_param.with_sum ? 2 : 0) : 0);
   CHECK_EQ(inputs.size(), input_size);
   size_t idx = 0;
 
@@ -253,19 +251,19 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
   // Check input change
   // TODO(zhennan): Only update cached_* changed.
-  if (initalized) {
+  if (initalized_) {
     if (mkldnn_param.with_bn) {
-      if (weight_ver != inputs[in_weight].version() ||
-          ((!conv_param.no_bias) && bias_ver != inputs[in_bias].version())) {
-        initalized = false;
+      if (weight_ver_ != inputs[in_weight].version() ||
+          ((!conv_param.no_bias) && bias_ver_ != inputs[in_bias].version())) {
+        initalized_ = false;
       }
     }
-    if (initalized && mkldnn_param.quantized) {
-      if (cached_data_min != data_min || cached_data_max != data_max ||
-          cached_sum_min != sum_min || cached_sum_max != sum_max ||
-          weight_ver != inputs[in_weight].version() ||
-          ((!conv_param.no_bias) && bias_ver != inputs[in_bias].version())) {
-        initalized = false;
+    if (initalized_ && mkldnn_param.quantized) {
+      if (cached_data_min_ != data_min || cached_data_max_ != data_max ||
+          cached_sum_min_ != sum_min || cached_sum_max_ != sum_max ||
+          weight_ver_ != inputs[in_weight].version() ||
+          ((!conv_param.no_bias) && bias_ver_ != inputs[in_bias].version())) {
+        initalized_ = false;
       }
     }
   }
@@ -282,17 +280,17 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     }
   }
 
-  if (!initalized) {
-    cached_data_min = data_min;
-    cached_data_max = data_max;
-    cached_sum_min = sum_min;
-    cached_sum_max = sum_max;
+  if (!initalized_) {
+    cached_data_min_ = data_min;
+    cached_data_max_ = data_max;
+    cached_sum_min_ = sum_min;
+    cached_sum_max_ = sum_max;
     full_conv_param.sum_scale = 1.0;
     cached_weight_ = inputs[in_weight].Reorder2Default();
-    weight_ver = inputs[in_weight].version();
+    weight_ver_ = inputs[in_weight].version();
     if (!conv_param.no_bias) {
       cached_bias_ = inputs[in_bias].Reorder2Default();
-      bias_ver = inputs[in_bias].version();
+      bias_ver_ = inputs[in_bias].version();
     } else {
       cached_bias_ = NDArray();
     }
@@ -315,7 +313,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         QuantizeConvWeightBias<DType>(&cached_weight_, &cached_bias_,
                                       has_bias, data_min, data_max,
                                       mkldnn_param.weight_channelwise_scale,
-                                      &weight_scales);
+                                      &weight_scales_);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
@@ -340,23 +338,23 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         full_conv_param.requantize_scales.resize(channel);
         for (size_t c = 0; c < channel; c++) {
           auto weight_scale = mkldnn_param.weight_channelwise_scale
-                                  ? weight_scales[c]
-                                  : weight_scales[0];
+                                  ? weight_scales_[c]
+                                  : weight_scales_[0];
           full_conv_param.requantize_scales[c] =
               output_scale / data_scale / weight_scale;
         }
       } else {
-        output_scale = data_scale * weight_scales[0];
+        output_scale = data_scale * weight_scales_[0];
         full_conv_param.requantize_scales.resize(0);
       }
       if (mkldnn_param.with_sum)
         full_conv_param.sum_scale = output_scale / sum_in_scale;
     }
-    fwd.reset(new MKLDNNConvForward(
+    fwd_.reset(new MKLDNNConvForward(
         full_conv_param, ctx.is_train, data_, cached_weight_,
         has_bias ? &cached_bias_ : nullptr, output_));
   }
-  initalized = true;
+  initalized_ = true;
   std::vector<NDArray> new_inputs;
   std::vector<OpReqType> new_req;
   if (has_bias) {
@@ -366,7 +364,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     new_inputs = {data_, cached_weight_};
     new_req = {req[in_data], req[in_weight]};
   }
-  ConvolutionFusionComputeExCPU(full_conv_param, ctx, fwd.get(), new_inputs,
+  ConvolutionFusionComputeExCPU(full_conv_param, ctx, fwd_.get(), new_inputs,
                                 new_req, {output_});
 
   if (mkldnn_param.with_sum) {
@@ -625,7 +623,7 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
 bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs,
                                 const NodeAttrs &input_attrs) {
   const std::vector<std::string> exclude_key{
-      "weight", "bias", "gamma", "beta", "moving_mean", "moving_var"};
+      "weight", "bias", "gamma", "beta", "moving_mean", "moving_var", "running_mean"};
   for (auto i : exclude_key) {
     if (common::StringEndsWith(input_attrs.name, i)) {
       return true;
