@@ -20,9 +20,9 @@ package org.apache.mxnetexamples.imclassification
 import java.util.concurrent._
 
 import org.apache.mxnetexamples.imclassification.models._
-import org.apache.mxnetexamples.imclassification.util.ModelTrain
+import org.apache.mxnetexamples.imclassification.util.Fitter
 import org.apache.mxnet._
-import org.apache.mxnetexamples.imclassification.data.{MnistIter, SyntheticDataIter}
+import org.apache.mxnetexamples.imclassification.datasets.{MnistIter, SyntheticDataIter}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -48,7 +48,7 @@ object TrainModel {
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
       val (dataLoader, net) = dataLoaderAndModel("mnist", model, dataPath,
         numExamples = numExamples, benchmark = benchmark)
-      val Acc = ModelTrain.fit(batchSize = 128, numExamples, devs = devs,
+      val Acc = Fitter.fit(batchSize = 128, numExamples, devs = devs,
         network = net, dataLoader = dataLoader,
         kvStore = "local", numEpochs = numEpochs)
       logger.info("Finish test fit ...")
@@ -141,7 +141,7 @@ object TrainModel {
         logger.info("Start KVStoreServer for scheduler & servers")
         KVStoreServer.start()
       } else {
-        ModelTrain.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+        Fitter.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
           network = net, dataLoader = dataLoader,
           kvStore = inst.kvStore, numEpochs = inst.numEpochs,
           modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,

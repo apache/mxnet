@@ -22,8 +22,8 @@ import org.apache.mxnet._
 import org.apache.mxnet.optimizer.SGD
 import org.slf4j.LoggerFactory
 
-object ModelTrain {
-  private val logger = LoggerFactory.getLogger(classOf[ModelTrain])
+object Fitter {
+  private val logger = LoggerFactory.getLogger(classOf[Fitter])
 
   /**
     * Fits a model
@@ -130,5 +130,5 @@ object ModelTrain {
   // scalastyle:on parameterNum
 }
 
-class ModelTrain
+class Fitter
 
