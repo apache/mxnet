@@ -1,11 +1,11 @@
 LSTM time series example
 =============================================
 
-This tutorial shows how to use an LSTM model with multivariate data, and generate predictions from it. For demonstration purposes, we used an opensource pollution data. You can find the data on [GitHub](https://github.com/dmlc/web-data/tree/master/mxnet/tinyshakespeare).
-The tutorial is an illustration of how to use LSTM models with MXNetR. We are forecasting the air pollution with data recorded at the US embassy in Beijing, China for five years.
+This tutorial shows how to use an LSTM model with multivariate data, and generate predictions from it. For demonstration purposes, we used an open source [pollution data](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data).
+The tutorial is an illustration of how to use LSTM models with MXNet-R. We are forecasting the air pollution with data recorded at the US embassy in Beijing, China for five years.
 
 Dataset Attribution:
-"PM2.5 data of US Embassy in Beijing" (https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
+"PM2.5 data of US Embassy in Beijing" 
 We want to predict pollution levels(PM2.5 concentration) in the city given the above dataset.
 
 ```r
@@ -26,55 +26,55 @@ Ir: Cumulated hours of rain
 ```
 
 We use past PM2.5 concentration, dew point, temperature, pressure, wind speed, snow and rain to predict
-PM2.5 concentration levels
+PM2.5 concentration levels.
 
-Load  and pre-process the Data
+Load and pre-process the data
 ---------
-Load in the data and preprocess it. It is assumed that the data has been downloaded in as csv file 'data.csv' locally.
+The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
 
  ```r
-    ## Loading required packages
-    library("readr")
-    library("dplyr")
-    library("mxnet")
-    library("abind")
+  ## Loading required packages
+  library("readr")
+  library("dplyr")
+  library("mxnet")
+  library("abind")
  ```
 
 
 
  ```r
 
-    mx.set.seed(1234)
-    ## Preprocessing steps
+  mx.set.seed(1234)
+  ## Preprocessing steps
 
-    Data <- read.csv(file="data.csv", header=TRUE, sep=",")
+  Data <- read.csv(file="data.csv", header=TRUE, sep=",")
 
-    ## Extracting specific features from the dataset as variables for time series
-    ## We extract pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
+  ## Extracting specific features from the dataset as variables for time series
+  ## We extract pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
 
-    df <- data.frame(Data$pm2.5, Data$DEWP,Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
-    df[is.na(df)] <- 0
+  df <- data.frame(Data$pm2.5, Data$DEWP,Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
+  df[is.na(df)] <- 0
 
-    ## Now we normalise each of the feature set to a range(0,1)
-    df <- matrix(as.matrix(df),ncol=ncol(df),dimnames=NULL)
-    rangenorm <- function(x){(x-min(x))/(max(x)-min(x))}
-    df <- apply(df,2, rangenorm)
-    df <- t(df)
+  ## Now we normalise each of the feature set to a range(0,1)
+  df <- matrix(as.matrix(df),ncol=ncol(df),dimnames=NULL)
+  rangenorm <- function(x){(x-min(x))/(max(x)-min(x))}
+  df <- apply(df,2, rangenorm)
+  df <- t(df)
   ```
-For using multidimesional data with MXNetR. We need to convert training data to the form
-(n_dim x seq_len x num_samples) and label should be of the form (seq_len x num_samples) or (1 x num_samples)
-depending on the LSTM flavour to be used(one-to-one/ many-to-one). Please note that MXNetR currently supports only these two flavours of RNN.
-We have used n_dim = 7, seq_len = 100  and num_samples = 430.
+For using multidimesional data with MXNet-R, we need to convert training data to the form
+(n_dim x seq_len x num_samples). For one-to-one RNN flavours labels should be of the form (seq_len x num_samples) while for many-to-one flavour, the labels should be of the form (1 x num_samples). Please note that MXNet-R currently supports only these two flavours of RNN.
+We have used n_dim = 7, seq_len = 100,  and num_samples = 430 because the dataset has 430 samples, each the length of 100 timestamps, we have seven time series as input features so each input has dimesnion of seven at each time step.
+
 
 ```r
 n_dim <- 7
 seq_len <- 100
 num_samples <- 430
 ## extract only required data from dataset
-trX<- df[1:n_dim, 25:(24+(seq_len * num_samples))]
+trX <- df[1:n_dim, 25:(24+(seq_len * num_samples))]
 ## the label data(next PM2.5 concentration) should be one time step ahead of the current PM2.5 concentration
 
-trY<- df[1,26:(25+(seqlen* num_samples))]
+trY <- df[1,26:(25+(seqlen* num_samples))]
 ## reshape the matrices in the format acceptable by MXNetR RNNs
 trainX <- trX
 dim(trainX) <- c(n_dim, seq_len, num_samples)
@@ -90,10 +90,11 @@ Defining and training the network
 
 ```r
 batch.size <- 32
-# take first 300 samples for train - remaining 100 for evaluation
+# take first 300 samples for training - remaining 100 for evaluation
 train_ids <- 1:300
-eval_ids<- 301:400
-
+eval_ids <- 301:400
+## The number of samples used for training and evaluation is arbitrary.
+## I have kept aside few samples for testing purposes
 ## create dataiterators
 train.data <- mx.io.arrayiter(data = trainX[,,train_ids, drop = F], label = trainY[, train_ids],
                               batch.size = batch.size, shuffle = TRUE)
@@ -262,7 +263,7 @@ Start training with 1 devices
 
 Inference on the network
 ---------
-Now we have trained the network. Let's use it for inference
+Now we have trained the network. Let's use it for inference.
 
 ```r
 ctx <- mx.cpu()
@@ -275,16 +276,17 @@ sym_state_cell <- internals$get.output(which(internals$outputs %in% "RNN_state_c
 sym_output <- internals$get.output(which(internals$outputs %in% "loss_output"))
 symbol <- mx.symbol.Group(sym_output, sym_state, sym_state_cell)
 
-## We will predict 100 timestamps for 401stsamples since it was not used in training
+## We will predict 100 timestamps for 401st sample (first sample from the test samples)
 pred_length = 100
 predict <- numeric()
 
 ## We pass the 400th sample through the network to get the weights and use it for predicting next 100 time stamps.
-data = mx.nd.array(trainX[, , 400, drop = F])
-label = mx.nd.array(trainY[, 400, drop = F])
+data <- mx.nd.array(trainX[, , 400, drop = F])
+label <- mx.nd.array(trainY[, 400, drop = F])
 
 
-
+## We create dataiterators for the input, please note that the label is required to create iterator
+## and will not be used in the inference. You can use dummy values too in the label.
 infer.data <- mx.io.arrayiter(data = data, label = label,
                               batch.size = 1, shuffle = FALSE)
 
@@ -294,8 +296,8 @@ infer <- mx.infer.rnn.one(infer.data = infer.data,
                           aux.params = model$aux.params,
                           input.params = NULL,
                           ctx = ctx)
-## Once we get the weights for the above time seriees, we try to predict the next 100 steps for this time series which is technically
-##our 401st time series
+## Once we get the weights for the above time series, we try to predict the next 100 steps 
+## for this time series, which is technically our 401st time series.
 
 real<- trainY[ ,401]
 
@@ -356,3 +358,5 @@ Now predict contains the predicted 100 values
  [97] 0.06740443 0.06338028 0.06740443 0.07444668
 ```
 The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
+
+For more tutorials on MXNet-R, head on to [MXNet-R tutorials](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/r)
