@@ -42,11 +42,11 @@ and _Install MXNet dependencies_
 
 To use the prebuilt jars (easiest), you will need to replace the native version of the line in the project dependencies with your configuration.
 
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]`
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.3.0"]`
 or
-`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]`
+`[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.0"]`
 or
-`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]`
+`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0"]`
 
 If you are using the prebuilt jars they may have a slightly different dependencies then building from source:
 
@@ -116,7 +116,7 @@ Checkout the latest SHA from the main package:
 
 If you need to checkout a particular release you can do it with:
 
-`git checkout tags/1.2.1 -b release-1.2.1`
+`git checkout tags/1.3.0 -b release-1.3.0`
 
 `git submodule update --init --recursive`
 

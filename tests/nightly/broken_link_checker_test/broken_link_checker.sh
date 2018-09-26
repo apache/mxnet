@@ -28,6 +28,3 @@ echo `pwd`
 
 echo "Running test_broken_links.py"
 python test_broken_links.py
-
-echo "Running check_regression.sh"
-./check_regression.sh

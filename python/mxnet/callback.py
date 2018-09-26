@@ -165,9 +165,13 @@ class Speedometer(object):
                     name_value = param.eval_metric.get_name_value()
                     if self.auto_reset:
                         param.eval_metric.reset()
-                    msg = 'Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec'
-                    msg += '\t%s=%f'*len(name_value)
-                    logging.info(msg, param.epoch, count, speed, *sum(name_value, ()))
+                        msg = 'Epoch[%d] Batch [%d-%d]\tSpeed: %.2f samples/sec'
+                        msg += '\t%s=%f'*len(name_value)
+                        logging.info(msg, param.epoch, count-self.frequent, count, speed, *sum(name_value, ()))
+                    else:
+                        msg = 'Epoch[%d] Batch [0-%d]\tSpeed: %.2f samples/sec'
+                        msg += '\t%s=%f'*len(name_value)
+                        logging.info(msg, param.epoch, count, speed, *sum(name_value, ()))
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)

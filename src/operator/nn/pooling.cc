@@ -96,6 +96,13 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     CHECK(param.p_value.has_value());
   }
   const TShape &dshape = (*in_shape)[0];
+  if (param.pooling_convention == pool_enum::kSame) {
+    CHECK_EQ(dshape.ndim(), 3U)
+      << "Pooling: Input data should be 3D in (batch, channel, x)"
+      << ". Currently 'same' supports Max Pooling 1-D";
+    CHECK(param.pad[0] == 0 && param.pad[1] == 0 && param.pad[2] == 0)
+      << "Same pooling convention disables the use of pad parameter.";
+  }
   CHECK_GE(dshape.ndim(), 3U)
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
@@ -126,10 +133,14 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       oshape[2] = 1 +
                   (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
                       param.stride[0];
-    } else {
-      oshape[2] = 1 + static_cast<int>(ceil(
+    } else if (param.pooling_convention == pool_enum::kFull) {
+      oshape[2] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[2] + 2 * param.pad[0] -
                                              param.kernel[0]) /
+                          param.stride[0]));
+    } else {
+      oshape[2] = static_cast<int>(std::ceil(
+                          static_cast<float>(dshape[2] + 2 * param.pad[0]) /
                           param.stride[0]));
     }
     out_shape->clear();
@@ -157,11 +168,11 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                   (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
                       param.stride[1];
     } else {
-      oshape[2] = 1 + static_cast<int>(ceil(
+      oshape[2] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[2] + 2 * param.pad[0] -
                                              param.kernel[0]) /
                           param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(ceil(
+      oshape[3] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[3] + 2 * param.pad[1] -
                                              param.kernel[1]) /
                           param.stride[1]));
@@ -192,15 +203,15 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                   (dshape[4] + 2 * param.pad[2] - param.kernel[2]) /
                       param.stride[2];
     } else {
-      oshape[2] = 1 + static_cast<int>(ceil(
+      oshape[2] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[2] + 2 * param.pad[0] -
                                              param.kernel[0]) /
                           param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(ceil(
+      oshape[3] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[3] + 2 * param.pad[1] -
                                              param.kernel[1]) /
                           param.stride[1]));
-      oshape[4] = 1 + static_cast<int>(ceil(
+      oshape[4] = 1 + static_cast<int>(std::ceil(
                           static_cast<float>(dshape[4] + 2 * param.pad[2] -
                                              param.kernel[2]) /
                           param.stride[2]));
@@ -395,6 +406,7 @@ For each window ``X``, the mathematical expression for Lp pooling is:
 .set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient",
@@ -424,6 +436,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
 #endif
 .set_attr_parser(PoolingParamParser)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", PoolingGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", PoolingGradCompute<cpu>);
