@@ -173,12 +173,12 @@ class NaiveEngine final : public Engine {
       if (streams_[dev_id] == nullptr) {
         streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
       }
-      exec_fun(RunContext{exec_ctx, streams_[dev_id]}, callback);
+      exec_fun(RunContext{exec_ctx, streams_[dev_id], streams_[dev_id]}, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
     } else {
-      exec_fun(RunContext{exec_ctx, &cpu_stream_}, callback);
+      exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr}, callback);
     }
     CHECK(this->req_completed_)
         << "NaiveEngine only support synchronize Push so far";

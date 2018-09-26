@@ -83,6 +83,10 @@ struct OpContext {
   inline mshadow::Stream<xpu>* get_stream() const {
     return run_ctx.get_stream<xpu>();
   }
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_aux_stream() const {
+    return run_ctx.get_aux_stream<xpu>();
+  }
 };
 
 /*! \brief the execution type of the operator */

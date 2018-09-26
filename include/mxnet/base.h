@@ -194,6 +194,11 @@ struct Context {
    */
   inline static int32_t GetGPUCount();
   /*!
+   * Get the number of streams that a GPU Worker has available to operations.
+   * \return The number of streams that are available.
+   */
+  inline static int32_t GetGPUStreamsPerWorker();
+  /*!
    * \brief get the free and total available memory on a GPU
    * \param dev the GPU number to query
    * \param free_mem pointer to the uint64_t holding free GPU memory
@@ -233,6 +238,10 @@ struct RunContext {
    */
   void *stream;
   /*!
+   * \brief the auxiliary stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   */
+  void *aux_stream;
+  /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream
    * \tparam xpu the device type of the stream
@@ -240,6 +249,16 @@ struct RunContext {
   template<typename xpu>
   inline mshadow::Stream<xpu>* get_stream() const {
     return static_cast<mshadow::Stream<xpu>*>(stream);
+  }
+  /*!
+   * \brief get the auxiliary (i.e. 2nd) mshadow stream from Context
+   *  The user must sync work enqueued to this stream with the primary stream using events.
+   * \return the mshadow stream
+   * \tparam xpu the device type of the stream
+   */
+  template<typename xpu>
+  inline mshadow::Stream<xpu>* get_aux_stream() const {
+    return static_cast<mshadow::Stream<xpu>*>(aux_stream);
   }
   /*! \brief get the base Context from RunContext */
   inline const Context& get_ctx() const {
@@ -303,6 +322,15 @@ inline int32_t Context::GetGPUCount() {
 #else
   return 0;
 #endif
+}
+
+inline int32_t Context::GetGPUStreamsPerWorker() {
+  // The default number of streams available if the user has not set MXNET_GPU_WORKER_NSTREAMS.
+  const int32_t default_num_streams = 1;
+  // The get_aux_stream() interface can supply one additional stream beyond the standard one.
+  static int32_t num_streams =
+      dmlc::GetEnv("MXNET_GPU_WORKER_NSTREAMS", default_num_streams) >= 2 ? 2 : 1;
+  return num_streams;
 }
 
 inline void Context::GetGPUMemoryInformation(int dev, uint64_t *free_mem,

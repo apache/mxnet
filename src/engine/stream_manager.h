@@ -55,6 +55,8 @@ class StreamManager {
 #if MXNET_USE_CUDA
   std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
       gpu_streams_;
+  std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
+      gpu_aux_streams_;
   std::array<mshadow::Stream<gpu>*, kNumGpus> gpu_io_streams_;
   std::array<int, kNumGpus> gpu_cnt_;
 #endif  // MXNET_USE_CUDA
@@ -80,12 +82,17 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
           for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
             i = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
           }
+          for (auto&& i : gpu_aux_streams_.at(ctx.dev_id)) {
+            i = Context::GetGPUStreamsPerWorker() >= 2 ?
+                mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id) : nullptr;
+          }
           counter = 0;
         }
         use_counter = counter;
         counter = (counter + 1) % kStreams;
       }
-      ret = RunContext{ctx, gpu_streams_.at(ctx.dev_id).at(use_counter)};
+      ret = RunContext{ctx, gpu_streams_.at(ctx.dev_id).at(use_counter),
+                            gpu_aux_streams_.at(ctx.dev_id).at(use_counter)};
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;

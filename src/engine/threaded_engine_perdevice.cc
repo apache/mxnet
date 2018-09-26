@@ -244,7 +244,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     this->is_worker_ = true;
 #if MXNET_USE_CUDA
     CHECK(block != nullptr);
-    mshadow::Stream<gpu> *stream;
+    mshadow::Stream<gpu> *stream = nullptr;
+    mshadow::Stream<gpu> *aux_stream = nullptr;
     do {
       ThreadPool::SetReadyOnDestroy setReady(ready_event);
       // allocate stream
@@ -253,11 +254,14 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         stream = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
       } else {
         stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
+        if (Context::GetGPUStreamsPerWorker() >= 2) {
+          aux_stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
+        }
       }
     } while (false);
     // execute task
     OprBlock* opr_block;
-    RunContext run_ctx{ctx, stream};
+    RunContext run_ctx{ctx, stream, aux_stream};
     auto* task_queue = &(block->task_queue);
 
     // Don't eat up omp threads for GPU jobs.  They're probably best used elsewhere,
