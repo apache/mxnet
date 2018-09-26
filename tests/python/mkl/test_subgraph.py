@@ -489,8 +489,7 @@ def check_positive_fusion():
 
 @with_seed()
 def check_negative_fusion():
-  #shape = [(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
-  shape = [(4,4,10,10)]
+  shape = [(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
   for data_shape in shape:
     # conv + bn
     syms, attrs, excluded_attrs = neg_conv_bn()
