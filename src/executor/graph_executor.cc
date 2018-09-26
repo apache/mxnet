@@ -44,6 +44,7 @@ GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;
   subgraph_property_ = dmlc::GetEnv("MXNET_SUBGRAPH_BACKEND", std::string());
+  engine_ref_ = Engine::_GetSharedRef();
 }
 
 GraphExecutor::~GraphExecutor() {
