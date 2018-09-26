@@ -66,7 +66,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
 * MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
   - Values: Int ```(default=24)```
-  - The threshold that decides the rounding strategy. If the memory size is smaller than the threshold, it rounds to the smallest 2^n; if the memory size is larger than the threshold, it rounds to the next k * 2^CUTOFF.
+  - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2^T`, it rounds to the smallest `2^n` that is larger than the requested memory size; if the memory size is larger than `2^T`, it rounds to the next k * 2^T.
 
 ## Engine Type
 
