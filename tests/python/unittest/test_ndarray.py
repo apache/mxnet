@@ -1471,6 +1471,24 @@ def test_dlpack():
             mx.test_utils.assert_almost_equal(a_np, d_np)
             mx.test_utils.assert_almost_equal(a_np, e_np)
 
+@with_seed()
+def test_ndarray_constant_init():
+    # a=mx.nd.array([1])
+    a=mx.nd.array(9)
+    assert(isinstance(a,mx.nd.NDArray))    
+
+@with_seed()
+def test_symbol_constant_init():
+    # a=mx.nd.array([1])
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    c = a * b
+    d = c.eval(a=mx.nd.array(2),b=mx.nd.array(3))
+    assert(isinstance(d[0],mx.nd.NDArray))
+    e = c.bind(mx.cpu(),args=[mx.nd.array(2),mx.nd.array(3)])
+    f = e.forward()
+    assert(isinstance(f[0],mx.nd.NDArray))
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

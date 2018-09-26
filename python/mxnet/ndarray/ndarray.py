@@ -869,7 +869,7 @@ fixed-size items.
         source_array = np.ascontiguousarray(source_array, dtype=self.dtype)
         if source_array.shape != self.shape:
             raise ValueError('Shape inconsistent: expected %s vs got %s'%(
-                str(self.shape), str(source_array.shape)))
+                str(source_array.shape), str(self.shape)))
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.c_void_p),
@@ -2479,6 +2479,8 @@ def array(source_array, ctx=None, dtype=None):
     if isinstance(source_array, NDArray):
         dtype = source_array.dtype if dtype is None else dtype
     else:
+        if isinstance(source_array,(float,int)):
+            source_array=[float(source_array)]
         dtype = mx_real_t if dtype is None else dtype
         if not isinstance(source_array, np.ndarray):
             try:
