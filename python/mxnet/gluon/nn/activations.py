@@ -18,7 +18,7 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-__all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'Swish']
+__all__ = ['Activation', 'LeakyReLU', 'PReLU', 'ELU', 'SELU', 'CELU', 'Swish']
 
 from ... import initializer
 from ..block import HybridBlock
@@ -179,6 +179,39 @@ class SELU(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.LeakyReLU(x, act_type='selu', name='fwd')
+
+
+class CELU(HybridBlock):
+    r"""
+    Continuous Exponential Linear Unit. (CELU)
+        https://arxiv.org/abs/1704.07483
+
+    .. math::
+
+        f\left(x\right) = \left\{
+            \begin{array}{lr}
+                \alpha (\exp(x/\alpha) - 1) & : x \lt 0 \\
+                x & : x \geq 0 \\
+            \end{array}
+        \right.\\
+
+    Parameters
+    ----------
+    alpha : float
+        slope coefficient for the negative half axis.
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, alpha=0.25, **kwargs):
+        super(CELU, self).__init__(**kwargs)
+        self._alpha = alpha
+
+    def hybrid_forward(self, F, x):
+        return F.LeakyReLU(x, slope=self._alpha, act_type='celu', name='fwd')
 
 
 class Swish(HybridBlock):

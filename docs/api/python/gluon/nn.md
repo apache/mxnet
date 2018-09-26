@@ -79,6 +79,7 @@ This document lists the neural network blocks in Gluon:
     PReLU
     ELU
     SELU
+    CELU
     Swish
 ```
 

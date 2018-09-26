@@ -47,7 +47,7 @@ namespace op {
 namespace leakyrelu {
 enum LeakyReLUOpInputs {kData, kGamma};
 enum LeakyReLUOpOutputs {kOut, kMask};
-enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU, kSELU};
+enum LeakyReLUOpType {kLeakyReLU, kPReLU, kRReLU, kELU, kSELU, kCELU};
 enum LeakyReLUOpResource {kRandom};
 }  // namespace leakyrelu
 
@@ -64,9 +64,10 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
     .add_enum("prelu", leakyrelu::kPReLU)
     .add_enum("elu", leakyrelu::kELU)
     .add_enum("selu", leakyrelu::kSELU)
+    .add_enum("celu", leakyrelu::kCELU)
     .describe("Activation function to be applied.");
     DMLC_DECLARE_FIELD(slope).set_default(0.25f)
-    .describe("Init slope for the activation. (For leaky and elu only)");
+    .describe("Init slope for the activation. (For leaky, elu and celu only)");
     DMLC_DECLARE_FIELD(lower_bound).set_default(0.125f)
     .describe("Lower bound of random slope. (For rrelu only)");
     DMLC_DECLARE_FIELD(upper_bound).set_default(0.334f)
@@ -190,8 +191,16 @@ class LeakyReLUOp : public Operator {
         });
         break;
       }
+      case leakyrelu::kCELU: {
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::celu, Req>, xpu>::Launch(
+            s, out.size(0) * out.size(1) * out.size(2), out.dptr_, data.dptr_,
+            DType(param_.slope));
+        });
+        break;
+      }
       default:
-        LOG(FATAL) << "Not implmented";
+        LOG(FATAL) << "Not implemented";
     }
   }
 
@@ -287,8 +296,17 @@ class LeakyReLUOp : public Operator {
         });
         break;
       }
+      case leakyrelu::kCELU: {
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<
+            mxnet_op::backward_grad_tuned<mshadow_op::celu_grad>, Req>, xpu>::Launch(
+              s, gdata.size(0) * gdata.size(1) * gdata.size(2), gdata.dptr_, grad.dptr_,
+              output.dptr_, DType(param_.slope));
+        });
+        break;
+      }
       default:
-        LOG(FATAL) << "Not implmented";
+        LOG(FATAL) << "Not implemented";
     }
   }
 

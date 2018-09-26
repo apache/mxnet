@@ -1036,6 +1036,16 @@ def test_activations():
     for test_point, ref_point in zip(elu_test(point_to_validate), elu(point_to_validate)):
         assert test_point == ref_point
 
+    celu = mx.gluon.nn.CELU()
+    def celu_test(x):
+        def celu(x):
+            alpha = 0.25
+            return alpha * (mx.nd.exp(x / alpha) - 1) if x < 0 else x
+        return [celu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(celu_test(point_to_validate), celu(point_to_validate)):
+        assert test_point == ref_point
+
     selu = mx.gluon.nn.SELU()
     def selu_test(x):
         def selu(x):
@@ -1043,7 +1053,7 @@ def test_activations():
             return scale * x if x >= 0 else alpha * mx.nd.exp(x) - alpha
         return [selu(x_i) for x_i in x]
 
-    for test_point, ref_point in zip(selu(point_to_validate), selu(point_to_validate)):
+    for test_point, ref_point in zip(selu_test(point_to_validate), selu(point_to_validate)):
         assert test_point == ref_point
 
     prelu = mx.gluon.nn.PReLU()

@@ -61,6 +61,8 @@ The following modified ReLU Activation functions are supported:
 - *rrelu*: Randomized ReLU. same as *leaky* but the `slope` is uniformly and randomly chosen from
   *[lower_bound, upper_bound)* for training, while fixed to be
   *(lower_bound+upper_bound)/2* for inference.
+- *celu*: Continuous exponential linear unit. `y = x >= 0 ? x : slope * (exp(x/slope)-1)` as
+  described in https://arxiv.org/abs/1704.07483
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to activation function.")

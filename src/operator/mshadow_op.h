@@ -148,6 +148,11 @@ MXNET_BINARY_MATH_OP_NC(elu, a > DType(0) ? a :
 
 MXNET_BINARY_MATH_OP_NC(elu_grad, a > DType(0) ? DType(1) : DType(b + a));
 
+MXNET_BINARY_MATH_OP_NC(celu, a >= DType(0) ? a :
+                        DType(math::id(b) * math::expm1(a/b)));
+
+MXNET_BINARY_MATH_OP_NC(celu_grad, a >= DType(0) ? DType(1) : DType((b + a) / b));
+
 MXNET_SIMPLE_UNARY_MATH_OP(tanh);
 
 MXNET_UNARY_MATH_OP(tanh_grad, 1.0f - math::sqr(a));

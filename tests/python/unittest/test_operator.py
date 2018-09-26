@@ -735,6 +735,8 @@ def test_leaky_relu():
             out[neg_indices] = slope * np.expm1(out[neg_indices])
         elif act_type == 'leaky':
             out[neg_indices] = slope * out[neg_indices]
+        elif act_type == 'celu':
+            out[neg_indices] = slope * np.expm1(out[neg_indices] / slope)
         return out
     def fleaky_relu_grad(grad, x, y, act_type, slope=0.25):
         neg_indices = x < 0
@@ -743,6 +745,8 @@ def test_leaky_relu():
             out[neg_indices] = y[neg_indices] + slope
         elif act_type == 'leaky':
             out[neg_indices] = slope
+        elif act_type == 'celu':
+            out[neg_indices] = (y[neg_indices] + slope) / slope
         return out * grad
     for ndim in range(1, 4):
         shape = rand_shape_nd(ndim)
@@ -754,7 +758,7 @@ def test_leaky_relu():
             rtol = 1e-2
             atol = 1e-3
             xa[abs(xa) < eps] = 1.0
-            for act_type in ['elu', 'leaky']:
+            for act_type in ['elu', 'leaky', 'celu']:
                 y = mx.symbol.LeakyReLU(data=x, slope=slp, act_type=act_type)
                 ya = fleaky_relu(xa, slope=slp, act_type=act_type)
                 ga = fleaky_relu_grad(np.ones(shape), xa, ya, slope=slp, act_type=act_type)
