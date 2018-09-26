@@ -62,11 +62,11 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: String ```(default=Naive)```
   - The type of memory pool.
   - Choices:
-    - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If the buffered memory match the requested size, the memory will be returned from the pool in memory allocation.
+    - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If a buffered memory chunk matches the size of a new request, the chunk from the memory pool will be returned and reused.
     - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
 * MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
   - Values: Int ```(default=24)```
-  - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2^T`, it rounds to the smallest `2^n` that is larger than the requested memory size; if the memory size is larger than `2^T`, it rounds to the next k * 2^T.
+  - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
 
 ## Engine Type
 
