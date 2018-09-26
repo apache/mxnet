@@ -58,6 +58,15 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
   - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.  
+* MXNET_GPU_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of memory pool.
+  - Choices:
+    - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If the buffered memory match the requested size, the memory will be returned from the pool in memory allocation.
+    - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
+* MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The threshold that decides the rounding strategy. If the memory size is smaller than the threshold, it rounds to the smallest 2^n; if the memory size is larger than the threshold, it rounds to the next k * 2^CUTOFF.
 
 ## Engine Type
 
