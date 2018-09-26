@@ -128,7 +128,7 @@ def test_round_ste():
 
 
 def test_grad_cancel():
-    npy = np.random.uniform(-0.5, 1, (2, 3, 4))
+    npy = np.random.uniform(-2, 2, (2, 3, 4))
 
     x = mx.nd.array(npy)
     x.attach_grad()
@@ -142,5 +142,5 @@ def test_grad_cancel():
             cancelled = mx.nd.contrib.gradcancel(x, threshold=threshold)
             y = cancelled ** 2
         y.backward()
-        exp_grad[np.abs(exp_grad) > threshold] = 0
+        exp_grad[np.abs(npy) > threshold] = 0
         np.testing.assert_almost_equal(exp_grad, x.grad.asnumpy())

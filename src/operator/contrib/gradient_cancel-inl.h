@@ -107,7 +107,7 @@ struct gradcancel_backward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* out_grad,
                                   const DType* in_data, const float threshold) {
-    KERNEL_ASSIGN(in_grad[i], req, math::fabs(out_grad[i]) <= threshold ? out_grad[i] : DType(0));
+    KERNEL_ASSIGN(in_grad[i], req, math::fabs(in_data[i]) <= threshold ? out_grad[i] : DType(0));
   }
 };
 
