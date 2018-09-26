@@ -27,6 +27,7 @@ from . import mask as maskUtils
 import os
 from collections import defaultdict
 import sys
+
 PYTHON_VERSION = sys.version_info[0]
 if PYTHON_VERSION == 2:
     from urllib import urlretrieve
