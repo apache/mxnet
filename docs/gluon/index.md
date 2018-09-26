@@ -6,8 +6,8 @@ Based on the [the Gluon API specification](https://github.com/gluon-api/gluon-ap
 
 To get started with Gluon, checkout the following resources and tutorials:
 * [60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/) - six 10-minute lessons on using Gluon
-* [GluonCV Toolkit](https://gluon-cv.mxnet.io/) - implementations of state of the art deep learning algorithms in **Natural Language Processing (NLP)**
-* [GluonNLP Toolkit](https://gluon-nlp.mxnet.io/) - implementations of state of the art deep learning algorithms in **Computer Vision (CV)**
+* [GluonCV Toolkit](https://gluon-cv.mxnet.io/) - implementations of state of the art deep learning algorithms in **Computer Vision (CV)**
+* [GluonNLP Toolkit](https://gluon-nlp.mxnet.io/) - implementations of state of the art deep learning algorithms in **Natural Language Processing (NLP)**
 * [Gluon: The Straight Dope](https://gluon.mxnet.io/) - notebooks designed to teach deep learning from the ground up, all using the Gluon API
 
 <br/>
