@@ -118,6 +118,14 @@ def test_ndarray_setitem():
     x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
+    # numpy assignment for empty axis
+    for trivial_shape in [(), (1), (1, 1), (1, 1, 1)]:
+        x = mx.nd.zeros(trivial_shape)
+        x[:] = np.ones(trivial_shape)
+        x_np = np.ones(trivial_shape, dtype=x.dtype)
+        assert x.shape == trivial_shape
+        assert same(x.asnumpy(), x_np)
+
 
 @with_seed()
 def test_ndarray_elementwise():
@@ -215,6 +223,13 @@ def test_ndarray_onehot():
         npy[np.arange(shape[0]), indices] = 1.0
         mx.nd.onehot_encode(mx.nd.array(indices), out=arr)
         assert same(npy, arr.asnumpy())
+
+
+def test_init_from_scalar():
+    npy = np.ones([])
+    arr = mx.nd.array(npy)
+    assert arr.shape == ()
+    assert same(npy, arr.asnumpy())
 
 
 @with_seed()
