@@ -201,6 +201,15 @@ object NDArray extends NDArrayBase {
   }
 
   /**
+    * Get the String representation of NDArray
+    * @param nd input NDArray
+    * @return String
+    */
+  def toString(nd : NDArray) : String = {
+    nd.visualize
+  }
+
+  /**
    * Create an empty uninitialized new NDArray, with specified shape.
    *
    * @param shape shape of the NDArray.
@@ -507,6 +516,57 @@ object NDArray extends NDArrayBase {
 
   def array(sourceArr: Array[Double], shape: Shape): NDArray = {
     array(sourceArr, shape, null)
+  }
+
+  /**
+    * Create a new NDArray based on the structure of source Array
+    * @param sourceArr Array[Array...Array[Float]...]
+    * @param ctx context like to pass in
+    * @return an NDArray with the same shape of the input
+    */
+  def toNDArray(sourceArr: Array[_], ctx : Context = null) : NDArray = {
+    val shape = ArrayBuffer[Int]()
+    shapeGetter(sourceArr, shape, 0)
+    val finalArr = new Array[Float](shape.product)
+    arrayCombiner(sourceArr, finalArr, 0, finalArr.length - 1)
+    array(finalArr, Shape(shape), ctx)
+  }
+
+  private def shapeGetter(sourceArr : Any,
+                          shape : ArrayBuffer[Int], shapeIdx : Int) : Unit = {
+    sourceArr match {
+      case arrFloat : Array[Float] => {
+        val arrLength = arrFloat.length
+        if (shape.length == shapeIdx) {
+          shape += arrLength
+        }
+        require(shape(shapeIdx) == arrLength, "Each Array should have equal length")
+      }
+      case arr : Array[Any] => {
+        val arrLength = arr.length
+        if (shape.length == shapeIdx) {
+          shape += arrLength
+        }
+        require(shape(shapeIdx) == arrLength,
+          s"Each Array should have equal length, expected ${shape(shapeIdx)}, get $arrLength")
+        arr.foreach(ele => shapeGetter(ele, shape, shapeIdx + 1))
+      }
+      case _ => throw new IllegalArgumentException(s"Wrong type passed: ${sourceArr.getClass}")
+    }
+  }
+
+  private def arrayCombiner(sourceArr : Any, arr : Array[Float], start : Int, end : Int) : Unit = {
+    sourceArr match {
+      case arrFloat : Array[Float] => {
+        for (i <- arrFloat.indices) arr(start + i) = arrFloat(i)
+      }
+      case arrAny : Array[Any] => {
+        val fragment = (end - start + 1) / arrAny.length
+        for (i <- arrAny.indices)
+          arrayCombiner(arrAny(i), arr, start + i * fragment, end + (i + 1) * fragment)
+      }
+      case _ => throw new IllegalArgumentException(s"Wrong type passed: ${sourceArr.getClass}")
+    }
   }
 
   /**
