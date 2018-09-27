@@ -77,6 +77,7 @@ When using supported NVIDIA GPU hardware, inference and training can be vastly f
 The following steps will setup MXNet with CUDA. cuDNN can be enabled only when building from source.
 1. Install [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 1. Download and install [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). CUDA versions 9.2 or 9.0 are recommended. Some [issues with CUDA 9.1](https://github.com/apache/incubator-mxnet/labels/CUDA) have been identified in the past.
+1. Download and install [NVIDIA_CUDA_DNN](https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows)
 1. Install MXNet with CUDA support with pip:
 
 ```bash
@@ -93,6 +94,7 @@ The following steps will setup MXNet with CUDA and MKL.
 1. Install [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 1. Download and install [Intel MKL](https://software.intel.com/en-us/mkl/choose-download/windows) (registration required).
 1. Download and install [NVIDIA CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal).
+1. Download and install [NVIDIA_CUDA_DNN](https://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows)
 1. Install MXNet with MKL support with pip:
 
 ```bash
@@ -117,7 +119,7 @@ We provide two primary options to build and install MXNet yourself using [Micros
 
 **NOTE:** Visual Studio 2017's compiler is `vc15`. This is not to be confused with Visual Studio 2015's compiler, `vc14`.
 
-You also have the option to install MXNet with MKL or MKLDNN. In this case it is recommended that you refer to the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md).
+You also have the option to install MXNet with MKL or MKL-DNN. In this case it is recommended that you refer to the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md).
 
 **Option 1: Build with Microsoft Visual Studio 2017 (VS2017)**
 
@@ -163,7 +165,6 @@ cd C:\build
 ```
 cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
 ```
-**Note**: you may add to the cmake compilation options the compiler version to use with: `-T version=14.11`
 6. After the CMake successfully completed, compile the the MXNet source code by using following command:
 ```
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
@@ -216,7 +217,7 @@ These steps are required after building from source. If you already installed MX
 ```bash
     # Assuming you are in root mxnet source code folder
     cd python
-    sudo python setup.py install
+    python setup.py install
 ```
 
 Done! We have installed MXNet with Python interface.

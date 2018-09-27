@@ -130,7 +130,7 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
                           num_map_keys, map_keys, map_dev_types, map_dev_ids,
                           len, in_args, arg_grad_store, grad_req_type,
                           aux_states_len, aux_states,
-                          NULL, out);
+                          nullptr, out);
 }
 
 int MXExecutorBindEX(SymbolHandle symbol_handle,

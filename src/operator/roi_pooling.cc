@@ -234,7 +234,7 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(ROIPoolingParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ROIPoolingOp<cpu, DType>(param);
   });
