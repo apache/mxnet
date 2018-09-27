@@ -2479,8 +2479,8 @@ def array(source_array, ctx=None, dtype=None):
     if isinstance(source_array, NDArray):
         dtype = source_array.dtype if dtype is None else dtype
     else:
-        if isinstance(source_array,(float,int)):
-            source_array=[float(source_array)]
+        if isinstance(source_array, (float, int)):
+            source_array = [float(source_array)]
         dtype = mx_real_t if dtype is None else dtype
         if not isinstance(source_array, np.ndarray):
             try:
