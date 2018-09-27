@@ -119,7 +119,7 @@ def test_ndarray_setitem():
     assert same(x.asnumpy(), x_np)
 
     # numpy assignment for empty axis
-    for trivial_shape in [(), (1), (1, 1), (1, 1, 1)]:
+    for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
         x = mx.nd.zeros(trivial_shape)
         x[:] = np.ones(trivial_shape)
         x_np = np.ones(trivial_shape, dtype=x.dtype)
