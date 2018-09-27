@@ -191,6 +191,23 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   }
 }
 
+static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
+  auto mkldnn_dtype = static_cast<mkldnn::memory::data_type>(dtype);
+  switch (mkldnn_dtype) {
+    case mkldnn::memory::data_type::f32:
+      return mshadow::kFloat32;
+    case mkldnn::memory::data_type::s32:
+      return mshadow::kInt32;
+    case mkldnn::memory::data_type::s8:
+      return mshadow::kInt8;
+    case mkldnn::memory::data_type::u8:
+      return mshadow::kUint8;
+    default:
+      LOG(FATAL) << "unknown MKLDNN type";
+      return mshadow::kFloat32;
+  }
+}
+
 inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
   mkldnn::memory::dims dims(ndim);
   for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];

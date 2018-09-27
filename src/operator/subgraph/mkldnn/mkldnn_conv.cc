@@ -79,8 +79,7 @@ static inline size_t GetInSumIndex(const MKLDNNConvFusionParam &param) {
 
 template <typename DType>
 static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
-                                   bool has_bias, float data_min,
-                                   float data_max,
+                                   bool has_bias, float data_scale,
                                    bool weight_channelwise_scale,
                                    std::vector<float> *weight_scales) {
   using red::limits::MaxValue;
@@ -144,7 +143,6 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
     NDArray quantized_bias = NDArray(bias->storage_type(), bias->shape(),
                                      bias->ctx(), true, mshadow::kInt32);
     int32_t *quan_bias_ptr = quantized_bias.data().dptr<int32_t>();
-    DType data_scale = uint8_range / MaxAbs(data_min, data_max);
     for (size_t c = 0; c < channel; ++c) {
       auto weight_scale =
           weight_channelwise_scale ? weight_scales->at(c) : weight_scales->at(0);
@@ -177,7 +175,8 @@ class SgMKLDNNConvOperator {
   explicit SgMKLDNNConvOperator(const nnvm::NodeAttrs &attrs)
       : initalized_(false),
         subgraph_sym_(*attrs.subgraphs[0]),
-        param_(nnvm::get<MKLDNNConvFusionParam>(attrs.parsed)) {}
+        param_(nnvm::get<MKLDNNConvFusionParam>(attrs.parsed)),
+        inplace_(false) {}
 
   void Forward(const OpContext &ctx,
                const std::vector<NDArray> &inputs,
@@ -205,6 +204,7 @@ class SgMKLDNNConvOperator {
   size_t weight_ver_;
   size_t bias_ver_;
   std::vector<float> weight_scales_;
+  bool inplace_;
 };
 
 void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
@@ -246,8 +246,26 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       mkldnn_param.quantized ? outputs[kMax].data().dptr<float>() : nullptr;
   CHECK_EQ(input_size, idx);
   bool has_bias = mkldnn_param.with_bn || !conv_param.no_bias;
-  NDArray data_ = inputs[in_data];
-  NDArray output_ = mkldnn_param.with_sum ? inputs[in_sum] : outputs[kOut];
+  NDArray data = inputs[in_data];
+  NDArray output = mkldnn_param.with_sum ? inputs[in_sum] : outputs[kOut];
+
+  // Copy inputs[in_sum] into outputs[kOut] in case inplace optimization failed.
+  if (mkldnn_param.with_sum) {
+    if (!initalized_) {
+      auto in_mkl_mem = inputs[in_sum].GetMKLDNNData();
+      auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
+      // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
+      // which make check (req[kOut] == )
+      if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
+        inplace_ = true;
+      }
+    }
+    if (!inplace_) {
+      auto in_mkl_mem = inputs[in_sum].GetMKLDNNData();
+      const_cast<NDArray &>(outputs[kOut]).CopyFrom(*in_mkl_mem);
+      output = NDArray(outputs[kOut].GetMKLDNNData());
+    }
+  }
 
   // Check input change
   // TODO(zhennan): Only update cached_* changed.
@@ -309,26 +327,28 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     }
     // Quantize weight and bias.
     if (mkldnn_param.quantized) {
+      CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
+      auto data_range = (data.dtype() == mshadow::kInt8) ? int8_range : uint8_range;
+      float data_scale = data_range / MaxAbs(cached_data_min_, cached_data_max_);
       MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
         QuantizeConvWeightBias<DType>(&cached_weight_, &cached_bias_,
-                                      has_bias, data_min, data_max,
+                                      has_bias, data_scale,
                                       mkldnn_param.weight_channelwise_scale,
                                       &weight_scales_);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
-      float data_scale = uint8_range / MaxAbs(data_min, data_max);
       float sum_in_scale = 1.0;
       float out_range;
       float quantized_out_range;
       float output_scale;
-      if (data_min < 0.0) {
-        // TODO(zhennan): we need to use offset to convert int8 to uint8.
+      if (cached_data_min_ < 0.0) {
+        // TODO(zhennan): Support int8 input when mkldnn supports.
         LOG(FATAL) << "Can't handle negetive value for QuantizeData";
       }
       if (mkldnn_param.with_sum) {
-        auto quantized_sum_range = sum_min < 0 ? int8_range : uint8_range;
-        sum_in_scale = quantized_sum_range / MaxAbs(sum_min, sum_max);
+        auto quantized_sum_range = cached_sum_min_ < 0 ? int8_range : uint8_range;
+        sum_in_scale = quantized_sum_range / MaxAbs(cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize) {
         quantized_out_range =
@@ -351,21 +371,21 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         full_conv_param.sum_scale = output_scale / sum_in_scale;
     }
     fwd_.reset(new MKLDNNConvForward(
-        full_conv_param, ctx.is_train, data_, cached_weight_,
-        has_bias ? &cached_bias_ : nullptr, output_));
+        full_conv_param, ctx.is_train, data, cached_weight_,
+        has_bias ? &cached_bias_ : nullptr, output));
   }
   initalized_ = true;
   std::vector<NDArray> new_inputs;
   std::vector<OpReqType> new_req;
   if (has_bias) {
-    new_inputs = {data_, cached_weight_, cached_bias_};
+    new_inputs = {data, cached_weight_, cached_bias_};
     new_req = {req[in_data], req[in_weight], req[in_bias]};
   } else {
-    new_inputs = {data_, cached_weight_};
+    new_inputs = {data, cached_weight_};
     new_req = {req[in_data], req[in_weight]};
   }
   ConvolutionFusionComputeExCPU(full_conv_param, ctx, fwd_.get(), new_inputs,
-                                new_req, {output_});
+                                new_req, {output});
 
   if (mkldnn_param.with_sum) {
     auto out = const_cast<NDArray &>(outputs[kOut]);

@@ -204,10 +204,10 @@ if __name__ == '__main__':
             raise ValueError('unknow calibration mode %s received, only supports `none`, `naive`, and `entropy`'
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
-    # out = SymbolHandle()
-    # backend = "MKLDNN_POST_QUANTIZE"
-    # check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
-    # qsym = Symbol(out)
+    out = SymbolHandle()
+    backend = "MKLDNN_POST_QUANTIZE"
+    check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
+    qsym = Symbol(out)
     save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)

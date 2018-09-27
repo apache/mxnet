@@ -42,27 +42,12 @@ bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input) {
   return SupportMKLDNNQuantize(input.dtype()) && input.shape().ndim() == 4;
 }
 
-inline static mkldnn::memory::desc GetInDataMemDesc(const NDArray &arr) {
-  mkldnn::memory::dims dims(arr.shape().ndim());
-  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
-  int mkldnn_dtype;
-  // For INT8 case, currently we only support uint8 as input data so need
-  // to create the memory primitive of uint8 type
-  if (arr.dtype() == mshadow::kInt8) {
-    mkldnn_dtype = mshadow::kUint8;
-  } else {
-    mkldnn_dtype = arr.dtype();
-  }
-  return mkldnn::memory::desc{dims, get_mkldnn_type(mkldnn_dtype),
-                              mkldnn::memory::format::any};
-}
-
 mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
     const MKLDNNConvFullParam &param, const bool is_train,
     const NDArray &data, const NDArray &weights, const NDArray *bias,
     const NDArray &output) {
   auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
-  auto data_md = GetInDataMemDesc(data);
+  auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.conv_param.num_group);
   auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();

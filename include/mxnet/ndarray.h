@@ -628,6 +628,12 @@ class NDArray {
 
 #if MXNET_USE_MKLDNN == 1
   /*
+   * Create NDArray from mkldnn memory.
+   * mkldnn_mem The mkldnn memory to be managed.
+   * static_data If true, mkldnn memory won't be freed on destruction.
+   */
+  explicit NDArray(const mkldnn::memory *mkldnn_mem, bool static_data = true);
+  /*
    * Test if the data is stored in one of special MKLDNN format.
    */
   bool IsMKLDNNData() const {
