@@ -33,33 +33,32 @@ Load and pre-process the data
 The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
 
  ```r
-  ## Loading required packages
-  library("readr")
-  library("dplyr")
-  library("mxnet")
-  library("abind")
+## Loading required packages
+library("readr")
+library("dplyr")
+library("mxnet")
+library("abind")
  ```
 
 
 
  ```r
+mx.set.seed(1234)
+## Preprocessing steps
+Data <- read.csv(file = "/Users/khedia/Downloads/data.csv", header = TRUE, sep = ",")
 
-  mx.set.seed(1234)
-  ## Preprocessing steps
+## Extracting specific features from the dataset as variables for time series We extract
+## pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
+df <- data.frame(Data$pm2.5, Data$DEWP, Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
+df[is.na(df)] <- 0
 
-  Data <- read.csv(file="data.csv", header=TRUE, sep=",")
-
-  ## Extracting specific features from the dataset as variables for time series
-  ## We extract pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
-
-  df <- data.frame(Data$pm2.5, Data$DEWP,Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
-  df[is.na(df)] <- 0
-
-  ## Now we normalise each of the feature set to a range(0,1)
-  df <- matrix(as.matrix(df),ncol=ncol(df),dimnames=NULL)
-  rangenorm <- function(x){(x-min(x))/(max(x)-min(x))}
-  df <- apply(df,2, rangenorm)
-  df <- t(df)
+## Now we normalise each of the feature set to a range(0,1)
+df <- matrix(as.matrix(df), ncol = ncol(df), dimnames = NULL)
+rangenorm <- function(x) {
+    (x - min(x))/(max(x) - min(x))
+}
+df <- apply(df, 2, rangenorm)
+df <- t(df)
   ```
 For using multidimesional data with MXNet-R, we need to convert training data to the form
 (n_dim x seq_len x num_samples). For one-to-one RNN flavours labels should be of the form (seq_len x num_samples) while for many-to-one flavour, the labels should be of the form (1 x num_samples). Please note that MXNet-R currently supports only these two flavours of RNN.
@@ -70,17 +69,19 @@ We have used n_dim = 7, seq_len = 100,  and num_samples = 430 because the datase
 n_dim <- 7
 seq_len <- 100
 num_samples <- 430
-## extract only required data from dataset
-trX <- df[1:n_dim, 25:(24+(seq_len * num_samples))]
-## the label data(next PM2.5 concentration) should be one time step ahead of the current PM2.5 concentration
 
-trY <- df[1,26:(25+(seqlen* num_samples))]
+## extract only required data from dataset
+trX <- df[1:n_dim, 25:(24 + (seq_len * num_samples))]
+
+## the label data(next PM2.5 concentration) should be one time step
+## ahead of the current PM2.5 concentration
+trY <- df[1, 26:(25 + (seq_len * num_samples))]
+
 ## reshape the matrices in the format acceptable by MXNetR RNNs
 trainX <- trX
 dim(trainX) <- c(n_dim, seq_len, num_samples)
 trainY <- trY
 dim(trainY) <- c(seq_len, num_samples)
-
 ```
 
 
@@ -90,186 +91,263 @@ Defining and training the network
 
 ```r
 batch.size <- 32
+
 # take first 300 samples for training - remaining 100 for evaluation
 train_ids <- 1:300
 eval_ids <- 301:400
-## The number of samples used for training and evaluation is arbitrary.
-## I have kept aside few samples for testing purposes
-## create dataiterators
-train.data <- mx.io.arrayiter(data = trainX[,,train_ids, drop = F], label = trainY[, train_ids],
-                              batch.size = batch.size, shuffle = TRUE)
 
-eval.data <- mx.io.arrayiter(data = trainX[,,eval_ids, drop = F], label = trainY[, eval_ids],
-                              batch.size = batch.size, shuffle = FALSE)
+## The number of samples used for training and evaluation is arbitrary.  I have kept aside few
+## samples for testing purposes create dataiterators
+train.data <- mx.io.arrayiter(data = trainX[, , train_ids, drop = F], label = trainY[, train_ids],
+    batch.size = batch.size, shuffle = TRUE)
+
+eval.data <- mx.io.arrayiter(data = trainX[, , eval_ids, drop = F], label = trainY[, eval_ids],
+    batch.size = batch.size, shuffle = FALSE)
 
 ## Create the symbol for RNN
-symbol <- rnn.graph(num_rnn_layer =  2,
-                    num_hidden = 50,
-                    input_size = NULL,
-                    num_embed = NULL,
-                    num_decode = 1,
-                    masking = F,
-                    loss_output = "linear",
-                    dropout = 0.2,
-                    ignore_label = -1,
-                    cell_type = "lstm",
-                    output_last_state = T,
-                    config = "one-to-one")
-
-
+symbol <- rnn.graph(num_rnn_layer = 1, num_hidden = 5, input_size = NULL, num_embed = NULL, num_decode = 1,
+    masking = F, loss_output = "linear", dropout = 0.2, ignore_label = -1, cell_type = "lstm", output_last_state = T,
+    config = "one-to-one")
 
 mx.metric.mse.seq <- mx.metric.custom("MSE", function(label, pred) {
-                      label = mx.nd.reshape(label, shape = -1)
-                      pred = mx.nd.reshape(pred, shape = -1)
-                      res <- mx.nd.mean(mx.nd.square(label-pred))
-                      return(as.array(res))
-                      })
+    label = mx.nd.reshape(label, shape = -1)
+    pred = mx.nd.reshape(pred, shape = -1)
+    res <- mx.nd.mean(mx.nd.square(label - pred))
+    return(as.array(res))
+})
 
 
 
 ctx <- mx.cpu()
 
-initializer <- mx.init.Xavier(rnd_type = "gaussian",
-                              factor_type = "avg",
-                              magnitude = 3)
+initializer <- mx.init.Xavier(rnd_type = "gaussian", factor_type = "avg", magnitude = 3)
 
-optimizer <- mx.opt.create("adadelta", rho = 0.9, eps = 1e-5, wd = 1e-6,
-                                                         clip_gradient = 1, rescale.grad = 1/batch.size)
+optimizer <- mx.opt.create("adadelta", rho = 0.9, eps = 1e-05, wd = 1e-06, clip_gradient = 1, rescale.grad = 1/batch.size)
 
 logger <- mx.metric.logger()
 epoch.end.callback <- mx.callback.log.train.metric(period = 10, logger = logger)
 
 ## train the network
-system.time(
-  model <- mx.model.buckets(symbol = symbol,
-                            train.data = train.data,
-                            eval.data = eval.data,
-                            num.round = 50, ctx = ctx, verbose = TRUE,
-                            metric = mx.metric.mse.seq,
-                            initializer = initializer, optimizer = optimizer,
-                            batch.end.callback = NULL,
-                            epoch.end.callback = epoch.end.callback)
-)
-
+system.time(model <- mx.model.buckets(symbol = symbol, train.data = train.data, eval.data = eval.data,
+    num.round = 100, ctx = ctx, verbose = TRUE, metric = mx.metric.mse.seq, initializer = initializer,
+    optimizer = optimizer, batch.end.callback = NULL, epoch.end.callback = epoch.end.callback))
+ctx <- mx.cpu()
 ```
 Output:
 ```
 Start training with 1 devices
-[1] Train-MSE=0.0175756292417645
-[1] Validation-MSE=0.0108831799589097
-[2] Train-MSE=0.0116676720790565
-[2] Validation-MSE=0.00835292390547693
-[3] Train-MSE=0.0103536401875317
-[3] Validation-MSE=0.00770004198420793
-[4] Train-MSE=0.00992695298045874
-[4] Validation-MSE=0.00748429435770959
-[5] Train-MSE=0.00970045481808484
-[5] Validation-MSE=0.00734121853020042
-[6] Train-MSE=0.00956926480866969
-[6] Validation-MSE=0.00723317882511765
-[7] Train-MSE=0.00946674752049148
-[7] Validation-MSE=0.00715298682916909
-[8] Train-MSE=0.00936337062157691
-[8] Validation-MSE=0.00708933407440782
-[9] Train-MSE=0.00928824483416974
-[9] Validation-MSE=0.00702768098562956
-[10] Train-MSE=0.00921900537796319
-[10] Validation-MSE=0.00698263343656436
-[11] Train-MSE=0.00915476991795003
-[11] Validation-MSE=0.00694422319065779
-[12] Train-MSE=0.00911224479787052
-[12] Validation-MSE=0.00691420421935618
-[13] Train-MSE=0.0090605927631259
-[13] Validation-MSE=0.00686828832840547
-[14] Train-MSE=0.00901446407660842
-[14] Validation-MSE=0.00685080053517595
-[15] Train-MSE=0.0089907712303102
-[15] Validation-MSE=0.00681731867371127
-[16] Train-MSE=0.00894410968758166
-[16] Validation-MSE=0.00680519745219499
-[17] Train-MSE=0.00891360901296139
-[17] Validation-MSE=0.00678778381552547
-[18] Train-MSE=0.00887094167992473
-[18] Validation-MSE=0.00675358629086986
-[19] Train-MSE=0.00885531790554523
-[19] Validation-MSE=0.00676276802551001
-[20] Train-MSE=0.0088208335917443
-[20] Validation-MSE=0.00674056768184528
-[21] Train-MSE=0.00880425171926618
-[21] Validation-MSE=0.00673307734541595
-[22] Train-MSE=0.00879250690340996
-[22] Validation-MSE=0.00670740590430796
-[23] Train-MSE=0.00875497269444168
-[23] Validation-MSE=0.00668720051180571
-[24] Train-MSE=0.00873568719252944
-[24] Validation-MSE=0.00669587979791686
-[25] Train-MSE=0.00874641905538738
-[25] Validation-MSE=0.00669469079002738
-[26] Train-MSE=0.008697918523103
-[26] Validation-MSE=0.00669995549833402
-[27] Train-MSE=0.00869045881554484
-[27] Validation-MSE=0.00670569541398436
-[28] Train-MSE=0.00865633632056415
-[28] Validation-MSE=0.00670662586344406
-[29] Train-MSE=0.00868522766977549
-[29] Validation-MSE=0.00668792036594823
-[30] Train-MSE=0.0086129839066416
-[30] Validation-MSE=0.00667576276464388
-[31] Train-MSE=0.0086337742395699
-[31] Validation-MSE=0.0067121529718861
-[32] Train-MSE=0.00863495240919292
-[32] Validation-MSE=0.0067587440717034
-[33] Train-MSE=0.00863885483704507
-[33] Validation-MSE=0.00670913810608909
-[34] Train-MSE=0.00858410224318504
-[34] Validation-MSE=0.00674143311334774
-[35] Train-MSE=0.00860943677835166
-[35] Validation-MSE=0.00671671854797751
-[36] Train-MSE=0.00857279957272112
-[36] Validation-MSE=0.00672605860745534
-[37] Train-MSE=0.00857790051959455
-[37] Validation-MSE=0.00671195174800232
-[38] Train-MSE=0.00856402018107474
-[38] Validation-MSE=0.00670708599500358
-[39] Train-MSE=0.00855070641264319
-[39] Validation-MSE=0.00669713690876961
-[40] Train-MSE=0.00855873627588153
-[40] Validation-MSE=0.00669847876997665
-[41] Train-MSE=0.00854103988967836
-[41] Validation-MSE=0.00672988337464631
-[42] Train-MSE=0.00854658158496022
-[42] Validation-MSE=0.0067430961644277
-[43] Train-MSE=0.00850498480722308
-[43] Validation-MSE=0.00670209160307422
-[44] Train-MSE=0.00847653122618794
-[44] Validation-MSE=0.00672520510852337
-[45] Train-MSE=0.00853331410326064
-[45] Validation-MSE=0.0066903488477692
-[46] Train-MSE=0.0084140149410814
-[46] Validation-MSE=0.00665930815739557
-[47] Train-MSE=0.00842269244603813
-[47] Validation-MSE=0.00667664298089221
-[48] Train-MSE=0.00844420134089887
-[48] Validation-MSE=0.00665349006885663
-[49] Train-MSE=0.00839704093523324
-[49] Validation-MSE=0.00666191370692104
-[50] Train-MSE=0.00840363306924701
-[50] Validation-MSE=0.00664306507678702
-   user  system elapsed
- 66.782   6.229  39.745
-
+[1] Train-MSE=0.197570244409144
+[1] Validation-MSE=0.0153861071448773
+[2] Train-MSE=0.0152517843060195
+[2] Validation-MSE=0.0128299412317574
+[3] Train-MSE=0.0124418652616441
+[3] Validation-MSE=0.010827143676579
+[4] Train-MSE=0.0105128229130059
+[4] Validation-MSE=0.00940261723008007
+[5] Train-MSE=0.00914482437074184
+[5] Validation-MSE=0.00830172537826002
+[6] Train-MSE=0.00813581114634871
+[6] Validation-MSE=0.00747016374953091
+[7] Train-MSE=0.00735094994306564
+[7] Validation-MSE=0.00679832429159433
+[8] Train-MSE=0.00672049634158611
+[8] Validation-MSE=0.00623159145470709
+[9] Train-MSE=0.00620287149213254
+[9] Validation-MSE=0.00577476259786636
+[10] Train-MSE=0.00577280316501856
+[10] Validation-MSE=0.00539038667920977
+[11] Train-MSE=0.00540679777041078
+[11] Validation-MSE=0.00506085657980293
+[12] Train-MSE=0.0050867410376668
+[12] Validation-MSE=0.00477395416237414
+[13] Train-MSE=0.00480019277893007
+[13] Validation-MSE=0.00450056773843244
+[14] Train-MSE=0.00453343892004341
+[14] Validation-MSE=0.00424888811539859
+[15] Train-MSE=0.00428280527703464
+[15] Validation-MSE=0.00400642631575465
+[16] Train-MSE=0.00405749503988773
+[16] Validation-MSE=0.00380465737544
+[17] Train-MSE=0.00386031914968044
+[17] Validation-MSE=0.00360809749690816
+[18] Train-MSE=0.00368094681762159
+[18] Validation-MSE=0.00342673255363479
+[19] Train-MSE=0.00352097053546459
+[19] Validation-MSE=0.00327468500472605
+[20] Train-MSE=0.0033796411473304
+[20] Validation-MSE=0.00314171868376434
+[21] Train-MSE=0.00325083395000547
+[21] Validation-MSE=0.00301414600107819
+[22] Train-MSE=0.00313130742870271
+[22] Validation-MSE=0.00289485178655013
+[23] Train-MSE=0.00302554031368345
+[23] Validation-MSE=0.00278339034412056
+[24] Train-MSE=0.00293059891555458
+[24] Validation-MSE=0.00268512079492211
+[25] Train-MSE=0.00284229153767228
+[25] Validation-MSE=0.00259777921019122
+[26] Train-MSE=0.00275672329589725
+[26] Validation-MSE=0.00252195040229708
+[27] Train-MSE=0.00267978976480663
+[27] Validation-MSE=0.00245509872911498
+[28] Train-MSE=0.00260648035909981
+[28] Validation-MSE=0.00239788752514869
+[29] Train-MSE=0.00253766365349293
+[29] Validation-MSE=0.00234557129442692
+[30] Train-MSE=0.00247282343916595
+[30] Validation-MSE=0.00227686495054513
+[31] Train-MSE=0.00241204290650785
+[31] Validation-MSE=0.00221905030775815
+[32] Train-MSE=0.00234982871916145
+[32] Validation-MSE=0.00217330717714503
+[33] Train-MSE=0.0022953683976084
+[33] Validation-MSE=0.00212387152714655
+[34] Train-MSE=0.00224245293065906
+[34] Validation-MSE=0.00206730491481721
+[35] Train-MSE=0.00219523886917159
+[35] Validation-MSE=0.00202221114886925
+[36] Train-MSE=0.00215675563085824
+[36] Validation-MSE=0.00198384901159443
+[37] Train-MSE=0.00212372307432815
+[37] Validation-MSE=0.00195024130516686
+[38] Train-MSE=0.00209467530949041
+[38] Validation-MSE=0.00192040478577837
+[39] Train-MSE=0.00206880773184821
+[39] Validation-MSE=0.00189365042024292
+[40] Train-MSE=0.0020455869147554
+[40] Validation-MSE=0.00186931228381582
+[41] Train-MSE=0.00202461584703997
+[41] Validation-MSE=0.00184688396984711
+[42] Train-MSE=0.00200558808865026
+[42] Validation-MSE=0.00182616201345809
+[43] Train-MSE=0.00198826132109389
+[43] Validation-MSE=0.00180705610546283
+[44] Train-MSE=0.00197243962902576
+[44] Validation-MSE=0.00178946062806062
+[45] Train-MSE=0.00195796076441184
+[45] Validation-MSE=0.00177325020194985
+[46] Train-MSE=0.00194468242116272
+[46] Validation-MSE=0.00175829164800234
+[47] Train-MSE=0.00193248536670581
+[47] Validation-MSE=0.00174446412711404
+[48] Train-MSE=0.0019212627899833
+[48] Validation-MSE=0.00173165925662033
+[49] Train-MSE=0.0019109228043817
+[49] Validation-MSE=0.0017197776469402
+[50] Train-MSE=0.0019013806944713
+[50] Validation-MSE=0.00170873696333729
+[51] Train-MSE=0.00189256289741024
+[51] Validation-MSE=0.00169845693744719
+[52] Train-MSE=0.00188440269557759
+[52] Validation-MSE=0.00168887217296287
+[53] Train-MSE=0.00187684068223462
+[53] Validation-MSE=0.00167992216302082
+[54] Train-MSE=0.00186982554150745
+[54] Validation-MSE=0.00167155353119597
+[55] Train-MSE=0.00186330996220931
+[55] Validation-MSE=0.00166372323292308
+[56] Train-MSE=0.00185725253541023
+[56] Validation-MSE=0.00165638656471856
+[57] Train-MSE=0.00185161621775478
+[57] Validation-MSE=0.00164951026090421
+[58] Train-MSE=0.00184636762132868
+[58] Validation-MSE=0.00164306123042479
+[59] Train-MSE=0.00184147892287001
+[59] Validation-MSE=0.00163701188284904
+[60] Train-MSE=0.00183692508144304
+[60] Validation-MSE=0.0016313357045874
+[61] Train-MSE=0.0018326819408685
+[61] Validation-MSE=0.00162601153715514
+[62] Train-MSE=0.00182872912846506
+[62] Validation-MSE=0.00162101385649294
+[63] Train-MSE=0.00182504559634253
+[63] Validation-MSE=0.0016163194377441
+[64] Train-MSE=0.00182161193806678
+[64] Validation-MSE=0.00161190654034726
+[65] Train-MSE=0.00181840892182663
+[65] Validation-MSE=0.00160775164840743
+[66] Train-MSE=0.00181541682686657
+[66] Validation-MSE=0.00160382952890359
+[67] Train-MSE=0.00181261657271534
+[67] Validation-MSE=0.0016001186450012
+[68] Train-MSE=0.00180998920695856
+[68] Validation-MSE=0.00159659716882743
+[69] Train-MSE=0.0018075181171298
+[69] Validation-MSE=0.00159324560081586
+[70] Train-MSE=0.00180518878623843
+[70] Validation-MSE=0.0015900497965049
+[71] Train-MSE=0.00180299020139501
+[71] Validation-MSE=0.00158699919120409
+[72] Train-MSE=0.00180091126821935
+[72] Validation-MSE=0.00158408441348001
+[73] Train-MSE=0.00179894380271435
+[73] Validation-MSE=0.00158129513147287
+[74] Train-MSE=0.00179708101786673
+[74] Validation-MSE=0.00157862660125829
+[75] Train-MSE=0.00179531620815396
+[75] Validation-MSE=0.00157607259461656
+[76] Train-MSE=0.00179364408832043
+[76] Validation-MSE=0.00157362839672714
+[77] Train-MSE=0.00179206018801779
+[77] Validation-MSE=0.00157128760474734
+[78] Train-MSE=0.00179055887274444
+[78] Validation-MSE=0.00156904454343021
+[79] Train-MSE=0.00178913549752906
+[79] Validation-MSE=0.00156689740833826
+[80] Train-MSE=0.00178778694244102
+[80] Validation-MSE=0.00156483851606026
+[81] Train-MSE=0.00178650941234082
+[81] Validation-MSE=0.00156286609126255
+[82] Train-MSE=0.00178530000848696
+[82] Validation-MSE=0.00156097739818506
+[83] Train-MSE=0.00178415522677824
+[83] Validation-MSE=0.00155916524818167
+[84] Train-MSE=0.00178307290188968
+[84] Validation-MSE=0.00155743182403967
+[85] Train-MSE=0.00178205048432574
+[85] Validation-MSE=0.00155576804536395
+[86] Train-MSE=0.00178108524996787
+[86] Validation-MSE=0.00155417347559705
+[87] Train-MSE=0.00178017514990643
+[87] Validation-MSE=0.00155264738714322
+[88] Train-MSE=0.00177931841462851
+[88] Validation-MSE=0.00155118416296318
+[89] Train-MSE=0.00177851294865832
+[89] Validation-MSE=0.00154978284263052
+[90] Train-MSE=0.00177775789052248
+[90] Validation-MSE=0.00154844031203538
+[91] Train-MSE=0.00177705133100972
+[91] Validation-MSE=0.00154715491225943
+[92] Train-MSE=0.00177639147732407
+[92] Validation-MSE=0.00154592350008897
+[93] Train-MSE=0.00177577760769054
+[93] Validation-MSE=0.00154474508599378
+[94] Train-MSE=0.0017752077546902
+[94] Validation-MSE=0.0015436161775142
+[95] Train-MSE=0.00177468206966296
+[95] Validation-MSE=0.00154253660002723
+[96] Train-MSE=0.00177419915562496
+[96] Validation-MSE=0.00154150440357625
+[97] Train-MSE=0.0017737578949891
+[97] Validation-MSE=0.00154051734716631
+[98] Train-MSE=0.00177335749613121
+[98] Validation-MSE=0.00153957353904843
+[99] Train-MSE=0.00177299699280411
+[99] Validation-MSE=0.00153867155313492
+[100] Train-MSE=0.00177267640829086
+[100] Validation-MSE=0.00153781197150238
+   user  system elapsed 
+ 21.937   1.914  13.402 
 ```
-
+We can see how mean squared error varies with epochs below.
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/loss.png?raw=true)<!--notebook-skip-line-->
 
 Inference on the network
 ---------
 Now we have trained the network. Let's use it for inference.
 
 ```r
-ctx <- mx.cpu()
-
 ## We extract the state symbols for RNN
-
 internals <- model$symbol$get.internals()
 sym_state <- internals$get.output(which(internals$outputs %in% "RNN_state"))
 sym_state_cell <- internals$get.output(which(internals$outputs %in% "RNN_state_cell"))
@@ -277,86 +355,47 @@ sym_output <- internals$get.output(which(internals$outputs %in% "loss_output"))
 symbol <- mx.symbol.Group(sym_output, sym_state, sym_state_cell)
 
 ## We will predict 100 timestamps for 401st sample (first sample from the test samples)
-pred_length = 100
-predict <- numeric()
+pred_length <- 100
+predicted <- numeric()
 
-## We pass the 400th sample through the network to get the weights and use it for predicting next 100 time stamps.
+## We pass the 400th sample through the network to get the weights and use it for predicting next
+## 100 time stamps.
 data <- mx.nd.array(trainX[, , 400, drop = F])
 label <- mx.nd.array(trainY[, 400, drop = F])
 
 
-## We create dataiterators for the input, please note that the label is required to create iterator
-## and will not be used in the inference. You can use dummy values too in the label.
-infer.data <- mx.io.arrayiter(data = data, label = label,
-                              batch.size = 1, shuffle = FALSE)
+## We create dataiterators for the input, please note that the label is required to create
+## iterator and will not be used in the inference. You can use dummy values too in the label.
+infer.data <- mx.io.arrayiter(data = data, label = label, batch.size = 1, shuffle = FALSE)
 
-infer <- mx.infer.rnn.one(infer.data = infer.data,
-                          symbol = symbol,
-                          arg.params = model$arg.params,
-                          aux.params = model$aux.params,
-                          input.params = NULL,
-                          ctx = ctx)
-## Once we get the weights for the above time series, we try to predict the next 100 steps 
-## for this time series, which is technically our 401st time series.
-
-real<- trainY[ ,401]
+infer <- mx.infer.rnn.one(infer.data = infer.data, symbol = symbol, arg.params = model$arg.params,
+    aux.params = model$aux.params, input.params = NULL, ctx = ctx)
+    
+## Once we get the weights for the above time series, we try to predict the next 100 steps for
+## this time series, which is technically our 401st time series.
+actual <- trainY[, 401]
 
 ## Now we iterate one by one to generate each of the next timestamp pollution values
-
 for (i in 1:pred_length) {
 
-  data <- mx.nd.array(trainX[, i, 401, drop = F])
-  label <- mx.nd.array(trainY[i,401, drop = F])
-  infer.data <- mx.io.arrayiter(data = data, label = label,
-                                batch.size = 1, shuffle = FALSE)
-  ## note that we use rnn state values from previous iterations here
-  infer <- mx.infer.rnn.one(infer.data = infer.data,
-                            symbol = symbol,
-                            ctx = ctx,
-                            arg.params = model$arg.params,
-                            aux.params = model$aux.params,
-                            input.params = list(rnn.state = infer[[2]],
-                                                rnn.state.cell = infer[[3]]))
+    data <- mx.nd.array(trainX[, i, 401, drop = F])
+    label <- mx.nd.array(trainY[i, 401, drop = F])
+    infer.data <- mx.io.arrayiter(data = data, label = label, batch.size = 1, shuffle = FALSE)
+    ## note that we use rnn state values from previous iterations here
+    infer <- mx.infer.rnn.one(infer.data = infer.data, symbol = symbol, ctx = ctx, arg.params = model$arg.params,
+        aux.params = model$aux.params, input.params = list(rnn.state = infer[[2]], rnn.state.cell = infer[[3]]))
 
-  pred <- infer[[1]]
-  predict <- c(predict, as.numeric(as.array(pred)))
+    pred <- infer[[1]]
+    predicted <- c(predicted, as.numeric(as.array(pred)))
 
 }
-
 ```
-Now predict contains the predicted 100 values
+Now predicted contains the predicted 100 values. We use ggplot to plot the actual and predicted values as shown below.
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_401.png?raw=true)<!--notebook-skip-line-->
 
-```
-> predict
-  [1] 0.07202110 0.07473785 0.07704198 0.07890865 0.07866135 0.07802615 0.07835323 0.07779201
-  [9] 0.07753669 0.07813390 0.07946113 0.08086129 0.08315894 0.08248840 0.08063691 0.07665294
- [17] 0.07449745 0.07181541 0.07004550 0.06852350 0.06651592 0.06582737 0.06484741 0.06473041
- [25] 0.06570850 0.06849141 0.07106550 0.07429304 0.07519219 0.07302019 0.07029570 0.07020824
- [33] 0.07033765 0.07064262 0.07164756 0.07258270 0.07392646 0.07482745 0.07253803 0.06833689
- [41] 0.06562686 0.06298455 0.06118675 0.06004642 0.05913667 0.05937991 0.06084058 0.06260598
- [49] 0.06461339 0.06610494 0.06790128 0.06700534 0.06526335 0.06434848 0.06419372 0.06458106
- [57] 0.06451128 0.06394381 0.06342814 0.06225721 0.06086770 0.06100054 0.06181625 0.06202789
- [65] 0.06179357 0.06211190 0.06205740 0.06191149 0.06142320 0.06112600 0.06098184 0.06103123
- [73] 0.06323517 0.06354101 0.06597340 0.06735678 0.06951007 0.07118392 0.07365122 0.07625698
- [81] 0.07842132 0.07991818 0.07907465 0.07529922 0.07086860 0.06635273 0.06279082 0.05998828
- [89] 0.05896929 0.05801799 0.05909069 0.05821043 0.05980247 0.06013399 0.06061675 0.05972625
- [97] 0.06003752 0.06044054 0.06041266 0.06089244
+We also repeated the above experiments to generate the next 100 samples to 301st time series and we got the following results.
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_301.png?raw=true)<!--notebook-skip-line-->
 
- > real
- [1] 0.20020121 0.21327968 0.21227364 0.20221328 0.19416499 0.19919517 0.18812877 0.18511066
- [9] 0.19315895 0.20925553 0.22032193 0.25150905 0.22837022 0.21126761 0.17706237 0.18108652
- [17] 0.16498994 0.16398390 0.15593561 0.13480885 0.13480885 0.12273642 0.12575453 0.13581489
- [25] 0.16800805 0.18812877 0.20724346 0.19718310 0.15492958 0.12072435 0.13581489 0.13279678
- [33] 0.13682093 0.14688129 0.15995976 0.18008048 0.18611670 0.15291751 0.11267606 0.12374245
- [41] 0.10965795 0.10362173 0.09859155 0.09456740 0.10663984 0.11569416 0.12474849 0.13480885
- [49] 0.13480885 0.13782696 0.10160966 0.07847082 0.07947686 0.08551308 0.09356137 0.08853119
- [57] 0.07847082 0.06941650 0.06237425 0.05734406 0.07746479 0.08752515 0.09758551 0.10160966
- [65] 0.11267606 0.10965795 0.11066398 0.10462777 0.10462777 0.10160966 0.10060362 0.11368209
- [73] 0.11569416 0.12173038 0.11971831 0.13883300 0.14688129 0.15895372 0.18511066 0.19114688
- [81] 0.20221328 0.17605634 0.13279678 0.10261569 0.08853119 0.07444668 0.07444668 0.08249497
- [89] 0.07344064 0.09557344 0.07645875 0.10261569 0.07243461 0.06941650 0.05231388 0.05432596
- [97] 0.06740443 0.06338028 0.06740443 0.07444668
-```
 The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
 
 For more tutorials on MXNet-R, head on to [MXNet-R tutorials](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/r)
