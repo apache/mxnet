@@ -1,4 +1,4 @@
-# Contributing MXNet
+# Contributing To MXNet
 
 Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on MXNet best practices and processes.
 
