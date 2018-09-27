@@ -604,7 +604,7 @@ class Conv2DTranspose(_Conv):
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, cudnn_true, cudnn_off,
+            bias_initializer, cudnn_tune, cudnn_off,
             op_name='Deconvolution', adj=output_padding, **kwargs)
         self.outpad = output_padding
 
