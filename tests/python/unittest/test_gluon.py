@@ -819,7 +819,6 @@ def test_embedding():
     check_embedding_large_input(True)
     check_embedding_large_input(False)
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11616")
 @with_seed()
 def test_export():
     ctx = mx.context.current_context()
