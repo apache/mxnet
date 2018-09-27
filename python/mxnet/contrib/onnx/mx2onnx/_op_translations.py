@@ -1845,6 +1845,10 @@ def convert_cast(node, **kwargs):
     proc_nodes = kwargs["proc_nodes"]
     inputs = node["inputs"]
     dtype = node["attrs"]["dtype"]
+
+    # dtype can be mapped only with types from TensorProto
+    # float32 is mapped to float and float64 to double in onnx
+    # following tensorproto mapping https://github.com/onnx/onnx/blob/master/onnx/mapping.py
     if dtype == 'float32':
         dtype = 'float'
     elif dtype == 'float64':

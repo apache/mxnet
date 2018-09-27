@@ -121,6 +121,7 @@ def argmax(attrs, inputs, proto_obj):
     axis = attrs.get('axis', 0)
     keepdims = attrs.get('keepdims', 1)
     argmax_op = symbol.argmax(inputs[0], axis=axis, keepdims=keepdims)
+    # onnx argmax operator always expects int64 as output type
     cast_attrs = {'dtype': 'int64'}
     return 'cast', cast_attrs, argmax_op
 
@@ -129,6 +130,7 @@ def argmin(attrs, inputs, proto_obj):
     axis = attrs.get('axis', 0)
     keepdims = attrs.get('keepdims', 1)
     argmin_op = symbol.argmin(inputs[0], axis=axis, keepdims=keepdims)
+    # onnx argmax operator always expects int64 as output type
     cast_attrs = {'dtype': 'int64'}
     return 'cast', cast_attrs, argmin_op
 
