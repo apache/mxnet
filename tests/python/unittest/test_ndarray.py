@@ -1485,7 +1485,7 @@ def test_symbol_constant_init():
     c = a * b
     d = c.eval(a=mx.nd.array(2),b=mx.nd.array(3))
     assert(isinstance(d[0],mx.nd.NDArray))
-    e = c.bind(mx.cpu(),args=[mx.nd.array(2),mx.nd.array(3)])
+    e = c.bind(ctx=mx.cpu(),args=[mx.nd.array(2),mx.nd.array(3)])
     f = e.forward()
     assert(isinstance(f[0],mx.nd.NDArray))
 
