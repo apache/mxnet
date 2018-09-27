@@ -43,17 +43,27 @@ library("abind")
 
 
  ```r
-mx.set.seed(1234)
 ## Preprocessing steps
-Data <- read.csv(file = "/Users/khedia/Downloads/data.csv", header = TRUE, sep = ",")
+Data <- read.csv(file = "/Users/khedia/Downloads/data.csv",
+                 header = TRUE,
+                 sep = ",")
 
 ## Extracting specific features from the dataset as variables for time series We extract
 ## pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
-df <- data.frame(Data$pm2.5, Data$DEWP, Data$TEMP, Data$PRES, Data$Iws, Data$Is, Data$Ir)
+df <- data.frame(Data$pm2.5,
+                 Data$DEWP,
+                 Data$TEMP,
+                 Data$PRES,
+                 Data$Iws,
+                 Data$Is,
+                 Data$Ir)
 df[is.na(df)] <- 0
 
 ## Now we normalise each of the feature set to a range(0,1)
-df <- matrix(as.matrix(df), ncol = ncol(df), dimnames = NULL)
+df <- matrix(as.matrix(df),
+             ncol = ncol(df),
+             dimnames = NULL)
+
 rangenorm <- function(x) {
     (x - min(x))/(max(x) - min(x))
 }
@@ -98,16 +108,29 @@ eval_ids <- 301:400
 
 ## The number of samples used for training and evaluation is arbitrary.  I have kept aside few
 ## samples for testing purposes create dataiterators
-train.data <- mx.io.arrayiter(data = trainX[, , train_ids, drop = F], label = trainY[, train_ids],
-    batch.size = batch.size, shuffle = TRUE)
+train.data <- mx.io.arrayiter(data = trainX[, , train_ids, drop = F],
+                              label = trainY[, train_ids],
+                              batch.size = batch.size, shuffle = TRUE)
 
-eval.data <- mx.io.arrayiter(data = trainX[, , eval_ids, drop = F], label = trainY[, eval_ids],
-    batch.size = batch.size, shuffle = FALSE)
+eval.data <- mx.io.arrayiter(data = trainX[, , eval_ids, drop = F],
+                             label = trainY[, eval_ids],
+                             batch.size = batch.size, shuffle = FALSE)
 
 ## Create the symbol for RNN
-symbol <- rnn.graph(num_rnn_layer = 1, num_hidden = 5, input_size = NULL, num_embed = NULL, num_decode = 1,
-    masking = F, loss_output = "linear", dropout = 0.2, ignore_label = -1, cell_type = "lstm", output_last_state = T,
-    config = "one-to-one")
+symbol <- rnn.graph(num_rnn_layer = 1,
+                    num_hidden = 5,
+                    input_size = NULL,
+                    num_embed = NULL,
+                    num_decode = 1,
+                    masking = F,
+                    loss_output = "linear",
+                    dropout = 0.2,
+                    ignore_label = -1,
+                    cell_type = "lstm",
+                    output_last_state = T,
+                    config = "one-to-one")
+
+
 
 mx.metric.mse.seq <- mx.metric.custom("MSE", function(label, pred) {
     label = mx.nd.reshape(label, shape = -1)
@@ -120,18 +143,33 @@ mx.metric.mse.seq <- mx.metric.custom("MSE", function(label, pred) {
 
 ctx <- mx.cpu()
 
-initializer <- mx.init.Xavier(rnd_type = "gaussian", factor_type = "avg", magnitude = 3)
+initializer <- mx.init.Xavier(rnd_type = "gaussian",
+                              factor_type = "avg",
+                              magnitude = 3)
 
-optimizer <- mx.opt.create("adadelta", rho = 0.9, eps = 1e-05, wd = 1e-06, clip_gradient = 1, rescale.grad = 1/batch.size)
+optimizer <- mx.opt.create("adadelta",
+                           rho = 0.9,
+                           eps = 1e-05,
+                           wd = 1e-06,
+                           clip_gradient = 1,
+                           rescale.grad = 1/batch.size)
 
 logger <- mx.metric.logger()
-epoch.end.callback <- mx.callback.log.train.metric(period = 10, logger = logger)
+epoch.end.callback <- mx.callback.log.train.metric(period = 10,
+                                                   logger = logger)
 
 ## train the network
-system.time(model <- mx.model.buckets(symbol = symbol, train.data = train.data, eval.data = eval.data,
-    num.round = 100, ctx = ctx, verbose = TRUE, metric = mx.metric.mse.seq, initializer = initializer,
-    optimizer = optimizer, batch.end.callback = NULL, epoch.end.callback = epoch.end.callback))
-ctx <- mx.cpu()
+system.time(model <- mx.model.buckets(symbol = symbol,
+                                      train.data = train.data,
+                                      eval.data = eval.data,
+                                      num.round = 100,
+                                      ctx = ctx,
+                                      verbose = TRUE,
+                                      metric = mx.metric.mse.seq,
+                                      initializer = initializer,
+                                      optimizer = optimizer,
+                                      batch.end.callback = NULL,
+                                      epoch.end.callback = epoch.end.callback))
 ```
 Output:
 ```
@@ -176,170 +214,13 @@ Start training with 1 devices
 [19] Validation-MSE=0.00327468500472605
 [20] Train-MSE=0.0033796411473304
 [20] Validation-MSE=0.00314171868376434
-[21] Train-MSE=0.00325083395000547
-[21] Validation-MSE=0.00301414600107819
-[22] Train-MSE=0.00313130742870271
-[22] Validation-MSE=0.00289485178655013
-[23] Train-MSE=0.00302554031368345
-[23] Validation-MSE=0.00278339034412056
-[24] Train-MSE=0.00293059891555458
-[24] Validation-MSE=0.00268512079492211
-[25] Train-MSE=0.00284229153767228
-[25] Validation-MSE=0.00259777921019122
-[26] Train-MSE=0.00275672329589725
-[26] Validation-MSE=0.00252195040229708
-[27] Train-MSE=0.00267978976480663
-[27] Validation-MSE=0.00245509872911498
-[28] Train-MSE=0.00260648035909981
-[28] Validation-MSE=0.00239788752514869
-[29] Train-MSE=0.00253766365349293
-[29] Validation-MSE=0.00234557129442692
-[30] Train-MSE=0.00247282343916595
-[30] Validation-MSE=0.00227686495054513
-[31] Train-MSE=0.00241204290650785
-[31] Validation-MSE=0.00221905030775815
-[32] Train-MSE=0.00234982871916145
-[32] Validation-MSE=0.00217330717714503
-[33] Train-MSE=0.0022953683976084
-[33] Validation-MSE=0.00212387152714655
-[34] Train-MSE=0.00224245293065906
-[34] Validation-MSE=0.00206730491481721
-[35] Train-MSE=0.00219523886917159
-[35] Validation-MSE=0.00202221114886925
-[36] Train-MSE=0.00215675563085824
-[36] Validation-MSE=0.00198384901159443
-[37] Train-MSE=0.00212372307432815
-[37] Validation-MSE=0.00195024130516686
-[38] Train-MSE=0.00209467530949041
-[38] Validation-MSE=0.00192040478577837
-[39] Train-MSE=0.00206880773184821
-[39] Validation-MSE=0.00189365042024292
-[40] Train-MSE=0.0020455869147554
-[40] Validation-MSE=0.00186931228381582
-[41] Train-MSE=0.00202461584703997
-[41] Validation-MSE=0.00184688396984711
-[42] Train-MSE=0.00200558808865026
-[42] Validation-MSE=0.00182616201345809
-[43] Train-MSE=0.00198826132109389
-[43] Validation-MSE=0.00180705610546283
-[44] Train-MSE=0.00197243962902576
-[44] Validation-MSE=0.00178946062806062
-[45] Train-MSE=0.00195796076441184
-[45] Validation-MSE=0.00177325020194985
-[46] Train-MSE=0.00194468242116272
-[46] Validation-MSE=0.00175829164800234
-[47] Train-MSE=0.00193248536670581
-[47] Validation-MSE=0.00174446412711404
-[48] Train-MSE=0.0019212627899833
-[48] Validation-MSE=0.00173165925662033
-[49] Train-MSE=0.0019109228043817
-[49] Validation-MSE=0.0017197776469402
-[50] Train-MSE=0.0019013806944713
-[50] Validation-MSE=0.00170873696333729
-[51] Train-MSE=0.00189256289741024
-[51] Validation-MSE=0.00169845693744719
-[52] Train-MSE=0.00188440269557759
-[52] Validation-MSE=0.00168887217296287
-[53] Train-MSE=0.00187684068223462
-[53] Validation-MSE=0.00167992216302082
-[54] Train-MSE=0.00186982554150745
-[54] Validation-MSE=0.00167155353119597
-[55] Train-MSE=0.00186330996220931
-[55] Validation-MSE=0.00166372323292308
-[56] Train-MSE=0.00185725253541023
-[56] Validation-MSE=0.00165638656471856
-[57] Train-MSE=0.00185161621775478
-[57] Validation-MSE=0.00164951026090421
-[58] Train-MSE=0.00184636762132868
-[58] Validation-MSE=0.00164306123042479
-[59] Train-MSE=0.00184147892287001
-[59] Validation-MSE=0.00163701188284904
-[60] Train-MSE=0.00183692508144304
-[60] Validation-MSE=0.0016313357045874
-[61] Train-MSE=0.0018326819408685
-[61] Validation-MSE=0.00162601153715514
-[62] Train-MSE=0.00182872912846506
-[62] Validation-MSE=0.00162101385649294
-[63] Train-MSE=0.00182504559634253
-[63] Validation-MSE=0.0016163194377441
-[64] Train-MSE=0.00182161193806678
-[64] Validation-MSE=0.00161190654034726
-[65] Train-MSE=0.00181840892182663
-[65] Validation-MSE=0.00160775164840743
-[66] Train-MSE=0.00181541682686657
-[66] Validation-MSE=0.00160382952890359
-[67] Train-MSE=0.00181261657271534
-[67] Validation-MSE=0.0016001186450012
-[68] Train-MSE=0.00180998920695856
-[68] Validation-MSE=0.00159659716882743
-[69] Train-MSE=0.0018075181171298
-[69] Validation-MSE=0.00159324560081586
-[70] Train-MSE=0.00180518878623843
-[70] Validation-MSE=0.0015900497965049
-[71] Train-MSE=0.00180299020139501
-[71] Validation-MSE=0.00158699919120409
-[72] Train-MSE=0.00180091126821935
-[72] Validation-MSE=0.00158408441348001
-[73] Train-MSE=0.00179894380271435
-[73] Validation-MSE=0.00158129513147287
-[74] Train-MSE=0.00179708101786673
-[74] Validation-MSE=0.00157862660125829
-[75] Train-MSE=0.00179531620815396
-[75] Validation-MSE=0.00157607259461656
-[76] Train-MSE=0.00179364408832043
-[76] Validation-MSE=0.00157362839672714
-[77] Train-MSE=0.00179206018801779
-[77] Validation-MSE=0.00157128760474734
-[78] Train-MSE=0.00179055887274444
-[78] Validation-MSE=0.00156904454343021
-[79] Train-MSE=0.00178913549752906
-[79] Validation-MSE=0.00156689740833826
-[80] Train-MSE=0.00178778694244102
-[80] Validation-MSE=0.00156483851606026
-[81] Train-MSE=0.00178650941234082
-[81] Validation-MSE=0.00156286609126255
-[82] Train-MSE=0.00178530000848696
-[82] Validation-MSE=0.00156097739818506
-[83] Train-MSE=0.00178415522677824
-[83] Validation-MSE=0.00155916524818167
-[84] Train-MSE=0.00178307290188968
-[84] Validation-MSE=0.00155743182403967
-[85] Train-MSE=0.00178205048432574
-[85] Validation-MSE=0.00155576804536395
-[86] Train-MSE=0.00178108524996787
-[86] Validation-MSE=0.00155417347559705
-[87] Train-MSE=0.00178017514990643
-[87] Validation-MSE=0.00155264738714322
-[88] Train-MSE=0.00177931841462851
-[88] Validation-MSE=0.00155118416296318
-[89] Train-MSE=0.00177851294865832
-[89] Validation-MSE=0.00154978284263052
-[90] Train-MSE=0.00177775789052248
-[90] Validation-MSE=0.00154844031203538
-[91] Train-MSE=0.00177705133100972
-[91] Validation-MSE=0.00154715491225943
-[92] Train-MSE=0.00177639147732407
-[92] Validation-MSE=0.00154592350008897
-[93] Train-MSE=0.00177577760769054
-[93] Validation-MSE=0.00154474508599378
-[94] Train-MSE=0.0017752077546902
-[94] Validation-MSE=0.0015436161775142
-[95] Train-MSE=0.00177468206966296
-[95] Validation-MSE=0.00154253660002723
-[96] Train-MSE=0.00177419915562496
-[96] Validation-MSE=0.00154150440357625
-[97] Train-MSE=0.0017737578949891
-[97] Validation-MSE=0.00154051734716631
-[98] Train-MSE=0.00177335749613121
-[98] Validation-MSE=0.00153957353904843
-[99] Train-MSE=0.00177299699280411
-[99] Validation-MSE=0.00153867155313492
-[100] Train-MSE=0.00177267640829086
-[100] Validation-MSE=0.00153781197150238
+..........
+..........
    user  system elapsed
  21.937   1.914  13.402
 ```
 We can see how mean squared error varies with epochs below.
+
 ![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/loss.png?raw=true)<!--notebook-skip-line-->
 
 Inference on the network
@@ -366,34 +247,53 @@ label <- mx.nd.array(trainY[, 400, drop = F])
 
 ## We create dataiterators for the input, please note that the label is required to create
 ## iterator and will not be used in the inference. You can use dummy values too in the label.
-infer.data <- mx.io.arrayiter(data = data, label = label, batch.size = 1, shuffle = FALSE)
+infer.data <- mx.io.arrayiter(data = data,
+                              label = label,
+                              batch.size = 1,
+                              shuffle = FALSE)
 
-infer <- mx.infer.rnn.one(infer.data = infer.data, symbol = symbol, arg.params = model$arg.params,
-    aux.params = model$aux.params, input.params = NULL, ctx = ctx)
-
+infer <- mx.infer.rnn.one(infer.data = infer.data,
+                          symbol = symbol,
+                          arg.params = model$arg.params,
+                          aux.params = model$aux.params,
+                          input.params = NULL,
+                          ctx = ctx)
 ## Once we get the weights for the above time series, we try to predict the next 100 steps for
 ## this time series, which is technically our 401st time series.
+
 actual <- trainY[, 401]
 
 ## Now we iterate one by one to generate each of the next timestamp pollution values
+
 for (i in 1:pred_length) {
 
     data <- mx.nd.array(trainX[, i, 401, drop = F])
     label <- mx.nd.array(trainY[i, 401, drop = F])
-    infer.data <- mx.io.arrayiter(data = data, label = label, batch.size = 1, shuffle = FALSE)
+    infer.data <- mx.io.arrayiter(data = data,
+                                  label = label,
+                                  batch.size = 1,
+                                  shuffle = FALSE)
     ## note that we use rnn state values from previous iterations here
-    infer <- mx.infer.rnn.one(infer.data = infer.data, symbol = symbol, ctx = ctx, arg.params = model$arg.params,
-        aux.params = model$aux.params, input.params = list(rnn.state = infer[[2]], rnn.state.cell = infer[[3]]))
+    infer <- mx.infer.rnn.one(infer.data = infer.data,
+                              symbol = symbol,
+                              ctx = ctx,
+                              arg.params = model$arg.params,
+                              aux.params = model$aux.params,
+                              input.params = list(rnn.state = infer[[2]],
+                                                  rnn.state.cell = infer[[3]]))
 
     pred <- infer[[1]]
     predicted <- c(predicted, as.numeric(as.array(pred)))
 
 }
+
 ```
 Now predicted contains the predicted 100 values. We use ggplot to plot the actual and predicted values as shown below.
+
 ![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_401.png?raw=true)<!--notebook-skip-line-->
 
 We also repeated the above experiments to generate the next 100 samples to 301st time series and we got the following results.
+
 ![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_301.png?raw=true)<!--notebook-skip-line-->
 
 The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
