@@ -86,10 +86,15 @@ class _Conv(HybridBlock):
         Initializer for the `weight` weights matrix.
     bias_initializer: str or `Initializer`
         Initializer for the bias vector.
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
     """
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
+                 cudnn_tune=None, cudnn_off=False,
                  op_name='Convolution', adj=None, prefix=None, params=None):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
@@ -105,7 +110,8 @@ class _Conv(HybridBlock):
             self._kwargs = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': channels, 'num_group': groups,
-                'no_bias': not use_bias, 'layout': layout}
+                'no_bias': not use_bias, 'layout': layout,
+                'cudnn_tune': cudnn_tune, 'cudnn_off': cudnn_off}
             if adj is not None:
                 self._kwargs['adj'] = adj
 
@@ -215,6 +221,10 @@ class Conv1D(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
 
 
     Inputs:
@@ -230,14 +240,15 @@ class Conv1D(_Conv):
     def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, **kwargs):
+                 in_channels=0, cudnn_tune=None, cudnn_off=False, **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            cudnn_tune, cudnn_off, **kwargs)
 
 
 class Conv2D(_Conv):
@@ -292,6 +303,10 @@ class Conv2D(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
 
 
     Inputs:
@@ -310,14 +325,16 @@ class Conv2D(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer='zeros', in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0,
+                 cudnn_tune=None, cudnn_off=False, **kwargs):
         assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            cudnn_tune, cudnn_off, **kwargs)
 
 
 class Conv3D(_Conv):
@@ -372,7 +389,10 @@ class Conv3D(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running the performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
 
     Inputs:
         - **data**: 5D input tensor with shape
@@ -391,14 +411,15 @@ class Conv3D(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, **kwargs):
+                 in_channels=0, cudnn_tune=None, cudnn_off=False, **kwargs):
         assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            cudnn_tune, cudnn_off, **kwargs)
 
 
 class Conv1DTranspose(_Conv):
@@ -457,6 +478,10 @@ class Conv1DTranspose(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
 
 
     Inputs:
@@ -472,7 +497,7 @@ class Conv1DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, **kwargs):
+                 in_channels=0, cudnn_tune=None, cudnn_off=False, **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
@@ -483,7 +508,8 @@ class Conv1DTranspose(_Conv):
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+            bias_initializer, cudnn_tune, cudnn_off,
+            op_name='Deconvolution', adj=output_padding, **kwargs)
         self.outpad = output_padding
 
 
@@ -545,7 +571,10 @@ class Conv2DTranspose(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
 
     Inputs:
         - **data**: 4D input tensor with shape
@@ -563,7 +592,8 @@ class Conv2DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1), padding=(0, 0),
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer='zeros', in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0,
+                 cudnn_tune=None, cudnn_off=False, **kwargs):
         assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
@@ -574,7 +604,8 @@ class Conv2DTranspose(_Conv):
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, op_name='Deconvolution', adj=output_padding, **kwargs)
+            bias_initializer, cudnn_true, cudnn_off,
+            op_name='Deconvolution', adj=output_padding, **kwargs)
         self.outpad = output_padding
 
 
@@ -636,6 +667,10 @@ class Conv3DTranspose(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
+    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
+        Whether to pick convolution algo by running performance test.
+    cudnn_off: boolean, optional, default=False
+        Turn off cudnn for this layer.
 
 
     Inputs:
@@ -655,7 +690,8 @@ class Conv3DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
-                 bias_initializer='zeros', in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0,
+                 cudnn_tune=None, cudnn_off=False, **kwargs):
         assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
@@ -666,7 +702,8 @@ class Conv3DTranspose(_Conv):
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            op_name='Deconvolution', adj=output_padding, **kwargs)
+            cudnn_tune, cudnn_off, op_name='Deconvolution',
+            adj=output_padding, **kwargs)
         self.outpad = output_padding
 
 
