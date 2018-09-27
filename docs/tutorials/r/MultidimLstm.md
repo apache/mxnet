@@ -44,18 +44,18 @@ library("abind")
 
  ```r
 ## Preprocessing steps
-Data <- read.csv(file = "/Users/khedia/Downloads/data.csv", 
-                 header = TRUE, 
+Data <- read.csv(file = "/Users/khedia/Downloads/data.csv",
+                 header = TRUE,
                  sep = ",")
 
 ## Extracting specific features from the dataset as variables for time series We extract
 ## pollution, temperature, pressue, windspeed, snowfall and rainfall information from dataset
 df <- data.frame(Data$pm2.5,
-                 Data$DEWP, 
-                 Data$TEMP, 
-                 Data$PRES, 
-                 Data$Iws, 
-                 Data$Is, 
+                 Data$DEWP,
+                 Data$TEMP,
+                 Data$PRES,
+                 Data$Iws,
+                 Data$Is,
                  Data$Ir)
 df[is.na(df)] <- 0
 
@@ -194,28 +194,29 @@ Start training with 1 devices
 [9] Validation-MSE=0.00577476259786636
 [10] Train-MSE=0.00577280316501856
 [10] Validation-MSE=0.00539038667920977
-[11] Train-MSE=0.00540679777041078
-[11] Validation-MSE=0.00506085657980293
-[12] Train-MSE=0.0050867410376668
-[12] Validation-MSE=0.00477395416237414
-[13] Train-MSE=0.00480019277893007
-[13] Validation-MSE=0.00450056773843244
-[14] Train-MSE=0.00453343892004341
-[14] Validation-MSE=0.00424888811539859
-[15] Train-MSE=0.00428280527703464
-[15] Validation-MSE=0.00400642631575465
-[16] Train-MSE=0.00405749503988773
-[16] Validation-MSE=0.00380465737544
-[17] Train-MSE=0.00386031914968044
-[17] Validation-MSE=0.00360809749690816
-[18] Train-MSE=0.00368094681762159
-[18] Validation-MSE=0.00342673255363479
-[19] Train-MSE=0.00352097053546459
-[19] Validation-MSE=0.00327468500472605
-[20] Train-MSE=0.0033796411473304
-[20] Validation-MSE=0.00314171868376434
 ..........
 ..........
+[91] Train-MSE=0.00177705133100972
+[91] Validation-MSE=0.00154715491225943
+[92] Train-MSE=0.00177639147732407
+[92] Validation-MSE=0.00154592350008897
+[93] Train-MSE=0.00177577760769054
+[93] Validation-MSE=0.00154474508599378
+[94] Train-MSE=0.0017752077546902
+[94] Validation-MSE=0.0015436161775142
+[95] Train-MSE=0.00177468206966296
+[95] Validation-MSE=0.00154253660002723
+[96] Train-MSE=0.00177419915562496
+[96] Validation-MSE=0.00154150440357625
+[97] Train-MSE=0.0017737578949891
+[97] Validation-MSE=0.00154051734716631
+[98] Train-MSE=0.00177335749613121
+[98] Validation-MSE=0.00153957353904843
+[99] Train-MSE=0.00177299699280411
+[99] Validation-MSE=0.00153867155313492
+[100] Train-MSE=0.00177267640829086
+[100] Validation-MSE=0.00153781197150238
+
    user  system elapsed 
  21.937   1.914  13.402 
 ```
