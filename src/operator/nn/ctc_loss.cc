@@ -22,18 +22,18 @@
  * \brief CPU Implementation of CTC Loss op
  */
 #include "./ctc_loss-inl.h"
-#include "../contrib/ctc_include/detail/cpu_ctc.h"
+#include "./ctc_include/detail/cpu_ctc.h"
 
 namespace mshadow {
 template <typename DType>
 ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              DType *costs, DType *grads, int *labels,
                              int *label_lengths, int *data_lengths,
-                             void *workspace, int train, int blank_label) {
+                             void *workspace, bool isTraining, int blank_label) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
   mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
-  if (train) {
+  if (isTraining) {
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
                              label_lengths, data_lengths);
   } else {

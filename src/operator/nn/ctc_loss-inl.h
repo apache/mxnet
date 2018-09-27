@@ -198,17 +198,26 @@ struct CTCLossOpParam : public dmlc::Parameter<CTCLossOpParam> {
   }
 };
 
+// By default, the inputs must include data array and label array
+// if use_data_lengths parameter is set, user should also supply
+// data_lengths array; if use_label_lengths parameter is set, user
+// should also specify label_lengths array.
+inline uint32_t CTCLossOpNumInputs(const NodeAttrs& attrs) {
+  const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
+  return 2U + param.use_data_lengths + param.use_label_lengths;
+}
+
 inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
                            std::vector<TShape>* in_attrs,
                            std::vector<TShape>* out_attrs) {
     const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
-    CHECK_EQ(in_attrs->size(), 2U + param.use_data_lengths + param.use_label_lengths);
+    CHECK_EQ(in_attrs->size(), CTCLossOpNumInputs(attrs));
     CHECK_EQ(out_attrs->size(), 2U);
 
     const TShape &dshape = (*in_attrs)[ctc_loss::kData];
     const TShape &lshape = (*in_attrs)[ctc_loss::kLabel];
-    CHECK_EQ(dshape.ndim(), 3U) << "The data array must be of rank 3.";
-    CHECK_EQ(lshape.ndim(), 2U) << "The labels array must be of rank 2.";
+    CHECK_EQ(dshape.ndim(), 3U) << "The number of dimensions of data array must be 3.";
+    CHECK_EQ(lshape.ndim(), 2U) << "The number of dimensions of labels array must be 2.";
     CHECK_EQ(dshape[1], lshape[0])
         << "The batch size for the labels and data arrays must be the same.";
 
@@ -270,10 +279,6 @@ inline bool CTCLossOpStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-inline int CTCLossOpNumInputs(const NodeAttrs& attrs) {
-  const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
-  return 2 + param.use_data_lengths + param.use_label_lengths;
-}
 
 inline std::vector<std::string> CTCLossOpListInputNames(const NodeAttrs& attrs) {
   const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
@@ -298,7 +303,7 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
 
   const CTCLossOpParam& param = nnvm::get<CTCLossOpParam>(attrs.parsed);
-  CHECK_EQ(inputs.size(), 2U + param.use_data_lengths + param.use_label_lengths);
+  CHECK_EQ(inputs.size(), CTCLossOpNumInputs(attrs));
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
 
