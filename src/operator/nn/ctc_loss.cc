@@ -22,7 +22,7 @@
  * \brief CPU Implementation of CTC Loss op
  */
 #include "./ctc_loss-inl.h"
-#include "./ctc_include/detail/cpu_ctc.h"
+#include "./ctc_include/detail/cpu_ctc.h"  // NOLINT(*)
 
 namespace mshadow {
 template <typename DType>

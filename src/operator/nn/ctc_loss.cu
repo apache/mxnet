@@ -24,7 +24,7 @@
  */
 
 #include "./ctc_loss-inl.h"
-#include "./ctc_include/detail/gpu_ctc.h"
+#include "./ctc_include/detail/gpu_ctc.h"  // NOLINT(*)
 
 namespace mshadow {
 
