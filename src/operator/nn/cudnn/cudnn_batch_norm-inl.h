@@ -115,6 +115,8 @@ class CuDNNBatchNormOp {
 
       if (param_.fix_gamma) gamma = 1.f;
 
+      if (param_.fix_beta) beta = 0.f;
+
       if (ctx.is_train) {
         Tensor<gpu, 1, DTypeParam> save_mean =
           out_data[cudnnbatchnorm::kMean].get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
@@ -229,6 +231,7 @@ class CuDNNBatchNormOp {
         global_stats ? nullptr : save_mean.dptr_,
         global_stats ? nullptr : save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
+      if (param_.fix_beta) dbeta = 0.f;
     })
 #else  // CUDNN_VERSION < 4007
     MSHADOW_REAL_TYPE_SWITCH(dtype_param_, DTypeParam, {
@@ -267,6 +270,7 @@ class CuDNNBatchNormOp {
                                                  global_stats ? nullptr : save_mean.dptr_,
                                                  global_stats ? nullptr : save_inv_var.dptr_));
       if (param_.fix_gamma) dgamma = 0.f;
+      if (param_.fix_beta) dbeta = 0.f;
     })
 #endif
   }
