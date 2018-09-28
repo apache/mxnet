@@ -66,10 +66,10 @@ inline void ROIPoolForward(const Tensor<cpu, 4, Dtype> &out,
     Dtype *top_data_n = top_data + n * out_size;
     Dtype *argmax_data_n = argmax_data + n * max_idx_size;
     int roi_batch_ind = bottom_rois_n[0];
-    int roi_start_w = round(bottom_rois_n[1] * spatial_scale_);
-    int roi_start_h = round(bottom_rois_n[2] * spatial_scale_);
-    int roi_end_w = round(bottom_rois_n[3] * spatial_scale_);
-    int roi_end_h = round(bottom_rois_n[4] * spatial_scale_);
+    int roi_start_w = std::round(bottom_rois_n[1] * spatial_scale_);
+    int roi_start_h = std::round(bottom_rois_n[2] * spatial_scale_);
+    int roi_end_w = std::round(bottom_rois_n[3] * spatial_scale_);
+    int roi_end_h = std::round(bottom_rois_n[4] * spatial_scale_);
     assert(roi_batch_ind >= 0);
     assert(static_cast<index_t>(roi_batch_ind) < data.size(0) /* batch size */);
 
@@ -171,10 +171,10 @@ inline void ROIPoolBackwardAcc(const Tensor<cpu, 4, Dtype> &in_grad,
               continue;
             }
 
-            int roi_start_w = round(offset_bottom_rois[1] * spatial_scale_);
-            int roi_start_h = round(offset_bottom_rois[2] * spatial_scale_);
-            int roi_end_w = round(offset_bottom_rois[3] * spatial_scale_);
-            int roi_end_h = round(offset_bottom_rois[4] * spatial_scale_);
+            int roi_start_w = std::round(offset_bottom_rois[1] * spatial_scale_);
+            int roi_start_h = std::round(offset_bottom_rois[2] * spatial_scale_);
+            int roi_end_w = std::round(offset_bottom_rois[3] * spatial_scale_);
+            int roi_end_h = std::round(offset_bottom_rois[4] * spatial_scale_);
 
             bool in_roi = (w >= roi_start_w && w <= roi_end_w &&
                            h >= roi_start_h && h <= roi_end_h);
@@ -234,7 +234,7 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(ROIPoolingParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ROIPoolingOp<cpu, DType>(param);
   });

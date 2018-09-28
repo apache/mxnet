@@ -141,10 +141,16 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
-Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
+Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>. 
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+
+**NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- End of pip -->
 
@@ -252,12 +258,16 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
 
@@ -478,11 +488,16 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
+**NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- END of pip -->
 
@@ -686,11 +701,16 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
+**NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- End of pip -->
 
@@ -762,12 +782,16 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 

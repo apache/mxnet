@@ -772,48 +772,61 @@ def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
         out = x.copy()
-        out = np.multiply(out, gamma)
+        if len(x.shape) == 4:
+            out = out.transpose(2,3,0,1)
+            out = np.multiply(out, gamma)
+            out = out.transpose(2,3,0,1)
+        else:
+            out = np.multiply(out, gamma)
         out[pos_indices] = x[pos_indices]
         return out
     def fprelu_grad(x, y, gamma):
         pos_indices = x > 0
-        grad_x = np.multiply(np.ones(x.shape), gamma)
+        if len(x.shape) == 4:
+            grad_x = np.multiply(np.ones(x.shape).transpose(2,3,0,1), gamma)
+            grad_x = grad_x.transpose(2,3,0,1)
+        else:
+            grad_x = np.multiply(np.ones(x.shape), gamma)
         grad_gam = np.zeros(gamma.shape)
         copy_x = x.copy()
         copy_x[pos_indices] = 0.0
         grad_x[pos_indices] = 1.0
-        if len(gamma.shape) > 1:
+        if len(gamma.shape) > 1 and len(x.shape) != 4:
             grad_gam = copy_x
+        elif len(gamma.shape) > 1 and len(x.shape) == 4:
+            grad_gam = np.sum(copy_x, axis=(2,3))
         elif gamma.shape[0] == 1:
             grad_gam = np.sum(np.sum(copy_x))
-        elif gamma.shape[0] > 1:
+        elif gamma.shape[0] > 1 and len(x.shape) != 4:
             grad_gam = np.sum(copy_x, axis=0)
+        elif gamma.shape[0] > 1 and len(x.shape) == 4:
+            grad_gam = np.sum(copy_x, axis=(0,2,3))
         return (grad_x, grad_gam)
-    shape = (3,4)
     x = mx.symbol.Variable("x")
     gamma = mx.symbol.Variable("gamma")
-    for dtype in [np.float16, np.float32, np.float64]:
-        for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
-            gam_full = np.array([gam, gam, gam])
-            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-            rtol = 1e-2
-            atol = 1e-3
-            eps = 1e-4
-            xa[abs(xa) < eps] = 1.0
-            y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
-            ya = fprelu(xa, gam)
-            ya_full = fprelu(xa, gam_full)
-            g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
-            g_xa_full, g_gam_full = fprelu_grad(xa, ya_full, gamma=gam_full)
-            # Skip numeric check for float16 type to get rid of flaky behavior
-            if dtype is not np.float16:
-                check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
-                check_numeric_gradient(y, [xa, gam_full], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_forward(y, [xa, gam_full], [ya_full], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_backward(y, [xa, gam_full], [np.ones(shape), np.ones(gam_full.shape)],
-                                    [g_xa_full, g_gam_full], rtol=rtol, atol=atol, dtype=dtype)
+    for shape in [(3,4), (3,4,4,5)]:
+        for dtype in [np.float16, np.float32, np.float64]:
+            for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
+                gam_full = np.array([gam, gam, gam])
+                xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+                rtol = 1e-2
+                atol = 1e-3
+                eps = 1e-4
+                xa[abs(xa) < eps] = 1.0
+                y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
+                ya = fprelu(xa, gam)
+                ya_full = fprelu(xa, gam_full)
+                g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
+                g_xa_full, g_gam_full = fprelu_grad(xa, ya_full, gamma=gam_full)
+                # Skip numeric check for float16 type to get rid of flaky behavior
+                if dtype is not np.float16:
+                    check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+                    check_numeric_gradient(y, [xa, gam_full], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_forward(y, [xa, gam_full], [ya_full], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa, gam_full], [np.ones(shape), np.ones(gam_full.shape)],
+                                        [g_xa_full, g_gam_full], rtol=rtol, atol=atol, dtype=dtype)
 
 @with_seed()
 def test_selu():
@@ -4339,7 +4352,7 @@ def test_where():
         x = mx.sym.Variable('x')
         y = mx.sym.Variable('y')
         where_sym = mx.sym.where(condition, x, y)
-	
+
         assert_exception(lambda: where_sym.eval(x=mx.nd.array([[2,3],[4,5],[6,7]]),
                                                 y=mx.nd.array([[8,9],[10,11],[12,13]]),
                                                 condition=mx.nd.array([1,0])), MXNetError)
@@ -4982,7 +4995,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
                     trans_x = input_offset[roi_idx, class_id * 2, part_h, part_w] * trans_std
                     trans_y = input_offset[roi_idx, class_id * 2 + 1, part_h, part_w] * trans_std
                     bin_h_start, bin_w_start = ph * bin_size_h + roi_start_h, pw * bin_size_w + roi_start_w
-                    
+
                     need_check = True
                     while need_check:
                         pass_check = True
@@ -6812,6 +6825,50 @@ def test_diag():
     diag_sym = mx.sym.diag(data=data, k=-1)
     check_numeric_gradient(diag_sym, [a_np])
 
+    # Test 4d input
+    x1 = np.random.randint(3,9)
+    x2 = np.random.randint(3,9)
+    x3 = np.random.randint(3,9)
+    x4 = np.random.randint(3,9)
+    a_np = np.random.random((x1, x2, x3, x4)).astype(np.float32)
+    a = mx.nd.array(a_np).astype('float32')
+
+    # k = 0, axis1=0, axis2=1
+    r = mx.nd.diag(data=a, k=0, axis1=0, axis2=1)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=0, axis1=0, axis2=1))
+
+    # k = 1, axis1=1, axis2=0
+    r = mx.nd.diag(data=a, k=1, axis1=1, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=1, axis1=1, axis2=0))
+
+    # k = -1 axis1=1, axis3=3
+    r = mx.nd.diag(data=a, k=-1, axis1=1, axis2=3)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=-1, axis1=1, axis2=3))
+
+    # k = 2, axis1=-2, axis2=0
+    r = mx.nd.diag(data=a, k=2, axis1=-2, axis2=0)
+    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=2, axis1=-2, axis2=0))
+
+    # Test 4d backward, k=0, axis1=3, axis2=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=0, axis1=3, axis2=0)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=1, axis1=1, axis2=2
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=1, axis1=1, axis2=2)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=-1, axis1=2, axis2=0
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-1, axis1=2, axis2=0)
+    check_numeric_gradient(diag_sym, [a_np])
+
+    # Test 4d backward, k=-2, axis1=1, axis2=-1
+    data = mx.sym.Variable('data')
+    diag_sym = mx.sym.diag(data=data, k=-2, axis1=1, axis2=-1)
+    check_numeric_gradient(diag_sym, [a_np])
+
 @with_seed()
 def test_depthtospace():
     def f(x, blocksize):
@@ -6912,6 +6969,58 @@ def test_spacetodepth():
     test_invalid_space_dim()
     test_invalid_block_size()
     test_invalid_depth_dim()
+
+@with_seed()
+def test_invalid_kernel_size():
+    invalid_kernel_size = 28
+    assert_exception(
+        mx.nd.Correlation,
+        MXNetError,
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        kernel_size=invalid_kernel_size)
+
+@with_seed()
+def test_valid_kernel_size():
+    valid_kernel_size = 9
+    mx.nd.Correlation(
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        mx.nd.array(np.random.rand(1, 1, 28, 28)),
+        kernel_size=valid_kernel_size)
+
+@with_seed()
+def test_valid_max_pooling_pad_type_same():
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
+    output_data=mx.nd.Pooling(
+        input_data,
+        kernel=kernel,
+        stride=stride,
+        pad=(0,0,0),
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
+    assert(math.ceil(input_data.shape[2]/stride) == output_data.shape[2])
+
+@with_seed()
+def test_invalid_max_pooling_pad_type_same():
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
+    pad = 2
+    assert_exception(
+        mx.nd.Pooling,
+        MXNetError,
+        input_data,
+        stride=stride,
+        kernel=kernel,
+        pad=pad,
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
 
 if __name__ == '__main__':
     import nose
