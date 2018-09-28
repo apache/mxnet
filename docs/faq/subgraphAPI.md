@@ -12,11 +12,11 @@ The figure below illustrates the subgraph mechanism.
 
 ![](/Users/dzzhen/Workspace/incubator-mxnet/docs/faq/subgraph.png)
 
-The subgraph API allows the developers to customize subgraph searching and :
+The subgraph API allows the backend developers to customize the subgraph mechanism in two places:
 
-* Define a subgraph selector to search for particular patterns in a computation graph,
-* Replace a subgraph.
+* Subgraph searching: define a subgraph selector to search for particular patterns in a computation graph,
 
+* Subgraph node creation: attach an operator to run the computation in the subgraph. We can potentially manipulate the subgraph here.
 
 
 Below I will illustrate the subgraph API with a very simple task, as shown in the figure above. That is, replacing convolution and batch_norm with the conv_bn.
