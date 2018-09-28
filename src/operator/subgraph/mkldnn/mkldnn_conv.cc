@@ -187,7 +187,7 @@ class SgMKLDNNConvOperator {
                 const std::vector<OpReqType> &req,
                 const std::vector<NDArray> &outputs) {
     LOG(FATAL) << "Not implemented: subgraph mkldnn Conv only supports "
-                  "inference computation";
+                  "inference computation.";
   }
 
  private:
