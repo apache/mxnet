@@ -144,7 +144,7 @@ To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/
 1. Unzip the file, rename it to ```OpenBLAS``` and put it under `C:\utils`. You can place the unzipped files and folders in another directory if you wish.
 1. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS directory that contains the `include` and `lib` directories and type `set OpenBLAS_HOME=C:\utils\OpenBLAS` on the command prompt(```cmd```).
 1. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). If you already had CUDA, then installed VS2017, you should reinstall CUDA now so that you get the CUDA toolkit components for VS2017 integration. Note that the lastest CUDA version supported by MXNet is 9.2. You can find it on the `Legacy Releases`.
-1. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN and put those libraries into ```C:\cuda```.
+1. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN and put those libraries into ```C:\cuda```.
 1. Download and install [git](https://git-for-windows.github.io/) if you haven't already.
 
 After you have installed all of the required dependencies, build the MXNet source code:
