@@ -29,11 +29,11 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
   enum SelectStatus {
-    sFail = 0,
-    sStart,
-    sBN,
-    sSum,
-    sSuccess,
+    kFail = 0,
+    kStart,
+    kBN,
+    kSum,
+    kSuccess,
   };
 
  private:
@@ -53,7 +53,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node &n) override {
     if (n.op() && n.op()->name == "Convolution") {
-      status = disable_all ? sSuccess : sStart;
+      status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
       return true;
@@ -66,7 +66,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    if (status == sFail || status == sSuccess || new_node.is_variable())
+    if (status == kFail || status == kSuccess || new_node.is_variable())
       return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
@@ -74,25 +74,25 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
       while (matched_list.back() != &n) {
         matched_list.pop_back();
       }
-      status = sSuccess;
+      status = kSuccess;
       return false;
     }
     // Use status machine to do selection. The status change is
-    // sStart -> sBN -> sSum -> sSuccess
+    // kStart -> kBN -> kSum -> kSuccess
     switch (status) {
-      case sStart:
+      case kStart:
         if ((!disable_conv_bn) && new_node.op()->name == "BatchNorm") {
           matched_list.push_back(&new_node);
-          status = sBN;
+          status = kBN;
           return true;
         }
-      case sBN:
+      case kBN:
         if ((!disable_conv_sum) && new_node.op()->name == "elemwise_add") {
           matched_list.push_back(&new_node);
-          status = sSum;
+          status = kSum;
           return true;
         }
-      case sSum:
+      case kSum:
       default:
         if ((!disable_conv_relu) && new_node.op()->name == "Activation") {
           const ActivationParam &param =
@@ -100,21 +100,21 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
           if (param.act_type == activation::kReLU) {
             matched_list.push_back(&new_node);
             // If we find conv+relu, then we can't match bn anymore.
-            if (status == sStart) status = sBN;
+            if (status == kStart) status = kBN;
             return true;
           } else {
-            status = sSuccess;
+            status = kSuccess;
             return false;
           }
         }
-        status = sSuccess;
+        status = kSuccess;
         return false;
     }
   }
 
   std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
-    if (status == sFail) {
+    if (status == kFail) {
       return std::vector<nnvm::Node *>(0);
     } else {
       return candidates;

@@ -38,7 +38,7 @@ def check_qsym_calibrated(qsym):
     return 0, 0
   assert ''.join(qsym.attr_dict().keys()).find('quantized_') != -1
   for k, v in attrs.items():
-    if k.find('requantize_sg_mkldnn_conv') != -1:
+    if k.find('_sg_mkldnn_conv') != -1:
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
       min_value = v['min_calib_range']
@@ -83,6 +83,10 @@ def check_quantize(sym, data_shape, label_shape, data_val, sym_output):
                                                                      #disable_requantize=True,
                                                                      calib_quantize_op=True,
                                                                      num_calib_examples=20)
+    out = SymbolHandle()
+    backend = "MKLDNN_POST_QUANTIZE"
+    check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
+    qsym = Symbol(out)
     minVar, maxVar = check_qsym_calibrated(qsym)
     rtol = (maxVar - minVar) / 256
     qsym_output = check_qsym_forward(qsym, qarg_params, qaux_params, data_val, data_shape, label_shape)

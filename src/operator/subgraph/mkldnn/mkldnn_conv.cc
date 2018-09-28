@@ -255,7 +255,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       auto in_mkl_mem = inputs[in_sum].GetMKLDNNData();
       auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
       // TODO(zhennan): Currently, mkldnn fallback mechanism will break inplace option,
-      // which make check (req[kOut] == )
+      // which make check (req[kOut] == kWriteInplace) useless.
       if (in_mkl_mem->get_data_handle() == out_mkl_mem->get_data_handle()) {
         inplace_ = true;
       }
@@ -643,7 +643,7 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
 bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs,
                                 const NodeAttrs &input_attrs) {
   const std::vector<std::string> exclude_key{
-      "weight", "bias", "gamma", "beta", "moving_mean", "moving_var", "running_mean"};
+      "weight", "bias", "gamma", "beta", "moving_mean", "moving_var"};
   for (auto i : exclude_key) {
     if (common::StringEndsWith(input_attrs.name, i)) {
       return true;

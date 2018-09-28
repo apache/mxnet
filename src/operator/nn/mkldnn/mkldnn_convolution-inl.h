@@ -37,8 +37,6 @@ namespace mxnet {
 namespace op {
 
 struct MKLDNNConvParam : public dmlc::Parameter<MKLDNNConvParam> {
-  // When adding more members into this class, please double check GetHash()
-  // won't overflow.
   bool with_bn;
   bool with_relu;
   bool with_sum;

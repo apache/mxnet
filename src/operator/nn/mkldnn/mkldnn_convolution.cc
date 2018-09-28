@@ -308,8 +308,7 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
   if (param.mkldnn_param.with_sum) {
     out_mem = mkldnn_output_t(
         OutDataOp::Noop,
-        const_cast<mkldnn::memory *>(out_data[conv::kOut].GetMKLDNNDataReorder(
-            fwd->fwd_pd.dst_primitive_desc())));
+        const_cast<mkldnn::memory *>(out_data[conv::kOut].GetMKLDNNData()));
   } else {
     out_mem = CreateMKLDNNMem(out_data[conv::kOut],
                               fwd->fwd_pd.dst_primitive_desc(), req[conv::kOut]);
