@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include <cstdlib>
+#include <chrono>
 #include "mxnet-cpp/MxNetCpp.h"
 
 using namespace mxnet::cpp;
@@ -67,13 +68,7 @@ class Lenet {
     Symbol pool2 = Pooling("pool2", tanh2, Shape(2, 2), PoolingPoolType::kMax,
       false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
 
-    Symbol conv3 = Convolution("conv3", pool2, conv3_w, conv3_b,
-      Shape(2, 2), 500);
-    Symbol tanh3 = Activation("tanh3", conv3, ActivationActType::kTanh);
-    Symbol pool3 = Pooling("pool3", tanh3, Shape(2, 2), PoolingPoolType::kMax,
-      false, false, PoolingPoolingConvention::kValid, Shape(1, 1));
-
-    Symbol flatten = Flatten("flatten", pool3);
+    Symbol flatten = Flatten("flatten", pool2);
     Symbol fc1 = FullyConnected("fc1", flatten, fc1_w, fc1_b, 500);
     Symbol tanh4 = Activation("tanh4", fc1, ActivationActType::kTanh);
     Symbol fc2 = FullyConnected("fc2", tanh4, fc2_w, fc2_b, 10);
@@ -88,9 +83,8 @@ class Lenet {
     int val_fold = 1;
     int W = 28;
     int H = 28;
-    int batch_size = 42;
-    float learning_rate = 1e-4;
-    float weight_decay = 1e-4;
+    int batch_size = 64;
+    float learning_rate = 0.05;
 
     /*prepare the data*/
     std::vector<float> data_vec, label_vec;
@@ -135,18 +129,16 @@ class Lenet {
     // args_map["fc1_b"] = 0;
 
     lenet.InferArgsMap(ctx_dev, &args_map, args_map);
-    Optimizer* opt = OptimizerRegistry::Find("ccsgd");
-    opt->SetParam("momentum", 0.9)
-       ->SetParam("rescale_grad", 1.0)
-       ->SetParam("clip_gradient", 10)
-       ->SetParam("lr", learning_rate)
-       ->SetParam("wd", weight_decay);
+    Optimizer* opt = OptimizerRegistry::Find("sgd");
+    opt->SetParam("lr", learning_rate);
 
     Executor *exe = lenet.SimpleBind(ctx_dev, args_map);
     auto arg_names = lenet.ListArguments();
 
     for (int ITER = 0; ITER < max_epoch; ++ITER) {
       size_t start_index = 0;
+      auto e_start = std::chrono::high_resolution_clock::now();
+
       while (start_index < train_num) {
         if (start_index + batch_size > train_num) {
           start_index = train_num - batch_size;
@@ -169,7 +161,9 @@ class Lenet {
         }
       }
 
-      LG << "Iter " << ITER
+      auto e_end = std::chrono::high_resolution_clock::now();
+      auto time_taken = std::chrono::duration<double, std::milli> (e_end - e_start).count()/1000L;
+      LG << "Epoch [" << ITER << "] Time cost :" << time_taken
          << ", accuracy: " << ValAccuracy(batch_size * 10, lenet);
     }
     delete exe;
