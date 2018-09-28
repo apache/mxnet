@@ -58,7 +58,6 @@ class SgSelector : public SubgraphSelector {
 The second step is to define a subgraph property to use the subgraph selector above to customize the subgraph searching. By defining this class, we can also customize subgraph node creation. When customizing node creation, we can specify what operator to run the subgraph on the node. In the example below, we use CachedOp to run the subgraph with convolution and batch_norm. In practice, it's most likely that we use a fused operator from a backend library to run the subgraph.
 
 ```C++
-
 class SgProperty : public SubgraphProperty {
  public:
   static SubgraphPropertyPtr Create() {
@@ -86,5 +85,11 @@ After defining the subgraph property, we need to register it.
 
 ```C++
 MXNET_REGISTER_SUBGRAPH_PROPERTY(SgTest, SgProperty);
+```
+
+After compiling this subgraph mechanism into MXNet, we can use the environment variable `MXNET_SUBGRAPH_BACKEND` to activate it.
+
+```bash
+export MXNET_SUBGRAPH_BACKEND=SgTest
 ```
 
