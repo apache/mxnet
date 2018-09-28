@@ -137,14 +137,14 @@ To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/
 ```
 1. Download and install [CMake](https://cmake.org/download) if it is not already installed. [CMake v3.12.2](https://cmake.org/files/v3.12/cmake-3.12.2-win64-x64.msi) has been tested with MXNet.
 1. Download and run the  [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download) package. There are more recent versions of OpenCV, so please create an issue/PR to update this info if you validate one of these later versions.
-1. This will unzip several files. You can place them in another directory if you wish.
-1. Set the environment variable `OpenCV_DIR` to point to the OpenCV build directory that you just unzipped (e.g., `OpenCV_DIR = C:\utils\opencv\build`).
+1. This will unzip several files. You can place them in another directory if you wish. We will use `C:\utils` as our default path.
+1. Set the environment variable `OpenCV_DIR` to point to the OpenCV build directory that you just unzipped. Start ```cmd``` and type `set OpenCV_DIR=C:\utils\opencv\build`.
 1. If you don’t have the Intel Math Kernel Library (MKL) installed, you can install it and follow the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md) from here, or you can use OpenBLAS. These instructions will assume you're using OpenBLAS.
 1. Download the [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.19/OpenBLAS-v0.2.19-Win64-int32.zip/download) package. Later versions of OpenBLAS are available, but you would need to build from source. v0.2.19 is the most recent version that ships with binaries. Contributions of more recent binaries would be appreciated.
 1. Unzip the file. You can place the unzipped files and folders in another directory if you wish.
-1. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS directory that contains the `include` and `lib` directories (e.g., `OpenBLAS_HOME = C:\utils\OpenBLAS`).
-1. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). If you already had CUDA, then installed VS2017, you should reinstall CUDA now so that you get the CUDA toolkit components for VS2017 integration.
-1. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN.
+1. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS directory that contains the `include` and `lib` directories and type `set OpenBLAS_HOME=C:\utils\OpenBLAS` on the command prompt.
+1. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). If you already had CUDA, then installed VS2017, you should reinstall CUDA now so that you get the CUDA toolkit components for VS2017 integration. Note that the lastest CUDA version supported by MXNet is 9.2. You can find it on the `Legacy Releases`.
+1. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then Follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN and put it into ```C:\cuda```.
 1. Download and install [git](https://git-for-windows.github.io/) if you haven't already.
 
 After you have installed all of the required dependencies, build the MXNet source code:
@@ -158,12 +158,12 @@ git clone https://github.com/apache/incubator-mxnet.git --recursive
 3. Verify that the `DCUDNN_INCLUDE` and `DCUDNN_LIBRARY` environment variables are pointing to the `include` folder and `cudnn.lib` file of your CUDA installed location, and `C:\incubator-mxnet` is the location of the source code you just cloned in the previous step.
 4. Create a build dir using the following command and go to the directory, for example:
 ```
-mkdir C:\build
-cd C:\build
+mkdir C:\incubator-mxnet\build
+cd C:\incubator-mxnet\build
 ```
 5. Compile the MXNet source code with `cmake` by using following command:
 ```
-cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
+cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DUSE_MKL_IF_AVAILABLE=OFF -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
 ```
 6. After the CMake successfully completed, compile the the MXNet source code by using following command:
 ```
@@ -212,7 +212,25 @@ These steps are required after building from source. If you already installed MX
 
 1. Install ```Python``` using windows installer available [here](https://www.python.org/downloads/release/python-2712/).
 2. Install ```Numpy``` using windows installer available [here](https://scipy.org/index.html).
-3. Next, we install Python package interface for MXNet. You can find the Python interface package for [MXNet on GitHub](https://github.com/dmlc/mxnet/tree/master/python/mxnet).
+3. Start ```cmd``` and create a folder named ```common```(```mkdir C:\common```)
+4. Download the [mingw64_dll.zip](https://sourceforge.net/projects/openblas/files/v0.2.12/mingw64_dll.zip/download), unzip and copy three libraries (.dll files) that openblas.dll depends on to ```C:\common```.
+5. Copy the required .dll file to ```C:\common``` and make sure following libraries (.dll files) in the folder.
+```
+libgcc_s_seh-1.dll (in mingw64_dll)
+libgfortran-3.dll (in mingw64_dll)
+libquadmath-0.dll (in mingw64_dll)
+libopenblas.dll (in OpenBlas folder you download)
+opencv_world341.dll (in OpenCV folder you download)
+kernel32.dll
+vcomp140.dll
+nvcuda.dll (only if you use CUDA)
+```
+6. Add ```C:\common``` to Environment Variables.
+* Type ```control sysdm.cpl``` on ```cmp```
+* Select the **Advanced tab** and click **Environment Variables**
+* Double click the **Path** and click **New**
+* Add ```C:\common``` and click OK
+7. Next, we install Python package interface for MXNet. You can find the Python interface package for [MXNet on GitHub](https://github.com/dmlc/mxnet/tree/master/python/mxnet).
 
 ```bash
     # Assuming you are in root mxnet source code folder
