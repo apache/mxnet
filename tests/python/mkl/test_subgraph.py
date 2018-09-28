@@ -38,11 +38,8 @@ MIN_VALUE=-1.0
 MAX_VALUE=1.0
 
 def check_qsym_calibrated(qsym):
-  attrs = qsym.attr_dict()
-  if ''.join(qsym.attr_dict().keys()).find('quantized_pool') != -1:
-    return
   assert ''.join(qsym.attr_dict().keys()).find('quantized_') != -1
-  for k, v in attrs.items():
+  for k, v in qsym.attr_dict().items():
     if k.find('_sg_mkldnn_conv') != -1:
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
@@ -93,7 +90,7 @@ def check_quantize(sym, arg_params, aux_params, data_shape, label_shape, batch, 
   assert cond == 0
 
 @with_seed()
-def check_fusion(sym, data_shape, label_shape, attrs_op, nofusion=False):
+def check_fusion(sym, data_shape, label_shape, attrs_op):
   dev = mx.cpu()
   mod = Module(symbol=sym)
   mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
@@ -119,8 +116,8 @@ def check_fusion(sym, data_shape, label_shape, attrs_op, nofusion=False):
   for output_sg in mod_sg.get_outputs():
       output_sg.wait_to_read()
 
-  if not nofusion:
-    assert ''.join(sym_sg.get_internals().list_outputs()).find('sg_mkldnn_conv') != -1
+  assert ''.join(sym_sg.get_internals().list_outputs()).find('sg_mkldnn_conv') != -1
+
   for k, v in sym_sg.attr_dict().items():
     if k.find('sg_mkldnn_conv') != -1:
       for attr_op in attrs_op:
@@ -128,11 +125,8 @@ def check_fusion(sym, data_shape, label_shape, attrs_op, nofusion=False):
 
   # Check the result accuracy based on fp32 fusion
   assert_allclose(output[0].asnumpy(), output_sg[0].asnumpy(), rtol = 0)
-
   # fp32 to uint8
-  if nofusion:
-    check_quantize(sym, arg_params, aux_params, data_shape, label_shape, batch, output)
-  else: check_quantize(sym_sg, arg_params, aux_params, data_shape, label_shape, batch, output_sg)
+  check_quantize(sym_sg, arg_params, aux_params, data_shape, label_shape, batch, output_sg)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None, date_shape=(4,4,10,10)):
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
@@ -225,15 +219,6 @@ def conv_bn_sum_relu():
   fc = mx.sym.FullyConnected(data=relu, num_hidden=10, flatten=True, name='fc')
   sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
   return sym, conv_bn_add_relu_attr
-
-# pooling op quantizion case
-def uint8_pooling():
-  data = mx.symbol.Variable('data')
-  bn = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=0.9, name='bn')
-  pool = mx.sym.Pooling(data=bn, kernel=(4, 4), pool_type='max', name='pool')
-  fc = mx.sym.FullyConnected(data=pool, num_hidden=10, flatten=True, name='fc')
-  sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
-  return sym
 
 # conv + bn can't be fusion case
 # eg.1
@@ -504,12 +489,6 @@ def test_pos_conv_bn_sum_relu():
     check_fusion(net, data_shape, label_shape, attrs)
 
 @with_seed()
-def test_pos_uint8_pooling():
-  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
-    net = uint8_pooling()
-    check_fusion(net, data_shape, label_shape, '', True)
-
-@with_seed()
 def test_neg_conv_bn():
   for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn()
@@ -540,5 +519,5 @@ def test_neg_conv_bn_add_relu():
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 if __name__ == "__main__":
-    import nose
-    nose.runmodule()
+  import nose
+  nose.runmodule()
