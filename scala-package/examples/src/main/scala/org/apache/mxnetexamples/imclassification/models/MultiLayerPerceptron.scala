@@ -29,7 +29,6 @@ object MultiLayerPerceptron {
   def getSymbol(numClasses: Int): Symbol = {
     val data = Symbol.Variable("data")
 
-    // val fc1 = Symbol.FullyConnected(name = "relu")()(Map("data" -> data, "act_type" -> "relu"))
     val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
     val act1 = Symbol.api.Activation(data = Some(fc1), "relu", name = "relu")
     val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
