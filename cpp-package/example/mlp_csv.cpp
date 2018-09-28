@@ -35,52 +35,116 @@
 using namespace mxnet::cpp;
 
 /*
- * Implementing the mlp symbol with given layer configuration.
+ * Implementing the mlp symbol with given hidden units configuration.
  */
-Symbol mlp(const std::vector<int> &layers)
+Symbol mlp(const std::vector<int> &hidden_units)
 {
-    auto x = Symbol::Variable("X");
+    auto data = Symbol::Variable("data");
     auto label = Symbol::Variable("label");
 
-    std::vector<Symbol> weights(layers.size());
-    std::vector<Symbol> biases(layers.size());
-    std::vector<Symbol> outputs(layers.size());
+    std::vector<Symbol> weights(hidden_units.size());
+    std::vector<Symbol> biases(hidden_units.size());
+    std::vector<Symbol> outputs(hidden_units.size());
 
-    for (size_t i = 0; i < layers.size(); ++i) {
+    for (size_t i = 0; i < hidden_units.size(); ++i) {
         weights[i] = Symbol::Variable("w" + std::to_string(i));
         biases[i] = Symbol::Variable("b" + std::to_string(i));
         Symbol fc = FullyConnected(
-                                   i == 0? x : outputs[i-1],  // data
+                                   i == 0? data : outputs[i-1],  // data
                                    weights[i],
                                    biases[i],
-                                   layers[i]);
-        outputs[i] = i == layers.size()-1 ? fc : Activation(fc, ActivationActType::kRelu);
+                                   hidden_units[i]);
+        outputs[i] = i == hidden_units.size()-1 ? fc : Activation(fc, ActivationActType::kRelu);
     }
     return SoftmaxOutput(outputs.back(), label);
 }
 
+/*
+ * Convert the input string of number of hidden units into the vector of integers.
+ */
+void getLayers(std::string &hidden_units_string, std::vector<int> &hidden_units)
+{
+    std::string delimiter = ",";
+    size_t pos = 0;
+    std::string token;
+    while ((pos = hidden_units_string.find(delimiter)) != std::string::npos) {
+        token = hidden_units_string.substr(0, pos);
+        hidden_units.push_back(atoi(token.c_str()));
+        hidden_units_string.erase(0, pos + delimiter.length());
+    }
+    hidden_units.push_back(atoi(hidden_units_string.c_str()));
+}
+
+void printUsage()
+{
+    std::cout << "Usage:" << std::endl;
+    std::cout << "mlp_csv_cpu --train mnist_training_set.csv --test mnist_test_set.csv --epochs 10 --batch_size 100 --hidden_units \"128,64,64\"" << std::endl;
+    std::cout << "The example uses mnist data in CSV format. The MNIST data in CSV format assumes the column 0 to be label and the rest 784 column to be data." << std::endl;
+}
 
 int main(int argc, char** argv)
 {
     const int image_size = 28;
     const int num_mnist_features = image_size * image_size;
-    const std::vector<int> layers{128, 64, 10};
-    const int batch_size = 100;
-    const int max_epoch = 10;
+    int batch_size = 100;
+    int max_epoch = 10;
     const float learning_rate = 0.1;
     const float weight_decay = 1e-2;
-
+    bool isGpu = false;
+    
+    std::string training_set;
+    std::string test_set;
+    std::string hidden_units_string;
+    int index = 1;
+    while (index < argc) {
+        if (strcmp("--train", argv[index]) == 0) {
+            index++;
+            training_set = argv[index];
+        } else if (strcmp("--test", argv[index]) == 0) {
+            index++;
+            test_set = argv[index];
+        } else if (strcmp("--epochs", argv[index]) == 0) {
+            index++;
+            max_epoch = atoi(argv[index]);
+        } else if (strcmp("--batch_size", argv[index]) == 0) {
+            index++;
+            batch_size = atoi(argv[index]);
+        } else if (strcmp("--hidden_units", argv[index]) == 0) {
+            index++;
+            hidden_units_string = argv[index];
+        } else if (strcmp("--gpu", argv[index]) == 0) {
+            isGpu = true;
+            index ++;
+        } else if (strcmp("--help", argv[index]) == 0) {
+            printUsage();
+            return 0;
+        }
+        index ++;
+    }
+    
+    if (training_set.empty() || test_set.empty() || hidden_units_string.empty()) {
+        std::cout << "ERROR: The mandatory arguments such as path to training and test data or number of hidden units for mlp are not specified." << std::endl << std::endl;
+        printUsage();
+        return 0;
+    }
+    
+    std::vector<int> hidden_units;
+    getLayers(hidden_units_string, hidden_units);
+    
+    if (hidden_units.empty()) {
+        std::cout << "ERROR: Number of hidden units are not provided in correct format. The numbers need to be separated by ','." << std::endl << std::endl;
+        printUsage();
+        return 0;
+    }
+    
     /*
      * The MNIST data in CSV format has 785 columns.
      * The first column is "Label" and rest of the columns contain data.
      * The mnist_train.csv has 60000 records and mnist_test.csv has
      * 10000 records.
      */
-    std::vector<std::string> data_files = { "./data/mnist_train.csv",
-                                            "./data/mnist_test.csv"};
-
     auto train_iter = MXDataIter("CSVIter")
-    .SetParam("data_csv", "./data/mnist_train.csv")
+    .SetParam("data_csv", training_set)
     .SetParam("data_shape", Shape(num_mnist_features + 1,1))
     .SetParam("batch_size", batch_size)
     .SetParam("flat", 1)
@@ -88,19 +152,22 @@ int main(int argc, char** argv)
     .CreateDataIter();
 
     auto val_iter = MXDataIter("CSVIter")
-    .SetParam("data_csv", "./data/mnist_test.csv")
+    .SetParam("data_csv", test_set)
     .SetParam("data_shape", Shape(num_mnist_features + 1, 1))
     .SetParam("batch_size", batch_size)
     .SetParam("flat", 1)
     .SetParam("shuffle",0)
     .CreateDataIter();
 
-    auto net = mlp(layers);
-    
-    Context ctx = Context::cpu();  // Use CPU for training
+    auto net = mlp(hidden_units);
+
+    Context ctx = Context::cpu();
+    if (isGpu) {
+        ctx = Context::gpu();
+    }
     
     std::map<std::string, NDArray> args;
-    args["X"] = NDArray(Shape(batch_size, num_mnist_features), ctx);
+    args["data"] = NDArray(Shape(batch_size, num_mnist_features), ctx);
     args["label"] = NDArray(Shape(batch_size), ctx);
     // Let MXNet infer shapes other parameters such as weights
     net.InferArgsMap(ctx, &args, args);
@@ -141,15 +208,16 @@ int main(int argc, char** argv)
             // Extract the label data by slicing the first column of the data and copy it to "label" arg.
             reshapedData.Slice(0,1).Reshape(Shape(batch_size)).CopyTo(&args["label"]);
             
-            // Extract the feature data by slicing the columns 1 to 785 of the data and copy it to "X" arg.
-            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,num_mnist_features)).CopyTo(&args["X"]);
+            // Extract the feature data by slicing the columns 1 to 785 of the data and copy it to "data" arg.
+            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,num_mnist_features)).CopyTo(&args["data"]);
             
-            // Compute gradients
             exec->Forward(true);
+
+            // Compute gradients
             exec->Backward();
             // Update parameters
             for (size_t i = 0; i < arg_names.size(); ++i) {
-                if (arg_names[i] == "X" || arg_names[i] == "label") continue;
+                if (arg_names[i] == "data" || arg_names[i] == "label") continue;
                 opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
             }
         }
@@ -170,8 +238,8 @@ int main(int argc, char** argv)
             NDArray labelData = reshapedData.Slice(0,1).Reshape(Shape(batch_size));
             labelData.CopyTo(&args["label"]);
             
-            // Extract the feature data by slicing the columns 1 to 785 of the data and copy it to "X" arg.
-            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,num_mnist_features)).CopyTo(&args["X"]);
+            // Extract the feature data by slicing the columns 1 to 785 of the data and copy it to "data" arg.
+            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,num_mnist_features)).CopyTo(&args["data"]);
             
             // Forward pass is enough as no gradient is needed when evaluating
             exec->Forward(false);
@@ -179,7 +247,7 @@ int main(int argc, char** argv)
         }
         float duration = std::chrono::duration_cast<std::chrono::milliseconds>
         (toc - tic).count() / 1000.0;
-        LG << "Epoch: " << iter << " " << samples/duration << " samples/sec Accuracy: " << acc.Get();
+        LG << "Epoch[" << iter << "]  " << samples/duration << " samples/sec Accuracy: " << acc.Get();
     }
     
     delete exec;
