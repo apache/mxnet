@@ -222,9 +222,6 @@ libgfortran-3.dll (in mingw64_dll)
 libquadmath-0.dll (in mingw64_dll)
 libopenblas.dll (in OpenBlas folder you download)
 opencv_world341.dll (in OpenCV folder you download)
-kernel32.dll (in C:\Windows\System32)
-vcomp140.dll
-nvcuda.dll (only if you use CUDA)
 ```
 6. Add ```C:\common``` to Environment Variables.
  * Type ```control sysdm.cpl``` on ```cmp```
