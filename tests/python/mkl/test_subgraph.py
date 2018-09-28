@@ -32,96 +32,107 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
 
+DATA_SHAPE=[(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
+DATA_LABEL=[(4, 10), (32, 10), (64, 10)]
+MIN_VALUE=-1.0
+MAX_VALUE=1.0
+
 def check_qsym_calibrated(qsym):
   attrs = qsym.attr_dict()
   if ''.join(qsym.attr_dict().keys()).find('quantized_pool') != -1:
-    return 0, 0
+    return
   assert ''.join(qsym.attr_dict().keys()).find('quantized_') != -1
   for k, v in attrs.items():
-    if k.find('requantize_sg_mkldnn_conv') != -1:
+    if k.find('_sg_mkldnn_conv') != -1:
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
-      min_value = v['min_calib_range']
-      max_value = v['max_calib_range']
+      min_value = float(v['min_calib_range'])
+      max_value = float(v['max_calib_range'])
     if k.find('_quantize') != -1:
       assert v['out_type'] == 'uint8'
-  return float(min_value), float(max_value)
 
-def check_qsym_forward(qsym, qarg_params, qaux_params, data_val, data_shape, label_shape):
+def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape):
   mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
   mod.bind(for_training=False,
            data_shapes=[('data', data_shape)],
            label_shapes=[('softmax_label', label_shape)])
   mod.set_params(qarg_params, qaux_params)
-  batch = mx.io.DataBatch(data_val, [])
   mod.forward(batch, is_train=False)
   for output in mod.get_outputs():
     output.wait_to_read()
   return output
 
-def check_quantize(sym, data_shape, label_shape, data_val, sym_output):
-    mod = Module(symbol=sym)
-    mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)], for_training=False)
-    mod.init_params()
-    arg_params, aux_params = mod.get_params()
-    excluded_sym_names = []
-    if mx.current_context() == mx.cpu():
-      excluded_sym_names += ['fc']
-    calib_data = mx.nd.random.uniform(shape=data_shape)
-    calib_data = NDArrayIter(data=calib_data)
-    calib_data = DummyIter(calib_data)
-    calib_layer = lambda name: name.endswith('_output')
-    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
-                                                                     arg_params=arg_params,
-                                                                     aux_params=aux_params,
-                                                                     ctx=mx.current_context(),
-                                                                     excluded_sym_names=excluded_sym_names,
-                                                                     quantized_dtype='uint8',
-                                                                     calib_mode='naive',
-                                                                     calib_data=calib_data,
-                                                                     calib_layer=calib_layer,
-                                                                     #disable_requantize=True,
-                                                                     calib_quantize_op=True,
-                                                                     num_calib_examples=20)
-    minVar, maxVar = check_qsym_calibrated(qsym)
-    rtol = (maxVar - minVar) / 256
-    qsym_output = check_qsym_forward(qsym, qarg_params, qaux_params, data_val, data_shape, label_shape)
-    assert_allclose(qsym_output[0].asnumpy(), sym_output[0].asnumpy(), rtol=rtol)
+def check_quantize(sym, arg_params, aux_params, data_shape, label_shape, batch, sym_output):
+  excluded_sym_names = []
+  if mx.current_context() == mx.cpu():
+    excluded_sym_names += ['fc']
+  calib_data = mx.nd.random.uniform(shape=data_shape)
+  calib_data = NDArrayIter(data=calib_data)
+  calib_data = DummyIter(calib_data)
+  calib_layer = lambda name: name.endswith('_output')
+  qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
+                                                                   arg_params=arg_params,
+                                                                   aux_params=aux_params,
+                                                                   ctx=mx.current_context(),
+                                                                   excluded_sym_names=excluded_sym_names,
+                                                                   quantized_dtype='uint8',
+                                                                   calib_mode='naive',
+                                                                   calib_data=calib_data,
+                                                                   calib_layer=calib_layer,
+                                                                   calib_quantize_op=True,
+                                                                   num_calib_examples=20)
+  out = SymbolHandle()
+  backend = "MKLDNN_POST_QUANTIZE"
+  check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
+  qsym = Symbol(out)
+  check_qsym_calibrated(qsym)
+  qsym_output = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
 
-def check_fusion(sym, date_shape, label_shape, attrs_op, nofusion=False):
-  exe = sym.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
+  diff = mx.nd.abs(sym_output - qsym_output.astype(sym_output.dtype))
+  cond = mx.nd.lesser(2, diff).sum().asscalar()
+  assert cond == 0
+
+@with_seed()
+def check_fusion(sym, data_shape, label_shape, attrs_op, nofusion=False):
+  dev = mx.cpu()
+  mod = Module(symbol=sym)
+  mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
+  mod.init_params(mx.init.Normal(0.5))
+  arg_params, aux_params = mod.get_params()
+
+  data = [mx.random.uniform(MIN_VALUE, MAX_VALUE, shape=shape, ctx=dev) for _, shape in mod.data_shapes]
+  batch = mx.io.DataBatch(data, [])
+
+  mod.forward(batch, is_train=False)
+  for output in mod.get_outputs():
+      output.wait_to_read()
+
   out = SymbolHandle()
   backend = "MKLDNN"
   check_call(_LIB.MXGenBackendSubgraph(sym.handle, c_str(backend), ctypes.byref(out)))
   sym_sg = Symbol(out)
-  exe_sg = sym_sg.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
+  mod_sg = Module(symbol=sym)
+  mod_sg.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
+  mod_sg.set_params(arg_params, aux_params)
 
-  mx.random.seed(12345)
-  for k, v in exe.arg_dict.items():
-    v = mx.random.uniform(-1.0, 1.0, shape=v.shape)
-  data_val = [exe.arg_dict['data']]
+  mod_sg.forward(batch, is_train=False)
+  for output_sg in mod_sg.get_outputs():
+      output_sg.wait_to_read()
 
-  fwd = exe.forward(is_train=False)
-  fwd[0].wait_to_read()
-
-  fwd_sg = exe_sg.forward(is_train=False)
-  fwd_sg[0].wait_to_read()
-
-  # Check the result accuracy based on fp32 fusion
-  assert_allclose(fwd[0].asnumpy(), fwd_sg[0].asnumpy(), rtol=0)
-  attrs=sym_sg.attr_dict()
   if not nofusion:
     assert ''.join(sym_sg.get_internals().list_outputs()).find('sg_mkldnn_conv') != -1
-  for k, v in attrs.items():
+  for k, v in sym_sg.attr_dict().items():
     if k.find('sg_mkldnn_conv') != -1:
       for attr_op in attrs_op:
         assert v[attr_op] == 'true'
 
+  # Check the result accuracy based on fp32 fusion
+  assert_allclose(output[0].asnumpy(), output_sg[0].asnumpy(), rtol = 0)
+
   # fp32 to uint8
   if nofusion:
-    check_quantize(sym, date_shape, label_shape, data_val, fwd[0])
-  else: check_quantize(sym_sg, date_shape, label_shape, data_val, fwd[0])
-
+    check_quantize(sym, arg_params, aux_params, data_shape, label_shape, batch, output)
+  else: check_quantize(sym_sg, arg_params, aux_params, data_shape, label_shape, batch, output_sg)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None, date_shape=(4,4,10,10)):
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
@@ -216,10 +227,10 @@ def conv_bn_sum_relu():
   return sym, conv_bn_add_relu_attr
 
 # pooling op quantizion case
-def int8_pooling():
+def uint8_pooling():
   data = mx.symbol.Variable('data')
   bn = mx.sym.BatchNorm(data=data, fix_gamma=True, eps=2e-5, momentum=0.9, name='bn')
-  pool = mx.sym.Pooling(data=bn, kernel=(4, 4), pool_type='avg', name='pool')
+  pool = mx.sym.Pooling(data=bn, kernel=(4, 4), pool_type='max', name='pool')
   fc = mx.sym.FullyConnected(data=pool, num_hidden=10, flatten=True, name='fc')
   sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
   return sym
@@ -457,62 +468,77 @@ def neg_conv_bn_add_relu():
   return syms, attrs, excluded_attrs
 
 @with_seed()
-def check_positive_fusion():
-  def positive_fusion():
-    shape = [(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
-    label = [(4, 10), (32, 10), (64, 10)]
-
-    for date_shape, label_shape in zip(shape, label):
-      # conv + bn + add + relu
-      net, attrs = conv_bn_sum_relu()
-      check_fusion(net, date_shape, label_shape, attrs)
-      # single conv replace
-      net, attrs = single_conv()
-      check_fusion(net, date_shape, label_shape, attrs)
-      # conv + relu
-      net, attrs = conv_relu()
-      check_fusion(net, date_shape, label_shape, attrs)
-      # conv + bn
-      net, attrs = conv_bn()
-      check_fusion(net, date_shape, label_shape, attrs)
-      # conv + add
-      net, attrs = conv_add()
-      check_fusion(net, date_shape, label_shape, attrs)
-      # conv + bn + relu
-      net, attrs = conv_bn_relu()
-      check_fusion(net, date_shape, label_shape, attrs)
-      # pool quantlizion
-      net = int8_pooling()
-      check_fusion(net, date_shape, label_shape, '', True)
-
-  positive_fusion()
+def test_pos_single_conv():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net, attrs = single_conv()
+    check_fusion(net, data_shape, label_shape, attrs)
 
 @with_seed()
-def check_negative_fusion():
-  shape = [(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
-  for data_shape in shape:
-    # conv + bn
+def test_pos_conv_relu():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net, attrs = conv_relu()
+    check_fusion(net, data_shape, label_shape, attrs)
+
+@with_seed()
+def test_pos_conv_bn():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net, attrs = conv_bn()
+    check_fusion(net, data_shape, label_shape, attrs)
+
+@with_seed()
+def test_pos_conv_add():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net, attrs = conv_add()
+    check_fusion(net, data_shape, label_shape, attrs)
+
+@with_seed()
+def test_pos_conv_bn_relu():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net, attrs = conv_bn_relu()
+    check_fusion(net, data_shape, label_shape, attrs)
+
+@with_seed()
+def test_pos_conv_bn_sum_relu():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net, attrs = conv_bn_sum_relu()
+    check_fusion(net, data_shape, label_shape, attrs)
+
+@with_seed()
+def test_pos_uint8_pooling():
+  for data_shape, label_shape in zip(DATA_SHAPE, DATA_LABEL):
+    net = uint8_pooling()
+    check_fusion(net, data_shape, label_shape, '', True)
+
+@with_seed()
+def test_neg_conv_bn():
+  for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn()
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
-    # conv + relu
+
+@with_seed()
+def test_neg_conv_relu():
+  for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_relu()
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
-    # conv + add
+
+@with_seed()
+def test_neg_conv_add():
+  for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_add()
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
-    # conv + bn + relu
+
+@with_seed()
+def test_neg_conv_bn_relu():
+  for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn_relu()
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
-    # conv + bn + add + relu
+
+@with_seed()
+def test_neg_conv_bn_add_relu():
+  for data_shape in DATA_SHAPE:
     syms, attrs, excluded_attrs = neg_conv_bn_add_relu()
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-
-@with_seed()
-def test_sugbraph():
-  check_positive_fusion()
-  check_negative_fusion()
-
 if __name__ == "__main__":
-  import nose
-  nose.runmodule()
+    import nose
+    nose.runmodule()
