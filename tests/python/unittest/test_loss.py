@@ -82,6 +82,7 @@ def test_ce_loss():
             eval_metric=mx.metric.Loss(), optimizer='adam',
             initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    
 
 # tracked at: https://github.com/apache/incubator-mxnet/issues/11691
 @with_seed()
@@ -347,6 +348,50 @@ def test_triplet_loss():
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+
+
+
+@with_seed()
+def test_poisson_nllloss():
+    pred = mx.nd.random.normal(shape = (3, 4))
+    print (" Prediction before the adjustment done: ",pred)
+    min_pred = mx.nd.min(pred)
+    print("Found the minimum as: ",min_pred)
+    #This is necessary to ensure only positive random values are generated for prediction,
+    # to avoid ivalid log calculation
+    pred[:] = pred + mx.nd.abs(min_pred)
+    print (" Prediction after the adjustment done: ",pred)
+
+    target = mx.nd.random.normal(shape = (3, 4))
+    min_target = mx.nd.min(target)
+    #This is necessary to ensure only positive random values are generated for prediction,
+    # to avoid ivalid log calculation
+    target[:] += mx.nd.abs(min_target)
+    print(" Pred = ", pred)
+    print("Target: ", target)
+    Loss                = gluon.loss.PoissonNLLLoss(from_logits=True)
+    Loss_no_logits      = gluon.loss.PoissonNLLLoss(from_logits=False)
+
+    #Calculating by brute formula for default value of from_logits = True
+    brute_loss          = np.mean(np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy())
+    loss_withlogits     = Loss(pred, target)
+
+    print(loss_withlogits, " is from the loss function!")
+    print (brute_loss," is the numpy calculated loss!")
+
+    assert_almost_equal(brute_loss, loss_withlogits.asscalar())
+
+    #Now testing for the option from_Logits = False
+    loss_no_logits      =  Loss_no_logits(pred, target)
+    np_loss_no_logits   =  np.mean(pred.asnumpy() - target.asnumpy() * np.log( pred.asnumpy() + 1e-08 ))
+
+    print("The so called invalid value = ",(pred.asnumpy() + 1e-08))
+    print("No logits - ",loss_no_logits, " is from the loss function!")
+    print ("No logits - ",np_loss_no_logits," is the numpy calculated loss!")
+    if np.isnan(loss_no_logits.asscalar()):
+        assert_almost_equal(np.isnan(np_loss_no_logits), np.isnan(loss_no_logits.asscalar()))
+    else:    
+        assert_almost_equal(np_loss_no_logits, loss_no_logits.asscalar())
 
 
 if __name__ == '__main__':
