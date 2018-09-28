@@ -38,9 +38,9 @@ MIN_VALUE=-1.0
 MAX_VALUE=1.0
 
 def check_qsym_calibrated(qsym):
-  assert ''.join(qsym.attr_dict().keys()).find('quantized_') != -1
+  assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_mkldnn_conv') != -1
   for k, v in qsym.attr_dict().items():
-    if k.find('_sg_mkldnn_conv') != -1:
+    if k.find('quantized_sg_mkldnn_conv') != -1:
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
     if k.find('_quantize') != -1:
@@ -122,10 +122,7 @@ def check_fusion(sym, data_shape, label_shape, attrs_op):
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None, date_shape=(4,4,10,10)):
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
-    out = SymbolHandle()
-    backend = "MKLDNN"
-    check_call(_LIB.MXGenBackendSubgraph(sym.handle, c_str(backend), ctypes.byref(out)))
-    sym_sg = Symbol(out)
+    sym_sg = sym.get_backend_symbol("MKLDNN")
     exe_sg = sym_sg.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
 
     attrs_dict = sym_sg.attr_dict()
