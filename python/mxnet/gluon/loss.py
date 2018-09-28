@@ -23,11 +23,12 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SigmoidBinaryCrossEntropyLoss', 'SigmoidBCELoss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
-           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss','PoissonNLLLoss']
-
+           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss']
+import numpy as np
 from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
+
 
 def _apply_weighting(F, loss, weight=None, sample_weight=None):
     """Apply weighting to loss.
@@ -709,7 +710,8 @@ class TripletLoss(Loss):
 
 
 class PoissonNLLLoss(Loss):
-    r"""For a target (Random Variable) in a Poisson distribution, the function calculates the Negative Log likelihood loss.
+    r"""For a target (Random Variable) in a Poisson distribution, the function calculates the Negative
+    Log likelihood loss.
     PoissonNLLLoss measures the loss accrued from a poisson regression prediction made by the model.
 
     .. math::
@@ -720,9 +722,9 @@ class PoissonNLLLoss(Loss):
     Parameters
     ----------
     from_logits : boolean, default True
-        indicating whether log(predicted) value has already been computed. If True, the loss is computed as :
-        :math:`\exp(\text{pred}) - \text{target} * \text{pred}`, and if False, then loss is computed as :
-        :math:`\text{pred} - \text{target} * \log(\text{pred}+\text{epsislon})`.The default value 
+        indicating whether log(predicted) value has already been computed. If True, the loss is computed as
+        :math:`\exp(\text{pred}) - \text{target} * \text{pred}`, and if False, then loss is computed as
+        :math:`\text{pred} - \text{target} * \log(\text{pred}+\text{epsislon})`.The default value
     weight : float or None
         Global scalar weight for loss.
     batch_axis : int, default 0
@@ -743,26 +745,25 @@ class PoissonNLLLoss(Loss):
           to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
-        
 
     Outputs:
     --------
         - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
     """
-    def __init__(self, margin=1, weight=None, from_logits=True, batch_axis=0, **kwargs):
+    def __init__(self, weight=None, from_logits=True, batch_axis=0, **kwargs):
         super(PoissonNLLLoss, self).__init__(weight, batch_axis, **kwargs)
         self._from_logits = from_logits
 
-    def hybrid_forward(self, F, pred, target, sample_weight = None, compute_full = False, epsilon = 1e-08):
+    def hybrid_forward(self, F, pred, target, sample_weight=None, compute_full=False, epsilon=1e-08):
         target = _reshape_like(F, target, pred)
         if self._from_logits:
             loss = F.exp(pred) - target * pred
         else:
-            if compute_full: 
+            if compute_full:
                 stirling_factor = target * F.log(target)- target + 0.5 * F.log(2 * target * np.pi)
-                stirling_factor = stirling_factor[target>1]
+                stirling_factor = stirling_factor[target > 1]
             else:
                 stirling_factor = 0.0
-            loss = pred - target * F.log( pred + epsilon ) + stirling_factor
+            loss = pred - target * F.log(pred + epsilon) + stirling_factor
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss)
