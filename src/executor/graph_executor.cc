@@ -1130,8 +1130,7 @@ void GraphExecutor::InitCachedOps() {
 
     // the variables
     std::vector<Engine::VarHandle> use_vars, mutate_vars;
-    for (size_t i = 0; i < exec->in_array.size(); ++i) {
-      auto& nd = exec->in_array[i];
+    for (auto &nd : exec->in_array) {
       use_vars.push_back(nd.var());
     }
     for (auto& r : exec->op_ctx.requested) {
@@ -1551,8 +1550,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
   std::vector<Context> aux_state_ctxes(aux_states.size());
 
   size_t i1 = 0, i2 = 0;
-  for (size_t i = 0; i < input_names.size(); ++i) {
-    if (i2 < aux_names.size() && aux_names[i2] == input_names[i]) {
+  for (const auto &input_name : input_names) {
+    if (i2 < aux_names.size() && aux_names[i2] == input_name) {
       arg_shapes.push_back(aux_states[i2].shape());
       arg_dtypes.push_back(aux_states[i2].dtype());
       arg_stypes.push_back(aux_states[i2].storage_type());
@@ -1560,7 +1559,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
       ++i2;
     } else {
       CHECK(i1 < arg_names.size());
-      CHECK_EQ(arg_names[i1], input_names[i]);
+      CHECK_EQ(arg_names[i1], input_name);
       arg_shapes.push_back(in_args->at(i1).shape());
       arg_dtypes.push_back(in_args->at(i1).dtype());
       arg_stypes.push_back(in_args->at(i1).storage_type());

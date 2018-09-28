@@ -387,11 +387,11 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
     cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
-  for (size_t i = 0; i < ptrs.size(); ++i) {
+  for (auto &ptr : ptrs) {
     NDArray* nd;
-    if (ptrs[i] == nullptr) {
+    if (ptr == nullptr) {
         nd = new NDArray();
-        ptrs[i] = reinterpret_cast<void*>(nd);
+      ptr = reinterpret_cast<void*>(nd);
     }
   }
   for (size_t i = 0; i < outputs.size(); ++i) {
@@ -457,8 +457,8 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     stypes[i] = (*iattr)[i];
   }
 
-  for (size_t i = 0; i < oattr->size(); i++) {
-    stypes.push_back((*oattr)[i]);
+  for (int i : *oattr) {
+    stypes.push_back(i);
     tags.push_back(2);
   }
 

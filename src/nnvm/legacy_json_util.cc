@@ -211,8 +211,8 @@ Graph LoadLegacyJSONPass(Graph g) {
               << ". Attempting to upgrade...";
     upgrading = true;
   }
-  for (auto it = upgrader_list.begin(); it != upgrader_list.end(); ++it) {
-    if (it->first > version) load = it->second(load);
+  for (auto &it : upgrader_list) {
+    if (it.first > version) load = it.second(load);
   }
   if (upgrading) LOG(INFO) << "Symbol successfully upgraded!";
   return load;
