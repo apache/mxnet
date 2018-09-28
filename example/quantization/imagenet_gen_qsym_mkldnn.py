@@ -118,10 +118,7 @@ if __name__ == '__main__':
     prefix, epoch = download_model(model_name=args.model, logger=logger)
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
-    out = SymbolHandle()
-    backend = "MKLDNN"
-    check_call(_LIB.MXGenBackendSubgraph(sym.handle, c_str(backend), ctypes.byref(out)))
-    sym = Symbol(out)
+    sym = sym.get_backend_symbol('MKLDNN')
 
     # get batch size
     batch_size = args.batch_size
@@ -204,10 +201,7 @@ if __name__ == '__main__':
             raise ValueError('unknow calibration mode %s received, only supports `none`, `naive`, and `entropy`'
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
-    out = SymbolHandle()
-    backend = "MKLDNN_POST_QUANTIZE"
-    check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
-    qsym = Symbol(out)
+    qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
     save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)

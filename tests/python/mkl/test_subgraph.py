@@ -83,10 +83,7 @@ def check_quantize(sym, data_shape, label_shape, data_val, sym_output):
                                                                      #disable_requantize=True,
                                                                      calib_quantize_op=True,
                                                                      num_calib_examples=20)
-    out = SymbolHandle()
-    backend = "MKLDNN_POST_QUANTIZE"
-    check_call(_LIB.MXGenBackendSubgraph(qsym.handle, c_str(backend), ctypes.byref(out)))
-    qsym = Symbol(out)
+    qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
     minVar, maxVar = check_qsym_calibrated(qsym)
     rtol = (maxVar - minVar) / 256
     qsym_output = check_qsym_forward(qsym, qarg_params, qaux_params, data_val, data_shape, label_shape)
@@ -94,10 +91,7 @@ def check_quantize(sym, data_shape, label_shape, data_val, sym_output):
 
 def check_fusion(sym, date_shape, label_shape, name, nofusion=False):
   exe = sym.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
-  out = SymbolHandle()
-  backend = "MKLDNN"
-  check_call(_LIB.MXGenBackendSubgraph(sym.handle, c_str(backend), ctypes.byref(out)))
-  sym_sg = Symbol(out)
+  sym_sg = sym.get_backend_symbol("MKLDNN")
   exe_sg = sym_sg.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
 
   mx.random.seed(12345)
