@@ -1,23 +1,14 @@
 # MXNet
 
-[![Build Status](https://travis-ci.org/dmlc/MXNet.jl.svg?branch=master)](https://travis-ci.org/dmlc/MXNet.jl)
-[![Windows Build](https://ci.appveyor.com/api/projects/status/re90njols2th2ide?svg=true)](https://ci.appveyor.com/project/pluskid/mxnet-jl)
-[![codecov.io](https://codecov.io/github/dmlc/MXNet.jl/coverage.svg?branch=master)](https://codecov.io/github/dmlc/MXNet.jl?branch=master)
-[![](https://img.shields.io/badge/docs-latest-blue.svg)](https://dmlc.github.io/MXNet.jl/latest)
-[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://dmlc.github.io/MXNet.jl/stable)
 [![MXNet](http://pkg.julialang.org/badges/MXNet_0.6.svg)](http://pkg.julialang.org/?pkg=MXNet)
-[![License](http://dmlc.github.io/img/apache2.svg)](LICENSE.md)
-[![Join the chat at https://gitter.im/dmlc/mxnet](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/dmlc/mxnet)
 
 
-MXNet.jl is the [dmlc/mxnet](https://github.com/dmlc/mxnet) [Julia](http://julialang.org/) package. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of its features include:
+MXNet.jl is the [dmlc/mxnet](https://github.com/apache/incubator-mxnet) [Julia](http://julialang.org/) package. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of its features include:
 
 * Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
-* Flexible symbolic manipulation to composite and construct state-of-the-art deep learning models.
+* Flexible symbolic manipulation to composite and construction of state-of-the-art deep learning models.
 
-The current support julia version is 0.6. Julia 0.7/1.0 is not supported yet.
-
-Here is an example of how training a simple 3-layer MLP on MNIST looks like:
+Here is an example of how training a simple 3-layer MLP on MNIST:
 
 ```julia
 using MXNet

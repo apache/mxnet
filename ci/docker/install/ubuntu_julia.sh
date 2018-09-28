@@ -17,6 +17,21 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
-wget -c http://data.dmlc.ml/mxnet/data/Inception.zip
-unzip Inception.zip
+set -ex
+
+export JLBINARY='julia.tar.gz'
+export JULIADIR='/work/julia'
+export JULIA="${JULIADIR}/bin/julia"
+
+mkdir -p $JULIADIR
+# The julia version in Ubuntu repo is too old
+# We download the tarball from the official link:
+#   https://julialang.org/downloads/
+wget -O $JLBINARY https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.2-linux-x86_64.tar.gz
+tar xzvf $JLBINARY -C $JULIADIR --strip 1
+rm $JLBINARY
+
+$JULIA -e 'versioninfo()'
