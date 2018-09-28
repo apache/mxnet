@@ -197,9 +197,9 @@ struct ElemwiseGradUseOut {
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
-    index_t n_out = n->num_outputs();
-    for (index_t i = 0; i < n_out; ++i) {
-      heads.emplace_back(nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0});
+    uint32_t n_out = n->num_outputs();
+    for (uint32_t i = 0; i < n_out; ++i) {
+      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
     }
     return MakeNonlossGradNode(op_name, n, ograds, heads, n->attrs.dict);
   }
@@ -214,9 +214,9 @@ struct ElemwiseGradUseInOut {
     for (auto& h : n->inputs) {
       heads.push_back(h);
     }
-    index_t n_out = n->num_outputs();
-    for (index_t i = 0; i < n_out; ++i) {
-      heads.emplace_back(nnvm::NodeEntry{n, static_cast<uint32_t>(i), 0});
+    uint32_t n_out = n->num_outputs();
+    for (uint32_t i = 0; i < n_out; ++i) {
+      heads.emplace_back(nnvm::NodeEntry{n, i, 0});
     }
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }
