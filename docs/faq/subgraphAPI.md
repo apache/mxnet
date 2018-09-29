@@ -4,8 +4,8 @@ The subgraph API has been proposed and implemented as the default mechanism for 
 
 The subgraph API works as the following steps:
 
-* Search for particular patterns in a graph,
-* Group the operators/nodes with particular patterns into a subgraph and shrink the subgraph into a single node,
+* Search for particular patterns in a graph.
+* Group the operators/nodes with particular patterns into a subgraph and shrink the subgraph into a single node.
 * Put the subgraph node back to the original graph to replace the subgraph.
 
 The figure below illustrates the subgraph mechanism.
@@ -14,8 +14,7 @@ The figure below illustrates the subgraph mechanism.
 
 The subgraph API allows the backend developers to customize the subgraph mechanism in two places:
 
-* Subgraph searching: define a subgraph selector to search for particular patterns in a computation graph,
-
+* Subgraph searching: define a subgraph selector to search for particular patterns in a computation graph.
 * Subgraph node creation: attach an operator to run the computation in the subgraph. We can potentially manipulate the subgraph here.
 
 
