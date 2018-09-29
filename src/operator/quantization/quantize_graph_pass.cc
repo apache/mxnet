@@ -91,27 +91,27 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
 
 inline bool NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
-  if (quantized_op_map.count(node->op())) {
-    bool excluded = false;
-    if (node->attrs.subgraphs.size()) {
-      // This is a subgraph node, try to match subgraph name first,
-      // and then try to match inner node.
-      if (excluded_nodes.count(node->attrs.name)) {
-        excluded = true;
-      } else {
-        // Assume index 0 holds subgraph symbol.
+  static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
+  const auto& op = node->op();
+  if (op && quantized_op_map.count(op)) {
+    bool need = true;
+    if (excluded_nodes.count(node->attrs.name)) {
+      need = false;
+    } else if (node->attrs.subgraphs.size()) {
+      ExecType exec_type = fexec_type.count(op) ? fexec_type[op](node->attrs) : ExecType::kSync;
+      if (exec_type != ExecType::kSubgraphExec) {
+        // This is a fused subgraph node, try to match inner node.
+        CHECK_EQ(node->attrs.subgraphs.size(), 1);
         auto subgraph_sym = node->attrs.subgraphs[0];
-        DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& node) {
-          if (node->is_variable()) return;
-          if (excluded_nodes.count(node->attrs.name)) {
-            excluded = true;
+        DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr& n) {
+          if (n->is_variable()) return;
+          if (excluded_nodes.count(n->attrs.name)) {
+            need = false;
           }
         });
       }
-    } else {
-      excluded = excluded_nodes.count(node->attrs.name);
     }
-    return !excluded;
+    return need;
   }
   return false;
 }
