@@ -1,4 +1,4 @@
-##How to Integrate Backend Libraries to MXNet with the Subgraph API
+## How to Integrate Backend Libraries to MXNet with the Subgraph API
 
 The subgraph API has been proposed and implemented as the default mechanism for integrating backend libraries to MXNet. The subgraph API is a very flexible interface. Although it was proposed as an integration mechanism, it has been used as a tool for manipulating NNVM graphs for graph-level optimizations, such as operator fusion.
 
