@@ -1,5 +1,6 @@
 #include "./subgraph/common.h"
 #include "./subgraph/subgraph_property.h"
+#include "../imperative/cached_op.h"
 
 namespace mxnet {
 namespace op {
@@ -44,8 +45,11 @@ class SgProperty : public SubgraphProperty {
       n->attrs.op = Op::Get("_CachedOp");
       n->attrs.name = "ConvBN" + std::to_string(subgraph_id);
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+      std::vector<std::pair<std::string, std::string> > flags{{"static_alloc", "true"}};
+      n->attrs.parsed = CachedOpPtr(new CachedOp(sym, flags));
       return n;
   }
+
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     return std::make_shared<SgSelector>();
   }
