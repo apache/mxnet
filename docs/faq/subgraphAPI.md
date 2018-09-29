@@ -68,6 +68,8 @@ class SgProperty : public SubgraphProperty {
       n->attrs.op = Op::Get("_CachedOp");
       n->attrs.name = "ConvBN" + std::to_string(subgraph_id);
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+      std::vector<std::pair<std::string, std::string> > flags{{"static_alloc", "true"}};
+      n->attrs.parsed = CachedOpPtr(new CachedOp(sym, flags));
       return n;
   }
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
