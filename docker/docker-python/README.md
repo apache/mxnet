@@ -27,9 +27,9 @@ For example:
 ** Note: The build script picks up the latest pip binaries. This means it uses the latest released mxnet version. The version specified as a parameter to the script is only used to tag the built image correctly.  
 
 ### Tests run
-* `/mxnet/tests/python/train/test_conv.py`
-* `/mxnet/example/image-classification/train_mnist.py`
-* `/mxnet/docker/docker-python/test_mxnet.py`: This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter. 
+* [test_conv.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/train/test_conv.py)
+* [train_mnist.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py)
+* [test_mxnet.py](https://github.com/apache/incubator-mxnet/blob/master/docker/docker-python/test_mxnet.py): This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter. 
 
 ### Dockerhub Credentials
 Dockerhub credentials will be required to push images at the end of this script. 
