@@ -27,32 +27,31 @@ The first step is to define a subgraph selector to find the required pattern.
 class SgSelector : public SubgraphSelector {
  public:
   SgSelector() {
-      find_bn = false;
+    find_sg = false;
   }
   bool Select(const nnvm::Node &n) override {
-      return n.op() && n.op()->name == "Convolution";
+    return n.op() && n.op()->name == "Convolution";
   }
-
   bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-      return false;
+    return false;
   }
-
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-      if (n.op() && n.op()->name == "BatchNorm" && !find_bn) {
-          find_bn = true;
-          return true;
-      } else {
-          return false;
-      }
+    if (new_node.op() && new_node.op()->name == "Activation" && !find_sg) {
+      find_sg = true;
+      return true;
+    } else {
+      return false;
+    }
   }
-  std::vector<nnvm::Node *> Filter(const std::vector<nnvm::Node *> &candidates) {
+  std::vector<nnvm::Node *> Filter(const std::vector<nnvm::Node *> &candidates) override {
+    if (find_sg)
       return candidates;
+    else
+      return std::vector<nnvm::Node *>();
   }
-
  private:
-  bool find_bn;
+  bool find_sg;
 };
-
 ```
 
 The second step is to define a subgraph property to use the subgraph selector above to customize the subgraph searching. By defining this class, we can also customize subgraph node creation. When customizing node creation, we can specify what operator to run the subgraph on the node. In the example below, we use CachedOp to run the subgraph with convolution and batch_norm. In practice, it's most likely that we use a fused operator from a backend library to run the subgraph.
@@ -63,18 +62,14 @@ class SgProperty : public SubgraphProperty {
   static SubgraphPropertyPtr Create() {
     return std::make_shared<SgProperty>();
   }
-
-  bool NeedGraphAttrs() const override { return false; }
-
   nnvm::NodePtr CreateSubgraphNode(
-      const nnvm::Symbol &sym, const int subgraph_id = 0) const override {
-    nnvm::NodePtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_CachedOp");
-    n->attrs.name = "ConvBN" + std::to_string(subgraph_id);
-    n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
-    return n;
+    const nnvm::Symbol &sym, const int subgraph_id = 0) const override {
+      nnvm::NodePtr n = nnvm::Node::Create();
+      n->attrs.op = Op::Get("_CachedOp");
+      n->attrs.name = "ConvBN" + std::to_string(subgraph_id);
+      n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+      return n;
   }
-
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     return std::make_shared<SgSelector>();
   }
