@@ -306,7 +306,7 @@ using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
  * which can handle fp32 inputs directly.
  */
 using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
-                                                const NodeAttrs& input_attrs)>;
+                                                size_t index)>;
 
 }  // namespace mxnet
 

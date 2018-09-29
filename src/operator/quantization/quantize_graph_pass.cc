@@ -141,7 +141,8 @@ Graph QuantizeGraph(Graph &&src) {
       new_node = fquantized_op(node->attrs);
 
       // add data into quantized op input
-      for (const auto& e : node->inputs) {
+      for (size_t i = 0; i < node->inputs.size(); ++i) {
+        const auto& e = node->inputs[i];
         NodePtr mirror_node = mirror_map.at(e.node.get());
         NodeEntry mirror_entry = NodeEntry{
           mirror_node, e.index, e.version};
@@ -151,7 +152,7 @@ Graph QuantizeGraph(Graph &&src) {
         // e's source node and the newly created quantize op so that the quantize op can be
         // reused next time when the same entry is visited again.
         if (avoid_quantize_input_map.count(node->op()) &&
-            avoid_quantize_input_map[node->op()](node->attrs, e.node->attrs)) {
+            avoid_quantize_input_map[node->op()](node->attrs, i)) {
           new_node->inputs.emplace_back(mirror_entry);
         } else if (!NeedQuantize(e.node, excluded_nodes) &&
                    (mirror_node->op() == nullptr ||
@@ -188,7 +189,8 @@ Graph QuantizeGraph(Graph &&src) {
 
       // add min and max into quantized op input assume order of quantized op inputs is:
       // data1, data2, ..., min1, max1, min2, max2, ...
-      for (const auto& e : node->inputs) {
+      for (size_t i = 0; i < node->inputs.size(); ++i) {
+        const auto& e = node->inputs[i];
         NodePtr mirror_node = mirror_map.at(e.node.get());
         if (mirror_node->op() != nullptr
             && mirror_node->op()->name == "_contrib_dequantize") {
@@ -200,7 +202,7 @@ Graph QuantizeGraph(Graph &&src) {
         uint32_t min_index = 1;
         uint32_t max_index = 2;
         if (avoid_quantize_input_map.count(node->op()) &&
-            avoid_quantize_input_map[node->op()](node->attrs, e.node->attrs)) {
+            avoid_quantize_input_map[node->op()](node->attrs, i)) {
           // skip non-quantized input
           continue;
         }

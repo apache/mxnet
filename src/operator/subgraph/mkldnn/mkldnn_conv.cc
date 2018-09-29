@@ -26,7 +26,6 @@
 #include "../../nn/mkldnn/mkldnn_base-inl.h"
 #include "../../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../../quantization/quantization_utils.h"
-#include "../../../common/utils.h"
 #include "mkldnn_conv-inl.h"
 
 namespace mxnet {
@@ -640,16 +639,22 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs,
-                                const NodeAttrs &input_attrs) {
-  const std::vector<std::string> exclude_key{
-      "weight", "bias", "gamma", "beta", "moving_mean", "moving_var"};
-  for (auto i : exclude_key) {
-    if (common::StringEndsWith(input_attrs.name, i)) {
-      return true;
-    }
+bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs, size_t index) {
+  auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
+  std::unordered_set<size_t> avoid_indice;
+  size_t idx = 0;
+  idx++;                         // data
+  avoid_indice.insert(idx++);    // weight
+  if (!param.full_conv_param.conv_param.no_bias) {
+    avoid_indice.insert(idx++);  // bias
   }
-  return false;
+  if (param.full_conv_param.mkldnn_param.with_bn) {
+    avoid_indice.insert(idx++);  // gamma
+    avoid_indice.insert(idx++);  // beta
+    avoid_indice.insert(idx++);  // mean
+    avoid_indice.insert(idx++);  // var
+  }
+  return avoid_indice.count(index);
 }
 
 NNVM_REGISTER_OP(_sg_mkldnn_conv)
