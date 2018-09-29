@@ -171,7 +171,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
 // Batch parameters
 struct BatchParam : public dmlc::Parameter<BatchParam> {
   /*! \brief label width */
-  index_t batch_size;
+  uint32_t batch_size;
   /*! \brief use round roubin to handle overflow batch */
   bool round_batch;
   // declare parameters

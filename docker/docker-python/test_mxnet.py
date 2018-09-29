@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,18 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-######################################################################
-# This script installs ONNX for Python along with all required dependencies 
-# on a Ubuntu Machine.
-# Tested on Ubuntu 16.04 distro.
-######################################################################
+# This checks that the version of mxnet imported matches the parameter passed to the build script.
+import mxnet as mx
+import sys
 
-set -e
-set -x
+pip_version = mx.__version__
+expected_version = sys.argv[1]
 
-echo "Installing libprotobuf-dev and protobuf-compiler ..."
-apt-get install -y libprotobuf-dev protobuf-compiler
-
-echo "Installing pytest, pytest-cov, protobuf, Pillow, ONNX and tabulate ..."
-pip2 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.3.0 Pillow==5.0.0 tabulate==0.7.5
-pip3 install pytest==3.4.0 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.3.0 Pillow==5.0.0 tabulate==0.7.5
+if pip_version != expected_version:
+    raise ValueError("ERROR: Incorrect pip version. Please check the parameter passed or pip binary used.")
