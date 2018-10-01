@@ -205,7 +205,7 @@ def test_ctc_loss():
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
-    l = loss(mx.nd.ones((2, 25, 4)), mx.nd.array([[2, 1, 3, 3], [3, 2, 2, 3]]), 
+    l = loss(mx.nd.ones((2, 25, 4)), mx.nd.array([[2, 1, 3, 3], [3, 2, 2, 3]]),
              mx.nd.array([20, 20]), mx.nd.array([2, 3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
@@ -372,8 +372,17 @@ def test_poisson_nllloss():
     np_loss_no_logits = np.mean(pred.asnumpy() - target.asnumpy() * np.log(pred.asnumpy() + 1e-08))
     if np.isnan(loss_no_logits.asscalar()):
         assert_almost_equal(np.isnan(np_loss_no_logits), np.isnan(loss_no_logits.asscalar()))
-    else: 
+    else:
         assert_almost_equal(np_loss_no_logits, loss_no_logits.asscalar())
+    # Adding test case for compute full use case for the stirling factor calculation
+    np_pred = np.random.uniform(1, 5, (2, 3))
+    np_target = np.random.uniform(1, 5, (2, 3))
+    np_compute_full = np.mean((np_pred - np_target * np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
+     np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)))
+    Loss_compute_full = gluon.loss.PoissonNLLLoss(from_logits=False, compute_full=True)
+    loss_compute_full = Loss_compute_full(mx.nd.array(np_pred), mx.nd.array(np_target))
+    assert_almost_equal(np_compute_full, loss_compute_full.asscalar())
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

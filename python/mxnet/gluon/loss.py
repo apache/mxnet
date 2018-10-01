@@ -750,20 +750,21 @@ class PoissonNLLLoss(Loss):
     --------
         - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
     """
-    def __init__(self, weight=None, from_logits=True, batch_axis=0, **kwargs):
+    def __init__(self, weight=None, from_logits=True, batch_axis=0, compute_full=False, **kwargs):
         super(PoissonNLLLoss, self).__init__(weight, batch_axis, **kwargs)
         self._from_logits = from_logits
+        self._compute_full = compute_full
 
-    def hybrid_forward(self, F, pred, target, sample_weight=None, compute_full=False, epsilon=1e-08):
+    def hybrid_forward(self, F, pred, target, sample_weight=None, epsilon=1e-08):
         target = _reshape_like(F, target, pred)
         if self._from_logits:
             loss = F.exp(pred) - target * pred
         else:
-            if compute_full:
-                stirling_factor = target * F.log(target)- target + 0.5 * F.log(2 * target * np.pi)
-                stirling_factor = stirling_factor[target > 1]
-            else:
-                stirling_factor = 0.0
-            loss = pred - target * F.log(pred + epsilon) + stirling_factor
+            loss = pred - target * F.log(pred + epsilon)
+        if self._compute_full:
+            stirling_factor = target * F.log(target)- target + 0.5 * F.log(2 * target * np.pi)
+            target_gt_1 = target > 1
+            stirling_factor *= target_gt_1
+            loss += stirling_factor
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss)
