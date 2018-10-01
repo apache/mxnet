@@ -91,7 +91,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_params',
     'test_operator_permute2',
     'test_clip'
-    'test_cast'
+    'test_cast',
+    'test_depthtospace'
     ]
 
 BASIC_MODEL_TESTS = [
