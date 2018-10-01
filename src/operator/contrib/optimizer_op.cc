@@ -23,21 +23,21 @@
  * \brief Optimizer operators
  * \author Leonard Lausen
  */
-#include "./optimizer_op-inl.h"
 #include "../elemwise_op_common.h"
+#include "./optimizer_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(ProximalGroupAdagradParam);
+DMLC_REGISTER_PARAMETER(GroupAdagradParam);
 
 /*!
- * \brief Shape inference function for Proximal Group AdaGrad.
+ * \brief Shape inference function for Group AdaGrad.
  */
-inline bool ProximalGroupAdagradShape(const nnvm::NodeAttrs &attrs,
-                                      std::vector<TShape> *in_attrs,
-                                      std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 4U);
+inline bool GroupAdagradShape(const nnvm::NodeAttrs &attrs,
+                              std::vector<TShape> *in_attrs,
+                              std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
@@ -50,8 +50,8 @@ inline bool ProximalGroupAdagradShape(const nnvm::NodeAttrs &attrs,
          (in_attrs->at(0)[0] == in_attrs->at(2)[0]);
 }
 
-NNVM_REGISTER_OP(_contrib_proximal_group_adagrad_update)
-.describe(R"code(Update function for Proximal Group AdaGrad optimizer.
+NNVM_REGISTER_OP(_contrib_group_adagrad_update)
+.describe(R"code(Update function for Group AdaGrad optimizer.
 
 Referenced from *Adaptive Subgradient Methods for Online Learning and Stochastic Optimization*,
 and available at http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf but
@@ -64,31 +64,29 @@ Updates are applied by::
     div = grad / sqrt(history + float_stable_eps)
     weight -= div * lr
 
-If `l2_regularization_strength > 0` a proximal operator is used to optimize with
-group lasso objective. Weights are updated lazily if the gradient is sparse.
-In particular, before using a set of weights for a forward pass, you may
-want to ensure that the lazily accumulated group lasso regularization is
-applied.
+Weights are updated lazily if the gradient is sparse. In particular, before
+using a set of weights for a forward pass, you may want to ensure that the
+lazily accumulated group lasso regularization is applied.
 
 Note that non-zero values for the weight decay option are not supported.
 
 )code" ADD_FILELINE)
-.set_num_inputs(4)
+.set_num_inputs(3)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<ProximalGroupAdagradParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ProximalGroupAdagradShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", ProximalGroupAdagradStorageType)
+.set_attr_parser(ParamParser<GroupAdagradParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", GroupAdagradShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", GroupAdagradStorageType)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
-    return std::vector<uint32_t>{2, 3};
+    return std::vector<uint32_t>{2};
   })
-.set_attr<FComputeEx>("FComputeEx<cpu>", ProximalGroupAdagradUpdateEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", GroupAdagradUpdateEx<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("history", "NDArray-or-Symbol", "History")
 .add_argument("last_update", "NDArray-or-Symbol", "Array storing last update counter for each row.")
-.add_arguments(ProximalGroupAdagradParam::__FIELDS__());
+.add_arguments(GroupAdagradParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

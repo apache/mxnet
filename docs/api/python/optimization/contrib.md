@@ -35,7 +35,7 @@ In the rest of this document, we list routines provided by the `optimizer.contri
 .. autosummary::
     :nosignatures:
 
-     ProximalGroupAdaGrad
+     GroupAdaGrad
 ```
 
 ## API Reference

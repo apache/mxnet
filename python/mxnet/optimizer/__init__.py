@@ -17,6 +17,7 @@
 """Optimizer API of MXNet."""
 
 from . import optimizer, contrib
+# pylint: disable=wildcard-import
 from .optimizer import *
 # pylint: enable=wildcard-import
 
