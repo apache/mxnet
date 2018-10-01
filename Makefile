@@ -568,7 +568,7 @@ lint: cpplint rcpplint jnilint pylint
 
 cpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
-	--exclude_path src/operator/contrib/ctc_include src/operator/nn/ctc_include
+	--exclude_path src/operator/contrib/ctc_include
 
 pylint:
 	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
