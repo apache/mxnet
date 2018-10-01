@@ -1,4 +1,5 @@
 RewriteEngine on
+RewriteRule ^$ /versions/master/index.html [R=301,L]
 RewriteRule ^get_started/why_mxnet.html$ /faq/why_mxnet.html [R=301,L]
 RewriteRule ^get_started.*$ /install/ [R=301,L]
 RewriteRule ^how_to.*$ /faq/ [R=301,L]
