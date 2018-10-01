@@ -185,7 +185,7 @@ def test_l1_loss():
 @with_seed(1234)
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
-    l = loss(mx.nd.ones((2, 20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC')

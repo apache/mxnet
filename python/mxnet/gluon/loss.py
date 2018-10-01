@@ -762,6 +762,7 @@ class PoissonNLLLoss(Loss):
         else:
             loss = pred - target * F.log(pred + epsilon)
         if self._compute_full:
+            # Using numpy's pi value
             stirling_factor = target * F.log(target)- target + 0.5 * F.log(2 * target * np.pi)
             target_gt_1 = target > 1
             stirling_factor *= target_gt_1
