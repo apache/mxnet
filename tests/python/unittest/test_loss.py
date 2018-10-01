@@ -14,13 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-import numpy as np
+
 import mxnet as mx
+import numpy as np
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import with_seed
-# from common import setup_module, teardown
-#import unittest
+from common import setup_module, with_seed, teardown
+import unittest
 
 
 @with_seed()
@@ -49,17 +49,17 @@ def test_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    mx.test_utils.assert_almost_equal(L, np.array([2.12692809, 0.04858733]))
+    mx.test_utils.assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]))
 
     L = loss(output, label, weighting).asnumpy()
-    mx.test_utils.assert_almost_equal(L, np.array([1.06346405, 0.04858733]))
+    mx.test_utils.assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
 
 
 def get_net(num_hidden, flatten=True):
     data = mx.symbol.Variable('data')
     fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
     act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(act1, name='fc2', num_hidden=64, flatten=flatten)
+    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
     act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
     fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
     return fc3
@@ -185,28 +185,27 @@ def test_l1_loss():
 @with_seed(1234)
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
-    l = loss(mx.nd.ones((2, 20, 4)), mx.nd.array([[1, 0, -1, -1], [2, 1, 1, -1]]))
+    l = loss(mx.nd.ones((2, 20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC')
-    l = loss(mx.nd.ones((20, 2, 4)), mx.nd.array([[1, 0, -1, -1], [2, 1, 1, -1]]))
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN')
-    l = loss(mx.nd.ones((20, 2, 4)), mx.nd.array([[1, 0, -1, -1], [2, 1, 1, -1]]).T)
+    l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]).T)
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
-    l = loss(mx.nd.ones((2, 20, 4)), mx.nd.array([[2, 1, 2, 2], [3, 2, 2, 2]]), None, mx.nd.array([2, 3]))
+    l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,2,2],[3,2,2,2]]), None, mx.nd.array([2,3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
-    l = loss(mx.nd.ones((2, 25, 4)), mx.nd.array([[2, 1, -1, -1], [3, 2, 2, -1]]), mx.nd.array([20, 20]))
+    l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]), mx.nd.array([20,20]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
-    l = loss(mx.nd.ones((2, 25, 4)), mx.nd.array([[2, 1, 3, 3], [3, 2, 2, 3]]),
-             mx.nd.array([20, 20]), mx.nd.array([2, 3]))
+    l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
 
@@ -246,10 +245,10 @@ def test_sample_weight_loss():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             eval_metric=mx.metric.Loss(), optimizer='adam')
     data_iter = mx.io.NDArrayIter(data[10:], {'label': label, 'w': weight}, batch_size=10)
-    score = mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+    score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
     assert score > 1
     data_iter = mx.io.NDArrayIter(data[:10], {'label': label, 'w': weight}, batch_size=10)
-    score = mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+    score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
     assert score < 0.05
 
 
@@ -343,7 +342,7 @@ def test_triplet_loss():
     Loss = gluon.loss.TripletLoss()
     loss = Loss(output, pos, neg)
     loss = mx.sym.make_loss(loss)
-    mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos', 'neg'))
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos','neg'))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
@@ -361,20 +360,25 @@ def test_poisson_nllloss():
     #This is necessary to ensure only positive random values are generated for prediction,
     # to avoid ivalid log calculation
     target[:] += mx.nd.abs(min_target)
+
     Loss = gluon.loss.PoissonNLLLoss(from_logits=True)
     Loss_no_logits = gluon.loss.PoissonNLLLoss(from_logits=False)
     #Calculating by brute formula for default value of from_logits = True
+
+    # 1) Testing for flag logits = True
     brute_loss = np.mean(np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy())
     loss_withlogits = Loss(pred, target)
     assert_almost_equal(brute_loss, loss_withlogits.asscalar())
-    #Now testing for the option from_Logits = False
+
+    #2) Testing for flag logits = False
     loss_no_logits = Loss_no_logits(pred, target)
     np_loss_no_logits = np.mean(pred.asnumpy() - target.asnumpy() * np.log(pred.asnumpy() + 1e-08))
     if np.isnan(loss_no_logits.asscalar()):
         assert_almost_equal(np.isnan(np_loss_no_logits), np.isnan(loss_no_logits.asscalar()))
     else:
         assert_almost_equal(np_loss_no_logits, loss_no_logits.asscalar())
-    # Adding test case for compute full use case for the stirling factor calculation
+
+    #3) Testing for Sterling approximation
     np_pred = np.random.uniform(1, 5, (2, 3))
     np_target = np.random.uniform(1, 5, (2, 3))
     np_compute_full = np.mean((np_pred - np_target * np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
