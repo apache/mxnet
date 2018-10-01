@@ -885,7 +885,6 @@ build_docs() {
     popd
 }
 
-
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
@@ -1019,6 +1018,14 @@ deploy_docs() {
 
     make docs
 
+    popd
+}
+
+deploy_nightly_maven() {
+    set -ex
+    pushd .
+    cd /work/mxnet
+    ./scala-package/dev/build.sh
     popd
 }
 

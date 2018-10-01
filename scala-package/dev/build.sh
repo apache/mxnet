@@ -22,7 +22,7 @@ sudo bash ci/docker/install/ubuntu_scala.sh
 
 # Setup Environment Variables
 # OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
-export OS_TYPE=linux-x86_64-cpu
+# export OS_TYPE=linux-x86_64-cpu
 
 # This script is used to build the base dependencies of MXNet Scala Env
 # git clone --recursive https://github.com/apache/incubator-mxnet
@@ -55,4 +55,4 @@ make scalapkg
 make scalaunittest
 make scalaintegrationtest
 echo "\n\n\n" | make scalarelease-dryrun
-make scaladeploy
+# make scaladeploy
