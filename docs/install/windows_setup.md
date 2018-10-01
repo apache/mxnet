@@ -11,7 +11,7 @@ The following describes how to install with pip for computers with CPUs, Intel C
 - [Build from Source](#build-from-source)
 - Install MXNet with a Programming Language API
     - [Python](#install-the-mxnet-package-for-python)
-    - [R](#install-mxnet-package-for-r)
+    - [R](#install-the-mxnet-package-for-r)
     - [Julia](#install-the-mxnet-package-for-julia)
 
 
