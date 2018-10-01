@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNet::Gluon::Contrib
 
+1.33    Thu Oct  4 13:25:56 PDT 2018
+        - Fixed kwalitee issues.
+
 1.32    Sun Jul 15 12:12:15 PDT 2018
         - Missing POD fixes.
 

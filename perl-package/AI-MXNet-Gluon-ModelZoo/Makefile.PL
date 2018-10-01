@@ -37,10 +37,11 @@ my %WriteMakefileArgs = (
   "NAME" => "AI::MXNet::Gluon::ModelZoo",
   "PREREQ_PM" => {
     "AI::MXNet" => "1.31",
-    "AI::MXNet::Gluon::Contrib" => "1.3"
+    "AI::MXNet::Gluon::Contrib" => "1.3",
+    "IO::Uncompress::Unzip" => "0"
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.32",
+  "VERSION" => "1.33",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -49,7 +50,8 @@ my %WriteMakefileArgs = (
 
 my %FallbackPrereqs = (
   "AI::MXNet" => "1.31",
-  "AI::MXNet::Gluon::Contrib" => "1.3"
+  "AI::MXNet::Gluon::Contrib" => "1.3",
+  "IO::Uncompress::Unzip" => "0"
 );
 
 

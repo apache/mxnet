@@ -82,7 +82,7 @@ sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo'
     but rather brings the training algorithm and model closer together to provide flexibility in the development process.
 
     Dynamic Graphs: Gluon enables developers to define neural network models that are dynamic,
-    meaning they can be built on the fly, with any structure, and using any of Perl’s native control flow.
+    meaning they can be built on the fly, with any structure, and using any of Perl's native control flow.
 
     High Performance: Gluon provides all of the above benefits without impacting the training speed that the underlying engine provides.
 

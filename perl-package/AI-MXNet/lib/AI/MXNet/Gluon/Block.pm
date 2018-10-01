@@ -93,6 +93,7 @@ method __exit__()
 
 package AI::MXNet::Gluon::Block;
 use AI::MXNet::Gluon::Mouse;
+use Scalar::Util qw(refaddr);
 
 =head2 NAME
 
@@ -288,14 +289,15 @@ method __setattr__($name, $current, $prev=)
 
 method _check_container_with_block()
 {
-    my $_find_block_in_container;
-    $_find_block_in_container = sub { my ($data) = @_;
+    my $_find_unregistered_block_in_container;
+    my %children = map { refaddr($_) => 1 } $self->_children->values;
+    $_find_unregistered_block_in_container = sub { my ($data) = @_;
     # Find whether a nested container structure contains Blocks
         if(ref $data eq 'ARRAY')
         {
             for my $ele (@{ $data })
             {
-                if($_find_block_in_container->($ele))
+                if($_find_unregistered_block_in_container->($ele))
                 {
                     return 1
                 }
@@ -306,7 +308,7 @@ method _check_container_with_block()
         {
             for my $v (values %$data)
             {
-                if($_find_block_in_container->($v))
+                if($_find_unregistered_block_in_container->($v))
                 {
                     return 1;
                 }
@@ -315,7 +317,7 @@ method _check_container_with_block()
         }
         elsif(blessed $data and $data->isa('AI::MXNet::Gluon::Block'))
         {
-            return 1;
+            return not exists $children{ refaddr($data) };
         }
         else
         {
@@ -327,10 +329,10 @@ method _check_container_with_block()
     {
         if((ref $v eq 'HASH' or ref $v eq 'ARRAY') and not $k =~ /^__/)
         {
-            if($_find_block_in_container->($v))
+            if($_find_unregistered_block_in_container->($v))
             {
                 AI::MXNet::Logging->warning(
-                    '"%s" is a container with Blocks. '.
+                    '"%s" is a unregsitered container with Blocks. '.
                     'Note that Blocks inside the list, tuple or dict will not be '.
                     'registered automatically. Make sure to register them using '.
                     'register_child() or switching to '.
@@ -837,10 +839,11 @@ method summary(@inputs)
             $shared_params += $summary->get($layer)->get('shared');
         }
         print (('=')x80, "\n");
-        print "Total params: $total_params\n";
-        print "Trainable params: $trainable_params\n";
-        print "Non-trainable params: ", $total_params - $trainable_params, "\n";
-        print "Shared params: $shared_params\n";
+        print "Parameters in forward computation graph, duplicate included\n";
+        print "   Total params: $total_params\n";
+        print "   Non-trainable params: ", $total_params - $trainable_params, "\n";
+        print "Shared params in forward computation graph: $shared_params\n";
+        print "Unique parameters in model: ", $total_params - $shared_params, "\n";
         print (('-')x80, "\n");
     };
     $_->detach for @hooks;
@@ -1361,19 +1364,25 @@ sub BUILD
         }
     }
 
-    for my $i (@{ $out->list_arguments })
+    my $arg_params = $out->list_arguments;
+    my $aux_params = $out->list_auxiliary_states;
+    my ($arg_types, $aux_types) = _infer_param_types($syms, $out, $arg_params, $aux_params);
+
+    for(enumerate($arg_params))
     {
-        if(not exists $input_names{$i})
+        my ($i, $arg) = @$_;
+        if(not exists $input_names{ $arg })
         {
-            $self->params->get($i, allow_deferred_init => 1);
+            $self->params->get($arg, allow_deferred_init => 1, dtype => $arg_types->[$i]);
         }
     }
 
-    for my $i (@{ $out->list_auxiliary_states })
+    for(enumerate($aux_params))
     {
-        if(not exists $input_names{$i})
+        my ($i, $arg) = @$_;
+        if(not exists $input_names{ $arg })
         {
-            $self->params->get($i, grad_req => 'null', allow_deferred_init => 1);
+            $self->params->get($arg, grad_req => 'null', allow_deferred_init => 1, dtype => $aux_types->[$i]);
         }
     }
 
@@ -1386,6 +1395,71 @@ sub BUILD
         $self->_reg_params->{ $key } = $val;
     }
     $self->_prefix($prefix);
+}
+
+
+func _infer_param_types($in_params, $out_params, $arg_params, $aux_params, $default_dtype='float32')
+{
+    # Utility function that helps in inferring DType of args and auxs params
+    # from given input param.
+    # Parameters
+    # ----------
+    # in_params: array ref of AI::MXNet::Symbol objects
+    #     List of input symbol variables.
+    # out_params: AI::MXNet::Symbol
+    #     Output symbol variable.
+    # arg_params: array ref of Str
+    #     List of names of argument parametrs.
+    # aux_params: array ref of Str
+    #     List of names of auxiliary parameters.
+    # default_dtype: Dtype, default 'float32'
+    #     Default data type for arg_params and aux_params, if unable to infer the type.
+    #  Returns
+    # -------
+    # arg_types: Array ref of Dtype
+    #     List of arg_params type. Order is same as arg_params.
+    #     Defaults to 'float32', if unable to infer type.
+    # aux_types: Array ref of Dtype
+    #     List of aux_params type. Order is same as aux_params.
+    #     Defaults to 'float32', if unable to infer type.
+
+    my $arg_types;
+    my $aux_types;
+    # Get Input symbol details. This will be used to infer types of
+    # other parameters.
+    my @input_sym_names = map { $_->name } @{ $in_params };
+    # Try to infer input types. If not successful, we will set default dtype.
+    # If successful, we will try to infer other params in the graph.
+    my @input_sym_arg_types;
+    my $can_infer_input_type = 1;
+    for my $in_param(@{ $in_params })
+    {
+        my $input_sym_arg_type = ($in_param->infer_type)[0];
+        if(not $input_sym_arg_type or @$input_sym_arg_type < 1)
+        {
+            $can_infer_input_type = 0;
+            last;
+        }
+        else
+        {
+            push @input_sym_arg_types, $input_sym_arg_type->[0];
+        }
+    }
+    # Try to infer types of other parameters.
+    if($can_infer_input_type)
+    {
+        my %params = map { $_->[0] => $_->[1] } zip(\@input_sym_names, \@input_sym_arg_types);
+        ($arg_types, undef, $aux_types) = $out_params->infer_type(%params);
+        if(not defined $arg_types or @$arg_types != @$arg_params)
+        {
+            $arg_types = [($default_dtype)x@$arg_params];
+        }
+        if(not defined $aux_types or @$aux_types != @$aux_params)
+        {
+            $aux_types = [($default_dtype)x@$aux_params];
+        }
+    }
+    return ($arg_types, $aux_types);
 }
 
 func _common_prefix(@names)
