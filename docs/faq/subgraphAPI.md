@@ -60,7 +60,7 @@ class SgSelector : public SubgraphSelector {
 };
 ```
 
-The second step is to define a subgraph property to use the subgraph selector above to customize the subgraph searching. By defining this class, we can also customize subgraph node creation. When customizing node creation, we can specify what operator to run the subgraph on the node. In the example below, we use CachedOp to run the subgraph with convolution and batch_norm. In practice, it's most likely that we use a fused operator from a backend library to run the subgraph.
+The second step is to define a subgraph property to use the subgraph selector above to customize the subgraph searching. By defining this class, we can also customize subgraph node creation. When customizing node creation, we can specify what operator to run the subgraph on the node. In this example, we use CachedOp, which itself is a graph executor, to run the subgraph with convolution and batch_norm. In practice, it's most likely that we use a single operator from a backend library to replace the two operators for execution.
 
 ```C++
 class SgProperty : public SubgraphProperty {
