@@ -17,6 +17,8 @@
 #
 
 import os
+import json
+import logging
 import subprocess
 
 HOME = os.environ['HOME']
@@ -32,10 +34,42 @@ This file would do the following items:
 '''
 
 
+def getCredentials():
+    import boto3
+    import botocore
+    secret_name = os.environ['DOCKERHUB_SECRET_NAME']
+    endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
+    region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
+
+    session = boto3.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name,
+        endpoint_url=endpoint_url
+    )
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except botocore.exceptions.ClientError as client_error:
+        if client_error.response['Error']['Code'] == 'ResourceNotFoundException':
+            logging.exception("The requested secret %s was not found", secret_name)
+        elif client_error.response['Error']['Code'] == 'InvalidRequestException':
+            logging.exception("The request was invalid due to:")
+        elif client_error.response['Error']['Code'] == 'InvalidParameterException':
+            logging.exception("The request had invalid params:")
+        else:
+            raise
+    else:
+        secret = get_secret_value_response['SecretString']
+        secret_dict = json.loads(secret)
+        return secret_dict
+
+
 def importASC(path, passPhrase):
     subprocess.run(['gpg', '--batch', '--yes',
-                   '--passphrase=\"{}\"'.format(passPhrase),
-                   "--import", "{}/keys.asc".format(path)])
+                    '--passphrase=\"{}\"'.format(passPhrase),
+                    "--import", "{}".format(os.environ['MVN_DEPLOY_GPG_KEY'])])
 
 
 def encryptMasterPSW(password):
@@ -48,11 +82,6 @@ def encryptPSW(password):
     result = subprocess.run(['mvn', '--encrypt-password', password],
                             stdout=subprocess.PIPE)
     return str(result.stdout)[2:-3]
-
-
-def createASC(path, data):
-    with open(os.path.join(path, "keys.asc"), "w") as f:
-        f.write(data)
 
 
 def masterPSW(password):
@@ -102,16 +131,17 @@ xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.o
 if __name__ == "__main__":
     if not os.path.exists(KEY_PATH):
         os.makedirs(KEY_PATH)
-    userCredential = {"username": "nswamy", "password": "123456"}
+    userCredential = {
+        "username": os.environ['MVN_DEPLOY_USER'],
+        "password": os.environ['MVN_DEPLOY_PASSWORD']
+    }
     keyCredential = {
-        "passPhrase": "asdfg",
-        "encrytedKey": "A-Very-long-string",
-        "masterPass": "123456"
+        "passPhrase": os.environ['MVN_DEPLOY_PASSPHRASE'],
+        "masterPass": os.environ['MVN_DEPLOY_MASTERPASS']
     }
     masterPass = encryptMasterPSW(keyCredential["masterPass"])
     masterPSW(masterPass)
     passwordEncrypted = encryptPSW(userCredential["password"])
     severPSW(userCredential["username"], passwordEncrypted,
              keyCredential["passPhrase"])
-    # createASC(HOME, keyCredential["encrytedKey"])
     importASC(HOME, keyCredential["passPhrase"])
