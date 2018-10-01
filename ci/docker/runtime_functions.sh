@@ -270,7 +270,6 @@ build_amzn_linux_cpu() {
     ninja -v
 }
 
-
 build_centos7_mkldnn() {
     set -ex
     cd /work/mxnet
@@ -764,6 +763,12 @@ unittest_ubuntu_python3_quantization_gpu() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
+unittest_ubuntu_cpu_scala_publish() {
+    set -ex
+    cd /work/mxnet
+    sudo bash scala-package/dev/build.sh
+}
+
 unittest_ubuntu_cpu_scala() {
     set -ex
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
@@ -953,7 +958,6 @@ build_docs() {
     popd
 }
 
-
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
@@ -1087,6 +1091,14 @@ deploy_docs() {
 
     make docs
 
+    popd
+}
+
+deploy_nightly_maven() {
+    set -ex
+    pushd .
+    cd /work/mxnet
+    ./scala-package/dev/build.sh
     popd
 }
 
