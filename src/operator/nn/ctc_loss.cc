@@ -48,7 +48,8 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(CTCLossOpParam);
 
-NNVM_REGISTER_OP(ctc_loss)
+NNVM_REGISTER_OP(CTCLoss)
+.add_alias("ctc_loss")
 .describe(R"code(Connectionist Temporal Classification Loss.
 The shapes of the inputs and outputs:
 

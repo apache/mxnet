@@ -468,10 +468,10 @@ class CTCLoss(Loss):
             pred = F.swapaxes(pred, 0, 1)
         if self._batch_axis == 1:
             label = F.swapaxes(label, 0, 1)
-        loss = F.contrib.CTCLoss(pred, label, pred_lengths, label_lengths,
-                                 use_data_lengths=pred_lengths is not None,
-                                 use_label_lengths=label_lengths is not None,
-                                 blank_label='last')
+        loss = F.CTCLoss(pred, label, pred_lengths, label_lengths,
+                         use_data_lengths=pred_lengths is not None,
+                         use_label_lengths=label_lengths is not None,
+                         blank_label='last')
         return _apply_weighting(F, loss, self._weight, sample_weight)
 
 

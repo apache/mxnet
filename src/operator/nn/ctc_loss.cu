@@ -49,7 +49,8 @@ ctcStatus_t compute_ctc_cost(const Tensor<gpu, 3, DType> activations,
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(ctc_loss)
+NNVM_REGISTER_OP(CTCLoss)
+.add_alias("ctc_loss")
 .set_attr<FCompute>("FCompute<gpu>", CTCLossOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_ctc_loss)
