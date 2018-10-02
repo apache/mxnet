@@ -92,6 +92,10 @@ endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+ifeq ($(ENABLE_TESTCOVERAGE), 1)
+        CFLAGS += --coverage
+        LDFLAGS += --coverage
+endif
 
 ifeq ($(USE_TENSORRT), 1)
 	CFLAGS +=  -I$(ROOTDIR) -I$(TPARTYDIR) -DONNX_NAMESPACE=$(ONNX_NAMESPACE) -DMXNET_USE_TENSORRT=1
@@ -227,63 +231,71 @@ endif
 
 # gperftools malloc library (tcmalloc)
 ifeq ($(USE_GPERFTOOLS), 1)
-#	FIND_LIBNAME=tcmalloc_and_profiler
-	FIND_LIBNAME=tcmalloc
-	FIND_LIBFILEEXT=so
-	FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-	ifeq (,$(FIND_LIBFILE))
-		FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-		ifeq (,$(FIND_LIBFILE))
-			FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-			ifeq (,$(FIND_LIBFILE))
-				FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-				ifeq (,$(FIND_LIBFILE))
-					USE_GPERFTOOLS=0
-				endif
-			endif
-		endif
-	endif
-	ifeq ($(USE_GPERFTOOLS), 1)
-		CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
-		LDFLAGS += $(FIND_LIBFILE)
-	endif
+FIND_LIBFILEEXT=so
+ifeq ($(USE_GPERFTOOLS_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /lib/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+	USE_GPERFTOOLS=0
+endif
+endif
+endif
+endif
+endif
+ifeq ($(USE_GPERFTOOLS), 1)
+	CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+	LDFLAGS += $(FIND_LIBFILE)
 endif
 
 # jemalloc malloc library (if not using gperftools)
-ifneq ($(USE_GPERFTOOLS), 1)
-	ifeq ($(USE_JEMALLOC), 1)
-		FIND_LIBNAME=jemalloc
-		FIND_LIBFILEEXT=so
-		FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-		ifeq (,$(FIND_LIBFILE))
-			FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-			ifeq (,$(FIND_LIBFILE))
-				FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-				ifeq (,$(FIND_LIBFILE))
-					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-					ifeq (,$(FIND_LIBFILE))
-						FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-						ifeq (,$(FIND_LIBFILE))
-							USE_JEMALLOC=0
-						endif
-					endif
-				endif
-			endif
-		endif
-		ifeq ($(USE_JEMALLOC), 1)
-			CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
-			-fno-builtin-free -DUSE_JEMALLOC
-			LDFLAGS += $(FIND_LIBFILE)
-		endif
-	endif
+else
+ifeq ($(USE_JEMALLOC), 1)
+FIND_LIBFILEEXT=so
+ifeq ($(USE_JEMALLOC_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /lib/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+	USE_JEMALLOC=0
+endif
+endif
+endif
+endif
+endif
+endif
+ifeq ($(USE_JEMALLOC), 1)
+	CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
+	-fno-builtin-free -DUSE_JEMALLOC
+	LDFLAGS += $(FIND_LIBFILE)
+endif
+endif
 endif
 
 # If not using tcmalloc or jemalloc, print a warning (user should consider installing)
 ifneq ($(USE_GPERFTOOLS), 1)
-	ifneq ($(USE_JEMALLOC), 1)
+ifneq ($(USE_JEMALLOC), 1)
 $(warning WARNING: Significant performance increases can be achieved by installing and \
 enabling gperftools or jemalloc development packages)
-	endif
+endif
 endif
 
 ifeq ($(USE_THREADED_ENGINE), 1)

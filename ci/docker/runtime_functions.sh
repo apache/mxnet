@@ -245,6 +245,7 @@ build_centos7_cpu() {
     make \
         DEV=1 \
         USE_LAPACK=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
@@ -256,6 +257,7 @@ build_amzn_linux_cpu() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -277,6 +279,7 @@ build_centos7_mkldnn() {
 
     make \
         DEV=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_MKLDNN=1 \
@@ -291,6 +294,7 @@ build_centos7_gpu() {
     # build_ccache_wrappers
     make \
         DEV=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
@@ -311,6 +315,7 @@ build_ubuntu_cpu_openblas() {
     export CXX="ccache g++"
     make \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
@@ -324,6 +329,7 @@ build_ubuntu_cpu_cmake_debug() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
@@ -336,12 +342,42 @@ build_ubuntu_cpu_cmake_debug() {
     popd
 }
 
+build_ubuntu_cpu_cmake_asan() {
+    set -ex
+
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER=/usr/bin/g++-8 \
+        -DCMAKE_C_COMPILER=/usr/bin/gcc-8 \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=OFF \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_GPERFTOOLS=OFF \
+        -DUSE_JEMALLOC=OFF \
+        -DUSE_ASAN=ON \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        /work/mxnet
+    make -j $(nproc) mxnet
+    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
+    ASAN_OPTIONS=detect_leaks=0 \
+    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
+    make -j $(nproc) mlp_cpu
+    popd
+}
+
 build_ubuntu_cpu_clang39() {
     set -ex
      export CXX=clang++-3.9
     export CC=clang-3.9
      build_ccache_wrappers
      make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -358,6 +394,7 @@ build_ubuntu_cpu_clang60() {
     build_ccache_wrappers
 
     make  \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
@@ -400,6 +437,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
     build_ccache_wrappers
 
     make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -416,6 +454,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
     build_ccache_wrappers
 
     make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -430,6 +469,7 @@ build_ubuntu_cpu_mkldnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -481,6 +521,7 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     make \
         DEV=1                                               \
+        ENABLE_TESTCOVERAGE=1                               \
         USE_BLAS=openblas                                   \
         USE_CUDA=1                                          \
         USE_CUDA_PATH=/usr/local/cuda                       \
@@ -502,6 +543,7 @@ build_ubuntu_gpu_mkldnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -518,6 +560,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
         USE_CUDA=1                    \
@@ -532,6 +575,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
     # build_ccache_wrappers
     make \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_BLAS=openblas             \
         USE_CUDA=1                    \
         USE_CUDA_PATH=/usr/local/cuda \
@@ -545,14 +589,19 @@ build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas
+    make -C amalgamation/     \
+        USE_BLAS=openblas     \
+        ENABLE_TESTCOVERAGE=1
 }
 
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas MIN=1
+    make -C amalgamation/     \
+        USE_BLAS=openblas     \
+        MIN=1                 \
+        ENABLE_TESTCOVERAGE=1
 }
 
 build_ubuntu_gpu_cmake_mkldnn() {
@@ -561,6 +610,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON   \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=1          \
@@ -581,6 +631,7 @@ build_ubuntu_gpu_cmake() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON   \
         -DUSE_CUDA=1               \
         -DUSE_CUDNN=1              \
         -DUSE_MKLML_MKL=0          \
@@ -715,14 +766,14 @@ unittest_ubuntu_python3_quantization_gpu() {
 
 unittest_ubuntu_cpu_scala() {
     set -ex
-    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
     ./contrib/clojure-package/ci-test.sh
 }
 
@@ -743,7 +794,10 @@ unittest_ubuntu_cpu_R() {
     mkdir -p ~/.R/
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
@@ -755,7 +809,9 @@ unittest_ubuntu_gpu_R() {
     mkdir -p ~/.R/
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
@@ -797,6 +853,17 @@ integrationtest_ubuntu_gpu_caffe() {
     python tools/caffe_converter/test_converter.py
 }
 
+integrationtest_ubuntu_cpu_asan() {
+    set -ex
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
+
+    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
+    export ASAN_OPTIONS=exitcode=0
+    cd /work/mxnet/build/cpp-package/example/
+    /work/mxnet/cpp-package/example/get_data.sh
+    ./mlp_cpu
+}
+
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
     cpp-package/tests/ci_test.sh
@@ -821,8 +888,8 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 
 integrationtest_ubuntu_gpu_scala() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
-    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1 ENABLE_TESTCOVERAGE=1
+    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {

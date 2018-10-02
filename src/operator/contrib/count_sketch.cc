@@ -30,7 +30,7 @@ namespace op {
 template<>
 Operator *CreateOp<cpu>(CountSketchParam param, int dtype) {
     LOG(FATAL) << "CountSketch is only available for GPU.";
-    return NULL;
+    return nullptr;
 }
 Operator *CountSketchProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
                                             std::vector<int> *in_type) const {

@@ -170,3 +170,10 @@ tests/mxnet_unit_tests
 # generated wrappers for ccache
 cc
 cxx
+
+# Code coverage related
+.coverage
+*.gcov
+*.gcno
+coverage.xml
+
