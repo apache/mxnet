@@ -158,7 +158,17 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Performance tests are run to pick the convolution algo when value is 1 or 2
   - Value of 1 chooses the best algo in a limited workspace
   - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
-  
+
+* MXNET_CUDA_ALLOW_TENSOR_CORE
+  - 0(false) or 1(true) ```(default=1)```
+	- If set to '0', disallows Tensor Core use in CUDA ops.
+	- If set to '1', allows Tensor Core use in CUDA ops.
+  - This variable can only be set once in a session.
+
+* MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION
+  - 0(false) or 1(true) ```(default=0)```
+	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
+	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
