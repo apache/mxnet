@@ -36,6 +36,8 @@ except ImportError:
 from . import sampler as _sampler
 from ... import nd, context
 
+multiprocessing.set_start_method('spawn')
+
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
         """Rebuild ndarray from pickled shared memory"""
