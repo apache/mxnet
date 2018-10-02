@@ -37,8 +37,7 @@ using namespace mxnet::cpp;
 /*
  * Implementing the mlp symbol with given hidden units configuration.
  */
-Symbol mlp(const std::vector<int> &hidden_units)
-{
+Symbol mlp(const std::vector<int> &hidden_units) {
     auto data = Symbol::Variable("data");
     auto label = Symbol::Variable("label");
 
@@ -62,28 +61,29 @@ Symbol mlp(const std::vector<int> &hidden_units)
 /*
  * Convert the input string of number of hidden units into the vector of integers.
  */
-void getLayers(std::string &hidden_units_string, std::vector<int> &hidden_units)
-{
+std::vector<int> getLayers(std::string hidden_units_string) {
     std::string delimiter = ",";
     size_t pos = 0;
     std::string token;
+    std::vector<int> hidden_units;
     while ((pos = hidden_units_string.find(delimiter)) != std::string::npos) {
         token = hidden_units_string.substr(0, pos);
         hidden_units.push_back(atoi(token.c_str()));
         hidden_units_string.erase(0, pos + delimiter.length());
     }
     hidden_units.push_back(atoi(hidden_units_string.c_str()));
+    return hidden_units;
 }
 
-void printUsage()
-{
+void printUsage() {
     std::cout << "Usage:" << std::endl;
-    std::cout << "mlp_csv_cpu --train mnist_training_set.csv --test mnist_test_set.csv --epochs 10 --batch_size 100 --hidden_units \"128,64,64\"" << std::endl;
-    std::cout << "The example uses mnist data in CSV format. The MNIST data in CSV format assumes the column 0 to be label and the rest 784 column to be data." << std::endl;
+    std::cout << "mlp_csv_cpu --train mnist_training_set.csv --test mnist_test_set.csv --epochs 10 "
+              << "--batch_size 100 --hidden_units \"128,64,64\"" << std::endl;
+    std::cout << "The example uses mnist data in CSV format. The MNIST data in CSV format assumes "
+              << "the column 0 to be label and the rest 784 column to be data." << std::endl;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     const int image_size = 28;
     const int num_mnist_features = image_size * image_size;
     int batch_size = 100;
@@ -123,16 +123,17 @@ int main(int argc, char** argv)
     }
     
     if (training_set.empty() || test_set.empty() || hidden_units_string.empty()) {
-        std::cout << "ERROR: The mandatory arguments such as path to training and test data or number of hidden units for mlp are not specified." << std::endl << std::endl;
+        std::cout << "ERROR: The mandatory arguments such as path to training and test data or \
+                  number of hidden units for mlp are not specified." << std::endl << std::endl;
         printUsage();
         return 0;
     }
     
-    std::vector<int> hidden_units;
-    getLayers(hidden_units_string, hidden_units);
+    std::vector<int> hidden_units = getLayers(hidden_units_string);
     
     if (hidden_units.empty()) {
-        std::cout << "ERROR: Number of hidden units are not provided in correct format. The numbers need to be separated by ','." << std::endl << std::endl;
+        std::cout << "ERROR: Number of hidden units are not provided in correct format."
+                  << "The numbers need to be separated by ','." << std::endl << std::endl;
         printUsage();
         return 0;
     }
@@ -203,13 +204,22 @@ int main(int argc, char** argv)
              * The shape of data_batch.data is (batch_size, (num_mnist_features + 1))
              * Need to reshape this data so that label column can be extracted from this data.
              */
-            NDArray reshapedData = data_batch.data.Reshape(Shape((num_mnist_features + 1),batch_size));
+            NDArray reshapedData = data_batch.data.Reshape(Shape((num_mnist_features + 1),
+                                                                 batch_size));
             
-            // Extract the label data by slicing the first column of the data and copy it to "label" arg.
+            /*
+             * Extract the label data by slicing the first column of the data and
+             * copy it to "label" arg.
+             */
             reshapedData.Slice(0,1).Reshape(Shape(batch_size)).CopyTo(&args["label"]);
             
-            // Extract the feature data by slicing the columns 1 to 785 of the data and copy it to "data" arg.
-            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,num_mnist_features)).CopyTo(&args["data"]);
+            /*
+             * Extract the feature data by slicing the columns 1 to 785 of the data and
+             * copy it to "data" arg.
+             */
+            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,
+                                                                         num_mnist_features)
+                                                                   ).CopyTo(&args["data"]);
             
             exec->Forward(true);
 
@@ -232,14 +242,23 @@ int main(int argc, char** argv)
              * The shape of data_batch.data is (batch_size, (num_mnist_features + 1))
              * Need to reshape this data so that label column can be extracted from this data.
              */
-            NDArray reshapedData = data_batch.data.Reshape(Shape((num_mnist_features + 1),batch_size));
+            NDArray reshapedData = data_batch.data.Reshape(Shape((num_mnist_features + 1),
+                                                                 batch_size));
             
-            // Extract the label data by slicing the first column of the data and copy it to "label" arg.
+            /*
+             * Extract the label data by slicing the first column of the data and
+             * copy it to "label" arg.
+             */
             NDArray labelData = reshapedData.Slice(0,1).Reshape(Shape(batch_size));
             labelData.CopyTo(&args["label"]);
             
-            // Extract the feature data by slicing the columns 1 to 785 of the data and copy it to "data" arg.
-            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,num_mnist_features)).CopyTo(&args["data"]);
+            /*
+             * Extract the feature data by slicing the columns 1 to 785 of the data and
+             * copy it to "data" arg.
+             */
+            reshapedData.Slice(1,(num_mnist_features + 1)).Reshape(Shape(batch_size,
+                                                                         num_mnist_features)
+                                                                   ).CopyTo(&args["data"]);
             
             // Forward pass is enough as no gradient is needed when evaluating
             exec->Forward(false);
@@ -247,9 +266,10 @@ int main(int argc, char** argv)
         }
         float duration = std::chrono::duration_cast<std::chrono::milliseconds>
         (toc - tic).count() / 1000.0;
-        LG << "Epoch[" << iter << "]  " << samples/duration << " samples/sec Accuracy: " << acc.Get();
+        LG << "Epoch[" << iter << "]  " << samples/duration << " samples/sec Accuracy: "
+           << acc.Get();
     }
-    
+
     delete exec;
     MXNotifyShutdown();
     return 0;
