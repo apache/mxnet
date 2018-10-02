@@ -1,4 +1,4 @@
-## How to Integrate Backend Libraries to MXNet with the Subgraph API
+## Subgraph API
 
 The subgraph API has been proposed and implemented as the default mechanism for integrating backend libraries to MXNet. The subgraph API is a very flexible interface. Although it was proposed as an integration mechanism, it has been used as a tool for manipulating NNVM graphs for graph-level optimizations, such as operator fusion.
 
@@ -6,7 +6,7 @@ The subgraph API works as the following steps:
 
 * Search for particular patterns in a graph.
 * Group the operators/nodes with particular patterns into a subgraph and shrink the subgraph into a single node.
-* Put the subgraph node back to the original graph to replace the subgraph.
+* Replace the subgraph in the original graph with the subgraph node.
 
 The figure below illustrates the subgraph mechanism.
 
@@ -18,9 +18,9 @@ The subgraph API allows the backend developers to customize the subgraph mechani
 * Subgraph node creation: attach an operator to run the computation in the subgraph. We can potentially manipulate the subgraph here.
 
 
-Below I will illustrate the subgraph API with a very simple task, as shown in the figure above. That is, replacing convolution and batch_norm with the conv_bn.
+The following is a demonstration of how the subgraph API can be applied to a simple task. Refer to the previous figure for an overview of the process. That is, replacing `Convolution` and `BatchNorm` with the conv_bn.
 
-The first step is to define a subgraph selector to find the required pattern. To find a pattern that has convolution and batch_norm, we can start the search on the node with convolution. Then from the convolution node, we search for batch_norm along the outgoing edge.
+The first step is to define a subgraph selector to find the required pattern. To find a pattern that has `Convolution` and `BatchNorm`, we can start the search on the node with `Convolution`. Then from the `Convolution` node, we search for `BatchNorm` along the outgoing edge.
 
 ```C++
 class SgSelector : public SubgraphSelector {
@@ -29,7 +29,7 @@ class SgSelector : public SubgraphSelector {
     find_bn = false;
   }
   bool Select(const nnvm::Node &n) override {
-    // Here we start on the convolution node to search for a subgraph.
+    // Here we start on the Convolution node to search for a subgraph.
     return n.op() && n.op()->name == "Convolution";
   }
   bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) override {
@@ -37,8 +37,8 @@ class SgSelector : public SubgraphSelector {
     return false;
   }
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    // We search on the outgoing edge. Once we find a batch_norm node, we won't
-    // accept any more batch_norm nodes.
+    // We search on the outgoing edge. Once we find a BatchNorm node, we won't
+    // accept any more BatchNorm nodes.
     if (new_node.op() && new_node.op()->name == "BatchNorm" && !find_bn) {
       find_bn = true;
       return true;
@@ -47,9 +47,9 @@ class SgSelector : public SubgraphSelector {
     }
   }
   std::vector<nnvm::Node *> Filter(const std::vector<nnvm::Node *> &candidates) override {
-    // We might have found a convolution node, but we might have failed to find a batch_norm
-    // node that uses the output of the convolution node. If we failed, we should skip
-    // the convolution node as well.
+    // We might have found a Convolution node, but we might have failed to find a BatchNorm
+    // node that uses the output of the Convolution node. If we failed, we should skip
+    // the Convolution node as well.
     if (find_bn)
       return candidates;
     else
@@ -60,7 +60,7 @@ class SgSelector : public SubgraphSelector {
 };
 ```
 
-The second step is to define a subgraph property to use the subgraph selector above to customize the subgraph searching. By defining this class, we can also customize subgraph node creation. When customizing node creation, we can specify what operator to run the subgraph on the node. In this example, we use CachedOp, which itself is a graph executor, to run the subgraph with convolution and batch_norm. In practice, it's most likely that we use a single operator from a backend library to replace the two operators for execution.
+The second step is to define a subgraph property to use the subgraph selector above to customize the subgraph searching. By defining this class, we can also customize subgraph node creation. When customizing node creation, we can specify what operator to run the subgraph on the node. In this example, we use `CachedOp`, which itself is a graph executor, to run the subgraph with `Convolution` and `BatchNorm`. In practice, it's most likely that we use a single operator from a backend library to replace the two operators for execution.
 
 ```C++
 class SgProperty : public SubgraphProperty {
@@ -97,3 +97,6 @@ After compiling this subgraph mechanism into MXNet, we can use the environment v
 export MXNET_SUBGRAPH_BACKEND=SgTest
 ```
 
+This tutorial shows a simple example of how to use the subgraph API to search for patterns in an NNVM graph.
+Intested users can try different pattern matching rules (i.e., define their own `SubgraphSelector`) and
+attach different operators to execute the subgraphs.
