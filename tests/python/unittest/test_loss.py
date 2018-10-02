@@ -224,8 +224,6 @@ def test_ctc_loss_train():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
-    score = mod.score(data_iter, eval_metric=mx.metric.Loss())
-    print(score)
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
