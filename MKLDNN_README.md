@@ -70,20 +70,6 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git
 cd incubator-mxnet
 ```
 
-### Enable OpenMP for MacOS
-
-If you want to enable OpenMP for better performance, you should modify the Makefile in MXNet root dictionary:
-
-Add CFLAGS '-fopenmp' for Darwin.
-
-```
-ifeq ($(USE_OPENMP), 1)
-# ifneq ($(UNAME_S), Darwin)
-    CFLAGS += -fopenmp
-# endif
-endif
-```
-
 ### Build MXNet with MKL-DNN
 
 ```
