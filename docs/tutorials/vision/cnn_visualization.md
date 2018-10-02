@@ -99,12 +99,18 @@ def get_vgg(num_layers, ctx=mx.cpu(), root=os.path.join('~', '.mxnet', 'models')
     # Get the number of convolution layers and filters
     layers, filters = vgg_spec[num_layers]
 
-    # Build the VGG network
+    # Build the modified VGG network
     net = VGG(layers, filters, **kwargs)
-
-    # Load pretrained weights from model zoo
-    from mxnet.gluon.model_zoo.model_store import get_model_file
-    net.load_params(get_model_file('vgg%d' % num_layers, root=root), ctx=ctx)
+    net.initialize(ctx=ctx)
+    
+    # Get the pretrained model
+    vgg = mx.gluon.model_zoo.vision.get_vgg(num_layers, pretrained=True, ctx=ctx)
+    
+    # Set the parameters in the new network
+    params = vgg.collect_params()
+    for key in params:
+        param = params[key]
+        net.collect_params()[net.prefix+key.replace(vgg.prefix, '')].set_data(param.data())
 
     return net
 
