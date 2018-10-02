@@ -225,7 +225,7 @@ def test_ctc_loss_train():
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     score = mod.score(data_iter, eval_metric=mx.metric.Loss())
-    print(score)       
+    print(score)
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
@@ -352,6 +352,5 @@ def test_triplet_loss():
 
 
 if __name__ == '__main__':
-    test_ctc_loss_train()
-    #import nose
-    #nose.runmodule()
+    import nose
+    nose.runmodule()
