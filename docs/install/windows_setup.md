@@ -228,7 +228,7 @@ opencv_world341.dll (in OpenCV folder you download)
  * Select the **Advanced tab** and click **Environment Variables**
  * Double click the **Path** and click **New**
  * Add ```C:\common``` and click OK
-7. Use setup.py to insatll the package
+7. Use setup.py to insatll the package.
 ```bash
     # Assuming you are in root mxnet source code folder
     cd python
