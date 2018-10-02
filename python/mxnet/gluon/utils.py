@@ -204,6 +204,7 @@ if not sys.platform.startswith('win32'):
         try:
             os.rename(src, dst)
         except OSError:
+            os.remove(src)
             raise OSError(
                 'Moving downloaded temp file - {}, to {} failed. Please retry the download.'.format(src, dst))
 else:
