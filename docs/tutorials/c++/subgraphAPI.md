@@ -10,7 +10,7 @@ The subgraph API works as the following steps:
 
 The figure below illustrates the subgraph mechanism.
 
-![](./subgraph.png)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/subgraph/subgraph.png)
 
 The subgraph API allows the backend developers to customize the subgraph mechanism in two places:
 
