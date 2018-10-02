@@ -691,7 +691,7 @@ def test_order():
     gt = gt_topk(large_matrix_npy, axis=1, ret_typ="indices", k=5, is_ascend=False)
     assert_almost_equal(nd_ret_topk, gt)
 
-    for dtype in [ np.int32, np.int64, np.float32, np.float64]:
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
         a_npy = get_values(ensure_unique=True, dtype=dtype)
         a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
