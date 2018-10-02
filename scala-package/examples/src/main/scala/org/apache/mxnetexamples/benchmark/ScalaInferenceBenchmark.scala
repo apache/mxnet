@@ -91,7 +91,7 @@ object ScalaInferenceBenchmark {
     val p99 = percentile(99, times)
     val average = times.sum / (times.length * 1.0)
 
-    logger.info("\n%s_latency p99 %d, %s_p50 %d, %s_average %f".format(metricsPrefix,
+    logger.info("\n%s_p99 %d, %s_p50 %d, %s_average %1.2f".format(metricsPrefix,
       p99, metricsPrefix, p50, metricsPrefix, average))
 
   }
