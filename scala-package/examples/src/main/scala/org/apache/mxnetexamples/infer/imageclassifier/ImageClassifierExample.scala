@@ -182,7 +182,8 @@ class ImageClassifierExample(CLIParser: CLIParser) extends InferBase{
     val inputDescriptor = IndexedSeq(DataDesc("data", inputShape, dType, "NCHW"))
 
     // Create object of ImageClassifier class
-    val imgClassifier: ImageClassifier = new ImageClassifier(CLIParser.modelPathPrefix, inputDescriptor, context)
+    val imgClassifier: ImageClassifier = new ImageClassifier(CLIParser.modelPathPrefix,
+      inputDescriptor, context)
     imgClassifier
   }
 
