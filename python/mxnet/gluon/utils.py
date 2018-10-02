@@ -224,15 +224,13 @@ else:
             return x.decode(sys.getfilesystemencoding())
         return x
 
-    def _format_error(err):
-        return ctypes.FormatError(_str_to_unicode(err))
-
-    def _handle_errors(rv):
-        """Handle WinError.
-        Internal use only"""
+    def _handle_errors(rv, src):
+        """Handle WinError. Internal use only"""
         if not rv:
-            msg = _format_error(ctypes.GetLastError())
-            raise ctypes.WinError(msg)
+            msg = ctypes.FormatError(ctypes.GetLastError())
+            # if the MoveFileExW fail, remove the tempfile
+            os.remove(src)
+            raise OSError(msg)
 
     def _replace_atomic(src, dst):
         """Implement atomic os.replace with windows.
@@ -242,7 +240,7 @@ else:
         _handle_errors(ctypes.windll.kernel32.MoveFileExW(
             _str_to_unicode(src), _str_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
-        ))
+        ), src)
 
 
 def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
@@ -328,8 +326,8 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 if retries <= 0:
                     raise e
                 else:
-                    print("download failed, retrying, {} attempt{} left"
-                          .format(retries, 's' if retries > 1 else ''))
+                    print('download failed due to {}, retrying, {} attempt{} left'
+                          .format(repr(e), retries, 's' if retries > 1 else ''))
 
     return fname
 
