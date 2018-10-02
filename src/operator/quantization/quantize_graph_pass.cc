@@ -97,7 +97,7 @@ inline bool NeedQuantize(NodePtr node, const std::unordered_set<std::string>& ex
     bool need = true;
     if (excluded_nodes.count(node->attrs.name)) {
       need = false;
-    } else if (node->attrs.subgraphs.size()) {
+    } else if (!node->attrs.subgraphs.empty()) {
       ExecType exec_type = fexec_type.count(op) ? fexec_type[op](node->attrs) : ExecType::kSync;
       if (exec_type != ExecType::kSubgraphExec) {
         // This is a fused subgraph node, try to match inner node.
@@ -239,7 +239,7 @@ Graph QuantizeGraph(Graph &&src) {
               NodeEntry{new_node, static_cast<uint32_t>(i), 0});
         }
         new_node = requantize_node;
-        }
+      }
     } else {
       // If the currently visited node does not need quantization, copy the current node to become
       // the new_node. Meanwhile, check whether any inputs of the current node need quantization
@@ -249,7 +249,7 @@ Graph QuantizeGraph(Graph &&src) {
       *new_node = *node;
       new_node->inputs.clear();
       if (node->is_variable() && node->attrs.name == "data") {
-        // Instert identity for data to collect calib for it.
+        // Insert identity for data to collect calib for it.
         NodePtr identity_node =
             CreateNode("identity", new_node->attrs.name + "_id");
         identity_node->inputs.emplace_back(NodeEntry{new_node, 0, 0});
