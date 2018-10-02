@@ -378,18 +378,18 @@ void TopKImpl(const RunContext &ctx,
     << "The total element_num is " << element_num << ", but the selected IDType can only represent "
     << mxnet::common::MaxIntegerValue<IDType>() << " elements";
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
-  index_t temp_size = 0;
+  size_t temp_size = 0;
   // Temp space needed by the gpu-based full sorts.
-  temp_size = std::max<index_t>(temp_size,
+  temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
-  temp_size = std::max<index_t>(temp_size,
+  temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
-  temp_size = std::max<index_t>(temp_size,
+  temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += sizeof(int) * src.Size();
   // Temp space for cpu sorts.
-  temp_size = std::max(temp_size, static_cast<index_t>(sizeof(DType)) * src.Size());
+  temp_size = std::max(temp_size, sizeof(DType) * static_cast<size_t>(src.Size()));
   index_t workspace_size = temp_size + sizeof(DType) * src.Size() + sizeof(int) * src.Size();
   if (param.ret_typ == topk_enum::kReturnMask) {
     workspace_size += sizeof(int) * batch_size * k + sizeof(DType) * batch_size * k;
