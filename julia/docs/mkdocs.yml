@@ -1,0 +1,48 @@
+site_name: MXNet.jl
+repo_url:  https://github.com/dmlc/MXNet.jl
+
+theme: material
+
+extra:
+  palette:
+    primary: 'indigo'
+    accent: 'blue'
+
+extra_css:
+  - assets/Documenter.css
+
+extra_javascript:
+  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
+  - assets/mathjaxhelper.js
+
+markdown_extensions:
+  - extra
+  - tables
+  - fenced_code
+  - mdx_math
+  - admonition
+
+docs_dir: 'build'
+
+pages:
+  - Home: index.md
+  - Tutorial:
+    - Digit Recognition on MNIST: tutorial/mnist.md
+    - Generating Random Sentence with LSTM RNN: tutorial/char-lstm.md
+  - User Guide:
+    - Installation Guide: user-guide/install.md
+    - Overview: user-guide/overview.md
+    - FAQ: user-guide/faq.md
+  - API Documentation:
+    - Context: api/context.md
+    - Models: api/model.md
+    - Initializers: api/initializer.md
+    - Optimizers: api/optimizer.md
+    - Callbacks in training: api/callback.md
+    - Evaluation Metrics: api/metric.md
+    - Data Providers: api/io.md
+    - NDArray API: api/ndarray.md
+    - Symbolic API: api/symbolic-node.md
+    - Neural Networks Factory: api/nn-factory.md
+    - Executor: api/executor.md
+    - Network Visualization: api/visualize.md
