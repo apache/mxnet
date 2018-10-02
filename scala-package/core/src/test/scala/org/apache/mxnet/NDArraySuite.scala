@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.mxnet.NDArrayConversions._
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import scala.collection.mutable.ArrayBuffer
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   private val sequence: AtomicInteger = new AtomicInteger(0)
@@ -83,6 +84,31 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     val ndarray = NDArray.empty(4, 1)
     ndarray.set(Array(1f, 2f, 3f, 4f))
     assert(ndarray.toArray === Array(1f, 2f, 3f, 4f))
+  }
+
+  test("create NDArray based on Java Matrix") {
+    val arrBuf = ArrayBuffer[Array[Float]]()
+    for (i <- 0 until 100) arrBuf += Array(1.0f, 1.0f, 1.0f, 1.0f)
+    val arr = Array(
+      Array(
+        arrBuf.toArray
+      ),
+      Array(
+        arrBuf.toArray
+        )
+    )
+    var nd = NDArray.toNDArray(arr)
+    require(nd.shape == Shape(2, 1, 100, 4))
+    val arr2 = Array(1.0f, 1.0f, 1.0f, 1.0f)
+    nd = NDArray.toNDArray(arr2)
+    require(nd.shape == Shape(4))
+  }
+
+  test("test Visualize") {
+    var nd = NDArray.ones(Shape(1, 2, 100, 1))
+    nd.visualize
+    nd = NDArray.ones(Shape(1, 4))
+    nd.visualize
   }
 
   test("plus") {

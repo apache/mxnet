@@ -563,7 +563,7 @@ object NDArray extends NDArrayBase {
       case arrAny : Array[Any] => {
         val fragment = (end - start + 1) / arrAny.length
         for (i <- arrAny.indices)
-          arrayCombiner(arrAny(i), arr, start + i * fragment, end + (i + 1) * fragment)
+          arrayCombiner(arrAny(i), arr, start + i * fragment, start + (i + 1) * fragment)
       }
       case _ => throw new IllegalArgumentException(s"Wrong type passed: ${sourceArr.getClass}")
     }
