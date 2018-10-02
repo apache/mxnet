@@ -17,10 +17,6 @@
  * under the License.
  */
 
-/*!
- * Amol Lele amol.github@gmail.com
- */
-
 /*
  * Example: mlp_csv_cpu
  * Description:
