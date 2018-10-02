@@ -345,7 +345,7 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
 
     size_t size_bytes;
     get_workspace_size<real_t>(&label_lengths, &data_lengths, alphabet_size,
-                               batch_size, data.kDevCPU ? true : false, &size_bytes);
+                               batch_size, data.kDevCPU ? false : true, &size_bytes);
 
     // round-up so there are enough elems in memory
     int num_tmp_elems = (size_bytes + sizeof(real_t) - 1) / sizeof(real_t);
