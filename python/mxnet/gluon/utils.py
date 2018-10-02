@@ -204,7 +204,10 @@ if not sys.platform.startswith('win32'):
         try:
             os.rename(src, dst)
         except OSError:
-            os.remove(src)
+            try:
+                os.remove(src)
+            except OSError:
+                pass
             raise OSError(
                 'Moving downloaded temp file - {}, to {} failed. Please retry the download.'.format(src, dst))
 else:
@@ -230,7 +233,10 @@ else:
         if not rv:
             msg = ctypes.FormatError(ctypes.GetLastError())
             # if the MoveFileExW fail, remove the tempfile
-            os.remove(src)
+            try:
+                os.remove(src)
+            except OSError:
+                pass
             raise OSError(msg)
 
     def _replace_atomic(src, dst):
