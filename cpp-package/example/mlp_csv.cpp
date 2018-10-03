@@ -101,10 +101,10 @@ int main(int argc, char** argv) {
             test_set = argv[index];
         } else if (strcmp("--epochs", argv[index]) == 0) {
             index++;
-            max_epoch = atoi(argv[index]);
+            max_epoch = strtol(argv[index], NULL, 10);
         } else if (strcmp("--batch_size", argv[index]) == 0) {
             index++;
-            batch_size = atoi(argv[index]);
+            batch_size = strtol(argv[index], NULL, 10);
         } else if (strcmp("--hidden_units", argv[index]) == 0) {
             index++;
             hidden_units_string = argv[index];
