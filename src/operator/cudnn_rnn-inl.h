@@ -38,7 +38,7 @@ namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
-class CuDNNRNNOp : public Operator{
+class CuDNNRNNOp : public Operator {
  public:
   explicit CuDNNRNNOp(RNNParam param) {
     this->param_ = param;
@@ -69,6 +69,12 @@ class CuDNNRNNOp : public Operator{
       default:
         LOG(FATAL) << "Not implmented";
     }
+#if MXNET_USE_CUDNN == 1 && ((CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7)
+    CHECK((param_.mode == rnn_enum::kLstm) || !param_.projection_size.has_value())
+#else
+    CHECK(!param_.projection_size.has_value())
+#endif
+      << "Projection is only supported for LSTM with CuDNN version later than 7.1.1";
     // RNN Direction
     direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
     // Other
@@ -123,6 +129,12 @@ class CuDNNRNNOp : public Operator{
         Storage::Get()->Free(dropout_states_);
       }
     }
+    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
+    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
+    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
+    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
+    #endif
   }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -169,49 +181,165 @@ class CuDNNRNNOp : public Operator{
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
+    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
+    if (param_.projection_size.has_value()) {
+      CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
+                                           dtype_,
+                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
+                                           param_.seq_length_,
+                                           param_.batch_size_,
+                                           param_.input_size_,
+                                           seqLengthArray.data(),
+                                           nullptr));
+      int out_size =
+        (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
+      out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
+      CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
+                                           dtype_,
+                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
+                                           param_.seq_length_,
+                                           param_.batch_size_,
+                                           out_size,
+                                           seqLengthArray.data(),
+                                           nullptr));
+      if (ctx.is_train) {
+        CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
+                                             dtype_,
+                                             CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
+                                             param_.seq_length_,
+                                             param_.batch_size_,
+                                             param_.input_size_,
+                                             seqLengthArray.data(),
+                                             nullptr));
+        CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
+                                             dtype_,
+                                             CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
+                                             param_.seq_length_,
+                                             param_.batch_size_,
+                                             out_size,
+                                             seqLengthArray.data(),
+                                             nullptr));
+      }
+    }
+    #endif
     if (ctx.is_train) {
-      CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
-                                         rnn_desc_,
-                                         param_.seq_length_,
-                                         x_desc_vec_.data(),
-                                         x.dptr_,
-                                         hx_desc_,
-                                         hx.dptr_,
-                                         cx_desc_,
-                                         cx_ptr,
-                                         w_desc_,
-                                         w.dptr_,
-                                         y_desc_vec_.data(),
-                                         y.dptr_,
-                                         hy_desc_,
-                                         hy_ptr,
-                                         cy_desc_,
-                                         cy_ptr,
-                                         temp_space.dptr_,
-                                         workspace_byte_,
-                                         reserve_space_.dptr,
-                                         reserve_space_byte_));
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      if (!param_.projection_size.has_value())
+      #endif
+      {
+        CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
+                                           rnn_desc_,
+                                           param_.seq_length_,
+                                           x_desc_vec_.data(),
+                                           x.dptr_,
+                                           hx_desc_,
+                                           hx.dptr_,
+                                           cx_desc_,
+                                           cx_ptr,
+                                           w_desc_,
+                                           w.dptr_,
+                                           y_desc_vec_.data(),
+                                           y.dptr_,
+                                           hy_desc_,
+                                           hy_ptr,
+                                           cy_desc_,
+                                           cy_ptr,
+                                           temp_space.dptr_,
+                                           workspace_byte_,
+                                           reserve_space_.dptr,
+                                           reserve_space_byte_));
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      } else {
+        CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
+                                             rnn_desc_,
+                                             x_data_desc_,
+                                             x.dptr_,
+                                             hx_desc_,
+                                             hx.dptr_,
+                                             cx_desc_,
+                                             cx_ptr,
+                                             w_desc_,
+                                             w.dptr_,
+                                             y_data_desc_,
+                                             y.dptr_,
+                                             hy_desc_,
+                                             hy_ptr,
+                                             cy_desc_,
+                                             cy_ptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             nullptr,
+                                             temp_space.dptr_,
+                                             workspace_byte_,
+                                             reserve_space_.dptr,
+                                             reserve_space_byte_));
+      }
+      #else
+      }
+      #endif
     } else {
-      // inference mode
-      CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
-                                          rnn_desc_,
-                                          param_.seq_length_,
-                                          x_desc_vec_.data(),
-                                          x.dptr_,
-                                          hx_desc_,
-                                          hx.dptr_,
-                                          cx_desc_,
-                                          cx_ptr,
-                                          w_desc_,
-                                          w.dptr_,
-                                          y_desc_vec_.data(),
-                                          y.dptr_,
-                                          hy_desc_,
-                                          hy_ptr,
-                                          cy_desc_,
-                                          cy_ptr,
-                                          temp_space.dptr_,
-                                          workspace_byte_));
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      if (!param_.projection_size.has_value())
+      #endif
+      {
+        // inference mode
+        CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
+                                            rnn_desc_,
+                                            param_.seq_length_,
+                                            x_desc_vec_.data(),
+                                            x.dptr_,
+                                            hx_desc_,
+                                            hx.dptr_,
+                                            cx_desc_,
+                                            cx_ptr,
+                                            w_desc_,
+                                            w.dptr_,
+                                            y_desc_vec_.data(),
+                                            y.dptr_,
+                                            hy_desc_,
+                                            hy_ptr,
+                                            cy_desc_,
+                                            cy_ptr,
+                                            temp_space.dptr_,
+                                            workspace_byte_));
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      } else {
+        CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
+                                              rnn_desc_,
+                                              x_data_desc_,
+                                              x.dptr_,
+                                              hx_desc_,
+                                              hx.dptr_,
+                                              cx_desc_,
+                                              cx_ptr,
+                                              w_desc_,
+                                              w.dptr_,
+                                              y_data_desc_,
+                                              y.dptr_,
+                                              hy_desc_,
+                                              hy_ptr,
+                                              cy_desc_,
+                                              cy_ptr,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr,
+                                              nullptr,
+                                              temp_space.dptr_,
+                                              workspace_byte_));
+      }
+      #else
+      }
+      #endif
     }
   }
 
@@ -283,48 +411,103 @@ class CuDNNRNNOp : public Operator{
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
-    CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
-                                    rnn_desc_,
-                                    param_.seq_length_,
-                                    y_desc_vec_.data(),
-                                    y.dptr_,
-                                    dy_desc_vec_.data(),
-                                    dy.dptr_,
-                                    dhy_desc_,
-                                    dhy_ptr,
-                                    dcy_desc_,
-                                    dcy_ptr,
-                                    w_desc_,
-                                    w.dptr_,
-                                    hx_desc_,
-                                    hx.dptr_,
-                                    cx_desc_,
-                                    cx_ptr,
-                                    dx_desc_vec_.data(),
-                                    dx.dptr_,
-                                    dhx_desc_,
-                                    dhx.dptr_,
-                                    dcx_desc_,
-                                    dcx_ptr,
-                                    temp_space.dptr_,
-                                    workspace_byte_,
-                                    reserve_space_.dptr,
-                                    reserve_space_byte_));
-    CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
-                                       rnn_desc_,
-                                       param_.seq_length_,
-                                       x_desc_vec_.data(),
-                                       x.dptr_,
-                                       hx_desc_,
-                                       hx.dptr_,
-                                       y_desc_vec_.data(),
-                                       y.dptr_,
-                                       temp_space.dptr_,
-                                       workspace_byte_,
-                                       dw_desc_,
-                                       dw.dptr_,
-                                       reserve_space_.dptr,
-                                       reserve_space_byte_));
+    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    if (!param_.projection_size.has_value()) {
+    #else
+    {
+    #endif
+      CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
+                                      rnn_desc_,
+                                      param_.seq_length_,
+                                      y_desc_vec_.data(),
+                                      y.dptr_,
+                                      dy_desc_vec_.data(),
+                                      dy.dptr_,
+                                      dhy_desc_,
+                                      dhy_ptr,
+                                      dcy_desc_,
+                                      dcy_ptr,
+                                      w_desc_,
+                                      w.dptr_,
+                                      hx_desc_,
+                                      hx.dptr_,
+                                      cx_desc_,
+                                      cx_ptr,
+                                      dx_desc_vec_.data(),
+                                      dx.dptr_,
+                                      dhx_desc_,
+                                      dhx.dptr_,
+                                      dcx_desc_,
+                                      dcx_ptr,
+                                      temp_space.dptr_,
+                                      workspace_byte_,
+                                      reserve_space_.dptr,
+                                      reserve_space_byte_));
+      CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
+                                         rnn_desc_,
+                                         param_.seq_length_,
+                                         x_desc_vec_.data(),
+                                         x.dptr_,
+                                         hx_desc_,
+                                         hx.dptr_,
+                                         y_desc_vec_.data(),
+                                         y.dptr_,
+                                         temp_space.dptr_,
+                                         workspace_byte_,
+                                         dw_desc_,
+                                         dw.dptr_,
+                                         reserve_space_.dptr,
+                                         reserve_space_byte_));
+    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    } else {
+      CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
+                                        rnn_desc_,
+                                        y_data_desc_,
+                                        y.dptr_,
+                                        dy_data_desc_,
+                                        dy.dptr_,
+                                        nullptr,
+                                        nullptr,
+                                        dhy_desc_,
+                                        dhy_ptr,
+                                        dcy_desc_,
+                                        dcy_ptr,
+                                        w_desc_,
+                                        w.dptr_,
+                                        hx_desc_,
+                                        hx.dptr_,
+                                        cx_desc_,
+                                        cx_ptr,
+                                        dx_data_desc_,
+                                        dx.dptr_,
+                                        dhx_desc_,
+                                        dhx.dptr_,
+                                        dcx_desc_,
+                                        dcx_ptr,
+                                        nullptr,
+                                        nullptr,
+                                        temp_space.dptr_,
+                                        workspace_byte_,
+                                        reserve_space_.dptr,
+                                        reserve_space_byte_));
+      CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
+                                           rnn_desc_,
+                                           x_data_desc_,
+                                           x.dptr_,
+                                           hx_desc_,
+                                           hx.dptr_,
+                                           y_data_desc_,
+                                           y.dptr_,
+                                           temp_space.dptr_,
+                                           workspace_byte_,
+                                           dw_desc_,
+                                           dw.dptr_,
+                                           reserve_space_.dptr,
+                                           reserve_space_byte_));
+    }
+    #else
+    }
+    #endif
   }
 
  private:
@@ -405,6 +588,12 @@ class CuDNNRNNOp : public Operator{
       y_desc_vec_ = y_vec;
       dx_desc_vec_ = dx_vec;
       dy_desc_vec_ = dy_vec;
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
+      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
+      #endif
 
       // set the state tensors
       dimA[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
@@ -413,12 +602,28 @@ class CuDNNRNNOp : public Operator{
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      int dimB[3];
+      int strideB[3];
+      dimB[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
+      dimB[1] = param_.batch_size_;
+      dimB[2] = param_.projection_size.has_value() ?
+                param_.projection_size.value() : param_.state_size;
+      strideB[0] = dimB[2] * dimB[1];
+      strideB[1] = dimB[2];
+      strideB[2] = 1;
+      #endif
 
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
                                             dtype_,
                                             3,
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+                                            dimB,
+                                            strideB));
+      #else
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(cx_desc_,
                                             dtype_,
                                             3,
@@ -427,8 +632,13 @@ class CuDNNRNNOp : public Operator{
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
                                             dtype_,
                                             3,
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+                                            dimB,
+                                            strideB));
+      #else
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(cy_desc_,
                                             dtype_,
                                             3,
@@ -437,8 +647,13 @@ class CuDNNRNNOp : public Operator{
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
                                             dtype_,
                                             3,
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+                                            dimB,
+                                            strideB));
+      #else
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dcx_desc_,
                                             dtype_,
                                             3,
@@ -447,8 +662,13 @@ class CuDNNRNNOp : public Operator{
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
                                             dtype_,
                                             3,
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+                                            dimB,
+                                            strideB));
+      #else
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dcy_desc_,
                                             dtype_,
                                             3,
@@ -497,6 +717,14 @@ class CuDNNRNNOp : public Operator{
           math_type = CUDNN_TENSOR_OP_MATH;
         }
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
+      #endif
+      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      if (param_.projection_size.has_value()) {
+        CUDNN_CALL(cudnnSetRNNProjectionLayers(s->dnn_handle_,
+                                               rnn_desc_,
+                                               param_.projection_size.value(),
+                                               0));
+      }
       #endif
       // Get temp space sizes
       CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
@@ -586,6 +814,9 @@ class CuDNNRNNOp : public Operator{
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, dropout_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
+  #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+  cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
+  #endif
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;
   cudnnTensorDescriptor_t hy_desc_, cy_desc_;
   cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;
