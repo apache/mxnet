@@ -1583,7 +1583,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
 
   if (ret != 0) {
     if (jkeys != NULL) {
-      for (int i = 0; i < jnumArgs; i++ ) {
+      for (int i = 0; i < jnumArgs; i++) {
         jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
         env->ReleaseStringUTFChars(jkey, keys[i]);
         env->DeleteLocalRef(jkey);
