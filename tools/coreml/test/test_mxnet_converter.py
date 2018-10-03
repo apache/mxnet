@@ -18,18 +18,16 @@
 import unittest
 import mxnet as mx
 import numpy as np
-import sys
-import os
-current_working_directory = os.getcwd()
-sys.path.append(current_working_directory + "/..")
-sys.path.append(current_working_directory + "/../converter/")
-import _mxnet_converter as mxnet_converter
+
+from converter._mxnet_converter import convert
 from collections import namedtuple
 from converter import utils
 
+
 def _mxnet_remove_batch(input_data):
     for blob in input_data:
-        input_data[blob] = np.reshape(input_data[blob], input_data[blob].shape[1:])
+        input_data[blob] = np.reshape(input_data[blob],
+                                      input_data[blob].shape[1:])
     return input_data
 
 
@@ -39,7 +37,9 @@ def _get_mxnet_module(net, data_shapes, mode, label_names, input_names=None):
     """
     mx.random.seed(1993)
 
-    mod = utils.create_module(sym=net, data_shapes=data_shapes, label_shapes=input_names, label_names=label_names)
+    mod = utils.create_module(sym=net, data_shapes=data_shapes,
+                              label_shapes=input_names,
+                              label_names=label_names)
 
     if mode == 'random':
         mod.init_params(
@@ -61,12 +61,16 @@ def _get_mxnet_module(net, data_shapes, mode, label_names, input_names=None):
 
 class SingleLayerTest(unittest.TestCase):
     """
-    Unit test class for testing where converter is able to convert individual layers or not.
-    In order to do so, it converts model and generates preds on both CoreML and MXNet and check they are the same.
+    Unit test class for testing where converter is able to convert individual
+    layers or not.
+    In order to do so, it converts model and generates preds on both CoreML and
+    MXNet and check they are the same.
     """
-    def _test_mxnet_model(self, net, input_shape, mode, class_labels=None, coreml_mode=None, label_names=None, delta=1e-3,
+    def _test_mxnet_model(self, net, input_shape, mode, class_labels=None,
+                          coreml_mode=None, label_names=None, delta=1e-2,
                           pre_processing_args=None, input_name='data'):
-        """ Helper method that convert the CoreML model into CoreML and compares the predictions over random data.
+        """ Helper method that convert the CoreML model into CoreML and
+        compares the predictions over random data.
 
         Parameters
         ----------
@@ -74,22 +78,25 @@ class SingleLayerTest(unittest.TestCase):
             The graph that we'll be converting into CoreML.
 
         input_shape: tuple of ints
-            The shape of input data. Generally of the format (batch-size, channels, height, width)
+            The shape of input data. Generally of the format (batch-size,
+            channels, height, width)
 
         mode: (random|zeros|ones)
-            The mode to use in order to set the parameters (weights and biases).
+            The mode to use in order to set the parameters (weights and
+            biases).
 
         label_names: list of strings
             The names of the output labels. Default: None
 
         delta: float
-            The maximum difference b/w predictions of MXNet and CoreML that is tolerable.
+            The maximum difference b/w predictions of MXNet and CoreML that is
+            tolerable.
 
         input_name: str
             The name of the input variable to the symbolic graph.
         """
 
-        data_shapes=[(input_name, input_shape)]
+        data_shapes = [(input_name, input_shape)]
 
         mod = _get_mxnet_module(net, data_shapes, mode, label_names)
 
@@ -100,19 +107,21 @@ class SingleLayerTest(unittest.TestCase):
         mxnet_preds = mod.get_outputs()[0].asnumpy().flatten()
 
         # Get predictions from coreml
-        coreml_model = mxnet_converter.convert(
+        coreml_model = convert(
             model=mod,
             class_labels=class_labels,
             mode=coreml_mode,
             input_shape={input_name: input_shape},
             preprocessor_args=pre_processing_args
         )
-        coreml_preds = coreml_model.predict(_mxnet_remove_batch(input_data)).values()[0].flatten()
+        coreml_preds = coreml_model.predict(_mxnet_remove_batch(input_data)) \
+                                   .values()[0].flatten()
 
         # Check prediction accuracy
         self.assertEquals(len(mxnet_preds), len(coreml_preds))
         for i in range(len(mxnet_preds)):
-            self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i], delta = delta)
+            self.assertAlmostEquals(mxnet_preds[i], coreml_preds[i],
+                                    delta=delta)
 
     def test_tiny_inner_product_zero_input(self):
         np.random.seed(1988)
@@ -140,7 +149,8 @@ class SingleLayerTest(unittest.TestCase):
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
-        self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='ones',
+                               delta=0.05)
 
     def test_tiny_inner_product_random_input(self):
         np.random.seed(1988)
@@ -153,7 +163,8 @@ class SingleLayerTest(unittest.TestCase):
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data')
-        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5, no_bias=True)
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5,
+                                    no_bias=True)
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
     def test_tiny_softmax_random_input(self):
@@ -162,7 +173,8 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.Variable('data')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         net = mx.sym.SoftmaxOutput(net, name='softmax')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'])
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random',
+                               label_names=['softmax_label'])
 
     def test_tiny_relu_activation_random_input(self):
         np.random.seed(1988)
@@ -228,7 +240,8 @@ class SingleLayerTest(unittest.TestCase):
             pad=pad,
             name='conv_1'
         )
-        self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='ones',
+                               delta=0.05)
 
     def test_tiny_conv_random_input(self):
         np.random.seed(1988)
@@ -481,7 +494,8 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.Flatten(data=net, name='flatten1')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         net = mx.sym.SoftmaxOutput(net, name='softmax')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'])
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random',
+                               label_names=['softmax_label'])
 
     def test_transpose(self):
         np.random.seed(1988)
@@ -529,14 +543,16 @@ class SingleLayerTest(unittest.TestCase):
 
         kwargs = {'input_shape': {'data': input_shape}}
         # Get predictions from coreml
-        coreml_model = mxnet_converter.convert(
+        coreml_model = convert(
             model=mod,
-            class_labels=['Category1','Category2','Category3','Category4','Category5'],
+            class_labels=['Category1', 'Category2', 'Category3',
+                          'Category4', 'Category5'],
             mode='classifier',
             **kwargs
         )
 
-        prediction = coreml_model.predict(_mxnet_remove_batch({'data': input_data}))
+        prediction = coreml_model.predict(
+            _mxnet_remove_batch({'data': input_data}))
         self.assertEqual(prediction['classLabel'], 'Category3')
 
     def test_really_tiny_deconv_random_input(self):
@@ -579,7 +595,8 @@ class SingleLayerTest(unittest.TestCase):
             name='deconv_1'
         )
         # Test the mxnet model
-        self._test_mxnet_model(net, input_shape=input_shape, mode='ones')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='ones',
+                               delta=0.05)
 
     def test_tiny_deconv_random_input(self):
         np.random.seed(1988)
@@ -911,13 +928,14 @@ class SingleLayerTest(unittest.TestCase):
             moving_var=moving_var,
             use_global_stats=True,
             name='batch_norm_1')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random',
+                               delta=1e-2)
 
     def test_batch_norm_no_global_stats(self):
         """ This test should throw an exception since converter doesn't support
             conversion of MXNet models that use local batch stats (i.e.
-            use_global_stats=False). The reason for this is CoreML doesn't support
-            local batch stats.
+            use_global_stats=False). The reason for this is CoreML doesn't
+            support local batch stats.
         """
         np.random.seed(1988)
         input_shape = (1, 1, 2, 3)
@@ -935,7 +953,8 @@ class SingleLayerTest(unittest.TestCase):
             moving_var=moving_var,
             use_global_stats=False,
             name='batch_norm_1')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random',
+                               delta=1e-2)
 
     def test_pre_processing_args(self):
         np.random.seed(1988)
@@ -943,27 +962,34 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.Variable('data')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
         net = mx.sym.SoftmaxOutput(net, name='softmax')
-        self._test_mxnet_model(net, input_shape=input_shape, mode='random', label_names=['softmax_label'],
-                               pre_processing_args={'red_bias':0, 'blue_bias':0, 'green_bias':0, 'image_scale':1})
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random',
+                               label_names=['softmax_label'],
+                               pre_processing_args={'red_bias': 0,
+                                                    'blue_bias': 0,
+                                                    'green_bias': 0,
+                                                    'image_scale': 1})
 
     def test_different_input_variables(self):
         """
-        Verifying the behavior when input variable name is different than the standard name - 'data'.
+        Verifying the behavior when input variable name is different than the
+        standard name - 'data'.
         """
         np.random.seed(1988)
         input_shape = (1, 10)
         net = mx.sym.Variable('data1')
         net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
-        self._test_mxnet_model(net, input_shape=input_shape, mode='zeros', input_name='data1')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='zeros',
+                               input_name='data1')
 
     def test_really_tiny_conv_optional_params(self):
         """
-        Verifying the behavior of a convolutional layer when stride and pad are not provided.
+        Verifying the behavior of a convolutional layer when stride and pad
+        are not provided.
         """
         np.random.seed(1988)
         input_shape = (1, 1, 10, 10)
         num_filter = 1
-        kernel = (1 ,1)
+        kernel = (1, 1)
 
         # Define a model
         net = mx.sym.Variable('data')
