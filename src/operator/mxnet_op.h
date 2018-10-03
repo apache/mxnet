@@ -111,6 +111,33 @@ inline int get_num_threads<cpu>(const int N) {
   }
 
 
+/*! \brief operator request type switch */
+#define MXNET_REQ_TYPE_SWITCH(req, ReqType, ...)  \
+  switch (req) {                                    \
+  case kNullOp:                                     \
+    {                                               \
+      const OpReqType ReqType = kNullOp;            \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case kWriteInplace:                               \
+  case kWriteTo:                                    \
+    {                                               \
+      const OpReqType ReqType = kWriteTo;           \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case kAddTo:                                      \
+    {                                               \
+      const OpReqType ReqType = kAddTo;             \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    break;                                          \
+  }
+
+
 #define MXNET_NDIM_SWITCH(NDim, ndim, ...)         \
   if (NDim == 0) {                                 \
   } else if (NDim == 1) {                          \
@@ -159,6 +186,52 @@ inline int get_num_threads<cpu>(const int N) {
   case mshadow::kInt8:                                     \
     LOG(FATAL) << "This operation does not "               \
                   "support int8 or uint8";                 \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_NO_FLOAT16_TYPE_SWITCH(type, DType, ...)     \
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    LOG(FATAL) << "This operation does not "               \
+                  "support float16";                       \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      typedef int8_t DType;                                \
+      {__VA_ARGS__}                                        \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt32:                                    \
     {                                                      \

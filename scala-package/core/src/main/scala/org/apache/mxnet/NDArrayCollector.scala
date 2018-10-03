@@ -18,6 +18,7 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.Base.CPtrAddress
+import org.apache.mxnet.annotation.Experimental
 import org.slf4j.LoggerFactory
 
 import scala.annotation.varargs
@@ -80,6 +81,7 @@ object NDArrayCollector {
    * Create a collector allows users to later dispose the collected NDArray manually.
    * @return a manually-disposable collector.
    */
+  @Experimental
   def manual(): NDArrayCollector = new NDArrayCollector(false)
 
   /**
@@ -131,10 +133,15 @@ class NDArrayCollector private(private val autoDispose: Boolean = true,
    * If the return type of scope is <em>NDArray</em> or <em>NDArrayFuncReturn</em>,
    * it is smart enough NOT to collect or dispose the returned NDArray. <br />
    * However in other cases, it is users' responsibility NOT to leak allocated NDArrays outside.
+   * <br />
+   * We might switch to try -with-resources statement (by AutoCloseable in Java 1.7+)
+   * and deprecate this method later, thus it is marked as Experimental.
+   *
    * @param codeBlock code block to be executed within the scope.
    * @tparam T return type of the function <em>codeBlock</em>.
    * @return The result of function <em>codeBlock</em>.
    */
+  @Experimental
   def withScope[T](codeBlock: => T): T = {
     val old = NDArrayCollector.currCollector.get()
     NDArrayCollector.currCollector.set(this)

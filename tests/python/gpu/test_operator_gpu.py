@@ -41,6 +41,7 @@ from test_exc_handling import *
 from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
+from test_subgraph_op import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
@@ -261,7 +262,6 @@ def test_fft():
 
 
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10087")
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
@@ -287,12 +287,12 @@ def test_batchnorm_with_type():
   ]
 
   ctx_list_v2_3D = [
-    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.cpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float64}},
-    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float16}},
-    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (4, 2, 3, 5, 5), 'type_dict': {'norm_data': np.float64}}
+    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.cpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}},
+    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float16}},
+    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float32}},
+    {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
   ]
 
   # V1, 2D
@@ -749,7 +749,6 @@ def test_grid_generator_with_type():
     check_consistency(sym, ctx_list, grad_req="add")
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed.  https://github.com/apache/incubator-mxnet/issues/11839")
 @with_seed()
 def test_spatial_transformer_with_type():
     data = mx.sym.Variable('data')
@@ -758,9 +757,13 @@ def test_spatial_transformer_with_type():
     loc = mx.sym.Activation(data=loc, act_type='relu')
     loc = mx.sym.FullyConnected(data=loc, num_hidden=6)
     sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
-                                    transform_type="affine", sampler_type="bilinear")
+                                    transform_type="affine", sampler_type="bilinear", cudnn_off=True)
     ctx_list = [{'ctx': mx.gpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float64}},
                 {'ctx': mx.cpu(0), 'data': (1, 5, 10, 10), 'type_dict': {'data': np.float64}}]
+    check_consistency(sym, ctx_list)
+    check_consistency(sym, ctx_list, grad_req="add")
+    sym = mx.sym.SpatialTransformer(data=data, loc=loc, target_shape=(10, 10),
+                                    transform_type="affine", sampler_type="bilinear", cudnn_off=False)
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
@@ -1916,6 +1919,81 @@ def test_softmax_activation():
         cpu_y.backward()
         assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
                 atol = 1e-3, rtol = 1e-3)
+
+
+@with_seed()
+def test_bilinear_sampler_versions():
+    data = mx.sym.Variable('data')
+    grid = mx.sym.Variable('grid')
+    sym1 = mx.sym.BilinearSampler(data=data, grid=grid)
+    sym2 = mx.sym.BilinearSampler(data=data, grid=grid, cudnn_off=True)
+    sym3 = mx.sym.BilinearSampler(data=data, grid=grid)
+
+    test_cases = [[(1,3,15,16),(1,2,10,10)],
+                 [(1,6,7,16),(1,2,10,4)],
+                 [(1,7,3,16),(1,2,8,11)],
+                 [(1,9,50,50),(1,2,50,50)]]
+
+    for item in test_cases:
+        data_shape, grid_shape = item
+        # kWriteTo
+        exe_cpu = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
+        exe_gpu = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cudnn = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_list = [exe_cpu, exe_gpu, exe_cudnn]
+        ref_idx = 0
+        test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
+        test_grid = np.random.uniform(low=-2, high=2, size=grid_shape).astype(np.float32)
+        for exe in exe_list:
+            exe.arg_dict['data'][:] = test_data
+            exe.arg_dict['grid'][:] = test_grid
+            exe.forward(is_train=True)
+            assert_almost_equal(exe_list[ref_idx].outputs[0].asnumpy(), exe.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+
+        out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
+        for exe in exe_list:
+            exe.backward(mx.nd.array(out_grad))
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
+        data_grad = exe_list[ref_idx].grad_dict['data'].asnumpy()
+        grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
+
+        # kAddTo
+        exe_cpu_addto = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
+        exe_gpu_addto = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cudnn_addto = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
+        data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
+        grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
+        for exe in exe_list:
+            exe.arg_dict['data'][:] = test_data
+            exe.arg_dict['grid'][:] = test_grid
+            exe.grad_dict['data'][:] = data_initial_grad
+            exe.grad_dict['grid'][:] = grid_initial_grad
+            exe.forward(is_train=True)
+            exe.backward(mx.nd.array(out_grad))
+            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['data'].asnumpy(), data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
+
+        for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
+            # Mixture of kWriteTo and kNullOp
+            exe_cpu_mix = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
+            exe_gpu_mix = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_cudnn_mix = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_list = [exe_cpu_mix, exe_gpu_mix, exe_cudnn_mix]
+            for exe in exe_list:
+                exe.arg_dict['data'][:] = test_data
+                exe.arg_dict['grid'][:] = test_grid
+                exe.forward(is_train=True)
+                exe.backward(mx.nd.array(out_grad))
+                if req_dict['data'] is 'write':
+                    assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+                if req_dict['grid'] is 'write':
+                    assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
 
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.

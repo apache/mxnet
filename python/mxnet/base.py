@@ -232,6 +232,7 @@ RtcHandle = ctypes.c_void_p
 CudaModuleHandle = ctypes.c_void_p
 CudaKernelHandle = ctypes.c_void_p
 ProfileHandle = ctypes.c_void_p
+DLPackHandle = ctypes.c_void_p
 
 
 #----------------------------
@@ -574,7 +575,7 @@ def _get_op_name_prefix(op_name):
     return ""
 
 
-# pylint: enable=too-many-locals, invalid-name
+# pylint: enable=invalid-name
 def _init_op_module(root_namespace, module_name, make_op_func):
     """
     Registers op functions created by `make_op_func` under
@@ -726,3 +727,6 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
     module_op_file.close()
     write_all_str(module_internal_file, module_internal_all)
     module_internal_file.close()
+
+ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
+ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p

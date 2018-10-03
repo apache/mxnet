@@ -1,5 +1,25 @@
 # Tutorials
 
+```eval_rst
+.. toctree::
+   :hidden:
+   basic/index.md
+   c++/index.md
+   control_flow/index.md
+   embedded/index.md
+   gluon/index.md
+   nlp/index.md
+   onnx/index.md
+   python/index.md
+   r/index.md
+   scala/index.md
+   sparse/index.md
+   speech_recognition/index.md
+   tensorrt/index.md
+   unsupervised_learning/index.md
+   vision/index.md
+```
+
 MXNet tutorials can be found in this section. A variety of language bindings are available for MXNet (including Python, Scala, C++ and R) and we have a different tutorial section for each language.
 
 Are you new to MXNet, and don't have a preference on language? We currently recommend starting with Python, and specifically the Gluon APIs (versus Module APIs) as they're more flexible and easier to debug.
@@ -38,8 +58,10 @@ Select API:&nbsp;
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
 * Practitioner Guides
+    * [Gotchas using NumPy](/tutorials/gluon/gotchas_numpy_in_mxnet.html)
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Checkpointing and Model Serialization (a.k.a. saving and loading)](/tutorials/gluon/save_load_params.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/> ([Alternative](http://gluon.mxnet.io/chapter03_deep-neural-networks/serialization.html))
+    * [Distributed Training](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training)
     * [Inference using an ONNX model](/tutorials/onnx/inference_on_onnx_model.html)
     * [Fine-tuning an ONNX model on Gluon](/tutorials/onnx/fine_tuning_gluon.html)
     * [Visualizing Decisions of Convolutional Neural Networks](/tutorials/vision/cnn_visualization.html)
@@ -47,6 +69,7 @@ Select API:&nbsp;
     * [Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules.html)
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
+    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
 * API Guides
     * Core APIs
         * NDArray
@@ -96,6 +119,7 @@ Select API:&nbsp;
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
+    * [Optimizing Deep Learning Computation Graphs with TensorRT](/tutorials/tensorrt/inference_with_trt.html)
 * API Guides
     * Core APIs
         * NDArray

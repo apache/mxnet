@@ -50,7 +50,6 @@ net ;=> #object[org.apache.mxnet.Symbol 0x5c78c8c2 "org.apache.mxnet.Symbol@5c78
 (def b (sym/variable "b"))
 (def c (sym/+ a b))
 
-
 ;; Each symbol takes a (unique) string name. NDArray and Symbol both represent a single tensor. Operators represent the computation between tensors. Operators take symbol (or NDArray) as inputs and might also additionally accept other hyperparameters such as the number of hidden neurons (num_hidden) or the activation type (act_type) and produce the output.
 
 ;; We can view a symbol simply as a function taking several arguments. And we can retrieve those arguments with the following method call:

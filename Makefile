@@ -92,6 +92,10 @@ endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+ifeq ($(ENABLE_TESTCOVERAGE), 1)
+        CFLAGS += --coverage
+        LDFLAGS += --coverage
+endif
 
 ifeq ($(USE_TENSORRT), 1)
 	CFLAGS +=  -I$(ROOTDIR) -I$(TPARTYDIR) -DONNX_NAMESPACE=$(ONNX_NAMESPACE) -DMXNET_USE_TENSORRT=1
@@ -227,63 +231,71 @@ endif
 
 # gperftools malloc library (tcmalloc)
 ifeq ($(USE_GPERFTOOLS), 1)
-#	FIND_LIBNAME=tcmalloc_and_profiler
-	FIND_LIBNAME=tcmalloc
-	FIND_LIBFILEEXT=so
-	FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-	ifeq (,$(FIND_LIBFILE))
-		FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-		ifeq (,$(FIND_LIBFILE))
-			FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-			ifeq (,$(FIND_LIBFILE))
-				FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-				ifeq (,$(FIND_LIBFILE))
-					USE_GPERFTOOLS=0
-				endif
-			endif
-		endif
-	endif
-	ifeq ($(USE_GPERFTOOLS), 1)
-		CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
-		LDFLAGS += $(FIND_LIBFILE)
-	endif
+FIND_LIBFILEEXT=so
+ifeq ($(USE_GPERFTOOLS_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /lib/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+	USE_GPERFTOOLS=0
+endif
+endif
+endif
+endif
+endif
+ifeq ($(USE_GPERFTOOLS), 1)
+	CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free
+	LDFLAGS += $(FIND_LIBFILE)
 endif
 
 # jemalloc malloc library (if not using gperftools)
-ifneq ($(USE_GPERFTOOLS), 1)
-	ifeq ($(USE_JEMALLOC), 1)
-		FIND_LIBNAME=jemalloc
-		FIND_LIBFILEEXT=so
-		FIND_LIBFILE=$(wildcard /lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-		ifeq (,$(FIND_LIBFILE))
-			FIND_LIBFILE=$(wildcard /usr/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-			ifeq (,$(FIND_LIBFILE))
-				FIND_LIBFILE=$(wildcard /usr/local/lib/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-				ifeq (,$(FIND_LIBFILE))
-					FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-					ifeq (,$(FIND_LIBFILE))
-						FIND_LIBFILE=$(wildcard /usr/lib64/lib$(FIND_LIBNAME).$(FIND_LIBFILEEXT))
-						ifeq (,$(FIND_LIBFILE))
-							USE_JEMALLOC=0
-						endif
-					endif
-				endif
-			endif
-		endif
-		ifeq ($(USE_JEMALLOC), 1)
-			CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
-			-fno-builtin-free -DUSE_JEMALLOC
-			LDFLAGS += $(FIND_LIBFILE)
-		endif
-	endif
+else
+ifeq ($(USE_JEMALLOC), 1)
+FIND_LIBFILEEXT=so
+ifeq ($(USE_JEMALLOC_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /lib/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.$(FIND_LIBFILEEXT))
+ifeq (,$(FIND_LIBFILE))
+	USE_JEMALLOC=0
+endif
+endif
+endif
+endif
+endif
+endif
+ifeq ($(USE_JEMALLOC), 1)
+	CFLAGS += -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc \
+	-fno-builtin-free -DUSE_JEMALLOC
+	LDFLAGS += $(FIND_LIBFILE)
+endif
+endif
 endif
 
 # If not using tcmalloc or jemalloc, print a warning (user should consider installing)
 ifneq ($(USE_GPERFTOOLS), 1)
-	ifneq ($(USE_JEMALLOC), 1)
+ifneq ($(USE_JEMALLOC), 1)
 $(warning WARNING: Significant performance increases can be achieved by installing and \
 enabling gperftools or jemalloc development packages)
-	endif
+endif
 endif
 
 ifeq ($(USE_THREADED_ENGINE), 1)
@@ -565,7 +577,6 @@ rcpplint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
 
 rpkg:
-	mkdir -p R-package/inst
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
@@ -579,16 +590,15 @@ rpkg:
 	echo "import(methods)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
-	rm -rf R-package/NAMESPACE
 	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
 	devtools::install_version('roxygen2',version='5.0.1',\
 	repo='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
 	R CMD INSTALL R-package
-	rm -rf R-package/src/image_recordio.h
 
 rpkgtest:
-	Rscript -e "require(testthat);res<-test_dir('R-package/tests/testthat');if(!testthat:::all_passed(res)){stop('Test failures', call. = FALSE)}"
+	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
+	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file("r-package_coverage.json");writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \

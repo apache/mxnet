@@ -5,10 +5,10 @@ the basic data structure for manipulating data in MXNet.
 And just using NDArray by itself, we can execute a wide range of mathematical operations.
 In fact, we could define and update a full neural network just by using `NDArray`.
 `NDArray` allows you to write programs for scientific computation
-in an imperative fashion, making full use of the native control of any front-end language.
+in an imperative fashion, making full use of the native control of any front-end language. Gluon uses this approach under the hood (before hybridization) to allow for flexible and debugable networks.
 So you might wonder, why don't we just use `NDArray` for all computation?
 
-MXNet provides the Symbol API, an interface for symbolic programming.
+MXNet also provides the Symbol API, an interface for symbolic programming.
 With symbolic programming, rather than executing operations step by step,
 we first define a *computation graph*.
 This graph contains placeholders for inputs and designated outputs.
@@ -16,7 +16,7 @@ We can then compile the graph, yielding a function
 that can be bound to `NDArray`s and run.
 MXNet's Symbol API is similar to the network configurations
 used by [Caffe](http://caffe.berkeleyvision.org/)
-and the symbolic programming in [Theano](http://deeplearning.net/software/theano/).
+and the symbolic programming in [Theano](http://deeplearning.net/software/theano/). And Gluon takes advantage of this approach under the hood after the network has been hybridized.
 
 Another advantage conferred by symbolic approach is that
 we can optimize our functions before using them.
@@ -94,7 +94,7 @@ mx.viz.plot_network(symbol=g)
 
 The computations declared in the above examples can be bound to the input data
 for evaluation by using `bind` method. We discuss this further in the
-[symbol manipulation](#Symbol Manipulation) section.
+[Symbol Manipulation](#symbol-manipulation) section.
 
 ### Basic Neural Networks
 
@@ -291,7 +291,7 @@ One important difference of `Symbol` compared to `NDArray` is that we first
 declare the computation and then bind the computation with data to run.
 
 In this section, we introduce the functions to manipulate a symbol directly. But
-note that, most of them are wrapped by the `module` package.
+note that, most of them are wrapped by the high-level packages: `Module` and `Gluon`.
 
 ### Shape and Type Inference
 

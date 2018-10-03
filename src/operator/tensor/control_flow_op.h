@@ -189,6 +189,7 @@ inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
     return true;
   } else if ((*in_attrs)[0].ndim() == 1) {
     CHECK_EQ((*in_attrs)[0].Size(), static_cast<size_t>(tshape[0]));
+    return true;
   }
   return false;
 }

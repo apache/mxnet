@@ -314,7 +314,6 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
 
   // For the shape of output data.
   size_t len = in_shape->at(0)[0];
-  CHECK_GT(len, 0);
   for (int i = 0; i < params.num_out_data; i++) {
     // If the output shape isn't inferred, we don't need to propogate the info.
     const auto& g_out_shape = subg_out_shape[i];
@@ -1269,7 +1268,7 @@ NNVM_REGISTER_OP(_foreach)
     [](const NodeAttrs& attrs) {
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   std::vector<std::string> names;
-  names.push_back("fn");
+  names.emplace_back("fn");
   for (int i = 0; i < params.num_args - 1; i++)
     names.push_back("data" + std::to_string(i));
   return names;
@@ -1331,8 +1330,8 @@ NNVM_REGISTER_OP(_while_loop)
   const WhileLoopParam& params = nnvm::get<WhileLoopParam>(attrs.parsed);
   std::vector<std::string> names;
   names.reserve(params.num_args);
-  names.push_back("cond");
-  names.push_back("func");
+  names.emplace_back("cond");
+  names.emplace_back("func");
   for (int i = 2; i < params.num_args; i++)
     names.push_back("data" + std::to_string(i - 2));
   return names;
@@ -1393,9 +1392,9 @@ NNVM_REGISTER_OP(_cond)
   const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   std::vector<std::string> names;
   names.reserve(params.num_args);
-  names.push_back("cond");
-  names.push_back("then_branch");
-  names.push_back("else_branch");
+  names.emplace_back("cond");
+  names.emplace_back("then_branch");
+  names.emplace_back("else_branch");
   for (int i = 3; i < params.num_args; ++i)
     names.push_back("data" + std::to_string(i - 3));
   return names;

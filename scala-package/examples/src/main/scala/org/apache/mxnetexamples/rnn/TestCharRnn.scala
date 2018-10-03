@@ -30,54 +30,56 @@ object TestCharRnn {
 
   private val logger = LoggerFactory.getLogger(classOf[TrainCharRnn])
 
-  def runTestCharRNN(dataPath: String, modelPrefix: String, starterSentence : String): Unit = {
-    // The batch size for training
-    val batchSize = 32
-    // We can support various length input
-    // For this problem, we cut each input sentence to length of 129
-    // So we only need fix length bucket
-    val buckets = List(129)
-    // hidden unit in LSTM cell
-    val numHidden = 512
-    // embedding dimension, which is, map a char to a 256 dim vector
-    val numEmbed = 256
-    // number of lstm layer
-    val numLstmLayer = 3
+  def runInferenceCharRNN(dataPath: String, modelPrefix: String, starterSentence : String): Unit = {
+    NDArrayCollector.auto().withScope {
+      // The batch size for training
+      val batchSize = 32
+      // We can support various length input
+      // For this problem, we cut each input sentence to length of 129
+      // So we only need fix length bucket
+      val buckets = List(129)
+      // hidden unit in LSTM cell
+      val numHidden = 512
+      // embedding dimension, which is, map a char to a 256 dim vector
+      val numEmbed = 256
+      // number of lstm layer
+      val numLstmLayer = 3
 
-    // build char vocabluary from input
-    val vocab = Utils.buildVocab(dataPath)
+      // build char vocabluary from input
+      val vocab = Utils.buildVocab(dataPath)
 
-    // load from check-point
-    val (_, argParams, _) = Model.loadCheckpoint(modelPrefix, 75)
+      // load from check-point
+      val (_, argParams, _) = Model.loadCheckpoint(modelPrefix, 75)
 
-    // build an inference model
-    val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1,
-      numHidden = numHidden, numEmbed = numEmbed,
-      numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f)
+      // build an inference model
+      val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1,
+        numHidden = numHidden, numEmbed = numEmbed,
+        numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f)
 
-    // generate a sequence of 1200 chars
-    val seqLength = 1200
-    val inputNdarray = NDArray.zeros(1)
-    val revertVocab = Utils.makeRevertVocab(vocab)
+      // generate a sequence of 1200 chars
+      val seqLength = 1200
+      val inputNdarray = NDArray.zeros(1)
+      val revertVocab = Utils.makeRevertVocab(vocab)
 
-    // Feel free to change the starter sentence
-    var output = starterSentence
-    val randomSample = true
-    var newSentence = true
-    val ignoreLength = output.length()
+      // Feel free to change the starter sentence
+      var output = starterSentence
+      val randomSample = true
+      var newSentence = true
+      val ignoreLength = output.length()
 
-    for (i <- 0 until seqLength) {
-      if (i <= ignoreLength - 1) Utils.makeInput(output(i), vocab, inputNdarray)
-      else Utils.makeInput(output.takeRight(1)(0), vocab, inputNdarray)
-      val prob = model.forward(inputNdarray, newSentence)
-      newSentence = false
-      val nextChar = Utils.makeOutput(prob, revertVocab, randomSample)
-      if (nextChar == "") newSentence = true
-      if (i >= ignoreLength) output = output ++ nextChar
+      for (i <- 0 until seqLength) {
+        if (i <= ignoreLength - 1) Utils.makeInput(output(i), vocab, inputNdarray)
+        else Utils.makeInput(output.takeRight(1)(0), vocab, inputNdarray)
+        val prob = model.forward(inputNdarray, newSentence)
+        newSentence = false
+        val nextChar = Utils.makeOutput(prob, revertVocab, randomSample)
+        if (nextChar == "") newSentence = true
+        if (i >= ignoreLength) output = output ++ nextChar
+      }
+
+      // Let's see what we can learned from char in Obama's speech.
+      logger.info(output)
     }
-
-    // Let's see what we can learned from char in Obama's speech.
-    logger.info(output)
   }
 
   def main(args: Array[String]): Unit = {
@@ -86,7 +88,7 @@ object TestCharRnn {
     try {
       parser.parseArgument(args.toList.asJava)
       assert(stcr.dataPath != null && stcr.modelPrefix != null && stcr.starterSentence != null)
-      runTestCharRNN(stcr.dataPath, stcr.modelPrefix, stcr.starterSentence)
+      runInferenceCharRNN(stcr.dataPath, stcr.modelPrefix, stcr.starterSentence)
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)

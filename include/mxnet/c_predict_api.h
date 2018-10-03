@@ -70,7 +70,7 @@ MXNET_DLL const char* MXGetLastError();
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param out The created predictor handle.
  * \return 0 when success, -1 when failure.
@@ -99,7 +99,7 @@ MXNET_DLL int MXPredCreate(const char* symbol_json_str,
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param num_output_nodes Number of output nodes to the net,
  * \param output_keys The name of output argument.
@@ -119,6 +119,39 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
                                      mx_uint num_output_nodes,
                                      const char** output_keys,
                                      PredictorHandle* out);
+
+/*!
+ * \brief create predictors for multiple threads. One predictor for a thread.
+ * \param symbol_json_str The JSON string of the symbol.
+ * \param param_bytes The in-memory raw bytes of parameter ndarray file.
+ * \param param_size The size of parameter ndarray file.
+ * \param dev_type The device type, 1: cpu, 2:gpu
+ * \param dev_id The device id of the predictor.
+ * \param num_input_nodes Number of input nodes to the net,
+ *    For feedforward net, this is 1.
+ * \param input_keys The name of input argument.
+ *    For feedforward net, this is {"data"}
+ * \param input_shape_indptr Index pointer of shapes of each input node.
+ *    The length of this array = num_input_nodes + 1.
+ *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
+ * \param input_shape_data A flattened data of shapes of each input node.
+ *    For feedforward net that takes 4 dimensional input, this is the shape data.
+ * \param num_threads The number of threads that we'll run the predictors.
+ * \param out An array of created predictor handles. The array has to be large
+ *   enough to keep `num_threads` predictors.
+ * \return 0 when success, -1 when failure.
+ */
+MXNET_DLL int MXPredCreateMultiThread(const char* symbol_json_str,
+                                      const void* param_bytes,
+                                      int param_size,
+                                      int dev_type, int dev_id,
+                                      mx_uint num_input_nodes,
+                                      const char** input_keys,
+                                      const mx_uint* input_shape_indptr,
+                                      const mx_uint* input_shape_data,
+                                      int num_threads,
+                                      PredictorHandle* out);
+
 /*!
  * \brief Change the input shape of an existing predictor.
  * \param num_input_nodes Number of input nodes to the net,
@@ -128,7 +161,7 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param handle The original predictor handle.
  * \param out The reshaped predictor handle.
