@@ -1581,6 +1581,18 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
+  if (ret != 0) {
+    if (jkeys != NULL) {
+      for (int i = 0; i < jnumArgs; i++ ) {
+        jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
+        env->ReleaseStringUTFChars(jkey, keys[i]);
+        env->DeleteLocalRef(jkey);
+      }
+    }
+    jclass illArgClass = env->FindClass("java/lang/IllegalArgumentException");
+    return env->ThrowNew(illArgClass, MXGetLastError());
+  }
+
   jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
   jmethodID listAppend = env->GetMethodID(listClass,
     "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
