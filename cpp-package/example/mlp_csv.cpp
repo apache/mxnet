@@ -57,24 +57,22 @@ Symbol mlp(const std::vector<int> &hidden_units) {
 /*
  * Convert the input string of number of hidden units into the vector of integers.
  */
-std::vector<int> getLayers(std::string hidden_units_string) {
-    std::string delimiter = ",";
-    size_t pos = 0;
-    std::string token;
+std::vector<int> getLayers(const std::string& hidden_units_string) {
     std::vector<int> hidden_units;
-    while ((pos = hidden_units_string.find(delimiter)) != std::string::npos) {
-        token = hidden_units_string.substr(0, pos);
-        hidden_units.push_back(atoi(token.c_str()));
-        hidden_units_string.erase(0, pos + delimiter.length());
+    char *pNext;
+    int num_unit = strtol(hidden_units_string.c_str(), &pNext, 10);
+    hidden_units.push_back(num_unit);
+    while (*pNext) {
+        num_unit = strtol(pNext, &pNext, 10);
+        hidden_units.push_back(num_unit);
     }
-    hidden_units.push_back(atoi(hidden_units_string.c_str()));
     return hidden_units;
 }
 
 void printUsage() {
     std::cout << "Usage:" << std::endl;
     std::cout << "mlp_csv --train mnist_training_set.csv --test mnist_test_set.csv --epochs 10 "
-    << "--batch_size 100 --hidden_units \"128,64,64\" [--gpu]" << std::endl;
+    << "--batch_size 100 --hidden_units \"128 64 64\" [--gpu]" << std::endl;
     std::cout << "The example uses mnist data in CSV format. The MNIST data in CSV format assumes "
     << "the column 0 to be label and the rest 784 column to be data." << std::endl;
     std::cout << "By default, the example uses 'cpu' context. If '--gpu' is specified, "
@@ -124,16 +122,16 @@ int main(int argc, char** argv) {
         std::cout << "ERROR: The mandatory arguments such as path to training and test data or "
         << "number of hidden units for mlp are not specified." << std::endl << std::endl;
         printUsage();
-        return 0;
+        return 1;
     }
 
     std::vector<int> hidden_units = getLayers(hidden_units_string);
 
     if (hidden_units.empty()) {
         std::cout << "ERROR: Number of hidden units are not provided in correct format."
-        << "The numbers need to be separated by ','." << std::endl << std::endl;
+        << "The numbers need to be separated by ' '." << std::endl << std::endl;
         printUsage();
-        return 0;
+        return 1;
     }
 
     /*
@@ -178,7 +176,7 @@ int main(int argc, char** argv) {
         initializer(arg.first, &arg.second);
     }
 
-    // Create sgd optimizer
+    // Create sgd optimiz er
     Optimizer* opt = OptimizerRegistry::Find("sgd");
     opt->SetParam("rescale_grad", 1.0/batch_size)
     ->SetParam("lr", learning_rate)

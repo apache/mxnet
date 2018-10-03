@@ -42,7 +42,7 @@ cp ../../build/cpp-package/example/${EXE_NAME} .
 python mnist_to_csv.py ./data/mnist_data/train-images-idx3-ubyte ./data/mnist_data/train-labels-idx1-ubyte ./data/mnist_data/mnist_train.csv 60000
 python mnist_to_csv.py ./data/mnist_data/t10k-images-idx3-ubyte ./data/mnist_data/t10k-labels-idx1-ubyte ./data/mnist_data/mnist_test.csv 10000
 
-./${EXE_NAME} --train ./data/mnist_data/mnist_train.csv --test ./data/mnist_data/mnist_test.csv --epochs 10 --batch_size 100 --hidden_units "128,64,10" 2&> ${EXE_NAME}.log
+./${EXE_NAME} --train ./data/mnist_data/mnist_train.csv --test ./data/mnist_data/mnist_test.csv --epochs 10 --batch_size 100 --hidden_units "128 64 10" 2&> ${EXE_NAME}.log
 
 if [ ! -f ${EXE_NAME}.log ];
 then
