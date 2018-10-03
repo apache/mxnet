@@ -1586,7 +1586,8 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
     jmethodID listAppend = env->GetMethodID(listClass,
       "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
 
-    if (FillSymbolInferShape(env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
+    if (FillSymbolInferShape(
+          env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
       // TODO(Yizhi): out of memory error thrown, return a specific error code ?
       return -1;
     }
