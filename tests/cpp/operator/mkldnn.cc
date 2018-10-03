@@ -575,6 +575,21 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused |
+      ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
 
@@ -588,6 +603,21 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
   attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused |
+      ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
 
