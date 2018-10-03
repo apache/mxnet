@@ -485,7 +485,7 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   }
   if (req[conv::kWeight]) {
     MKLDNNConvBackward &convBwdWeight = GetConvBwd(attrs, data,
-        weight, &bias, inputs[conv::kOut], fwd_pd);
+        weight, bias, inputs[conv::kOut], fwd_pd);
     if (convBwdWeight.bwdData_pd.diff_dst_primitive_desc() !=
         convBwdWeight.bwdWeights_pd.diff_dst_primitive_desc())
       out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
