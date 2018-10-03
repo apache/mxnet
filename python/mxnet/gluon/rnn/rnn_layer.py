@@ -35,7 +35,7 @@ class _RNNLayer(HybridBlock):
                  dropout, bidirectional, input_size,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 mode, projection_size=None, h2p_weight_initializer=None,
+                 mode, projection_size, h2r_weight_initializer,
                  **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
         assert layout in ('TNC', 'NTC'), \
@@ -88,9 +88,9 @@ class _RNNLayer(HybridBlock):
                     self._register_param('{}{}_h2h_bias'.format(j, i),
                                          shape=(ng*nh,),
                                          init=h2h_bias_initializer)
-                    self._register_param('{}{}_h2p_weight'.format(j, i),
+                    self._register_param('{}{}_h2r_weight'.format(j, i),
                                          shape=(np, nh),
-                                         init=h2p_weight_initializer)
+                                         init=h2r_weight_initializer)
                 ni = np * self._dir
 
     def _register_param(self, name, shape, init):
@@ -137,6 +137,7 @@ class _RNNLayer(HybridBlock):
 
     def _unfuse(self):
         """Unfuses the fused RNN in to a stack of rnn cells."""
+        assert self._projection_size is None, "_unfuse does not support projection layer yet!"
         get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
                                                                   activation='relu',
                                                                   **kwargs),
@@ -148,7 +149,6 @@ class _RNNLayer(HybridBlock):
                     'gru': lambda **kwargs: rnn_cell.GRUCell(self._hidden_size,
                                                              **kwargs)}[self._mode]
 
-        assert self._projection_size is not None, "_unfuse does not support projection layer yet!"
         stack = rnn_cell.HybridSequentialRNNCell(prefix=self.prefix, params=self.params)
         with stack.name_scope():
             ni = self._input_size
@@ -213,7 +213,7 @@ class _RNNLayer(HybridBlock):
         skip_states = states is None
         if skip_states:
             if F is ndarray:
-                states = self.begin_state(batch_size, ctx=inputs.context)
+                states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
             else:
                 states = self.begin_state(0, func=symbol.zeros)
         if isinstance(states, tensor_types):
@@ -244,8 +244,8 @@ class _RNNLayer(HybridBlock):
                       for t in ['weight', 'bias']
                       for l in range(self._num_layers)
                       for d in ['l', 'r'][:self._dir]
-                      for g in ['i2h', 'h2h', 'h2p']
-                      if g != 'h2p' or t != 'bias']
+                      for g in ['i2h', 'h2h', 'h2r']
+                      if g != 'h2r' or t != 'bias']
 
         params = F._internal._rnn_param_concat(*params, dim=0)
 
@@ -352,7 +352,7 @@ class RNN(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'rnn_'+activation, **kwargs)
+                                  'rnn_'+activation, None, None, **kwargs)
 
     def state_info(self, batch_size=0):
         return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
@@ -452,12 +452,12 @@ class LSTM(_RNNLayer):
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 projection_size=None, h2p_weight_initializer=None, **kwargs):
+                 projection_size=None, h2r_weight_initializer=None, **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
                                    i2h_weight_initializer, h2h_weight_initializer,
                                    i2h_bias_initializer, h2h_bias_initializer,
-                                   'lstm', projection_size, h2p_weight_initializer, **kwargs)
+                                   'lstm', projection_size, h2r_weight_initializer, **kwargs)
 
     def state_info(self, batch_size=0):
         if self._projection_size is None:
@@ -564,7 +564,7 @@ class GRU(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'gru', **kwargs)
+                                  'gru', None, None, **kwargs)
 
     def state_info(self, batch_size=0):
         return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),

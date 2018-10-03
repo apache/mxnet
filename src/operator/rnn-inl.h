@@ -184,7 +184,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 
     DMLC_DECLARE_FIELD(p).set_default(0.)
     .set_range(0, 1)
-    .describe("Dropout probability, fraction of the input that gets dropped out at training time");
+    .describe("drop rate of the dropout on the outputs of each RNN layer, except the last layer.");
 
     DMLC_DECLARE_FIELD(state_outputs).set_default(false)
     .describe("Whether to have the states as symbol outputs.");

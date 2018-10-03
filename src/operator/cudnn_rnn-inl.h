@@ -26,6 +26,10 @@
 #ifndef MXNET_OPERATOR_CUDNN_RNN_INL_H_
 #define MXNET_OPERATOR_CUDNN_RNN_INL_H_
 
+#define USE_CUDNN_RNN_PROJ MXNET_USE_CUDNN == 1 && ((CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2)\
+    || CUDNN_MAJOR > 7)
+
+
 #include <mxnet/storage.h>
 #include <vector>
 #include <map>
@@ -69,12 +73,17 @@ class CuDNNRNNOp : public Operator {
       default:
         LOG(FATAL) << "Not implmented";
     }
-#if MXNET_USE_CUDNN == 1 && ((CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7)
-    CHECK((param_.mode == rnn_enum::kLstm) || !param_.projection_size.has_value())
+#if USE_CUDNN_RNN_PROJ
+    if (param_.projection_size.has_value()) {
+      CHECK_EQ(param_.mode, rnn_enum::kLstm)
+        << "Projection is only supported for LSTM.";
+      CHECK_GE(param_.state_size, param_.projection_size.value())
+        << "State size must be larger than state size.";
+    }
 #else
     CHECK(!param_.projection_size.has_value())
+      << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
 #endif
-      << "Projection is only supported for LSTM with CuDNN version later than 7.1.1";
     // RNN Direction
     direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
     // Other
@@ -129,11 +138,11 @@ class CuDNNRNNOp : public Operator {
         Storage::Get()->Free(dropout_states_);
       }
     }
-    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
-    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
-    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
-    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
-    // CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
+    #if USE_CUDNN_RNN_PROJ
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
     #endif
   }
 
@@ -181,7 +190,7 @@ class CuDNNRNNOp : public Operator {
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
-    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    #if USE_CUDNN_RNN_PROJ
     std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
     if (param_.projection_size.has_value()) {
       CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
@@ -224,7 +233,7 @@ class CuDNNRNNOp : public Operator {
     }
     #endif
     if (ctx.is_train) {
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       if (!param_.projection_size.has_value())
       #endif
       {
@@ -249,7 +258,7 @@ class CuDNNRNNOp : public Operator {
                                            workspace_byte_,
                                            reserve_space_.dptr,
                                            reserve_space_byte_));
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       } else {
         CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
                                              rnn_desc_,
@@ -284,7 +293,7 @@ class CuDNNRNNOp : public Operator {
       }
       #endif
     } else {
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       if (!param_.projection_size.has_value())
       #endif
       {
@@ -308,7 +317,7 @@ class CuDNNRNNOp : public Operator {
                                             cy_ptr,
                                             temp_space.dptr_,
                                             workspace_byte_));
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       } else {
         CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
                                               rnn_desc_,
@@ -411,7 +420,7 @@ class CuDNNRNNOp : public Operator {
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
-    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    #if USE_CUDNN_RNN_PROJ
     if (!param_.projection_size.has_value()) {
     #else
     {
@@ -458,7 +467,7 @@ class CuDNNRNNOp : public Operator {
                                          dw.dptr_,
                                          reserve_space_.dptr,
                                          reserve_space_byte_));
-    #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+    #if USE_CUDNN_RNN_PROJ
     } else {
       CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                         rnn_desc_,
@@ -588,7 +597,7 @@ class CuDNNRNNOp : public Operator {
       y_desc_vec_ = y_vec;
       dx_desc_vec_ = dx_vec;
       dy_desc_vec_ = dy_vec;
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
       CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
       CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
@@ -602,7 +611,7 @@ class CuDNNRNNOp : public Operator {
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       int dimB[3];
       int strideB[3];
       dimB[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
@@ -617,7 +626,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
                                             dtype_,
                                             3,
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
@@ -632,7 +641,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
                                             dtype_,
                                             3,
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
@@ -647,7 +656,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
                                             dtype_,
                                             3,
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
@@ -662,7 +671,7 @@ class CuDNNRNNOp : public Operator {
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
                                             dtype_,
                                             3,
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
@@ -723,7 +732,7 @@ class CuDNNRNNOp : public Operator {
       #endif
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
       #endif
-      #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+      #if USE_CUDNN_RNN_PROJ
       if (param_.projection_size.has_value()) {
         CUDNN_CALL(cudnnSetRNNProjectionLayers(s->dnn_handle_,
                                                rnn_desc_,
@@ -819,7 +828,7 @@ class CuDNNRNNOp : public Operator {
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, dropout_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
-  #if (CUDNN_MAJOR == 7 && CUDNN_MINOR >= 2) || CUDNN_MAJOR > 7
+  #if USE_CUDNN_RNN_PROJ
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
   #endif
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;

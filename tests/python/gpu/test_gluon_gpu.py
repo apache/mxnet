@@ -80,66 +80,120 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
 
-def check_lstmp(hidden_size, projection_size, rtol=1e-3, atol=1e-6):
-    batch_size = 1
-    seq_len = 1
+@with_seed()
+@assert_raises_cudnn_disabled()
+def test_lstmp():
+    hidden_size, projection_size = 4096, 2048
+    rtol, atol = 1e-3, 1e-6
+    batch_size, seq_len = 32, 80
     input_size = random.randint(100, 300)
-    in_data = {'rnn_t%d_data' % i: rand_ndarray((batch_size, input_size), stype='default') for i in range(seq_len)}
-    i2h_weight = rand_ndarray((hidden_size*4, input_size), stype='default').as_in_context(mx.gpu(0))
-    i2h_bias = rand_ndarray((hidden_size*4, ), stype='default').as_in_context(mx.gpu(0))
-    h2h_weight = rand_ndarray((hidden_size*4, projection_size), stype='default').as_in_context(mx.gpu(0))
-    h2h_bias = rand_ndarray((hidden_size*4, ), stype='default').as_in_context(mx.gpu(0))
-    h2p_weight = rand_ndarray((projection_size, hidden_size), stype='default').as_in_context(mx.gpu(0))
-    lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size, input_size=input_size, prefix='lstm0_')
-    lstm_layer.collect_params().initialize(ctx=mx.gpu(0))
-    cudnn_input = mx.nd.stack(*(in_data.values()))
-    _ = lstm_layer(cudnn_input)
-    for name, param in lstm_layer.collect_params().items():
-        if "i2h_weight" in name:
-            param.set_data(i2h_weight)
-        if "i2h_bias" in name:
-            param.set_data(i2h_bias)
-        if "h2h_weight" in name:
-            param.set_data(h2h_weight)
-        if "h2h_bias" in name:
-            param.set_data(h2h_bias)
-        if "h2p_weight" in name:
-            param.set_data(h2p_weight)
-    cudnn_output = lstm_layer(cudnn_input).asnumpy()
-    syms = [mx.sym.Variable("rnn_t%d_data" % i) for i  in range(seq_len)]
-    cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size, projection_size=projection_size, prefix='self_')
-    syms, _ = cell.unroll(seq_len, syms)
-    sym = mx.sym.Group(syms)
-    args = in_data.copy()
-    args['self_i2h_weight'] = i2h_weight
-    args['self_h2h_weight'] = h2h_weight
-    args['self_i2h_bias'] = i2h_bias
-    args['self_h2h_bias'] = h2h_bias
-    args['self_h2r_weight'] = h2p_weight
-    exe = sym.bind(mx.gpu(0), args)
-    exe.forward()
-    outputs = list(map(lambda x: x.asnumpy(), exe.outputs))
-    self_outputs = np.stack(outputs)
-    assert_almost_equal(self_outputs, cudnn_output, rtol=rtol, atol=atol)
+    lstm_input = rand_ndarray((seq_len, batch_size, input_size)).as_in_context(mx.gpu(0))
+    shapes = {'i2h_weight': (hidden_size*4, input_size),
+              'h2h_weight': (hidden_size*4, projection_size),
+              'i2h_bias': (hidden_size*4,),
+              'h2h_bias': (hidden_size*4,),
+              'h2r_weight': (projection_size, hidden_size)}
+    weights = {k: rand_ndarray(v) for k, v in shapes.items()}
+    lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
+                                input_size=input_size, prefix='lstm0_')
+    lstm_cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size,
+                                            projection_size=projection_size,
+                                            input_size=input_size,
+                                            prefix='lstm0_l0_')
+    lstm_layer.initialize(ctx=mx.gpu(0))
+    lstm_cell.initialize(ctx=mx.gpu(0))
+    layer_params = lstm_layer.collect_params()
+    cell_params = lstm_layer.collect_params()
+    for k, v in weights.items():
+        layer_params['lstm0_l0_'+k].set_data(v)
+        cell_params['lstm0_l0_'+k].set_data(v)
+    with autograd.record():
+        layer_output = lstm_layer(lstm_input)
+        cell_output = lstm_cell.unroll(seq_len, lstm_input, layout='TNC',
+                                       merge_outputs=True)[0]
+    assert_almost_equal(layer_output.asnumpy(), cell_output.asnumpy(), rtol=rtol, atol=atol)
+    layer_output.backward()
+    cell_output.backward()
+    for k, v in weights.items():
+        layer_grad = layer_params['lstm0_l0_'+k].grad
+        cell_grad = cell_params['lstm0_l0_'+k].grad
+        print('checking gradient for {}'.format('lstm0_l0_'+k))
+        assert_almost_equal(layer_grad.asnumpy(), cell_grad.asnumpy(),
+                            rtol=rtol, atol=atol)
 
 
 @with_seed()
 @assert_raises_cudnn_disabled()
 def test_rnn_layer():
-    # check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
-    # check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
-    # check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
-    # check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
-    #
-    # check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-    # check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
 
-    check_lstmp(500, 100, rtol=1e-3, atol=1e-6)
-    # check_rnn_layer_forward(gluon.rnn.LSTM(7, projection_size=5), mx.nd.ones((2, 3, 7)), run_only=False)
-    # check_rnn_layer_forward(gluon.rnn.LSTM(7, 2, projection_size=5), mx.nd.ones((2, 3, 7)), run_only=False)
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+    check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.nd.ones((8, 3, 20)), [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))])
+
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, projection_size=5), mx.nd.ones((8, 3, 20)),
+                            run_only=True)
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, projection_size=5),
+                            mx.nd.ones((8, 3, 20)),
+                            [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))], run_only=True)
+
+
+@assert_raises_cudnn_disabled()
+def test_layer_bidirectional():
+    class RefBiLSTM(gluon.Block):
+        def __init__(self, size, proj_size, **kwargs):
+            super(RefBiLSTM, self).__init__(**kwargs)
+            with self.name_scope():
+                self._lstm_fwd = gluon.rnn.LSTM(size, projection_size=proj_size, bidirectional=False, prefix='l0')
+                self._lstm_bwd = gluon.rnn.LSTM(size, projection_size=proj_size, bidirectional=False, prefix='r0')
+
+        def forward(self, inpt):
+            fwd = self._lstm_fwd(inpt)
+            bwd_inpt = nd.flip(inpt, 0)
+            bwd = self._lstm_bwd(bwd_inpt)
+            bwd = nd.flip(bwd, 0)
+            return nd.concat(fwd, bwd, dim=2)
+
+    size = 7
+    in_size = 5
+    proj_size = 3
+    weights = {}
+    for d in ['l', 'r']:
+        weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
+        weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, proj_size))
+        weights['lstm_{}0_h2r_weight'.format(d)] = mx.random.uniform(shape=(proj_size, size))
+        weights['lstm_{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+        weights['lstm_{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+
+    net = gluon.rnn.LSTM(size, projection_size=proj_size, bidirectional=True, prefix='lstm_')
+    ref_net = RefBiLSTM(size, proj_size, prefix='lstm_')
+    net.initialize()
+    ref_net.initialize()
+    net_params = net.collect_params()
+    ref_net_params = ref_net.collect_params()
+    for k in weights:
+        net_params[k].set_data(weights[k])
+        ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
+
+    data = mx.random.uniform(shape=(11, 10, in_size))
+    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
 
 
 @with_seed()
+@assert_raises_cudnn_disabled()
+def test_rnn_layer_begin_state_type():
+    fake_data = nd.random.uniform(shape=(3, 5, 7), dtype='float16')
+    modeling_layer = gluon.rnn.LSTM(hidden_size=11, num_layers=2, dropout=0.2, bidirectional=True)
+    modeling_layer.cast('float16')
+    modeling_layer.initialize()
+    modeling_layer(fake_data)
+
+
 def test_gluon_ctc_consistency():
     loss = mx.gluon.loss.CTCLoss()
     data = mx.nd.arange(0, 4, repeat=40, ctx=mx.gpu(0)).reshape((2,20,4)).flip(axis=0)
