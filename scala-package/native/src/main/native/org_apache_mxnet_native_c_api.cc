@@ -1581,37 +1581,28 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
-  if (ret != 0) {
-    if (jkeys != NULL) {
-      for (int i = 0; i < jnumArgs; i++) {
-        jstring jkey = reinterpret_cast<jstring>(env->GetObjectArrayElement(jkeys, i));
-        env->ReleaseStringUTFChars(jkey, keys[i]);
-        env->DeleteLocalRef(jkey);
-      }
+  if (ret == 0) {
+    jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+    jmethodID listAppend = env->GetMethodID(listClass,
+      "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+    if (FillSymbolInferShape(env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
+      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+      return -1;
     }
-    return ret;
-  }
+    if (FillSymbolInferShape(
+          env, listAppend, joutShapeData, outShapeSize, outShapeNdim, outShapeData)) {
+      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+      return -1;
+    }
+    if (FillSymbolInferShape(
+          env, listAppend, jauxShapeData, auxShapeSize, auxShapeNdim, auxShapeData)) {
+      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+      return -1;
+    }
 
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
-  jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
-
-  if (FillSymbolInferShape(env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
-    // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-    return -1;
+    SetIntField(env, jcomplete, complete);
   }
-  if (FillSymbolInferShape(
-        env, listAppend, joutShapeData, outShapeSize, outShapeNdim, outShapeData)) {
-    // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-    return -1;
-  }
-  if (FillSymbolInferShape(
-        env, listAppend, jauxShapeData, auxShapeSize, auxShapeNdim, auxShapeData)) {
-    // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-    return -1;
-  }
-
-  SetIntField(env, jcomplete, complete);
 
   // release allocated memory
   if (jkeys != NULL) {
