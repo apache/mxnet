@@ -311,6 +311,12 @@ def test_batchnorm_with_type():
   check_consistency(sym, ctx_list_v2_2D)
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
+  # Don't specify fix_beta. Default i.e., fix_beta=False will be verified.
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_2D)
+  # Don't specify fix_gamma. Default i.e., fix_gamma=False will be verified.
+  sym = mx.sym.BatchNorm(name='norm', fix_beta=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_2D)
 
   # V2, 1D
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=False, cudnn_off=True)
@@ -321,13 +327,24 @@ def test_batchnorm_with_type():
   check_consistency(sym, ctx_list_v2_1D)
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_1D)
-  #
+  # Don't specify fix_beta. Default i.e., fix_beta=False will be verified.
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_1D)
+  # Don't specify fix_gamma. Default i.e., fix_gamma=False will be verified.
+  sym = mx.sym.BatchNorm(name='norm', fix_beta=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_1D)
+
   # # V2, 3D
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_3D)
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_3D)
-
+  # Don't specify fix_beta. Default i.e., fix_beta=False will be verified.
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_3D)
+  # Don't specify fix_gamma. Default i.e., fix_gamma=False will be verified.
+  sym = mx.sym.BatchNorm(name='norm', fix_beta=False, cudnn_off=True)
+  check_consistency(sym, ctx_list_v2_3D)
 
 @with_seed()
 def test_batchnorm_versions():

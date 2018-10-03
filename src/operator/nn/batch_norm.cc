@@ -200,14 +200,14 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
         // Case 3
         // fix_gamma = True
         // fix_beta = False
-      if (IsBNWriting(req[batchnorm::kData])) {
-        ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
-                      *out_data = static_cast<DType>(
-                        ((*in_data - thisMean) * thisInvstd) + thisBias);
-                    });
-      }
+        if (IsBNWriting(req[batchnorm::kData])) {
+          ForEachFast(inputData, outputData, channel,
+                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
+                                                                   DType *out_data) {
+                        *out_data = static_cast<DType>(
+                          ((*in_data - thisMean) * thisInvstd) + thisBias);
+                      });
+        }
       } else {
         // Case 4
         // fix_gamma = True
