@@ -24,7 +24,7 @@ import org.apache.mxnet.NDArray
  * @author Yizhi Liu
  */
 class MXNDArray(@transient private var ndArray: NDArray) extends Serializable {
-  require(ndArray != null)
+  require(ndArray != null, "Undefined ndArray")
   private val arrayBytes: Array[Byte] = ndArray.serialize()
 
   def get: NDArray = {

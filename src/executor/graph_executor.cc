@@ -44,6 +44,7 @@ GraphExecutor::GraphExecutor() {
   log_verbose_ = dmlc::GetEnv("MXNET_EXEC_VERBOSE_LOGGING", false);
   need_grad_ = false;
   subgraph_property_ = dmlc::GetEnv("MXNET_SUBGRAPH_BACKEND", std::string());
+  engine_ref_ = Engine::_GetSharedRef();
 }
 
 GraphExecutor::~GraphExecutor() {
@@ -141,8 +142,8 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
   if (v.empty()) {
     nnvm::NodePtr ng = nnvm::Node::Create();
-    ng->attrs.op = zeros_op;
-    ng->attrs.name = "zeros";
+    ng->attrs.op = Op::Get("_zeros_without_dtype");
+    ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
     return nnvm::NodeEntry{ng, 0, 0};
   }

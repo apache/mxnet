@@ -427,7 +427,7 @@ object NDArray extends NDArrayBase {
    * @return An `NDArray` that lives on the same context as `arrays[0].context`.
    */
   def concatenate(arrays: Seq[NDArray], axis: Int = 0, alwaysCopy: Boolean = true): NDArray = {
-    require(arrays.size > 0)
+    require(arrays.size > 0, "Provide at least one array")
 
     val array0 = arrays(0)
     if (!alwaysCopy && arrays.size == 1) {
@@ -439,9 +439,12 @@ object NDArray extends NDArrayBase {
 
       val shapeAxis =
         arrays.map(arr => {
-          require(shapeRest1 == arr.shape.slice(0, axis))
-          require(shapeRest2 == arr.shape.slice(axis + 1, arr.shape.length))
-          require(dtype == arr.dtype)
+          require(shapeRest1 == arr.shape.slice(0, axis),
+            s"Mismatch between shape $shapeRest1 and ${arr.shape}")
+          require(shapeRest2 == arr.shape.slice(axis + 1, arr.shape.length),
+            s"Mismatch between shape $shapeRest2 and ${arr.shape}")
+          require(dtype == arr.dtype,
+            s"All arrays must have the same type (got ${dtype} and ${arr.dtype})")
           arr.shape(axis)
         }).sum
       val retShape = shapeRest1 ++ Shape(shapeAxis) ++ shapeRest2
@@ -484,7 +487,7 @@ object NDArray extends NDArrayBase {
    *     - `s3://my-bucket/path/my-s3-ndarray`
    *     - `hdfs://my-bucket/path/my-hdfs-ndarray`
    *     - `/path-to/my-local-ndarray`
-   * @return dict of str->NDArray to be saved
+    * @return dict of str->NDArray
    */
   def load(fname: String): (Array[String], Array[NDArray]) = {
     val outSize = new MXUintRef
@@ -492,7 +495,8 @@ object NDArray extends NDArrayBase {
     val handles = ArrayBuffer.empty[NDArrayHandle]
     val names = ArrayBuffer.empty[String]
     checkCall(_LIB.mxNDArrayLoad(fname, outSize, handles, outNameSize, names))
-    require(outNameSize.value == 0 || outNameSize.value == outSize.value)
+    require(outNameSize.value == 0 || outNameSize.value == outSize.value,
+      s"Mismatch between names and arrays in file $fname")
     (names.toArray, handles.map(new NDArray(_)).toArray)
   }
 
@@ -1003,7 +1007,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     val ndim = new MXUintRef
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
-    require(ndim.value == data.length, s"ndim=$ndim, while len(pdata)=${data.length}")
+    require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
     Shape(data)
   }
 

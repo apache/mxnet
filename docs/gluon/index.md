@@ -2,11 +2,14 @@
 
 ![gluon logo](https://github.com/dmlc/web-data/blob/master/mxnet/image/image-gluon-logo.png?raw=true)
 
-Based on the [the Gluon API specification](https://github.com/gluon-api/gluon-api), the new Gluon library in Apache MXNet provides a clear, concise, and simple API for deep learning. It makes it easy to prototype, build, and train deep learning models without sacrificing training speed. Install the latest version of MXNet to get access to Gluon by either following these easy steps or using this simple command:
+Based on the [the Gluon API specification](https://github.com/gluon-api/gluon-api), the new Gluon library in Apache MXNet provides a clear, concise, and simple API for deep learning. It makes it easy to prototype, build, and train deep learning models without sacrificing training speed. [Install the latest version of MXNet](/install/) to get access to Gluon.
 
-```bash
-    pip install mxnet
-```
+To get started with Gluon, checkout the following resources and tutorials:
+* [60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/) - six 10-minute lessons on using Gluon
+* [GluonCV Toolkit](https://gluon-cv.mxnet.io/) - implementations of state of the art deep learning algorithms in **Computer Vision (CV)**
+* [GluonNLP Toolkit](https://gluon-nlp.mxnet.io/) - implementations of state of the art deep learning algorithms in **Natural Language Processing (NLP)**
+* [Gluon: The Straight Dope](https://gluon.mxnet.io/) - notebooks designed to teach deep learning from the ground up, all using the Gluon API
+
 <br/>
 <div class="boxed">
     Advantages
@@ -19,6 +22,7 @@ Based on the [the Gluon API specification](https://github.com/gluon-api/gluon-ap
 3. Dynamic Graphs: Gluon enables developers to define neural network models that are dynamic, meaning they can be built on the fly, with any structure, and using any of Python’s native control flow.
 
 4. High Performance: Gluon provides all of the above benefits without impacting the training speed that the underlying engine provides.
+
 <br/>
 <div class="boxed">
     The Straight Dope
@@ -96,3 +100,12 @@ with net.name_scope():
 ```python
 net.hybridize()
 ```
+
+## Learn More
+
+* [Gluon API Documentation](/api/python/gluon/gluon.html)
+* [Gluon Tutorials](/tutorials/)
+* [60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/)
+* [GluonCV Toolkit](https://gluon-cv.mxnet.io/)
+* [GluonNLP Toolkit](https://gluon-nlp.mxnet.io/)
+* [Gluon: The Straight Dope](https://gluon.mxnet.io/)

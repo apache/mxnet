@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(GridGeneratorParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   if (dtype == mshadow::kFloat32) {
     op = new GridGeneratorOp<cpu, float>(param);
   } else {

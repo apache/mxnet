@@ -67,7 +67,7 @@ Profiler::Profiler()
   this->gpu_num_ = 0;
 #endif
 
-  this->profile_stat = new DeviceStats[cpu_num_ + gpu_num_ + 2];
+  this->profile_stat = std::unique_ptr<DeviceStats[]>(new DeviceStats[cpu_num_ + gpu_num_ + 2]);
   for (unsigned int i = 0; i < cpu_num_; ++i) {
     this->profile_stat[i].dev_name_ = "cpu/" + std::to_string(i);
   }

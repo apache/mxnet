@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 require(mxnet)
 
 context("symbol")
@@ -106,7 +123,7 @@ test_that("symbol concat", {
   expect_equal(outputs(children(s3)), c("data1", "data2"))
   expect_equal(arguments(s3), c("data1", "data2"))
   
-  s4 <- mx.symbol.Concat(data = c(s1, s2), num.args = 2, name = "concat")
+  s4 <- mx.symbol.concat(data = c(s1, s2), num.args = 2, name = "concat")
   expect_equal(outputs(s3), outputs(s4))
   expect_equal(outputs(children(s3)), outputs(children(s4)))
   expect_equal(arguments(s3), arguments(s4))
