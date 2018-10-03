@@ -470,12 +470,12 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
       data, weight, param.no_bias ? nullptr : bias, out_grad);
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
-  MKLDNNConvBackward &convBwd = GetConvBwd(attrs, inputs[conv::kData + 1],
-             inputs[conv::kWeight + 1], nullptr, inputs[conv::kOut], fwd_pd);
+  MKLDNNConvBackward &convBwd = GetConvBwd(attrs, data,
+      weight, nullptr, inputs[conv::kOut], fwd_pd);
   auto out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
       convBwd.bwdData_pd.diff_dst_primitive_desc());
   if (req[conv::kData]) {
-    auto weight_mem = GetWeights(inputs[conv::kWeight + 1],
+    auto weight_mem = GetWeights(weight,
         convBwd.bwdData_pd.weights_primitive_desc(), param.num_group);
     auto in_grad_mem = CreateMKLDNNMem(in_grad[conv::kData],
         convBwd.bwdData_pd.diff_src_primitive_desc(), req[conv::kData]);
@@ -484,14 +484,14 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
     CommitOutput(in_grad[conv::kData], in_grad_mem);
   }
   if (req[conv::kWeight]) {
-    MKLDNNConvBackward &convBwdWeight = GetConvBwd(attrs, inputs[conv::kData + 1],
-             inputs[conv::kWeight + 1], param.no_bias ? nullptr : &inputs[conv::kBias + 1],
+    MKLDNNConvBackward &convBwdWeight = GetConvBwd(attrs, data,
+        weight, param.no_bias ? nullptr : &bias,
              inputs[conv::kOut], fwd_pd);
     if (convBwdWeight.bwdData_pd.diff_dst_primitive_desc() !=
         convBwdWeight.bwdWeights_pd.diff_dst_primitive_desc())
       out_grad_mem = inputs[conv::kOut].GetMKLDNNDataReorder(
           convBwdWeight.bwdWeights_pd.diff_dst_primitive_desc());
-    auto data_mem = inputs[conv::kData + 1].GetMKLDNNDataReorder(
+    auto data_mem = data.GetMKLDNNDataReorder(
         convBwdWeight.bwdWeights_pd.src_primitive_desc());
     auto in_grad_weight = CreateMKLDNNWeightGrad(
         in_grad[conv::kWeight],
