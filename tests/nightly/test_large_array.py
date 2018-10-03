@@ -15,17 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import unittest
 import mxnet as mx
 from mxnet import gluon, nd
 
-def test_ndarray2numpy():
-    m = gluon.nn.Embedding(14000, 128)
-    m.initialize()
-    ind = nd.zeros((700000, 128))
-    x = m(ind)
-    x.shape
-    test=x.asnumpy()
-    assert (x.shape == test.shape)
+
+class TestLargeArray(unittest.TestCase):
+    def test_ndarray2numpy(self):
+        m = gluon.nn.Embedding(14000, 128)
+        m.initialize()
+        ind = nd.zeros((700000, 128))
+        x = m(ind)
+        x.shape
+        test = x.asnumpy()
+        assert (x.shape == test.shape)
 
 if __name__ == '__main__':
-    test_ndarray2numpy()
+    unittest.main()
