@@ -460,17 +460,24 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const DeconvolutionParam &param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+
+  auto data = inputs[deconv::kData + 1];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+
+  auto weight = inputs[deconv::kWeight + 1];
+  if (weight.IsView() && weight.IsMKLDNNData())
+    weight = weight.Reorder2Default();
+  
   CHECK_NE(req[deconv::kWeight], kWriteInplace)
       << "cannot write weight inplace";
   MKLDNNDeconvBackwardData &bwd_data =
-      GetDeconvBwdData(param, inputs[deconv::kData + 1],
-                       inputs[deconv::kWeight + 1], inputs[deconv::kOut]);
+      GetDeconvBwdData(param, data, weight, inputs[deconv::kOut]);
   auto out_grad_mem = inputs[deconv::kOut].GetMKLDNNDataReorder(
       bwd_data.pd.src_primitive_desc());
   if (req[deconv::kData]) {
     auto weight_mem =
-        GetWeights(inputs[deconv::kWeight + 1],
-                   bwd_data.pd.weights_primitive_desc(), param.num_group);
+        GetWeights(weight, bwd_data.pd.weights_primitive_desc(), param.num_group);
     auto in_grad_mem =
         CreateMKLDNNMem(in_grad[deconv::kData],
                         bwd_data.pd.dst_primitive_desc(), req[deconv::kData]);
@@ -480,12 +487,12 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
   }
   if (req[deconv::kWeight]) {
     MKLDNNDeconvBackwardWeights &bwd_weights = GetDeconvBwdWeights(
-        param, inputs[deconv::kData + 1], inputs[deconv::kWeight + 1],
+        param, data, weight,
         inputs[deconv::kOut], bwd_data.pd);
     if (bwd_data.pd.src_primitive_desc() != bwd_weights.pd.src_primitive_desc())
       out_grad_mem = inputs[deconv::kOut].GetMKLDNNDataReorder(
           bwd_weights.pd.src_primitive_desc());
-    auto data_mem = inputs[deconv::kData + 1].GetMKLDNNDataReorder(
+    auto data_mem = data.GetMKLDNNDataReorder(
         bwd_weights.pd.diff_dst_primitive_desc());
     auto in_grad_weight = CreateMKLDNNWeightGrad(
         in_grad[deconv::kWeight], bwd_weights.pd.diff_weights_primitive_desc(),
