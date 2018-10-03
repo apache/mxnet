@@ -77,6 +77,7 @@ USE_CUDNN = 0
 USE_OPENCV = 1
 
 # use openmp for parallelization
+# apple-clang by default does not have openmp built-in
 USE_OPENMP = 0
 
 # choose the version of blas you want to use
