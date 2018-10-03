@@ -333,11 +333,11 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
       n_parsed_ -= n_to_copy;
       // Copy
       #pragma omp parallel for num_threads(param_.preprocess_threads)
-      for (uint32_t i = 0; i < n_to_copy; ++i) {
+      for (int i = 0; i < static_cast<int>(n_to_copy); ++i) {
         omp_exc_.Run([&] {
         std::pair<size_t, size_t> place = inst_order_[inst_index_ + i];
         const DataInst& batch = temp_[place.first][place.second];
-        for (uint32_t j = 0; j < batch.data.size(); ++j) {
+        for (size_t j = 0; j < batch.data.size(); ++j) {
           CHECK_EQ(unit_size_[j], batch.data[j].Size());
           MSHADOW_TYPE_SWITCH(out->data[j].data().type_flag_, dtype, {
           mshadow::Copy(
