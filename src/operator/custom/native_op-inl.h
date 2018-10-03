@@ -206,7 +206,7 @@ class NativeOpProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    for (const auto &kwarg : kwargs) {
+    for (const auto& kwarg : kwargs) {
       if (kwarg.first == "info") {
         sscanf(kwarg.second.c_str(), "%p", &param_.pinfo);
       }
@@ -229,7 +229,7 @@ class NativeOpProp : public OperatorProperty {
     for (const auto& s : *in_shape) size += s.ndim();
     std::vector<uint32_t> shapes_buffer(size);
     uint32_t *ptr = shapes_buffer.data();
-    for (auto &shape : *in_shape) {
+    for (const auto& shape : *in_shape) {
       shapes.push_back(ptr);
       ndims.push_back(shape.ndim());
       ptr = nnvm::ShapeTypeCast(shape.begin(), shape.end(), ptr);

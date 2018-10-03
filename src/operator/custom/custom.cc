@@ -91,7 +91,7 @@ void AttrParser(NodeAttrs* attrs) {
   CustomParam& params = nnvm::get<CustomParam>(attrs->parsed);
 
   std::vector<const char*> keys, vals;
-  for (auto &p : attrs->dict) {
+  for (auto& p : attrs->dict) {
     if (p.first == "op_type") {
       params.op_type = p.second;
     } else {
@@ -185,7 +185,7 @@ bool InferType(const NodeAttrs& attrs,
   for (size_t i = 0; i < params.num_args; ++i) {
     types.push_back((*in_type)[i]);
   }
-  for (const auto &i : *out_type) {
+  for (const auto& i : *out_type) {
     types.push_back(i);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
@@ -387,7 +387,7 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
     cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
-  for (auto &ptr : ptrs) {
+  for (const auto& ptr : ptrs) {
     NDArray* nd;
     if (ptr == nullptr) {
         nd = new NDArray();

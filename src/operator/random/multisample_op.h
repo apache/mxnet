@@ -78,7 +78,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
     tshape = TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
   // Shape assignemnt/checking for inputs.
-  for (const auto &in_attr : *in_attrs) {
+  for (const auto& in_attr : *in_attrs) {
     if ( !shape_assign(&tshape, in_attr)) return false;
   }
   for (size_t i = 0; i < in_attrs->size(); ++i) {

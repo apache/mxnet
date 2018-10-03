@@ -102,7 +102,7 @@ class CommDeviceTree : public CommDevice {
 
     if (stype == kDefaultStorage) {
       // Copy everything into buf.merged for each gpu
-      for (const auto &src_gpu_value : src) {
+      for (const auto& src_gpu_value : src) {
         int start = scan_[root][depth_];
         int end = scan_[root][depth_+1];
 
@@ -401,7 +401,7 @@ class CommDeviceTree : public CommDevice {
     bool delay_alloc = true;
     std::map<int, int> key_dist;
 
-    for (auto &tree_sorted_key_attr : tree_sorted_key_attrs_) {
+    for (auto& tree_sorted_key_attr : tree_sorted_key_attrs_) {
       const int key  = std::get<0>(tree_sorted_key_attr);
       const TShape& shape = std::get<1>(tree_sorted_key_attr);
       const int type = std::get<2>(tree_sorted_key_attr);
@@ -485,7 +485,7 @@ class CommDeviceTree : public CommDevice {
       }
     }
 
-    for (auto &it : key_dist) {
+    for (auto& it : key_dist) {
       LOG(INFO) << "Size " << it.first << " occurs " << it.second << " times";
     }
     inited_ = true;

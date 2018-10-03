@@ -1130,7 +1130,7 @@ void GraphExecutor::InitCachedOps() {
 
     // the variables
     std::vector<Engine::VarHandle> use_vars, mutate_vars;
-    for (auto &nd : exec->in_array) {
+    for (const auto& nd : exec->in_array) {
       use_vars.push_back(nd.var());
     }
     for (auto& r : exec->op_ctx.requested) {
@@ -1550,7 +1550,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
   std::vector<Context> aux_state_ctxes(aux_states.size());
 
   size_t i1 = 0, i2 = 0;
-  for (const auto &input_name : input_names) {
+  for (const auto& input_name : input_names) {
     if (i2 < aux_names.size() && aux_names[i2] == input_name) {
       arg_shapes.push_back(aux_states[i2].shape());
       arg_dtypes.push_back(aux_states[i2].dtype());

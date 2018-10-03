@@ -231,7 +231,7 @@ class CommCPU : public Comm {
       << "BroadcastRowSparse expects row-sparse src NDArray";
     CHECK_EQ(src.ctx().dev_mask(), Context::kCPU)
       << "BroadcastRowSparse with src on gpu context not supported";
-    for (const auto &dst_kv : dst) {
+    for (const auto& dst_kv : dst) {
       NDArray* out = dst_kv.first;
       NDArray row_id = dst_kv.second;
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
@@ -621,7 +621,7 @@ class CommDevice : public Comm {
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
       << "BroadcastRowSparse expects row-sparse src NDArray";
 
-    for (const auto &dst_kv : dst) {
+    for (const auto& dst_kv : dst) {
       NDArray* out = dst_kv.first;
       NDArray row_id = dst_kv.second;
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
@@ -686,14 +686,14 @@ class CommDevice : public Comm {
       ctx_info[d.dev_id] = std::make_pair(d, 0);
     }
 
-    for (auto &sorted_key_attr : sorted_key_attrs_) {
+    for (auto& sorted_key_attr : sorted_key_attrs_) {
       const int key  = std::get<0>(sorted_key_attr);
       const TShape& shape = std::get<1>(sorted_key_attr);
       const int type = std::get<2>(sorted_key_attr);
       auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
-      for (auto &ctx_info_kv : ctx_info) {
+      for (auto& ctx_info_kv : ctx_info) {
         size_t size = ctx_info_kv.second.second;
         if (size <= min_size) {
           ctx = ctx_info_kv.second.first;

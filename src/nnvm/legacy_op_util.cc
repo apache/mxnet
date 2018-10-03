@@ -388,13 +388,13 @@ std::vector<std::pair<int, int> > OpBackInplaceOption(const NodeAttrs& attrs) {
   std::vector<int> out_data_index(prop.outputs.size());
 
   int counter = 0;
-  for (int &i : in_data_index) {
+  for (const int& i : in_data_index) {
     in_data_index[i] = counter++;
   }
-  for (int &i : out_grad_index) {
+  for (const int& i : out_grad_index) {
     out_grad_index[i] = counter++;
   }
-  for (int &i : out_data_index) {
+  for (const int& i : out_data_index) {
     out_data_index[i] = counter++;
   }
 

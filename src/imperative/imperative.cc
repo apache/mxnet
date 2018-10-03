@@ -348,7 +348,7 @@ std::vector<NDArray*> Imperative::Backward(
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
-  for (const auto &e : g_graph.outputs) {
+  for (const auto& e : g_graph.outputs) {
     if (e.node->op() == nullptr) {
       auto node = Node::Create();
       node->attrs.op = copy_op;
@@ -375,7 +375,9 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<OpStatePtr> states;
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto &i : buff) arrays.push_back(&i);
+  for (auto& i : buff) {
+    arrays.push_back(&i);
+  }
   if (create_graph) {
     states.resize(num_forward_nodes);
     nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
@@ -390,7 +392,7 @@ std::vector<NDArray*> Imperative::Backward(
         ref_count[eid] = 1;
       }
     });
-    for (auto &ograd_entry : ograd_entries) {
+    for (auto& ograd_entry : ograd_entries) {
       AGInfo& info = AGInfo::Get(ograd_entry.node);
       if (!idx.exist(ograd_entry.node.get())) continue;
       size_t eid = idx.entry_id(ograd_entry);
@@ -409,7 +411,7 @@ std::vector<NDArray*> Imperative::Backward(
         if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
       }
     }
-    for (auto &ograd_entry : ograd_entries) {
+    for (auto& ograd_entry : ograd_entries) {
       if (!idx.exist(ograd_entry.node.get())) continue;
       AGInfo& info = AGInfo::Get(ograd_entry.node);
       arrays[idx.entry_id(ograd_entry)] = &info.outputs[0];

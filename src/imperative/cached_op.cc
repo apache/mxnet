@@ -658,7 +658,7 @@ void CachedOp::StaticRunOps(
         arg_dtypes.clear();
         arg_shapes.reserve(ndinputs.size());
         arg_dtypes.reserve(ndinputs.size());
-        for (auto &ndinput : ndinputs) {
+        for (auto& ndinput : ndinputs) {
           arg_shapes.emplace_back(ndinput->shape());
           arg_dtypes.emplace_back(ndinput->dtype());
         }
@@ -784,7 +784,7 @@ OpStatePtr CachedOp::DynamicForward(
   states.reserve(idx.num_nodes());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto &i : buff) arrays.push_back(&i);
+  for (auto& i : buff) arrays.push_back(&i);
   for (size_t i = 0; i < num_inputs; ++i) {
     arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
   }
@@ -907,7 +907,7 @@ void CachedOp::DynamicBackward(
   buff.resize(idx.num_node_entries());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto &i : buff) arrays.push_back(&i);
+  for (auto& i : buff) arrays.push_back(&i);
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (runtime.info.bwd_input_eid[i] == kEidNotExist) {
       continue;
@@ -1177,8 +1177,9 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
       in_ptrs.push_back(&(*it));
   }
   CHECK_EQ(in_ptrs.size(), s.op->num_backward_inputs());
-  for (auto &out_buf : out_bufs)
+  for (auto& out_buf : out_bufs) {
     out_ptrs.push_back(&out_buf);
+  }
   CHECK_EQ(out_ptrs.size(), s.op->num_backward_outputs());
   // Set is_training correct for the imperative executor.
   bool orig_is_train;
@@ -1283,7 +1284,7 @@ void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
     nnvm::Symbol sym;
     sym.outputs = g.outputs;
     std::vector<std::pair<std::string, std::string> > flags;
-    for (auto &attr : attrs->dict)
+    for (const auto& attr : attrs->dict)
       flags.emplace_back(attr.first, attr.second);
     attrs->parsed = CachedOpPtr(new CachedOp(sym, flags));
   }

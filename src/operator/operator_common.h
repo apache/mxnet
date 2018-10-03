@@ -337,7 +337,7 @@ inline bool storage_type_assign(StorageTypeVector* stypes,
                                 const DispatchMode target_dispatch) {
   CHECK_GT(stypes->size(), 0);
   bool success = true;
-  for (int &stype : *stypes) {
+  for (int& stype : *stypes) {
     if (!type_assign(&stype, target_stype)) {
       success = false;
     }

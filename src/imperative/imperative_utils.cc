@@ -79,7 +79,7 @@ void RunGraph(
       arg_dtypes.clear();
       arg_shapes.reserve(ndinputs.size());
       arg_dtypes.reserve(ndinputs.size());
-      for (auto &ndinput : ndinputs) {
+      for (auto& ndinput : ndinputs) {
         arg_shapes.emplace_back(ndinput->shape());
         arg_dtypes.emplace_back(ndinput->dtype());
       }

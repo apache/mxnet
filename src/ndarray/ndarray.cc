@@ -122,7 +122,7 @@ NDArray::Chunk::~Chunk() {
       }
 #endif
       if (mem.h.size > 0) Storage::Get()->Free(mem.h);
-      for (const auto &aux : mem.aux_h) {
+      for (const auto& aux : mem.aux_h) {
         if (aux.size > 0) Storage::Get()->Free(aux);
       }
     }
@@ -1280,7 +1280,7 @@ void CopyFromTo(const NDArray& from, const NDArray *to, int priority) {
 void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority) {
   std::vector<Engine::VarHandle> const_vars;
   const_vars.reserve(source.size());
-  for (const auto &source_array : source) {
+  for (const auto& source_array : source) {
     if (source_array.var() != out->var()) {
       const_vars.push_back(source_array.var());
     }

@@ -349,7 +349,7 @@ class ImageDetLabel {
     if (!valid) return false;
     // transform ground-truth labels
     std::vector<ImageDetObject> new_objects;
-    for (auto &object : objects_) {
+    for (auto& object : objects_) {
       if (image_det_aug_default_enum::kCenter == crop_emit_mode) {
         float center_x = (object.left + object.right) * 0.5f;
         float center_y = (object.top + object.bottom) * 0.5f;
@@ -375,7 +375,7 @@ class ImageDetLabel {
    */
   bool TryPad(const Rect pad_box) {
     // update all objects inplace
-    for (auto &object : objects_) {
+    for (auto& object : objects_) {
       object = object.Project(pad_box);
     }
     return true;
@@ -384,7 +384,7 @@ class ImageDetLabel {
   /*! \brief flip image and object coordinates horizontally */
   bool TryMirror() {
     // flip all objects horizontally
-    for (auto &object : objects_) {
+    for (auto& object : objects_) {
       object = object.HorizontalFlip();
     }
     return true;

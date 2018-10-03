@@ -215,7 +215,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    for (auto &kwarg : kwargs_left) {
+    for (auto& kwarg : kwargs_left) {
         if (!strcmp(kwarg.first.c_str(), "rotate_list")) {
           const char* val = kwarg.second.c_str();
           const char *end = val + strlen(val);
