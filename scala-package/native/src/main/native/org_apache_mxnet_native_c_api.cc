@@ -1589,8 +1589,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
         env->DeleteLocalRef(jkey);
       }
     }
-    jclass illArgClass = env->FindClass("java/lang/IllegalArgumentException");
-    return env->ThrowNew(illArgClass, MXGetLastError());
+    return ret;
   }
 
   jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
