@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2017 Microsoft
+ * Copyright (c) 2017 by Contributors
  * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file psroi_pooling.cc
  * \brief psroi pooling operator
@@ -231,7 +231,7 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(PSROIPoolingParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new PSROIPoolingOp<cpu, DType>(param);
   });
