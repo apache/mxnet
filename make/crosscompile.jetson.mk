@@ -56,6 +56,9 @@ DEBUG = 0
 # whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER = 1
 
+# Enable TensorRT on Jetson devices (requires nvinfer library installed via Jetpack)
+USE_TENSORRT = 1
+
 # the additional link flags you want to add
 ADD_LDFLAGS = -L${CROSS_ROOT}/lib
 
