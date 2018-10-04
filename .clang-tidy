@@ -54,7 +54,8 @@ Checks: >
 
 # In order to trigger an error, you must have a rule defined both in checks and in this section.
 WarningsAsErrors: >
-    cppcoreguidelines-no-malloc, modernize-use-nullptr, performance-unnecessary-copy-initialization
+    cppcoreguidelines-no-malloc, modernize-use-nullptr, performance-unnecessary-copy-initialization,
+    modernize-use-emplace, performance-move-const-arg
 
 # Todo: define a better regex match that includes most project headers, but excludes third party
 # code.

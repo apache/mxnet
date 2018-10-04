@@ -191,7 +191,7 @@ int _CreatePartialOut(const char* symbol_json_str,
       if (known_shape.count(key) != 0) {
         in_shapes.push_back(known_shape[key]);
       } else {
-        in_shapes.push_back(TShape());
+        in_shapes.emplace_back();
       }
     }
     nnvm::Graph g; g.outputs = sym.outputs;
@@ -369,7 +369,7 @@ int MXPredReshape(mx_uint num_input_nodes,
       if (new_shape.count(key) != 0) {
         in_shapes.push_back(new_shape[key]);
       } else {
-        in_shapes.push_back(TShape());
+        in_shapes.emplace_back();
       }
     }
     nnvm::Graph g; g.outputs = ret->sym.outputs;
