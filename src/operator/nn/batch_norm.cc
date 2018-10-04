@@ -78,7 +78,7 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
 
   for (size_t outer = 0; outer < num; ++outer) {
     for (size_t i = 0; i < matrixSize; ++i) {
-      onData(data++, odata++);
+      (data++, odata++);
     }
     data  += skipLength;
     odata += skipLength;
@@ -212,17 +212,17 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
         // Case 4
         // fix_gamma = True
         // fix_beta = True
-          if (IsBNWriting(req[batchnorm::kBeta])) {
-            b[channel] = AccReal(0);
-          }
-          if (IsBNWriting(req[batchnorm::kData])) {
-            ForEachFast(inputData, outputData, channel,
-                        [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                     DType *out_data) {
-                          *out_data = static_cast<DType>(
-                            ((*in_data - thisMean) * thisInvstd));
-                        });
-          }
+        if (IsBNWriting(req[batchnorm::kBeta])) {
+          b[channel] = AccReal(0);
+        }
+        if (IsBNWriting(req[batchnorm::kData])) {
+          ForEachFast(inputData, outputData, channel,
+                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
+                                                                    DType *out_data) {
+                        *out_data = static_cast<DType>(
+                          ((*in_data - thisMean) * thisInvstd));
+                      });
+        }
       }
     }
   }
