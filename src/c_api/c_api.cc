@@ -500,6 +500,31 @@ int MXNDArrayGetData(NDArrayHandle handle,
   API_END();
 }
 
+int MXNDArrayToDLPack(NDArrayHandle handle,
+                      DLManagedTensorHandle *out_dlpack) {
+  API_BEGIN();
+  NDArray *arr = static_cast<NDArray*>(handle);
+  *out_dlpack = arr->ToDLPack();
+  API_END();
+}
+
+int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                        NDArrayHandle *out_handle) {
+  API_BEGIN();
+  *out_handle = new NDArray(NDArray::FromDLPack(
+              static_cast<DLManagedTensor*>(dlpack)));
+  API_END();
+}
+
+int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack) {
+  API_BEGIN();
+  if (dlpack != nullptr) {
+    DLManagedTensor *p_dlpack = static_cast<DLManagedTensor*>(dlpack);
+    p_dlpack->deleter(p_dlpack);
+  }
+  API_END();
+}
+
 int MXNDArrayGetDType(NDArrayHandle handle,
                      int *out_dtype) {
   API_BEGIN();

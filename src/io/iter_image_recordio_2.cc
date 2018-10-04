@@ -119,6 +119,8 @@ class ImageRecordIOParser2 {
   bool legacy_shuffle_;
   // whether mean image is ready.
   bool meanfile_ready_;
+  /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
+  dmlc::OMPException omp_exc_;
 };
 
 template<typename DType>
@@ -331,6 +333,7 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
       // Copy
       #pragma omp parallel for num_threads(param_.preprocess_threads)
       for (int i = 0; i < n_to_copy; ++i) {
+        omp_exc_.Run([&] {
         std::pair<unsigned, unsigned> place = inst_order_[inst_index_ + i];
         const DataInst& batch = temp_[place.first][place.second];
         for (unsigned j = 0; j < batch.data.size(); ++j) {
@@ -342,7 +345,9 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
               batch.data[j].get_with_shape<cpu, 1, dtype>(mshadow::Shape1(unit_size_[j])));
           });
         }
+        });
       }
+      omp_exc_.Rethrow();
       n_to_out = n_to_copy;
       inst_index_ += n_to_copy;
     }
@@ -486,6 +491,7 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
   unsigned gl_idx = current_size;
   #pragma omp parallel num_threads(param_.preprocess_threads)
   {
+    omp_exc_.Run([&] {
     CHECK(omp_get_num_threads() == param_.preprocess_threads);
     unsigned int tid = omp_get_thread_num();
     // dmlc::RecordIOChunkReader reader(*chunk, tid, param_.preprocess_threads);
@@ -603,7 +609,9 @@ inline unsigned ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t
         mshadow::Shape1(label_buf.size())));
       res.release();
     }
+  });
   }
+  omp_exc_.Rethrow();
   return (std::min(batch_param_.batch_size, gl_idx) - current_size);
 #else
   LOG(FATAL) << "Opencv is needed for image decoding and augmenting.";
