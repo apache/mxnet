@@ -608,9 +608,9 @@ class RNNProp : public OperatorProperty {
     if (!param_.state_outputs)
       return outputs;
     else
-      outputs.push_back("state");
+      outputs.emplace_back("state");
     if (param_.mode == rnn_enum::kLstm)
-      outputs.push_back("state_cell");
+      outputs.emplace_back("state_cell");
     return outputs;
   }
 

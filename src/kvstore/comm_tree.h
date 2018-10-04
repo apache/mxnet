@@ -395,7 +395,7 @@ class CommDeviceTree : public CommDevice {
     // 2) Force copy_buf to be of kRecvBufferSize
     // 3) Do not use greedy assignment; all keys are assigned to each GPU
     for (unsigned i = 0; i < devs_.size(); ++i)
-      tree_merge_buf_.push_back(std::unordered_map<int, TreeBufferEntry>());
+      tree_merge_buf_.emplace_back();
 
     bool delay_alloc = true;
     std::map<int, int> key_dist;
@@ -457,7 +457,7 @@ class CommDeviceTree : public CommDevice {
               if (row == devs_.size()-1)
                 shape_copy[0] = last_slice;
               buf.merged[row] = NDArray(shape_copy, ctx, delay_alloc, type);
-              buf.copy_buf.push_back(std::vector<NDArray>());
+              buf.copy_buf.emplace_back();
               if (buf.copy_buf[row].empty()) {
                 buf.copy_buf[row].resize(kBranch-1);
                 for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
@@ -469,9 +469,9 @@ class CommDeviceTree : public CommDevice {
               }
             }
           } else {
-            buf.merged.push_back(NDArray(shape, ctx, false, type));
+            buf.merged.emplace_back(shape, ctx, false, type);
             if (buf.copy_buf.empty()) {
-              buf.copy_buf.push_back(std::vector<NDArray>());
+              buf.copy_buf.emplace_back();
               buf.copy_buf[0].resize(kBranch-1);
               for (size_t col = 0; col < buf.copy_buf[0].size(); ++col) {
                 buf.copy_buf[0][col] = NDArray(buf.merged[0].shape(),

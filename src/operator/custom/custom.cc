@@ -81,7 +81,7 @@ std::vector<std::string> List(const NodeAttrs& attrs) {
       &args, params.info->contexts[Type]));
   std::vector<std::string> ret;
   for (int i = 0; args[i] != nullptr; ++i) {
-    ret.push_back(args[i]);
+    ret.emplace_back(args[i]);
   }
   return ret;
 }

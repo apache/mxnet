@@ -60,7 +60,7 @@ Graph UpgradeJSON_FixParsing(Graph g) {
         for (const auto key : kHiddenKeys) {
           size_t pos = it->first.rfind(key);
           if (pos == 0 || (pos != std::string::npos && pos == it->first.length() - key.length())) {
-            hidden_keys.push_back(*it);
+            hidden_keys.emplace_back(*it);
             erase = true;
             break;
           }

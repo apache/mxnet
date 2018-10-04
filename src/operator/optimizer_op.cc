@@ -384,7 +384,7 @@ only the row slices whose indices appear in grad.indices are updated (for both w
   [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
     std::vector<ResourceRequest> request;
     if (dispatch_mode == DispatchMode::kFComputeEx) {
-      request.push_back(ResourceRequest::kTempSpace);
+      request.emplace_back(ResourceRequest::kTempSpace);
     }
     return request;
   })
