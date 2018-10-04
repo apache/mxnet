@@ -14,24 +14,34 @@ def check_params(use_bias, activation):
         raise ValueError("Activation '{}' is not supported for a binary layer.")
 
 
-def quantize(F, x, bits):
+def quantize(F, x, bits, use_dorefa_weight_activation=False):
+    def quantize_k(x):
+        vmax = 2 ** bits - 1
+        return F.round_ste(x * vmax) / vmax
+
     if bits == 1:
         return F.det_sign(x)
     elif bits < 32:
-        raise NotImplementedError("Quantized not yet supported.")
+        if use_dorefa_weight_activation:
+            act_x = 0.5 * F.tanh(x) / F.max(F.abs(F.tanh(x))) + 0.5
+            return 2 * quantize_k(act_x) - 1
+        else:
+            return quantize_k(x.clip(0, 1))
     else:
         return x
 
 
 class QActivation(HybridBlock):
-    def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0, **kwargs):
+    def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0,
+                 use_dorefa_weight_activation=False, **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
         self.bits = bits
         self.threshold = gradient_cancel_threshold
+        self.use_dorefa = use_dorefa_weight_activation
 
     def hybrid_forward(self, F, x):
         x = F.contrib.gradcancel(x, threshold=self.threshold)
-        x = quantize(F, x, self.bits)
+        x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
         return x
 
 
@@ -83,9 +93,11 @@ class _QConv(_Conv):
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = reduce(mul, weight.shape[1:], 1)
-        quantized_weight = quantize(F, weight, self.bits)
+        quantized_weight = quantize(F, weight, self.bits, use_dorefa_weight_activation=True)
         padded = self._apply_pre_padding(F, x)
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
+        if 1 < self.activation < 32:
+            return h
         return (h + self._offset) / 2
 
 

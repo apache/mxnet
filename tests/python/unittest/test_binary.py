@@ -8,6 +8,8 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet.gluon import nn
 import pytest
 
+from qconvolution import qconv_fwd, qconv_bwd, dorefa_weight_act, dorefa_weight_act_grad, bound_activation, \
+    bound_activation_grad, quantize_k, quantize_k_grad
 
 def forward(x, *block_sequence):
     hidden = x
@@ -200,3 +202,73 @@ def test_grad_cancel(threshold):
     y.backward()
     exp_grad[np.abs(npy) > threshold] = 0
     np.testing.assert_almost_equal(exp_grad, x.grad.asnumpy())
+
+
+"""
+    Test DoReFa > 2 bit quantization
+"""
+
+
+@pytest.mark.parametrize("bits_a", [2, 3, 8, 16])
+@pytest.mark.parametrize("use_dorefa_weight_activation", [True, False])
+@pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS[1:2])
+def test_qactivation(bits_a, input_shape, test_conv, layer, use_dorefa_weight_activation, args, kwargs):
+    d = np.random.uniform(-1, 1, input_shape)
+    in_data = mx.nd.array(d)
+    in_data.attach_grad()
+
+    act1 = nn.QActivation(bits=bits_a, backward_only=False, use_dorefa_weight_activation=use_dorefa_weight_activation)
+    with autograd.record():
+        y = act1.forward(in_data)
+        loss = y.sum()
+    loss.backward()
+    gradients, result = in_data.grad.asnumpy(), y.asnumpy()
+
+    expected_result = quantize_k(bound_activation(d), bits_a)
+    expected_gradient = quantize_k_grad(bound_activation(d)) * bound_activation_grad(d) * gradients
+
+    if use_dorefa_weight_activation:
+        expected_result = 2 * quantize_k(dorefa_weight_act(d), bits_a) - 1
+        expected_gradient = 2 * dorefa_weight_act_grad(d)
+
+    np.testing.assert_almost_equal(expected_result, result)
+    np.testing.assert_almost_equal(expected_gradient, gradients)
+
+
+CONV_TEST_PARAMS = [
+    # in_channels = 0 means it will be inferred later
+    ((1, 2, 5, 5), {"kernel_size": 3, "strides": 1, "padding": 1, "in_channels": 2}),
+    ((1, 2, 4, 4), {"kernel_size": 2, "strides": 2, "padding": 0, "in_channels": 2}),
+]
+
+
+@pytest.mark.parametrize("bits", [2, 3, 16])
+@pytest.mark.parametrize("activation", [2, 3, 16])
+@pytest.mark.parametrize("channels", [16])
+#@pytest.mark.parametrize("scaling", [True, False])
+@pytest.mark.parametrize("input_shape,kwargs", CONV_TEST_PARAMS)
+def test_qconvolution(bits, activation, channels, input_shape, kwargs, scaling=False):
+    d = np.random.uniform(-1, 1, input_shape)
+    in_data = mx.nd.array(d)
+    in_data.attach_grad()
+
+    qconv = nn.QConv2D(channels, bits=bits, activation=activation, **kwargs)
+    qconv.initialize(mx.init.Xavier(magnitude=2))
+    w = qconv.weight.data().asnumpy()
+
+    with autograd.record():
+        y = qconv.forward(in_data)
+        loss = y.sum()
+    loss.backward()
+    result = y.asnumpy()
+    gradients_x = in_data.grad.asnumpy()
+    gradients_w = qconv.weight.grad().asnumpy()
+
+    params = {'act_bit': activation, 'weight_bit': bits, 'sy': kwargs['strides'], 'sx': kwargs['strides'],
+              'ph': kwargs['padding'], 'pw': kwargs['padding'], 'pval': -1, 'scaling': scaling}
+    expected_result = qconv_fwd(d, w, **params)
+    expected_gradients_x, expected_gradients_w = qconv_bwd(d, w, np.ones_like(expected_result), **params)
+
+    np.testing.assert_almost_equal(expected_result, result)
+    np.testing.assert_almost_equal(expected_gradients_x, gradients_x)
+    np.testing.assert_almost_equal(expected_gradients_w, gradients_w)
