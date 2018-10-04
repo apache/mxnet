@@ -211,8 +211,7 @@ def _get_dockerhub_credentials():  # pragma: no cover
             logging.exception("The request was invalid due to:")
         elif client_error.response['Error']['Code'] == 'InvalidParameterException':
             logging.exception("The request had invalid params:")
-        else:
-            raise
+        raise
     else:
         secret = get_secret_value_response['SecretString']
         secret_dict = json.loads(secret)
