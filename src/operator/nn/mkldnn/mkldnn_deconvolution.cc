@@ -298,9 +298,18 @@ void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &c
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
 
+  auto data = in_data[deconv::kData];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+
+  auto weight = in_data[deconv::kWeight];
+  if (weight.IsView() && weight.IsMKLDNNData())
+    weight = weight.Reorder2Default();
+
+  const NDArray* bias = param.no_bias ? nullptr : &in_data[deconv::kBias];
+
   MKLDNNDeconvForward &deconvFwd = GetDeconvFwd(
-      attrs, in_data[deconv::kData], in_data[deconv::kWeight],
-      param.no_bias ? nullptr : &in_data[deconv::kBias], out_data[deconv::kOut]);
+      attrs, data, weight, bias, out_data[deconv::kOut]);
 
   deconvFwd.SetDataHandle(param, ctx, in_data, req, out_data);
 
@@ -468,7 +477,7 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
   auto weight = inputs[deconv::kWeight + 1];
   if (weight.IsView() && weight.IsMKLDNNData())
     weight = weight.Reorder2Default();
-  
+
   CHECK_NE(req[deconv::kWeight], kWriteInplace)
       << "cannot write weight inplace";
   MKLDNNDeconvBackwardData &bwd_data =
