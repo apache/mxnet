@@ -20,28 +20,41 @@
 set -e
 
 echo $OSTYPE
-platform=linux-x86_64-cpu
+
+hw_type=cpu
+if [ "$1" = "gpu" ]
+then
+    hw_type=gpu
+fi
+
+platform=linux-x86_64
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-        platform=osx-x86_64-cpu
+        platform=osx-x86_64
+fi
+
+platform=linux-x86_64
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+        platform=osx-x86_64
 fi
 
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
 
-MODEL_NAME=$1
+MODEL_NAME=$2
 
-RUNS=$2
+RUNS=$3
 
-BATCHSIZE=$3
+BATCHSIZE=$4
 
 # model dir
-MODEL_PATH_PREFIX=$4
+MODEL_PATH_PREFIX=$5
 # input image
-INPUT_IMG=$5
+INPUT_IMG=$6
 # which input image dir
-INPUT_DIR=$6
+INPUT_DIR=$7
 
 java -Xmx8G -Dmxnet.traceLeakedObjects=true -cp $CLASS_PATH \
 	org.apache.mxnetexamples.benchmark.ScalaInferenceBenchmark \

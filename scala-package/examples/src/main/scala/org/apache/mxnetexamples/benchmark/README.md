@@ -26,14 +26,15 @@ To help you easily run the benchmarks, a starter shell script has been provided 
 Each of the script takes some parameters as inputs, details of which can be found either in the bash scripts or in the example classes itself. 
 
 * *ImageClassification Example*
-<br> The following shows an example of running ImageClassifier under the benchmark script. The script takes in the number of iterations for inference calls, the batch size for batch inference calls, the model path, input file, and input directory. 
+<br> The following shows an example of running ImageClassifier under the benchmark script. The script takes as parameters, the platform type (cpu/gpu), number of iterations for inference calls, the batch size for batch inference calls, the model path, input file, and input directory. 
 For more details to run ImageClassificationExample as a standalone file, refer to the [README](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/imageclassifier/README.md) for ImageClassifierExample.
 You may need to run ```chmod u+x run_image_inference_bm.sh``` before running this script.
     ```bash
     cd <Path-To-MXNET-Repo>/scala-package/examples/scripts/infer/imageclassifier
     ./get_resnet_data.sh
     cd <Path-To-MXNET-Repo>/scala-package/examples/scripts/benchmark
-    ./run_image_inference_bm.sh ImageClassifierExample 100 10 ../infer/models/resnet-152/resnet-152 ../infer/images/kitten.jpg ../infer/images/
+    ./run_image_inference_bm.sh gpu ImageClassifierExample 100 10 ../infer/models/resnet-152/resnet-152 ../infer/images/kitten.jpg ../infer/images/
+    ./run_image_inference_bm.sh cpu ImageClassifierExample 100 10 ../infer/models/resnet-152/resnet-152 ../infer/images/kitten.jpg ../infer/images/
     ```
     Upon running this script, you might see an output like this : 
     ```
