@@ -831,7 +831,7 @@ def test_order():
     # Repeat those tests that don't involve indices.  These should pass even with
     # duplicated input data values (over many repeated runs with different random seeds,
     # this will be tested).
-    for dtype in [ np.int32, np.int64, np.float32, np.float64]:
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
         a_npy = get_values(ensure_unique=False, dtype=dtype)
         a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
