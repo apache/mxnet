@@ -52,6 +52,7 @@ class _RNNLayer(HybridBlock):
         self._h2h_weight_initializer = h2h_weight_initializer
         self._i2h_bias_initializer = i2h_bias_initializer
         self._h2h_bias_initializer = h2h_bias_initializer
+        self._h2r_weight_initializer = h2r_weight_initializer
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
@@ -240,12 +241,12 @@ class _RNNLayer(HybridBlock):
                       for d in ['l', 'r'][:self._dir]
                       for g in ['i2h', 'h2h'])
         else:
-            params = [kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
                       for t in ['weight', 'bias']
                       for l in range(self._num_layers)
                       for d in ['l', 'r'][:self._dir]
                       for g in ['i2h', 'h2h', 'h2r']
-                      if g != 'h2r' or t != 'bias']
+                      if g != 'h2r' or t != 'bias')
 
         params = F._internal._rnn_param_concat(*params, dim=0)
 

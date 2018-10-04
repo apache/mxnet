@@ -107,6 +107,13 @@ class CuDNNRNNOp : public Operator {
 
     CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
+
+    #if USE_CUDNN_RNN_PROJ
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
+    #endif
   }
 
   ~CuDNNRNNOp() {
@@ -192,55 +199,49 @@ class CuDNNRNNOp : public Operator {
                               mshadow::Shape1(temp_size), s);
     #if USE_CUDNN_RNN_PROJ
     std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
-    if (param_.projection_size.has_value()) {
-      CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
+    CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
+                                         dtype_,
+                                         CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                         param_.seq_length_,
+                                         param_.batch_size_,
+                                         param_.input_size_,
+                                         seqLengthArray.data(),
+                                         nullptr));
+    int out_size =
+      (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
+    out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
+    CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
+                                         dtype_,
+                                         CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                         param_.seq_length_,
+                                         param_.batch_size_,
+                                         out_size,
+                                         seqLengthArray.data(),
+                                         nullptr));
+    if (ctx.is_train) {
+      CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
                                            dtype_,
-                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
+                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
                                            param_.seq_length_,
                                            param_.batch_size_,
                                            param_.input_size_,
                                            seqLengthArray.data(),
                                            nullptr));
-      int out_size =
-        (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
-      out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
-      CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
+      CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
                                            dtype_,
-                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
+                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
                                            param_.seq_length_,
                                            param_.batch_size_,
                                            out_size,
                                            seqLengthArray.data(),
                                            nullptr));
-      if (ctx.is_train) {
-        CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
-                                             dtype_,
-                                             CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
-                                             param_.seq_length_,
-                                             param_.batch_size_,
-                                             param_.input_size_,
-                                             seqLengthArray.data(),
-                                             nullptr));
-        CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
-                                             dtype_,
-                                             CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED,
-                                             param_.seq_length_,
-                                             param_.batch_size_,
-                                             out_size,
-                                             seqLengthArray.data(),
-                                             nullptr));
-      }
     }
     #endif
     if (ctx.is_train) {
       #if USE_CUDNN_RNN_PROJ
-      if (!param_.projection_size.has_value())
-      #endif
-      {
-        CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
+      CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
                                            rnn_desc_,
-                                           param_.seq_length_,
-                                           x_desc_vec_.data(),
+                                           x_data_desc_,
                                            x.dptr_,
                                            hx_desc_,
                                            hx.dptr_,
@@ -248,60 +249,52 @@ class CuDNNRNNOp : public Operator {
                                            cx_ptr,
                                            w_desc_,
                                            w.dptr_,
-                                           y_desc_vec_.data(),
+                                           y_data_desc_,
                                            y.dptr_,
                                            hy_desc_,
                                            hy_ptr,
                                            cy_desc_,
                                            cy_ptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
                                            temp_space.dptr_,
                                            workspace_byte_,
                                            reserve_space_.dptr,
                                            reserve_space_byte_));
-      #if USE_CUDNN_RNN_PROJ
-      } else {
-        CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
-                                             rnn_desc_,
-                                             x_data_desc_,
-                                             x.dptr_,
-                                             hx_desc_,
-                                             hx.dptr_,
-                                             cx_desc_,
-                                             cx_ptr,
-                                             w_desc_,
-                                             w.dptr_,
-                                             y_data_desc_,
-                                             y.dptr_,
-                                             hy_desc_,
-                                             hy_ptr,
-                                             cy_desc_,
-                                             cy_ptr,
-                                             nullptr,
-                                             nullptr,
-                                             nullptr,
-                                             nullptr,
-                                             nullptr,
-                                             nullptr,
-                                             nullptr,
-                                             nullptr,
-                                             temp_space.dptr_,
-                                             workspace_byte_,
-                                             reserve_space_.dptr,
-                                             reserve_space_byte_));
-      }
       #else
-      }
+      CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
+                                         rnn_desc_,
+                                         param_.seq_length_,
+                                         x_desc_vec_.data(),
+                                         x.dptr_,
+                                         hx_desc_,
+                                         hx.dptr_,
+                                         cx_desc_,
+                                         cx_ptr,
+                                         w_desc_,
+                                         w.dptr_,
+                                         y_desc_vec_.data(),
+                                         y.dptr_,
+                                         hy_desc_,
+                                         hy_ptr,
+                                         cy_desc_,
+                                         cy_ptr,
+                                         temp_space.dptr_,
+                                         workspace_byte_,
+                                         reserve_space_.dptr,
+                                         reserve_space_byte_));
       #endif
     } else {
       #if USE_CUDNN_RNN_PROJ
-      if (!param_.projection_size.has_value())
-      #endif
-      {
-        // inference mode
-        CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
+      CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
                                             rnn_desc_,
-                                            param_.seq_length_,
-                                            x_desc_vec_.data(),
+                                            x_data_desc_,
                                             x.dptr_,
                                             hx_desc_,
                                             hx.dptr_,
@@ -309,45 +302,42 @@ class CuDNNRNNOp : public Operator {
                                             cx_ptr,
                                             w_desc_,
                                             w.dptr_,
-                                            y_desc_vec_.data(),
+                                            y_data_desc_,
                                             y.dptr_,
                                             hy_desc_,
                                             hy_ptr,
                                             cy_desc_,
                                             cy_ptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
                                             temp_space.dptr_,
                                             workspace_byte_));
-      #if USE_CUDNN_RNN_PROJ
-      } else {
-        CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
-                                              rnn_desc_,
-                                              x_data_desc_,
-                                              x.dptr_,
-                                              hx_desc_,
-                                              hx.dptr_,
-                                              cx_desc_,
-                                              cx_ptr,
-                                              w_desc_,
-                                              w.dptr_,
-                                              y_data_desc_,
-                                              y.dptr_,
-                                              hy_desc_,
-                                              hy_ptr,
-                                              cy_desc_,
-                                              cy_ptr,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr,
-                                              nullptr,
-                                              temp_space.dptr_,
-                                              workspace_byte_));
-      }
       #else
-      }
+      CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
+                                          rnn_desc_,
+                                          param_.seq_length_,
+                                          x_desc_vec_.data(),
+                                          x.dptr_,
+                                          hx_desc_,
+                                          hx.dptr_,
+                                          cx_desc_,
+                                          cx_ptr,
+                                          w_desc_,
+                                          w.dptr_,
+                                          y_desc_vec_.data(),
+                                          y.dptr_,
+                                          hy_desc_,
+                                          hy_ptr,
+                                          cy_desc_,
+                                          cy_ptr,
+                                          temp_space.dptr_,
+                                          workspace_byte_));
       #endif
     }
   }
@@ -421,17 +411,14 @@ class CuDNNRNNOp : public Operator {
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
     #if USE_CUDNN_RNN_PROJ
-    if (!param_.projection_size.has_value()) {
-    #else
-    {
-    #endif
-      CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
+    CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
                                       rnn_desc_,
-                                      param_.seq_length_,
-                                      y_desc_vec_.data(),
+                                      y_data_desc_,
                                       y.dptr_,
-                                      dy_desc_vec_.data(),
+                                      dy_data_desc_,
                                       dy.dptr_,
+                                      nullptr,
+                                      nullptr,
                                       dhy_desc_,
                                       dhy_ptr,
                                       dcy_desc_,
@@ -442,24 +429,25 @@ class CuDNNRNNOp : public Operator {
                                       hx.dptr_,
                                       cx_desc_,
                                       cx_ptr,
-                                      dx_desc_vec_.data(),
+                                      dx_data_desc_,
                                       dx.dptr_,
                                       dhx_desc_,
                                       dhx.dptr_,
                                       dcx_desc_,
                                       dcx_ptr,
+                                      nullptr,
+                                      nullptr,
                                       temp_space.dptr_,
                                       workspace_byte_,
                                       reserve_space_.dptr,
                                       reserve_space_byte_));
-      CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
+    CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
                                          rnn_desc_,
-                                         param_.seq_length_,
-                                         x_desc_vec_.data(),
+                                         x_data_desc_,
                                          x.dptr_,
                                          hx_desc_,
                                          hx.dptr_,
-                                         y_desc_vec_.data(),
+                                         y_data_desc_,
                                          y.dptr_,
                                          temp_space.dptr_,
                                          workspace_byte_,
@@ -467,55 +455,49 @@ class CuDNNRNNOp : public Operator {
                                          dw.dptr_,
                                          reserve_space_.dptr,
                                          reserve_space_byte_));
-    #if USE_CUDNN_RNN_PROJ
-    } else {
-      CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
-                                        rnn_desc_,
-                                        y_data_desc_,
-                                        y.dptr_,
-                                        dy_data_desc_,
-                                        dy.dptr_,
-                                        nullptr,
-                                        nullptr,
-                                        dhy_desc_,
-                                        dhy_ptr,
-                                        dcy_desc_,
-                                        dcy_ptr,
-                                        w_desc_,
-                                        w.dptr_,
-                                        hx_desc_,
-                                        hx.dptr_,
-                                        cx_desc_,
-                                        cx_ptr,
-                                        dx_data_desc_,
-                                        dx.dptr_,
-                                        dhx_desc_,
-                                        dhx.dptr_,
-                                        dcx_desc_,
-                                        dcx_ptr,
-                                        nullptr,
-                                        nullptr,
-                                        temp_space.dptr_,
-                                        workspace_byte_,
-                                        reserve_space_.dptr,
-                                        reserve_space_byte_));
-      CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
-                                           rnn_desc_,
-                                           x_data_desc_,
-                                           x.dptr_,
-                                           hx_desc_,
-                                           hx.dptr_,
-                                           y_data_desc_,
-                                           y.dptr_,
-                                           temp_space.dptr_,
-                                           workspace_byte_,
-                                           dw_desc_,
-                                           dw.dptr_,
-                                           reserve_space_.dptr,
-                                           reserve_space_byte_));
-    }
     #else
-    }
+    CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
+                                    rnn_desc_,
+                                    param_.seq_length_,
+                                    y_desc_vec_.data(),
+                                    y.dptr_,
+                                    dy_desc_vec_.data(),
+                                    dy.dptr_,
+                                    dhy_desc_,
+                                    dhy_ptr,
+                                    dcy_desc_,
+                                    dcy_ptr,
+                                    w_desc_,
+                                    w.dptr_,
+                                    hx_desc_,
+                                    hx.dptr_,
+                                    cx_desc_,
+                                    cx_ptr,
+                                    dx_desc_vec_.data(),
+                                    dx.dptr_,
+                                    dhx_desc_,
+                                    dhx.dptr_,
+                                    dcx_desc_,
+                                    dcx_ptr,
+                                    temp_space.dptr_,
+                                    workspace_byte_,
+                                    reserve_space_.dptr,
+                                    reserve_space_byte_));
+    CUDNN_CALL(cudnnRNNBackwardWeights(s->dnn_handle_,
+                                       rnn_desc_,
+                                       param_.seq_length_,
+                                       x_desc_vec_.data(),
+                                       x.dptr_,
+                                       hx_desc_,
+                                       hx.dptr_,
+                                       y_desc_vec_.data(),
+                                       y.dptr_,
+                                       temp_space.dptr_,
+                                       workspace_byte_,
+                                       dw_desc_,
+                                       dw.dptr_,
+                                       reserve_space_.dptr,
+                                       reserve_space_byte_));
     #endif
   }
 
@@ -559,8 +541,6 @@ class CuDNNRNNOp : public Operator {
         dimA[0] = param_.batch_size_;
         dimA[1] = param_.input_size_;
         dimA[2] = 1;
-        dimA[0] = param_.batch_size_;
-        dimA[1] = param_.input_size_;
         strideA[0] = dimA[2] * dimA[1];
         strideA[1] = dimA[2];
         strideA[2] = 1;
@@ -583,10 +563,10 @@ class CuDNNRNNOp : public Operator {
         strideA[2] = 1;
 
         CUDNN_CALL(cudnnSetTensorNdDescriptor(y_vec[i],
-                                             dtype_,
-                                             3,
-                                             dimA,
-                                             strideA));
+                                              dtype_,
+                                              3,
+                                              dimA,
+                                              strideA));
         CUDNN_CALL(cudnnSetTensorNdDescriptor(dy_vec[i],
                                               dtype_,
                                               3,
@@ -597,12 +577,6 @@ class CuDNNRNNOp : public Operator {
       y_desc_vec_ = y_vec;
       dx_desc_vec_ = dx_vec;
       dy_desc_vec_ = dy_vec;
-      #if USE_CUDNN_RNN_PROJ
-      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
-      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
-      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
-      CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
-      #endif
 
       // set the state tensors
       dimA[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
@@ -623,13 +597,16 @@ class CuDNNRNNOp : public Operator {
       strideB[2] = 1;
       #endif
 
+      #if USE_CUDNN_RNN_PROJ
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
                                             dtype_,
                                             3,
-      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
+                                            dtype_,
+                                            3,
                                             dimA,
                                             strideA));
       #endif
@@ -638,13 +615,16 @@ class CuDNNRNNOp : public Operator {
                                             3,
                                             dimA,
                                             strideA));
+      #if USE_CUDNN_RNN_PROJ
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
                                             dtype_,
                                             3,
-      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
+                                            dtype_,
+                                            3,
                                             dimA,
                                             strideA));
       #endif
@@ -653,13 +633,16 @@ class CuDNNRNNOp : public Operator {
                                             3,
                                             dimA,
                                             strideA));
+      #if USE_CUDNN_RNN_PROJ
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
                                             dtype_,
                                             3,
-      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
+                                            dtype_,
+                                            3,
                                             dimA,
                                             strideA));
       #endif
@@ -668,13 +651,16 @@ class CuDNNRNNOp : public Operator {
                                             3,
                                             dimA,
                                             strideA));
+      #if USE_CUDNN_RNN_PROJ
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
                                             dtype_,
                                             3,
-      #if USE_CUDNN_RNN_PROJ
                                             dimB,
                                             strideB));
       #else
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
+                                            dtype_,
+                                            3,
                                             dimA,
                                             strideA));
       #endif
@@ -699,26 +685,26 @@ class CuDNNRNNOp : public Operator {
                                            seed_));
       // RNN descriptors
       #if CUDNN_MAJOR >= 6
-        cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
-        CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
-                                            rnn_desc_,
-                                            param_.state_size,
-                                            param_.num_layers,
-                                            dropout_desc_,
-                                            input_mode_,
-                                            direction_,
-                                            mode_,
-                                            rnn_algo,
-                                            dtype_));
+      cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
+      CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
+                                          rnn_desc_,
+                                          param_.state_size,
+                                          param_.num_layers,
+                                          dropout_desc_,
+                                          input_mode_,
+                                          direction_,
+                                          mode_,
+                                          rnn_algo,
+                                          dtype_));
       #else
-        CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
-                                         param_.state_size,
-                                         param_.num_layers,
-                                         dropout_desc_,
-                                         input_mode_,
-                                         direction_,
-                                         mode_,
-                                         dtype_));
+      CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
+                                       param_.state_size,
+                                       param_.num_layers,
+                                       dropout_desc_,
+                                       input_mode_,
+                                       direction_,
+                                       mode_,
+                                       dtype_));
       #endif
       #if CUDNN_MAJOR >= 7
         cudnnMathType_t math_type = CUDNN_DEFAULT_MATH;

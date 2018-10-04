@@ -670,16 +670,16 @@ class RNNProp : public OperatorProperty {
                        Shape3(total_layers, batch_size, layer_size));
     if (param_.mode == rnn_enum::kLstm)
       SHAPE_ASSIGN_CHECK(*in_shape,
-                        rnn_enum::kStateCell,
-                        Shape3(total_layers, batch_size, param_.state_size));
+                         rnn_enum::kStateCell,
+                         Shape3(total_layers, batch_size, param_.state_size));
 
     // calculate parameter vector length
     int param_size = GetRnnParamSize(param_.num_layers,
-                                    input_size,
-                                    param_.state_size,
-                                    numDirections,
-                                    param_.mode,
-                                    param_.projection_size);
+                                     input_size,
+                                     param_.state_size,
+                                     numDirections,
+                                     param_.mode,
+                                     param_.projection_size);
     SHAPE_ASSIGN_CHECK(*in_shape, rnn_enum::kParams, Shape1(param_size));
 
     out_shape->clear();
@@ -705,8 +705,13 @@ class RNNProp : public OperatorProperty {
       }
       out_shape->push_back(outStateShape);
       // Deal with lstm cell state
-      if (param_.mode == rnn_enum::kLstm)
-        out_shape->push_back(outStateShape);
+      if (param_.mode == rnn_enum::kLstm) {
+        TShape cellStateShape = dshape;
+        cellStateShape[0] = total_layers;
+        cellStateShape[1] = batch_size;
+        cellStateShape[2] = param_.state_size;
+        out_shape->push_back(cellStateShape);
+      }
       return true;
     }
   }

@@ -83,11 +83,11 @@ def check_rnn_layer_w_rand_inputs(layer):
 @with_seed()
 @assert_raises_cudnn_disabled()
 def test_lstmp():
-    hidden_size, projection_size = 4096, 2048
-    rtol, atol = 1e-3, 1e-6
-    batch_size, seq_len = 32, 80
-    input_size = random.randint(100, 300)
-    lstm_input = rand_ndarray((seq_len, batch_size, input_size)).as_in_context(mx.gpu(0))
+    hidden_size, projection_size = 3, 2
+    rtol, atol = 1e-2, 1e-2
+    batch_size, seq_len = 7, 11
+    input_size = 5
+    lstm_input = mx.nd.uniform(shape=(seq_len, batch_size, input_size), ctx=mx.gpu(0))
     shapes = {'i2h_weight': (hidden_size*4, input_size),
               'h2h_weight': (hidden_size*4, projection_size),
               'i2h_bias': (hidden_size*4,),
@@ -103,20 +103,20 @@ def test_lstmp():
     lstm_layer.initialize(ctx=mx.gpu(0))
     lstm_cell.initialize(ctx=mx.gpu(0))
     layer_params = lstm_layer.collect_params()
-    cell_params = lstm_layer.collect_params()
+    cell_params = lstm_cell.collect_params()
     for k, v in weights.items():
-        layer_params['lstm0_l0_'+k].set_data(v)
-        cell_params['lstm0_l0_'+k].set_data(v)
+        layer_params['lstm0_l0_'+k].set_data(v.copy())
+        cell_params['lstm0_l0_'+k].set_data(v.copy())
     with autograd.record():
-        layer_output = lstm_layer(lstm_input)
-        cell_output = lstm_cell.unroll(seq_len, lstm_input, layout='TNC',
+        layer_output = lstm_layer(lstm_input.copy())
+        cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
                                        merge_outputs=True)[0]
     assert_almost_equal(layer_output.asnumpy(), cell_output.asnumpy(), rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
     for k, v in weights.items():
-        layer_grad = layer_params['lstm0_l0_'+k].grad
-        cell_grad = cell_params['lstm0_l0_'+k].grad
+        layer_grad = layer_params['lstm0_l0_'+k].grad()
+        cell_grad = cell_params['lstm0_l0_'+k].grad()
         print('checking gradient for {}'.format('lstm0_l0_'+k))
         assert_almost_equal(layer_grad.asnumpy(), cell_grad.asnumpy(),
                             rtol=rtol, atol=atol)
