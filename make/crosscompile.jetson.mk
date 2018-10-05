@@ -59,6 +59,9 @@ USE_SIGNAL_HANDLER = 1
 # Enable TensorRT on Jetson devices (requires nvinfer library installed via Jetpack)
 USE_TENSORRT = 1
 
+# Set a default namespace for MXNet's native ONNX converter
+ONNX_NAMESPACE=onnx
+
 # the additional link flags you want to add
 ADD_LDFLAGS = -L${CROSS_ROOT}/lib
 
