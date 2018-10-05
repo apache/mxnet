@@ -108,22 +108,22 @@ build_jetson() {
     pushd .
 
     # Build ONNX
-    # pushd .
-    # echo "Installing ONNX."
-    # cd 3rdparty/onnx-tensorrt/third_party/onnx
-    # rm -rf build
-    # mkdir -p build
-    # cd build
-    # cmake \
-    #     -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} \
-    #     -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a \
-    #     -DBUILD_SHARED_LIBS=OFF .. \
-    #     -G Ninja
-    # ninja -j 1 -v onnx/onnx.proto
-    # ninja -j 1 -v
-    # export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
-    # export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
-    # popd
+    pushd .
+    echo "Installing ONNX."
+    cd 3rdparty/onnx-tensorrt/third_party/onnx
+    rm -rf build
+    mkdir -p build
+    cd build
+    cmake \
+        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} \
+        -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a \
+        -DBUILD_SHARED_LIBS=OFF .. \
+        -G Ninja
+    ninja -j 1 -v onnx/onnx.proto
+    ninja -j 1 -v
+    export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
+    export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    popd
 
     # Build ONNX-TensorRT
     pushd .
