@@ -73,6 +73,9 @@ class _QConv(_Conv):
             padding = (padding,) * len(kernel_size)
         self._pre_padding = padding
 
+    def _alias(self):
+        return 'qconv'
+
     def _apply_pre_padding(self, F, x):
         if sum(self._pre_padding) > 0:
             assert self._kwargs["layout"] == "NCHW", \

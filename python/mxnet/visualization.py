@@ -193,8 +193,37 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
+def shrink_binary_layers(nodes):
+    delete = None
+    for i, node in enumerate(nodes):
+        op = node["op"]
+        name = node["name"]
+
+        if "_qconv" in name and any(x in name for x in ["__plusscalar", "__divscalar", "_det_sign", "_pad"]):
+            delete = i
+            break
+
+        if "_qactivation" in name and ("_gradcancel" in name):
+            delete = i
+            break
+
+    if delete is None:
+        return nodes, False
+
+    del nodes[delete]
+
+    for node in nodes:
+        inputs = node["inputs"]
+        new_inputs = []
+        for a, b, c in inputs:
+            if a >= delete:
+                a = a-1
+            new_inputs.append([a, b, c])
+        node["inputs"] = new_inputs
+    return nodes, True
+
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
-                 hide_weights=True):
+                 hide_weights=True, consolidate_binary_layers=True):
     """Creates a visualization (Graphviz digraph object) of the given computation graph.
     Graphviz must be installed for this function to work.
 
@@ -278,6 +307,11 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                        '_moving_var', '_moving_mean', '_running_var', '_running_mean')
         return name.endswith(weight_like)
 
+    if consolidate_binary_layers:
+        nodes, changed = shrink_binary_layers(nodes)
+        while changed:
+            nodes, changed = shrink_binary_layers(nodes)
+
     # make nodes
     hidden_nodes = set()
     for node in nodes:
@@ -303,14 +337,19 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                                                  "x".join(_str2tuple(node["attrs"]["stride"]))
                                                  if "stride" in node["attrs"] else "1",
                                                  node["attrs"]["num_filter"])
+            if "qconv" in name:
+                label = "Q%s" % label
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
             label = r"FullyConnected\n%s" % node["attrs"]["num_hidden"]
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
-        elif op in ('Activation', 'LeakyReLU'):
-            label = r"%s\n%s" % (op, node["attrs"]["act_type"])
+        elif op in ('Activation', 'LeakyReLU') or "_qactivation" in name:
+            if "_qactivation" in name:
+                label = "QActivation"
+            else:
+                label = r"%s\n%s" % (op, node["attrs"]["act_type"])
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
             label = r"Pooling\n%s, %s/%s" % (node["attrs"]["pool_type"],
