@@ -143,7 +143,7 @@ Start the pdl2 terminal.
 $ pdl2
 ```
 
-Run a short *MXNet* python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+Run a short *MXNet* Perl program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
 
 ```perl
 pdl> use AI::MXNet qw(mx)
