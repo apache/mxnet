@@ -78,7 +78,7 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
 
   for (size_t outer = 0; outer < num; ++outer) {
     for (size_t i = 0; i < matrixSize; ++i) {
-      (data++, odata++);
+      onData(data++, odata++);
     }
     data  += skipLength;
     odata += skipLength;
