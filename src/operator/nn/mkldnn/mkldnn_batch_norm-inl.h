@@ -198,8 +198,8 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
     auto fwd_pd = _GetFwd(*in_data.GetMKLDNNData(), ctx.is_train,
                           (DType) param.eps, flags);
     MKLDNNBNForward fwd(fwd_pd, ctx.is_train);
-    if (!MKLDNNCacheSet)
-      return fwd
+    if (!MKLDNNCacheSet())
+      return fwd;
     auto ins_ret = fwds.insert(std::pair<MKLDNNBNSignature, MKLDNNBNForward>(
             key, fwd));
     CHECK(ins_ret.second);
