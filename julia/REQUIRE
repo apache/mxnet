@@ -1,0 +1,7 @@
+julia 0.6
+Formatting
+BinDeps
+JSON
+MacroTools
+TakingBroadcastSeriously
+Reexport

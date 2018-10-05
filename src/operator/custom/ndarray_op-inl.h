@@ -87,7 +87,7 @@ class NDArrayOpProp : public OperatorProperty {
     CHECK(param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }
@@ -97,7 +97,7 @@ class NDArrayOpProp : public OperatorProperty {
     CHECK(param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs));
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }

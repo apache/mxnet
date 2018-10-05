@@ -231,32 +231,21 @@ endif
 
 # gperftools malloc library (tcmalloc)
 ifeq ($(USE_GPERFTOOLS), 1)
-FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.a)
+FIND_LIBFILEEXT=so
+ifeq ($(USE_GPERFTOOLS_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.so)
+FIND_LIBFILE=$(wildcard /lib/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libtcmalloc.a)
+FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libtcmalloc.so)
+FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.so)
+FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
 	USE_GPERFTOOLS=0
-endif
-endif
-endif
-endif
-endif
 endif
 endif
 endif
@@ -270,37 +259,23 @@ endif
 # jemalloc malloc library (if not using gperftools)
 else
 ifeq ($(USE_JEMALLOC), 1)
-FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.a)
+FIND_LIBFILEEXT=so
+ifeq ($(USE_JEMALLOC_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.so)
+FIND_LIBFILE=$(wildcard /lib/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libjemalloc.a)
+FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libjemalloc.so)
+FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.a)
+FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.so)
+FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
 	USE_JEMALLOC=0
-endif
-endif
-endif
-endif
-endif
-endif
 endif
 endif
 endif

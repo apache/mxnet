@@ -45,6 +45,9 @@ RUN /work/ubuntu_r.sh
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
 
+COPY install/ubuntu_julia.sh /work/
+RUN /work/ubuntu_julia.sh
+
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 
