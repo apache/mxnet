@@ -24,7 +24,7 @@ from ._op_translations import tanh, arccos, arcsin, arctan, _cos, _sin, _tan
 from ._op_translations import softplus, shape, gather, lp_pooling
 from ._op_translations import ceil, floor, hardsigmoid, global_lppooling
 from ._op_translations import concat
-from ._op_translations import leaky_relu, _elu, _prelu, softmax, fully_connected
+from ._op_translations import leaky_relu, _elu, _prelu, _selu, softmax, fully_connected
 from ._op_translations import global_avgpooling, global_maxpooling, linalg_gemm
 from ._op_translations import sigmoid, pad, relu, matrix_multiplication, batch_norm
 from ._op_translations import dropout, local_response_norm, conv, deconv
@@ -75,6 +75,7 @@ _convert_map = {
     'LeakyRelu'         : leaky_relu,
     'Elu'               : _elu,
     'PRelu'             : _prelu,
+    'Selu'              : _selu,
     'Softmax'           : softmax,
     'FC'                : fully_connected,
     'GlobalAveragePool' : global_avgpooling,
