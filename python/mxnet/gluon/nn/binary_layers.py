@@ -10,10 +10,8 @@ from ...symbol import Symbol
 def check_params(use_bias, activation):
     if use_bias:
         raise ValueError("Bias is not supported for a binary layer.")
-    if isinstance(activation, int) and 0 <= activation <= 32:
-        return
-    raise ValueError("Activation '{}' is not supported for a binary layer. "
-                     "Pass the number of bits (<=32) for activation instead (0 for no activation).".format(activation))
+    if activation is not None:
+        raise ValueError("Activation '{}' is not supported for a binary layer.")
 
 
 def quantize(F, x, bits):
@@ -26,32 +24,27 @@ def quantize(F, x, bits):
 
 
 class QActivation(HybridBlock):
-    def __init__(self, *args, bits=1, backward_only=False, gradient_cancel_threshold=1.0, **kwargs):
+    def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0, **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
         self.bits = bits
-        self.do_forward = not backward_only
         self.threshold = gradient_cancel_threshold
 
     def hybrid_forward(self, F, x):
         x = F.contrib.gradcancel(x, threshold=self.threshold)
-        if self.do_forward:
-            x = quantize(F, x, self.bits)
+        x = quantize(F, x, self.bits)
         return x
 
 
 class QDense(Dense):
-    def __init__(self, *args, bits=1, activation=0, use_bias=False, **kwargs):
+    def __init__(self, *args, bits=1, activation=None, use_bias=False, **kwargs):
         check_params(use_bias, activation)
         super(QDense, self).__init__(*args, activation=None, use_bias=False, **kwargs)
         self._offset = 0
         self.bits = bits
-        self.activation = activation
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = reduce(mul, weight.shape[1:], 1)
-        if self.activation > 0:
-            x = quantize(F, x, self.activation)
         quantized_weight = quantize(F, weight, self.bits)
         h = F.FullyConnected(x, quantized_weight, bias, no_bias=True,
                              num_hidden=self._units, flatten=self._flatten, name='fwd')
@@ -60,15 +53,14 @@ class QDense(Dense):
 
 class _QConv(_Conv):
     def __init__(self, channels, kernel_size, bits, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs):
+                 in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs):
+        check_params(use_bias, activation)
         # set activation to None and padding to zero
         super(_QConv, self).__init__(
             channels, kernel_size, strides, 0, dilation, groups, layout,
             in_channels, None, use_bias, weight_initializer, bias_initializer, **kwargs)
-        check_params(use_bias, activation)
         self._offset = 0
         self.bits = bits
-        self.activation = activation
         if isinstance(padding, numeric_types):
             padding = (padding,) * len(kernel_size)
         self._pre_padding = padding
@@ -89,8 +81,6 @@ class _QConv(_Conv):
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = reduce(mul, weight.shape[1:], 1)
-        if self.activation > 0:
-            x = quantize(F, x, self.activation)
         quantized_weight = quantize(F, weight, self.bits)
         padded = self._apply_pre_padding(F, x)
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
@@ -99,7 +89,7 @@ class _QConv(_Conv):
 
 class QConv1D(_QConv):
     def __init__(self, channels, kernel_size, bits=1, strides=1, padding=0, dilation=1,
-                 groups=1, layout='NCW', activation=0, use_bias=False,
+                 groups=1, layout='NCW', activation=None, use_bias=False,
                  weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
@@ -113,7 +103,7 @@ class QConv1D(_QConv):
 class QConv2D(_QConv):
     def __init__(self, channels, kernel_size, bits=1, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
-                 activation=0, use_bias=False, weight_initializer=None,
+                 activation=None, use_bias=False, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
@@ -125,7 +115,7 @@ class QConv2D(_QConv):
 
 class QConv3D(_QConv):
     def __init__(self, channels, kernel_size, bits=1, strides=(1, 1, 1), padding=(0, 0, 0),
-                 dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=0,
+                 dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=False, weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
         if isinstance(kernel_size, numeric_types):
