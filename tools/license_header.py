@@ -76,13 +76,15 @@ _WHITE_LIST = ['R-package/',
                'example/rcnn/rcnn/cython/nms_kernel.cu',
                'prepare_mkl.sh',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
-               'src/operator/contrib/ctc_include/']
+               'src/operator/contrib/ctc_include/',
+               'julia/REQUIRE']
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
-          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#', '.t':'#', '.ps1': '#'}
+          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
+          '.t':'#', '.ps1':'#', '.jl':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')

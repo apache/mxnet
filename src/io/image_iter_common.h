@@ -42,7 +42,7 @@ class ImageLabelMap {
    * \param label_width predefined label_width
    */
   explicit ImageLabelMap(const char *path_imglist,
-                         mshadow::index_t label_width,
+                         index_t label_width,
                          bool silent) {
     this->label_width = label_width;
     image_index_.clear();
@@ -58,7 +58,7 @@ class ImageLabelMap {
       // skip space
       while (isspace(*p) && p != end) ++p;
       image_index_.push_back(static_cast<size_t>(atol(p)));
-      for (size_t i = 0; i < label_width; ++i) {
+      for (index_t i = 0; i < label_width; ++i) {
         // skip till space
         while (!isspace(*p) && p != end) ++p;
         // skip space
@@ -171,7 +171,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
 // Batch parameters
 struct BatchParam : public dmlc::Parameter<BatchParam> {
   /*! \brief label width */
-  index_t batch_size;
+  uint32_t batch_size;
   /*! \brief use round roubin to handle overflow batch */
   bool round_batch;
   // declare parameters
