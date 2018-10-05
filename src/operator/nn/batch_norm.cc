@@ -157,73 +157,32 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
     AccReal *w = weights.dptr<AccReal>();
     AccReal *b = bias.dptr<AccReal>();
 
+    // Ignore gamma
+    if (param_.fix_gamma) {
+      if (IsBNWriting(req[batchnorm::kGamma])) {
+        w[channel] = AccReal(1);
+      }
+    }
+
+    // Ignore beta
+    if (param_.fix_beta) {
+       if (IsBNWriting(req[batchnorm::kBeta])) {
+          b[channel] = AccReal(0);
+        }
+    }
+
     const AccReal thisMean = mean[channel];
     const AccReal thisInvstd = var[channel];
     const AccReal thisWeight = w[channel];
     const AccReal thisBias = b[channel];
 
-    // note that var is still invstd
-    if (!param_.fix_gamma) {
-      if (!param_.fix_beta) {
-        // Case 1
-        // fix_gamma = False
-        // fix_beta = False
-        if (IsBNWriting(req[batchnorm::kData])) {
+    if (IsBNWriting(req[batchnorm::kData])) {
           ForEachFast(inputData, outputData, channel,
                       [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
                                                                   DType *out_data) {
                         *out_data = static_cast<DType>(
                           ((*in_data - thisMean) * thisInvstd) * thisWeight + thisBias);
                       });
-        }
-      } else {
-        // Case 2
-        // fix_gamma = False
-        // fix_beta = True
-        if (IsBNWriting(req[batchnorm::kBeta])) {
-          b[channel] = AccReal(0);
-        }
-        if (IsBNWriting(req[batchnorm::kData])) {
-          ForEachFast(inputData, outputData, channel,
-                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                  DType *out_data) {
-                        *out_data = static_cast<DType>(
-                          ((*in_data - thisMean) * thisInvstd) * thisWeight);
-                      });
-          }
-      }
-    } else {
-      if (IsBNWriting(req[batchnorm::kGamma])) {
-        w[channel] = AccReal(1);
-      }
-      if (!param_.fix_beta) {
-        // Case 3
-        // fix_gamma = True
-        // fix_beta = False
-        if (IsBNWriting(req[batchnorm::kData])) {
-          ForEachFast(inputData, outputData, channel,
-                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                   DType *out_data) {
-                        *out_data = static_cast<DType>(
-                          ((*in_data - thisMean) * thisInvstd) + thisBias);
-                      });
-        }
-      } else {
-        // Case 4
-        // fix_gamma = True
-        // fix_beta = True
-        if (IsBNWriting(req[batchnorm::kBeta])) {
-          b[channel] = AccReal(0);
-        }
-        if (IsBNWriting(req[batchnorm::kData])) {
-          ForEachFast(inputData, outputData, channel,
-                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                    DType *out_data) {
-                        *out_data = static_cast<DType>(
-                          ((*in_data - thisMean) * thisInvstd));
-                      });
-        }
-      }
     }
   }
 }
