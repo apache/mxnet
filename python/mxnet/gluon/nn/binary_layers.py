@@ -20,7 +20,7 @@ def quantize(F, x, bits):
     if bits == 1:
         return F.det_sign(x)
     elif bits < 32:
-        raise NotImplementedError("Quantized not yet suported.")
+        raise NotImplementedError("Quantized not yet supported.")
     else:
         return x
 
