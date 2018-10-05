@@ -4510,6 +4510,7 @@ def check_ctc_loss(acts, labels, loss_truth):
     # test grad
     check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
 
+# check contrib operator for backward compatibility
 def check_contrib_ctc_loss(acts, labels, loss_truth):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
@@ -4661,6 +4662,7 @@ def test_ctc_loss_grad():
             assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
             assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
 
+    # check contrib operator for backward compatibility
     def check_contrib_ctc_loss_grad(blank_label): # from tf
         vocab_size = 5
         max_label_len = 5
@@ -4730,11 +4732,11 @@ def test_ctc_loss_grad():
             data.attach_grad()
             with mx.autograd.record():
                 l = mx.contrib.ndarray.CTCLoss(data, label,
-                                       use_data_lengths=True,
-                                       use_label_lengths=True,
-                                       data_lengths=mx.nd.array(seq_lens),
-                                       label_lengths=mx.nd.array(label_lens),
-                                       blank_label=blank_label)
+                                               use_data_lengths=True,
+                                               use_label_lengths=True,
+                                               data_lengths=mx.nd.array(seq_lens),
+                                               label_lengths=mx.nd.array(label_lens),
+                                               blank_label=blank_label)
                 l.backward()
             assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
             assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
