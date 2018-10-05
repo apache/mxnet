@@ -17,35 +17,43 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Install gluoncv since we're testing Gluon models as well
-pip2 install gluoncv==0.2.0
-pip3 install gluoncv==0.2.0
-
 # Install Protobuf
-# Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
 pushd .
 cd ..
 apt-get update
 apt-get install -y automake libtool zip
 git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
+
 cd protobuf
+
+# Default AMD64 protobuf target.
+AMD64_PROTOBUF_TARGET=/usr/local
+
+# Custom ARM protobuf target.
+ARM_PROTOBUF_TARGET=/usr/aarch64-linux-gnu
+
+# Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
 ./autogen.sh
 ./configure --disable-shared CXXFLAGS=-fPIC --host=amd64 CC=gcc CXX=g++
 make -j$(nproc)
 make install
-./configure --disable-shared CXXFLAGS=-fPIC --host=arm-linux --with-protoc=/usr/local/bin/protoc
+
+# Remove dynamic AMD64 protobuf libs to force linker to statically link
+rm -rf $AMD64_PROTOBUF_TARGET/lib/libprotobuf-lite.so*
+rm -rf $AMD64_PROTOBUF_TARGET/lib/libprotobuf.so*
+rm -rf $AMD64_PROTOBUF_TARGET/lib/libprotoc.so*
+
+mkdir -p /usr/local/protobuf/targets/aarch64-linux
+make clean
+./autogen.sh
+./configure --disable-shared CXXFLAGS=-fPIC --host=arm-linux --with-protoc=/usr/local/bin/protoc --prefix=$ARM_PROTOBUF_TARGET
 make -j$(nproc)
 make install
-rm -rf /usr/local/lib/libprotobuf-lite.so*
-rm -rf /usr/local/lib/libprotobuf.so*
-rm -rf /usr/local/lib/libprotoc.so*
+
+# Remove dynamic ARM protobuf libs to force linker to statically link
+rm -rf $ARM_PROTOBUF_TARGET/lib/libprotobuf-lite.so*
+rm -rf $ARM_PROTOBUF_TARGET/lib/libprotobuf.so*
+rm -rf $ARM_PROTOBUF_TARGET/lib/libprotoc.so*
+
 ldconfig
 popd
-
-# Install TensorRT
-echo "TensorRT build enabled. Installing TensorRT."
-wget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/nvinfer-runtime-trt-repo-ubuntu1604-4.0.1-ga-cuda9.0_1-1_amd64.deb
-dpkg -i tensorrt.deb
-apt-get update
-apt-get install -y --allow-downgrades libnvinfer-dev
-rm tensorrt.deb

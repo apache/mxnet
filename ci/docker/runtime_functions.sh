@@ -107,8 +107,55 @@ build_jetson() {
     set -ex
     pushd .
 
+    # Build ONNX
+    # pushd .
+    # echo "Installing ONNX."
+    # cd 3rdparty/onnx-tensorrt/third_party/onnx
+    # rm -rf build
+    # mkdir -p build
+    # cd build
+    # cmake \
+    #     -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} \
+    #     -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a \
+    #     -DBUILD_SHARED_LIBS=OFF .. \
+    #     -G Ninja
+    # ninja -j 1 -v onnx/onnx.proto
+    # ninja -j 1 -v
+    # export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
+    # export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    # popd
+
+    # Build ONNX-TensorRT
+    pushd .
+    cd 3rdparty/onnx-tensorrt/
+    mkdir -p build
+    cd build
+
+    # Work around cmake findcuda issue by running twice.
+    cmake  -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda/ \
+           -DCUDA_CUDART_LIBRARY=/usr/local/cuda-9.0/targets/aarch64-linux/lib/libcudart.so \
+           -DCUDA_INCLUDE_DIRS=/usr/local/cuda-9.0/targets/aarch64-linux/include/ \
+           -DCUDA_TOOLKIT_TARGET_DIR=/usr/local/cuda-9.0/targets/aarch64-linux/ \
+           -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a  .. || \
+    cmake  -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda/ \
+           -DCUDA_CUDART_LIBRARY=/usr/local/cuda-9.0/targets/aarch64-linux/lib/libcudart.so \
+           -DCUDA_INCLUDE_DIRS=/usr/local/cuda-9.0/targets/aarch64-linux/include/ \
+           -DCUDA_TOOLKIT_TARGET_DIR=/usr/local/cuda-9.0/targets/aarch64-linux/ \
+           -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a  ..
+    make -j$(nproc) gen_onnx_proto
+    make -j$(nproc) nvonnxparser_plugin
+    make -j$(nproc) onnx_proto
+    make -j$(nproc) nvonnxparser_runtime_static
+    make -j$(nproc) nvonnxparser_static
+    make -j$(nproc) nvonnxparser
+    make -j$(nproc) trt_onnxify
+    export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    export LIBRARY_PATH=$LIBRARY_PATH:`pwd`/third_party/onnx/
+    mv third_party/onnx/libonnx_proto.a third_party/onnx/libonnxtrt_proto.a
+    popd
+
     cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
+    make -j $(nproc)
 
     build_wheel /work/mxnet/python /work/mxnet/lib
     popd
