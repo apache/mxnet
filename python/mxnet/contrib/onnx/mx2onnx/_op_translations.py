@@ -2102,3 +2102,28 @@ def convert_depthtospace(node, **kwargs):
         name=name,
     )
     return [node]
+
+@mx_op.register("space_to_depth")
+def convert_spacetodepth(node, **kwargs):
+    """Map MXNet's space_to_depth operator attributes to onnx's
+    SpaceToDepth operator and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    attrs = node["attrs"]
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    blksize = int(attrs.get("block_size", 0))
+
+    node = onnx.helper.make_node(
+        "SpaceToDepth",
+        [input_node],
+        [name],
+        blocksize=blksize,
+        name=name,
+    )
+    return [node]
