@@ -181,6 +181,10 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+  
+* MXNET_MKLDNN_CACHE_ENABLED
+  - Values: 0, 1 ```(default=1)```
+  - Flag to enable or disable MKLDNN cache. On by default. This should be disabled your dataset has variable size inputs.
 
 Settings for Minimum Memory Usage
 ---------------------------------
