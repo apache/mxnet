@@ -395,7 +395,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     &inputs, &dict, &n);
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < p->num_outputs(); ++i) {
+  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
     ret.emplace_back(nnvm::NodeEntry{p, i, 0});
   }
   return ret;
@@ -406,7 +406,7 @@ inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
     const nnvm::NodePtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < n->num_inputs(); ++i) {
+  for (uint32_t i = 0; i < n->num_inputs(); ++i) {
     std::ostringstream os;
     if (1 == n->num_inputs()) {
       os << n->attrs.name << "_backward";
@@ -445,7 +445,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
   p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
   p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < p->num_outputs(); ++i) {
+  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
     ret.emplace_back(nnvm::NodeEntry{p, i, 0});
   }
   return ret;

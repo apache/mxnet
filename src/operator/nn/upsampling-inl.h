@@ -48,8 +48,8 @@ enum UpSamplingMultiInputMode {kConcat, kSum};
 }  // namespace up_enum
 
 struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
-  index_t scale;
-  index_t num_filter;
+  int scale;
+  int num_filter;
   int sample_type;
   int num_args;
   int multi_input_mode;

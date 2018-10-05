@@ -286,14 +286,14 @@ class BatchNormV1Prop : public OperatorProperty {
     // For other input types, these parameters have the same type as input
     // NOTE: This requirement is from cuDNN (v. 4 and 5)
     int dtype_param = (dtype == kFloat16) ? kFloat32 : dtype;
-    for (index_t i = 1; i < in_type->size(); ++i) {
+    for (size_t i = 1; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype_param;
       } else {
         UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, ListArguments()[i]);
       }
     }
-    for (index_t i = 0; i < aux_type->size(); ++i) {
+    for (size_t i = 0; i < aux_type->size(); ++i) {
       if ((*aux_type)[i] != -1) {
         UNIFORM_TYPE_CHECK((*aux_type)[i], dtype_param, ListArguments()[i]);
       }
