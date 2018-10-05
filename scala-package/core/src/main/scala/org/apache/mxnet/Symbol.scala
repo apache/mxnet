@@ -423,7 +423,13 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
       }
     val (argShapes, _, auxShapes) = inferShape(shapeDict)
     val (argTypes, _, auxTypes) = inferType(types)
-    require(argShapes != null && argTypes != null, "Input node is not complete")
+    require(argShapes != null, "Shape inference failed." +
+      s"Known shapes are $shapeDict for symbol arguments ${listArguments()} " +
+      s"and aux states ${listAuxiliaryStates()}")
+    require(argTypes != null, "Type inference failed." +
+      s"Known types as $typeDict for symbol arguments ${listArguments()} " +
+      s"and aux states ${listAuxiliaryStates()}")
+
     // alloc space
     val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
       NDArray.zeros(shape, ctx, dtype = t)
@@ -715,10 +721,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
                          args: Iterable[_], argsGrad: Iterable[_],
                          gradsReq: Iterable[_], auxStates: Iterable[_],
                          group2ctx: Map[String, Context], sharedExec: Executor): Executor = {
-    require(args != null && !args.isInstanceOf[Set[_]])
-    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]])
-    require(auxStates == null || !auxStates.isInstanceOf[Set[_]])
-    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]])
+    require(args != null && !args.isInstanceOf[Set[_]],
+      s"args must be provided (Set is not supported)")
+    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]],
+      s"argsGrad must be provided (Set is not supported)")
+    require(auxStates == null || !auxStates.isInstanceOf[Set[_]],
+      s"auxStates must be provided (Set is not supported)")
+    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]],
+      s"gradsReq must be provided (Set is not supported)")
 
     val (argsHandle, argsNDArray) =
       if (args.isInstanceOf[Seq[_]]) {
@@ -756,14 +766,16 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     val reqsArray =
       if (gradsReq.isInstanceOf[Seq[_]]) {
         gradsReq.asInstanceOf[Seq[String]].map { req =>
-          require(Symbol.bindReqMap.contains(req), s"grad_req must be in ${Symbol.bindReqMap}")
+          require(Symbol.bindReqMap.contains(req),
+            s"grad_req $req must be in ${Symbol.bindReqMap}")
           Symbol.bindReqMap(req)
         }.toArray
       } else {
         val gradsReqMap = gradsReq.asInstanceOf[Map[String, String]]
         symbolArguments.map { req =>
           val value = gradsReqMap.getOrElse(req, "null")
-          require(Symbol.bindReqMap.contains(value), s"grad_req must be in ${Symbol.bindReqMap}")
+          require(Symbol.bindReqMap.contains(value),
+            s"grad_req $req must be in ${Symbol.bindReqMap}")
           Symbol.bindReqMap(value)
         }.toArray
       }
@@ -1083,9 +1095,9 @@ object Symbol extends SymbolBase {
           (key, value.toString)
         }
       }
-    require(symbols.isEmpty || symbolKwargs.isEmpty, String.format(
-      "%s can only accept input Symbols either as positional or keyword arguments, not both",
-      operator))
+    require(symbols.isEmpty || symbolKwargs.isEmpty,
+      s"$operator can only accept input Symbols either as positional or keyword arguments, " +
+        s"not both")
     if (symbols.isEmpty) {
       createFromNamedSymbols(operator, name, attr)(symbolKwargs, strKwargs)
     } else {
@@ -1217,7 +1229,8 @@ object Symbol extends SymbolBase {
    */
   private def getNDArrayInputs(argKey: String, args: Seq[NDArray], argNames: Seq[String],
                                allowMissing: Boolean): (Array[NDArrayHandle], Array[NDArray]) = {
-    require(args.length == argNames.length, s"Length of $argKey do not match number of arguments")
+    require(args.length == argNames.length,
+      s"Length of $argKey do not match number of arguments")
     val argHandles = args.map(_.handle)
     (argHandles.toArray, args.toArray)
   }
@@ -1232,7 +1245,8 @@ object Symbol extends SymbolBase {
           argArrays += narr.get
           argHandles += narr.get.handle
         case None =>
-          require(allowMissing, s"Must specify all the arguments in $argKey")
+          require(allowMissing,
+            s"Must specify all the arguments in $argKey. $name is unknown")
           argArrays += null
           argHandles += 0L
       }

@@ -21,6 +21,7 @@
 #include <string>
 #include "./common.h"
 #include "./subgraph_property.h"
+#include "../../imperative/cached_op.h"
 
 namespace mxnet {
 namespace op {
@@ -51,7 +52,7 @@ class ContainOpSelector: public SubgraphSelector {
 
 /*
  * This subgraph property finds a subgraph whose nodes have only operators
- * within a set. The operators in the subgraph will be executed by _default_subgraph_op.
+ * within a set. The operators in the subgraph will be executed by _CachedOp.
  */
 class DefaultSubgraphProperty: public SubgraphProperty {
  public:
@@ -59,9 +60,13 @@ class DefaultSubgraphProperty: public SubgraphProperty {
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     nnvm::NodePtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_default_subgraph_op");
-    n->attrs.name = "_default_subgraph_op" + std::to_string(subgraph_id);
+    n->attrs.op = Op::Get("_CachedOp");
+    n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+
+    std::vector<std::pair<std::string, std::string> > flags{{"static_alloc", "true"}};
+    n->attrs.parsed = CachedOpPtr(new CachedOp(sym, flags));
+
     return n;
   }
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {

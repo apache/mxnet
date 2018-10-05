@@ -99,7 +99,7 @@ class FeedForward private(
   // verify the argument of the default symbol and user provided parameters
   def checkArguments(): Unit = {
     if (!argumentChecked) {
-      require(symbol != null)
+      require(symbol != null, "Symbol must not be null")
       // check if symbol contain duplicated names.
       ExecutorManager.checkArguments(symbol)
       // rematch parameters to delete useless ones
@@ -169,7 +169,9 @@ class FeedForward private(
   private def initPredictor(inputShapes: Map[String, Shape]): Unit = {
     if (this.predExec != null) {
       val (argShapes, _, _) = symbol.inferShape(inputShapes)
-      require(argShapes != null, "Incomplete input shapes")
+      require(argShapes != null, "Shape inference failed." +
+        s"Known shapes are $inputShapes for symbol arguments ${symbol.listArguments()} " +
+        s"and aux states ${symbol.listAuxiliaryStates()}")
       val predShapes = this.predExec.argArrays.map(_.shape)
       if (argShapes.sameElements(predShapes)) {
         return
@@ -187,7 +189,8 @@ class FeedForward private(
     require(y != null || !isTrain, "y must be specified")
     val label = if (y == null) NDArray.zeros(X.shape(0)) else y
     require(label.shape.length == 1, "Label must be 1D")
-    require(X.shape(0) == label.shape(0), "The numbers of data points and labels not equal")
+    require(X.shape(0) == label.shape(0),
+      s"The numbers of data points (${X.shape(0)}) and labels (${label.shape(0)}) are not equal")
     if (isTrain) {
       new NDArrayIter(IndexedSeq(X), IndexedSeq(label), batchSize,
         shuffle = isTrain, lastBatchHandle = "roll_over")
@@ -402,7 +405,7 @@ class FeedForward private(
    * - ``prefix-epoch.params`` will be saved for parameters.
    */
   def save(prefix: String, epoch: Int = this.numEpoch): Unit = {
-    require(epoch >= 0)
+    require(epoch >= 0, s"epoch must be >=0 (got $epoch)")
     Model.saveCheckpoint(prefix, epoch, this.symbol, getArgParams, getAuxParams)
   }
 

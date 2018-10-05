@@ -163,7 +163,7 @@ class Predictor(object):
         for k, v in kwargs.items():
             if not isinstance(v, np.ndarray):
                 raise ValueError("Expect numpy ndarray as input")
-            v = np.ascontiguousarray(v, dtype=np.float32)
+            v = np.asarray(v, dtype=np.float32, order='C')
             _check_call(_LIB.MXPredSetInput(
                 self.handle, c_str(k),
                 v.ctypes.data_as(mx_float_p),

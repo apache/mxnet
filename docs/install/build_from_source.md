@@ -16,6 +16,8 @@ This document explains how to build MXNet from source code. Building MXNet from 
 
 You need C++ build tools and a BLAS library to build the MXNet shared library. If you want to run MXNet with GPUs, you will need to install [NVDIA CUDA and cuDNN](https://developer.nvidia.com/cuda-downloads) first.
 
+You may use [GNU Make](https://www.gnu.org/software/make/) to build the library but [cmake](https://cmake.org/) is required when building with MKLDNN
+
 
 ### C++ build tools
 
@@ -25,7 +27,7 @@ You need C++ build tools and a BLAS library to build the MXNet shared library. I
 
 2. [Git](https://git-scm.com/downloads) for downloading the sources from Github repository.
 
-3. [cmake](https://cmake.org/) is recommended. You may also use [GNU Make](https://www.gnu.org/software/make/) to build the library.
+
 
 
 ### BLAS library
@@ -80,7 +82,7 @@ There is a configuration file for make,
 
 ## Build Configurations
 
-`cmake` is recommended for building MXNet, however you may use `make` instead.
+`cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead.
 
 
 ### Math Library Selection

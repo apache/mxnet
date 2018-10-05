@@ -622,7 +622,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(CorrelationParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new CorrelationOp<gpu, DType>(param);
   });

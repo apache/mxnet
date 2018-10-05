@@ -301,7 +301,7 @@ class LeakyReLUOp : public Operator {
     TShape result(dst.ndim());
     int s = src.ndim() - 1;
     for (int i = dst.ndim() - 1; i >= 0; i--) {
-      if (s >= 0 && (dst[i] == src[s] || src[s] == 1)) {
+      if (s >= 0 && i <= 1 && (dst[i] == src[s] || src[s] == 1)) {
         result[i] = src[s];
         s--;
       } else {
