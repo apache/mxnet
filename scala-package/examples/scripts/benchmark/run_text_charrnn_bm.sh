@@ -39,7 +39,6 @@ MODEL_NAME=$2
 
 RUNS=$3
 
-
 # model dir
 MODEL_PATH_PREFIX=$4
 # input image
