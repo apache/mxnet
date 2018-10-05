@@ -250,4 +250,5 @@ class SSDClassifierExample(CLIParser: CLIParser)
     val output = model.imageBatchObjectDetect(imgInput, Some(5))
     output
   }
+
 }

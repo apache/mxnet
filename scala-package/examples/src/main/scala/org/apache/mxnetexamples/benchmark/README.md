@@ -56,7 +56,7 @@ You may need to run ```chmod u+x run_image_inference_bm.sh``` before running thi
     cd <Path-To-MXNET-Repo>/scala-package/examples/scripts/benchmark
     ./run_image_inference_bm.sh cpu ObjectDetectionExample 100 10 ../infer/models/resnet50_ssd/resnet50_ssd_model ../infer/images/dog.jpg ../infer/images/ 
     ```
-    Upon running this script, you might see an output like this : 
+    Upon running this script, you might see an output like this :  
     ```
     [main] INFO org.apache.mxnetexamples.benchmark.CLIParserBase - 
     single_inference_latency p99 1663, single_inference_p50 729, single_inference_average 755.17
