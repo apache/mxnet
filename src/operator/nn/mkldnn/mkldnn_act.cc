@@ -147,10 +147,10 @@ static MKLDNNActForward &GetActForward(const ActivationParam& param,
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNActForward fwd(param, ctx.is_train, in_data, in_mem);
-    auto ins_ret = fwds.insert(std::pair<MKLDNNActSignature, MKLDNNActForward>(
-            key, fwd));
     if (!MKLDNNCacheSet())
       return fwd;
+    auto ins_ret = fwds.insert(std::pair<MKLDNNActSignature, MKLDNNActForward>(
+            key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
