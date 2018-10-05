@@ -143,8 +143,8 @@ static inline bool MKLDNNEnvSet() {
 }
 
 static inline bool MKLDNNCacheSet() {
-  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_MKLDNN_CACHE_ENABLED", true);
-  return is_mkldnn_enabled;
+  static bool is_mkldnn_cache_enabled = dmlc::GetEnv("MXNET_MKLDNN_CACHE_ENABLED", true);
+  return is_mkldnn_cache_enabled;
 }
 
 /*
