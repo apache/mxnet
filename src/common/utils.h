@@ -474,6 +474,8 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
                                        "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+  if (!MKLDNNCacheSet()) common::LogOnce("MXNET_MKLDNN_CACHE_ENABLED flag is off. "
+                                       "If you have static input shapes for best performance set MXNET_MKLDNN_CACHE_ENABLED=1");
 #endif
 }
 

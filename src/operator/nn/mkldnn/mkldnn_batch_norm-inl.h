@@ -198,6 +198,8 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
     auto fwd_pd = _GetFwd(*in_data.GetMKLDNNData(), ctx.is_train,
                           (DType) param.eps, flags);
     MKLDNNBNForward fwd(fwd_pd, ctx.is_train);
+    if (!MKLDNNCacheSet)
+      return fwd
     auto ins_ret = fwds.insert(std::pair<MKLDNNBNSignature, MKLDNNBNForward>(
             key, fwd));
     CHECK(ins_ret.second);
@@ -360,6 +362,8 @@ static MKLDNNBNBackward &GetBNBackward(
   if (it == bwds.end()) {
     auto bwd_pd = _GetBwd(in_mem, diff_mem, param.eps, flags);
     MKLDNNBNBackward bwd(bwd_pd);
+    if (!MKLDNNCacheSet())
+      return bwd;
     auto ins_ret =
         bwds.insert(std::pair<MKLDNNBNSignature, MKLDNNBNBackward>(key, bwd));
     CHECK(ins_ret.second);

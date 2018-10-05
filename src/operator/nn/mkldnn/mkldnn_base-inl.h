@@ -142,6 +142,11 @@ static inline bool MKLDNNEnvSet() {
   return is_mkldnn_enabled;
 }
 
+static inline bool MKLDNNCacheSet() {
+  static bool is_mkldnn_enabled = dmlc::GetEnv("MXNET_MKLDNN_CACHE_ENABLED", true);
+  return is_mkldnn_enabled;
+}
+
 /*
  * This is to align address to a certain alignment.
  */

@@ -230,8 +230,10 @@ MKLDNNConvForward &GetConvFwd(const nnvm::NodeAttrs& attrs, const bool is_train,
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNConvForward fwd(param, is_train, data, weights, bias, output);
+    if (!MKLDNNCacheSet())
+      return fwd;
     auto ins_ret = fwds.insert(
-        std::pair<MKLDNNConvSignature, MKLDNNConvForward>(key, fwd));
+      std::pair<MKLDNNConvSignature, MKLDNNConvForward>(key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
@@ -423,9 +425,12 @@ static inline MKLDNNConvBackward &GetConvBwd(
   if (bias)
     key.AddSign(*bias);
 
+
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNConvBackward bwd(param, data, weights, bias, output, fwd_pd);
+    if (!MKLDNNCacheSet())
+      return bwd;
     auto ins_ret = bwds.insert(
         std::pair<MKLDNNConvSignature, MKLDNNConvBackward>(key, bwd));
     CHECK(ins_ret.second);
