@@ -41,6 +41,7 @@ class QDense(Dense):
         super(QDense, self).__init__(*args, activation=None, use_bias=False, **kwargs)
         self._offset = 0
         self.bits = bits
+        self.weight.wd_mult = 0.0
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
@@ -64,6 +65,7 @@ class _QConv(_Conv):
         if isinstance(padding, numeric_types):
             padding = (padding,) * len(kernel_size)
         self._pre_padding = padding
+        self.weight.wd_mult = 0.0
 
     def _alias(self):
         return 'qconv'
