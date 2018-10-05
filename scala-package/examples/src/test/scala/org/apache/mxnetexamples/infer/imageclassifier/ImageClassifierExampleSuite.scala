@@ -64,7 +64,7 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
-        inputImagePath, context)
+     inputImagePath, context)
 
     val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
         inputImageDir, context)

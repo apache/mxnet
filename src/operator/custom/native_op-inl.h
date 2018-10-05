@@ -77,7 +77,7 @@ class NativeOp : public Operator {
     s->Wait();
     param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
         tags.data(), param_.pinfo->p_forward);
-    for (index_t i = 0; i < out_data.size(); ++i) {
+    for (size_t i = 0; i < out_data.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
@@ -111,7 +111,7 @@ class NativeOp : public Operator {
     s->Wait();
     param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
         tags.data(), param_.pinfo->p_backward);
-    for (index_t i = 0; i < in_grad.size(); ++i) {
+    for (size_t i = 0; i < in_grad.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
@@ -185,7 +185,7 @@ class NativeOpProp : public OperatorProperty {
     param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }
@@ -195,7 +195,7 @@ class NativeOpProp : public OperatorProperty {
     param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }

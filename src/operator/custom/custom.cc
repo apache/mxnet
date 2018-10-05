@@ -81,7 +81,7 @@ std::vector<std::string> List(const NodeAttrs& attrs) {
       &args, params.info->contexts[Type]));
   std::vector<std::string> ret;
   for (int i = 0; args[i] != nullptr; ++i) {
-    ret.push_back(args[i]);
+    ret.emplace_back(args[i]);
   }
   return ret;
 }
@@ -238,14 +238,14 @@ std::vector<nnvm::NodeEntry> Gradient(
   }
 
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < params.num_args; ++i) {
-    ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+  for (size_t i = 0; i < params.num_args; ++i) {
+    ret.emplace_back(nnvm::NodeEntry{g, static_cast<uint32_t>(i), 0});
   }
   if (params.num_auxs) {
     nnvm::NodePtr ng = nnvm::Node::Create();
     ng->attrs.op = nnvm::Op::Get("_NoGradient");
     ng->attrs.name = "NoGradient";
-    for (index_t i = 0; i < params.num_auxs; ++i) {
+    for (size_t i = 0; i < params.num_auxs; ++i) {
       ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
     }
   }

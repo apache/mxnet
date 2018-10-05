@@ -119,7 +119,7 @@ We provide two primary options to build and install MXNet yourself using [Micros
 
 **NOTE:** Visual Studio 2017's compiler is `vc15`. This is not to be confused with Visual Studio 2015's compiler, `vc14`.
 
-You also have the option to install MXNet with MKL or MKLDNN. In this case it is recommended that you refer to the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md).
+You also have the option to install MXNet with MKL or MKL-DNN. In this case it is recommended that you refer to the [MKLDNN_README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md).
 
 **Option 1: Build with Microsoft Visual Studio 2017 (VS2017)**
 
