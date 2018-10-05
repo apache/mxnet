@@ -80,11 +80,13 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
         else:
             eprocessor = ExecutePreprocessor(timeout=TIME_OUT)
 
+        success = False
         # There is a low (< 1%) chance that starting a notebook executor will fail due to the kernel
         # taking to long to start, or a port collision, etc.
         for i in range(RETRIES):
             try:
                 nb, _ = eprocessor.preprocess(notebook, {'metadata': {'path': working_dir}})
+                success = True
             except RuntimeError as rte:
                 # We check if the exception has to do with the Jupyter kernel failing to start. If
                 # not, we rethrow to prevent the notebook from erring RETRIES times. It is not ideal
@@ -97,6 +99,8 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
                 time.sleep(1)
                 continue
             break
+        if not success:
+            errors.append('Error: Notebook failed to run.')
     except Exception as err:
         err_msg = str(err)
         errors.append(err_msg)
