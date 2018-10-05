@@ -23,7 +23,7 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SigmoidBinaryCrossEntropyLoss', 'SigmoidBCELoss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
-           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss']
+           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'CosineEmbeddingLoss']
 
 from .. import ndarray
 from ..base import numeric_types
@@ -706,3 +706,52 @@ class TripletLoss(Loss):
                      axis=self._batch_axis, exclude=True)
         loss = F.relu(loss + self._margin)
         return _apply_weighting(F, loss, self._weight, None)
+
+class CosineEmbeddingLoss(Loss):
+    r"""For a target label 1 or -1, vectors target and pred, the function computes the cosine distance
+    between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
+
+
+    `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
+
+    Parameters
+    ----------
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    margin : float
+        Margin of separation between correct and incorrect pair.
+
+
+    Inputs:
+    ------
+        - **pred**:   prediction tensor with arbitrary shape
+        - **target**: target tensor with same shape as pred.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+    --------
+        - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
+    """
+    def __init__(self, weight=None, batch_axis=0, margin=0, **kwargs):
+        super(CosineEmbeddingLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._margin = margin
+
+    def hybrid_forward(self, F, pred, target, label):
+        pred = _reshape_like(F, pred, target)
+        cos_sim = self.cosine_similarity(F, pred, target)
+        y_1 = label == 1
+        y_minus_1 = label == -1
+        cos_sim_a = cos_sim * y_1
+        cos_sim_b = y_minus_1 * (1 - cos_sim - self._margin)
+        return cos_sim_a + cos_sim_b
+
+    def cosine_similarity(self, F, F1, F2, axis=-1):
+        F1_norm = F1.norm(axis=axis).reshape(-1, 1)
+        F2_norm = F2.norm(axis=axis).reshape(-1, 1)
+        F1_dot_F2 = F.sum(F1*F2, axis=axis).reshape(-1, 1)
+        return (F1_dot_F2 / F.broadcast_maximum(F1_norm * F2_norm, F.array([1e-12])))
