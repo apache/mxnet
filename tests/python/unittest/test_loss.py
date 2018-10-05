@@ -348,6 +348,22 @@ def test_triplet_loss():
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
+@with_seed()
+def test_cosine_loss():
+    #For similarity check
+    label = mx.nd.array([1])
+    pred = mx.nd.array([[1, 1, 1, 1],
+                        [1, 2, 3, 4]])
+    target = mx.nd.array([[1, 1, 1, 1],
+                          [1, 2, 3, 4]])
+    Loss = gluon.loss.CosineEmbeddingLoss()
+    loss = Loss(pred, target, label)
+
+    #computing numpy way
+    numerator = mx.nd.sum(pred * target, keepdims=True, axis=1)
+    denominator = mx.nd.sqrt(mx.nd.sum(pred**2, axis=1, keepdims=True)) \
+    * mx.nd.sqrt(mx.nd.sum(target**2, axis=1, keepdims=True))
+    assert_almost_equal(loss.asnumpy(), (1-numerator/denominator).asnumpy())
 
 if __name__ == '__main__':
     import nose

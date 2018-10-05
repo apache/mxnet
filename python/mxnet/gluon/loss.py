@@ -732,6 +732,7 @@ class CosineEmbeddingLoss(Loss):
           to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
+        - label: A 1-D tensor indicating for each pair input and pred, target label is 1 or -1
 
     Outputs:
     --------
@@ -746,8 +747,8 @@ class CosineEmbeddingLoss(Loss):
         cos_sim = self.cosine_similarity(F, pred, target)
         y_1 = label == 1
         y_minus_1 = label == -1
-        cos_sim_a = cos_sim * y_1
-        cos_sim_b = y_minus_1 * (1 - cos_sim - self._margin)
+        cos_sim_a = (1 - cos_sim) * y_1
+        cos_sim_b = F.broadcast_maximum(F.array([0]), y_minus_1 * (cos_sim - self._margin), axis=1)
         return cos_sim_a + cos_sim_b
 
     def cosine_similarity(self, F, F1, F2, axis=-1):
