@@ -43,19 +43,7 @@ class GroupAdaGrad(Optimizer):
         div = grad / sqrt(history + float_stable_eps)
         weight -= div * lr
 
-    Weights are updated lazily if the gradient is sparse. In particular, before
-    using a set of weights for a forward pass, you may want to ensure that the
-    lazily accumulated group lasso regularization is applied. This can be
-    achieved by creating a sparse gradient array that contains explicit 0 data
-    for the indices to be updated:
-
-        fake_grad = mx.nd.sparse.row_sparse_array(
-            (mx.nd.zeros((len(indices), dim)), indices))
-        weight.grad()[:] = fake_grad
-        weight.data()._fresh_grad = True
-        trainer._optimizer._index_update_count[0] -= 1
-        trainer._optimizer.num_update -= 1
-        trainer.step(batch_size=1)
+    Weights are updated lazily if the gradient is sparse.
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.contrib.group_adagrad_update`.

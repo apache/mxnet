@@ -64,9 +64,7 @@ Updates are applied by::
     div = grad / sqrt(history + float_stable_eps)
     weight -= div * lr
 
-Weights are updated lazily if the gradient is sparse. In particular, before
-using a set of weights for a forward pass, you may want to ensure that the
-lazily accumulated group lasso regularization is applied.
+Weights are updated lazily if the gradient is sparse.
 
 Note that non-zero values for the weight decay option are not supported.
 
