@@ -226,7 +226,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       mshadow::Tensor<cpu, 1> label = out.label().Back();
       if (label_map_ != nullptr) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
-      } else if (rec.label != NULL) {
+      } else if (rec.label != nullptr) {
         CHECK_EQ(param_.label_width, rec.num_label)
           << "rec file provide " << rec.num_label << "-dimensional label "
              "but label_width is set to " << param_.label_width;

@@ -35,7 +35,7 @@ def sample_rois(rois, gt_boxes, num_classes, rois_per_image, fg_rois_per_image, 
     :param fg_rois_per_image: foreground roi number
     :param fg_overlap: overlap threshold for fg rois
     :param box_stds: std var of bbox reg
-    :return: (labels, rois, bbox_targets, bbox_weights)
+    :return: (rois, labels, bbox_targets, bbox_weights)
     """
     overlaps = bbox_overlaps(rois[:, 1:], gt_boxes[:, :4])
     gt_assignment = overlaps.argmax(axis=1)

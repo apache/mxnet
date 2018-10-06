@@ -74,3 +74,23 @@
     (is (every? #(= 4.0 %) (->> (executor/outputs exec)
                                 (map ndarray/->vec)
                                 first)))))
+
+(deftest test-forward
+  (let [a (sym/variable "a")
+        b (sym/variable "b")
+        c (sym/+ a b)
+        ex (sym/bind c {:a (ndarray/* (ndarray/ones [1 2]) 2)
+                        :b (ndarray/* (ndarray/ones [1 2]) 3)})]
+    ;; test forward with binded values
+    (executor/forward ex)
+    (is (= [5.0 5.0] (-> ex executor/outputs first ndarray/->vec)))
+    ;; test forward with new a (b is still [3.0 3.0]
+    (executor/forward ex false {:a (ndarray/* (ndarray/ones [1 2]) 4)})
+    (is (= [7.0 7.0] (-> ex executor/outputs first ndarray/->vec)))
+    ;; test forward with new b (a is still [4.0 4.0]
+    (executor/forward ex false {:b (ndarray/* (ndarray/ones [1 2]) 5)})
+    (is (= [9.0 9.0] (-> ex executor/outputs first ndarray/->vec)))
+    ;; test forward with new a & b
+    (executor/forward ex false {:a (ndarray/* (ndarray/ones [1 2]) 6)
+                                :b (ndarray/* (ndarray/ones [1 2]) 7)})
+    (is (= [13.0 13.0] (-> ex executor/outputs first ndarray/->vec)))))

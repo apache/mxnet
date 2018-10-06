@@ -70,7 +70,7 @@ MXNET_DLL const char* MXGetLastError();
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param out The created predictor handle.
  * \return 0 when success, -1 when failure.
@@ -99,7 +99,7 @@ MXNET_DLL int MXPredCreate(const char* symbol_json_str,
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param num_output_nodes Number of output nodes to the net,
  * \param output_keys The name of output argument.
@@ -134,7 +134,7 @@ MXNET_DLL int MXPredCreatePartialOut(const char* symbol_json_str,
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param num_threads The number of threads that we'll run the predictors.
  * \param out An array of created predictor handles. The array has to be large
@@ -161,7 +161,7 @@ MXNET_DLL int MXPredCreateMultiThread(const char* symbol_json_str,
  * \param input_shape_indptr Index pointer of shapes of each input node.
  *    The length of this array = num_input_nodes + 1.
  *    For feedforward net that takes 4 dimensional input, this is {0, 4}.
- * \param input_shape_data A flatted data of shapes of each input node.
+ * \param input_shape_data A flattened data of shapes of each input node.
  *    For feedforward net that takes 4 dimensional input, this is the shape data.
  * \param handle The original predictor handle.
  * \param out The reshaped predictor handle.

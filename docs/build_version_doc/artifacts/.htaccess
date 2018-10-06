@@ -11,7 +11,7 @@ RewriteRule ^versions/[^\/]+/community/.*$ /community/ [R=301,L]
 RewriteRule ^versions/[^\/]+/faq/.*$ /faq/ [R=301,L]
 RewriteRule ^versions/[^\/]+/gluon/.*$ /gluon/ [R=301,L]
 RewriteRule ^versions/[^\/]+/install/.*$ /install/ [R=301,L]
-RewriteRule ^versions/[^\/]+/tutorials/.*$ /tutorials/ [R=301,L]
+RewriteRule ^versions/[^\/]+/tutorials/(.*)$ /tutorials/$1 [R=301,L]
 
 # Redirect navbar APIs that did not exist
 RewriteRule ^versions/0.11.0/api/python/contrib/onnx.html /error/api.html [R=301,L]

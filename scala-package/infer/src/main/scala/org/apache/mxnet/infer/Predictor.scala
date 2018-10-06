@@ -113,13 +113,14 @@ class Predictor(modelPathPrefix: String,
   override def predict(input: IndexedSeq[Array[Float]])
   : IndexedSeq[Array[Float]] = {
 
-    require(input.length == inputDescriptors.length, "number of inputs provided: %d" +
-      " does not match number of inputs in inputDescriptors: %d".format(input.length,
-        inputDescriptors.length))
+    require(input.length == inputDescriptors.length,
+      s"number of inputs provided: ${input.length} does not match number of inputs " +
+        s"in inputDescriptors: ${inputDescriptors.length}")
 
     for((i, d) <- input.zip(inputDescriptors)) {
-      require (i.length == d.shape.product/batchSize, "number of elements:" +
-        " %d in the input does not match the shape:%s".format( i.length, d.shape.toString()))
+      require(i.length == d.shape.product / batchSize,
+        s"number of elements:${i.length} in the input does not match the shape:" +
+          s"${d.shape.toString()}")
     }
     var inputND: ListBuffer[NDArray] = ListBuffer.empty[NDArray]
 
@@ -163,17 +164,17 @@ class Predictor(modelPathPrefix: String,
    */
   override def predictWithNDArray(inputBatch: IndexedSeq[NDArray]): IndexedSeq[NDArray] = {
 
-    require(inputBatch.length == inputDescriptors.length, "number of inputs provided: %d" +
-      " do not match number of inputs in inputDescriptors: %d".format(inputBatch.length,
-        inputDescriptors.length))
+    require(inputBatch.length == inputDescriptors.length,
+      s"number of inputs provided: ${inputBatch.length} do not match number " +
+        s"of inputs in inputDescriptors: ${inputDescriptors.length}")
 
     // Shape validation, remove this when backend throws better error messages.
     for((i, d) <- inputBatch.zip(iDescriptors)) {
        require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
          "All inputs should be of same batch size")
       require(i.shape.drop(batchIndex + 1) == d.shape.drop(batchIndex + 1),
-        "Input Data Shape: %s should match the inputDescriptor shape: %s except batchSize".format(
-          i.shape.toString, d.shape.toString))
+        s"Input Data Shape: ${i.shape} should match the inputDescriptor " +
+          s"shape: ${d.shape} except batchSize")
     }
 
     val inputBatchSize = inputBatch(0).shape(batchIndex)

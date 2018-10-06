@@ -312,6 +312,34 @@ NDArray NDArray::data_ndarray() const {
   return ret;
 }
 
+struct NDArrayDLManager {
+    NDArray handle;  // ref NDArray
+    DLManagedTensor tensor;
+};
+
+DLManagedTensor* NDArray::ToDLPack() const {
+  NDArrayDLManager* dlmanager(new NDArrayDLManager);
+  dlmanager->handle = *this;
+  if (!is_none()) {
+    dlmanager->tensor.dl_tensor = data().dltensor();
+  }
+  dlmanager->tensor.manager_ctx = dlmanager;
+  dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
+    delete static_cast<NDArrayDLManager*>(dlmanager->manager_ctx);
+  };
+  return &(dlmanager->tensor);
+}
+
+NDArray NDArray::FromDLPack(const DLManagedTensor* tensor) {
+  const DLTensor &dl_tensor = tensor->dl_tensor;
+  auto deleter = [tensor](){
+    if (tensor->deleter != nullptr) {
+      tensor->deleter(const_cast<DLManagedTensor*>(tensor));
+    }
+  };
+  return NDArray(TBlob(dl_tensor), dl_tensor.ctx.device_id, deleter);
+}
+
 bool NDArray::fresh_out_grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return false;
   Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
@@ -2046,7 +2074,7 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
 #if MXNET_USE_OPENCV
   cv::Mat buf(1, size, CV_8U, str_img);
   cv::Mat res = cv::imdecode(buf, n_channels == 1 ? 0 : -1);
-  CHECK(res.data != NULL) << "OpenCV Failed to decode image";
+  CHECK(res.data != nullptr) << "OpenCV Failed to decode image";
   CHECK_LE(n_channels, static_cast<size_t>(res.channels()));
   if (y1 - y0 == 0) {
     x0 = 0;
@@ -2077,10 +2105,10 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
   if (mean.is_none()) {
     MSHADOW_TYPE_SWITCH(buff.dtype(), DType, {
       mshadow::Tensor<cpu, 4, DType> tensor = buff.data().get<cpu, 4, DType>();
-      for (index_t i = 0; i < y1-y0; i++) {
+      for (size_t i = 0; i < y1-y0; i++) {
         uchar* im_data = res.ptr<uchar>(y0+i) + res.channels()*x0;
-        for (index_t j = 0; j < x1-x0; j++) {
-          for (index_t k = 0; k < n_channels; k++) {
+        for (size_t j = 0; j < x1-x0; j++) {
+          for (size_t k = 0; k < n_channels; k++) {
             tensor[0][k][i][j] = DType(im_data[k]);  // NOLINT(*)
           }
           im_data += res.channels();
@@ -2097,10 +2125,10 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     MSHADOW_TYPE_SWITCH(buff.dtype(), DType, {
       mshadow::Tensor<cpu, 4, DType> tensor = buff.data().get<cpu, 4, DType>();
       mshadow::Tensor<cpu, 3, DType> tmean = mean.data().get<cpu, 3, DType>();
-      for (index_t i = 0; i < y1-y0; i++) {
+      for (size_t i = 0; i < y1-y0; i++) {
         uchar* im_data = res.ptr<uchar>(y0+i) + res.channels()*x0;
-        for (index_t j = 0; j < x1-x0; j++) {
-          for (index_t k = 0; k < n_channels; k++) {
+        for (size_t j = 0; j < x1-x0; j++) {
+          for (size_t k = 0; k < n_channels; k++) {
             tensor[0][k][i][j] = DType(im_data[k]) - tmean[k][i][j];  // NOLINT(*)
           }
           im_data += res.channels();

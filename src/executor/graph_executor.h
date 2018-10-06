@@ -260,6 +260,8 @@ class GraphExecutor : public Executor {
   bool log_verbose_ = false;
   // subgraph property name
   std::string subgraph_property_;
+  // ref of engine
+  std::shared_ptr<Engine> engine_ref_;
 };
 
 }  // namespace exec

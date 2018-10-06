@@ -22,6 +22,7 @@
 import time
 import logging
 import warnings
+import copy
 import numpy as np
 
 from .. import metric
@@ -507,6 +508,7 @@ class BaseModule(object):
             validation_metric = eval_metric
         if not isinstance(eval_metric, metric.EvalMetric):
             eval_metric = metric.create(eval_metric)
+        epoch_eval_metric = copy.deepcopy(eval_metric)
 
         ################################################################################
         # training loop
@@ -514,6 +516,7 @@ class BaseModule(object):
         for epoch in range(begin_epoch, num_epoch):
             tic = time.time()
             eval_metric.reset()
+            epoch_eval_metric.reset()
             nbatch = 0
             data_iter = iter(train_data)
             end_of_batch = False
@@ -529,8 +532,12 @@ class BaseModule(object):
                     self.update_metric(eval_metric,
                                        [db.label for db in data_batch],
                                        pre_sliced=True)
+                    self.update_metric(epoch_eval_metric,
+                                       [db.label for db in data_batch],
+                                       pre_sliced=True)
                 else:
                     self.update_metric(eval_metric, data_batch.label)
+                    self.update_metric(epoch_eval_metric, data_batch.label)
 
                 try:
                     # pre fetch next batch
@@ -543,7 +550,7 @@ class BaseModule(object):
                     monitor.toc_print()
 
                 if end_of_batch:
-                    eval_name_vals = eval_metric.get_name_value()
+                    eval_name_vals = epoch_eval_metric.get_name_value()
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,

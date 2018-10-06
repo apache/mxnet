@@ -36,6 +36,18 @@ except ImportError:
     multiprocessing = None
 
 def list_image(root, recursive, exts):
+    """Traverses the root of directory that contains images and
+    generates image list iterator.
+    Parameters
+    ----------
+    root: string
+    recursive: bool
+    exts: string
+    Returns
+    -------
+    image iterator that contains all the image under the specified path
+    """
+
     i = 0
     if recursive:
         cat = {}
@@ -61,6 +73,15 @@ def list_image(root, recursive, exts):
                 i += 1
 
 def write_list(path_out, image_list):
+    """Hepler function to write image list into the file.
+    The format is as below,
+    integer_image_index \t float_label_index \t path_to_image
+    Note that the blank between number and tab is only used for readability.
+    Parameters
+    ----------
+    path_out: string
+    image_list: list
+    """
     with open(path_out, 'w') as fout:
         for i, item in enumerate(image_list):
             line = '%d\t' % item[0]
@@ -70,6 +91,11 @@ def write_list(path_out, image_list):
             fout.write(line)
 
 def make_list(args):
+    """Generates .lst file.
+    Parameters
+    ----------
+    args: object that contains all the arguments
+    """
     image_list = list_image(args.root, args.recursive, args.exts)
     image_list = list(image_list)
     if args.shuffle is True:
@@ -95,6 +121,14 @@ def make_list(args):
             write_list(args.prefix + str_chunk + '_train.lst', chunk[sep_test:sep_test + sep])
 
 def read_list(path_in):
+    """Reads the .lst file and generates corresponding iterator.
+    Parameters
+    ----------
+    path_in: string
+    Returns
+    -------
+    item iterator that contains information in .lst file
+    """
     with open(path_in) as fin:
         while True:
             line = fin.readline()
@@ -102,17 +136,26 @@ def read_list(path_in):
                 break
             line = [i.strip() for i in line.strip().split('\t')]
             line_len = len(line)
+            # check the data format of .lst file
             if line_len < 3:
-                print('lst should at least has three parts, but only has %s parts for %s' %(line_len, line))
+                print('lst should have at least has three parts, but only has %s parts for %s' % (line_len, line))
                 continue
             try:
                 item = [int(line[0])] + [line[-1]] + [float(i) for i in line[1:-1]]
             except Exception as e:
-                print('Parsing lst met error for %s, detail: %s' %(line, e))
+                print('Parsing lst met error for %s, detail: %s' % (line, e))
                 continue
             yield item
 
 def image_encode(args, i, item, q_out):
+    """Reads, preprocesses, packs the image and put it back in output queue.
+    Parameters
+    ----------
+    args: object
+    i: int
+    item: list
+    q_out: queue
+    """
     fullpath = os.path.join(args.root, item[1])
 
     if len(item) > 3 and args.pack_label:
@@ -145,10 +188,10 @@ def image_encode(args, i, item, q_out):
         return
     if args.center_crop:
         if img.shape[0] > img.shape[1]:
-            margin = (img.shape[0] - img.shape[1]) // 2;
+            margin = (img.shape[0] - img.shape[1]) // 2
             img = img[margin:margin + img.shape[1], :]
         else:
-            margin = (img.shape[1] - img.shape[0]) // 2;
+            margin = (img.shape[1] - img.shape[0]) // 2
             img = img[:, margin:margin + img.shape[0]]
     if args.resize:
         if img.shape[0] > img.shape[1]:
@@ -167,6 +210,14 @@ def image_encode(args, i, item, q_out):
         return
 
 def read_worker(args, q_in, q_out):
+    """Function that will be spawned to fetch the image
+    from the input queue and put it back to output queue.
+    Parameters
+    ----------
+    args: object
+    q_in: queue
+    q_out: queue
+    """
     while True:
         deq = q_in.get()
         if deq is None:
@@ -175,6 +226,14 @@ def read_worker(args, q_in, q_out):
         image_encode(args, i, item, q_out)
 
 def write_worker(q_out, fname, working_dir):
+    """Function that will be spawned to fetch processed image
+    from the output queue and write to the .rec file.
+    Parameters
+    ----------
+    q_out: queue
+    fname: string
+    working_dir: string
+    """
     pre_time = time.time()
     count = 0
     fname = os.path.basename(fname)
@@ -204,6 +263,11 @@ def write_worker(q_out, fname, working_dir):
             count += 1
 
 def parse_args():
+    """Defines all arguments.
+    Returns
+    -------
+    args object that contains all the params
+    """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         description='Create an image list or \
@@ -260,8 +324,10 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
+    # if the '--list' is used, it generates .lst file
     if args.list:
         make_list(args)
+    # otherwise read .lst file to generates .rec file
     else:
         if os.path.isdir(args.prefix):
             working_dir = args.prefix
@@ -279,13 +345,16 @@ if __name__ == '__main__':
                 if args.num_thread > 1 and multiprocessing is not None:
                     q_in = [multiprocessing.Queue(1024) for i in range(args.num_thread)]
                     q_out = multiprocessing.Queue(1024)
+                    # define the process
                     read_process = [multiprocessing.Process(target=read_worker, args=(args, q_in[i], q_out)) \
                                     for i in range(args.num_thread)]
+                    # process images with num_thread process
                     for p in read_process:
                         p.start()
+                    # only use one process to write .rec to avoid race-condtion
                     write_process = multiprocessing.Process(target=write_worker, args=(q_out, fname, working_dir))
                     write_process.start()
-
+                    # put the image list into input queue
                     for i, item in enumerate(image_list):
                         q_in[i % len(q_in)].put((i, item))
                     for q in q_in:

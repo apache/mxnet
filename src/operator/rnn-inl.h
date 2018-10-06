@@ -576,7 +576,8 @@ class RNNOp : public Operator{
                        req[rnn_enum::kData],
                        req[rnn_enum::kParams],
                        req[rnn_enum::kState],
-                       req[rnn_enum::kStateCell],
+                       // State cell should be present for LSTMs, but is absent for other RNNs.
+                       param_.mode == rnn_enum::kLstm ? req[rnn_enum::kStateCell] : kNullOp,
                        param_.p,
                        param_.mode);
   }
@@ -607,9 +608,9 @@ class RNNProp : public OperatorProperty {
     if (!param_.state_outputs)
       return outputs;
     else
-      outputs.push_back("state");
+      outputs.emplace_back("state");
     if (param_.mode == rnn_enum::kLstm)
-      outputs.push_back("state_cell");
+      outputs.emplace_back("state_cell");
     return outputs;
   }
 
@@ -688,7 +689,7 @@ class RNNProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {

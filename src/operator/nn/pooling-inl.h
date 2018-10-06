@@ -74,6 +74,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     DMLC_DECLARE_FIELD(pooling_convention).set_default(pool_enum::kValid)
     .add_enum("full", pool_enum::kFull)
     .add_enum("valid", pool_enum::kValid)
+    .add_enum("same", pool_enum::kSame)
     .describe("Pooling convention to be applied.");
 
     DMLC_DECLARE_FIELD(stride).set_default(TShape())

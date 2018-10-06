@@ -153,7 +153,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(SpatialTransformerParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new SpatialTransformerOp<cpu, DType>(param);
   })
