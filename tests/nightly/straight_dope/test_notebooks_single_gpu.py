@@ -35,13 +35,11 @@ NOTEBOOKS_WHITELIST = [
     'chapter02_supervised-learning/environment',
     'chapter03_deep-neural-networks/kaggle-gluon-kfold',
     'chapter04_convolutional-neural-networks/deep-cnns-alexnet',  # > 10 mins.
-    'chapter05_recurrent-neural-networks/rnns-gluon', # > 10 mins.
     'chapter06_optimization/gd-sgd-scratch',  # Overflow warning is intended.
     'chapter06_optimization/gd-sgd-gluon',  # Overflow warning is intended.
     'chapter07_distributed-learning/multiple-gpus-scratch',
     'chapter07_distributed-learning/multiple-gpus-gluon',
     'chapter07_distributed-learning/training-with-multiple-machines',
-    'chapter08_computer-vision/visual-question-answer', # > 10 mins.
     'chapter11_recommender-systems/intro-recommender-systems',  # Early draft, non-working.
     'chapter12_time-series/intro-forecasting-gluon',
     'chapter12_time-series/intro-forecasting-2-gluon',
@@ -178,6 +176,9 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
     def test_gru_scratch(self):
         assert _test_notebook('chapter05_recurrent-neural-networks/gru-scratch')
 
+    def test_rnn_gluon(self):
+        assert _test_notebook('chapter05_recurrent-neural-networks/rnns-gluon')
+ 
     # Chapter 6
 
     def test_optimization_intro(self):
@@ -226,6 +227,10 @@ class StraightDopeSingleGpuTests(unittest.TestCase):
 
     def test_fine_tuning(self):
         assert _test_notebook('chapter08_computer-vision/fine-tuning')
+
+    def test_visual_qa(self):
+        assert _test_notebook('chapter08_computer-vision/visual-question-answer')
+
 
     # Chapter 9
 
