@@ -149,7 +149,7 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
       });
 
   // Restores device to before active device before ActivateDevice
-if (ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU) {
+if (handle->ctx.dev_type == Context::kCPUPinned || handle->ctx.dev_type == Context::kGPU) {
 #if MXNET_USE_CUDA
   mxnet::common::cuda::SetDevice set_device;
 #endif
