@@ -710,7 +710,31 @@ class TripletLoss(Loss):
 class CosineEmbeddingLoss(Loss):
     r"""For a target label 1 or -1, vectors target and pred, the function computes the cosine distance
     between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
+    .. math::
+        Cosine\_loss = \begin{gather*}
+	                        \begin{cases}
+		                        1 - cos\_sim(pred, target) & \text{if } label = 1\\
+		                        cos\_sim(pred, target) 	   & \text{if } label = -1
+	                        \end{cases}
+                        \end{gather*}
+        If
+        \begin{equation}
+	        pred = p_1x + p_2y + p_3z
+        \end{equation}
+        and
+        \begin{equation}
+	        target = t_1x + t_2y + t_3z
+        \end{equation}\\
+        Cosine Similarity:\\
+        \begin{equation}
+	        cos\_sim = \frac{pred.target}
+					        {||pred||.||target||}
+        \end{equation}
 
+        \begin{equation}
+	        cos\_sim(pred, target) = \frac{p_1.t_1 + p_2.t_2 + p_3.t_3}
+								          {\sqrt{p_1^2 + p_2^2 + p_3^2}.\sqrt{t_1^2 + t_2^2 + t_3^2}}
+        \end{equation}
 
     `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
 
