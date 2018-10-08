@@ -20,6 +20,8 @@ package org.apache.mxnetexamples.benchmark
 import org.apache.mxnetexamples.InferBase
 import org.apache.mxnetexamples.infer.imageclassifier.ImageClassifierExample
 import org.apache.mxnet._
+import org.apache.mxnetexamples.infer.objectdetector.SSDClassifierExample
+import org.apache.mxnetexamples.rnn.TestCharRnn
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -112,6 +114,18 @@ object ScalaInferenceBenchmark {
           baseCLI = imParser
           val parsedVals = new CmdLineParser(imParser).parseArgument(args.toList.asJava)
           new ImageClassifierExample(imParser)
+        }
+        case "ObjectDetectionExample" => {
+          val imParser = new org.apache.mxnetexamples.infer.objectdetector.CLIParser
+          baseCLI = imParser
+          val parsedVals = new CmdLineParser(imParser).parseArgument(args.toList.asJava)
+          new SSDClassifierExample(imParser)
+        }
+        case "CharRnn" => {
+          val imParser = new org.apache.mxnetexamples.rnn.CLIParser
+          baseCLI = imParser
+          val parsedVals = new CmdLineParser(imParser).parseArgument(args.toList.asJava)
+          new TestCharRnn(imParser)
         }
         case _ => throw new Exception("Invalid example name to run")
       }
