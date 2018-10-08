@@ -37,6 +37,27 @@ def _infer_weight_shape(op_name, data_shape, kwargs):
     sym = op(symbol.var('data', shape=data_shape), **kwargs)
     return sym.infer_shape_partial()[0]
 
+def _get_cuddn_controls(cudnn_flag):
+    assert cudnn in ('off', 'default', 'fastest', 'limited_workspace', 'global'),
+        "Invalid cudnn flag - '{0}' provided. \
+        Supported options - ‘off’, 'default', ‘fastest’, ‘limited_workspace’, ‘global’".format(cudnn_flag)
+    
+    # Default cudnn controls - Use cudnn and use limited_workspace tuning.
+    cudnn_off = False
+    cudnn_tune = 'limited_workspace'
+
+    if cuddn_flag == 'off':
+        cudnn_off = True
+        cudnn_tune = None
+    elif cudnn_flag == 'fastest':
+        cudnn_tune = 'fastest'
+    elif cudnn_flag == 'limited_workspace':
+        cudnn_tune = 'limited_workspace'
+    elif cudnn_flag == 'global':
+        cudnn_tune = None
+
+    return cudnn_off, cudnn_tune
+
 
 class _Conv(HybridBlock):
     """Abstract nD convolution layer (private, used as implementation base).
@@ -86,15 +107,20 @@ class _Conv(HybridBlock):
         Initializer for the `weight` weights matrix.
     bias_initializer: str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
     """
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer='zeros',
-                 cudnn_tune=None, cudnn_off=False,
+                 weight_initializer=None, bias_initializer='zeros', cudnn='limited_workspace',
                  op_name='Convolution', adj=None, prefix=None, params=None):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
@@ -107,6 +133,7 @@ class _Conv(HybridBlock):
             if isinstance(dilation, numeric_types):
                 dilation = (dilation,)*len(kernel_size)
             self._op_name = op_name
+            cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
             self._kwargs = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': channels, 'num_group': groups,
@@ -221,10 +248,16 @@ class Conv1D(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
     Inputs:
@@ -240,11 +273,12 @@ class Conv1D(_Conv):
     def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, cudnn_tune=None, cudnn_off=False, **kwargs):
+                 in_channels=0, cudnn='limited_workspace', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
+        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -303,10 +337,16 @@ class Conv2D(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
     Inputs:
@@ -326,11 +366,12 @@ class Conv2D(_Conv):
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0,
-                 cudnn_tune=None, cudnn_off=False, **kwargs):
+                 cudnn='limited_workspace', **kwargs):
         assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
+        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -389,10 +430,16 @@ class Conv3D(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running the performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
     Inputs:
         - **data**: 5D input tensor with shape
@@ -411,11 +458,12 @@ class Conv3D(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, cudnn_tune=None, cudnn_off=False, **kwargs):
+                 in_channels=0, cudnn='limited_workspace', **kwargs):
         assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
+        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
@@ -478,10 +526,16 @@ class Conv1DTranspose(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
     Inputs:
@@ -497,7 +551,7 @@ class Conv1DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, cudnn_tune=None, cudnn_off=False, **kwargs):
+                 in_channels=0, cudnn='limited_workspace', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
@@ -505,6 +559,7 @@ class Conv1DTranspose(_Conv):
             output_padding = (output_padding,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
+        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -571,10 +626,16 @@ class Conv2DTranspose(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
     Inputs:
         - **data**: 4D input tensor with shape
@@ -593,7 +654,7 @@ class Conv2DTranspose(_Conv):
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0,
-                 cudnn_tune=None, cudnn_off=False, **kwargs):
+                 cudnn='limited_workspace', **kwargs):
         assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
@@ -601,6 +662,7 @@ class Conv2DTranspose(_Conv):
             output_padding = (output_padding,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
+        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
@@ -667,10 +729,16 @@ class Conv3DTranspose(_Conv):
         Initializer for the `weight` weights matrix.
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
-    cudnn_tune: {None, 'fastest', 'limited_workspace', 'off'}, Optional, default='None'
-        Whether to pick convolution algo by running performance test.
-    cudnn_off: boolean, optional, default=False
-        Turn off cudnn for this layer.
+    cudnn : str,
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Optional, If you do not specificy anything, defaults to 'limited_workspace'.
+        off: Do not use cudnn for this layer.
+        default: Use cudnn. Do not auto tune to choose the algorithm.
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+                           that doesn’t exceed workspace limit.
+        fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+                MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
     Inputs:
@@ -691,7 +759,7 @@ class Conv3DTranspose(_Conv):
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0,
-                 cudnn_tune=None, cudnn_off=False, **kwargs):
+                 cudnn='limited_workspace', **kwargs):
         assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
@@ -699,6 +767,7 @@ class Conv3DTranspose(_Conv):
             output_padding = (output_padding,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
+        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
