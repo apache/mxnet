@@ -24,7 +24,8 @@ import collection.JavaConverters._
   */
 
 class Shape(val shape: org.apache.mxnet.Shape) {
-  def this(dims: java.util.List[java.lang.Integer]) = this(new org.apache.mxnet.Shape(dims.asScala.map(Int.unbox)))
+  def this(dims: java.util.List[java.lang.Integer])
+    = this(new org.apache.mxnet.Shape(dims.asScala.map(Int.unbox)))
   def this(dims: Array[Int]) = this(new org.apache.mxnet.Shape(dims))
 
   def apply(dim: Int): Int = shape.apply(dim)

@@ -26,7 +26,7 @@ class DataDesc(val dataDesc: org.apache.mxnet.DataDesc) {
 }
 
 object DataDesc{
-  implicit def fromDataDesc(dataDesc: org.apache.mxnet.DataDesc): DataDesc = new DataDesc(dataDesc)
+  implicit def fromDataDesc(dDesc: org.apache.mxnet.DataDesc): DataDesc = new DataDesc(dDesc)
 
   implicit def toDataDesc(dataDesc: DataDesc): org.apache.mxnet.DataDesc = dataDesc.dataDesc
 
