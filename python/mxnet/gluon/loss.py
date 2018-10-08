@@ -710,7 +710,9 @@ class TripletLoss(Loss):
 class CosineEmbeddingLoss(Loss):
     r"""For a target label 1 or -1, vectors target and pred, the function computes the cosine distance
     between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
+
     .. math::
+        \usepackage{amsmath}
         Cosine\_loss = \begin{gather*}
 	                        \begin{cases}
 		                        1 - cos\_sim(pred, target) & \text{if } label = 1\\
