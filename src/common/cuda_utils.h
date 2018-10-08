@@ -285,31 +285,27 @@ inline DType __device__ CudaMin(DType a, DType b) {
 
 class SetDevice {
  public:
-  /*! \brief default constructor only restores previous device upon going out of scope */
-  SetDevice() {
-#if MXNET_USE_CUDA
-    CUDA_CALL(cudaGetDevice(&restore_device_));
-#else
-    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
+  /*! \brief default constructor- only optionally restores previous device */
+  explicit SetDevice(bool restore = true) : restore_(restore) {
+    if (restore_)
+      CUDA_CALL(cudaGetDevice(&restore_device_));
   }
 
-  /*! \brief standard constuctor is cudaSetDevice + restore previous device */
-  explicit SetDevice(int device) {
-#if MXNET_USE_CUDA
-    CUDA_CALL(cudaGetDevice(&restore_device_));
+  /*! \brief standard constuctor- cudaSetDevice + optionally restore previous device */
+  explicit SetDevice(int device, bool restore = true) : restore_(restore) {
+    if (restore_)
+      CUDA_CALL(cudaGetDevice(&restore_device_));
     CUDA_CALL(cudaSetDevice(device));
-#else
-    LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
   }
 
   ~SetDevice() {
-    CUDA_CALL(cudaSetDevice(restore_device_));
+    if (restore_)
+      CUDA_CALL(cudaSetDevice(restore_device_));
   }
 
  private:
   int restore_device_;
+  bool restore_;
 };
 
 }  // namespace cuda
