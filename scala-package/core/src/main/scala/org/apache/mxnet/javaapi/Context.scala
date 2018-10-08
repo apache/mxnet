@@ -38,8 +38,8 @@ object Context {
   implicit def fromContext(context: org.apache.mxnet.Context): Context = new Context(context)
   implicit def toContext(jContext: Context): org.apache.mxnet.Context = jContext.context
 
-  val cpu:Context = org.apache.mxnet.Context.cpu()
-  val gpu:Context = org.apache.mxnet.Context.gpu()
+  val cpu: Context = org.apache.mxnet.Context.cpu()
+  val gpu: Context = org.apache.mxnet.Context.gpu()
   val devtype2str = org.apache.mxnet.Context.devstr2type.asJava
   val devstr2type = org.apache.mxnet.Context.devstr2type.asJava
 
