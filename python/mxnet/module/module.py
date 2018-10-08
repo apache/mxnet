@@ -495,7 +495,7 @@ class Module(BaseModule):
             return
 
         if self._params_dirty:
-            self._sync_params_from_devices()
+            self._sync_params_from_devices(copy_to_cpu=True)
 
         (kvstore, update_on_kvstore) = \
                 _create_kvstore(kvstore, len(self._context), self._arg_params)
