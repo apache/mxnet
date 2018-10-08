@@ -106,6 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--dataset', type=str, required=True, help='dataset path')
     parser.add_argument('--rgb-mean', type=str, default='0,0,0')
+    parser.add_argument('--rgb-std', type=str, default='0,0,0')
     parser.add_argument('--image-shape', type=str, default='3,224,224')
     parser.add_argument('--data-nthreads', type=int, default=60, help='number of threads for data decoding')
     parser.add_argument('--num-skipped-batches', type=int, default=0, help='skip the number of batches for inference')
@@ -129,7 +130,7 @@ if __name__ == '__main__':
         ctx = mx.cpu(0)
     else:
         raise ValueError('ctx %s is not supported in this script' % args.ctx)
-    
+
     logging.basicConfig()
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
@@ -145,6 +146,10 @@ if __name__ == '__main__':
     logger.info('rgb_mean = %s' % rgb_mean)
     rgb_mean = [float(i) for i in rgb_mean.split(',')]
     mean_args = {'mean_r': rgb_mean[0], 'mean_g': rgb_mean[1], 'mean_b': rgb_mean[2]}
+    rgb_std = args.rgb_std
+    logger.info('rgb_std = %s' % rgb_std)
+    rgb_std = [float(i) for i in rgb_std.split(',')]
+    std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
 
     label_name = args.label_name
     logger.info('label_name = %s' % label_name)
@@ -169,7 +174,8 @@ if __name__ == '__main__':
                                  shuffle=True,
                                  shuffle_chunk_seed=3982304,
                                  seed=48564309,
-                                 **mean_args)
+                                 **mean_args,
+                                 **std_args)
 
     # loading model
     sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)
