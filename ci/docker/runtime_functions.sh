@@ -270,7 +270,6 @@ build_amzn_linux_cpu() {
     ninja -v
 }
 
-
 build_centos7_mkldnn() {
     set -ex
     cd /work/mxnet
@@ -762,6 +761,12 @@ unittest_ubuntu_python3_quantization_gpu() {
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+}
+
+unittest_ubuntu_cpu_scala_publish() {
+    set -ex
+    cd /work/mxnet
+    sudo bash scala-package/dev/build.sh
 }
 
 unittest_ubuntu_cpu_scala() {
