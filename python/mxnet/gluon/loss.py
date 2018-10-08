@@ -774,9 +774,9 @@ class CosineEmbeddingLoss(Loss):
         cos_sim_b = F.broadcast_maximum(F.array([0]), y_minus_1 * (cos_sim - self._margin), axis=1)
         return cos_sim_a + cos_sim_b
 
-    def cosine_similarity(self, F, F1, F2, axis=-1):
+    def cosine_similarity(self, F, x, y, axis=-1):
         # Calculates the cosine similarity between 2 vectors
-        F1_norm = F1.norm(axis=axis).reshape(-1, 1)
-        F2_norm = F2.norm(axis=axis).reshape(-1, 1)
-        F1_dot_F2 = F.sum(F1*F2, axis=axis).reshape(-1, 1)
-        return (F1_dot_F2 / F.broadcast_maximum(F1_norm * F2_norm, F.array([1e-12])))
+        x_norm = F.norm(x, axis=axis).reshape(-1, 1)
+        y_norm = F.norm(y, axis=axis).reshape(-1, 1)
+        x_dot_y = F.sum(x*y, axis=axis).reshape(-1, 1)
+        return (x_dot_y / F.broadcast_maximum(x_norm * y_norm, F.array([1e-12])))
