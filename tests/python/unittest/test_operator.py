@@ -6970,6 +6970,25 @@ def test_spacetodepth():
     test_invalid_block_size()
     test_invalid_depth_dim()
 
+
+@with_seed()
+def test_softmax_cross_entropy():
+    def f_sm_ce(data, label):
+        return np.sum(-np.log(data) * label)
+
+    data = mx.sym.Variable('data')
+    label = mx.sym.Variable('label')
+    sym = mx.sym.softmax_cross_entropy(data=data, label=label)
+    num_labels = random.randint(100, 200)
+    batch_size = random.randint(100, 200)
+    np_data = rand_ndarray((batch_size, num_labels), stype='default').asnumpy()
+    np_sm = np_softmax(np_data)
+    np_label = np.random.randint(0, num_labels, (batch_size, ))
+    np_one_hot_label = np.zeros((batch_size, num_labels))
+    np_one_hot_label[np.arange(batch_size), np_label] = 1.
+    check_symbolic_forward(sym, {'data' : np_data, 'label' : np_label}, [np.array([f_sm_ce(np_sm, np_one_hot_label)])], rtol=1e-3, atol=1e-5)
+
+
 @with_seed()
 def test_invalid_kernel_size():
     invalid_kernel_size = 28

@@ -420,7 +420,6 @@ def check_layer_forward(layer, dshape):
     mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11506")
 @with_seed()
 def test_conv():
     layers1d = [
