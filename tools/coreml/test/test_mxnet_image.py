@@ -94,8 +94,7 @@ class ImageNetTest(unittest.TestCase):
             label_numpy = batch.label[0].asnumpy()
             for i in xrange(32):
                 input_data = {'data': data_numpy[i]}
-                coreml_predict = coreml_model.predict(input_data).values()[0] \
-                                             .flatten()
+                coreml_predict = coreml_model.predict(input_data).values()[0].flatten()
                 mxnet_predict = mxnet_preds[i]
                 label = label_numpy[i]
                 mxnet_acc.append(is_correct_top_one(mxnet_predict, label))
@@ -112,8 +111,7 @@ class ImageNetTest(unittest.TestCase):
         print("Coreml acc %s" % np.mean(coreml_acc))
         print("MXNet top 5 acc %s" % np.mean(mxnet_top_5_acc))
         print("Coreml top 5 acc %s" % np.mean(coreml_top_5_acc))
-        self.assertAlmostEqual(np.mean(mxnet_acc), np.mean(coreml_acc),
-                               delta=1e-4)
+        self.assertAlmostEqual(np.mean(mxnet_acc), np.mean(coreml_acc), delta=1e-4)
         self.assertAlmostEqual(np.mean(mxnet_top_5_acc),
                                np.mean(coreml_top_5_acc),
                                delta=1e-4)

@@ -42,21 +42,19 @@ def _kl_divergence(distribution1, distribution2):
     """
     assert len(distribution1) == len(distribution2)
     n = len(distribution1)
-    result = 1./n * sum(distribution1 * (np.log(distribution1) -
-                        np.log(distribution2)))
+    result = 1./n * sum(distribution1 * (np.log(distribution1) - np.log(distribution2)))
     return result
 
 
 class ModelsTest(unittest.TestCase):
     """
-    Unit test class that tests converter on entire MXNet models .
-    In order to test each unit test converts MXNet model into CoreML model
-    using the converter, generate predictions on both MXNet and CoreML and
-    verifies that predictions are same (or similar).
+    Unit test class that tests converter on entire MXNet models.
+    In order to test each unit test converts MXNet model into CoreML model using the converter,
+    generate predictions on both MXNet and CoreML and verifies that predictions are same
+    (or similar).
     """
     def _load_model(self, model_name, epoch_num, input_shape):
-        sym, arg_params, aux_params = mx.model.load_checkpoint(model_name,
-                                                               epoch_num)
+        sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, epoch_num)
         mod = mx.mod.Module(
             symbol=sym,
             context=mx.cpu(),
