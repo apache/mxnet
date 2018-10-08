@@ -279,16 +279,24 @@ method _init_kvstore()
     $self->_kv_initialized(1);
 }
 
-method _row_sparse_pull($parameter, $out, $row_id)
+# Internal method to invoke pull operations on KVStore. If $full_idx is set to 1,
+# $kv->pull is preferred instead of $kv->row_sparse_pull.
+
+method _row_sparse_pull($parameter, $out, $row_id, $full_idx=0)
 {
     # initialize kv and params if not already
     $self->_init_kvstore() unless $self->_kv_initialized;
     $self->_init_params() if scalar(@{ $self->_params_to_init });
-    $self->kvstore->row_sparse_pull(
-        $self->_param2idx->{ $parameter->name },
-        out => $out,
-        row_ids => $row_id
-    );
+    my $idx = $self->_param2idx->{ $parameter->name };
+    if($full_idx and not $self->kvstore->type =~ /dist/)
+    {
+        assert($row_id->size == $out->shape->[0]);
+        $self->kvstore->pull($idx, out => $out, priority => -$idx, ignore_sparse => 0);
+    }
+    else
+    {
+        $self->kvstore->row_sparse_pull($idx, out => $out, row_ids => $row_id, priority => -$idx);
+    }
 }
 
 =head2 step
