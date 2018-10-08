@@ -76,19 +76,19 @@ pytest tests/python/unittest/test_binary.py
 ## Usage
 
 We added binary versions of the following layers of the gluon API:
-- gluon.nn.Dense -> gluon.nn.BDense
-- gluon.nn.Conv1D -> gluon.nn.BConv1D
-- gluon.nn.Conv2D -> gluon.nn.BConv2D
-- gluon.nn.Conv3D -> gluon.nn.BConv3D
+- gluon.nn.Dense -> gluon.nn.QDense
+- gluon.nn.Conv1D -> gluon.nn.QConv1D
+- gluon.nn.Conv2D -> gluon.nn.QConv2D
+- gluon.nn.Conv3D -> gluon.nn.QConv3D
 
 ## Overview of Changes
 
-We added two functions `det_sign` and `round_ste` to mxnet core.
+We added three functions `det_sign` ([ada4ea1d](https://gitlab.hpi.de/joseph.bethge/bmxnet/commit/ada4ea1d4418cfdd6cbc6d0159e1a716cb01cd85)), `round_ste` ([044f81f0](https://gitlab.hpi.de/joseph.bethge/bmxnet/commit/044f81f028887b9842070df28b28de394bd07516)) and `contrib.gradcancel` to MXNet (see [src/operator/contrib/gradient_cancel[-inl.h|.cc|.cu]](src/operator/contrib)).
 
-The rest of our code resides in the following folders:
-- Layers are in [python/mxnet/gluon/nn/binary_layers.py](python/mxnet/gluon/nn/binary_layers.py)
+The rest of our code resides in the following folders/files:
+- Examples are in [example/bmxnet-examples](example/bmxnet-examples)
 - Tests are in [tests/python/unittest/test_binary.py](tests/python/unittest/test_binary.py)
-- Examples are in [example/binary](example/binary)
+- Layers are in [python/mxnet/gluon/nn/binary_layers.py](python/mxnet/gluon/nn/binary_layers.py)
 
 ### Citing BMXNet
 
