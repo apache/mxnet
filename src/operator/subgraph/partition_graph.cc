@@ -656,7 +656,6 @@ void CreateSubgraphNode(Graph* g,
   subg_prop->ConnectSubgraphOutputs(n, &output_entries);
   subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
 
-  n->inputs = orig_input_entries;
   const auto& indexed_graph = g->indexed_graph();
   for (size_t i = 0; i < n->inputs.size(); ++i) {
     auto& e = n->inputs[i];
