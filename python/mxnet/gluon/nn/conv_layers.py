@@ -38,7 +38,21 @@ def _infer_weight_shape(op_name, data_shape, kwargs):
     return sym.infer_shape_partial()[0]
 
 def _get_cuddn_controls(cudnn_flag):
-    assert cudnn in ('off', 'default', 'fastest', 'limited_workspace', 'global'),
+    """Prepare cudnn_tune, cudnn_off flags for sym and ndarray conv APIs
+    from given cudnn flags in Gluon Conv blocks.
+
+    Example: if cudnn_flag=limited_workspace, then returns,
+    cudnn_off=False, cudnn_tune='limited_workspace'
+
+    Parameters:
+    -----------
+    cudnn_flag : str
+        Supported flags - {'off', 'default', 'fastest', 'limited_workspace', 'global'}
+
+    Outputs:
+        - cudnn_off, cudnn_tune
+    """
+    assert cudnn in ('off', 'default', 'fastest', 'limited_workspace', 'global'), \
         "Invalid cudnn flag - '{0}' provided. \
         Supported options - ‘off’, 'default', ‘fastest’, ‘limited_workspace’, ‘global’".format(cudnn_flag)
     
