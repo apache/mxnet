@@ -208,8 +208,10 @@ if not sys.platform.startswith('win32'):
                 os.remove(src)
             except OSError:
                 pass
-            raise OSError(
-                'Moving downloaded temp file - {}, to {} failed. Please retry the download.'.format(src, dst))
+            finally:
+                raise OSError(
+                    'Moving downloaded temp file - {}, to {} failed. \
+                    Please retry the download.'.format(src, dst))
 else:
     import ctypes
 
@@ -232,12 +234,13 @@ else:
         """Handle WinError. Internal use only"""
         if not rv:
             msg = ctypes.FormatError(ctypes.GetLastError())
-            # if the MoveFileExW fail, remove the tempfile
+            # if the MoveFileExW fails(e.g. fail to acquire file lock), removes the tempfile
             try:
                 os.remove(src)
             except OSError:
                 pass
-            raise OSError(msg)
+            finally:
+                raise OSError(msg)
 
     def _replace_atomic(src, dst):
         """Implement atomic os.replace with windows.
