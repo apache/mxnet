@@ -44,6 +44,29 @@ from test_gluon_rnn import *
 
 set_default_context(mx.gpu(0))
 
+def _check_layer_forward(layer, dshape):
+    print("checking layer {}\nshape: {}.".format(layer, dshape))
+    layer.collect_params().initialize()
+    x = mx.nd.ones(shape=dshape)
+    x.attach_grad()
+    with mx.autograd.record():
+        out = layer(x)
+    out.backward()
+
+    np_out = out.asnumpy()
+    np_dx = x.grad.asnumpy()
+
+    layer.hybridize()
+
+    x = mx.nd.ones(shape=dshape)
+    x.attach_grad()
+    with mx.autograd.record():
+        out = layer(x)
+    out.backward()
+
+    mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
+    mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
+
 def check_rnn_layer(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
@@ -408,6 +431,60 @@ def test_large_models():
         # Evaluate model
         net(data_in).asnumpy()
 
+@with_seed()
+def test_conv_invalid_cudnn_flag():
+    try:
+        _check_layer_forward(nn.Conv1D(16, 3, in_channels=4, cudnn='fail_me'), (1, 4, 10))
+        assert False, "Gluon Conv1D block did not raise the AssertionError for invalid cudnn flag."
+    except AssertionError:
+        pass
+
+    try:
+        _check_layer_forward(nn.Conv2D(16, (3, 4), in_channels=4, cudnn='fail_me'), (1, 4, 20, 20))
+        assert False, "Gluon Conv2D block did not raise the AssertionError for invalid cudnn flag."
+    except AssertionError:
+        pass
+
+    try:
+        _check_layer_forward(nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='fail_me'), (1, 4, 10, 10, 10))
+        assert False, "Gluon Conv3D block did not raise the AssertionError for invalid cudnn flag."
+    except AssertionError:
+        pass
+
+@with_seed()
+def test_conv():
+    layers1d = [
+        nn.Conv1D(16, 3, in_channels=4)
+        nn.Conv1D(16, 3, in_channels=4, cudnn='off'),
+        nn.Conv1D(16, 3, in_channels=4, cudnn='default'),
+        nn.Conv1D(16, 3, in_channels=4, cudnn='global'),
+        nn.Conv1D(16, 3, in_channels=4, cudnn='fastest'),
+        nn.Conv1D(16, 3, in_channels=4, cudnn='limited_workspace')
+        ]
+    for layer in layers1d:
+        _check_layer_forward(layer, (1, 4, 10))
+
+    layers2d = [
+        nn.Conv2D(16, (5, 4), in_channels=4),
+        nn.Conv2D(16, (3, 4), in_channels=4, cudnn='off'),
+        nn.Conv2D(16, (5, 4), in_channels=4, cudnn='default'),
+        nn.Conv2D(16, (3, 4), in_channels=4, cudnn='global'),
+        nn.Conv2D(16, (5, 4), in_channels=4, cudnn='fastest'),
+        nn.Conv2D(16, (3, 4), in_channels=4, cudnn='limited_workspace'),
+        ]
+    for layer in layers2d:
+        _check_layer_forward(layer, (1, 4, 20, 20))
+
+    layers3d = [
+        nn.Conv3D(16, (5, 4, 3), in_channels=4),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='off'),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='default'),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='global'),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='fastest'),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='limited_workspace')
+        ]
+    for layer in layers3d:
+        _check_layer_forward(layer, (1, 4, 10, 10, 10))
 
 if __name__ == '__main__':
     import nose

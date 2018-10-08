@@ -52,15 +52,15 @@ def _get_cuddn_controls(cudnn_flag):
     Outputs:
         - cudnn_off, cudnn_tune
     """
-    assert cudnn in ('off', 'default', 'fastest', 'limited_workspace', 'global'), \
+    assert cudnn_flag in ('off', 'default', 'fastest', 'limited_workspace', 'global'), \
         "Invalid cudnn flag - '{0}' provided. \
         Supported options - ‘off’, 'default', ‘fastest’, ‘limited_workspace’, ‘global’".format(cudnn_flag)
-    
+
     # Default cudnn controls - Use cudnn and use limited_workspace tuning.
     cudnn_off = False
     cudnn_tune = None
 
-    if cuddn_flag == 'off':
+    if cudnn_flag == 'off':
         cudnn_off = True
     elif cudnn_flag == 'default':
         cudnn_tune = 'off'
@@ -121,14 +121,14 @@ class _Conv(HybridBlock):
     bias_initializer: str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
     """
     def __init__(self, channels, kernel_size, strides, padding, dilation,
@@ -262,14 +262,14 @@ class Conv1D(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -351,14 +351,14 @@ class Conv2D(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -444,14 +444,14 @@ class Conv3D(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
     Inputs:
@@ -540,14 +540,14 @@ class Conv1DTranspose(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -640,14 +640,14 @@ class Conv2DTranspose(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
     Inputs:
@@ -743,14 +743,14 @@ class Conv3DTranspose(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}. 
+        Supported values - {‘off’, ‘default’, ‘fastest’, ‘limited_workspace’, ‘global’}.
         Optional, If you do not specificy anything, defaults to 'global'.
         off: Do not use cudnn for this layer.
         default: Use cudnn. Do not auto tune to choose the algorithm.
-        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm 
+        limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn’t exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable 
+        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
