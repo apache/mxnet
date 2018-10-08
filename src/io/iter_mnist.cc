@@ -124,11 +124,11 @@ class MNISTIter: public IIterator<TBlobBatch> {
       batch_label_.dptr_ = &labels_[loc_];
       out_.data.clear();
       if (param_.flat) {
-          out_.data.push_back(TBlob(batch_data_.FlatTo2D()));
+          out_.data.emplace_back(batch_data_.FlatTo2D());
       } else {
-          out_.data.push_back(TBlob(batch_data_));
+          out_.data.emplace_back(batch_data_);
       }
-      out_.data.push_back(TBlob(batch_label_));
+      out_.data.emplace_back(batch_label_);
       loc_ += param_.batch_size;
       return true;
     } else {

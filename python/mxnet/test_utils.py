@@ -753,7 +753,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         if stype == 'default':
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
     for k in location:
-        location[k] = np.ascontiguousarray(location[k])
+        location[k] = np.asarray(location[k], order='C')
     for k, v in location.items():
         if v.dtype.kind != 'f':
             continue
