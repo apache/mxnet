@@ -712,8 +712,7 @@ class CosineEmbeddingLoss(Loss):
     between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
 
     .. math::
-        \usepackage{amsmath}
-        Cosine\_loss = \begin{gather*}
+        L = \begin{gather*}
 	                        \begin{cases}
 		                        1 - cos\_sim(pred, target) & \text{if } label = 1\\
 		                        cos\_sim(pred, target) 	   & \text{if } label = -1
@@ -726,8 +725,8 @@ class CosineEmbeddingLoss(Loss):
         and
         \begin{equation}
 	        target = t_1x + t_2y + t_3z
-        \end{equation}\\
-        Cosine Similarity:\\
+        \end{equation}
+        Cosine Similarity:
         \begin{equation}
 	        cos\_sim = \frac{pred.target}
 					        {||pred||.||target||}
@@ -751,17 +750,15 @@ class CosineEmbeddingLoss(Loss):
 
 
     Inputs:
-    ------
-        - **pred**:   prediction tensor with arbitrary shape
+        - **pred**: prediction tensor with arbitrary shape
         - **target**: target tensor with same shape as pred.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
           to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
-        - label: A 1-D tensor indicating for each pair input and pred, target label is 1 or -1
+        - **label**: A 1-D tensor indicating for each pair input and pred, target label is 1 or -1
 
     Outputs:
-    --------
         - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, margin=0, **kwargs):
@@ -778,6 +775,7 @@ class CosineEmbeddingLoss(Loss):
         return cos_sim_a + cos_sim_b
 
     def cosine_similarity(self, F, F1, F2, axis=-1):
+        # Calculates the cosine similarity between 2 vectors
         F1_norm = F1.norm(axis=axis).reshape(-1, 1)
         F2_norm = F2.norm(axis=axis).reshape(-1, 1)
         F1_dot_F2 = F.sum(F1*F2, axis=axis).reshape(-1, 1)
