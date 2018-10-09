@@ -29,7 +29,6 @@ from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
 
-
 def _apply_weighting(F, loss, weight=None, sample_weight=None):
     """Apply weighting to loss.
 
