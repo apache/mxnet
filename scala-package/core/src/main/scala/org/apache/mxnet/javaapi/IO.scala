@@ -32,4 +32,3 @@ object DataDesc{
 
   def getBatchAxis(layout: String): Int = org.apache.mxnet.DataDesc.getBatchAxis(Some(layout))
 }
-
