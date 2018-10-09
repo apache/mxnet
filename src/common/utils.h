@@ -475,7 +475,8 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
   if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
                                        "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
   if (MKLDNNCacheSize() != -1) common::LogOnce("MXNET_MKLDNN_CACHE_SIZE is set."
-                                       "Should only be set if your model has variable input shapes, "
+                                       "Should only be set if "
+                                       "your model has variable input shapes, "
                                        "as cache size may grow unbounded");
 #endif
 }
