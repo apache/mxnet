@@ -52,7 +52,7 @@ def _get_cuddn_controls(cudnn_flag):
     Outputs:
         - cudnn_off, cudnn_tune
     """
-    assert cudnn_flag in ('off', 'default', 'fastest', 'limited_workspace', 'global'), \
+    assert cudnn_flag in ('off', 'default', 'fastest', 'limited_workspace', 'global', None), \
         "Invalid cudnn flag - '{0}' provided. \
         Supported options - 'off', 'default', \
         'fastest','limited_workspace', 'global'".format(cudnn_flag)
@@ -292,11 +292,10 @@ class Conv1D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
-        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv1D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            cudnn_tune, cudnn_off, **kwargs)
+            cudnn, **kwargs)
 
 
 class Conv2D(_Conv):
@@ -385,11 +384,10 @@ class Conv2D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
-        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv2D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            cudnn_tune, cudnn_off, **kwargs)
+            cudnn, **kwargs)
 
 
 class Conv3D(_Conv):
@@ -477,11 +475,10 @@ class Conv3D(_Conv):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
-        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv3D, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            cudnn_tune, cudnn_off, **kwargs)
+            cudnn, **kwargs)
 
 
 class Conv1DTranspose(_Conv):
@@ -573,11 +570,10 @@ class Conv1DTranspose(_Conv):
             output_padding = (output_padding,)
         assert len(kernel_size) == 1, "kernel_size must be a number or a list of 1 ints"
         assert len(output_padding) == 1, "output_padding must be a number or a list of 1 ints"
-        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv1DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, cudnn_tune, cudnn_off,
+            bias_initializer, cudnn,
             op_name='Deconvolution', adj=output_padding, **kwargs)
         self.outpad = output_padding
 
@@ -676,11 +672,10 @@ class Conv2DTranspose(_Conv):
             output_padding = (output_padding,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         assert len(output_padding) == 2, "output_padding must be a number or a list of 2 ints"
-        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv2DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer,
-            bias_initializer, cudnn_tune, cudnn_off,
+            bias_initializer, cudnn,
             op_name='Deconvolution', adj=output_padding, **kwargs)
         self.outpad = output_padding
 
@@ -781,11 +776,10 @@ class Conv3DTranspose(_Conv):
             output_padding = (output_padding,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
         assert len(output_padding) == 3, "output_padding must be a number or a list of 3 ints"
-        cudnn_off, cudnn_tune = _get_cuddn_controls(cudnn)
         super(Conv3DTranspose, self).__init__(
             channels, kernel_size, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            cudnn_tune, cudnn_off, op_name='Deconvolution',
+            cudnn, op_name='Deconvolution',
             adj=output_padding, **kwargs)
         self.outpad = output_padding
 
