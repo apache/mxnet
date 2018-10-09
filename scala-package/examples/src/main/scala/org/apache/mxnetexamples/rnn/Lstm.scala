@@ -32,22 +32,22 @@ object Lstm {
   def lstm(numHidden: Int, inData: Symbol, prevState: LSTMState,
            param: LSTMParam, seqIdx: Int, layerIdx: Int, dropout: Float = 0f): LSTMState = {
     val inDataa = {
-      if (dropout > 0f) Symbol.api.Dropout(data = Some(inData), p = Some(dropout))
+      if (dropout > 0f) Symbol.api.Dropout(data = inData, p = dropout)
       else inData
     }
-    val i2h = Symbol.api.FullyConnected(data = Some(inDataa), weight = Some(param.i2hWeight),
-      bias = Some(param.i2hBias), num_hidden = numHidden * 4, name = s"t${seqIdx}_l${layerIdx}_i2h")
-    val h2h = Symbol.api.FullyConnected(data = Some(prevState.h), weight = Some(param.h2hWeight),
-      bias = Some(param.h2hBias), num_hidden = numHidden * 4, name = s"t${seqIdx}_l${layerIdx}_h2h")
+    val i2h = Symbol.api.FullyConnected(data = inDataa, weight = param.i2hWeight,
+      bias = param.i2hBias, num_hidden = numHidden * 4, name = s"t${seqIdx}_l${layerIdx}_i2h")
+    val h2h = Symbol.api.FullyConnected(data = prevState.h, weight = param.h2hWeight,
+      bias = param.h2hBias, num_hidden = numHidden * 4, name = s"t${seqIdx}_l${layerIdx}_h2h")
     val gates = i2h + h2h
-    val sliceGates = Symbol.api.SliceChannel(data = Some(gates), num_outputs = 4,
+    val sliceGates = Symbol.api.SliceChannel(data = gates, num_outputs = 4,
       name = s"t${seqIdx}_l${layerIdx}_slice")
-    val ingate = Symbol.api.Activation(data = Some(sliceGates.get(0)), act_type = "sigmoid")
-    val inTransform = Symbol.api.Activation(data = Some(sliceGates.get(1)), act_type = "tanh")
-    val forgetGate = Symbol.api.Activation(data = Some(sliceGates.get(2)), act_type = "sigmoid")
-    val outGate = Symbol.api.Activation(data = Some(sliceGates.get(3)), act_type = "sigmoid")
+    val ingate = Symbol.api.Activation(data = sliceGates.get(0), act_type = "sigmoid")
+    val inTransform = Symbol.api.Activation(data = sliceGates.get(1), act_type = "tanh")
+    val forgetGate = Symbol.api.Activation(data = sliceGates.get(2), act_type = "sigmoid")
+    val outGate = Symbol.api.Activation(data = sliceGates.get(3), act_type = "sigmoid")
     val nextC = (forgetGate * prevState.c) + (ingate * inTransform)
-    val nextH = outGate * Symbol.api.Activation(data = Some(nextC), "tanh")
+    val nextH = outGate * Symbol.api.Activation(data = nextC, "tanh")
     LSTMState(c = nextC, h = nextH)
   }
 
@@ -79,10 +79,10 @@ object Lstm {
     // embeding layer
     val data = Symbol.Variable("data")
     var label = Symbol.Variable("softmax_label")
-    val embed = Symbol.api.Embedding(data = Some(data), input_dim = inputSize,
-      weight = Some(embedWeight), output_dim = numEmbed, name = "embed")
-    val wordvec = Symbol.api.SliceChannel(data = Some(embed),
-      num_outputs = seqLen, squeeze_axis = Some(true))
+    val embed = Symbol.api.Embedding(data = data, input_dim = inputSize,
+      weight = embedWeight, output_dim = numEmbed, name = "embed")
+    val wordvec = Symbol.api.SliceChannel(data = embed,
+      num_outputs = seqLen, squeeze_axis = true)
 
     val hiddenAll = ArrayBuffer[Symbol]()
     var dpRatio = 0f
@@ -100,16 +100,16 @@ object Lstm {
         lastStates(i) = nextState
       }
       // decoder
-      if (dropout > 0f) hidden = Symbol.api.Dropout(data = Some(hidden), p = Some(dropout))
+      if (dropout > 0f) hidden = Symbol.api.Dropout(data = hidden, p = dropout)
       hiddenAll.append(hidden)
     }
     val hiddenConcat = Symbol.api.Concat(data = hiddenAll.toArray, num_args = hiddenAll.length,
-      dim = Some(0))
-    val pred = Symbol.api.FullyConnected(data = Some(hiddenConcat), num_hidden = numLabel,
-      weight = Some(clsWeight), bias = Some(clsBias))
-    label = Symbol.api.transpose(data = Some(label))
-    label = Symbol.api.Reshape(data = Some(label), target_shape = Some(Shape(0)))
-    val sm = Symbol.api.SoftmaxOutput(data = Some(pred), label = Some(label), name = "softmax")
+      dim = 0)
+    val pred = Symbol.api.FullyConnected(data = hiddenConcat, num_hidden = numLabel,
+      weight = clsWeight, bias = clsBias)
+    label = Symbol.api.transpose(data = label)
+    label = Symbol.api.Reshape(data = label, target_shape = Shape(0))
+    val sm = Symbol.api.SoftmaxOutput(data = pred, label = label, name = "softmax")
     sm
   }
 
@@ -134,8 +134,8 @@ object Lstm {
 
     val data = Symbol.Variable("data")
 
-    var hidden = Symbol.api.Embedding(data = Some(data), input_dim = inputSize,
-      weight = Some(embedWeight), output_dim = numEmbed, name = "embed")
+    var hidden = Symbol.api.Embedding(data = data, input_dim = inputSize,
+      weight = embedWeight, output_dim = numEmbed, name = "embed")
 
     var dpRatio = 0f
     // stack LSTM
@@ -149,10 +149,10 @@ object Lstm {
       lastStates(i) = nextState
     }
     // decoder
-    if (dropout > 0f) hidden = Symbol.api.Dropout(data = Some(hidden), p = Some(dropout))
-    val fc = Symbol.api.FullyConnected(data = Some(hidden),
-      num_hidden = numLabel, weight = Some(clsWeight), bias = Some(clsBias))
-    val sm = Symbol.api.SoftmaxOutput(data = Some(fc), name = "softmax")
+    if (dropout > 0f) hidden = Symbol.api.Dropout(data = hidden, p = dropout)
+    val fc = Symbol.api.FullyConnected(data = hidden,
+      num_hidden = numLabel, weight = clsWeight, bias = clsBias)
+    val sm = Symbol.api.SoftmaxOutput(data = fc, name = "softmax")
     var output = Array(sm)
     for (state <- lastStates) {
       output = output :+ state.c

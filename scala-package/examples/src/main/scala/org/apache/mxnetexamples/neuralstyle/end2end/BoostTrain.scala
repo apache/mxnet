@@ -39,11 +39,11 @@ object BoostTrain {
     val nChannel = img.shape(1)
     val sImg = Symbol.Variable("img")
     val sKernel = Symbol.Variable("kernel")
-    val channels = Symbol.api.SliceChannel(data = Some(sImg), num_outputs = nChannel)
+    val channels = Symbol.api.SliceChannel(data = sImg, num_outputs = nChannel)
     val toConcat = (0 until nChannel).map( i =>
-      Symbol.api.Convolution(data = Some(channels.get(i)), weight = Some(sKernel),
-        num_filter = 1, kernel = Shape(3, 3), pad = Some(Shape(1, 1)),
-        no_bias = Some(true), stride = Some(Shape(1, 1)))
+      Symbol.api.Convolution(data = channels.get(i), weight = sKernel,
+        num_filter = 1, kernel = Shape(3, 3), pad = Shape(1, 1),
+        no_bias = true, stride = Shape(1, 1))
     ).toArray
     val out = Symbol.api.Concat(data = toConcat, num_args = toConcat.length) * tvWeight
     val kernel = {

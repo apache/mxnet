@@ -139,7 +139,7 @@ private[mxnet] object APIDocGenerator{
         case _ => absClassArg.argName
       }
       if (absClassArg.isOptional) {
-        argDef += s"$currArgName : Option[${absClassArg.argType}] = None"
+        argDef += s"$currArgName : ${absClassArg.argType} = null"
       }
       else {
         argDef += s"$currArgName : ${absClassArg.argType}"
@@ -150,7 +150,7 @@ private[mxnet] object APIDocGenerator{
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
     } else {
-      argDef += "out : Option[NDArray] = None"
+      argDef += "out : NDArray = null"
       returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
     val experimentalTag = "@Experimental"

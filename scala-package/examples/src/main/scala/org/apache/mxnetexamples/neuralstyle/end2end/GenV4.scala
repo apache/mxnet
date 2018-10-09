@@ -24,11 +24,11 @@ object GenV4 {
 
   def Conv(data: Symbol, numFilter: Int, workspace : Long, kernel: (Int, Int) = (5, 5),
            pad: (Int, Int) = (2, 2)): Symbol = {
-    val sym1 = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
-      kernel = Shape(kernel._1, kernel._2), workspace = Some(workspace),
-      pad = Some(Shape(pad._1, pad._2)), no_bias = Some(false))
-    val sym2 = Symbol.api.BatchNorm(data = Some(sym1), fix_gamma = Some(false))
-    val sym3 = Symbol.api.LeakyReLU(data = Some(sym2), act_type = Some("leaky"))
+    val sym1 = Symbol.api.Convolution(data = data, num_filter = numFilter,
+      kernel = Shape(kernel._1, kernel._2), workspace = workspace,
+      pad = Shape(pad._1, pad._2), no_bias = false)
+    val sym2 = Symbol.api.BatchNorm(data = sym1, fix_gamma = false)
+    val sym3 = Symbol.api.LeakyReLU(data = sym2, act_type = "leaky")
     sym2.dispose()
     sym1.dispose()
     sym3
@@ -43,12 +43,12 @@ object GenV4 {
     var conv4_1 = Conv(conv3_1, 32, 4096)
     var conv5_1 = Conv(conv4_1, 48, 4096)
     var conv6_1 = Conv(conv5_1, 32, 4096)
-    var out = Symbol.api.Convolution(data = Some(conv6_1), num_filter = 3, kernel = Shape(3, 3),
-      pad = Some(Shape(1, 1)), no_bias = Some(true), workspace = Some(4096))
-    out = Symbol.api.BatchNorm(data = Some(out), fix_gamma = Some(false))
-    out = Symbol.api.Activation(data = Some(out), act_type = "tanh")
+    var out = Symbol.api.Convolution(data = conv6_1, num_filter = 3, kernel = Shape(3, 3),
+      pad = Shape(1, 1), no_bias = true, workspace = 4096.toLong)
+    out = Symbol.api.BatchNorm(data = out, fix_gamma = false)
+    out = Symbol.api.Activation(data = out, act_type = "tanh")
     val rawOut = (out * 128) + 128
-    val norm = Symbol.api.SliceChannel(data = Some(rawOut), num_outputs = 3)
+    val norm = Symbol.api.SliceChannel(data = rawOut, num_outputs = 3)
     val rCh = norm.get(0) - 123.68f
     val gCh = norm.get(1) - 116.779f
     val bCh = norm.get(2) - 103.939f

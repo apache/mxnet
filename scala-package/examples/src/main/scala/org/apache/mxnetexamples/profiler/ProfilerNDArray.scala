@@ -47,7 +47,7 @@ object ProfilerNDArray {
         val randomRet = (0 until shape.product)
           .map(r => scala.util.Random.nextFloat() - 0.5f).toArray
         dat.set(randomRet)
-        val ndArrayRet = NDArray.api.broadcast_to(dat, Some(targetShape))
+        val ndArrayRet = NDArray.api.broadcast_to(dat, targetShape)
         require(ndArrayRet.shape == targetShape)
         val err = {
           // implementation of broadcast

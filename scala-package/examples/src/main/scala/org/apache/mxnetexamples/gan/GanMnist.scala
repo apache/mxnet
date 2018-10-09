@@ -32,25 +32,25 @@ object GanMnist {
   def deconv2D(data: Symbol, iShape: Shape, oShape: Shape,
                kShape: (Int, Int), name: String, stride: (Int, Int) = (2, 2)): Symbol = {
     val targetShape = Shape(oShape(oShape.length - 2), oShape(oShape.length - 1))
-    val net = Symbol.api.Deconvolution(data = Some(data), kernel = Shape(kShape._1, kShape._2),
-      stride = Some(Shape(stride._1, stride._2)), target_shape = Some(targetShape),
-      num_filter = oShape(0), no_bias = Some(true), name = name)
+    val net = Symbol.api.Deconvolution(data = data, kernel = Shape(kShape._1, kShape._2),
+      stride = Shape(stride._1, stride._2), target_shape = targetShape,
+      num_filter = oShape(0), no_bias = true, name = name)
     net
   }
 
   def deconv2DBnRelu(data: Symbol, prefix: String, iShape: Shape,
                      oShape: Shape, kShape: (Int, Int), eps: Float = 1e-5f + 1e-12f): Symbol = {
     var net = deconv2D(data, iShape, oShape, kShape, name = s"${prefix}_deconv")
-    net = Symbol.api.BatchNorm(name = s"${prefix}_bn", data = Some(net),
-      fix_gamma = Some(true), eps = Some(eps))
-    net = Symbol.api.Activation(data = Some(net), act_type = "relu", name = s"${prefix}_act")
+    net = Symbol.api.BatchNorm(name = s"${prefix}_bn", data = net,
+      fix_gamma = true, eps = eps.toDouble)
+    net = Symbol.api.Activation(data = net, act_type = "relu", name = s"${prefix}_act")
     net
   }
 
   def deconv2DAct(data: Symbol, prefix: String, actType: String,
                   iShape: Shape, oShape: Shape, kShape: (Int, Int)): Symbol = {
     var net = deconv2D(data, iShape, oShape, kShape, name = s"${prefix}_deconv")
-    net = Symbol.api.Activation(data = Some(net), act_type = "relu", name = s"${prefix}_act")
+    net = Symbol.api.Activation(data = net, act_type = "relu", name = s"${prefix}_act")
     net
   }
 
@@ -58,11 +58,11 @@ object GanMnist {
                    eps: Float = 1e-5f + 1e-12f): (Symbol, Symbol) = {
 
     val code = Symbol.Variable("rand")
-    var net = Symbol.api.FullyConnected(data = Some(code), num_hidden = 4 * 4 * ngf * 4,
-      no_bias = Some(true), name = " g1")
-    net = Symbol.api.Activation(data = Some(net), act_type = "relu", name = "gact1")
+    var net = Symbol.api.FullyConnected(data = code, num_hidden = 4 * 4 * ngf * 4,
+      no_bias = true, name = " g1")
+    net = Symbol.api.Activation(data = net, act_type = "relu", name = "gact1")
     // 4 x 4
-    net = Symbol.api.Reshape(data = Some(net), shape = Some(Shape(-1, ngf * 4, 4, 4)))
+    net = Symbol.api.Reshape(data = net, shape = Shape(-1, ngf * 4, 4, 4))
     // 8 x 8
     net = deconv2DBnRelu(net, prefix = "g2",
       iShape = Shape(ngf * 4, 4, 4), oShape = Shape(ngf * 2, 8, 8), kShape = (3, 3))
@@ -75,22 +75,22 @@ object GanMnist {
 
     val data = Symbol.Variable("data")
     // 28 x 28
-    val conv1 = Symbol.api.Convolution(data = Some(data), kernel = Shape(5, 5),
+    val conv1 = Symbol.api.Convolution(data = data, kernel = Shape(5, 5),
       num_filter = 20, name = "conv1")
-    val tanh1 = Symbol.api.Activation(data = Some(conv1), act_type = "tanh")
-    val pool1 = Symbol.api.Pooling(data = Some(tanh1), pool_type = Some("max"),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
+    val tanh1 = Symbol.api.Activation(data = conv1, act_type = "tanh")
+    val pool1 = Symbol.api.Pooling(data = tanh1, pool_type = "max",
+      kernel = Shape(2, 2), stride = Shape(2, 2))
     // second conv
-    val conv2 = Symbol.api.Convolution(data = Some(pool1), kernel = Shape(5, 5),
+    val conv2 = Symbol.api.Convolution(data = pool1, kernel = Shape(5, 5),
       num_filter = 50, name = "conv2")
-    val tanh2 = Symbol.api.Activation(data = Some(conv2), act_type = "tanh")
-    val pool2 = Symbol.api.Pooling(data = Some(tanh2), pool_type = Some("max"),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
-    var d5 = Symbol.api.Flatten(data = Some(pool2))
-    d5 = Symbol.api.FullyConnected(data = Some(d5), num_hidden = 500, name = "fc1")
-    d5 = Symbol.api.Activation(data = Some(d5), act_type = "tanh")
-    d5 = Symbol.api.FullyConnected(data = Some(d5), num_hidden = 1, name = "fc_dloss")
-    val dloss = Symbol.api.LogisticRegressionOutput(data = Some(d5), name = "dloss")
+    val tanh2 = Symbol.api.Activation(data = conv2, act_type = "tanh")
+    val pool2 = Symbol.api.Pooling(data = tanh2, pool_type = "max",
+      kernel = Shape(2, 2), stride = Shape(2, 2))
+    var d5 = Symbol.api.Flatten(data = pool2)
+    d5 = Symbol.api.FullyConnected(data = d5, num_hidden = 500, name = "fc1")
+    d5 = Symbol.api.Activation(data = d5, act_type = "tanh")
+    d5 = Symbol.api.FullyConnected(data = d5, num_hidden = 1, name = "fc_dloss")
+    val dloss = Symbol.api.LogisticRegressionOutput(data = d5, name = "dloss")
 
     (gout, dloss)
   }

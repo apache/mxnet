@@ -96,11 +96,11 @@ object ExampleCustomOp {
   def test(dataPath : String, ctx : Context) : Float = {
     val data = Symbol.Variable("data")
     val label = Symbol.Variable("label")
-    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
-    val act1 = Symbol.api.Activation (data = Some(fc1), "relu", name = "relu")
-    val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
-    val act2 = Symbol.api.Activation(data = Some(fc2), "relu", name = "relu2")
-    val fc3 = Symbol.api.FullyConnected(Some(act2), None, None, 10, name = "fc3")
+    val fc1 = Symbol.api.FullyConnected(data = data, num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation (data = fc1, "relu", name = "relu")
+    val fc2 = Symbol.api.FullyConnected(act1, null, null, 64, name = "fc2")
+    val act2 = Symbol.api.Activation(data = fc2, "relu", name = "relu2")
+    val fc3 = Symbol.api.FullyConnected(act2, null, null, 10, name = "fc3")
     val kwargs = mutable.Map[String, Any]("label" -> label, "data" -> fc3)
     val mlp = Symbol.api.Custom(op_type = "softmax", name = "softmax", kwargs = kwargs)
 

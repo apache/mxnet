@@ -43,11 +43,11 @@ object CNNTextClassification {
     val inputX = Symbol.Variable("data")
     val inputY = Symbol.Variable("softmax_label")
     val polledOutputs = filterList.map { filterSize =>
-      val conv = Symbol.api.Convolution(data = Some(inputX),
+      val conv = Symbol.api.Convolution(data = inputX,
         kernel = new Shape(filterSize, numEmbed), num_filter = numFilter)
-      val relu = Symbol.api.Activation(data = Some(conv), act_type = "relu")
-      val pool = Symbol.api.Pooling(data = Some(relu), pool_type = Some("max"),
-        kernel = Some(new Shape(sentenceSize - filterSize + 1, 1)), stride = Some(new Shape(1, 1)))
+      val relu = Symbol.api.Activation(data = conv, act_type = "relu")
+      val pool = Symbol.api.Pooling(data = relu, pool_type = "max",
+        kernel = new Shape(sentenceSize - filterSize + 1, 1), stride = new Shape(1, 1))
       relu.dispose()
       conv.dispose()
       pool
@@ -56,17 +56,17 @@ object CNNTextClassification {
     val totalFilters = numFilter * filterList.length
     // val concat = Symbol.Concat()(polledOutputs: _*)(Map("dim" -> 1))
     val concat = Symbol.api.concat(data = polledOutputs,
-      num_args = polledOutputs.length, dim = Some(1))
-    val hPool = Symbol.api.reshape(data = Some(concat),
-      target_shape = Some(new Shape(batchSize, totalFilters)))
+      num_args = polledOutputs.length, dim = 1)
+    val hPool = Symbol.api.reshape(data = concat,
+      target_shape = new Shape(batchSize, totalFilters))
 
     val hDrop = {
-      if (dropout > 0f) Symbol.api.Dropout(data = Some(hPool), p = Some(dropout))
+      if (dropout > 0f) Symbol.api.Dropout(data = hPool, p = dropout)
       else hPool
     }
 
-    val fc = Symbol.api.FullyConnected(data = Some(hDrop), num_hidden = numLabel)
-    val sm = Symbol.api.SoftmaxOutput(data = Some(fc), label = Some(inputY))
+    val fc = Symbol.api.FullyConnected(data = hDrop, num_hidden = numLabel)
+    val sm = Symbol.api.SoftmaxOutput(data = fc, label = inputY)
     fc.dispose()
     hDrop.dispose()
     hPool.dispose()

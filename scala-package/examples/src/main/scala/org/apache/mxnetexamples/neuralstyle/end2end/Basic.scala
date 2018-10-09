@@ -70,10 +70,10 @@ object Basic {
     var gradScale = List[Int]()
     for (i <- 0 until style.listOutputs().length) {
       val shape = outputShape(i)
-      val x = Symbol.api.Reshape(data = Some(style.get(i)),
-        shape = Some(Shape(shape(1), shape(2) * shape(3))))
-      val gram = Symbol.api.FullyConnected(data = Some(x), weight = Some(x),
-        no_bias = Some(true), num_hidden = shape(1))
+      val x = Symbol.api.Reshape(data = style.get(i),
+        shape = Shape(shape(1), shape(2) * shape(3)))
+      val gram = Symbol.api.FullyConnected(data = x, weight = x,
+        no_bias = true, num_hidden = shape(1))
       gramList = gramList :+ gram
       gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
     }
@@ -84,12 +84,12 @@ object Basic {
     var gramLoss = List[Symbol]()
     for (i <- 0 until gram.listOutputs().length) {
       val gvar = Symbol.Variable(s"target_gram_$i")
-      gramLoss = gramLoss :+ Symbol.api.sum(Some(
-        Symbol.api.square(Some(gvar - gram.get(i)))
-      ))
+      gramLoss = gramLoss :+ Symbol.api.sum(
+        Symbol.api.square(gvar - gram.get(i))
+      )
     }
     val cvar = Symbol.Variable("target_content")
-    val contentLoss = Symbol.api.sum(Some(Symbol.api.square(Some(cvar - content))))
+    val contentLoss = Symbol.api.sum(Symbol.api.square(cvar - content))
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
 
