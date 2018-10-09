@@ -91,10 +91,11 @@ object ScalaInferenceBenchmark {
     val times: Seq[Long] = inferenceTimes
     val p50 = percentile(50, times)
     val p99 = percentile(99, times)
+    val p90 = percentile(90, times)
     val average = times.sum / (times.length * 1.0)
 
-    logger.info("\n%s_p99 %d, %s_p50 %d, %s_average %1.2f".format(metricsPrefix,
-      p99, metricsPrefix, p50, metricsPrefix, average))
+    logger.info("\n%s_p99 %d, %s_p90 %d, %s_p50 %d, %s_average %1.2f".format(metricsPrefix,
+      p99, metricsPrefix, p90, metricsPrefix, p50, metricsPrefix, average))
 
   }
 
