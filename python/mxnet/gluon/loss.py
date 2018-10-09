@@ -712,18 +712,12 @@ class CosineEmbeddingLoss(Loss):
     between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
 
     .. math::
-        L = \[\begin{gathered}
-                            \begin{cases}
-                                1 - cos\_sim(pred, target) & \text{if } label = 1\\
-                                cos\_sim(pred, target)     & \text{if } label = -1
-                            \end{cases}
-                        \end{gathered}\] If
-\[pred = p_1x + p_2y + p_3z\] and \[target = t_1x + t_2y + t_3z\] Cosine
-Similarity: \[cos\_sim = \frac{pred.target}
-                            {||pred||.||target||}\]
-
-\[cos\_sim(pred, target) = \frac{p_1.t_1 + p_2.t_2 + p_3.t_3}
-                                          {\sqrt{p_1^2 + p_2^2 + p_3^2}.\sqrt{t_1^2 + t_2^2 + t_3^2}}\]
+        L = \begin{gather*}
+                \begin{cases}
+                    1 - cos\_sim(pred, target) & \text{if } label = 1\\
+                    cos\_sim(pred, target)     & \text{if } label = -1
+                 \end{cases}
+            \end{gather*}
 
     `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
 
