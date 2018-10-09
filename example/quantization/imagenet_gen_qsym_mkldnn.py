@@ -97,7 +97,7 @@ if __name__ == '__main__':
                                                       'imagenet1k-inception-bn',
                                                       'custom'],
                         help='currently only supports imagenet1k-resnet-50_v1, imagenet1k-resnet-152 or imagenet1k-inception-bn.'
-                              'you can')
+                             'you can set to custom to load your pre-trained model.')
     parser.add_argument('--use-gluon-model', type=bool, default=False,
                         help='If enabled, will download pretrained model from Gluon-CV '
                              'and convert to symbolic model ')    
