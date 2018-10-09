@@ -1499,7 +1499,6 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
 // This is for simple_bind flow.
 static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    const std::string& prop_name,
-                                   std::vector<NDArray> *in_args,
                                    const std::unordered_map<std::string, TShape>& arg_shape_map,
                                    const std::unordered_map<std::string, int>& arg_dtype_map,
                                    const std::unordered_map<std::string, int>& arg_stype_map,
@@ -1508,8 +1507,6 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    const std::vector<Context>& in_arg_ctxes,
                                    const std::vector<Context>& aux_state_ctxes) {
   const std::vector<std::string> input_names = src.ListInputNames(Symbol::kAll);
-  const std::vector<std::string> arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
-  CHECK_EQ(arg_names.size(), in_args->size());
   nnvm::ShapeVector arg_shapes(input_names.size(), TShape());
   nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
   StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
@@ -1527,24 +1524,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
       arg_stypes[i] = it3->second;
     }
   }
-  // setup in_args_map
-  std::unordered_map<std::string, NDArray> in_args_map;
-  for (size_t i = 0; i < in_args->size(); ++i) {
-    in_args_map[arg_names[i]] = in_args->at(i);
-  }
-  auto result = PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
-                               ctx_map, in_arg_ctxes, aux_state_ctxes);
-  // Reorder in_args into new_in_args according to partitioned symbol input sequence
-  std::vector<NDArray> new_in_args(in_args->size());
-  // get new symbol in_arg names
-  std::vector<std::string> new_arg_names = result.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
-  CHECK_EQ(arg_names.size(), new_arg_names.size());
-  in_args->clear();
-  for (auto arg_name : new_arg_names) {
-    CHECK(in_args_map.count(arg_name));
-    in_args->push_back(in_args_map[arg_name]);
-  }
-  return result;
+  return PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
+                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes);
 }
 
 // Given input ndarrays, partition the graph using the backend name equal to prop_name.
@@ -1627,9 +1608,9 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
   if (!exec->subgraph_property().empty()) {
-    symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), in_args, arg_shape_map,
-                                  arg_dtype_map, arg_stype_map, default_ctx, group2ctx,
-                                  in_arg_ctxes, aux_state_ctxes);
+    symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), arg_shape_map, arg_dtype_map,
+                                  arg_stype_map, default_ctx, group2ctx, in_arg_ctxes,
+                                  aux_state_ctxes);
   }
   exec->Init(symbol, default_ctx, group2ctx,
              in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
