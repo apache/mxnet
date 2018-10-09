@@ -739,7 +739,7 @@ class CosineEmbeddingLoss(Loss):
         - **label**: A 1-D tensor indicating for each pair input and pred, target label is 1 or -1
 
     Outputs:
-        - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
+        - **loss**: The loss tensor with shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, margin=0, **kwargs):
         super(CosineEmbeddingLoss, self).__init__(weight, batch_axis, **kwargs)
@@ -747,14 +747,14 @@ class CosineEmbeddingLoss(Loss):
 
     def hybrid_forward(self, F, pred, target, label):
         pred = _reshape_like(F, pred, target)
-        cos_sim = self.cosine_similarity(F, pred, target)
+        cos_sim = self._cosine_similarity(F, pred, target)
         y_1 = label == 1
         y_minus_1 = label == -1
         cos_sim_a = (1 - cos_sim) * y_1
         cos_sim_b = F.broadcast_maximum(F.array([0]), y_minus_1 * (cos_sim - self._margin), axis=1)
         return cos_sim_a + cos_sim_b
 
-    def cosine_similarity(self, F, x, y, axis=-1):
+    def _cosine_similarity(self, F, x, y, axis=-1):
         # Calculates the cosine similarity between 2 vectors
         x_norm = F.norm(x, axis=axis).reshape(-1, 1)
         y_norm = F.norm(y, axis=axis).reshape(-1, 1)
