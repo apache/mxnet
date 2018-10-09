@@ -18,14 +18,13 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2018 by Contributors
  * \file ctc_loss.cu
- * \brief
- * \author Sebastian Bodenstein
-*/
-#include <algorithm>
+ * \brief GPU Implementation of ctc_loss op
+ */
+
 #include "./ctc_loss-inl.h"
-#include "./ctc_include/detail/gpu_ctc.h"
+#include "../../../3rdparty/ctc_include/detail/gpu_ctc.h"
 
 namespace mshadow {
 
@@ -45,17 +44,19 @@ ctcStatus_t compute_ctc_cost(const Tensor<gpu, 3, DType> activations,
     return ctc.score_forward(activations.dptr_, costs, labels,
                              label_lengths, input_lengths);
 }
-
 }  // namespace mshadow
-
-////////////////////////////////////////////////////////////////////////////////
 
 namespace mxnet {
 namespace op {
-template <>
-Operator *CreateOp<gpu>(CTCLossParam param, int dtype) {
-  return new CTCLossOp<gpu>(param);
-}
+
+NNVM_REGISTER_OP(CTCLoss)
+.add_alias("ctc_loss")
+.add_alias("_contrib_ctc_loss")
+.add_alias("_contrib_CTCLoss")
+.set_attr<FCompute>("FCompute<gpu>", CTCLossOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_ctc_loss)
+.set_attr<FCompute>("FCompute<gpu>", CTCLossOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

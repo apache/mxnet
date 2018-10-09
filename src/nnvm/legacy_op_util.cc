@@ -288,8 +288,7 @@ std::vector<std::pair<int, int> > OpPropInplaceOption(const NodeAttrs& attrs) {
   }
   std::vector<std::pair<int, int> > forward_inplace;
   for (auto& kv : prop.ptr->ForwardInplaceOption(in_data, out_addr)) {
-    forward_inplace.push_back(
-        std::make_pair(kv.first, *static_cast<int*>(kv.second)));
+    forward_inplace.emplace_back(kv.first, *static_cast<int*>(kv.second));
   }
   return forward_inplace;
 }

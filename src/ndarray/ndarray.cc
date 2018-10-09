@@ -168,6 +168,18 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_MKLDNN == 1
 
+NDArray::NDArray(const mkldnn::memory *mkldnn_mem, bool static_data)
+    : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+  auto mem_pd = mkldnn_mem->get_primitive_desc();
+  auto mem_desc = mem_pd.desc();
+  shape_ = TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
+  dtype_ = get_mxnet_type(mem_desc.data.data_type);
+  auto data = TBlob(mkldnn_mem->get_data_handle(), shape_, cpu::kDevMask, dtype_);
+  ptr_ = std::make_shared<Chunk>(data, 0);
+  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mem_pd, ptr_->shandle.dptr);
+  ptr_->static_data = static_data;
+}
+
 NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
   CHECK_GE(shape_.Size(), shape.Size())
@@ -477,24 +489,6 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   mkl_mem_.reset(new MKLDNNMemory(pd, shandle.dptr));
 }
 
-/*
- * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
- * the given one. operator== can't guarantee that. == can return true even if
- * the formats are different. I need to double check its format.
- */
-static inline mkldnn::memory *GetMKLDNNExact(
-    const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
-  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
-  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
-    return const_cast<mkldnn::memory *>(mem);
-  } else {
-    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
-            desc, mem->get_data_handle()));
-    MKLDNNStream::Get()->RegisterMem(ret);
-    return ret.get();
-  }
-}
-
 const mkldnn::memory *NDArray::GetMKLDNNData(
     const mkldnn::memory::primitive_desc &desc) const {
   if (desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
@@ -721,6 +715,21 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
   ptr_->mkl_mem_.reset(new MKLDNNMemory(desc, ptr_->shandle.dptr));
   MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
   return ptr_->mkl_mem_->GetRaw();
+}
+
+void NDArray::UpdateMKLDNNMemDesc() {
+  const mkldnn::memory *mem = GetMKLDNNData();
+  auto mem_desc = mem->get_primitive_desc().desc();
+  auto this_dtype = get_mkldnn_type(dtype());
+  if (this_dtype != mem_desc.data.data_type) {
+    mkldnn::memory::desc data_md(
+        mkldnn::memory::dims(mem_desc.data.dims,
+                             mem_desc.data.dims + mem_desc.data.ndims),
+        this_dtype, static_cast<mkldnn::memory::format>(mem_desc.data.format));
+    mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
+    ptr_->mkl_mem_.reset(new MKLDNNMemory(pd, ptr_->shandle.dptr));
+    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+  }
 }
 #endif
 
@@ -1592,8 +1601,12 @@ void NDArray::Save(dmlc::Stream *strm) const {
     save_data = nd_cpu.data();
   } else {
     this->WaitToRead();
-    save_data = this->data();
     nd_cpu = *this;
+#if MXNET_USE_MKLDNN == 1
+    if (nd_cpu.IsMKLDNNData())
+      nd_cpu = nd_cpu.Reorder2Default();
+#endif
+    save_data = nd_cpu.data();
   }
 
   // save type flag
@@ -2105,10 +2118,10 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
   if (mean.is_none()) {
     MSHADOW_TYPE_SWITCH(buff.dtype(), DType, {
       mshadow::Tensor<cpu, 4, DType> tensor = buff.data().get<cpu, 4, DType>();
-      for (index_t i = 0; i < y1-y0; i++) {
+      for (size_t i = 0; i < y1-y0; i++) {
         uchar* im_data = res.ptr<uchar>(y0+i) + res.channels()*x0;
-        for (index_t j = 0; j < x1-x0; j++) {
-          for (index_t k = 0; k < n_channels; k++) {
+        for (size_t j = 0; j < x1-x0; j++) {
+          for (size_t k = 0; k < n_channels; k++) {
             tensor[0][k][i][j] = DType(im_data[k]);  // NOLINT(*)
           }
           im_data += res.channels();
@@ -2125,10 +2138,10 @@ void Imdecode(NDArray *ret, NDArray mean, size_t index,
     MSHADOW_TYPE_SWITCH(buff.dtype(), DType, {
       mshadow::Tensor<cpu, 4, DType> tensor = buff.data().get<cpu, 4, DType>();
       mshadow::Tensor<cpu, 3, DType> tmean = mean.data().get<cpu, 3, DType>();
-      for (index_t i = 0; i < y1-y0; i++) {
+      for (size_t i = 0; i < y1-y0; i++) {
         uchar* im_data = res.ptr<uchar>(y0+i) + res.channels()*x0;
-        for (index_t j = 0; j < x1-x0; j++) {
-          for (index_t k = 0; k < n_channels; k++) {
+        for (size_t j = 0; j < x1-x0; j++) {
+          for (size_t k = 0; k < n_channels; k++) {
             tensor[0][k][i][j] = DType(im_data[k]) - tmean[k][i][j];  // NOLINT(*)
           }
           im_data += res.channels();
