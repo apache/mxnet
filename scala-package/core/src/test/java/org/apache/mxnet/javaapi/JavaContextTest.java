@@ -15,21 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet.javaapi
+package org.apache.mxnet.javaapi;
 
-class DataDesc(val dataDesc: org.apache.mxnet.DataDesc) {
+import org.junit.Test;
 
-  def this(name: String, shape: Shape, dType: DType.DType, layout: String) =
-    this(new org.apache.mxnet.DataDesc(name, shape, dType, layout))
-
-  override def toString(): String = dataDesc.toString()
+public class JavaContextTest {
+	
+	@Test
+	public void testCPU() {
+		Context.cpu();
+	}
+	
+	@Test
+	public void testDefault() {
+		Context.defaultCtx();
+	}
+	
+	@Test
+	public void testConstructor() {
+		new Context("cpu", 0);
+	}
 }
-
-object DataDesc{
-  implicit def fromDataDesc(dDesc: org.apache.mxnet.DataDesc): DataDesc = new DataDesc(dDesc)
-
-  implicit def toDataDesc(dataDesc: DataDesc): org.apache.mxnet.DataDesc = dataDesc.dataDesc
-
-  def getBatchAxis(layout: String): Int = org.apache.mxnet.DataDesc.getBatchAxis(Some(layout))
-}
-

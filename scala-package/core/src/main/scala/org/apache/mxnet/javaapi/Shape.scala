@@ -50,3 +50,4 @@ object Shape {
 
   implicit def toShape(jShape: Shape): org.apache.mxnet.Shape = jShape.shape
 }
+
