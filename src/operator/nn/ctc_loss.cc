@@ -18,26 +18,22 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
  * \file ctc_loss.cc
- * \brief
- * \author Sebastian Bodenstein
-*/
-
+ * \brief CPU Implementation of CTC Loss op
+ */
 #include "./ctc_loss-inl.h"
-#include "./ctc_include/detail/cpu_ctc.h"
+#include "../../../3rdparty/ctc_include/detail/cpu_ctc.h"
 
 namespace mshadow {
-
 template <typename DType>
 ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              DType *costs, DType *grads, int *labels,
                              int *label_lengths, int *data_lengths,
-                             void *workspace, int train, int blank_label) {
+                             void *workspace, bool isTraining, int blank_label) {
   int minibatch = static_cast<int>(activations.size(1));
   int alphabet_size = static_cast<int>(activations.size(2));
   mxnet_warpctc::CpuCTC<DType> ctc(alphabet_size, minibatch, workspace, blank_label);
-  if (train) {
+  if (isTraining) {
     return ctc.cost_and_grad(activations.dptr_, grads, costs, labels,
                              label_lengths, data_lengths);
   } else {
@@ -45,32 +41,18 @@ ctcStatus_t compute_ctc_cost(const Tensor<cpu, 3, DType> activations,
                              data_lengths);
   }
 }
-
 }  // namespace mshadow
 
 namespace mxnet {
 namespace op {
-template <>
-Operator *CreateOp<cpu>(CTCLossParam param, int dtype) {
-  return new CTCLossOp<cpu>(param);
-}
 
-// DO_BIND_DISPATCH comes from operator_common.h
-Operator *CTCLossProp::CreateOperatorEx(Context ctx,
-                                        std::vector<TShape> *in_shape,
-                                        std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
-  std::vector<int> out_type, aux_type;
-  CHECK(InferType(in_type, &out_type, &aux_type));
-  CHECK(InferShape(in_shape, &out_shape, &aux_shape));
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
-}
+DMLC_REGISTER_PARAMETER(CTCLossOpParam);
 
-DMLC_REGISTER_PARAMETER(CTCLossParam);
-
-MXNET_REGISTER_OP_PROPERTY(_contrib_CTCLoss, CTCLossProp)
-    .describe(R"code(Connectionist Temporal Classification Loss.
-
+NNVM_REGISTER_OP(CTCLoss)
+.add_alias("ctc_loss")
+.add_alias("_contrib_CTCLoss")
+.add_alias("_contrib_ctc_loss")
+.describe(R"code(Connectionist Temporal Classification Loss.
 The shapes of the inputs and outputs:
 
 - **data**: `(sequence_length, batch_size, alphabet_size)`
@@ -113,18 +95,41 @@ Sequence Data with Recurrent Neural Networks*, A. Graves *et al*. for more
 information on the definition and the algorithm.
 
 )code" ADD_FILELINE)
-    .add_argument("data", "NDArray-or-Symbol", "Input data to the ctc_loss op.")
-    .add_argument("label", "NDArray-or-Symbol",
-                  "Ground-truth labels for the loss.")
-    .add_argument("data_lengths", "NDArray-or-Symbol",
-                  "Lengths of data for each of the samples. Only required "
-                  "when use_data_lengths is true.")
-    .add_argument("label_lengths", "NDArray-or-Symbol",
-                  "Lengths of labels for each of the samples. Only required "
-                  "when use_label_lengths is true.")
-    .add_arguments(CTCLossParam::__FIELDS__());
+.set_attr_parser(ParamParser<CTCLossOpParam>)
+.set_num_inputs(CTCLossOpNumInputs)
+.set_num_outputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames", CTCLossOpListInputNames)
+.set_attr<nnvm::FListOutputNames>("FListOutputNAmes",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"out", "grad"};
+  })
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+  [](const NodeAttrs& attrs) {
+    return 1;
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", CTCLossOpShape)
+.set_attr<nnvm::FInferType>("FInferType", CTCLossOpType)
+.set_attr<FInferStorageType>("FInferStorageType", CTCLossOpStorageType)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs)
+  { return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<FCompute>("FCompute<cpu>", CTCLossOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_ctc_loss"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_argument("label", "NDArray-or-Symbol", "Ground-truth labels for the loss.")
+.add_argument("data_lengths", "NDArray-or-Symbol",
+              "Lengths of data for each of the samples. Only required "
+              "when use_data_lengths is true.")
+.add_argument("label_lengths", "NDArray-or-Symbol",
+              "Lengths of labels for each of the samples. Only required "
+              "when use_label_lengths is true.")
+.add_arguments(CTCLossOpParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_contrib_CTCLoss).add_alias("_contrib_ctc_loss");
+NNVM_REGISTER_OP(_backward_ctc_loss)
+.set_attr_parser(ParamParser<CTCLossOpParam>)
+.set_num_inputs(1)
+.set_num_outputs(CTCLossOpNumInputs)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", CTCLossOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

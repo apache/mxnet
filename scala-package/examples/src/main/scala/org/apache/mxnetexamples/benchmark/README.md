@@ -46,4 +46,38 @@ You may need to run ```chmod u+x run_image_inference_bm.sh``` before running thi
     batch_inference_latency p99 4241, batch_inference_p50 4241, batch_inference_average 4241.00
     ```
 
-More examples to be added soon.
+* *Object Detection Example*
+<br> The following shows an example of running SSDClassifier under the benchmark script. The script takes in the number of iterations for inference calls, the batch size for batch inference calls, the model path, input file, and input directory. 
+For more details to run SSDClassifierExample as a standalone file, refer to the [README](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/infer/objectdetector/README.md) for SSDClassifierExample.
+You may need to run ```chmod u+x run_image_inference_bm.sh``` before running this script.
+    ```bash
+    cd <Path-To-MXNET-Repo>/scala-package/examples/scripts/infer/objectdetector
+    ./get_ssd_data.sh
+    cd <Path-To-MXNET-Repo>/scala-package/examples/scripts/benchmark
+    ./run_image_inference_bm.sh cpu ObjectDetectionExample 100 10 ../infer/models/resnet50_ssd/resnet50_ssd_model ../infer/images/dog.jpg ../infer/images/ 
+    ```
+    Upon running this script, you might see an output like this : 
+    ```
+    [main] INFO org.apache.mxnetexamples.benchmark.CLIParserBase - 
+    single_inference_latency p99 1663, single_inference_p50 729, single_inference_average 755.17
+    ...
+    
+    INFO org.apache.mxnetexamples.benchmark.CLIParserBase - 
+    batch_inference_latency p99 4241, batch_inference_p50 4241, batch_inference_average 4241.00
+    ```
+    
+* *Text Generation through RNNs*
+<br>The following shows an example of running TestCharRnn under the benchmark script. The script takes in the number of iterations for inference calls, the model path and the input text file. 
+For more details to run TestCharRnn as a standalone file, refer to the [README](https://github.com/apache/incubator-mxnet/blob/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples/rnn/README.md) for TextCharRnn.
+You may need to run ```chmod u+x run_text_charrnn_bm.sh``` before running this script.
+    ```bash
+    wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/RNN/obama.zip
+    unzip obama.zip
+    cd <Path-To-MXNET-Repo>/scala-package/examples/scripts/benchmark
+    ./run_text_charrnn_bm.sh cpu CharRnn 100 <path-to-model>/obama <path-to-model>/obama.txt 
+    ```
+    Upon running this script, you might see an output like this : 
+    ```
+    [main] INFO org.apache.mxnetexamples.benchmark.CLIParserBase - 
+    single_inference_latency p99 4097, single_inference_p50 2560, single_inference_average 2673.720000 
+    ```
