@@ -29,6 +29,15 @@ class Shape(dims: Traversable[Int]) extends Serializable {
     this(dims.toVector)
   }
 
+  /**
+    * Java compatible constructor
+    * @param dims Array of Int input
+    * @return Shape
+    */
+  def this(dims: Array[Int]) = {
+    this(dims.toVector)
+  }
+
   def apply(dim: Int): Int = shape(dim)
   def get(dim: Int): Int = apply(dim)
   def size: Int = shape.size
