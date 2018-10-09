@@ -20,6 +20,8 @@ package org.apache.mxnetexamples.benchmark
 import org.apache.mxnetexamples.InferBase
 import org.apache.mxnetexamples.infer.imageclassifier.ImageClassifierExample
 import org.apache.mxnet._
+import org.apache.mxnetexamples.infer.objectdetector.SSDClassifierExample
+import org.apache.mxnetexamples.rnn.TestCharRnn
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
@@ -89,10 +91,11 @@ object ScalaInferenceBenchmark {
     val times: Seq[Long] = inferenceTimes
     val p50 = percentile(50, times)
     val p99 = percentile(99, times)
+    val p90 = percentile(90, times)
     val average = times.sum / (times.length * 1.0)
 
-    logger.info("\n%s_p99 %d, %s_p50 %d, %s_average %1.2f".format(metricsPrefix,
-      p99, metricsPrefix, p50, metricsPrefix, average))
+    logger.info("\n%s_p99 %d, %s_p90 %d, %s_p50 %d, %s_average %1.2f".format(metricsPrefix,
+      p99, metricsPrefix, p90, metricsPrefix, p50, metricsPrefix, average))
 
   }
 
@@ -112,6 +115,18 @@ object ScalaInferenceBenchmark {
           baseCLI = imParser
           val parsedVals = new CmdLineParser(imParser).parseArgument(args.toList.asJava)
           new ImageClassifierExample(imParser)
+        }
+        case "ObjectDetectionExample" => {
+          val imParser = new org.apache.mxnetexamples.infer.objectdetector.CLIParser
+          baseCLI = imParser
+          val parsedVals = new CmdLineParser(imParser).parseArgument(args.toList.asJava)
+          new SSDClassifierExample(imParser)
+        }
+        case "CharRnn" => {
+          val imParser = new org.apache.mxnetexamples.rnn.CLIParser
+          baseCLI = imParser
+          val parsedVals = new CmdLineParser(imParser).parseArgument(args.toList.asJava)
+          new TestCharRnn(imParser)
         }
         case _ => throw new Exception("Invalid example name to run")
       }
