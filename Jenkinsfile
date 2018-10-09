@@ -526,7 +526,7 @@ core_logic: {
       }
     },
     'Python3: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init('gpu', mx_lib, true)
@@ -611,7 +611,7 @@ core_logic: {
       }
     },
     'Python3: MKLDNN-GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_P3) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib, true)
