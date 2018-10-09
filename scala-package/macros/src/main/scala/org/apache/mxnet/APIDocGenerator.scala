@@ -38,8 +38,9 @@ private[mxnet] object APIDocGenerator{
   def main(args: Array[String]) : Unit = {
     val FILE_PATH = args(0)
     val hashCollector = ListBuffer[String]()
-    hashCollector += absClassGen(FILE_PATH, true)
-    hashCollector += absClassGen(FILE_PATH, false)
+    hashCollector += absClassGen(FILE_PATH, true, false)
+    hashCollector += absClassGen(FILE_PATH, false, false)
+    hashCollector += absClassGen(FILE_PATH + "/api/java/", false, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     val finalHash = hashCollector.mkString("\n")
@@ -52,7 +53,7 @@ private[mxnet] object APIDocGenerator{
     org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(digest)
   }
 
-  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
+  def absClassGen(FILE_PATH : String, isSymbol : Boolean, isJava : Boolean) : String = {
     // scalastyle:off
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     // Defines Operators that should not generated
@@ -61,14 +62,14 @@ private[mxnet] object APIDocGenerator{
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
       .filterNot(ele => notGenerated.contains(ele.name))
       .map(absClassFunction => {
-      val scalaDoc = generateAPIDocFromBackend(absClassFunction)
-      val defBody = generateAPISignature(absClassFunction, isSymbol)
+      val scalaDoc = generateAPIDocFromBackend(absClassFunction, true, isJava)
+      val defBody = generateAPISignature(absClassFunction, isSymbol, isJava)
       s"$scalaDoc\n$defBody"
     })
-    val packageName = if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase"
+    val packageName = (if (isJava) "J" else "") + (if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase")
     val apacheLicence = "/*\n* Licensed to the Apache Software Foundation (ASF) under one or more\n* contributor license agreements.  See the NOTICE file distributed with\n* this work for additional information regarding copyright ownership.\n* The ASF licenses this file to You under the Apache License, Version 2.0\n* (the \"License\"); you may not use this file except in compliance with\n* the License.  You may obtain a copy of the License at\n*\n*    http://www.apache.org/licenses/LICENSE-2.0\n*\n* Unless required by applicable law or agreed to in writing, software\n* distributed under the License is distributed on an \"AS IS\" BASIS,\n* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n* See the License for the specific language governing permissions and\n* limitations under the License.\n*/\n"
     val scalaStyle = "// scalastyle:off"
-    val packageDef = "package org.apache.mxnet"
+    val packageDef = if (isJava) "package org.apache.mxnet.api.java" else "package org.apache.mxnet"
     val imports = "import org.apache.mxnet.annotation.Experimental"
     val absClassDef = s"abstract class $packageName"
     val finalStr = s"$apacheLicence\n$scalaStyle\n$packageDef\n$imports\n$absClassDef {\n${absFuncs.mkString("\n")}\n}"
@@ -107,7 +108,7 @@ private[mxnet] object APIDocGenerator{
   }
 
   // Generate ScalaDoc type
-  def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
+  def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true, isJava : Boolean = false) : String = {
     val desc = ArrayBuffer[String]()
     desc += "  * <pre>"
       func.desc.split("\n").foreach({ currStr =>
@@ -115,10 +116,13 @@ private[mxnet] object APIDocGenerator{
     })
     desc += "  * </pre>"
     val params = func.listOfArgs.map({ absClassArg =>
-      val currArgName = absClassArg.argName match {
+      var currArgName = absClassArg.argName match {
                 case "var" => "vari"
                 case "type" => "typeOf"
                 case _ => absClassArg.argName
+      }
+      if (isJava && absClassArg.isOptional) {
+        currArgName = s"optional_$currArgName"
       }
       s"  * @param $currArgName\t\t${absClassArg.argDesc}"
     })
@@ -130,16 +134,20 @@ private[mxnet] object APIDocGenerator{
     }
   }
 
-  def generateAPISignature(func : absClassFunction, isSymbol : Boolean) : String = {
+  def generateAPISignature(func : absClassFunction, isSymbol : Boolean, isJava : Boolean = false) : String = {
     var argDef = ListBuffer[String]()
     func.listOfArgs.foreach(absClassArg => {
-      val currArgName = absClassArg.argName match {
+      var currArgName = absClassArg.argName match {
         case "var" => "vari"
         case "type" => "typeOf"
         case _ => absClassArg.argName
       }
       if (absClassArg.isOptional) {
-        argDef += s"$currArgName : Option[${absClassArg.argType}] = None"
+        if (isJava) {
+          argDef += s"optional_$currArgName : ${absClassArg.argType} = null"
+        } else {
+          argDef += s"$currArgName : Option[${absClassArg.argType}] = None"
+        }
       }
       else {
         argDef += s"$currArgName : ${absClassArg.argType}"
@@ -150,7 +158,7 @@ private[mxnet] object APIDocGenerator{
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
     } else {
-      argDef += "out : Option[NDArray] = None"
+      argDef += (if (isJava) "out : org.apache.mxnet.NDArray = null" else "out : Option[NDArray] = None")
       returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
     val experimentalTag = "@Experimental"

@@ -15,32 +15,25 @@
  * limitations under the License.
  */
 
-package org.apache.mxnet
+package org.apache.mxnet.api.java
 
 import org.apache.mxnet.init.Base._
 import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 
 import scala.annotation.StaticAnnotation
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
-private[mxnet] class AddNDArrayFunctions(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
+private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) = macro JNDArrayMacro.typeSafeAPIDefs
 }
 
-private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
-  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.typeSafeAPIDefs
-}
-
-private[mxnet] object NDArrayMacro {
+private[mxnet] object JNDArrayMacro {
   case class NDArrayArg(argName: String, argType: String, isOptional : Boolean)
   case class NDArrayFunction(name: String, listOfArgs: List[NDArrayArg])
 
   // scalastyle:off havetype
-  def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    impl(c)(annottees: _*)
-  }
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     typeSafeAPIImpl(c)(annottees: _*)
   }
@@ -48,42 +41,11 @@ private[mxnet] object NDArrayMacro {
 
   private val ndarrayFunctions: List[NDArrayFunction] = initNDArrayModule()
 
-  private def impl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
-
-    val isContrib: Boolean = c.prefix.tree match {
-      case q"new AddNDArrayFunctions($b)" => c.eval[Boolean](c.Expr(b))
-    }
-
-    val newNDArrayFunctions = {
-      if (isContrib) ndarrayFunctions.filter(_.name.startsWith("_contrib_"))
-      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
-    }
-
-     val functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
-        val funcName = NDArrayfunction.name
-        val termName = TermName(funcName)
-       Seq(
-            // scalastyle:off
-            // (yizhi) We are investigating a way to make these functions type-safe
-            // and waiting to see the new approach is stable enough.
-            // Thus these functions may be deprecated in the future.
-            // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
-            q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
-            // e.g def transpose(args: Any*)
-            q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
-            // scalastyle:on
-          )
-        }
-
-    structGeneration(c)(functionDefs, annottees : _*)
-  }
-
   private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
-      case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
+      case q"new AddJNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
     // Defines Operators that should not generated
     val notGenerated = Set("Custom")
@@ -101,20 +63,21 @@ private[mxnet] object NDArrayMacro {
       // Construct Implementation field
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
-      impl += "val args = scala.collection.mutable.ArrayBuffer.empty[NDArray]"
+      impl += "val args = scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]"
       ndarrayfunction.listOfArgs.foreach({ ndarrayarg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
-        val currArgName = ndarrayarg.argName match {
+        var currArgName = ndarrayarg.argName match {
           case "var" => "vari"
           case "type" => "typeOf"
-          case _ => ndarrayarg.argName
+          case default => ndarrayarg.argName
         }
         if (ndarrayarg.isOptional) {
-          argDef += s"${currArgName} : Option[${ndarrayarg.argType}] = None"
+          currArgName = s"optional_$currArgName"
+          argDef += s"$currArgName : ${ndarrayarg.argType} = null"
         }
         else {
-          argDef += s"${currArgName} : ${ndarrayarg.argType}"
+          argDef += s"$currArgName : ${ndarrayarg.argType}"
         }
         // NDArray arg implementation
         val returnType = "org.apache.mxnet.NDArray"
@@ -133,13 +96,13 @@ private[mxnet] object NDArrayMacro {
             "map(\"" + ndarrayarg.argName + "\") = " + currArgName
           }
         impl.append(
-          if (ndarrayarg.isOptional) s"if (!$currArgName.isEmpty) $base.get"
+          if (ndarrayarg.isOptional) s"if ($currArgName != null) $base"
           else base
         )
       })
       // add default out parameter
-      argDef += "out : Option[NDArray] = None"
-      impl += "if (!out.isEmpty) map(\"out\") = out.get"
+      argDef += "out : org.apache.mxnet.NDArray = null"
+      impl += "if (out != null) map(\"out\") = out"
       // scalastyle:off
       impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
       // scalastyle:on
