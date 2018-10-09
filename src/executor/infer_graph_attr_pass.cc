@@ -330,7 +330,7 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
     graph.attrs["shape_inputs"] = std::make_shared<any>(std::move(shape_inputs));
   }
   if (shape_attr_key.length() != 0) {
-    graph.attrs["shape_attr_key"] = std::make_shared<any>(std::move(shape_attr_key));
+    graph.attrs["shape_attr_key"] = std::make_shared<any>(shape_attr_key);
   }
   return InferAttr<nnvm::TShape, nnvm::FInferShape>(
       std::move(graph), nnvm::TShape(),
@@ -348,7 +348,7 @@ nnvm::Graph InferType(nnvm::Graph&& graph,
     graph.attrs["dtype_inputs"] = std::make_shared<any>(std::move(dtype_inputs));
   }
   if (dtype_attr_key.length() != 0) {
-    graph.attrs["dtype_attr_key"] = std::make_shared<any>(std::move(dtype_attr_key));
+    graph.attrs["dtype_attr_key"] = std::make_shared<any>(dtype_attr_key);
   }
   return InferAttr<int, nnvm::FInferType>(
       std::move(graph), -1,
@@ -366,7 +366,7 @@ nnvm::Graph InferStorageType(nnvm::Graph&& graph,
     graph.attrs["storage_type_inputs"] = std::make_shared<any>(std::move(storage_type_inputs));
   }
   if (storage_type_attr_key.length() != 0) {
-    graph.attrs["storage_type_attr_key"] = std::make_shared<any>(std::move(storage_type_attr_key));
+    graph.attrs["storage_type_attr_key"] = std::make_shared<any>(storage_type_attr_key);
   }
   // initialize unknown values for dispatch modes
   if (graph.attrs.count("dispatch_mode") == 0) {

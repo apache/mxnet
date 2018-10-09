@@ -30,7 +30,7 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(PoolingV1Param param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.pool_type) {
       case pool_v1_enum::kMaxPooling:
@@ -44,7 +44,7 @@ Operator *CreateOp<cpu>(PoolingV1Param param, int dtype) {
         break;
       default:
         LOG(FATAL) << "unknown pooling type";
-        return NULL;
+        return nullptr;
     }
   })
 

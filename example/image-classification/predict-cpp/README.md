@@ -1,5 +1,5 @@
 # Image Classification Example Using the C Predict API
-This is a simple predictor which shows how to use the MXNet C Predict API for image classification with a pre-trained ImageNet model.
+This is a simple predictor which shows how to use the MXNet C Predict API for image classification with a pre-trained ImageNet model in a single thread and multiple threads.
 
 ## Prerequisites
 
@@ -45,10 +45,10 @@ Run the example by passing it an image that you want to classify. If you don't h
   wget https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Honeycrisp.jpg/1920px-Honeycrisp.jpg
   ```
 
-Then run the `image-classification-predict` program, passing the image as the argument.
+Then run the `image-classification-predict` program, passing the image as the first argument and the number of threads as the second parameter.
 
   ```bash
-  ./image-classification-predict 1920px-Honeycrisp.jpg
+  ./image-classification-predict 1920px-Honeycrisp.jpg 1
   ```
 
 ## Tips

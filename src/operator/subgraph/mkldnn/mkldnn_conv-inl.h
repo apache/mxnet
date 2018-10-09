@@ -17,28 +17,32 @@
  * under the License.
  */
 
-/*!
- *  Copyright (c) 2018 by Contributors
- * \file default_subgraph_op.cu
- * \brief GPU Implementation of subgraph operations
- */
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
+#if MXNET_USE_MKLDNN == 1
 
-#include <mxnet/ndarray.h>
-#include "./common.h"
-#include "../../imperative/imperative_utils.h"
-#include "../../imperative/cached_op.h"
+#include <utility>
+#include <vector>
+#include <string>
+#include "../../nn/convolution-inl.h"
+#include "../../nn/batch_norm-inl.h"
+#include "../../nn/mkldnn/mkldnn_convolution-inl.h"
 
 namespace mxnet {
 namespace op {
 
-void DefaultSubgraphOpForward(const OpStatePtr& state_ptr,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs);
+struct MKLDNNConvFusionParam {
+  MKLDNNConvFullParam full_conv_param;
+  std::shared_ptr<BatchNormParam> bn_param;
+};
 
-NNVM_REGISTER_OP(_default_subgraph_op)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", DefaultSubgraphOpForward);
+static const size_t uint8_range = 255;
+static const size_t int8_range = 127;
+
+enum MKLDNNConvOpOutputs { kOut, kMin, kMax };
 
 }  // namespace op
 }  // namespace mxnet
+
+#endif  // MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_

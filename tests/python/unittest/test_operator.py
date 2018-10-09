@@ -772,48 +772,61 @@ def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
         out = x.copy()
-        out = np.multiply(out, gamma)
+        if len(x.shape) == 4:
+            out = out.transpose(2,3,0,1)
+            out = np.multiply(out, gamma)
+            out = out.transpose(2,3,0,1)
+        else:
+            out = np.multiply(out, gamma)
         out[pos_indices] = x[pos_indices]
         return out
     def fprelu_grad(x, y, gamma):
         pos_indices = x > 0
-        grad_x = np.multiply(np.ones(x.shape), gamma)
+        if len(x.shape) == 4:
+            grad_x = np.multiply(np.ones(x.shape).transpose(2,3,0,1), gamma)
+            grad_x = grad_x.transpose(2,3,0,1)
+        else:
+            grad_x = np.multiply(np.ones(x.shape), gamma)
         grad_gam = np.zeros(gamma.shape)
         copy_x = x.copy()
         copy_x[pos_indices] = 0.0
         grad_x[pos_indices] = 1.0
-        if len(gamma.shape) > 1:
+        if len(gamma.shape) > 1 and len(x.shape) != 4:
             grad_gam = copy_x
+        elif len(gamma.shape) > 1 and len(x.shape) == 4:
+            grad_gam = np.sum(copy_x, axis=(2,3))
         elif gamma.shape[0] == 1:
             grad_gam = np.sum(np.sum(copy_x))
-        elif gamma.shape[0] > 1:
+        elif gamma.shape[0] > 1 and len(x.shape) != 4:
             grad_gam = np.sum(copy_x, axis=0)
+        elif gamma.shape[0] > 1 and len(x.shape) == 4:
+            grad_gam = np.sum(copy_x, axis=(0,2,3))
         return (grad_x, grad_gam)
-    shape = (3,4)
     x = mx.symbol.Variable("x")
     gamma = mx.symbol.Variable("gamma")
-    for dtype in [np.float16, np.float32, np.float64]:
-        for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
-            gam_full = np.array([gam, gam, gam])
-            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
-            rtol = 1e-2
-            atol = 1e-3
-            eps = 1e-4
-            xa[abs(xa) < eps] = 1.0
-            y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
-            ya = fprelu(xa, gam)
-            ya_full = fprelu(xa, gam_full)
-            g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
-            g_xa_full, g_gam_full = fprelu_grad(xa, ya_full, gamma=gam_full)
-            # Skip numeric check for float16 type to get rid of flaky behavior
-            if dtype is not np.float16:
-                check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
-                check_numeric_gradient(y, [xa, gam_full], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_forward(y, [xa, gam_full], [ya_full], rtol=rtol, atol=atol, dtype=dtype)
-            check_symbolic_backward(y, [xa, gam_full], [np.ones(shape), np.ones(gam_full.shape)],
-                                    [g_xa_full, g_gam_full], rtol=rtol, atol=atol, dtype=dtype)
+    for shape in [(3,4), (3,4,4,5)]:
+        for dtype in [np.float16, np.float32, np.float64]:
+            for gam in [np.array([0.1, 0.2, 0.3, 0.4], dtype=dtype)]:
+                gam_full = np.array([gam, gam, gam])
+                xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+                rtol = 1e-2
+                atol = 1e-3
+                eps = 1e-4
+                xa[abs(xa) < eps] = 1.0
+                y = mx.symbol.LeakyReLU(data=x, gamma=gamma, act_type='prelu')
+                ya = fprelu(xa, gam)
+                ya_full = fprelu(xa, gam_full)
+                g_xa, g_gam = fprelu_grad(xa, ya, gamma=gam)
+                g_xa_full, g_gam_full = fprelu_grad(xa, ya_full, gamma=gam_full)
+                # Skip numeric check for float16 type to get rid of flaky behavior
+                if dtype is not np.float16:
+                    check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+                    check_numeric_gradient(y, [xa, gam_full], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_forward(y, [xa, gam_full], [ya_full], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa, gam_full], [np.ones(shape), np.ones(gam_full.shape)],
+                                        [g_xa_full, g_gam_full], rtol=rtol, atol=atol, dtype=dtype)
 
 @with_seed()
 def test_selu():
@@ -4478,11 +4491,11 @@ def test_pick():
 def check_ctc_loss(acts, labels, loss_truth):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
-    ctc = mx.sym.contrib.ctc_loss(in_var, labels_var)
+    ctc = mx.sym.ctc_loss(in_var, labels_var)
     acts_nd = mx.nd.array(acts, ctx=default_context())
     labels_nd = mx.nd.array(labels, ctx=default_context())
     exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
-    # test forward without grad calc
+    # test forward with grad calc
     exe.forward(is_train=True)
     outTest = exe.outputs[0]
     # test forward without grad calc
@@ -4490,6 +4503,30 @@ def check_ctc_loss(acts, labels, loss_truth):
     outTrain = exe.outputs[0]
     # make sure losses calculated with both modes are the same
     assert_almost_equal(outTest.asnumpy(), outTrain.asnumpy())
+
+    # test against ground truth, if available
+    if loss_truth is not None:
+        assert_almost_equal(outTest.asnumpy(), loss_truth)
+    # test grad
+    check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
+
+# check contrib operator for backward compatibility
+def check_contrib_ctc_loss(acts, labels, loss_truth):
+    in_var = mx.sym.Variable('input')
+    labels_var = mx.sym.Variable('labels')
+    ctc = mx.sym.contrib.ctc_loss(in_var, labels_var)
+    acts_nd = mx.nd.array(acts, ctx=default_context())
+    labels_nd = mx.nd.array(labels, ctx=default_context())
+    exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
+    # test forward with grad calc
+    exe.forward(is_train=True)
+    outTest = exe.outputs[0]
+    # test forward without grad calc
+    exe.forward(is_train=False)
+    outTrain = exe.outputs[0]
+    # make sure losses calculated with both modes are the same
+    assert_almost_equal(outTest.asnumpy(), outTrain.asnumpy())
+
     # test against ground truth, if available
     if loss_truth is not None:
         assert_almost_equal(outTest.asnumpy(), loss_truth)
@@ -4507,6 +4544,8 @@ def test_ctc_loss():
     labels = np.array([[2, 3, 0], [2, 3, 0]])
     true_loss = np.array([4.04789, 4.04789], dtype=np.float32) # from Torch
     check_ctc_loss(acts, labels, true_loss)
+    check_contrib_ctc_loss(acts, labels, true_loss)
+
     # Test 2:
     acts2 = np.array([
         [[-5, -4, -3, -2, -1], [1.2, 3.4, 1.2, -0.1, -2.34]],
@@ -4515,11 +4554,13 @@ def test_ctc_loss():
     labels2 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.float32)
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels2, true_loss)
+    check_contrib_ctc_loss(acts2, labels2, true_loss)
 
     # Test 3: check use integer type as label
     labels3 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.int32)
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
     check_ctc_loss(acts2, labels3, true_loss)
+    check_contrib_ctc_loss(acts2, labels3, true_loss)
 
 @with_seed()
 def test_ctc_loss_with_large_classes():
@@ -4537,13 +4578,92 @@ def test_ctc_loss_with_large_classes():
         [1000, 2000, 3000, 4000, 0, 5000, 0, 0]], dtype=np.int32)
     nd_data = mx.nd.array(data)
     nd_label = mx.nd.array(label)
-    loss = mx.nd.contrib.ctc_loss(data=nd_data, label=nd_label)
+    loss = mx.nd.ctc_loss(data=nd_data, label=nd_label)
     expected_loss = np.array([688.02826, 145.34462])
     assert_almost_equal(loss.asnumpy(), expected_loss)
 
 @with_seed()
 def test_ctc_loss_grad():
     def check_ctc_loss_grad(blank_label): # from tf
+        vocab_size = 5
+        max_label_len = 5
+        padding_mask = -1+ (blank_label=='first')
+
+        targets_0 = [0, 1, 2, 1, 0]
+        loss_log_prob_0 = -3.34211
+        input_prob_matrix_0 = np.asarray(
+            [[0.633766, 0.221185, 0.0917319, 0.0129757, 0.0142857, 0.0260553],
+             [0.111121, 0.588392, 0.278779, 0.0055756, 0.00569609, 0.010436],
+             [0.0357786, 0.633813, 0.321418, 0.00249248, 0.00272882, 0.0037688],
+             [0.0663296, 0.643849, 0.280111, 0.00283995, 0.0035545, 0.00331533],
+             [0.458235, 0.396634, 0.123377, 0.00648837, 0.00903441, 0.00623107]],
+            dtype=np.float32)
+        gradient_log_prob_0 = np.asarray(
+            [[-0.366234, 0.221185, 0.0917319, 0.0129757, 0.0142857, 0.0260553],
+             [0.111121, -0.411608, 0.278779, 0.0055756, 0.00569609, 0.010436],
+             [0.0357786, 0.633813, -0.678582, 0.00249248, 0.00272882, 0.0037688],
+             [0.0663296, -0.356151, 0.280111, 0.00283995, 0.0035545, 0.00331533],
+             [-0.541765, 0.396634, 0.123377, 0.00648837, 0.00903441, 0.00623107]],
+            dtype=np.float32)
+
+        targets_1 = [0, 1, 1, 0]
+        loss_log_prob_1 = -5.42262
+        input_prob_matrix_1 = np.asarray(
+            [[0.30176, 0.28562, 0.0831517, 0.0862751, 0.0816851, 0.161508],
+             [0.24082, 0.397533, 0.0557226, 0.0546814, 0.0557528, 0.19549],
+             [0.230246, 0.450868, 0.0389607, 0.038309, 0.0391602, 0.202456],
+             [0.280884, 0.429522, 0.0326593, 0.0339046, 0.0326856, 0.190345],
+             [0.423286, 0.315517, 0.0338439, 0.0393744, 0.0339315, 0.154046]],
+            dtype=np.float32)
+        gradient_log_prob_1 = np.asarray(
+            [[-0.69824, 0.28562, 0.0831517, 0.0862751, 0.0816851, 0.161508],
+             [0.24082, -0.602467, 0.0557226, 0.0546814, 0.0557528, 0.19549],
+             [0.230246, 0.450868, 0.0389607, 0.038309, 0.0391602, -0.797544],
+             [0.280884, -0.570478, 0.0326593, 0.0339046, 0.0326856, 0.190345],
+             [-0.576714, 0.315517, 0.0338439, 0.0393744, 0.0339315, 0.154046]],
+            dtype=np.float32)
+
+        inputs = [
+            np.vstack(
+                [input_prob_matrix_0[t, :], input_prob_matrix_1[t, :]])
+            for t in range(5)
+        ] + 2 * [np.nan * np.ones((2, vocab_size+1), np.float32)]
+        inputs = np.log(np.asarray(inputs, dtype=np.float32))
+
+        grad_truth = np.array([
+            np.vstack(
+                [gradient_log_prob_0[t, :], gradient_log_prob_1[t, :]])
+            for t in range(5)
+        ] + 2 * [np.zeros((2, vocab_size+1), np.float32)])
+
+        if blank_label == 'first':
+            inputs = np.roll(inputs, 1, axis=2)
+            grad_truth = np.roll(grad_truth, 1, axis=2)
+
+        labels = (np.asarray([x + [padding_mask]*(max_label_len-len(x))
+                             for x in [targets_0, targets_1]])+(blank_label == 'first'))
+
+        seq_lens = np.array([5, 5], dtype=np.int32)
+        label_lens = np.array([5, 4], dtype=np.int32)
+        loss_truth = np.array([-loss_log_prob_0, -loss_log_prob_1], np.float32)
+
+        with default_context():
+            data = mx.nd.array(inputs)
+            label = mx.nd.array(labels)
+            data.attach_grad()
+            with mx.autograd.record():
+                l = mx.ndarray.CTCLoss(data, label,
+                                       use_data_lengths=True,
+                                       use_label_lengths=True,
+                                       data_lengths=mx.nd.array(seq_lens),
+                                       label_lengths=mx.nd.array(label_lens),
+                                       blank_label=blank_label)
+                l.backward()
+            assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
+            assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
+
+    # check contrib operator for backward compatibility
+    def check_contrib_ctc_loss_grad(blank_label): # from tf
         vocab_size = 5
         max_label_len = 5
         padding_mask = -1+ (blank_label=='first')
@@ -4621,8 +4741,11 @@ def test_ctc_loss_grad():
             assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
             assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
 
+
     check_ctc_loss_grad('first')
     check_ctc_loss_grad('last')
+    check_contrib_ctc_loss_grad('first')
+    check_contrib_ctc_loss_grad('last')
 
 
 @with_seed()
@@ -6957,6 +7080,25 @@ def test_spacetodepth():
     test_invalid_block_size()
     test_invalid_depth_dim()
 
+
+@with_seed()
+def test_softmax_cross_entropy():
+    def f_sm_ce(data, label):
+        return np.sum(-np.log(data) * label)
+
+    data = mx.sym.Variable('data')
+    label = mx.sym.Variable('label')
+    sym = mx.sym.softmax_cross_entropy(data=data, label=label)
+    num_labels = random.randint(100, 200)
+    batch_size = random.randint(100, 200)
+    np_data = rand_ndarray((batch_size, num_labels), stype='default').asnumpy()
+    np_sm = np_softmax(np_data)
+    np_label = np.random.randint(0, num_labels, (batch_size, ))
+    np_one_hot_label = np.zeros((batch_size, num_labels))
+    np_one_hot_label[np.arange(batch_size), np_label] = 1.
+    check_symbolic_forward(sym, {'data' : np_data, 'label' : np_label}, [np.array([f_sm_ce(np_sm, np_one_hot_label)])], rtol=1e-3, atol=1e-5)
+
+
 @with_seed()
 def test_invalid_kernel_size():
     invalid_kernel_size = 28
@@ -6974,6 +7116,40 @@ def test_valid_kernel_size():
         mx.nd.array(np.random.rand(1, 1, 28, 28)),
         mx.nd.array(np.random.rand(1, 1, 28, 28)),
         kernel_size=valid_kernel_size)
+
+@with_seed()
+def test_valid_max_pooling_pad_type_same():
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
+    output_data=mx.nd.Pooling(
+        input_data,
+        kernel=kernel,
+        stride=stride,
+        pad=(0,0,0),
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
+    assert(math.ceil(input_data.shape[2]/stride) == output_data.shape[2])
+
+@with_seed()
+def test_invalid_max_pooling_pad_type_same():
+    import math
+    input_data = mx.nd.array(np.random.rand(1,1,10))
+    stride = 2
+    kernel = 2
+    pad = 2
+    assert_exception(
+        mx.nd.Pooling,
+        MXNetError,
+        input_data,
+        stride=stride,
+        kernel=kernel,
+        pad=pad,
+        pool_type='max',
+        name='pooling',
+        pooling_convention="same")
 
 if __name__ == '__main__':
     import nose

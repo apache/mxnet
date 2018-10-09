@@ -88,6 +88,24 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
+def test_image_iter_exception():
+    def check_cifar10_exception():
+        get_cifar10()
+        dataiter = mx.io.ImageRecordIter(
+            path_imgrec="data/cifar/train.rec",
+            mean_img="data/cifar/cifar10_mean.bin",
+            rand_crop=False,
+            and_mirror=False,
+            shuffle=False,
+            data_shape=(5, 28, 28),
+            batch_size=100,
+            preprocess_threads=4,
+            prefetch_buffer=1)
+        labelcount = [0 for i in range(10)]
+        batchcount = 0
+        for batch in dataiter:
+            pass
+    assertRaises(MXNetError, check_cifar10_exception)
 
 def _init_NDArrayIter_data(data_type):
     if data_type == 'NDArray':
@@ -496,3 +514,4 @@ if __name__ == "__main__":
     test_NDArrayIter_csr()
     test_CSVIter()
     test_ImageRecordIter_seed_augmentation()
+    test_image_iter_exception()

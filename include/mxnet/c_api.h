@@ -93,6 +93,8 @@ typedef void *CudaModuleHandle;
 typedef void *CudaKernelHandle;
 /*! \brief handle to a Profile object (domain, duration, counter, etc.) */
 typedef void *ProfileHandle;
+/*! \brief handle to DLManagedTensor*/
+typedef void *DLManagedTensorHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -746,6 +748,40 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                void **out_pdata);
+/*!
+* \brief Create a reference view of NDArray that
+*  represents as DLManagedTensor
+*  Notice: MXNet uses asynchronous execution. Please call MXNDArrayWaitToRead or
+*          MXNDArrayWaitToWrite before calling MXNDArrayToDLPack.
+* \param handle the handle to the ndarray
+* \param out_dlpack pointer holder to get pointer of DLManagedTensor
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
+                                       DLManagedTensorHandle *out_dlpack);
+
+/*!
+* \brief Create a NDArray backed by a dlpack tensor.
+*
+* This allows us to create a NDArray using the memory
+* allocated by an external deep learning framework
+* that is DLPack compatible.
+*
+* The memory is retained until the NDArray went out of scope.
+*
+* \param dlpack the pointer of the input DLManagedTensor
+* \param out_handle pointer holder to get pointer of NDArray
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                                  NDArrayHandle *out_handle);
+/*!
+ * \brief Delete a dlpack tensor
+ * \param dlpack the pointer of the input DLManagedTensor
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack);
+
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray
@@ -1506,18 +1542,17 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result
  * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
- * \param excluded_symbols array of symbols to be excluded from being quantized
+ * \param excluded_symbols op names to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data.
+ * \param calib_quantize whether calibrate quantize op with offline calibration data.
  */
-MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
-                               SymbolHandle *ret_sym_handle,
+MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
-                               const SymbolHandle *excluded_symbols,
-                               const mx_uint num_offline,
-                               const char **offline_params,
-                               const char *quantized_dtype);
+                               const char **excluded_symbols,
+                               const mx_uint num_offline, const char **offline_params,
+                               const char *quantized_dtype, const bool calib_quantize);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
@@ -1534,6 +1569,15 @@ MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                                const float* low_quantiles,
                                                const float* high_quantiles,
                                                SymbolHandle* ret_sym_handle);
+
+/*!
+ * \brief Run subgraph pass based on the backend provided
+ * \param sym_handle symbol to be converted
+ * \param backend backend names for subgraph pass
+ * \param ret_sym_handle returned symbol
+ */
+MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
+                                   SymbolHandle *ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

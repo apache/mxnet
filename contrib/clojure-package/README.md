@@ -10,6 +10,8 @@ The motivation for creating a Clojure package is to be able to open the deep lea
 
 For high leverage, the Clojure package has been built on the existing Scala package using interop. This has allowed rapid development and close parity with the Scala functionality. This also leaves the door open to directly developing code against the jni-bindings with Clojure in the future in an incremental fashion, using the test suites as a refactoring guide.
 
+For a **video introduction**, see [Clojure MXNet with Carin Meier - Clojure Virtual Meetup](https://www.crowdcast.io/e/clojure-mxnet-with-carin) (setup instructions from 20:49)
+
 ## Current State and Plans
 
 The Clojure package is nearing the end of its first development milestone which is to achieve a close parity with the Scala package.

@@ -374,6 +374,22 @@ inline bool GetEnvAllowTensorCore() {
   return allow_tensor_core;
 }
 
+// The policy if the user hasn't set the environment variable
+// CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION
+#define MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION_DEFAULT false
+
+/*!
+ * \brief Returns global policy for TensorCore implicit type casting
+ */
+inline bool GetEnvAllowTensorCoreConversion() {
+  // Use of optional<bool> here permits: "0", "1", "true" and "false" to all be
+  // legal.
+  bool default_value = MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION_DEFAULT;
+  return dmlc::GetEnv("MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION",
+                      dmlc::optional<bool>(default_value))
+      .value();
+}
+
 #if CUDA_VERSION >= 9000
 // Sets the cuBLAS math mode that determines the 'allow TensorCore' policy.  Returns previous.
 inline cublasMath_t SetCublasMathMode(cublasHandle_t blas_handle, cublasMath_t new_math_type) {

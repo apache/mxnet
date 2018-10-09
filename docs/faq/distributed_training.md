@@ -147,7 +147,7 @@ ssh -A user@MASTER_IP_ADDRESS
 If your machines use passwords for authentication, see [here](https://help.ubuntu.com/community/SSH/OpenSSH/Keys) for instructions on setting up password-less authentication between machines.
 
 
-It is easier if all these machines have a shared file system so that they can access the training script. One way is to use Amazon Elastic File System to create your network file system.
+It is easier if all these machines have a shared file system so that they can access the training script. One way is to use [Amazon Elastic File System](https://aws.amazon.com/efs) to create your network file system.
 The options in the following command are the recommended options when mounting an AWS Elastic File System.
 
 ```
@@ -171,19 +171,19 @@ cd example/gluon/
 ```
 On a single machine, we can run this script as follows:
 ```
-python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1
+python image_classification.py --dataset cifar10 --model vgg11 --epochs 1
 ```
 
 For distributed training of this example, we would do the following:
 
 If the mxnet directory which contains the script `image_classification.py` is accessible to all machines in the cluster (for example if they are on a network file system), we can run:
 ```
-../../tools/launch.py -n 3 -H hosts --launcher ssh python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
+../../tools/launch.py -n 3 -H hosts --launcher ssh python image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync
 ```
 
 If the directory with the script is not accessible from the other machines in the cluster, then we can synchronize the current directory to all machines.
 ```
-../../tools/launch.py -n 3 -H hosts --launcher ssh --sync-dst-dir /tmp/mxnet_job/ python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
+../../tools/launch.py -n 3 -H hosts --launcher ssh --sync-dst-dir /tmp/mxnet_job/ python image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync
 ```
 
 > Tip: If you don't have a cluster ready and still want to try this out, pass the option `--launcher local` instead of `ssh`
@@ -219,7 +219,7 @@ If you have not installed MXNet system-wide
 then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`.
 For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`. This would work if your `lib` folder contains `libmxnet.so`, as would be the case when you use make. If you use CMake, this file would be in your `build` directory.
 
-- `python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync`
+- `python image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync`
 is the command for the training job on each machine. Note the use of `dist_sync` for the kvstore used in the script.
 
 #### Terminating Jobs
@@ -243,14 +243,16 @@ When `DMLC_ROLE` is set to `server` or `scheduler`, these processes start when m
 
 Below is an example to start all jobs locally on Linux or Mac. Note that starting all jobs on the same machine is not a good idea.
 This is only to make the usage clear.
+
+```bash
+export COMMAND='python example/gluon/image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync'
+DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=scheduler DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND
 ```
-export COMMAND=python example/gluon/mnist.py --dataset cifar10 --model vgg11 --num-epochs 1 --kv-store dist_async
-DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=scheduler DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND
-```
+
 For an in-depth discussion of how the scheduler sets up the cluster, you can go [here](https://blog.kovalevskyi.com/mxnet-distributed-training-explained-in-depth-part-1-b90c84bda725).
 
 ## Environment Variables
