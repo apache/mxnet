@@ -64,6 +64,20 @@ docker_test_image_gpu(){
     nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py --gpus 2"
 }
 
+docker_test_image_cpu_py3(){
+    echo "Running tests on mxnet/python:${1}"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/tests/python/train/test_conv.py"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/example/image-classification/train_mnist.py"
+}
+
+docker_test_image_gpu_py3(){
+    echo "Running tests on mxnet/python:${1}"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/tests/python/train/test_conv.py --gpu"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/example/image-classification/train_mnist.py --gpus 2"
+}
+
 # if both $MXNET_DOCKERHUB_PASSWORD and $MXNET_DOCKERHUB_USERNAME environment variables are set, docker will automatically login
 # if env variables are not set, login will be interactive.
 docker_account_login(){
@@ -117,10 +131,40 @@ docker_build_image "${mxnet_version}_gpu_cu92_mkl" "Dockerfile.mxnet.python.gpu.
 docker_test_image_gpu "${mxnet_version}_gpu_cu92_mkl"
 
 
+
+# Build and Test Python3 dockerfiles - CPU
+docker_build_image "${mxnet_version}_cpu_python3" "Dockerfile.mxnet.python3.cpu"
+docker_test_image_cpu_py3 "${mxnet_version}_cpu_python3"
+
+docker_build_image "${mxnet_version}_cpu_mkl_python3" "Dockerfile.mxnet.python3.cpu.mkl"
+docker_test_image_cpu_py3 "${mxnet_version}_cpu_mkl_python3"
+
+
+#Build and Test Python3 dockerfiles - GPU
+docker_build_image "${mxnet_version}_gpu_cu90_py3" "Dockerfile.mxnet.python3.gpu.cu90"
+docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu90_py3"
+
+docker_build_image "${mxnet_version}_gpu_cu90_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu90.mkl"
+docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu90_mkl_py3"
+
+docker_build_image "${mxnet_version}_gpu_cu80_py3" "Dockerfile.mxnet.python3.gpu.cu80"
+docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu80_py3"
+
+docker_build_image "${mxnet_version}_gpu_cu80_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu80.mkl"
+docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu80_mkl_py3"
+
+docker_build_image "${mxnet_version}_gpu_cu92_py3" "Dockerfile.mxnet.python3.gpu.cu92"
+docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu92_py3"
+
+docker_build_image "${mxnet_version}_gpu_cu92_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu92.mkl"
+docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu92_mkl_py3"
+
+
 # Push dockerfiles
 echo "All images were successfully built. Now login to dockerhub and push images"
 docker_account_login
 
+# Python2
 docker_push_image "${mxnet_version}_cpu"
 docker_push_image "${mxnet_version}_cpu_mkl"
 docker_push_image "latest"
@@ -131,6 +175,16 @@ docker_push_image "${mxnet_version}_gpu_cu80"
 docker_push_image "${mxnet_version}_gpu_cu80_mkl"
 docker_push_image "${mxnet_version}_gpu_cu92"
 docker_push_image "${mxnet_version}_gpu_cu92_mkl"
+
+# Python3
+docker_push_image "${mxnet_version}_cpu_py3"
+docker_push_image "${mxnet_version}_cpu_mkl_py3"
+docker_push_image "${mxnet_version}_gpu_cu90_py3"
+docker_push_image "${mxnet_version}_gpu_cu90_mkl_py3"
+docker_push_image "${mxnet_version}_gpu_cu80_py3"
+docker_push_image "${mxnet_version}_gpu_cu80_mkl_py3"
+docker_push_image "${mxnet_version}_gpu_cu92_py3"
+docker_push_image "${mxnet_version}_gpu_cu92_mkl_py3"
 
 docker_account_logout
 
