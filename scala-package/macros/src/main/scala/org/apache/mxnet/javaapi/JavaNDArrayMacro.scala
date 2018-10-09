@@ -18,7 +18,7 @@
 package org.apache.mxnet.javaapi
 
 import org.apache.mxnet.init.Base._
-import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
+import org.apache.mxnet.utils.CToScalaUtils
 
 import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
@@ -167,9 +167,6 @@ private[mxnet] object JavaNDArrayMacro {
     val result = c.Expr(Block(modDefs, Literal(Constant())))
     result
   }
-
-
-
 
   // List and add all the atomic symbol functions to current module.
   private def initNDArrayModule(): List[NDArrayFunction] = {
