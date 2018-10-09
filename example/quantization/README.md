@@ -76,3 +76,53 @@ python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./mod
 # Launch INT8 Inference
 python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/cqssd_
 ```
+
+## Custom Model
+
+This script also supports custom symbolic models. You can easily add some quantization layer configs in `imagenet_gen_qsym_mkldnn.py` like below:
+
+```
+elif args.model == 'custom':
+    # add rgb mean/std of your model.
+    rgb_mean = '0,0,0'
+    rgb_std = '0,0,0'
+    calib_layer = lambda name: name.endswith('_output')
+    # add layer names you donnot want to quantize.
+    # add conv/pool layer names that has negative inputs
+    # since MKLDNN only support uint8 quantization temporary.
+    # add all fc layer names since MKLDNN does not support temporary.
+    excluded_sym_names += ['layers']
+    # add your first conv layer names since MKLDNN only support uint8 quantization temporary.
+    if exclude_first_conv:
+        excluded_sym_names += ['layers']
+```
+
+Some tips on quantization configs:
+
+1. First, you should prepare your data, symbol file and parameter file of your fp32 symbolic model.
+2. Then, you should run the below command and keep sure that your fp32 symbolic model runs inference well.
+
+```
+# USE MKLDNN AS SUBGRAPH BACKEND
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+
+# Launch FP32 Inference 
+python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu --data-nthreads=1
+```
+
+3. Then, you should add `rgb_mean`, `rgb_std`and `excluded_sym_names` in this script. Notice that you should exxclude conv/pool layers that has negative data since MKLDNN only support uint8 quantization temporary. You should also exclude all fc layers in your mdoel.
+
+4. Then, you can run below command for quantization:
+
+```
+python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-mode=naive
+```
+
+5. After quantization, INT8 symbol and parameter will be saved in `model/` dictionary.
+
+6. Finally, you can run INT8 inference:
+
+```
+# Launch INT8 Inference 
+python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu --data-nthreads=1
+```
