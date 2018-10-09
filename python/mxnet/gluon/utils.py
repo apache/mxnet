@@ -321,9 +321,13 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                     # atmoic operation in the same file system
                     _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
                 else:
-                    os.remove('{}.{}'.format(fname, random_uuid))
-                    warnings.warn(
-                        'File {} exists in file system so the downloaded file is deleted'.format(fname))
+                    try:
+                        os.remove('{}.{}'.format(fname, random_uuid))
+                    except OSError:
+                        pass
+                    finally:
+                        warnings.warn(
+                            'File {} exists in file system so the downloaded file is deleted'.format(fname))
                 if sha1_hash and not check_sha1(fname, sha1_hash):
                     raise UserWarning(
                         'File {} is downloaded but the content hash does not match.'
