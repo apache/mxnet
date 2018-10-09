@@ -723,7 +723,7 @@ class PoissonNLLLoss(Loss):
     from_logits : boolean, default True
         indicating whether log(predicted) value has already been computed. If True, the loss is computed as
         :math:`\exp(\text{pred}) - \text{target} * \text{pred}`, and if False, then loss is computed as
-        :math:`\text{pred} - \text{target} * \log(\text{pred}+\text{epsislon})`.The default value
+        :math:`\text{pred} - \text{target} * \log(\text{pred}+\text{epsilon})`.The default value
     weight : float or None
         Global scalar weight for loss.
     batch_axis : int, default 0
