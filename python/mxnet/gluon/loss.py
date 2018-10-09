@@ -732,13 +732,12 @@ class PoissonNLLLoss(Loss):
     compute_full: boolean, default False
         Indicates whether to add an approximation(Stirling factor) for the Factorial term in the formula for the loss.
         The Stirling factor is:
-            \text{target} * \log(\text{target}) - \text{target} + 0.5 * \log(2 * \PI * \text{target})
+        :math:`\text{target} * \log(\text{target}) - \text{target} + 0.5 * \log(2 * \PI * \text{target})`
     epsilon: float, default 1e-08
         This is to avoid calculating log(0) which is not defined.
 
 
     Inputs:
-    ------
         - **pred**:   prediction tensor with arbitrary shape
         - **target**: Random variable(count or number) which belongs to a Poisson distribution.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
@@ -747,7 +746,6 @@ class PoissonNLLLoss(Loss):
           sample_weight should have shape (64, 1).
 
     Outputs:
-    --------
         - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
     """
     def __init__(self, weight=None, from_logits=True, batch_axis=0, compute_full=False, **kwargs):
