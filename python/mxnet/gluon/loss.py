@@ -731,7 +731,7 @@ class PoissonNLLLoss(Loss):
     compute_full: boolean, default False
         Indicates whether to add an approximation(Stirling factor) for the Factorial term in the formula for the loss.
         The Stirling factor is:
-        :math:`\text{target} * \log(\text{target}) - \text{target} + 0.5 * \log(2 * \PI * \text{target})`
+        :math:`\text{target} * \log(\text{target}) - \text{target} + 0.5 * \log(2 * \pi * \text{target})`
     epsilon: float, default 1e-08
         This is to avoid calculating log(0) which is not defined.
 
