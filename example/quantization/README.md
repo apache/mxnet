@@ -56,7 +56,17 @@ python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batche
 
 ## SSD-VGG
 
-Go to [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) dictionary. Following the [instruction](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model) in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our pre-trained model and packed binary data from [here](http://data.mxnet.io/data/) and extract to `model/` and `data/`dictionary.
+Go to [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) dictionary. Following the [instruction](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model) in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip) then rename them and extract to `model/` and `data/` dictionary as below.
+
+```
+data/
+|---val.rec
+|---val.lxt
+|---val.idx
+model/
+|---ssd_vgg16_reduced_300.params
+|---ssd_vgg16_reduced_300-symbol.json
+```
 
 Then, use the following command for quantization. By default, this script use 5 batches(32 samples per batch) for naive calib:
 
