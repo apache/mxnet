@@ -738,7 +738,7 @@ class PoissonNLLLoss(Loss):
 
 
     Inputs:
-        - **pred**:   prediction tensor with arbitrary shape
+        - **pred**:   Predicted value
         - **target**: Random variable(count or number) which belongs to a Poisson distribution.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
           to the same shape as pred. For example, if pred has shape (64, 10)
