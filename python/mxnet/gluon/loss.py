@@ -712,6 +712,7 @@ class CosineEmbeddingLoss(Loss):
     between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
 
     .. math::
+    
         L = \begin{gather*}
 	                        \begin{cases}
 		                        1 - cos\_sim(pred, target) & \text{if } label = 1\\
