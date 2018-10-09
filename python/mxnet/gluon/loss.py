@@ -713,8 +713,8 @@ class CosineEmbeddingLoss(Loss):
 
     .. math::
 
-        L = \begin{cases} (1 - {cos_sim(pred, target)}) & {if } label = 1\\
-                         ({cos_sim(pred, target)}) & {if } label = -1
+        L = \sum_i \begin{cases} (1 - {cos_sim({pred}_i, {target}_i)}) & {if } {label}_i = 1\\
+                         ({cos_sim({pred}_i, {target}_i)}) & {if } {label}_i = -1
                  \end{cases}
 
     `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
