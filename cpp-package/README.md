@@ -10,26 +10,30 @@ The cpp-package directory contains the implementation of C++ API. As mentioned a
 
 ###Steps to build the C++ package:
 1.  Building the MXNet C++ package requires building MXNet from source.
-2.  Clone the MXNet github repository **recursively** to ensure the code in submodules is available for building MXNet.
+2.  Clone the MXNet GitHub repository **recursively** to ensure the code in submodules is available for building MXNet.
+	```
+	git clone --recursive https://github.com/apache/incubator-mxnet mxnet
+	```
+
 3.  Install the [prerequisites](<https://mxnet.incubator.apache.org/install/build_from_source#prerequisites>), desired [BLAS libraries](<https://mxnet.incubator.apache.org/install/build_from_source#blas-library>) and optional [OpenCV, CUDA, and cuDNN](<https://mxnet.incubator.apache.org/install/build_from_source#optional>) for building MXNet from source.
 4.  There is a configuration file for make, [make/config.mk](<https://github.com/apache/incubator-mxnet/blob/master/make/config.mk>) that contains all the compilation options. You can edit this file and set the appropriate options prior to running the **make** command.
-5.  Please refer to  [platfrom specific build instructions](<https://mxnet.incubator.apache.org/install/build_from_source#build-instructions-by-operating-system>) and available [build configurations](https://mxnet.incubator.apache.org/install/build_from_source#build-configurations) for more details. 
-5.  For enabling the build of C++ Package, set the **USE__CPP__PACKAGE = 1** in [make/config.mk](<https://github.com/apache/incubator-mxnet/blob/master/make/config.mk>). Optionally, the compilation flag can also be specified on **make** command line as follows:
+5.  Please refer to  [platform specific build instructions](<https://mxnet.incubator.apache.org/install/build_from_source#build-instructions-by-operating-system>) and available [build configurations](https://mxnet.incubator.apache.org/install/build_from_source#build-configurations) for more details. 
+5.  For enabling the build of C++ Package, set the **USE\_CPP\_PACKAGE = 1** in [make/config.mk](<https://github.com/apache/incubator-mxnet/blob/master/make/config.mk>). Optionally, the compilation flag can also be specified on **make** command line as follows.
 	```
 	make -j USE_CPP_PACKAGE=1 
 	```
 
 ## Usage
 
-In order to consume the C++ API please follow the steps below
+In order to consume the C++ API please follow the steps below.
 
-1. Ensure that the MXNet shared library is built from source with the **USE__CPP__PACKAGE = 1**.
+1. Ensure that the MXNet shared library is built from source with the **USE\_CPP\_PACKAGE = 1**.
 2. Include the [MxNetCpp.h](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/include/mxnet-cpp/MxNetCpp.h>) in the program that is going to consume MXNet C++ API.
 	```
 	#include <mxnet-cpp/MxNetCpp.h>
 	```
-3. While building the program, ensure that the correct paths to the directories containing header files and MxNet shared library.
-4. The program links MxNet shared library dynamically. Hence the library needs to be accessible to the program during the runtime. This can be achieved by including the path to shared library to environment variable such as LD_LIBRARY_PATH.
+3. While building the program, ensure that the correct paths to the directories containing header files and MXNet shared library.
+4. The program links the MXNet shared library dynamically. Hence the library needs to be accessible to the program during runtime. This can be achieved by including the path to the shared library in the environment variable  **LD\_LIBRARY\_PATH** for Linux, Mac. and Ubuntu OS and **PATH** for Windows OS.
 
 
 ## Tutorial
