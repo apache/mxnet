@@ -20,7 +20,7 @@ import os
 import logging
 from common import modelzoo
 import mxnet as mx
-import gluon
+import gluoncv
 from mxnet import gluon, nd, image
 from gluoncv import utils
 from gluoncv.model_zoo import get_model
@@ -92,6 +92,7 @@ def save_params(fname, arg_params, aux_params, logger=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with MKL-DNN support')
     parser.add_argument('--model', type=str, choices=['resnet50_v1',
+                                                      'squeezenet1.0',
                                                       'imagenet1k-resnet-152',
                                                       'imagenet1k-inception-bn',
                                                       'custom'],
@@ -158,10 +159,10 @@ if __name__ == '__main__':
         download_calib_dataset('http://data.mxnet.io/data/val_256_q90.rec', args.calib_dataset)
 
     # download model
-    if args.model in ['resnet50_v1']:
+    if args.model in ['resnet50_v1', 'squeezenet1.0']:
         logger.info('model %s is converted from GluonCV' % args.model)
-        use_gluon_model = True
-    if use_gluon_model == True:
+        args.use_gluon_model = True
+    if args.use_gluon_model == True:
         prefix = convert_from_gluon(model_name=args.model, classes=1000, logger=logger)
         epoch = 0
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
@@ -216,6 +217,13 @@ if __name__ == '__main__':
         excluded_sym_names += ['resnetv10_dense0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['resnetv10_conv0_fwd', 'resnetv10_pool0_fwd']
+    elif args.model == 'squeezenet1.0':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        calib_layer = lambda name: name.endswith('_output')
+        excluded_sym_names += ['squeezenet0_flatten0_flatten0', 'squeezenet0_pool3_fwd']
+        if exclude_first_conv:
+            excluded_sym_names += ['squeezenet0_conv0_fwd"']
     elif args.model == 'custom':
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'
