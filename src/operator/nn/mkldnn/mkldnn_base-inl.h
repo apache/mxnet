@@ -147,9 +147,10 @@ static inline bool MKLDNNEnvSet() {
   return is_mkldnn_enabled;
 }
 
-static inline bool MKLDNNCacheSet() {
-  static bool is_mkldnn_cache_enabled = dmlc::GetEnv("MXNET_MKLDNN_CACHE_ENABLED", true);
-  return is_mkldnn_cache_enabled;
+// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
+static inline int MKLDNNCacheSize() {
+  static bool is_mkldnn_cache_size = dmlc::GetEnv("MXNET_MKLDNN_CACHE_SIZE", -1);
+  return is_mkldnn_cache_size;
 }
 
 /*

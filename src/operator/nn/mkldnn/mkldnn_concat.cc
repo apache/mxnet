@@ -87,8 +87,8 @@ static MKLDNNConcatFwd &GetConcatForward(
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNConcatFwd fwd(concat_dim, data_md);
-    if (!MKLDNNCacheSet())
-      return fwd;
+    if (!MKLDNNCacheSize() && fwds.size() > MKLDNNCacheSize())
+      fwds.clear();
     auto ins_ret = fwds.insert(std::pair<OpSignature, MKLDNNConcatFwd>(
             key, fwd));
     CHECK(ins_ret.second);
