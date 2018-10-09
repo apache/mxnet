@@ -25,7 +25,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertTrue;
 
-public class JavaNDArrayTest {
+public class NDArrayTest {
     @Test
     public void testCreateNDArray() {
         NDArray nd = new NDArray(new float[]{1.0f, 2.0f, 3.0f},
