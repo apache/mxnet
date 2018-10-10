@@ -713,9 +713,9 @@ class CosineEmbeddingLoss(Loss):
 
     .. math::
 
-        L = \sum_i \begin{cases} 1 - {cos\_sim({pred}_i, {target}_i)} & \text{ if } {label}_i = 1\\
-                         {cos\_sim({pred}_i, {target}_i)} & \text{ if } {label}_i = -1 \end{cases}
-        cos\_sim = \frac{pred.target}{||pred||.||target||}
+        L = \sum_i \begin{cases} 1 - {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = 1\\
+                         {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = -1 \end{cases}\\
+        cos\_sim(input1, input2) = \frac{{input1}_i.{input2}_i}{||{input1}_i||.||{input2}_i||}
 
     `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
 
@@ -730,13 +730,14 @@ class CosineEmbeddingLoss(Loss):
 
 
     Inputs:
-        - **pred**: prediction tensor with arbitrary shape
-        - **target**: target tensor with same shape as pred.
+        - **input1**: a tensor with arbitrary shape
+        - **input2**: another tensor with same shape as pred to which input1 is
+          compared for similarity and loss calculation
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
-          to the same shape as pred. For example, if pred has shape (64, 10)
+          to the same shape as input1. For example, if input1 has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
-        - **label**: A 1-D tensor indicating for each pair input and pred, target label is 1 or -1
+        - **label**: A 1-D tensor indicating for each pair input1 and input2, target label is 1 or -1
 
     Outputs:
         - **loss**: The loss tensor with shape (batch_size,).
@@ -745,9 +746,9 @@ class CosineEmbeddingLoss(Loss):
         super(CosineEmbeddingLoss, self).__init__(weight, batch_axis, **kwargs)
         self._margin = margin
 
-    def hybrid_forward(self, F, pred, target, label):
-        pred = _reshape_like(F, pred, target)
-        cos_sim = self._cosine_similarity(F, pred, target)
+    def hybrid_forward(self, F, input1, input2, label):
+        input1 = _reshape_like(F, input1, input2)
+        cos_sim = self._cosine_similarity(F, input1, input2)
         y_1 = label == 1
         y_minus_1 = label == -1
         cos_sim_a = (1 - cos_sim) * y_1
