@@ -42,11 +42,10 @@ def test_binary_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
     gradients1 = in_data.grad
 
     with autograd.record():
+        binary_weight = binary_layer.weight.data().det_sign()
         if test_conv:
             p = kwargs["padding"]
             padded_in = mx.ndarray.pad(in_data, mode="constant", pad_width=(0, 0, 0, 0, p, p, p, p), constant_value=-1)
-        binary_weight = binary_layer.weight.data().det_sign()
-        if test_conv:
             direct_result = mx.ndarray.Convolution(padded_in, binary_weight, **binary_layer._kwargs)
         else:
             direct_result = mx.ndarray.FullyConnected(in_data, binary_weight, None, no_bias=True, num_hidden=binary_layer._units)
