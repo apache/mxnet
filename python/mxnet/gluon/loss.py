@@ -717,7 +717,7 @@ class CosineEmbeddingLoss(Loss):
                          {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = -1 \end{cases}\\
         cos\_sim(input1, input2) = \frac{{input1}_i.{input2}_i}{||{input1}_i||.||{input2}_i||}
 
-    `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
+    `input1`, `input2` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------
