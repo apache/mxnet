@@ -116,21 +116,14 @@ def randn(*shape, **kwargs):
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
     dtype : {'float16','float32', 'float64'}
         Data type of output samples. Default is 'float32'
-    ctx : Context
-        Device context of output. Default is current context. Overridden by
-        `loc.context` when `loc` is an NDArray.
-    out : NDArray
-        Store output to an existing NDArray.
     """
     loc = kwargs.pop('loc', 0)
     scale = kwargs.pop('scale', 1)
     dtype = kwargs.pop('dtype', _Null)
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
     assert isinstance(loc, (int, float))
     assert isinstance(scale, (int, float))
     return _random_helper(_internal._random_normal, _internal._sample_normal,
-                          [loc, scale], shape, dtype, ctx, out, kwargs)
+                          [loc, scale], shape, dtype, kwargs)
 
 
 def poisson(lam=1, shape=_Null, dtype=_Null, **kwargs):
