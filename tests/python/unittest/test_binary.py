@@ -28,7 +28,7 @@ TEST_PARAMS = [
 
 
 @pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS)
-def test_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
+def test_binary_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
     in_npy = np.sign(np.random.uniform(-1, 1, input_shape))
     in_npy[in_npy == 0] = 1
     in_data = mx.nd.array(in_npy)
@@ -61,7 +61,7 @@ def test_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
 
 @pytest.mark.parametrize("input_shape", [(1, 2, 5, 5), (10, 1000)])
 @pytest.mark.parametrize("threshold", [0.01, 0.1, 0.5, 1.0, 2.0])
-def test_qconv_qdense(input_shape, threshold):
+def test_qactivation(input_shape, threshold):
     in_npy = np.random.uniform(-2, 2, input_shape)
     in_data = mx.nd.array(in_npy)
     in_data.attach_grad()
