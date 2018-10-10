@@ -59,9 +59,9 @@ def get_symbol(network, batch_size, dtype):
     else:
         net = import_module('symbols.'+network)
         sym = net.get_symbol(num_classes=1000,
-                            image_shape=','.join([str(i) for i in image_shape]),
-                            num_layers=num_layers,
-                            dtype=dtype)
+                             image_shape=','.join([str(i) for i in image_shape]),
+                             num_layers=num_layers,
+                             dtype=dtype)
     return (sym, [('data', (batch_size,)+image_shape)])
 
 def score(network, dev, batch_size, num_batches, dtype):
