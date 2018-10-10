@@ -24,6 +24,7 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
            'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss']
+
 import numpy as np
 from .. import ndarray
 from ..base import numeric_types
