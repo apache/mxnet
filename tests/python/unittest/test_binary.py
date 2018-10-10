@@ -28,8 +28,10 @@ TEST_PARAMS = [
 
 
 @pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS)
-def test_qconv(input_shape, test_conv, layer, args, kwargs):
-    in_data = mx.nd.array(np.random.uniform(-1, 1, input_shape))
+def test_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
+    in_npy = np.sign(np.random.uniform(-1, 1, input_shape))
+    in_npy[in_npy == 0] = 1
+    in_data = mx.nd.array(in_npy)
     in_data.attach_grad()
 
     binary_layer = layer(*args, **kwargs)
