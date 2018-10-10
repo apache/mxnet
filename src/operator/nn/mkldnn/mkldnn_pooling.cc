@@ -244,7 +244,7 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
     MKLDNNPoolingFwd fwd(data, output, kernel_h_, kernel_w_, stride_h_, stride_w_,
                          pad_t_, pad_b_, pad_l_, pad_r_, alg, with_workspace, is_train);
 
-    if (!MKLDNNCacheSize() && pooling_fwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheSize() != -1 && pooling_fwds.size() > MKLDNNCacheSize())
       pooling_fwds.clear();
     auto ins_ret = pooling_fwds.insert(
       std::pair<MKLDNNPoolingSignature, MKLDNNPoolingFwd>(key, fwd));
@@ -367,7 +367,7 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
         mkldnn::padding_kind::zero);
     const auto pdesc = pooling_backward::primitive_desc(desc, cpu_engine, fwd_pd);
     MKLDNNPoolingBwd bwd(pdesc, with_workspace);
-    if (!MKLDNNCacheSize() && pooling_bwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheSize() !=- 1 && pooling_bwds.size() > MKLDNNCacheSize())
       pooling_bwds.clear();
     auto ins_ret = pooling_bwds.insert(
         std::pair<MKLDNNPoolingSignature, MKLDNNPoolingBwd>(key, bwd));
