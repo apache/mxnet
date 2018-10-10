@@ -80,7 +80,6 @@ def Perplexity(label, pred):
 
 
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser(
         description="This example demonstrates an RNN implementation with Time-major layout. This implementation shows 1.5x-2x speedups compared to Batch-major RNN.")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size parameter")
