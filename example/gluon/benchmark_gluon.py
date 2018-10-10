@@ -12,14 +12,14 @@ parser = argparse.ArgumentParser(description='Gluon modelzoo-based CNN perf')
 
 parser.add_argument('--model', type=str, default='all', 
                                          choices=['all', 'alexnet', 'densenet121', 'densenet161', 
-                                        'densenet169', 'densenet201', 'inceptionv3', 'mobilenet0.25',
-                                        'mobilenet0.5', 'mobilenet0.75', 'mobilenet1.0', 'mobilenetv2_0.25',
-                                        'mobilenetv2_0.5', 'mobilenetv2_0.75', 'mobilenetv2_1.0', 'resnet101_v1',
-                                        'resnet101_v2', 'resnet152_v1', 'resnet152_v2', 'resnet18_v1', 
-                                        'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 
-                                        'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11', 
-                                        'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 
-                                        'vgg19', 'vgg19_bn'])
+                                                  'densenet169', 'densenet201', 'inceptionv3', 'mobilenet0.25',
+                                                  'mobilenet0.5', 'mobilenet0.75', 'mobilenet1.0', 'mobilenetv2_0.25',
+                                                  'mobilenetv2_0.5', 'mobilenetv2_0.75', 'mobilenetv2_1.0', 'resnet101_v1',
+                                                  'resnet101_v2', 'resnet152_v1', 'resnet152_v2', 'resnet18_v1', 
+                                                  'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 
+                                                  'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11', 
+                                                  'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 
+                                                  'vgg19', 'vgg19_bn'])
 parser.add_argument('--batch-size', type=int, default=0)
 parser.add_argument('--type', type=str, default='inf', choices=['all', 'train', 'inf'])
 
@@ -54,8 +54,8 @@ def score(network, batch_size, ctx):
     softmax = mx.sym.SoftmaxOutput(out, name='softmax')
     mod = mx.mod.Module(softmax, context=ctx)
     mod.bind(for_training     = False,
-                inputs_need_grad = False,
-                data_shapes      = data_shape)
+             inputs_need_grad = False,
+             data_shapes      = data_shape)
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
     data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, [])
@@ -82,8 +82,8 @@ def train(network, batch_size, ctx):
     softmax = mx.sym.SoftmaxOutput(out, name='softmax')
     mod = mx.mod.Module(softmax, context=ctx)
     mod.bind(for_training     = True,
-                inputs_need_grad = False,
-                data_shapes      = data_shape)
+             inputs_need_grad = False,
+             data_shapes      = data_shape)
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
     mod.init_optimizer(kvstore='local', optimizer='sgd')
     data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx) for _, shape in mod.data_shapes]
@@ -105,9 +105,9 @@ if __name__ == '__main__':
 
     if opt.model == 'all':
         networks = ['alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
-	                'inceptionv3', 'mobilenet0.25', 'mobilenet0.5', 'mobilenet0.75',
+                    'inceptionv3', 'mobilenet0.25', 'mobilenet0.5', 'mobilenet0.75',
                     'mobilenet1.0', 'mobilenetv2_0.25', 'mobilenetv2_0.5', 'mobilenetv2_0.75',
-	                'mobilenetv2_1.0', 'resnet101_v1', 'resnet101_v2', 'resnet152_v1', 'resnet152_v2',
+                    'mobilenetv2_1.0', 'resnet101_v1', 'resnet101_v2', 'resnet152_v1', 'resnet152_v2',
                     'resnet18_v1', 'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 
                     'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11', 'vgg11_bn', 'vgg13', 
                     'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn']

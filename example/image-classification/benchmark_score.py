@@ -31,10 +31,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description='SymbolAPI-based CNN perf')
 parser.add_argument('--network', type=str, default='all', 
-		                choices=['all', 'alexnet', 'vgg-16', 'resnetv1-50', 'resnet-50',
-                                 'resnet-152', 'inception-bn', 'inception-v3', 
-                                 'inception-v4', 'inception-resnet-v2', 'mobilenet',
-                                 'densenet121', 'squeezenet1.1'])
+                                 choices=['all', 'alexnet', 'vgg-16', 'resnetv1-50', 'resnet-50',
+                                          'resnet-152', 'inception-bn', 'inception-v3', 
+                                          'inception-v4', 'inception-resnet-v2', 'mobilenet',
+                                          'densenet121', 'squeezenet1.1'])
 parser.add_argument('--batch-size', type=int, default=0)
 
 opt = parser.parse_args()
