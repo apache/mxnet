@@ -781,6 +781,20 @@ class CuDNNDeconvolutionOp {
                               cudnn_backward_compute_type,
                               fwd, bwd, flt);
       } else {
+        // One potential problem is that cudnnFind() uses cudaMalloc() to directly allocate
+        // I/O and workspace areas, and these allocations may result in an out-of-memory
+        // error even though the StorageMangager free pool is not empty.  Ideally, cudnnFind
+        // would use MXNet's storage allocator for its I/O and workspace areas, instead of using
+        // the area carved out by MXNET_GPU_MEM_POOL_RESERVE.
+        // To get somewhat the same effect as this, we can pre-allocate the areas needed for the
+        // I/Os (possibly triggering a desirable StorageManager::ReleaseAll()), followed by a
+        // DirectFree(), which makes these areas available for cudnn's subsequent cudaMalloc().
+
+        // Allocate for x (or dx), w (or dw) and y (or dy).
+        ReserveElements({in_shape[conv::kData].Size(),
+                         in_shape[conv::kWeight].Size(),
+                         out_shape[conv::kOut].Size()});
+
         // We're about to call cudnnFind so we need to quiet the system by grabbing
         // the Storage lock.  Concurrent cudaMalloc's can disrupt the accurate timing
         // measurements of the algos, and can prevent the cuda driver's proper freeing
@@ -947,6 +961,16 @@ class CuDNNDeconvolutionOp {
         LOG(FATAL) << "Unexpected deconvolution data dimension " << dshape.ndim();
     }
     return c;
+  }
+
+  // Make a number of allocations and directly free them, ensuring room for an equivalent set of
+  // cudaMalloc() calls by (say) cudnnFind().  `elements` spec the alloc size in DTypes, not bytes.
+  void ReserveElements(const std::vector<size_t> &elements) {
+    std::vector<Storage::Handle> handles;
+    for (size_t alloc_element : elements)
+        handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()));
+    for (auto &handle : handles)
+        Storage::Get()->DirectFree(handle);
   }
 
   std::vector<int> param_stride_;
