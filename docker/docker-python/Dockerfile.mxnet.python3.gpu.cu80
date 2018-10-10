@@ -21,8 +21,8 @@
 FROM nvidia/cuda:8.0-cudnn5-devel
 
 RUN apt-get update
-RUN apt-get install -y wget python gcc
+RUN apt-get install -y wget python3 gcc
 RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python get-pip.py
+RUN python3 get-pip.py
 
-RUN pip install mxnet-cu80
+RUN pip3 install mxnet-cu80

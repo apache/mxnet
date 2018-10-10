@@ -21,8 +21,8 @@
 FROM nvidia/cuda:9.0-cudnn7-devel
 
 RUN apt-get update
-RUN apt-get install -y wget python gcc
+RUN apt-get install -y wget python3 gcc
 RUN wget https://bootstrap.pypa.io/get-pip.py
-RUN python get-pip.py
+RUN python3 get-pip.py
 
-RUN pip install mxnet-cu90
+RUN pip3 install mxnet-cu90
