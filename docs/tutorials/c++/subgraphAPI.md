@@ -100,3 +100,5 @@ export MXNET_SUBGRAPH_BACKEND=SgTest
 This tutorial shows a simple example of how to use the subgraph API to search for patterns in an NNVM graph.
 Intested users can try different pattern matching rules (i.e., define their own `SubgraphSelector`) and
 attach different operators to execute the subgraphs.
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
