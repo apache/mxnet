@@ -23,7 +23,7 @@ def forward(x, *block_sequence):
 TEST_PARAMS = [
     ((1, 2, 5, 5), True, nn.QConv2D, [16], {"kernel_size": 3, "strides": 1, "padding": 1, "in_channels": 0}),
     ((1, 2, 4, 4), True, nn.QConv2D, [16], {"kernel_size": 2, "strides": 2, "padding": 0, "in_channels": 0}),
-    ((1, 2, 25), False, nn.QDense, [16], {})
+    ((3, 50), False, nn.QDense, [16], {})
 ]
 
 
@@ -58,6 +58,9 @@ def test_binary_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
     assert_almost_equal(result1.asnumpy(), result2.asnumpy())
     assert_almost_equal(gradients1.asnumpy(), gradients2.asnumpy())
 
+    fractions = result1.asnumpy() - np.fix(result1.asnumpy())
+    assert_almost_equal(fractions, np.zeros_like(result1.asnumpy()))
+
 
 @pytest.mark.parametrize("input_shape", [(1, 2, 5, 5), (10, 1000)])
 @pytest.mark.parametrize("threshold", [0.01, 0.1, 0.5, 1.0, 2.0])
@@ -90,6 +93,67 @@ def test_qactivation(input_shape, threshold):
 
     # shape should be unchanged
     assert_almost_equal(result1.shape, in_data.shape)
+
+
+@pytest.mark.parametrize("input_shape,test_conv,layer,args,kwargs", TEST_PARAMS)
+def test_qconv_binary_operation(input_shape, test_conv, layer, args, kwargs):
+    in_npy = np.sign(np.random.uniform(-1, 1, input_shape))
+    in_npy[in_npy == 0] = 1
+    in_data = mx.nd.array(in_npy)
+
+    binary_layer = layer(*args, **kwargs)
+    binary_layer.initialize(mx.init.Xavier(magnitude=2))
+    result1 = binary_layer.forward(in_data)
+
+    if test_conv:
+        p = kwargs["padding"]
+        in_npy = mx.ndarray.pad(
+            in_data, mode="constant", pad_width=(0, 0, 0, 0, p, p, p, p), constant_value=-1
+        ).asnumpy()
+    binary_weight_npy = ((binary_layer.weight.data().det_sign() + 1) / 2).asnumpy()
+    in_data_converted_npy = (in_npy + 1) / 2
+    if test_conv:
+        kernel_size = kwargs["kernel_size"]
+        stride = kwargs["strides"]
+        shape = (
+            in_npy.shape[0],
+            binary_layer._channels,
+            round((in_data_converted_npy.shape[2] - kernel_size + 1) / stride),
+            round((in_data_converted_npy.shape[3] - kernel_size + 1) / stride)
+        )
+        assert_almost_equal(np.asarray(shape), np.asarray(result1.shape))
+        result2 = np.zeros(shape)
+        # naive convolution
+        for sample_idx in range(0, shape[0]):
+            for channel_idx in range(0, shape[1]):
+                for out_idx1 in range(0, shape[2]):
+                    for out_idx2 in range(0, shape[3]):
+                        for in_channel_idx in range(0, in_data_converted_npy.shape[1]):
+                            input_slice = in_data_converted_npy[
+                                          sample_idx,
+                                          in_channel_idx,
+                                          out_idx1*stride:out_idx1*stride+kernel_size,
+                                          out_idx2*stride:out_idx2*stride+kernel_size
+                                          ]
+                            weight_slice = binary_weight_npy[channel_idx, in_channel_idx]
+
+                            xor = np.logical_xor(input_slice, weight_slice)
+                            xnor = np.logical_not(xor)
+                            popcount = np.sum(xnor)
+                            result2[sample_idx, channel_idx, out_idx1, out_idx2] += popcount
+    else:
+        result2 = np.zeros((in_npy.shape[0], binary_layer._units))
+        for sample_idx in range(0, in_npy.shape[0]):
+            for output_idx in range(0, binary_layer._units):
+                input_slice = in_data_converted_npy[sample_idx]
+                weight_slice = binary_weight_npy[output_idx]
+
+                xor = np.logical_xor(input_slice, weight_slice)
+                xnor = np.logical_not(xor)
+                popcount = np.sum(xnor)
+                result2[sample_idx, output_idx] = popcount
+
+    assert_almost_equal(result1.asnumpy(), result2)
 
 
 def test_det_sign():
