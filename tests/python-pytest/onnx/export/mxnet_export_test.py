@@ -25,18 +25,22 @@ those PRs merged, this file will get EOL'ed.
 from __future__ import absolute_import
 import sys
 import os
+import unittest
 import logging
 import tarfile
 from collections import namedtuple
 import numpy as np
 import numpy.testing as npt
-from onnx import numpy_helper
+from onnx import numpy_helper, helper
 from onnx import TensorProto
 from mxnet.test_utils import download
 from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../../python/unittest'))
+sys.path.insert(0, os.path.join(CURR_PATH, '../../../python/unittest'))
+import backend
+from common import with_seed
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 URLS = {
@@ -179,6 +183,36 @@ def test_model_accuracy(model_name, input_shape):
         npt.assert_equal(expected.shape, actual.shape)
         npt.assert_almost_equal(expected, actual, decimal=3)
 
+@with_seed()
+def test_spacetodepth():
+    n, c, h, w = shape = (1, 1, 4, 6)
+    input1 = np.random.rand(n, c, h, w).astype("float32")
+    blocksize = 2
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=shape)]
+
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 4, 2, 3))]
+
+    nodes = [helper.make_node("SpaceToDepth", ["input1"], ["output"], block_size=blocksize)]
+
+    graph = helper.make_graph(nodes,
+                              "spacetodepth_test",
+                              inputs,
+                              outputs)
+
+    spacetodepth_model = helper.make_model(graph)
+
+    bkd_rep = backend.prepare(spacetodepth_model)
+    output = bkd_rep.run([input1])
+
+    tmp = np.reshape(input1, [n, c,
+                    h // blocksize, blocksize,
+                    w // blocksize, blocksize])
+    tmp = np.transpose(tmp, [0, 3, 5, 1, 2, 4])
+    numpy_op = np.reshape(tmp, [n, c * (blocksize**2),
+                    h // blocksize,
+                    w // blocksize])
+
+    npt.assert_almost_equal(output[0], numpy_op)
 
 if __name__ == '__main__':
     test_models("bvlc_googlenet", (1, 3, 224, 224), (1, 1000))
@@ -189,3 +223,5 @@ if __name__ == '__main__':
     # ONNX expected results due to AveragePool issue github issue(#10194)
     test_model_accuracy("inception_v1", (1, 3, 224, 224))
     test_model_accuracy("inception_v2", (1, 3, 224, 224))
+
+    unittest.main()
