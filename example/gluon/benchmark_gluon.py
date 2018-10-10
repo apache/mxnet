@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 import mxnet as mx
 import mxnet.gluon.model_zoo.vision as models
 import time
@@ -10,15 +27,15 @@ import errno
 logging.basicConfig(level=logging.INFO)
 parser = argparse.ArgumentParser(description='Gluon modelzoo-based CNN perf')
 
-parser.add_argument('--model', type=str, default='all', 
-                               choices=['all', 'alexnet', 'densenet121', 'densenet161', 
+parser.add_argument('--model', type=str, default='all',
+                               choices=['all', 'alexnet', 'densenet121', 'densenet161',
                                         'densenet169', 'densenet201', 'inceptionv3', 'mobilenet0.25',
                                         'mobilenet0.5', 'mobilenet0.75', 'mobilenet1.0', 'mobilenetv2_0.25',
                                         'mobilenetv2_0.5', 'mobilenetv2_0.75', 'mobilenetv2_1.0', 'resnet101_v1',
-                                        'resnet101_v2', 'resnet152_v1', 'resnet152_v2', 'resnet18_v1', 
-                                        'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 
-                                        'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11', 
-                                        'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 
+                                        'resnet101_v2', 'resnet152_v1', 'resnet152_v2', 'resnet18_v1',
+                                        'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1',
+                                        'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11',
+                                        'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
                                         'vgg19', 'vgg19_bn'])
 parser.add_argument('--batch-size', type=int, default=0)
 parser.add_argument('--type', type=str, default='inf', choices=['all', 'train', 'inf'])
@@ -108,8 +125,8 @@ if __name__ == '__main__':
                     'inceptionv3', 'mobilenet0.25', 'mobilenet0.5', 'mobilenet0.75',
                     'mobilenet1.0', 'mobilenetv2_0.25', 'mobilenetv2_0.5', 'mobilenetv2_0.75',
                     'mobilenetv2_1.0', 'resnet101_v1', 'resnet101_v2', 'resnet152_v1', 'resnet152_v2',
-                    'resnet18_v1', 'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1', 
-                    'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11', 'vgg11_bn', 'vgg13', 
+                    'resnet18_v1', 'resnet18_v2', 'resnet34_v1', 'resnet34_v2', 'resnet50_v1',
+                    'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11', 'vgg11_bn', 'vgg13',
                     'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19', 'vgg19_bn']
         logging.info('It may take some time to run all models, '
                      'set --network to run a specific one')
