@@ -59,6 +59,39 @@ def test_qconv_qdense(input_shape, test_conv, layer, args, kwargs):
     assert_almost_equal(gradients1.asnumpy(), gradients2.asnumpy())
 
 
+@pytest.mark.parametrize("input_shape", [(1, 2, 5, 5), (10, 1000)])
+@pytest.mark.parametrize("threshold", [0.01, 0.1, 0.5, 1.0, 2.0])
+def test_qconv_qdense(input_shape, threshold):
+    in_npy = np.random.uniform(-2, 2, input_shape)
+    in_data = mx.nd.array(in_npy)
+    in_data.attach_grad()
+
+    binary_layer = nn.QActivation(gradient_cancel_threshold=threshold)
+    with autograd.record():
+        result1 = binary_layer.forward(in_data)
+    result1.backward()
+    gradients1 = in_data.grad
+
+    with autograd.record():
+        cancelled = mx.ndarray.contrib.gradcancel(in_data, threshold=threshold)
+        result2 = cancelled.det_sign()
+    result2.backward()
+    gradients2 = in_data.grad
+
+    # check that correct functions are used
+    assert_almost_equal(result1.asnumpy(), result2.asnumpy())
+    assert_almost_equal(gradients1.asnumpy(), gradients2.asnumpy())
+
+    # explicitly model cancelling
+    grads_let_through = np.abs(np.sign(gradients2.asnumpy()))
+    expected_let_through = np.zeros_like(in_npy)
+    expected_let_through[np.abs(in_npy) <= threshold] = 1
+    assert_almost_equal(grads_let_through, expected_let_through)
+
+    # shape should be unchanged
+    assert_almost_equal(result1.shape, in_data.shape)
+
+
 def test_det_sign():
     exp_y = np.array([1.0, 1.0, -1.0])
     exp_grad = np.array([1.0, 1.0, 1.0])
