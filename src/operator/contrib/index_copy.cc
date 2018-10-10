@@ -22,3 +22,21 @@
   * \brief
   */
  #include "./index_copy-inl.h"
+
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(_contrib_index_copy)
+.describe(R"code(Implementation of index_copy)code" ADD_FILELINE)
+.set_num_inputs(3)
+.set_num_outputs(0)
+.set_attr<nnvm::FInferShape>("FInferShape", IndexCopyShape)
+.set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
+.set_attr<FCompute>("FCompute<cpu>", IndexCopyCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_index_copy"})
+.add_argument("old_tensor", "NDArray-or-Symbol", "Old tensor")
+.add_argument("index_tensor", "NDArray-or-Symbol", "Index vector")
+.add_argument("new_tensor", "NDArray-or-Symbol", "New tensor");
+
+}  // namespace op
+}  // namespace mxnet

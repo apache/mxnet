@@ -22,3 +22,12 @@
   * \brief
   */
  #include "./index_copy-inl.h"
+
+ namespace mxnet {
+ namespace op {
+
+ NNVM_REGISTER_OP(_contrib_index_copy)
+ .set_attr<FCompute>("FCompute<gpu>", IndexCopyCompute<gpu>);
+
+ }
+ }

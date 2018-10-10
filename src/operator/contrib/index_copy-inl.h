@@ -32,8 +32,23 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 
+namespace mxnet {
+namespace op {
+  
+// Perform index_copy in mshadow  
 struct index_copy {
-
+  MSHADOW_XINLINE static void Map(int i, 
+                                  int* index, 
+                                  float* new_tensor, 
+                                  float* old_tensor,
+                                  int dim) {
+    float* old_ptr = old_tensor + index[i] * dim;
+    float* new_ptr = new_tensor + i * dim;
+    // Copy new tensor to old tensor
+    for (int idx = 0; idx < dim; ++idx) {
+      *(old_ptr + idx) = *(new_ptr + idx);
+    }
+  }
 };
 
 template<typename xpu>
@@ -42,19 +57,38 @@ void IndexCopyCompute(const nnvm::NodeAttrs& attrs,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
 
+  Kernel<index_copy, xpu>::Launch(s, inputs[1].Size(),
+                            inputs[1].dptr<int>(),    // index_tensor
+                            inputs[2].dptr<float>(),  // new_tensor
+                            inputs[0].dptr<float>(),  // old_tensor
+                            inputs[2].Size() / inputs[1].Size());  // dim   
 }
 
 inline bool IndexCopyShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *in_attrs,
                            std::vector<TShape> *out_attrs) {
-
+  // 0. original tensor
+  // 1. index tensot
+  // 2. new tensor
+  CHECK_EQ(in_attrs->size(), 3U);
+  return true;
 }
 
 inline bool IndexCopyType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_attrs,
                           std::vector<int> *out_attrs) {
-  
+  // Check input tensor
+  CHECK_EQ((*in_attrs)[0], mshadow::kFloat32);
+  CHECK_EQ((*in_attrs)[1], mshadow::kInt32);
+  CHECK_EQ((*in_attrs)[2], mshadow::kFloat32);
+  return true;
 }
+
+}  // namespace op
+}  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_CONTRIB_INDEX_COPY_INL_H_
