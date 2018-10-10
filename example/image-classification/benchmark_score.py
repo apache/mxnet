@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     if opt.batch_size == 0:
         batch_sizes = [1, 2, 4, 8, 16, 32]
-        logging.info('run batchsize [1 ,2 , 4, 8, 16, 32] by default, '
+        logging.info('run batchsize [1, 2, 4, 8, 16, 32] by default, '
                      'set --batch-size to run a specific one')
     else:
         batch_sizes = [opt.batch_size]
