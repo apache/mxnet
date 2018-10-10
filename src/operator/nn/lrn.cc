@@ -57,7 +57,7 @@ bool LRNType(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
-  for (index_t i = 0; i < in_type->size(); ++i) {
+  for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
     } else {
@@ -116,6 +116,8 @@ void LRNComputeExCPU(const nnvm::NodeAttrs &attrs,
     MKLDNN_OPCHECK_INIT(false, 1, inputs, outputs);
     MKLDNNLRNForward(ctx, param, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    // Copy outputs[1] from opcheck reference as backward check needs it.
+    MKLDNN_OPCHECK_COPY_RESULT(outputs, std::vector<size_t>{1});
     return;
   }
   FallBackCompute(LRNCompute<cpu>, attrs, ctx, inputs, req, outputs);

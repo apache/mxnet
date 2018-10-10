@@ -560,7 +560,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
         }
         cv::cvtColor(res, res, CV_HLS2BGR);
       }
-      if (fabs(c) > 1e-3) {
+      if (std::fabs(c) > 1e-3) {
         cv::Mat tmp = res;
         tmp.convertTo(res, -1, c + 1.f, 0);
       }

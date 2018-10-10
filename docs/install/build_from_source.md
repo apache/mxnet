@@ -16,6 +16,8 @@ This document explains how to build MXNet from source code. Building MXNet from 
 
 You need C++ build tools and a BLAS library to build the MXNet shared library. If you want to run MXNet with GPUs, you will need to install [NVDIA CUDA and cuDNN](https://developer.nvidia.com/cuda-downloads) first.
 
+You may use [GNU Make](https://www.gnu.org/software/make/) to build the library but [cmake](https://cmake.org/) is required when building with MKLDNN
+
 
 ### C++ build tools
 
@@ -25,7 +27,7 @@ You need C++ build tools and a BLAS library to build the MXNet shared library. I
 
 2. [Git](https://git-scm.com/downloads) for downloading the sources from Github repository.
 
-3. [cmake](https://cmake.org/) is recommended. You may also use [GNU Make](https://www.gnu.org/software/make/) to build the library.
+
 
 
 ### BLAS library
@@ -40,7 +42,7 @@ MXNet supports multiple mathematical backends for computations on the CPU:
 * [Apple Accelerate](https://developer.apple.com/documentation/accelerate)
 * [ATLAS](http://math-atlas.sourceforge.net/)
 * [MKL](https://software.intel.com/en-us/intel-mkl) (MKL, MKLML)
-* [MKLDNN](https://github.com/intel/mkl-dnn)
+* [MKL-DNN](https://github.com/intel/mkl-dnn)
 * [OpenBLAS](http://www.openblas.net/)
 
 Usage of these are covered in more detail in the [build configurations](#build-configurations) section.
@@ -80,7 +82,7 @@ There is a configuration file for make,
 
 ## Build Configurations
 
-`cmake` is recommended for building MXNet, however you may use `make` instead.
+`cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead.
 
 
 ### Math Library Selection
@@ -92,13 +94,13 @@ The following lists show this order by library and `cmake` switch.
 
 For desktop platforms (x86_64):
 
-1. MKLDNN (submodule) | `USE_MKLDNN`
+1. MKL-DNN (submodule) | `USE_MKLDNN`
 2. MKL | `USE_MKL_IF_AVAILABLE`
 3. MKLML (downloaded) | `USE_MKLML`
 4. Apple Accelerate | `USE_APPLE_ACCELERATE_IF_AVAILABLE` | Mac only
 5. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
 
-Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKLDNN will be disabled as well for configuration
+Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKL-DNN will be disabled as well for configuration
 backwards compatibility.
 
 For embedded platforms (all other and if cross compiled):
@@ -129,8 +131,8 @@ It has following flavors:
   <!-- [Removed until #11148 is merged.] This is the most effective option since it can be downloaded and installed automatically
   by the cmake script (see cmake/DownloadMKLML.cmake).-->
 
-* MKLDNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
-  shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [mkl-dnn project](https://github.com/intel/mkl-dnn))
+* MKL-DNN is a separate open-source library, it can be used separately from MKL or MKLML. It is
+  shipped as a subrepo with MXNet source code (see 3rdparty/mkldnn or the [MKL-DNN project](https://github.com/intel/mkl-dnn))
 
 Since the full MKL library is almost always faster than any other BLAS library it's turned on by default,
 however it needs to be downloaded and installed manually before doing `cmake` configuration.

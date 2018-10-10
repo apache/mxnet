@@ -160,7 +160,8 @@ object Model {
                                        argParams: Map[String, NDArray],
                                        paramNames: IndexedSeq[String],
                                        updateOnKVStore: Boolean): Unit = {
-    require(paramArrays.length == paramNames.length)
+    require(paramArrays.length == paramNames.length,
+      s"Provided parameter arrays does not match parameter names")
     for (idx <- 0 until paramArrays.length) {
       val paramOnDevs = paramArrays(idx)
       val name = paramNames(idx)

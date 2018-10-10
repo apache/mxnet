@@ -130,7 +130,7 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
                           num_map_keys, map_keys, map_dev_types, map_dev_ids,
                           len, in_args, arg_grad_store, grad_req_type,
                           aux_states_len, aux_states,
-                          NULL, out);
+                          nullptr, out);
 }
 
 int MXExecutorBindEX(SymbolHandle symbol_handle,
@@ -168,7 +168,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
   for (mx_uint i = 0; i < len; ++i) {
     in_args_vec.push_back(*(in_args_ptr[i]));
     if (arg_grad_ptr[i] == nullptr) {
-      arg_grad_vec.push_back(NDArray());
+      arg_grad_vec.emplace_back();
       grad_req_vec.push_back(kNullOp);
     } else {
       arg_grad_vec.push_back(*(arg_grad_ptr[i]));

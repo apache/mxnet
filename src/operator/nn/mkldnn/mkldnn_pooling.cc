@@ -134,10 +134,9 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   }
 }
 
-mkldnn::pooling_forward::primitive_desc GetPoolingFwd(const PoolingParam &param,
-                                                      const bool is_train,
-                                                      const memory::desc &data_md,
-                                                      const memory::desc &out_md) {
+mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
+    const PoolingParam &param, const bool is_train, const memory::desc &data_md,
+    const memory::desc &out_md) {
   CHECK_EQ(param.kernel.ndim(), 2) << "Not Implemented";
   int kernel_h_, kernel_w_;
   if (param.global_pool) {
@@ -255,9 +254,122 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
 void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &in_data, const OpReqType req,
                           const NDArray &out_data, const NDArray *workspace) {
-  auto fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
+  auto &fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
   fwd.SetNewMem(in_data, out_data, req, workspace);
   fwd.Execute(out_data);
+}
+
+MKLDNNPoolingBwd::MKLDNNPoolingBwd(
+    const pooling_backward::primitive_desc &pdesc, bool with_ws)
+    : with_workspace(with_ws), pd(pdesc) {}
+
+void MKLDNNPoolingBwd::SetNewMem(const mxnet::NDArray *workspace,
+                                 const mxnet::NDArray &out_grad,
+                                 const mkldnn::memory *diff_src_mem) {
+  if (bwd == nullptr) {
+    diff_dst.reset(
+        new mkldnn::memory(out_grad.GetMKLDNNData()->get_primitive_desc(),
+                           out_grad.GetMKLDNNData()->get_data_handle()));
+    diff_src.reset(new mkldnn::memory(pd.diff_src_primitive_desc(),
+                                      diff_src_mem->get_data_handle()));
+    if (with_workspace) {
+      CHECK(workspace != nullptr);
+      ws.reset(
+          new mkldnn::memory(workspace->GetMKLDNNData()->get_primitive_desc(),
+                             workspace->GetMKLDNNData()->get_data_handle()));
+      bwd.reset(
+          new pooling_backward(pd, *diff_dst, primitive::at(*ws), *diff_src));
+    } else {
+      bwd.reset(new pooling_backward(pd, *diff_dst, *diff_src));
+    }
+  } else {
+    diff_dst->set_data_handle(out_grad.GetMKLDNNData()->get_data_handle());
+    diff_src->set_data_handle(diff_src_mem->get_data_handle());
+    if (with_workspace) {
+      CHECK(workspace != nullptr);
+      ws->set_data_handle(workspace->GetMKLDNNData()->get_data_handle());
+    }
+  }
+}
+
+const mkldnn::pooling_backward &MKLDNNPoolingBwd::GetBwd() {
+  return *this->bwd;
+}
+
+MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
+                                const NDArray &in_data,
+                                const NDArray &in_grad,
+                                const NDArray &out_grad) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local
+      std::unordered_map<MKLDNNPoolingSignature,
+                         MKLDNNPoolingBwd, OpHash> pooling_bwds;
+#else
+  static MX_THREAD_LOCAL
+      std::unordered_map<MKLDNNPoolingSignature,
+                         MKLDNNPoolingBwd, OpHash> pooling_bwds;
+#endif
+
+  bool with_workspace = MKLDNNRequireWorkspace(param);
+  MKLDNNPoolingSignature key(param);
+  key.AddSign(in_data);
+  key.AddSign(in_grad);
+  key.AddSign(out_grad);
+
+  auto it = pooling_bwds.find(key);
+  if (it == pooling_bwds.end()) {
+    auto diff_dst_mem = out_grad.GetMKLDNNData();
+    auto input_mem = in_data.GetMKLDNNData();
+    mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
+    const mkldnn::memory::desc data_md = data_mpd.desc();
+    const memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
+                               static_cast<int>(out_grad.shape()[2]),
+                               static_cast<int>(out_grad.shape()[3])};
+    const memory::desc out_md(
+        {dims}, static_cast<memory::data_type>(data_md.data.data_type),
+        static_cast<memory::format>(data_md.data.format));
+    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, out_md);
+
+    const mkldnn::memory::desc diff_md =
+        diff_dst_mem->get_primitive_desc().desc();
+    const memory::dims dims1 = {diff_md.data.dims[0], diff_md.data.dims[1],
+                                static_cast<int>(in_grad.shape()[2]),
+                                static_cast<int>(in_grad.shape()[3])};
+    const memory::desc diff_in_md(
+        {dims1}, static_cast<memory::data_type>(diff_md.data.data_type),
+        static_cast<memory::format>(diff_md.data.format));
+    const mkldnn::engine cpu_engine = data_mpd.get_engine();
+    const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
+
+    int kernel_h_, kernel_w_;
+    if (param.global_pool) {
+      kernel_h_ = data_md.data.dims[2];
+      kernel_w_ = data_md.data.dims[3];
+    } else {
+      kernel_h_ = param.kernel[0];
+      kernel_w_ = param.kernel[1];
+    }
+
+    int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
+    int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
+    int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+    if (param.global_pool) {
+      pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
+      stride_h_ = stride_w_ = 1;
+    }
+
+    const pooling_backward::desc desc(
+        alg, diff_in_md, diff_md, {stride_h_, stride_w_},
+        {kernel_h_, kernel_w_}, {pad_t_, pad_l_}, {pad_b_, pad_r_},
+        mkldnn::padding_kind::zero);
+    const auto pdesc = pooling_backward::primitive_desc(desc, cpu_engine, fwd_pd);
+    MKLDNNPoolingBwd bwd(pdesc, with_workspace);
+    auto ins_ret = pooling_bwds.insert(
+        std::pair<MKLDNNPoolingSignature, MKLDNNPoolingBwd>(key, bwd));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return it->second;
 }
 
 void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
@@ -267,68 +379,14 @@ void MKLDNNPoolingGradCompute(const OpContext &ctx, const PoolingParam &param,
   if (req == kNullOp) {
     return;
   }
-
   TmpMemMgr::Get()->Init(ctx.requested[0]);
-  // mkldnn::memory
-  auto diff_dst_mem = out_grad.GetMKLDNNData();
-  auto input_mem = in_data.GetMKLDNNData();
-  mkldnn::memory::primitive_desc data_mpd = input_mem->get_primitive_desc();
-  const mkldnn::memory::desc data_md = data_mpd.desc();
-  const memory::dims dims = {data_md.data.dims[0], data_md.data.dims[1],
-                             static_cast<int>(out_grad.shape()[2]),
-                             static_cast<int>(out_grad.shape()[3])};
-  const memory::desc out_md({dims},
-                            static_cast<memory::data_type>(data_md.data.data_type),
-                            static_cast<memory::format>(data_md.data.format));
-  auto pdesc_fwd = GetPoolingFwd(param, ctx.is_train, data_md, out_md);
 
-  const mkldnn::memory::desc diff_md = diff_dst_mem->get_primitive_desc().desc();
-  const memory::dims dims1 = {diff_md.data.dims[0], diff_md.data.dims[1],
-                              static_cast<int>(in_grad.shape()[2]),
-                              static_cast<int>(in_grad.shape()[3])};
-  const memory::desc diff_in_md(
-      {dims1}, static_cast<memory::data_type>(diff_md.data.data_type),
-      static_cast<memory::format>(diff_md.data.format));
-  const mkldnn::engine  cpu_engine = data_mpd.get_engine();
-  const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
-
-  int kernel_h_, kernel_w_;
-  if (param.global_pool) {
-    kernel_h_ = data_md.data.dims[2];
-    kernel_w_ = data_md.data.dims[3];
-  } else {
-    kernel_h_ = param.kernel[0];
-    kernel_w_ = param.kernel[1];
-  }
-
-  int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
-  int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
-  int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
-  if (param.global_pool) {
-    pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
-    stride_h_ = stride_w_ = 1;
-  }
-
-  const pooling_backward::desc desc(alg, diff_in_md, diff_md,
-                                    {stride_h_, stride_w_},
-                                    {kernel_h_, kernel_w_},
-                                    {pad_t_, pad_l_}, {pad_b_, pad_r_},
-                                    mkldnn::padding_kind::zero);
-  const pooling_backward::primitive_desc pdesc(desc, cpu_engine, pdesc_fwd);
-
+  auto &bwd = GetPoolingBwd(param, in_data, in_grad, out_grad);
   auto diff_src_mem =
-      CreateMKLDNNMem(in_grad, pdesc.diff_src_primitive_desc(), req);
+      CreateMKLDNNMem(in_grad, bwd.pd.diff_src_primitive_desc(), req);
 
-  if (MKLDNNRequireWorkspace(param)) {
-    CHECK(workspace != nullptr);
-    auto workspace_mem = workspace->GetMKLDNNData();
-    MKLDNNStream::Get()->RegisterPrim(
-        pooling_backward(pdesc, *diff_dst_mem, primitive::at(*workspace_mem),
-                         *diff_src_mem.second));
-  } else {
-    MKLDNNStream::Get()->RegisterPrim(
-        pooling_backward(pdesc, *diff_dst_mem, *diff_src_mem.second));
-  }
+  bwd.SetNewMem(workspace, out_grad, diff_src_mem.second);
+  MKLDNNStream::Get()->RegisterPrim(bwd.GetBwd());
   CommitOutput(in_grad, diff_src_mem);
   MKLDNNStream::Get()->Submit();
 }

@@ -116,6 +116,26 @@ class NDArray {
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
         entry_({nullptr, 0, 0}) {
   }
+
+  /*!
+   * \brief constructing a static NDArray that shares data with TBlob which is with deleter
+   *  Use with caution: allocate ONLY ONE NDArray for each TBlob,
+   *  make sure the memory region is available through out the life of NDArray
+   * \param data the memory content of static data
+   * \param dev_id the device id this tensor sits at
+   * \param deleter the function pointer of custom deleter
+   */
+  NDArray(const TBlob &data, int dev_id, const std::function<void()>& deleter)
+      : ptr_(new Chunk(data, dev_id),
+        [deleter](Chunk *p) {
+          deleter();    // call custom deleter
+          delete p;     // delete Chunk object
+        }),
+        shape_(data.shape_),
+        dtype_(data.type_flag_), storage_type_(kDefaultStorage),
+        entry_({nullptr, 0, 0}) {
+  }
+
   /*! \brief create ndarray from shared memory */
   NDArray(int shared_pid, int shared_id, const TShape& shape, int dtype)
       : ptr_(std::make_shared<Chunk>(shared_pid, shared_id, shape, dtype)), shape_(shape),
@@ -524,6 +544,26 @@ class NDArray {
   }
 
   /*!
+   * \brief Create a reference view of NDArray that
+   *  represents as DLManagedTensor.
+   * \return A DLManagedTensor
+   */
+  DLManagedTensor* ToDLPack() const;
+
+  /*!
+   * \brief Create a NDArray backed by a dlpack tensor.
+   *
+   * This allows us to create a NDArray using the memory
+   * allocated by an external deep learning framework
+   * that is DLPack compatible.
+   *
+   * The memory is retained until the NDArray went out of scope.
+   *
+   * \return The created NDArray view.
+   */
+  static NDArray FromDLPack(const DLManagedTensor* tensor);
+
+  /*!
    * \brief Update ndarray chunk storage handles using existing ndarray storage handles
    * Also update the aux_handle, aux_shapes and aux_types.
    * This is specifically used for custom op to update the inputs and outputs from
@@ -628,6 +668,12 @@ class NDArray {
 
 #if MXNET_USE_MKLDNN == 1
   /*
+   * Create NDArray from mkldnn memory.
+   * mkldnn_mem The mkldnn memory to be managed.
+   * static_data If true, mkldnn memory won't be freed on destruction.
+   */
+  explicit NDArray(const mkldnn::memory *mkldnn_mem, bool static_data = true);
+  /*
    * Test if the data is stored in one of special MKLDNN format.
    */
   bool IsMKLDNNData() const {
@@ -702,6 +748,11 @@ class NDArray {
    * It's used by FullyConnected right now.
    */
   NDArray MKLDNNDataReshape(const TShape &shape) const;
+
+   /*!
+   * \ Fix mkldnn memory descriptor mismatch from NDArray.
+   */
+  void UpdateMKLDNNMemDesc();
 #endif
 
   /*!

@@ -44,7 +44,7 @@ object Profiler {
    *                  be "stop" or "run". Default is "stop".
    */
   def profilerSetState(state: String = "stop"): Unit = {
-    require(state2Int.contains(state))
+    require(state2Int.contains(state), s"Invalid state $state")
     checkCall(_LIB.mxSetProfilerState(state2Int(state)))
   }
 

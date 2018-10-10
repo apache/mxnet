@@ -62,8 +62,8 @@ inline void TransformLocations(DType *out, const DType *anchors,
   DType ph = loc_pred[3];
   DType ox = px * vx * aw + ax;
   DType oy = py * vy * ah + ay;
-  DType ow = exp(pw * vw) * aw / 2;
-  DType oh = exp(ph * vh) * ah / 2;
+  DType ow = std::exp(pw * vw) * aw / 2;
+  DType oh = std::exp(ph * vh) * ah / 2;
   out[0] = clip ? std::max(DType(0), std::min(DType(1), ox - ow)) : (ox - ow);
   out[1] = clip ? std::max(DType(0), std::min(DType(1), oy - oh)) : (oy - oh);
   out[2] = clip ? std::max(DType(0), std::min(DType(1), ox + ow)) : (ox + ow);
@@ -198,7 +198,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(MultiBoxDetectionParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new MultiBoxDetectionOp<cpu, DType>(param);
   });

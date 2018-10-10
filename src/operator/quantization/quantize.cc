@@ -83,6 +83,7 @@ where
 .set_attr<nnvm::FInferType>("FInferType", QuantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeStorageType)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)

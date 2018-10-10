@@ -171,8 +171,8 @@ abstract class BaseModule {
             batchEndCallback: Option[BatchEndCallback] = None,
             scoreEndCallback: Option[BatchEndCallback] = None,
             reset: Boolean = true, epoch: Int = 0): EvalMetric = {
-    require(evalData != null && evalMetric != null)
-    require(binded && paramsInitialized)
+    require(evalData != null && evalMetric != null, "evalData and evalMetric must be defined")
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
 
     if (reset) {
       evalData.reset()
@@ -216,7 +216,7 @@ abstract class BaseModule {
    */
   def predictEveryBatch(evalData: DataIter, numBatch: Int = -1, reset: Boolean = true)
     : IndexedSeq[IndexedSeq[NDArray]] = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     if (reset) {
       evalData.reset()
     }
@@ -234,7 +234,7 @@ abstract class BaseModule {
   }
 
   def predict(batch: DataBatch): IndexedSeq[NDArray] = {
-    require(binded && paramsInitialized)
+    require(binded && paramsInitialized, "bind() and initParams() must be called first.")
     forward(batch, isTrain = Option(false))
     val pad = batch.pad
     getOutputsMerged().map(out => {
@@ -260,7 +260,8 @@ abstract class BaseModule {
     val numOutputs = outputBatches.head.size
     outputBatches.foreach(out =>
       require(out.size == numOutputs,
-      "Cannot merge batches, as num of outputs is not the same in mini-batches." +
+        s"Cannot merge batches, as num of outputs $numOutputs is not the same " +
+          s"in mini-batches (${out.size})." +
       "Maybe bucketing is used?")
     )
     val concatenatedOutput = outputBatches.map(out => NDArray.concatenate(out))
@@ -395,8 +396,8 @@ abstract class BaseModule {
    */
   def fit(trainData: DataIter, evalData: Option[DataIter] = None, numEpoch: Int = 1,
           fitParams: FitParams = new FitParams): Unit = {
-    require(fitParams != null)
-    require(numEpoch > 0, "please specify number of epochs")
+    require(fitParams != null, "Undefined fitParams")
+    require(numEpoch > 0, s"Invalid number of epochs $numEpoch")
     import org.apache.mxnet.DataDesc._
     bind(dataShapes = trainData.provideData, labelShapes = Option(trainData.provideLabel),
          forTraining = true, forceRebind = fitParams.forceRebind)
@@ -604,7 +605,7 @@ class FitParams {
 
   // The performance measure used to display during training.
   def setEvalMetric(evalMetric: EvalMetric): FitParams = {
-    require(evalMetric != null)
+    require(evalMetric != null, "Undefined evalMetric")
     this.evalMetric = evalMetric
     this
   }
@@ -623,13 +624,13 @@ class FitParams {
   }
 
   def setKVStore(kvStore: String): FitParams = {
-    require(kvStore != null)
+    require(kvStore != null, "Undefined kvStore")
     this.kvstore = kvstore
     this
   }
 
   def setOptimizer(optimizer: Optimizer): FitParams = {
-    require(optimizer != null)
+    require(optimizer != null, "Undefined optimizer")
     this.optimizer = optimizer
     this
   }
@@ -649,7 +650,7 @@ class FitParams {
 
   // Will be called to initialize the module parameters if not already initialized.
   def setInitializer(initializer: Initializer): FitParams = {
-    require(initializer != null)
+    require(initializer != null, "Undefined Initializer")
     this.initializer = initializer
     this
   }
@@ -697,7 +698,7 @@ class FitParams {
   // checkpoint saved at a previous training phase at epoch N,
   // then we should specify this value as N+1.
   def setBeginEpoch(beginEpoch: Int): FitParams = {
-    require(beginEpoch >= 0)
+    require(beginEpoch >= 0, s"Invalid epoch $beginEpoch")
     this.beginEpoch = beginEpoch
     this
   }

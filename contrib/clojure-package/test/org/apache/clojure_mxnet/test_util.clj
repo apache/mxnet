@@ -23,7 +23,7 @@
     (let [diff (Math/abs (- x y))]
       (< diff tolerance))
     (and
-    	(= (count x) (count y))
-		(reduce (fn [x y] (and x y))
-            (map #(approx= tolerance %1 %2) x y)))))
+     (= (count x) (count y))
+     (reduce (fn [x y] (and x y))
+             (map #(approx= tolerance %1 %2) x y)))))
 
