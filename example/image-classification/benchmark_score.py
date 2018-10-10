@@ -34,7 +34,7 @@ parser.add_argument('--network', type=str, default='all',
 		                choices=['all', 'alexnet', 'vgg-16', 'resnetv1-50', 'resnet-50',
                                  'resnet-152', 'inception-bn', 'inception-v3', 
                                  'inception-v4', 'inception-resnet-v2', 'mobilenet',
-                                 'densenet-121', 'squeezenet1.1'])
+                                 'densenet121', 'squeezenet1.1'])
 parser.add_argument('--batch-size', type=int, default=0)
 
 opt = parser.parse_args()
@@ -50,11 +50,7 @@ def get_symbol(network, batch_size, dtype):
     if 'vgg' in network:
         num_layers = int(network.split('-')[1])
         network = 'vgg'
-    if 'densenet' in network:
-        num_layers = int(network.split('-')[1])
-        network = 'densenet' + str(num_layers)
     if network in ['densenet121', 'squeezenet1.1']:
-        logging.info('network: %s is converted from gluon modelzoo', network)
         sym = models.get_model(network)
         sym.hybridize()
         data = mx.sym.var('data')
@@ -98,7 +94,7 @@ if __name__ == '__main__':
         networks = ['alexnet', 'vgg-16', 'resnetv1-50', 'resnet-50',
                     'resnet-152', 'inception-bn', 'inception-v3', 
                     'inception-v4', 'inception-resnet-v2', 
-                    'mobilenet', 'densenet-121', 'squeezenet1.1']
+                    'mobilenet', 'densenet121', 'squeezenet1.1']
         logging.info('It may take some time to run all models, '
                      'set --network to run a specific one')
     else:
@@ -116,6 +112,9 @@ if __name__ == '__main__':
 
     for net in networks:
         logging.info('network: %s', net)
+        if net in ['densenet121', 'squeezenet1.1']:
+            logging.info('network: %s is converted from gluon modelzoo', net)
+            logging.info('you can run example/gluon/benchmark_gluon.py for more models')
         for d in devs:
             logging.info('device: %s', d)
             logged_fp16_warning = False
