@@ -130,7 +130,7 @@ elif args.model == 'custom':
 
 Some tips on quantization configs:
 
-1. First, you should prepare your data, symbol file and parameter file of your fp32 symbolic model.
+1. First, you should prepare your data, symbol file (custom-symbol.json) and parameter file (custom-0000.params) of your fp32 symbolic model.
 2. Then, you should run the below command and keep sure that your fp32 symbolic model runs inference well.
 
 ```
@@ -138,7 +138,7 @@ Some tips on quantization configs:
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference 
-python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu --data-nthreads=1
+python imagenet_inference.py --symbol-file=./model/custom-symbol.json --param-file=./model/custom-0000.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu --data-nthreads=1
 ```
 
 3. Then, you should add `rgb_mean`, `rgb_std`and `excluded_sym_names` in this script. Notice that you should exxclude conv/pool layers that has negative data since MKLDNN only support uint8 quantization temporary. You should also exclude all fc layers in your mdoel.
