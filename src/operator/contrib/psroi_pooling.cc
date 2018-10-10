@@ -147,8 +147,6 @@ template <typename DType>
   const int output_dim,
   DType* bottom_diff,
   const DType* bottom_rois) {
-    const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(omp_threads)
   for (int index = 0; index < count; index++) {
     // The output is in order (n, ctop, ph, pw)
     int pw = index % pooled_width;
