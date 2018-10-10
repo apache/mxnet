@@ -454,7 +454,7 @@ def test_conv_invalid_cudnn_flag():
 @with_seed()
 def test_conv():
     layers1d = [
-        nn.Conv1D(16, 3, in_channels=4)
+        nn.Conv1D(16, 3, in_channels=4),
         nn.Conv1D(16, 3, in_channels=4, cudnn='off'),
         nn.Conv1D(16, 3, in_channels=4, cudnn='default'),
         nn.Conv1D(16, 3, in_channels=4, cudnn='global'),
