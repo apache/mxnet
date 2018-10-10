@@ -62,6 +62,13 @@ $(document).ready(function(){
         e.clearSelection();
 
         for(var i = 0; i < lines.length; ++i) {
+            for(var lang in LANG_GP) {
+                if(lines[i].indexOf(LANG_GP[lang]) != -1) {
+                    var re = new RegExp(LANG_GP[lang], g);
+                    lines[i] = lines[i].replace(re, "");
+                    break;
+                }
+            }
             lines[i] = lines[i].replace(/^\s+|\s+$/g, "");
             if(!hasGap && lines[i].startsWith(LANG_GP[lang])) hasGap = true;
         }
