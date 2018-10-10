@@ -365,6 +365,18 @@ def test_cosine_loss():
     * mx.nd.sqrt(mx.nd.sum(target**2, axis=1, keepdims=True))
     assert_almost_equal(loss.asnumpy(), (1-numerator/denominator).asnumpy())
 
+    # Label == -1
+    pred = mx.nd.array([[1, 1, 1, 1],
+                        [1, 2, 3, 4]])
+    target = mx.nd.array([[2, 2, 2, 2],
+                          [5, 6, 7, 8]])
+    label = mx.nd.array([-1])
+    loss = Loss(pred, target, label)
+    #computing numpy way
+    numerator = mx.nd.sum(pred * target, keepdims=True, axis=1)
+    denominator = mx.nd.sqrt(mx.nd.sum(pred**2, axis=1, keepdims=True)) \
+    * mx.nd.sqrt(mx.nd.sum(target**2, axis=1, keepdims=True))
+    assert_almost_equal(loss.asnumpy(), (numerator/denominator).asnumpy())
 if __name__ == '__main__':
     import nose
     nose.runmodule()
