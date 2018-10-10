@@ -23,24 +23,25 @@ import org.apache.mxnet._
 import scala.collection.immutable.ListMap
 import scala.util.Random
 
-class SyntheticDataIter(numClasses: Int, bs: Int, datumShape: List[Int], maxIter: Int,
-                        dtype: DType = DType.Float32) extends DataIter {
-  val batchSize = bs
+class SyntheticDataIter(numClasses: Int, val batchSize: Int, datumShape: List[Int],
+                        labelShape: List[Int], maxIter: Int, dtype: DType = DType.Float32
+                       ) extends DataIter {
   var curIter = 0
   val random = new Random()
   val shape = Shape(batchSize :: datumShape)
-  val imageShape = Shape(datumShape)
-  val batchLabelShape = Shape(batchSize)
+  val batchLabelShape = Shape(batchSize :: labelShape)
 
+  val maxLabel = if (labelShape.isEmpty) numClasses.toFloat else 1f
   var label: IndexedSeq[NDArray] = IndexedSeq(
-    NDArray.api.random_uniform(Some(0f), Some(numClasses.toFloat), shape = Some(batchLabelShape)))
+    NDArray.api.random_uniform(Some(0f), Some(maxLabel), shape = Some(batchLabelShape)))
   var data: IndexedSeq[NDArray] = IndexedSeq(
     NDArray.api.random_uniform(shape = Some(shape)))
+
   val provideDataDesc: IndexedSeq[DataDesc] = IndexedSeq(
     new DataDesc("data", shape, dtype, Layout.UNDEFINED))
   val provideLabelDesc: IndexedSeq[DataDesc] = IndexedSeq(
     new DataDesc("softmax_label", batchLabelShape, dtype, Layout.UNDEFINED))
-  val getPad = 0
+  val getPad: Int = 0
 
   override def getData(): IndexedSeq[NDArray] = data
 

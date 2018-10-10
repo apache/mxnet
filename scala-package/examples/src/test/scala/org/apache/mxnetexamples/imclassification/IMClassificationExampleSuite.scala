@@ -47,16 +47,16 @@ class IMClassificationExampleSuite extends FunSuite with BeforeAndAfterAll {
 
     var context = Context.cpu()
 
-    val output = TrainModel.test("mlp", modelDirPath)
+    val valAccuracy = TrainModel.test("mlp", modelDirPath)
     Process("rm -rf " + modelDirPath) !
 
-    assert(output >= 0.95f)
+    assert(valAccuracy >= 0.95f)
   }
 
   for(model <- List("mlp", "lenet", "resnet")) {
     test(s"Example CI: Test Image Classification Model ${model}") {
       var context = Context.cpu()
-      val output = TrainModel.test(model, "", 10, 1, benchmark = true)
+      val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true)
     }
   }
 

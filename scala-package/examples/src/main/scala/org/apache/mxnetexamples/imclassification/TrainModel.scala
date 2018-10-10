@@ -20,7 +20,7 @@ package org.apache.mxnetexamples.imclassification
 import java.util.concurrent._
 
 import org.apache.mxnetexamples.imclassification.models._
-import org.apache.mxnetexamples.imclassification.util.Fitter
+import org.apache.mxnetexamples.imclassification.util.Trainer
 import org.apache.mxnet._
 import org.apache.mxnetexamples.imclassification.datasets.{MnistIter, SyntheticDataIter}
 import org.kohsuke.args4j.{CmdLineParser, Option}
@@ -39,7 +39,7 @@ object TrainModel {
     * @param numExamples Number of image data examples
     * @param numEpochs Number of epochs to train for
     * @param benchmark Whether to use benchmark synthetic data instead of real image data
-    * @return The final test accuracy
+    * @return The final validation accuracy
     */
   def test(model: String, dataPath: String, numExamples: Int = 60000,
            numEpochs: Int = 10, benchmark: Boolean = false): Float = {
@@ -48,7 +48,7 @@ object TrainModel {
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
       val (dataLoader, net) = dataLoaderAndModel("mnist", model, dataPath,
         numExamples = numExamples, benchmark = benchmark)
-      val Acc = Fitter.fit(batchSize = 128, numExamples, devs = devs,
+      val Acc = Trainer.fit(batchSize = 128, numExamples, devs = devs,
         network = net, dataLoader = dataLoader,
         kvStore = "local", numEpochs = numEpochs)
       logger.info("Finish test fit ...")
@@ -89,7 +89,7 @@ object TrainModel {
 
     val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (benchmark) {
       (batchSize: Int, kv: KVStore) => {
-        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, numExamples)
+        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, List(), numExamples)
         (iter, iter)
       }
     } else {
@@ -141,7 +141,7 @@ object TrainModel {
         logger.info("Start KVStoreServer for scheduler & servers")
         KVStoreServer.start()
       } else {
-        Fitter.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+        Trainer.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
           network = net, dataLoader = dataLoader,
           kvStore = inst.kvStore, numEpochs = inst.numEpochs,
           modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
