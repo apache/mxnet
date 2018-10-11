@@ -1638,7 +1638,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
 
       auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
-      NDArray tmp_bias = CreateBiasNDArray(num_filter);
+      NDArray tmp_bias = CreateBiasNDArray(bias_shape);
 
       backwards_outputs[0] = &tmp_output.arr;
       backwards_outputs[1] = &tmp_kernel;
