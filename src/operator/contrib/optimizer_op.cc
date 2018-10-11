@@ -83,7 +83,6 @@ Note that non-zero values for the weight decay option are not supported.
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
 .add_argument("grad", "NDArray-or-Symbol", "Gradient")
 .add_argument("history", "NDArray-or-Symbol", "History")
-.add_argument("last_update", "NDArray-or-Symbol", "Array storing last update counter for each row.")
 .add_arguments(GroupAdagradParam::__FIELDS__());
 
 }  // namespace op
