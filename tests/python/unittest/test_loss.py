@@ -350,33 +350,22 @@ def test_triplet_loss():
 
 @with_seed()
 def test_cosine_loss():
-    #For similarity check
-    label = mx.nd.array([1])
-    pred = mx.nd.array([[1, 1, 1, 1],
-                        [1, 2, 3, 4]])
-    target = mx.nd.array([[1, 1, 1, 1],
-                          [1, 2, 3, 4]])
+    #Generating samples
+    input1 = mx.nd.random.randn(3, 2)
+    input2 = mx.nd.random.randn(3, 2)
+    label = mx.nd.sign(mx.nd.random.randn(input1.shape[0]))
+    #Calculating loss from cosine embedding loss function in Gluon
     Loss = gluon.loss.CosineEmbeddingLoss()
-    loss = Loss(pred, target, label)
+    loss = Loss(input1, input2, label)
 
-    #computing numpy way
-    numerator = mx.nd.sum(pred * target, keepdims=True, axis=1)
-    denominator = mx.nd.sqrt(mx.nd.sum(pred**2, axis=1, keepdims=True)) \
-    * mx.nd.sqrt(mx.nd.sum(target**2, axis=1, keepdims=True))
-    assert_almost_equal(loss.asnumpy(), (1-numerator/denominator).asnumpy())
+    # Calculating the loss Numpy way
+    numerator = mx.nd.sum(input1 * input2, keepdims=True, axis=1)
+    denominator = mx.nd.sqrt(mx.nd.sum(input1**2, axis=1, keepdims=True)) \
+    * mx.nd.sqrt(mx.nd.sum(input2**2, axis=1, keepdims=True))
+    final_numpy_array = mx.nd.where(label == 1, 1-numerator/denominator, \
+    mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1))
+    assert_almost_equal(loss.asnumpy(), final_numpy_array.asnumpy(), rtol=1e-3, atol=1e-5)
 
-    # Label == -1
-    pred = mx.nd.array([[1, 1, 1, 1],
-                        [1, 2, 3, 4]])
-    target = mx.nd.array([[2, 2, 2, 2],
-                          [5, 6, 7, 8]])
-    label = mx.nd.array([-1])
-    loss = Loss(pred, target, label)
-    #computing numpy way
-    numerator = mx.nd.sum(pred * target, keepdims=True, axis=1)
-    denominator = mx.nd.sqrt(mx.nd.sum(pred**2, axis=1, keepdims=True)) \
-    * mx.nd.sqrt(mx.nd.sum(target**2, axis=1, keepdims=True))
-    assert_almost_equal(loss.asnumpy(), (numerator/denominator).asnumpy())
 if __name__ == '__main__':
     import nose
     nose.runmodule()
