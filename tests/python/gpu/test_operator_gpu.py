@@ -303,52 +303,35 @@ def test_batchnorm_with_type():
 
 
   # V2, 2D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=False, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=True, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  # Don't specify fix_beta. Default i.e., fix_beta=False will be verified.
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
-  # Don't specify fix_gamma. Default i.e., fix_gamma=False will be verified.
-  sym = mx.sym.BatchNorm(name='norm', fix_beta=True, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
 
   # V2, 1D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=False, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=True, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  # Don't specify fix_beta. Default i.e., fix_beta=False will be verified.
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_1D)
-  # Don't specify fix_gamma. Default i.e., fix_gamma=False will be verified.
-  sym = mx.sym.BatchNorm(name='norm', fix_beta=True, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_1D)
-
+  #
   # # V2, 3D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, fix_beta=True, cudnn_off=True)
+  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_3D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, fix_beta=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_3D)
-  # Don't specify fix_beta. Default i.e., fix_beta=False will be verified.
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_3D)
-  # Don't specify fix_gamma. Default i.e., fix_gamma=False will be verified.
-  sym = mx.sym.BatchNorm(name='norm', fix_beta=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_3D)
+
 
 @with_seed()
 def test_batchnorm_versions():
-  def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, fix_beta, use_global_stats):
+  def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
     ctx_list = []
     sym_list = []
     # BatchNormV1 cpu
@@ -369,7 +352,6 @@ def test_batchnorm_versions():
     if 'batchnorm_cpu' in batchnorm_op_list:
       ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
       sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
-                                       fix_beta=fix_beta,
                                        use_global_stats=use_global_stats,
                                        name='batchnorm'))
 
@@ -377,7 +359,6 @@ def test_batchnorm_versions():
     if 'batchnorm_gpu' in batchnorm_op_list:
       ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
       sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
-                                       fix_beta=fix_beta,
                                        use_global_stats=use_global_stats,
                                        name='batchnorm', cudnn_off=True))
 
@@ -385,54 +366,47 @@ def test_batchnorm_versions():
     if 'batchnorm_cudnn' in batchnorm_op_list:
       ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
       sym_list.append(mx.sym.BatchNorm(fix_gamma=fix_gamma,
-                                       fix_beta=fix_beta,
                                        use_global_stats=use_global_stats,
                                        name='batchnorm', cudnn_off=False))
 
     check_consistency(sym_list, ctx_list)
 
-  def test_1d_batchnorm(fix_gamma, fix_beta, use_global_stats):
+  def test_1d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 20)
     test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
-                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
-  def test_2d_batchnorm(fix_gamma, fix_beta, use_global_stats):
+  def test_2d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 10, 10)
-    # batchmorm_v1 is deprecated.
-    # `fix_beta` parameter is available only in new batchnorm operator.
-    # Checking consistency separately for batchnormv1 and batchnorm.
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu'],
-                                   data=data,
-                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
-
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu',
+                                                      'batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
-                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
-  def test_3d_batchnorm(fix_gamma, fix_beta, use_global_stats):
+  def test_3d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 3, 5, 5)
     test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu'],
                                    data=data,
-                                   fix_gamma=fix_gamma, fix_beta=fix_beta, use_global_stats=use_global_stats)
+                                   fix_gamma=fix_gamma, use_global_stats=use_global_stats)
 
-  test_1d_batchnorm(True,  False, False)
-  test_1d_batchnorm(False, True, False)
-  test_1d_batchnorm(False, False, True)
-  test_1d_batchnorm(True,  True, True)
+  test_1d_batchnorm(True,  False)
+  test_1d_batchnorm(False, False)
+  test_1d_batchnorm(False, True)
+  test_1d_batchnorm(True,  True)
 
-  test_2d_batchnorm(True,  False, False)
-  test_2d_batchnorm(False, True, False)
-  test_2d_batchnorm(False, False, True)
-  test_2d_batchnorm(True,  True, True)
+  test_2d_batchnorm(True,  False)
+  test_2d_batchnorm(False, False)
+  test_2d_batchnorm(False, True)
+  test_2d_batchnorm(True,  True)
 
-  test_3d_batchnorm(True,  False, False)
-  test_3d_batchnorm(False, True, False)
-  test_3d_batchnorm(False, False, True)
-  test_3d_batchnorm(True,  True, True)
+  test_3d_batchnorm(True,  False)
+  test_3d_batchnorm(False, False)
+  test_3d_batchnorm(False, True)
+  test_3d_batchnorm(True,  True)
 
 
 @with_seed(1234)
