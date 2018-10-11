@@ -261,7 +261,7 @@ MKLDNNConvForward &GetConvFwd(const ConvolutionParam &param,
     full_param.conv_param = param;
     full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
     MKLDNNConvForward fwd(full_param, is_train, data, weights, bias, output);
-    if (MKLDNNCacheSize() != -1 && fwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheExceeded(fwds.size()))
       fwds.clear();
     auto ins_ret = fwds.insert(
       std::pair<MKLDNNConvSignature, MKLDNNConvForward>(key, fwd));
@@ -486,7 +486,7 @@ static inline MKLDNNConvBackward &GetConvBwd(
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNConvBackward bwd(param, data, weights, bias, output, fwd_pd);
-    if (MKLDNNCacheSize() != -1 && bwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheExceeded(bwds.size()))
       bwds.clear();
     auto ins_ret = bwds.insert(
         std::pair<MKLDNNConvSignature, MKLDNNConvBackward>(key, bwd));

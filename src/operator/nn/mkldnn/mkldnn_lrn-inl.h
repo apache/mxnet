@@ -189,7 +189,7 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
   auto it = lrn_fwds.find(key);
   if (it == lrn_fwds.end()) {
     MKLDNNLRNFwd fwd(param, ctx.is_train, in_data);
-    if (MKLDNNCacheSize() != -1 && lrn_fwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheExceeded(lrn_fwds.size()))
       lrn_fwds.clear();
     auto ins_ret = lrn_fwds.insert(std::pair<MKLDNNLRNSignature, MKLDNNLRNFwd>
                                    (key, fwd));
@@ -286,7 +286,7 @@ static MKLDNNLRNBwd &GetLRNBwd(const LRNParam &param, const NDArray &in_data,
     const mkldnn::memory::desc diff_md =
         out_grad.GetMKLDNNData()->get_primitive_desc().desc();
     MKLDNNLRNBwd bwd(param, in_data_md, diff_md);
-    if (MKLDNNCacheSize() !=- 1 && lrn_bwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheExceeded(lrn_bwds.size()))
       lrn_bwds.clear();
     auto ins_ret =
         lrn_bwds.insert(std::pair<MKLDNNLRNSignature, MKLDNNLRNBwd>(key, bwd));

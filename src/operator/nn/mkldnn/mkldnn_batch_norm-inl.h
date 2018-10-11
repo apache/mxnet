@@ -362,7 +362,7 @@ static MKLDNNBNBackward &GetBNBackward(
   if (it == bwds.end()) {
     auto bwd_pd = _GetBwd(in_mem, diff_mem, param.eps, flags);
     MKLDNNBNBackward bwd(bwd_pd);
-    if (MKLDNNCacheSize() != -1 && bwds.size() > MKLDNNCacheSize())
+    if (MKLDNNCacheExceeded(bwds.size()))
       bwds.clear();
     auto ins_ret =
         bwds.insert(std::pair<MKLDNNBNSignature, MKLDNNBNBackward>(key, bwd));
