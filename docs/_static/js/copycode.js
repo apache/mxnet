@@ -64,7 +64,7 @@ $(document).ready(function(){
         for(var i = 0; i < lines.length; ++i) {
             for(var lang in LANG_GP) {
                 if(lines[i].indexOf(LANG_GP[lang]) != -1) {
-                    var re = new RegExp(LANG_GP[lang], g);
+                    var re = new RegExp(LANG_GP[lang], "g");
                     lines[i] = lines[i].replace(re, "");
                     break;
                 }
