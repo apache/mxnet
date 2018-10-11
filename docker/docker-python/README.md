@@ -1,7 +1,7 @@
 # Release Python Docker Images for MXNet
 
 The `docker-python` directory can be used to release mxnet python docker images to dockerhub after any mxnet release.  
-It uses the appropriate pip binaries to build different docker images as -
+It uses the appropriate pip binaries to build different docker images. Both python2 (default) and python3 images are available as -
 * cpu
 * cpu_mkl
 * latest (same as cpu)
@@ -12,13 +12,21 @@ It uses the appropriate pip binaries to build different docker images as -
 * gpu_cu80_mkl
 * gpu_cu92 
 * gpu_cu92_mkl
+* cpu_py3
+* cpu_mkl_py3
+* gpu_cu90_py3
+* gpu_cu90_mkl_py3
+* gpu_cu80_py3
+* gpu_cu80_mkl_py3
+* gpu_cu92_py3
+* gpu_cu92_mkl_py3
 
 
 ** Note: If you want to use a different pip binary (specific mxnet or cuda version, etc), you can edit the last line of the cpu or gpu dockerfile as required. 
 
 Refer: https://pypi.org/project/mxnet/
 
-### Usage
+### Using the Build Script
 `./build_python_dockerfile.sh <mxnet_version> <path_to_cloned_mxnet_repo>`
 
 For example: 
@@ -39,3 +47,10 @@ Credentials can be provided in the following ways:
 * **Set Environment Variables:** Set the following environment variables which the script will pick up to login to dockerhub at runtime -
     * $MXNET_DOCKERHUB_PASSWORD
     * $MXNET_DOCKERHUB_USERNAME
+    
+
+### Using the Docker Images
+* The MXNet Python Docker images can be found here: https://hub.docker.com/r/mxnet/python/
+
+* Docker Pull Command: `docker pull mxnet/python:<image_tag>`
+* Get started: `docker run -it mxnet/python:<image_tag> bash`
