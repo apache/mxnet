@@ -439,7 +439,7 @@ Example::
 
 More precise control over how dimensions are inherited is achieved by specifying \
 slices over the `lhs` and `rhs` array dimensions. Only the sliced `lhs` dimensions \
-are reshaped to the `rhs` sliced dimensions, with the non-sliced `lhs` dimensions staying the same. 
+are reshaped to the `rhs` sliced dimensions, with the non-sliced `lhs` dimensions staying the same.
 
   Examples::
 
@@ -599,10 +599,6 @@ Example::
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
-  [](const NodeAttrs& attrs){
-    return std::vector<bool>{true};
-  })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_cast"})
 .add_argument("data", "NDArray-or-Symbol", "The input.")
@@ -613,10 +609,6 @@ NNVM_REGISTER_OP(_backward_cast)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
-  [](const NodeAttrs& attrs){
-    return std::vector<bool>{true};
   })
 .set_attr<FCompute>("FCompute<cpu>", CastCompute<cpu>);
 

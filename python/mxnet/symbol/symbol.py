@@ -2439,6 +2439,23 @@ class Symbol(SymbolBase):
         """
         return op.squeeze(self, *args, **kwargs)
 
+    def get_backend_symbol(self, backend):
+        """Return symbol for target backend.
+
+        Parameters
+        ----------
+        backend : str
+            The backend names.
+
+        Returns
+        -------
+        out : Symbol
+            The created Symbol for target backend.
+        """
+        out = SymbolHandle()
+        check_call(_LIB.MXGenBackendSubgraph(self.handle, c_str(backend), ctypes.byref(out)))
+        return Symbol(out)
+
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
 

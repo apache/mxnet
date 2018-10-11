@@ -121,7 +121,7 @@ from onnx import checker
 import onnx
 
 # Load onnx model
-model_proto = onnx.load(converted_model_path)
+model_proto = onnx.load_model(converted_model_path)
 
 # Check if converted ONNX protobuf is valid
 checker.check_graph(model_proto.graph)

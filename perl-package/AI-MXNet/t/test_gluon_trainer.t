@@ -24,6 +24,7 @@ use AI::MXNet::Gluon::NN qw(nn);
 use AI::MXNet::TestUtils qw(almost_equal dies_ok);
 use Scalar::Util qw(refaddr);
 use AI::MXNet::Base;
+$ENV{MXNET_STORAGE_FALLBACK_LOG_VERBOSE} = 0;
 
 sub test_multi_trainer
 {
@@ -127,15 +128,16 @@ sub test_trainer
 
 test_trainer();
 
-sub test_trainer_save_load
+sub test_trainer_sparse_save_load
 {
-    my $x = gluon->Parameter('x', shape=>[10], lr_mult=>1.0);
-    $x->initialize(ctx=>[mx->cpu(0), mx->cpu(1)], init=>'zeros');
+    my $x = gluon->Parameter('x', shape=>[10, 1], lr_mult=>1.0, stype=>'row_sparse');
+    $x->initialize(ctx=>[mx->cpu(0)], init=>'zeros');
     my $trainer = gluon->Trainer([$x], 'sgd', {learning_rate => 0.1});
+    my $all_rows = mx->nd->arange(start => 0, stop => 10, ctx => mx->cpu(0));
     mx->autograd->record(sub {
-        for my $w (@{ $x->list_data })
+        for my $w (@{ $x->list_row_sparse_data($all_rows) })
         {
-            my $y = $w + 1;
+            my $y = $w * 1;
             $y->backward();
         }
     });
@@ -148,7 +150,7 @@ sub test_trainer_save_load
     ok($trainer->kvstore->_updater->optimizer->_get_lr(0) == 0.2);
 }
 
-test_trainer_save_load();
+test_trainer_sparse_save_load();
 
 sub test_trainer_multi_layer_init
 {
