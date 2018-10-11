@@ -434,7 +434,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
     }
 
     for (int i = 0; i < channels_; i++) {
-      if (~param.fix_beta)
+      if (!param.fix_beta)
         weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
       else
         weight_buf[channels_ + i] = (DType)0.0f;
