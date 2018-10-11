@@ -29,6 +29,7 @@
 #include "../3rdparty/dmlc-core/src/io/local_filesys.cc"
 #include "../3rdparty/dmlc-core/src/data.cc"
 #include "../3rdparty/dmlc-core/src/io.cc"
+#include "../3rdparty/dmlc-core/src/io/filesys.cc"
 #include "../3rdparty/dmlc-core/src/recordio.cc"
 
 
