@@ -31,6 +31,11 @@
 #include <type_traits>
 
 namespace mxnet {
+
+inline size_t PadBytes(size_t num_bytes, size_t alignment) {
+  return num_bytes + (alignment - num_bytes % alignment) % alignment;
+}
+
 namespace op {
 /*!
  * \brief CPU/GPU: Sort key-value pairs stored in separate places. (Stable sort is performed!)
