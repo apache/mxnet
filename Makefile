@@ -66,8 +66,8 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
-	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
+	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
+	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
 	export USE_MKLML = 1
 endif
 

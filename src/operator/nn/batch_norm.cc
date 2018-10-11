@@ -155,35 +155,34 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
 
     // compute output
     AccReal *w = weights.dptr<AccReal>();
-    const AccReal *b = bias.dptr<AccReal>();
+    AccReal *b = bias.dptr<AccReal>();
+
+    // Ignore gamma
+    if (param_.fix_gamma) {
+      if (IsBNWriting(req[batchnorm::kGamma])) {
+        w[channel] = AccReal(1);
+      }
+    }
+
+    // Ignore beta
+    if (param_.fix_beta) {
+       if (IsBNWriting(req[batchnorm::kBeta])) {
+          b[channel] = AccReal(0);
+        }
+    }
 
     const AccReal thisMean = mean[channel];
     const AccReal thisInvstd = var[channel];
     const AccReal thisWeight = w[channel];
     const AccReal thisBias = b[channel];
 
-    // note that var is still invstd
-    if (!param_.fix_gamma) {
-      if (IsBNWriting(req[batchnorm::kData])) {
-        ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
-                      *out_data = static_cast<DType>(
-                        ((*in_data - thisMean) * thisInvstd) * thisWeight + thisBias);
-                    });
-      }
-    } else {
-      if (IsBNWriting(req[batchnorm::kGamma])) {
-        w[channel] = AccReal(1);
-      }
-      if (IsBNWriting(req[batchnorm::kData])) {
-        ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
-                      *out_data = static_cast<DType>(
-                        ((*in_data - thisMean) * thisInvstd) + thisBias);
-                    });
-      }
+    if (IsBNWriting(req[batchnorm::kData])) {
+          ForEachFast(inputData, outputData, channel,
+                      [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
+                                                                  DType *out_data) {
+                        *out_data = static_cast<DType>(
+                          ((*in_data - thisMean) * thisInvstd) * thisWeight + thisBias);
+                      });
     }
   }
 }
@@ -309,7 +308,11 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
     }
 
     if (IsBNWriting(req[batchnorm::kBeta])) {
-      gradBiasData[channel] = scale * sumGradOut;
+      if (!param_.fix_beta) {
+        gradBiasData[channel] = scale * sumGradOut;
+      } else {
+        gradBiasData[channel] = AccReal(0);
+      }
     }
   }
 }
@@ -478,6 +481,9 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   if (!common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) && param.fix_gamma) {
     LOG(FATAL) << "fix_gamma=True is not supported for sparse ndarrays. Tracked at #11647";
   }
+  if (!common::ContainsOnlyStorage(*in_attrs, kDefaultStorage) && param.fix_beta) {
+    LOG(FATAL) << "fix_beta=True is not supported for sparse ndarrays. Tracked at #11647";
+  }
   return dispatched;
 }
 
@@ -565,11 +571,12 @@ the 'channel' (separately normalized groups).  The default is 1.  Specifying -1 
 axis to be the last item in the input shape.
 
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
-then set ``gamma`` to 1 and its gradient to 0.
+then set ``gamma`` to 1 and its gradient to 0. If ``fix_beta`` is true, then set ``beta`` to 0
+and its gradient to 0.
 
 Note::
 
-When fix_gamma is set to True, no sparse support is provided. If fix_gamma is set to False,
+When fix_gamma/fix_beta is set to True, no sparse support is provided. If fix_gamma/fix_beta is set to False,
 the sparse tensors will fallback.
 
 )code" ADD_FILELINE)

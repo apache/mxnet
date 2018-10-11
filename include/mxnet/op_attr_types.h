@@ -300,6 +300,14 @@ using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
  */
 using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
 
+/*!
+ * \brief Register a function to determine if the input of a quantized operator
+ * needs to be quantized. This is usually used for the quantized operators
+ * which can handle fp32 inputs directly.
+ */
+using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
+                                                size_t index)>;
+
 }  // namespace mxnet
 
 #endif  // MXNET_OP_ATTR_TYPES_H_

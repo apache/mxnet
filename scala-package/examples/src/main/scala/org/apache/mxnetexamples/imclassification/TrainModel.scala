@@ -17,109 +17,106 @@
 
 package org.apache.mxnetexamples.imclassification
 
+import java.util.concurrent._
+
+import org.apache.mxnetexamples.imclassification.models._
+import org.apache.mxnetexamples.imclassification.util.Trainer
 import org.apache.mxnet._
+import org.apache.mxnetexamples.imclassification.datasets.{MnistIter, SyntheticDataIter}
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 
-object TrainMnist {
-  private val logger = LoggerFactory.getLogger(classOf[TrainMnist])
+object TrainModel {
+  private val logger = LoggerFactory.getLogger(classOf[TrainModel])
 
-  // multi-layer perceptron
-  def getMlp: Symbol = {
-    val data = Symbol.Variable("data")
-
-    // val fc1 = Symbol.FullyConnected(name = "relu")()(Map("data" -> data, "act_type" -> "relu"))
-    val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
-    val act1 = Symbol.api.Activation (data = Some(fc1), "relu", name = "relu")
-    val fc2 = Symbol.api.FullyConnected(Some(act1), None, None, 64, name = "fc2")
-    val act2 = Symbol.api.Activation(data = Some(fc2), "relu", name = "relu2")
-    val fc3 = Symbol.api.FullyConnected(Some(act2), None, None, 10, name = "fc3")
-    val mlp = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc3))
-    mlp
-  }
-
-  def getLenet: Symbol = {
-    val data = Symbol.Variable("data")
-    // first conv
-    val conv1 = Symbol.api.Convolution(data = Some(data), kernel = Shape(5, 5), num_filter = 20)
-    val tanh1 = Symbol.api.tanh(data = Some(conv1))
-    val pool1 = Symbol.api.Pooling(data = Some(tanh1), pool_type = Some("max"),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
-    // second conv
-    val conv2 = Symbol.api.Convolution(data = Some(pool1), kernel = Shape(5, 5), num_filter = 50)
-    val tanh2 = Symbol.api.tanh(data = Some(conv2))
-    val pool2 = Symbol.api.Pooling(data = Some(tanh2), pool_type = Some("max"),
-      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)))
-    // first fullc
-    val flatten = Symbol.api.Flatten(data = Some(pool2))
-    val fc1 = Symbol.api.FullyConnected(data = Some(flatten), num_hidden = 500)
-    val tanh3 = Symbol.api.tanh(data = Some(fc1))
-    // second fullc
-    val fc2 = Symbol.api.FullyConnected(data = Some(tanh3), num_hidden = 10)
-    // loss
-    val lenet = Symbol.api.SoftmaxOutput(name = "softmax", data = Some(fc2))
-    lenet
-  }
-
-  def getIterator(dataShape: Shape)
-    (dataDir: String, batchSize: Int, kv: KVStore): (DataIter, DataIter) = {
-    val flat = if (dataShape.size == 3) "False" else "True"
-
-    val train = IO.MNISTIter(Map(
-      "image" -> (dataDir + "train-images-idx3-ubyte"),
-      "label" -> (dataDir + "train-labels-idx1-ubyte"),
-      "label_name" -> "softmax_label",
-      "input_shape" -> dataShape.toString,
-      "batch_size" -> batchSize.toString,
-      "shuffle" -> "True",
-      "flat" -> flat,
-      "num_parts" -> kv.numWorkers.toString,
-      "part_index" -> kv.`rank`.toString))
-
-    val eval = IO.MNISTIter(Map(
-      "image" -> (dataDir + "t10k-images-idx3-ubyte"),
-      "label" -> (dataDir + "t10k-labels-idx1-ubyte"),
-      "label_name" -> "softmax_label",
-      "input_shape" -> dataShape.toString,
-      "batch_size" -> batchSize.toString,
-      "flat" -> flat,
-      "num_parts" -> kv.numWorkers.toString,
-      "part_index" -> kv.`rank`.toString))
-
-    (train, eval)
-  }
-
-  def test(dataPath : String) : Float = {
+  /**
+    * Simple model training and execution
+    * @param model The model identifying string
+    * @param dataPath Path to location of image data
+    * @param numExamples Number of image data examples
+    * @param numEpochs Number of epochs to train for
+    * @param benchmark Whether to use benchmark synthetic data instead of real image data
+    * @return The final validation accuracy
+    */
+  def test(model: String, dataPath: String, numExamples: Int = 60000,
+           numEpochs: Int = 10, benchmark: Boolean = false): Float = {
     NDArrayCollector.auto().withScope {
-      val (dataShape, net) = (Shape(784), getMlp)
       val devs = Array(Context.cpu(0))
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-      val Acc = ModelTrain.fit(dataDir = dataPath,
-        batchSize = 128, numExamples = 60000, devs = devs,
-        network = net, dataLoader = getIterator(dataShape),
-        kvStore = "local", numEpochs = 10)
+      val (dataLoader, net) = dataLoaderAndModel("mnist", model, dataPath,
+        numExamples = numExamples, benchmark = benchmark)
+      val Acc = Trainer.fit(batchSize = 128, numExamples, devs = devs,
+        network = net, dataLoader = dataLoader,
+        kvStore = "local", numEpochs = numEpochs)
       logger.info("Finish test fit ...")
       val (_, num) = Acc.get
       num(0)
     }
   }
 
+  /**
+    * Gets dataset iterator and model symbol
+    * @param dataset The dataset identifying string
+    * @param model The model identifying string
+    * @param dataDir Path to location of image data
+    * @param numLayers The number of model layers (resnet only)
+    * @param numExamples The number of examples in the dataset
+    * @param benchmark Whether to use benchmark synthetic data instead of real image data
+    * @return Data iterator (partially applied function) and model symbol
+    */
+  def dataLoaderAndModel(dataset: String, model: String, dataDir: String = "",
+                         numLayers: Int = 50, numExamples: Int = 60000,
+                         benchmark: Boolean = false
+                        ): ((Int, KVStore) => (DataIter, DataIter), Symbol) = {
+    val (imageShape, numClasses) = dataset match {
+      case "mnist" => (List(1, 28, 28), 10)
+      case "imagenet" => (List(3, 224, 224), 1000)
+      case _ => throw new Exception("Invalid image data collection")
+    }
 
+    val List(channels, height, width) = imageShape
+    val dataSize: Int = channels * height * width
+    val (datumShape, net) = model match {
+      case "mlp" => (List(dataSize), MultiLayerPerceptron.getSymbol(numClasses))
+      case "lenet" => (List(channels, height, width), Lenet.getSymbol(numClasses))
+      case "resnet" => (List(channels, height, width), Resnet.getSymbol(numClasses,
+        numLayers, imageShape))
+      case _ => throw new Exception("Invalid model name")
+    }
+
+    val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (benchmark) {
+      (batchSize: Int, kv: KVStore) => {
+        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, List(), numExamples)
+        (iter, iter)
+      }
+    } else {
+      dataset match {
+        case "mnist" => MnistIter.getIterator(Shape(datumShape), dataDir)
+        case _ => throw new Exception("This image data collection only supports the"
+          + "synthetic benchmark iterator.  Use --benchmark to enable")
+      }
+    }
+    (dataLoader, net)
+  }
+
+  /**
+    * Runs image classification training from CLI with various options
+    * @param args CLI args
+    */
   def main(args: Array[String]): Unit = {
-    val inst = new TrainMnist
+    val inst = new TrainModel
     val parser: CmdLineParser = new CmdLineParser(inst)
     try {
       parser.parseArgument(args.toList.asJava)
 
       val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
-        else inst.dataDir
+      else inst.dataDir
 
-      val (dataShape, net) =
-        if (inst.network == "mlp") (Shape(784), getMlp)
-        else (Shape(1, 28, 28), getLenet)
+      val (dataLoader, net) = dataLoaderAndModel(inst.dataset, inst.network, dataPath,
+        inst.numLayers, inst.numExamples, inst.benchmark)
 
       val devs =
         if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
@@ -144,9 +141,8 @@ object TrainMnist {
         logger.info("Start KVStoreServer for scheduler & servers")
         KVStoreServer.start()
       } else {
-        ModelTrain.fit(dataDir = inst.dataDir,
-          batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
-          network = net, dataLoader = getIterator(dataShape),
+        Trainer.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+          network = net, dataLoader = dataLoader,
           kvStore = inst.kvStore, numEpochs = inst.numEpochs,
           modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
           lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
@@ -163,11 +159,19 @@ object TrainMnist {
   }
 }
 
-class TrainMnist {
-  @Option(name = "--network", usage = "the cnn to use: ['mlp', 'lenet']")
+class TrainModel {
+  @Option(name = "--network", usage = "the cnn to use: ['mlp', 'lenet', 'resnet']")
   private val network: String = "mlp"
+  @Option(name = "--num-layers", usage = "the number of resnet layers to use")
+  private val numLayers: Int = 50
   @Option(name = "--data-dir", usage = "the input data directory")
   private val dataDir: String = "mnist/"
+
+  @Option(name = "--dataset", usage = "the images to classify: ['mnist', 'imagenet']")
+  private val dataset: String = "mnist"
+  @Option(name = "--benchmark", usage = "Benchmark to use synthetic data to measure performance")
+  private val benchmark: Boolean = false
+
   @Option(name = "--gpus", usage = "the gpus will be used, e.g. '0,1,2,3'")
   private val gpus: String = null
   @Option(name = "--cpus", usage = "the cpus will be used, e.g. '0,1,2,3'")
@@ -187,7 +191,7 @@ class TrainMnist {
   @Option(name = "--kv-store", usage = "the kvstore type")
   private val kvStore = "local"
   @Option(name = "--lr-factor",
-          usage = "times the lr with a factor for every lr-factor-epoch epoch")
+    usage = "times the lr with a factor for every lr-factor-epoch epoch")
   private val lrFactor: Float = 1f
   @Option(name = "--lr-factor-epoch", usage = "the number of epoch to factor the lr, could be .5")
   private val lrFactorEpoch: Float = 1f
@@ -205,3 +209,4 @@ class TrainMnist {
   @Option(name = "--num-server", usage = "# of servers")
   private val numServer: Int = 1
 }
+
