@@ -30,7 +30,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def main():
-    ctx = mx.gpu(0) if args.gpu >=0 else mx.cpu()
+    ctx = mx.cpu() if args.gpu == None else mx.gpu(0)
     fcnxs = symbol_fcnxs.get_fcn32s_symbol(numclass=21, workspace_default=1536)
     fcnxs_model_prefix = "model_pascal/FCN32s_VGG16"
     if args.model == "fcn16s":
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         help='the init type of fcn-xs model, e.g. vgg16, fcnxs')
     parser.add_argument('--retrain', action='store_true', default=False,
         help='true means continue training.')
-    parser.add_argument("--gpu", type=int, default=0, help="if negative then use cpu else use gpu")
+    parser.add_argument("--gpu", type=int, help="if None then use cpu else use gpu")
     args = parser.parse_args()
     logging.info(args)
     main()

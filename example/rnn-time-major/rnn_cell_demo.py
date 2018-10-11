@@ -83,9 +83,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="This example demonstrates an RNN implementation with Time-major layout. This implementation shows 1.5x-2x speedups compared to Batch-major RNN.")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size parameter")
-    parser.add_argument('--cuda', action='store_true', dest='cuda', help='train on GPU with CUDA')
-    parser.add_argument('--no-cuda', action='store_false', dest='cuda', help='train on CPU')
-    parser.add_argument('--device-id', type=str, default='0', help='Update count per available GPUs')
+    parser.add_argument('--gpus', type=str, help='training with gpu devices eg. 0,1 if null then use cpu')
     args = parser.parse_args()
     batch_size = args.batch_size
     buckets = [10, 20, 30, 40, 50, 60]
@@ -98,7 +96,7 @@ if __name__ == '__main__':
     momentum = 0.0
 
     # Update count per available GPUs
-    contexts = [mx.context.gpu(int(i)) for i in args.device-id.split(',')] if args.cuda else [mx.context.cpu()]
+    contexts = [mx.context.cpu()] if args.gpus == None else [mx.context.gpu(int(i)) for i in args.gpus.split(',')]
 
     vocab = default_build_vocab(os.path.join(data_dir, 'sherlockholmes.train.txt'))
 

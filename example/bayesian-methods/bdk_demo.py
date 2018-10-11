@@ -157,10 +157,10 @@ def get_toy_sym(teacher=True, teacher_noise_precision=None):
 
 
 def dev(xpu):
-    if xpu >= 0:
-        return mx.gpu()
-    else:
+    if xpu == None:
         return mx.cpu()
+    else:
+        return mx.gpu(xpu)
 
 
 def run_mnist_SGD(training_num=50000):
@@ -353,7 +353,7 @@ if __name__ == '__main__':
                         help="Type of algorithm to use. 0 --> SGD, 1 --> SGLD, other-->DistilledSGLD")
     parser.add_argument("-t", "--training", type=int, default=50000,
                         help="Number of training samples")
-    parser.add_argument("--gpu", type=int, default=0, help="if -1 then use cpu else use gpu")
+    parser.add_argument("--gpu", type=int, help="if None then use cpu else use gpu")
     args = parser.parse_args()
     training_num = args.training
     if args.dataset == 1:

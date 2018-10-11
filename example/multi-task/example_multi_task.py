@@ -139,14 +139,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="This is a simple example to show how to use mxnet for multi-task learning. It uses MNIST as an example and mocks up the multi-label task")
     parser.add_argument("--batch_size", type=int, default=100, help="Batch_size paramater")
     parser.add_argument("--num_epochs", type=int, default=100, help="number of epoches")
-    parser.add_argument("--gpu", type=int, default=0, help="positive and zero for gpu, else for cpu")
+    parser.add_argument("--gpu", type=int, help="if None then use cpu else use gpu")
     parser.add_argument("--lr", type=float, default=0.01, help="learning rate parameter")
 
     args = parser.parse_args()
     batch_size = args.batch_size
     num_epochs = args.num_epochs
     lr = args.lr
-    device = mx.gpu(0) if args.gpu >=0 else mx.cpu()
+    device = mx.cpu() if args.gpu == None else mx.gpu(0)
 
     network = build_network()
     train, val = get_mnist_iterator(batch_size=batch_size, input_shape = (784,))
