@@ -362,9 +362,9 @@ def test_cosine_loss():
     numerator = mx.nd.sum(input1 * input2, keepdims=True, axis=1)
     denominator = mx.nd.sqrt(mx.nd.sum(input1**2, axis=1, keepdims=True)) \
     * mx.nd.sqrt(mx.nd.sum(input2**2, axis=1, keepdims=True))
-    final_numpy_array = mx.nd.where(label == 1, 1-numerator/denominator, \
+    numpy_loss = mx.nd.where(label == 1, 1-numerator/denominator, \
     mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1))
-    assert_almost_equal(loss.asnumpy(), final_numpy_array.asnumpy(), rtol=1e-3, atol=1e-5)
+    assert_almost_equal(loss.asnumpy(), numpy_loss.asnumpy(), rtol=1e-3, atol=1e-5)
 
 if __name__ == '__main__':
     import nose
