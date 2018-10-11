@@ -533,6 +533,7 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"bias" , 1});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
@@ -561,6 +562,7 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"bias" , 1});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   return attrs;
 }
@@ -574,6 +576,7 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"bias" , 1});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
@@ -602,22 +605,8 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.dict.insert({"bias" , 1});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.input_types = ArrayTypes::Normal |
-      ArrayTypes::MKLDNN |
-      ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped |
-      ArrayTypes::NormalReused |
-      ArrayTypes::MKLDNNReused |
-      ArrayTypes::NormalReshapedReused;
-  attrs.output_types = ArrayTypes::Normal |
-      ArrayTypes::MKLDNN |
-      ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped |
-      ArrayTypes::NormalReused |
-      ArrayTypes::MKLDNNReused |
-      ArrayTypes::NormalReshapedReused |
-      ArrayTypes::NormalReusedDiffDtype;
   return attrs;
 }
 
@@ -1559,8 +1548,7 @@ NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input, bool i
   return arr;
 }
 
-NDArray CreateBiasNDArray(int num_filters) {
-  TShape target_shape = {num_filters};
+NDArray CreateBiasNDArray(TShape target_shape) {
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   NDArray arr(target_shape, Context());
   auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::x);
@@ -1625,7 +1613,8 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
           scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
-    NDArray ndbias = CreateBiasNDArray(num_filter);
+    TShape bias_shape = {num_filters};
+    NDArray ndbias = CreateBiasNDArray(bias_shape);
     inputs[0] = &in_arr.arr;
     inputs[1] = &ndkernel;
     inputs[2] = &ndbias;
