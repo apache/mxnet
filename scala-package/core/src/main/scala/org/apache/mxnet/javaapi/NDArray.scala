@@ -29,7 +29,8 @@ object NDArray {
 
   def waitall(): Unit = org.apache.mxnet.NDArray.waitall()
 
-  def onehotEncode(indices: NDArray, out: NDArray): NDArray = org.apache.mxnet.NDArray.onehotEncode(indices, out)
+  def onehotEncode(indices: NDArray, out: NDArray): NDArray
+  = org.apache.mxnet.NDArray.onehotEncode(indices, out)
 
   def empty(shape: Shape, ctx: Context, dtype: DType.DType): NDArray
   = org.apache.mxnet.NDArray.empty(shape, ctx, dtype)
@@ -49,7 +50,8 @@ object NDArray {
   = org.apache.mxnet.NDArray.ones(new Shape(shape), ctx)
   def ones(ctx : Context, shape : java.util.List[java.lang.Integer]) : NDArray
   = org.apache.mxnet.NDArray.ones(new Shape(shape), ctx)
-  def full(shape: Shape, value: Float, ctx: Context): NDArray = org.apache.mxnet.NDArray.full(shape, value, ctx)
+  def full(shape: Shape, value: Float, ctx: Context): NDArray
+  = org.apache.mxnet.NDArray.full(shape, value, ctx)
 
   def power(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
   def power(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
@@ -72,17 +74,22 @@ object NDArray {
   def greater(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.greater(lhs, rhs)
   def greater(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.greater(lhs, rhs)
 
-  def greaterEqual(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
-  def greaterEqual(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
+  def greaterEqual(lhs: NDArray, rhs: NDArray): NDArray
+  = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
+  def greaterEqual(lhs: NDArray, rhs: Float): NDArray
+  = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
 
   def lesser(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.lesser(lhs, rhs)
   def lesser(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.lesser(lhs, rhs)
 
-  def lesserEqual(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
-  def lesserEqual(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
+  def lesserEqual(lhs: NDArray, rhs: NDArray): NDArray
+  = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
+  def lesserEqual(lhs: NDArray, rhs: Float): NDArray
+  = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
 
   def array(sourceArr: java.util.List[java.lang.Float], shape: Shape, ctx: Context = null): NDArray
-  = org.apache.mxnet.NDArray.array(sourceArr.asScala.map(ele => Float.unbox(ele)).toArray, shape, ctx)
+  = org.apache.mxnet.NDArray.array(
+    sourceArr.asScala.map(ele => Float.unbox(ele)).toArray, shape, ctx)
 
   def arange(start: Float, stop: Float, step: Float, repeat: Int,
              ctx: Context, dType: DType.DType): NDArray =
@@ -181,9 +188,10 @@ class NDArray(val nd : org.apache.mxnet.NDArray ) {
 }
 
 object NDArrayFuncReturn {
-  implicit def toNDFuncReturn(javaFunReturn : NDArrayFuncReturn) : org.apache.mxnet.NDArrayFuncReturn = javaFunReturn.ndFuncReturn
-  implicit def toJavaNDFuncReturn(ndFuncReturn : org.apache.mxnet.NDArrayFuncReturn) : NDArrayFuncReturn =
-    new NDArrayFuncReturn(ndFuncReturn)
+  implicit def toNDFuncReturn(javaFunReturn : NDArrayFuncReturn)
+  : org.apache.mxnet.NDArrayFuncReturn = javaFunReturn.ndFuncReturn
+  implicit def toJavaNDFuncReturn(ndFuncReturn : org.apache.mxnet.NDArrayFuncReturn)
+  : NDArrayFuncReturn = new NDArrayFuncReturn(ndFuncReturn)
 }
 
 private[mxnet] class NDArrayFuncReturn(val ndFuncReturn : org.apache.mxnet.NDArrayFuncReturn) {

@@ -64,7 +64,7 @@ You can also disable only one rule, by specifying its rule id, as specified in:
 
   <check level="error" class="org.scalastyle.file.FileLineLengthChecker" enabled="true">
     <parameters>
-      <parameter name="maxLineLength"><![CDATA[132]]></parameter>
+      <parameter name="maxLineLength"><![CDATA[100]]></parameter>
       <parameter name="tabSize"><![CDATA[2]]></parameter>
       <parameter name="ignoreImports">true</parameter>
     </parameters>

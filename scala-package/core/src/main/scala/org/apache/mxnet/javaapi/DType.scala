@@ -24,6 +24,4 @@ object DType extends Enumeration {
   val UInt8 = org.apache.mxnet.DType.UInt8
   val Int32 = org.apache.mxnet.DType.Int32
   val Unknown = org.apache.mxnet.DType.Unknown
-
-  private[mxnet] def numOfBytes(dType: DType): Int = org.apache.mxnet.DType.numOfBytes(dType)
 }
