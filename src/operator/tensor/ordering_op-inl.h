@@ -321,7 +321,8 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
   const int M(dat.size(0)/N);
   if (full_sort) {
     // Divide workspace into two parts. The first one is needed to store batch ids.
-    const int id_size(sizeof(int)*ind.size(0));
+    size_t alignment = std::max(sizeof(DType), sizeof(int));
+    size_t id_size = PadBytes(sizeof(int) * ind.size(0), alignment);
     Tensor<gpu, 1, int> batch_id(reinterpret_cast<int*>(work.dptr_), Shape1(ind.size(0)), s);
     Tensor<gpu, 1, char> sort_work(work.dptr_+id_size, Shape1(work.size(0)-id_size), s);
     mxnet::op::SortByKey(dat, ind, is_ascend, &sort_work);
@@ -392,9 +393,9 @@ void TopKImpl(const RunContext &ctx,
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
   temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
-  temp_size += sizeof(int) * src.Size();
+  temp_size += PadBytes(sizeof(int) * src.Size(), alignment);
   // Temp space for cpu sorts.
-  temp_size = PadBytes(std::max(temp_size, sizeof(DType) * src.Size()), alignment);
+  temp_size = std::max(temp_size, sizeof(DType) * src.Size());
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
                                     + PadBytes(sizeof(int) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
