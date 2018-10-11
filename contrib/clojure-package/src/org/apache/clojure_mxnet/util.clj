@@ -204,3 +204,24 @@
     (throw (ex-info error-msg
                     (s/explain-data spec value)))))
 
+(defn map->scala-tuple-seq
+  "* Convert a map to a scala-Seq of scala-Tubple.
+   * Should also work if a seq of seq of 2 things passed.
+   * Otherwise passed through unchanged."
+  [map-or-tuple-seq]
+  (letfn [(key->name [k]
+            (if (or (keyword? k) (string? k) (symbol? k))
+              (string/replace (name k) "-" "_")
+              k))
+          (->tuple [kvp-or-tuple]
+            (if (coll? kvp-or-tuple)
+              (let [[k v] kvp-or-tuple]
+                ($/tuple (key->name k) v))
+              ;; pass-through
+              kvp-or-tuple))]
+    (if (coll? map-or-tuple-seq)
+      (->> map-or-tuple-seq
+           (map ->tuple)
+           (apply $/immutable-list))
+      ;; pass-through
+      map-or-tuple-seq)))

@@ -80,7 +80,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_reciprocal',
     'test_sqrt',
     'test_pow',
-    'test_exp',
+    'test_exp_',
     'test_argmax',
     'test_argmin',
     'test_min',
@@ -89,7 +89,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_exp',
     'test_operator_maxpool',
     'test_operator_params',
-    'test_operator_permute2'
+    'test_operator_permute2',
+    'test_clip'
+    'test_cast'
     ]
 
 BASIC_MODEL_TESTS = [

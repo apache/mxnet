@@ -66,7 +66,7 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(PSROIPoolingParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new PSROIPoolingOp<cpu, DType>(param);
   });

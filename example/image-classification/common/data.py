@@ -194,7 +194,6 @@ def get_rec_iter(args, kv=None):
         std_r               = rgb_std[0],
         std_g               = rgb_std[1],
         std_b               = rgb_std[2],
-        resize              = 256,
         data_name           = 'data',
         label_name          = 'softmax_label',
         batch_size          = args.batch_size,

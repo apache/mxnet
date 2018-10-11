@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 require(mxnet)
 
 source("get_data.R")
@@ -50,7 +67,7 @@ test_that("MNIST", {
     return(sum((as.array(label) + 1) == ypred)/length(label))
   }
   
-  expect_equal(accuracy(label, pred), accuracy(label, pred2))
+  expect_equal(accuracy(label, pred), accuracy(label, pred2), tolerance = 0.1)
   
   file.remove("chkpt-0001.params")
   file.remove("chkpt-symbol.json")
@@ -235,7 +252,7 @@ test_that("Captcha", {
   fc22 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
   fc23 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
   fc24 <- mx.symbol.FullyConnected(data = fc1, num_hidden = 10)
-  fc2 <- mx.symbol.Concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
+  fc2 <- mx.symbol.concat(c(fc21, fc22, fc23, fc24), dim = 0, num.args = 4)
   label <- mx.symbol.transpose(data = label)
   label <- mx.symbol.Reshape(data = label, target_shape = c(0))
   captcha_net <- mx.symbol.SoftmaxOutput(data = fc2, label = label, name = "softmax")

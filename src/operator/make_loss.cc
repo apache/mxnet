@@ -28,7 +28,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(MakeLossParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new MakeLossOp<cpu, DType>(param);
   });

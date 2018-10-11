@@ -92,7 +92,7 @@ void ElementwiseSumRspImpl(mshadow::Stream<cpu>* s,
               auto out_value_cur_row = out_values[irow];
               const auto offset = row_idx_ptr - nd_indices_start;
               auto nd_value_cur_row = nd_values[offset];
-              for (size_t j = 0; j < nd_value_cur_row.shape_[0]; ++j) {
+              for (index_t j = 0; j < nd_value_cur_row.shape_[0]; ++j) {
                 out_value_cur_row[j] += nd_value_cur_row[j];
               }
               ++irow;

@@ -15,7 +15,7 @@ LDFLAGS+=`pkg-config --libs opencv`
 export MXNET_ROOT=`pwd`/../../..
 
 CFLAGS+=-Wall -I$(MXNET_ROOT)/include
-LDFLAGS+=$(MXNET_ROOT)/lib/libmxnet.so
+LDFLAGS+=$(MXNET_ROOT)/lib/libmxnet.so -lpthread
 
 image-classification-predict: image-classification-predict.o
 	g++ -O3 -o image-classification-predict image-classification-predict.o $(LDFLAGS)

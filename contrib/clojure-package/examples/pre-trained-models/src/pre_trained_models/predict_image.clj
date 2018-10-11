@@ -92,7 +92,7 @@
 
 (comment
 
-  (predict "https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/python/predict_image/cat.jpg")
+  (predict "https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/python/predict_image/cat.jpg" true)
   ;; ({:prob 0.69066674, :label "n02122948 kitten, kitty"}
   ;;  {:prob 0.04466057, :label "n01323155 kit"}
   ;;  {:prob 0.029682875, :label "n01318894 pet"}

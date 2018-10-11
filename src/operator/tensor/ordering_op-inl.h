@@ -389,9 +389,12 @@ void TopKImpl(const RunContext &ctx,
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
   size_t temp_size = 0;
   // Temp space needed by the gpu-based full sorts.
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
-  temp_size = std::max(temp_size, mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
+  temp_size = std::max(temp_size,
+    mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
+  temp_size = std::max(temp_size,
+    mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
+  temp_size = std::max(temp_size,
+    mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(int) * src.Size(), alignment);
   // Temp space for cpu sorts.

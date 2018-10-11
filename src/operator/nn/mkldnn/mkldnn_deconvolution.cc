@@ -93,9 +93,9 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
   return mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
 }
 
-static mkldnn::convolution_forward::primitive_desc GetDeconvBwdData(
-    const DeconvolutionParam &param, const NDArray &data, const NDArray &weights,
-    bool has_bias, const NDArray &output) {
+static mkldnn::convolution_forward::primitive_desc GetDeconvBwdDataImpl(
+    const DeconvolutionParam &param, const NDArray &data,
+    const NDArray &weights, bool has_bias, const NDArray &output) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.num_group);
   auto out_md = GetMemDesc(output);
@@ -116,9 +116,10 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwdData(
       strides, padding, dilate);
 }
 
-static mkldnn::convolution_backward_weights::primitive_desc GetDeconvBwdWeights(
-    const DeconvolutionParam& param, const NDArray &data, const NDArray &weights,
-    bool has_bias, const NDArray &output,
+static mkldnn::convolution_backward_weights::primitive_desc
+GetDeconvBwdWeightsImpl(
+    const DeconvolutionParam &param, const NDArray &data,
+    const NDArray &weights, bool has_bias, const NDArray &output,
     const mkldnn::convolution_forward::primitive_desc &fwd_pd) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.num_group);
@@ -308,55 +309,203 @@ void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &c
   MKLDNNDeconvFwdBiasPostProcess(param, ctx, in_data, out_data);
 }
 
-void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
+class MKLDNNDeconvBackwardData {
+  std::shared_ptr<mkldnn::convolution_forward> bwd;
+  std::shared_ptr<mkldnn::memory> data;
+  std::shared_ptr<mkldnn::memory> weight;
+  std::shared_ptr<mkldnn::memory> out;
+
+ public:
+  const mkldnn::convolution_forward::primitive_desc pd;
+
+  MKLDNNDeconvBackwardData(const DeconvolutionParam &param, const NDArray &data,
+                           const NDArray &weights, const NDArray &output)
+      : pd(GetDeconvBwdDataImpl(param, data, weights, false, output)) {
+  }
+
+  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
+                 const mkldnn::memory &output) {
+    if (bwd == nullptr) {
+    this->data = std::shared_ptr<mkldnn::memory>(
+        new mkldnn::memory(pd.src_primitive_desc(), data.get_data_handle()));
+    this->weight = std::shared_ptr<mkldnn::memory>(
+        new mkldnn::memory(pd.weights_primitive_desc(), weight.get_data_handle()));
+    this->out = std::shared_ptr<mkldnn::memory>(
+        new mkldnn::memory(pd.dst_primitive_desc(), output.get_data_handle()));
+    bwd = std::shared_ptr<mkldnn::convolution_forward>(
+        new mkldnn::convolution_forward(pd, mkldnn::primitive::at(*this->data),
+                                        mkldnn::primitive::at(*this->weight),
+                                        *this->out));
+    } else {
+      this->data->set_data_handle(data.get_data_handle());
+      this->weight->set_data_handle(weight.get_data_handle());
+      this->out->set_data_handle(output.get_data_handle());
+    }
+  }
+
+  const mkldnn::convolution_forward &GetBwd() const { return *bwd; }
+};
+
+typedef ParamOpSign<DeconvolutionParam> MKLDNNDeconvSignature;
+
+static inline MKLDNNDeconvBackwardData &GetDeconvBwdData(
+    const DeconvolutionParam &param, const NDArray &data,
+    const NDArray &weights, const NDArray &output) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<MKLDNNDeconvSignature,
+                                         MKLDNNDeconvBackwardData, OpHash>
+      bwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNDeconvSignature,
+                                            MKLDNNDeconvBackwardData, OpHash>
+      bwds;
+#endif
+  MKLDNNDeconvSignature key(param);
+  // Here we can sign the conv op with NDArray because conv primitive will
+  // decide the right layout for the, so we only need to get the shape and the
+  // data type of the arrays.
+  key.AddSign(data);
+  key.AddSign(weights);
+  key.AddSign(output);
+
+  auto it = bwds.find(key);
+  if (it == bwds.end()) {
+    MKLDNNDeconvBackwardData bwd(param, data, weights, output);
+    auto ins_ret = bwds.insert(
+        std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardData>(key, bwd));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return it->second;
+}
+
+class MKLDNNDeconvBackwardWeights {
+  std::shared_ptr<mkldnn::convolution_backward_weights> bwd;
+  std::shared_ptr<mkldnn::memory> data;
+  std::shared_ptr<mkldnn::memory> weight;
+  std::shared_ptr<mkldnn::memory> out;
+
+ public:
+  const mkldnn::convolution_backward_weights::primitive_desc pd;
+
+  MKLDNNDeconvBackwardWeights(
+      const DeconvolutionParam &param, const NDArray &data,
+      const NDArray &weights, const NDArray &output,
+      const mkldnn::convolution_forward::primitive_desc &bwd_data_pd)
+      : pd(GetDeconvBwdWeightsImpl(param, data, weights, false, output,
+                                   bwd_data_pd)) {}
+
+  void SetNewMem(
+      const mkldnn::memory &data, const mkldnn::memory &weight,
+      const mkldnn::memory &output,
+      const mkldnn::convolution_forward::primitive_desc &bwd_data_pd) {
+    if (bwd == nullptr) {
+      this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+          bwd_data_pd.src_primitive_desc(), data.get_data_handle()));
+      this->weight = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+          bwd_data_pd.weights_primitive_desc(), weight.get_data_handle()));
+      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+          bwd_data_pd.dst_primitive_desc(), output.get_data_handle()));
+      bwd = std::shared_ptr<mkldnn::convolution_backward_weights>(
+          new mkldnn::convolution_backward_weights(pd, *this->data,
+                                                   *this->weight, *this->out));
+    } else {
+      this->data->set_data_handle(data.get_data_handle());
+      this->weight->set_data_handle(weight.get_data_handle());
+      this->out->set_data_handle(output.get_data_handle());
+    }
+  }
+
+  const mkldnn::convolution_backward_weights &GetBwd() const { return *bwd; }
+};
+
+static inline MKLDNNDeconvBackwardWeights &GetDeconvBwdWeights(
+    const DeconvolutionParam &param, const NDArray &data,
+    const NDArray &weights, const NDArray &output,
+    const mkldnn::convolution_forward::primitive_desc &bwd_data_pd) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<MKLDNNDeconvSignature,
+                                         MKLDNNDeconvBackwardWeights, OpHash>
+      bwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNDeconvSignature,
+                                            MKLDNNDeconvBackwardWeights, OpHash>
+      bwds;
+#endif
+  MKLDNNDeconvSignature key(param);
+  // Here we can sign the conv op with NDArray because conv primitive will
+  // decide the right layout for the, so we only need to get the shape and the
+  // data type of the arrays.
+  key.AddSign(data);
+  key.AddSign(weights);
+  key.AddSign(output);
+
+  auto it = bwds.find(key);
+  if (it == bwds.end()) {
+    MKLDNNDeconvBackwardWeights bwd(param, data, weights, output, bwd_data_pd);
+    auto ins_ret = bwds.insert(
+        std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardWeights>(key,
+                                                                      bwd));
+    CHECK(ins_ret.second);
+    it = ins_ret.first;
+  }
+  return it->second;
+}
+
+void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
+                                 const OpContext &ctx,
+                                 const std::vector<NDArray> &inputs,
+                                 const std::vector<OpReqType> &req,
+                                 const std::vector<NDArray> &outputs) {
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
-  const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
-  CHECK_NE(req[deconv::kWeight], kWriteInplace) << "cannot write weight inplace";
-  mkldnn::convolution_forward::primitive_desc bwdData_pd = GetDeconvBwdData(
-      param, inputs[deconv::kData + 1], inputs[deconv::kWeight + 1], false,
-      inputs[deconv::kOut]);
+  const DeconvolutionParam &param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  CHECK_NE(req[deconv::kWeight], kWriteInplace)
+      << "cannot write weight inplace";
+  MKLDNNDeconvBackwardData &bwd_data =
+      GetDeconvBwdData(param, inputs[deconv::kData + 1],
+                       inputs[deconv::kWeight + 1], inputs[deconv::kOut]);
   auto out_grad_mem = inputs[deconv::kOut].GetMKLDNNDataReorder(
-      bwdData_pd.src_primitive_desc());
+      bwd_data.pd.src_primitive_desc());
   if (req[deconv::kData]) {
-    auto weight_mem = GetWeights(inputs[deconv::kWeight + 1],
-                                 bwdData_pd.weights_primitive_desc(),
-                                 param.num_group);
-    auto in_grad_mem = CreateMKLDNNMem(in_grad[deconv::kData],
-                                       bwdData_pd.dst_primitive_desc(),
-                                       req[deconv::kData]);
-    MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_forward(bwdData_pd,
-          *out_grad_mem, *weight_mem, *in_grad_mem.second));
+    auto weight_mem =
+        GetWeights(inputs[deconv::kWeight + 1],
+                   bwd_data.pd.weights_primitive_desc(), param.num_group);
+    auto in_grad_mem =
+        CreateMKLDNNMem(in_grad[deconv::kData],
+                        bwd_data.pd.dst_primitive_desc(), req[deconv::kData]);
+    bwd_data.SetNewMem(*out_grad_mem, *weight_mem, *in_grad_mem.second);
+    MKLDNNStream::Get()->RegisterPrim(bwd_data.GetBwd());
     CommitOutput(in_grad[deconv::kData], in_grad_mem);
   }
   if (req[deconv::kWeight]) {
-    mkldnn::convolution_backward_weights::primitive_desc bwdWeights_pd
-      = GetDeconvBwdWeights(param, inputs[deconv::kData + 1],
-          inputs[deconv::kWeight + 1], false, inputs[deconv::kOut], bwdData_pd);
-    if (bwdData_pd.src_primitive_desc() != bwdWeights_pd.src_primitive_desc())
+    MKLDNNDeconvBackwardWeights &bwd_weights = GetDeconvBwdWeights(
+        param, inputs[deconv::kData + 1], inputs[deconv::kWeight + 1],
+        inputs[deconv::kOut], bwd_data.pd);
+    if (bwd_data.pd.src_primitive_desc() != bwd_weights.pd.src_primitive_desc())
       out_grad_mem = inputs[deconv::kOut].GetMKLDNNDataReorder(
-          bwdWeights_pd.src_primitive_desc());
+          bwd_weights.pd.src_primitive_desc());
     auto data_mem = inputs[deconv::kData + 1].GetMKLDNNDataReorder(
-        bwdWeights_pd.diff_dst_primitive_desc());
-    auto in_grad_weight = CreateMKLDNNWeightGrad(in_grad[deconv::kWeight],
-                                                 bwdWeights_pd.diff_weights_primitive_desc(),
-                                                 req[deconv::kWeight]);
-    MKLDNNStream::Get()->RegisterPrim(mkldnn::convolution_backward_weights(
-          bwdWeights_pd, *out_grad_mem, *data_mem, *in_grad_weight.second));
+        bwd_weights.pd.diff_dst_primitive_desc());
+    auto in_grad_weight = CreateMKLDNNWeightGrad(
+        in_grad[deconv::kWeight], bwd_weights.pd.diff_weights_primitive_desc(),
+        req[deconv::kWeight]);
+    bwd_weights.SetNewMem(*out_grad_mem, *data_mem, *in_grad_weight.second, bwd_data.pd);
+    MKLDNNStream::Get()->RegisterPrim(bwd_weights.GetBwd());
     CommitOutput(in_grad[deconv::kWeight], in_grad_weight);
   }
   MKLDNNStream::Get()->Submit();
   if (!param.no_bias) {
     typedef float DType;
     Stream<cpu> *s = ctx.get_stream<cpu>();
-    Tensor<cpu, 1, DType> gbias = in_grad[deconv::kBias].data().get<cpu, 1, DType>(s);
+    Tensor<cpu, 1, DType> gbias =
+        in_grad[deconv::kBias].data().get<cpu, 1, DType>(s);
     // If there is bias, the out grad has already been converted to the default
     // format, so this shouldn't cause any performance issues.
-    Tensor<cpu, 4, DType> grad = inputs[deconv::kOut].data().get<cpu, 4, DType>(s);
-    Assign(gbias, req[deconv::kBias], mshadow::expr::sumall_except_dim<1>(grad));
+    Tensor<cpu, 4, DType> grad =
+        inputs[deconv::kOut].data().get<cpu, 4, DType>(s);
+    Assign(gbias, req[deconv::kBias],
+           mshadow::expr::sumall_except_dim<1>(grad));
   }
 }
 

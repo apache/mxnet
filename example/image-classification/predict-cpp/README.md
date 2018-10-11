@@ -1,13 +1,23 @@
-# Image Classification Example of C++
-This is a simple predictor which shows how to use c api for image classfication.
+# Image Classification Example Using the C Predict API
+This is a simple predictor which shows how to use the MXNet C Predict API for image classification with a pre-trained ImageNet model in a single thread and multiple threads.
 
-It uses opencv for image reading
+## Prerequisites
 
-# How to Use
+* OpenCV for image processing: `USE_OPENCV` is set to true by default when [building from source](https://mxnet.incubator.apache.org/install/build_from_source.html)
 
-## Build
-1. Edit image-classification-predict.cc file, change the following lines to your model paths:
-  ```bash
+## How to Use this Example
+
+### Download the Model Artifacts
+1. You will need the model artifacts for the Inception ImageNet model. You can download these from http://data.mxnet.io/mxnet/models/imagenet/inception-bn/
+2. Place them into a `model/Inception/` subfolder, or if not, you will need to edit the source file and update the paths in the Build step.
+
+* [model/Inception/Inception-BN-symbol.json](http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-symbol.json)
+* [model/Inception/Inception-BN-0126.params](http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-0126.params)
+* [model/Inception/synset.txt](http://data.mxnet.io/mxnet/models/imagenet/synset.txt)
+
+### Build
+1. If using a different location for the model artifacts, edit `image-classification-predict.cc` file, and change the following lines to your artifacts' paths:
+  ```c
     // Models path for your model, you have to modify it
     std::string json_file = "model/Inception/Inception-BN-symbol.json";
     std::string param_file = "model/Inception/Inception-BN-0126.params";
@@ -16,41 +26,43 @@ It uses opencv for image reading
   ```
 
 2. You may also want to change the image size and channels:
-  ```bash
+  ```c
     // Image size and channels
     int width = 224;
     int height = 224;
     int channels = 3;
   ```
-  
+
 3. Simply just use our Makefile to build:
   ```bash
   make
   ```
 
-## Usage
-Run:
+### Run
+Run the example by passing it an image that you want to classify. If you don't have one handy, run the following to get one:
+
   ```bash
-  ./image-classification-predict apple.jpg
+  wget https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Honeycrisp.jpg/1920px-Honeycrisp.jpg
   ```
-The only parameter is the path of the test image.  
+
+Then run the `image-classification-predict` program, passing the image as the first argument and the number of threads as the second parameter.
+
+  ```bash
+  ./image-classification-predict 1920px-Honeycrisp.jpg 1
+  ```
 
 ## Tips
-* The model used in the sample can be downloaded here:
-http://pan.baidu.com/s/1sjXKrqX
-or here:
-http://data.mxnet.io/mxnet/models/imagenet/
 
-* If you don't run it in the mxnet root path, maybe you will need to copy lib folder here.
+* If you don't run it in the MXNet root path, you may need to copy the `lib` folder here.
 
-# Author
+## Author
 * **Xiao Liu**
 
 * E-mail: liuxiao@foxmail.com
 
 * Homepage: [www.liuxiao.org](http://www.liuxiao.org/)
 
-# Thanks
+## Thanks
 * pertusa (for Makefile and image reading check)
 
 * caprice-j (for reading function)
@@ -58,5 +70,3 @@ http://data.mxnet.io/mxnet/models/imagenet/
 * sofiawu (for sample model)
 
 * piiswrong and tqchen (for useful coding suggestions)
-
-
