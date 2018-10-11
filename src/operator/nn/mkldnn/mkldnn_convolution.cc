@@ -287,8 +287,6 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param,
 
   bool no_bias = param.conv_param.no_bias && !param.mkldnn_param.with_bn;
 
-  const NDArray* bias = no_bias ? nullptr : &in_data[conv::kBias];
-
   auto data_mem = data.GetMKLDNNDataReorder(
       fwd->fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem;
