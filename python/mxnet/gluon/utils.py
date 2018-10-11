@@ -72,7 +72,7 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    step = size // num_slice
+    step = size // num_slice + 1
     if batch_axis == 0:
         slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
                   for i in range(num_slice)]
