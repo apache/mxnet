@@ -1613,7 +1613,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
           scale_vector, true, forward_attrs.output_types);
     }
     NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
-    TShape bias_shape = {num_filters};
+    TShape bias_shape = {num_filter};
     NDArray ndbias = CreateBiasNDArray(bias_shape);
     inputs[0] = &in_arr.arr;
     inputs[1] = &ndkernel;
