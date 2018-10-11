@@ -36,6 +36,7 @@ DMLC_REGISTER_PARAMETER(SampleExponentialParam);
 DMLC_REGISTER_PARAMETER(SamplePoissonParam);
 DMLC_REGISTER_PARAMETER(SampleNegBinomialParam);
 DMLC_REGISTER_PARAMETER(SampleGenNegBinomialParam);
+DMLC_REGISTER_PARAMETER(SampleRandIntParam);
 
 #define MXNET_OPERATOR_REGISTER_SAMPLE(name, ParamType)                 \
   NNVM_REGISTER_OP(name)                                                \
