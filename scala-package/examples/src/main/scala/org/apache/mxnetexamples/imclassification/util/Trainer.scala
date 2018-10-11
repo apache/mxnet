@@ -15,19 +15,37 @@
  * limitations under the License.
  */
 
-package org.apache.mxnetexamples.imclassification
+package org.apache.mxnetexamples.imclassification.util
 
 import org.apache.mxnet.Callback.Speedometer
 import org.apache.mxnet._
 import org.apache.mxnet.optimizer.SGD
 import org.slf4j.LoggerFactory
 
-object ModelTrain {
-  private val logger = LoggerFactory.getLogger(classOf[ModelTrain])
+object Trainer {
+  private val logger = LoggerFactory.getLogger(classOf[Trainer])
 
+  /**
+    * Fits a model
+    * @param batchSize Number of images per training batch
+    * @param numExamples Total number of image examples
+    * @param devs List of device contexts to use
+    * @param network The model to train
+    * @param dataLoader Function to get data loaders for training and validation data
+    * @param kvStore KVStore to use
+    * @param numEpochs Number of times to train on each image
+    * @param modelPrefix Prefix to model identification
+    * @param loadEpoch Loads a saved checkpoint at this epoch when set
+    * @param lr The learning rate
+    * @param lrFactor Learning rate factor (see FactorScheduler)
+    * @param lrFactorEpoch Learning rate factor epoch (see FactorScheduler)
+    * @param clipGradient Maximum gradient during optimization
+    * @param monitorSize (See Monitor)
+    * @return Final accuracy
+    */
   // scalastyle:off parameterNum
-  def fit(dataDir: String, batchSize: Int, numExamples: Int, devs: Array[Context],
-          network: Symbol, dataLoader: (String, Int, KVStore) => (DataIter, DataIter),
+  def fit(batchSize: Int, numExamples: Int, devs: Array[Context],
+          network: Symbol, dataLoader: (Int, KVStore) => (DataIter, DataIter),
           kvStore: String, numEpochs: Int, modelPrefix: String = null, loadEpoch: Int = -1,
           lr: Float = 0.1f, lrFactor: Float = 1f, lrFactorEpoch: Float = 1f,
           clipGradient: Float = 0f, monitorSize: Int = -1): Accuracy = {
@@ -60,7 +78,7 @@ object ModelTrain {
       }
 
     // data
-    val (train, validation) = dataLoader(dataDir, batchSize, kv)
+    val (train, validation) = dataLoader(batchSize, kv)
 
     // train
     val epochSize =
@@ -75,8 +93,8 @@ object ModelTrain {
         null
       }
     val optimizer: Optimizer = new SGD(learningRate = lr,
-        lrScheduler = lrScheduler, clipGradient = clipGradient,
-        momentum = 0.9f, wd = 0.00001f)
+      lrScheduler = lrScheduler, clipGradient = clipGradient,
+      momentum = 0.9f, wd = 0.00001f)
 
     // disable kvstore for single device
     if (kv.`type`.contains("local") && (devs.length == 1 || devs(0).deviceType != "gpu")) {
@@ -108,7 +126,9 @@ object ModelTrain {
     }
     acc
   }
+
   // scalastyle:on parameterNum
 }
 
-class ModelTrain
+class Trainer
+
