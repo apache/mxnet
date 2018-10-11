@@ -48,7 +48,7 @@ qemu-system-arm -M virt -m {ram} \
   -kernel vmlinuz \
   -initrd initrd.img \
   -smp {smp} \
-  -append 'root=/dev/vda2' \
+  -append 'root=/dev/vda1' \
   -drive if=none,file=vda.qcow2,format=qcow2,id=hd \
   -device virtio-blk-device,drive=hd \
   -netdev user,id=mynet,hostfwd=tcp::{ssh_port}-:22 \
