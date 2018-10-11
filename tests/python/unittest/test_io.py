@@ -138,7 +138,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
         dataiter = mx.io.NDArrayIter(
             data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
         batch_count = 0
-        if labels is not None and not is_image and len(labels) != 0:
+        if labels is not None and len(labels) != 0 and not is_image:
             labelcount = [0 for i in range(10)]
         for batch in dataiter:
             if len(data) == 2:
@@ -159,7 +159,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
                 batch_count == batch_count_list[0]:
                 cache = batch.data[0].asnumpy()
         # check if batchifying functionality work properly
-        if labels is not None and not is_image and len(labels) != 0:
+        if labels is not None and len(labels) != 0 and not is_image:
             assert labelcount[0] == labelcount_list[idx][0], last_batch_handle_list[idx]
             assert labelcount[8] == labelcount_list[idx][1], last_batch_handle_list[idx]
         assert batch_count == batch_count_list[idx]
