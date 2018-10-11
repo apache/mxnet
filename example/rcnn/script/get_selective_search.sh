@@ -27,7 +27,7 @@ fi
 pushd data
 
 # the result is selective_search_data
-wget https://dl.dropboxusercontent.com/s/orrt7o6bp6ae0tc/selective_search_data.tgz
+wget https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/selective_search_data.tgz
 tar -xf selective_search_data.tgz
 
 popd
