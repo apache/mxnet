@@ -398,7 +398,8 @@ class RNNCell(HybridRecurrentCell):
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
                                num_hidden=self._hidden_size,
                                name=prefix+'h2h')
-        output = self._get_activation(F, i2h + h2h, self._activation,
+        i2h_plus_h2h = F._internal._plus(i2h, h2h, name=prefix+'plus0')
+        output = self._get_activation(F, i2h_plus_h2h, self._activation,
                                       name=prefix+'out')
 
         return output, [output]
@@ -511,7 +512,7 @@ class LSTMCell(HybridRecurrentCell):
                                num_hidden=self._hidden_size*4, name=prefix+'i2h')
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
                                num_hidden=self._hidden_size*4, name=prefix+'h2h')
-        gates = i2h + h2h
+        gates = F._internal._plus(i2h, h2h, name=prefix+'plus0')
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
         in_gate = self._get_activation(
             F, slice_gates[0], self._recurrent_activation, name=prefix+'i')
@@ -521,9 +522,10 @@ class LSTMCell(HybridRecurrentCell):
             F, slice_gates[2], self._activation, name=prefix+'c')
         out_gate = self._get_activation(
             F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
-        next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
+        next_c = F._internal._plus(F._internal._mul(forget_gate, states[1], name=prefix+'mul0'),
+                                   F._internal._mul(in_gate, in_transform, name=prefix+'mul1'),
                                    name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation),
+        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
                                   name=prefix+'out')
 
         return next_h, [next_h, next_c]
