@@ -32,9 +32,8 @@
 #define WRITE_GAMMA_FLAG      2
 #define WRITE_BETA_FLAG       4
 #define FIX_GAMMA_FLAG        8
-#define FIX_BETA_FLAG         16
-#define IS_TRAINING_FLAG      32
-#define USE_GLOBAL_STATS_FLAG 64
+#define IS_TRAINING_FLAG      16
+#define USE_GLOBAL_STATS_FLAG 32
 
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 #include "./cudnn/cudnn_batch_norm-inl.h"
@@ -224,19 +223,14 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
   AccReal gamma = ((flags & FIX_GAMMA_FLAG) == 0 && weight.numElements() > 0)
                   ? ScalarConvert<DType, AccReal>::to(weight[plane])
                   : ScalarConvert<int, AccReal>::to(1);
-  AccReal beta = ((flags & FIX_BETA_FLAG) == 0 && bias.numElements() > 0)
-                  ? ScalarConvert<DType, AccReal>::to(bias[plane])
-                  : ScalarConvert<int, AccReal>::to(0);
+  AccReal beta = bias.numElements() > 0 ? ScalarConvert<DType, AccReal>::to(bias[plane])
+                                        : ScalarConvert<int, AccReal>::to(0);
   if (threadIdx.x == 0) {
     saveMean[plane] = runningMean[plane];
     saveInvStd[plane] = VARIANCE_TO_INVSTD(runningVar[plane], epsilon);
     if ((flags & WRITE_GAMMA_FLAG) != 0 && (flags & FIX_GAMMA_FLAG) != 0
         && weight.numElements() > 0) {
       weight[plane] = AccReal(1);
-    }
-    if ((flags & WRITE_BETA_FLAG) != 0 && (flags & FIX_BETA_FLAG) != 0
-        && bias.numElements() > 0) {
-      bias[plane] = AccReal(0);
     }
   }
   // Write normalized and update the output
@@ -288,19 +282,14 @@ __global__ void BatchNormalizationUpdateOutputKernel(
         && weight.numElements() > 0) {
       weight[plane] = AccReal(1);
     }
-    if ((flags & WRITE_BETA_FLAG) != 0 && (flags & FIX_BETA_FLAG) != 0
-        && bias.numElements() > 0) {
-      bias[plane] = AccReal(0);
-    }
   }
 
   // Write normalized and update the output
   const AccReal gamma = ((flags & FIX_GAMMA_FLAG) == 0 && weight.numElements() > 0)
                         ? ScalarConvert<DType, AccReal>::to(weight[plane])
                         : ScalarConvert<int, AccReal>::to(1);
-  const AccReal beta = ((flags & FIX_BETA_FLAG) == 0 && bias.numElements() > 0)
-                        ? ScalarConvert<DType, AccReal>::to(bias[plane])
-                        : ScalarConvert<int, AccReal>::to(0);
+  const AccReal beta = bias.numElements() > 0 ? ScalarConvert<DType, AccReal>::to(bias[plane])
+                                              : ScalarConvert<int, AccReal>::to(0);
   for (int batch = 0, nbatch = input.OuterSize(); batch < nbatch; ++batch) {
     for (int x = threadIdx.x, nx = input.InnerSize(); x < nx; x += blockDim.x) {
       const DType inp = input.get_ref(batch, plane, x);
@@ -399,11 +388,7 @@ static __global__ void BatchNormalizationBackwardKernel(
   }
 
   if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    if ((flags & FIX_BETA_FLAG) == 0) {
-      tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
-    } else {
-      tensors.gradBias[plane] = DType(0);
-    }
+    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
   }
 }
 
@@ -597,7 +582,6 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
   uint32_t flags = 0;
   flags |= ctx.is_train ? IS_TRAINING_FLAG : 0;
   flags |= params.fix_gamma ? FIX_GAMMA_FLAG : 0;
-  flags |= params.fix_beta ? FIX_BETA_FLAG : 0;
   flags |= params.use_global_stats ? USE_GLOBAL_STATS_FLAG : 0;
   if (IsBNWriting(req[batchnorm::kData])) {
     flags |= WRITE_DATA_FLAG;
