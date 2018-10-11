@@ -110,7 +110,7 @@ def test_image_iter_exception():
 def _init_NDArrayIter_data(data_type, is_image=False):
     if is_image:
         data = nd.random.uniform(0, 255, shape=(5000, 1, 28, 28))
-        labels = nd.ones((5000, 1, 28, 28))
+        labels = nd.ones((5000, 1))
         return data, labels
     if data_type == 'NDArray':
         data = nd.ones((1000, 2, 2))
@@ -126,7 +126,7 @@ def _init_NDArrayIter_data(data_type, is_image=False):
 
 def _test_last_batch_handle(data, labels=None, is_image=False):
     # Test the three parameters 'pad', 'discard', 'roll_over'
-    last_batch_handle_list = ['pad', 'discard' , 'roll_over']
+    last_batch_handle_list = ['pad', 'discard', 'roll_over']
     if labels is not None and not is_image and len(labels) != 0:
         labelcount_list = [(124, 100), (100, 96), (100, 96)]
     if is_image:
@@ -149,7 +149,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
                     # check data if it matches corresponding labels
                     assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
                     for i in range(label.shape[0]):
-                        labelcount[int(label[i])] += 1
+                       labelcount[int(label[i])] += 1
             else:
                 assert not batch.label, 'label is not empty list'
             # keep the last batch of 'pad' to be used later 
