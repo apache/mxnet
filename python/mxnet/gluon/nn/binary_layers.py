@@ -64,7 +64,7 @@ class QDense(Dense):
 
 class _QConv(_Conv):
     def __init__(self, channels, kernel_size, bits, strides, padding, dilation, groups, layout, in_channels, activation,
-                 use_bias, weight_initializer, bias_initializer, no_offset=False, **kwargs):
+                 use_bias, weight_initializer, bias_initializer, no_offset=False, apply_scaling=False, **kwargs):
         check_params(use_bias, activation)
         # set activation to None and padding to zero
         super(_QConv, self).__init__(
@@ -77,6 +77,8 @@ class _QConv(_Conv):
             padding = (padding,) * len(kernel_size)
         self._pre_padding = padding
         self.weight.wd_mult = 0.0
+        self.scaling = apply_scaling
+        self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
 
     def _alias(self):
         return 'qconv'
@@ -97,7 +99,10 @@ class _QConv(_Conv):
         quantized_weight = quantize(F, weight, self.bits, use_dorefa_weight_activation=True)
         padded = self._apply_pre_padding(F, x)
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
-        if not self.no_offset and self.bits == 1:
+        if self.scaling:
+            return F.broadcast_mul(h, weight.abs().mean(axis=0, exclude=True, keepdims=True).transpose(
+                self._scaling_transpose))
+        if self.bits == 1 and not self.no_offset:
             return (h + self._offset) / 2
         return h
 
