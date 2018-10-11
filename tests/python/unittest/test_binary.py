@@ -224,7 +224,7 @@ def test_qactivation_forward(bits_a, input_shape, use_dorefa_weight_activation):
     in_data = mx.nd.array(d)
     in_data.attach_grad()
 
-    qact = nn.QActivation(bits=bits_a, backward_only=False, use_dorefa_weight_activation=use_dorefa_weight_activation)
+    qact = nn.QActivation(bits=bits_a, use_dorefa_weight_activation=use_dorefa_weight_activation)
     gradients, result = forward(in_data, qact)
 
     expected_result = quantize_k(np.clip(d, 0, 1), bits_a)
@@ -242,7 +242,7 @@ def test_qactivation_grad(activation, input_shape, use_dorefa_weight_activation)
     in_data = mx.nd.array(d)
     in_data.attach_grad()
 
-    qact = nn.QActivation(bits=activation, backward_only=False, use_dorefa_weight_activation=use_dorefa_weight_activation)
+    qact = nn.QActivation(bits=activation, use_dorefa_weight_activation=use_dorefa_weight_activation)
     gradients, result = forward(in_data, qact)
 
     '''
