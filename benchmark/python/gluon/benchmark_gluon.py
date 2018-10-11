@@ -25,7 +25,7 @@ import os
 import errno
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description='Gluon modelzoo-based CNN perf')
+parser = argparse.ArgumentParser(description='Gluon modelzoo-based CNN perf benchmark')
 
 parser.add_argument('--model', type=str, default='all',
                                choices=['all', 'alexnet', 'densenet121', 'densenet161',
@@ -38,25 +38,18 @@ parser.add_argument('--model', type=str, default='all',
                                         'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
                                         'vgg19', 'vgg19_bn'])
 parser.add_argument('--batch-size', type=int, default=0)
-parser.add_argument('--type', type=str, default='inf', choices=['all', 'train', 'inf'])
+parser.add_argument('--num-batches', type=int, default=10)
+parser.add_argument('--gpus', type=str, default='',
+                    help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
+parser.add_argument('--type', type=str, default='inference', choices=['all', 'training', 'inference'])
 
 opt = parser.parse_args()
 
-num_batches = 100
+num_batches = opt.num_batches
 dry_run = 10  # use 10 iterations to warm up
 batch_inf = [1, 16, 32, 64, 128, 256]
 batch_train = [1, 2, 4, 8, 16, 32, 64, 126, 256]
 image_shapes = [(3, 224, 224), (3, 299, 299)]
-
-def get_gpus():
-    """
-    return a list of GPUs
-    """
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return []
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
 def score(network, batch_size, ctx):
     net = models.get_model(network)
@@ -74,7 +67,10 @@ def score(network, batch_size, ctx):
              inputs_need_grad = False,
              data_shapes      = data_shape)
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx) for _, shape in mod.data_shapes]
+    if mx.cpu() in ctx:
+        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.cpu()) for _, shape in mod.data_shapes]
+    elif mx.gpu(0) in ctx:
+        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.gpu()) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, [])
     for i in range(dry_run + num_batches):
         if i == dry_run:
@@ -102,8 +98,14 @@ def train(network, batch_size, ctx):
              inputs_need_grad = False,
              data_shapes      = data_shape)
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-    mod.init_optimizer(kvstore='local', optimizer='sgd')
-    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx) for _, shape in mod.data_shapes]
+    if len(ctx) > 1:
+        mod.init_optimizer(kvstore='device', optimizer='sgd')
+    else:
+        mod.init_optimizer(kvstore='local', optimizer='sgd')
+    if mx.cpu() in ctx:
+        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.cpu()) for _, shape in mod.data_shapes]
+    elif mx.gpu(0) in ctx:
+        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.gpu()) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, [])
     for i in range(dry_run + num_batches):
         if i == dry_run:
@@ -132,34 +134,34 @@ if __name__ == '__main__':
                      'set --network to run a specific one')
     else:
         networks = [opt.model]
-
-    devs = [mx.gpu(0)] if len(get_gpus()) > 0 else []
-    # Enable USE_MKLDNN for better CPU performance
-    devs.append(mx.cpu())
+    
+    devs = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
+    num_gpus = len(devs)
 
     for network in networks:
         logging.info('network: %s', network)
-        for d in devs:
-            logging.info('device: %s', d)
-            if runtype == 'inf' or runtype == 'all':
-                if bs != 0:
-                    fwd_time = score(network, bs, d)
-                    fps = (bs*num_batches)/fwd_time
-                    logging.info(network + ' inference perf for BS %d is %f img/s', bs, fps)
-                else:
-                    for batch_size in batch_inf:
-                        fwd_time = score(network, batch_size, d)
-                        fps = (batch_size * num_batches) / fwd_time
-                        logging.info(network + ' inference perf for BS %d is %f img/s', batch_size, fps)
-            if runtype == 'train' or runtype == 'all':
-                if bs != 0:
-                    bwd_time = train(network, bs, d)
-                    fps = (bs*num_batches)/bwd_time
-                    logging.info(network + ' training perf for BS %d is %f img/s', bs, fps)
-                else:
-                    for batch_size in batch_train:
-                        bwd_time = train(network, batch_size, d)
-                        fps = (batch_size * num_batches) / bwd_time
-                        logging.info(network + ' training perf for BS %d is %f img/s', batch_size, fps)
-
-
+        logging.info('device: %s', devs)
+        if runtype == 'inference' or runtype == 'all':
+            if bs != 0:
+                batch_sizes = bs * max(1, num_gpus)
+                fwd_time = score(network, batch_sizes, devs)
+                fps = (batch_sizes * num_batches)/fwd_time
+                logging.info(network + ' inference perf for BS %d is %f img/s', bs, fps)
+            else:
+                for batch_size in batch_inf:
+                    batch_sizes = batch_size * max(1, num_gpus)
+                    fwd_time = score(network, batch_sizes, devs)
+                    fps = (batch_sizes * num_batches) / fwd_time
+                    logging.info(network + ' inference perf for BS %d is %f img/s', batch_size, fps)
+        if runtype == 'training' or runtype == 'all':
+            if bs != 0:
+                batch_sizes = bs * max(1, num_gpus)
+                bwd_time = train(network, batch_sizes, devs)
+                fps = (batch_sizes * num_batches) / bwd_time
+                logging.info(network + ' training perf for BS %d is %f img/s', bs, fps)
+            else:
+                for batch_size in batch_train:
+                    batch_sizes = batch_size * max(1, num_gpus)
+                    bwd_time = train(network, batch_sizes, devs)
+                    fps = (batch_sizes * num_batches) / bwd_time
+                    logging.info(network + ' training perf for BS %d is %f img/s', batch_size, fps)
