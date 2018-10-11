@@ -137,7 +137,7 @@ docker_build_image "${mxnet_version}_cpu_python3" "Dockerfile.mxnet.python3.cpu"
 docker_test_image_cpu_py3 "${mxnet_version}_cpu_python3"
 
 docker_build_image "${mxnet_version}_cpu_mkl_python3" "Dockerfile.mxnet.python3.cpu.mkl"
-docker_test_image_cpu_py3 "${mxnet_version}_cpu_mkl_python3"
+docker_test_image_cpu_py3 "${mxnet_version}_cpu_mkl_py3"
 
 
 #Build and Test Python3 dockerfiles - GPU
