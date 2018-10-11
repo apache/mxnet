@@ -45,7 +45,7 @@ If you don't have full [MKL](https://software.intel.com/en-us/intel-mkl) library
 Install the dependencies, required for MXNet, with the following commands:
 
 - [Homebrew](https://brew.sh/)
-- gcc (clang in macOS does not support OpenMP)
+- llvm (clang in macOS does not support OpenMP)
 - OpenCV (for computer vision operations)
 
 ```
@@ -59,8 +59,7 @@ brew install graphviz
 brew tap homebrew/core
 brew install opencv
 brew tap homebrew/versions
-brew install gcc49
-brew link gcc49 #gcc-5 and gcc-7 also work
+brew install llvm
 ```
 
 ### Clone MXNet sources
@@ -73,7 +72,7 @@ cd incubator-mxnet
 ### Build MXNet with MKL-DNN
 
 ```
-make -j $(sysctl -n hw.ncpu) CC=gcc-4.9 CXX=g++-4.9 USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
+make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang++ CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=0 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
 ```
 
 *Note: Temporarily disable OPENCV.*
