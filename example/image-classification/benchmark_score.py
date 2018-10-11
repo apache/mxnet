@@ -114,7 +114,7 @@ if __name__ == '__main__':
         logging.info('network: %s', net)
         if net in ['densenet121', 'squeezenet1.1']:
             logging.info('network: %s is converted from gluon modelzoo', net)
-            logging.info('you can run example/gluon/benchmark_gluon.py for more models')
+            logging.info('you can run benchmark/python/gluon/benchmark_gluon.py for more models')
         for d in devs:
             logging.info('device: %s', d)
             logged_fp16_warning = False
