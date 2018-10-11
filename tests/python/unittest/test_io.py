@@ -107,51 +107,59 @@ def test_image_iter_exception():
             pass
     assertRaises(MXNetError, check_cifar10_exception)
 
-def _init_NDArrayIter_data(data_type):
+def _init_NDArrayIter_data(data_type, is_image=False):
+    if is_image:
+        data = nd.random.uniform(0, 255, shape=(5000, 1, 28, 28))
+        lables = nd.ones((5000, 1, 28, 28))
+        return data, labels
     if data_type == 'NDArray':
         data = nd.ones((1000, 2, 2))
         labels = nd.ones((1000, 2, 2))
     else:
-        data = np.ones([1000, 2, 2])
-        labels = np.ones([1000, 1])
+        data = np.ones((1000, 2, 2))
+        labels = np.ones((1000, 1))
     for i in range(1000):
         data[i] = i / 100
         labels[i] = i / 100
     return data, labels
 
 
-def _test_last_batch_handle(data, labels=None):
+def _test_last_batch_handle(data, labels=None, is_image=False):
     # Test the three parameters 'pad', 'discard', 'roll_over'
     last_batch_handle_list = ['pad', 'discard' , 'roll_over']
-    if labels is not None and len(labels) != 0:
+    if labels is not None and not is_image and len(labels) != 0:
         labelcount_list = [(124, 100), (100, 96), (100, 96)]
-    batch_count_list = [8, 7, 7]
+    if is_image:
+        batch_count_list = [40, 39, 39]
+    else:
+        batch_count_list = [8, 7, 7]
     
     for idx in range(len(last_batch_handle_list)):
         dataiter = mx.io.NDArrayIter(
             data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
         batch_count = 0
-        if labels is not None and len(labels) != 0:
+        if labels is not None and not is_image and len(labels) != 0:
             labelcount = [0 for i in range(10)]
         for batch in dataiter:
             if len(data) == 2:
                 assert len(batch.data) == 2
             if labels is not None and len(labels) != 0:
-                label = batch.label[0].asnumpy().flatten()
-                # check data if it matches corresponding labels
-                assert ((batch.data[0].asnumpy()[:, 0, 0] == label).all()), last_batch_handle_list[idx]
-                for i in range(label.shape[0]):
-                    labelcount[int(label[i])] += 1
+                if not is_image:
+                    label = batch.label[0].asnumpy().flatten()
+                    # check data if it matches corresponding labels
+                    assert((batch.data[0].asnumpy()[:, 0, 0] == label).all())
+                    for i in range(label.shape[0]):
+                        labelcount[int(label[i])] += 1
             else:
                 assert not batch.label, 'label is not empty list'
             # keep the last batch of 'pad' to be used later 
             # to test first batch of roll_over in second iteration
             batch_count += 1
             if last_batch_handle_list[idx] == 'pad' and \
-                batch_count == 8:
+                batch_count == batch_count_list[0]:
                 cache = batch.data[0].asnumpy()
         # check if batchifying functionality work properly
-        if labels is not None and len(labels) != 0:
+        if labels is not None and not is_image and len(labels) != 0:
             assert labelcount[0] == labelcount_list[idx][0], last_batch_handle_list[idx]
             assert labelcount[8] == labelcount_list[idx][1], last_batch_handle_list[idx]
         assert batch_count == batch_count_list[idx]
@@ -177,22 +185,25 @@ def _test_shuffle(data, labels=None):
 
 def test_NDArrayIter():
     dtype_list = ['NDArray', 'ndarray']
+    tested_data_type = [False, True]
     for dtype in dtype_list:
-        data, labels = _init_NDArrayIter_data(dtype_list)
-        _test_last_batch_handle(data, labels)
-        _test_last_batch_handle([data, data], labels)
-        _test_last_batch_handle([data, data])
-        _test_last_batch_handle({'data1': data, 'data2': data}, labels)
-        _test_last_batch_handle({'data1': data, 'data2': data})
-        _test_last_batch_handle(data, [])
-        _test_last_batch_handle(data)
-        _test_shuffle(data, labels)
-        _test_shuffle([data, data], labels)
-        _test_shuffle([data, data])
-        _test_shuffle({'data1': data, 'data2': data}, labels)
-        _test_shuffle({'data1': data, 'data2': data})
-        _test_shuffle(data, [])
-        _test_shuffle(data)
+        for is_image in tested_data_type:
+            data, labels = _init_NDArrayIter_data(dtype, is_image)
+            _test_last_batch_handle(data, labels, is_image)
+            _test_last_batch_handle([data, data], labels, is_image)
+            _test_last_batch_handle(data=[data, data], is_image=is_image)
+            _test_last_batch_handle(
+                {'data1': data, 'data2': data}, labels, is_image)
+            _test_last_batch_handle(data={'data1': data, 'data2': data}, is_image=is_image)
+            _test_last_batch_handle(data, [], is_image)
+            _test_last_batch_handle(data=data, is_image=is_image)
+            _test_shuffle(data, labels)
+            _test_shuffle([data, data], labels)
+            _test_shuffle([data, data])
+            _test_shuffle({'data1': data, 'data2': data}, labels)
+            _test_shuffle({'data1': data, 'data2': data})
+            _test_shuffle(data, [])
+            _test_shuffle(data)
 
 
 def test_NDArrayIter_h5py():
