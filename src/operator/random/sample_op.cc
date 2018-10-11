@@ -171,5 +171,23 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, GeneralizedNegativeBinomialSampler<cpu>>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, GeneralizedNegativeBinomialSampler<cpu>>);
 
+MXNET_OPERATOR_REGISTER_SAMPLE(_random_randint, SampleRandIntParam)
+.add_alias("random_randint")
+.describe(R"code(Draw random samples from a discrete uniform distribution.
+
+Samples are uniformly distributed over the half-open interval *[low, high)*
+(includes *low*, but excludes *high*).
+
+Example::
+
+   randint(low=0, high=5, shape=(2,2)) = [[ 0,  2],
+                                          [ 3,  1]]
+
+)code" ADD_FILELINE)
+.set_attr<FInferStorageType>("FInferStorageType",
+                             InitStorageType<SampleRandIntParam, true, false>)
+.set_attr<FCompute>("FCompute<cpu>", Sample_<cpu, RandIntSampler<cpu>>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SampleEx_<cpu, RandIntSampler<cpu>>);
+
 }  // namespace op
 }  // namespace mxnet

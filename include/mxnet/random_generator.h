@@ -71,6 +71,11 @@ class RandGenerator<cpu, DType> {
       return dist_uniform(*engine_);
     }
 
+    MSHADOW_XINLINE FType discrete_uniform(const int lower, const int upper) {
+      std::uniform_int_distribution<DType> dist_discrete_uniform(lower, upper);
+      return dist_discrete_uniform(*engine_);
+    }
+
     MSHADOW_XINLINE FType normal() {
       std::normal_distribution<FType> dist_normal;
       return dist_normal(*engine_);
@@ -145,7 +150,13 @@ class RandGenerator<gpu, DType> {
       return curand_normal(&state_);
     }
 
-   private:
+    template<typename IType>
+    MSHADOW_XINLINE FType discrete_uniform(const IType *lower, const IType *upper) {
+      std::uniform_int_distribution<DType> dist_discrete_uniform(*lower, *upper);
+      return dist_discrete_uniform(*engine_);
+    }
+
+    private:
     RandGenerator<gpu, DType> *global_gen_;
     int global_state_idx_;
     curandStatePhilox4_32_10_t state_;

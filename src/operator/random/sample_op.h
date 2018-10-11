@@ -235,6 +235,36 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
   }
 };
 
+struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam> {
+  int low;
+  int high;
+  TShape shape;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(SampleRandIntParam) {
+    DMLC_DECLARE_FIELD(low).set_default(0)
+    .describe("Lower bound of the distribution.");
+    DMLC_DECLARE_FIELD(high).set_default(1)
+    .describe("Upper bound of the distribution.");
+    DMLC_DECLARE_FIELD(shape)
+    .set_default(TShape())
+    .describe("Shape of the output.");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              " Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .add_enum("None", -1)
+    .add_enum("uint8", kUint8)
+    .add_enum("int32", kInt32)
+    .add_enum("int8", kInt8)
+    .add_enum("int64", kInt64)
+    .set_default(-1)
+    .describe("DType of the output in case this can't be inferred. "
+              "Defaults to int32 if not defined (dtype=None).");
+  }
+};
+
 using FSampleCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                            const OpContext& ctx,
                                            const OpReqType& req,
@@ -411,6 +441,27 @@ struct SampleMaster<xpu, GeneralizedNegativeBinomialSampler<xpu>> {
   }
 };
 
+template<typename xpu>
+struct SampleMaster<xpu, RandIntSampler<xpu>> {
+  static void op(const nnvm::NodeAttrs& attrs,
+                 const OpContext& ctx,
+                 const OpReqType& req,
+                 TBlob* outputs) {
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const SampleRandIntParam& param = nnvm::get<SampleRandIntParam>(attrs.parsed);
+    CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
+    Tensor<xpu, 1, int> low, high;
+    GetSamplingTempData<xpu, int>(param.low, param.high, ctx,
+                                    &low, &high);
+    RandIntSampler<xpu> sampler;
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_parallel_random<xpu, OType>();
+      Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
+      sampler.Sample(low, high, out, pgen, s);
+    });
+  }
+};
+
 template<typename xpu, typename Sampler>
 void SampleComputeEx_(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
@@ -468,7 +519,7 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
   int dtype = -1;
   int dtype_out = (*out_type)[0];
   if (dtype_out != -1) {
-    // Output type can be inferred, use it and make sure it
+    // Output type can be inferred, use it and make sure it matches
     dtype = dtype_out;
     if (param.dtype != -1) {
       // dtype given in args, check that it matches the output type
@@ -486,10 +537,12 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
     }
   }
   bool dtype_ok = (dtype == kFloat16) || (dtype == kFloat32) ||
-  (dtype == kFloat64);
-  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, or float64: dtype is "
+  (dtype == kFloat64) || (dtype == kUint8) || (dtype == kInt32) ||
+  (dtype == kInt8) || (dtype == kInt64);
+  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, float64, uint8, "
+                              "int32, int8, or int64: dtype is "
   << dtype_out << " vs " << kFloat16 << " or " << kFloat32 << " or "
-  << kFloat64;
+  << kFloat64 << " or " << kUint8 << " or " << kInt32 << " or " << kInt8 << " or " << kInt64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 }

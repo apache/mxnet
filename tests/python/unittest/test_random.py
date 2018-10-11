@@ -767,6 +767,24 @@ def test_shuffle():
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
 
+@with_seed()
+def test_randint():
+    dtypes = ['uint8','int32','int8', 'int64']
+    for dtype in dtypes:
+        params = {
+            'low': -1,
+            'high': 3,
+            'shape' : (500, 500),
+            'dtype' : dtype,
+            'ctx' : mx.context.current_context()
+            }
+        mx.random.seed(128)
+        ret1 = mx.nd.random.randint(**params).asnumpy()
+        mx.random.seed(128)
+        ret2 = mx.nd.random.randint(**params).asnumpy()
+        assert same(ret1, ret2), \
+                "ndarray test: `%s` should give the same result with the same seed"
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
