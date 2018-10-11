@@ -533,7 +533,6 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
-  attrs.attrs.dict.insert({"bias" , "1"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
@@ -562,7 +561,6 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
-  attrs.attrs.dict.insert({"bias" , "1"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   return attrs;
 }
@@ -576,7 +574,6 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
-  attrs.attrs.dict.insert({"bias" , "1"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
@@ -605,7 +602,6 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
   attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
-  attrs.attrs.dict.insert({"bias" , "1"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
   return attrs;
 }
