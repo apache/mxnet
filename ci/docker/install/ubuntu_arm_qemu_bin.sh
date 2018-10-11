@@ -23,7 +23,7 @@
 set -exuo pipefail
 
 REMOTE="https://s3-eu-west-1.amazonaws.com/mxnet-edge-public/qemu"
-curl -f ${REMOTE}/vda_07.qcow2.bz2 | bunzip2 > vda.qcow2
-curl -fO ${REMOTE}/initrd.img-3.16.0-6-armmp-lpae
-curl -fO ${REMOTE}/vmlinuz-3.16.0-6-armmp-lpae
+curl -f ${REMOTE}/vda_debian_stretch.qcow2.bz2 | bunzip2 > vda.qcow2
+curl -f ${REMOTE}/vmlinuz-4.9.0-7-armmp-lpae -o vmlinuz
+curl -f ${REMOTE}/initrd.img-4.9.0-7-armmp-lpae -o initrd.img
 

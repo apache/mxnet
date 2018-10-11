@@ -45,8 +45,8 @@ import shlex
 
 QEMU_RUN="""
 qemu-system-arm -M virt -m {ram} \
-  -kernel vmlinuz-3.16.0-6-armmp-lpae \
-  -initrd initrd.img-3.16.0-6-armmp-lpae \
+  -kernel vmlinuz \
+  -initrd initrd.img \
   -smp {smp} \
   -append 'root=/dev/vda2' \
   -drive if=none,file=vda.qcow2,format=qcow2,id=hd \
