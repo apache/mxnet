@@ -223,7 +223,7 @@ if __name__ == '__main__':
         calib_layer = lambda name: name.endswith('_output')
         excluded_sym_names += ['squeezenet0_flatten0_flatten0', 'squeezenet0_pool3_fwd']
         if exclude_first_conv:
-            excluded_sym_names += ['squeezenet0_conv0_fwd"']
+            excluded_sym_names += ['squeezenet0_conv0_fwd']
     elif args.model == 'custom':
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'
