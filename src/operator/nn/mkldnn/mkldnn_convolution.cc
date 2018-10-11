@@ -520,7 +520,7 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
   if (weight.IsView() && weight.IsMKLDNNData())
     weight = weight.Reorder2Default();
 
-  const NDArray* bias = param.no_bias ? nullptr : &inputs[conv::kBias + 1];
+  const NDArray* bias = full_param.conv_param.no_bias ? nullptr : &inputs[conv::kBias + 1];
 
   auto out_grad = inputs[conv::kOut];
   if (out_grad.IsView() && out_grad.IsMKLDNNData())
