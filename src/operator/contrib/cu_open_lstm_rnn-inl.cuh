@@ -194,15 +194,6 @@ class CUOpenLSTMRNNOp : public Operator {
                                           m_event_h2h[layer_idx - 1][seq_idx], 0));
         //=====================================================================
         if (layer_idx == 0) {
-          /*
-          matmul_stridedbatched(m_cublas_handle,
-            &m_i2h_workspace[seq_begin],
-             m_l0_i2h_weight,
-            &m_data_T_major[seq_begin],
-            num_gates * m_num_hidden_units, m_batch_size, m_embed_dim,
-            num_gates * m_num_hidden_units * m_batch_size, 0,
-            m_embed_dim * m_batch_size, seq_end - seq_begin);
-           */
           matmul_stridedbatched(m_cublas_handle,
                                 RE_CAST(m_i2h_workspace.dptr) +
                                   seq_begin * 4 * m_num_hidden_units_x_batch_size,
@@ -217,26 +208,6 @@ class CUOpenLSTMRNNOp : public Operator {
                                 param_.embed_dim * param_.batch_size,
                                 seq_end - seq_begin);
         } else {
-          /*
-          if (m_i_dp_prob != 0 && is_train)
-          {
-            m_i_dp_handle->forward(
-              &m_i_dp_workspace [layer_idx - 1][seq_begin],
-              &m_hidden[layer_idx - 1][seq_begin + 1],
-              &m_i_dp_uniform_rv[layer_idx - 1][seq_begin],
-              m_stream_i2h[layer_idx], seq_end - seq_begin);
-          }
-          matmul_stridedbatched(m_cublas_handle,
-            &m_i2h_workspace[seq_begin],
-            &m_lN_i2h_weight[layer_idx - 1],
-            m_i_dp_prob != 0 && is_train ? 
-              &m_i_dp_workspace[layer_idx - 1][seq_begin] :
-              &m_hidden[layer_idx - 1][seq_begin + 1],
-            num_gates * m_num_hidden_units, m_batch_size, m_num_hidden_units,
-            num_gates * m_num_hidden_units * m_batch_size, 0,
-              m_num_hidden_units * m_batch_size, 
-            seq_end - seq_begin);
-           */
           if (param_.i_dp_prob != 0 && ctx.is_train) {
             __cuda_dropout_forward
               <<< (m_num_hidden_units_x_batch_size * (seq_end - seq_begin) - 1) / 128 + 1,
@@ -287,12 +258,6 @@ class CUOpenLSTMRNNOp : public Operator {
         CUBLAS_CALL(cublasSetStream(m_cublas_handle, m_stream_h2h[layer_idx]));
         for (unsigned seq_idx = seq_begin; seq_idx < seq_end; ++seq_idx) {
           if (seq_idx == 0) {
-            /*
-            transpose(m_cublas_handle,
-              &m_hidden[layer_idx],
-              &m_init_hidden[layer_idx],
-              m_batch_size, m_num_hidden_units);
-              */
             transpose(m_cublas_handle,
                       RE_CAST(m_hidden.dptr) +
                         layer_idx * (param_.seq_len + 1) *
@@ -301,15 +266,6 @@ class CUOpenLSTMRNNOp : public Operator {
                         layer_idx * m_num_hidden_units_x_batch_size,
                       param_.batch_size, param_.num_hidden_units);
           }  // seq_idx
-          /*
-          matmul(m_cublas_handle,
-            &m_h2h_workspace[layer_idx],
-            &m_lX_h2h_weight[layer_idx],
-            &m_hidden[layer_idx][seq_idx],
-            num_gates * m_num_hidden_units,
-            m_batch_size,
-            m_num_hidden_units);
-            */
           matmul(m_cublas_handle,
                  RE_CAST(m_h2h_workspace.dptr) +
                    layer_idx * 4 * m_num_hidden_units_x_batch_size,
@@ -322,12 +278,6 @@ class CUOpenLSTMRNNOp : public Operator {
                  param_.batch_size,
                  param_.num_hidden_units);
           if (seq_idx == 0) {
-            /*
-            transpose(m_cublas_handle,
-              &m_cell[layer_idx],
-              &m_init_cell[layer_idx],
-              m_batch_size, m_num_hidden_units);
-              */
             transpose(m_cublas_handle,
                       RE_CAST(m_cell.dptr) +
                         layer_idx * (param_.seq_len + 1) *
@@ -342,34 +292,6 @@ class CUOpenLSTMRNNOp : public Operator {
           // h2h needs to wait for i2h
           CUDA_CALL(cudaStreamWaitEvent(m_stream_h2h[layer_idx],
                                         m_event_i2h[layer_idx][seq_idx], 0));
-          /*
-          if (layer_idx == 0)
-          {
-            forward(
-              &m_i2h_workspace  [seq_idx],
-              &m_h2h_workspace[layer_idx],
-                m_l0_i2h_bias,
-                m_lX_h2h_bias,
-              &m_cell  [layer_idx][seq_idx],
-              is_train ? &m_linear_gates[layer_idx][seq_idx] : nullptr,
-              &m_cell  [layer_idx][seq_idx + 1],
-              &m_hidden[layer_idx][seq_idx + 1],
-              m_stream_h2h[layer_idx]);
-          }
-          else
-          {
-            forward(
-              &m_i2h_workspace  [seq_idx],
-              &m_h2h_workspace[layer_idx],
-              &m_lN_i2h_bias[layer_idx - 1],
-              &m_lX_h2h_bias[layer_idx],
-              &m_cell  [layer_idx][seq_idx],
-              is_train ? &m_linear_gates[layer_idx][seq_idx] : nullptr,
-              &m_cell  [layer_idx][seq_idx + 1],
-              &m_hidden[layer_idx][seq_idx + 1],
-              m_stream_h2h[layer_idx]);
-          }
-            */
           __cuda_fused_lstm_forward
             <<< (m_num_hidden_units_x_batch_size - 1) / 128 + 1,
                 128, 0, m_stream_h2h[layer_idx]
@@ -400,22 +322,6 @@ class CUOpenLSTMRNNOp : public Operator {
             CUDA_CALL(cudaEventRecord(m_event_h2h[layer_idx][seq_idx],
                                       m_stream_h2h[layer_idx]));
           // output final hidden and cell state if at the end of sequence
-          /*
-          if (param_.state_outputs && seq_idx == (param_.seq_len - 1))
-          {
-            transpose
-            (
-              transpose(m_cublas_handle,
-                ptr_final_hidden[layer_idx],
-                m_hidden[layer_idx][seq_idx + 1],
-                param_.num_hidden_units, param_.batch_size);
-              transpose(m_cublas_handle,
-                ptr_final_cell  [layer_idx],
-                m_hidden[layer_idx][seq_idx + 1],
-                param_.num_hidden_units, param_.batch_size);
-            )
-          }
-            */
           if (param_.state_outputs && seq_idx == (param_.seq_len - 1)) {
             transpose(m_cublas_handle,
                       ptr_final_hidden +
@@ -437,11 +343,6 @@ class CUOpenLSTMRNNOp : public Operator {
         }  // seq_idx
       }  // layer_idx
     }  // schedule
-    /*
-    transpose(m_cublas_handle,
-      m_concat_hidden_states, &m_hidden[m_num_layers - 1][1],
-      m_seq_len * m_num_hidden_units, m_batch_size);
-     */
     transpose(m_cublas_handle,
               concat_hidden_states.dptr_,
               RE_CAST(m_hidden.dptr) +
@@ -559,11 +460,6 @@ class CUOpenLSTMRNNOp : public Operator {
     // Backward Pass
     //=========================================================================
     CUBLAS_CALL(cublasSetStream(m_cublas_handle, m_stream_h2h[param_.num_layers - 1]));
-    /*
-    transpose(m_cublas_handle,
-      m_i2h_grad_workspace, m_concat_hidden_states_grad,
-      m_batch_size, m_seq_len * m_num_hidden_units);
-     */
     transpose(m_cublas_handle,
               RE_CAST(m_i2h_grad_workspace.dptr),
               concat_hidden_states_grad.dptr_,
@@ -641,19 +537,6 @@ class CUOpenLSTMRNNOp : public Operator {
                    param_.batch_size,
                    m_algo);
           } else {
-            /*
-            backward(
-              &m_i2h_workspace  [seq_idx],
-              &m_h2h_workspace[layer_idx],
-              &m_bias_grad[layer_idx],
-              &m_cell_grad[layer_idx],
-              &m_cell[layer_idx][seq_idx],
-              &m_linear_gates[layer_idx][seq_idx],
-              &m_cell[layer_idx][seq_idx + 1],
-              &m_i2h_grad_workspace  [seq_idx],
-              &m_h2h_grad_workspace[layer_idx],
-              m_stream_h2h[layer_idx], m_algo);
-             */
             __cuda_fused_lstm_backward
               <<< dim3(param_.num_hidden_units,
                        (param_.batch_size - 1) / block_size + 1),
@@ -689,17 +572,6 @@ class CUOpenLSTMRNNOp : public Operator {
           // record that we are computing m_i2h_workspace
           CUDA_CALL(cudaEventRecord(m_event_h2h[layer_idx][seq_idx],
                                     m_stream_h2h[layer_idx]));
-          /*
-          matmul_ex(m_cublas_handle,
-            &m_lX_h2h_weight_grad[layer_idx],
-            &m_h2h_workspace[layer_idx],
-            &m_hidden[layer_idx][seq_idx],
-            CUBLAS_OP_N, CUBLAS_OP_T,
-            num_gates * m_num_hidden_units,
-              m_batch_size,
-            m_num_hidden_units, m_batch_size,
-            1.0, 1.0);
-           */
           matmul_ex(m_cublas_handle,
                     h2h_weight_grad.dptr_ +
                       layer_idx * 4 * param_.num_hidden_units * param_.num_hidden_units,
@@ -713,18 +585,6 @@ class CUOpenLSTMRNNOp : public Operator {
                         param_.num_hidden_units, param_.batch_size,
                     1.0, 1.0);
           if (seq_idx > 0) {
-            /*
-            matmul_ex(m_cublas_handle,
-              &m_h2h_grad_workspace[layer_idx],
-              &m_lX_h2h_weight[layer_idx],
-              &m_h2h_workspace[layer_idx],
-              CUBLAS_OP_T, CUBLAS_OP_N,
-              num_gates * m_num_hidden_units,
-                m_num_hidden_units,
-              num_gates * m_num_hidden_units,
-                m_batch_size,
-              1.0, 0.0);
-             */
             matmul_ex(m_cublas_handle,
               RE_CAST(m_h2h_grad_workspace.dptr) +
                 layer_idx * m_num_hidden_units_x_batch_size,
@@ -748,48 +608,6 @@ class CUOpenLSTMRNNOp : public Operator {
           CUDA_CALL(cudaStreamWaitEvent(m_stream_i2h[layer_idx],
                                         m_event_h2h[layer_idx][seq_idx], 0));
         if (layer_idx > 0) {
-          /*
-          for (int seq_idx = seq_rbegin; seq_idx > seq_rend; --seq_idx)
-          {
-            // W_grad += matmul(Y, X.T)
-            matmul_ex(m_cublas_handle,
-              &m_lN_i2h_weight_grad[layer_idx - 1],
-              &m_i2h_workspace[seq_idx],
-              m_i_dp_prob != 0 ? 
-                &m_i_dp_workspace[layer_idx - 1][seq_idx] :
-                &m_hidden[layer_idx - 1][seq_idx + 1],
-              CUBLAS_OP_N, CUBLAS_OP_T,
-              num_gates * m_num_hidden_units,
-                m_batch_size,
-              m_num_hidden_units, m_batch_size,
-              1.0, 1.0);
-          }
-          // X_grad = matmul(W.T, Y)
-          matmul_stridedbatched_ex(m_cublas_handle,
-            &m_i2h_grad_workspace[seq_rend + 1],
-            &m_lN_i2h_weight[layer_idx - 1],
-            &m_i2h_workspace[seq_rend + 1],
-            CUBLAS_OP_T, CUBLAS_OP_N,
-            num_gates * m_num_hidden_units,
-              m_num_hidden_units,
-            num_gates * m_num_hidden_units,
-              m_batch_size,
-            m_num_hidden_units * m_batch_size,
-            0, 
-            num_gates * m_num_hidden_units *
-              m_batch_size,
-            seq_rbegin - seq_rend,
-            1.0, 0.0);
-          
-          if (m_i_dp_prob != 0)
-          {
-            m_i_dp_handle->backward(
-              &m_i2h_grad_workspace[seq_rend + 1],
-              &m_i2h_grad_workspace[seq_rend + 1],
-              &m_i_dp_uniform_rv[layer_idx - 1][seq_rend + 1],
-              m_stream_i2h[layer_idx], seq_rbegin - seq_rend);
-          }
-           */
           for (int seq_idx = seq_rbegin; seq_idx > seq_rend; --seq_idx)
             matmul_ex(m_cublas_handle,
                       i2h_weight_grad.dptr_ +
@@ -848,37 +666,6 @@ class CUOpenLSTMRNNOp : public Operator {
             CUDA_CALL(cudaEventRecord(m_event_i2h[layer_idx][seq_idx],
                                       m_stream_i2h[layer_idx]));
         } else {
-          /*
-          for (int seq_idx = seq_rbegin; seq_idx > seq_rend; --seq_idx)
-          {
-            // W_grad += matmul(Y, X.T)
-            matmul_ex(m_cublas_handle,
-               m_l0_i2h_weight_grad,
-              &m_i2h_workspace[seq_idx],
-              &m_data_T_major[seq_idx],
-              CUBLAS_OP_N, CUBLAS_OP_T,
-              num_gates * m_num_hidden_units,
-                m_batch_size,
-              m_embed_dim, m_batch_size,
-              1.0, 1.0);
-          }
-          // X_grad = matmul(W.T, Y)
-          matmul_stridedbatched_ex(m_cublas_handle,
-            &m_data_T_major_grad[seq_rend + 1],
-             m_l0_i2h_weight,
-            &m_i2h_workspace[seq_rend + 1],
-            CUBLAS_OP_T, CUBLAS_OP_N,
-            num_gates * m_num_hidden_units,
-              m_embed_dim,
-            num_gates * m_num_hidden_units,
-              m_batch_size,
-            m_embed_dim * m_batch_size,
-            0, 
-            num_gates * m_num_hidden_units * 
-              m_batch_size,
-            seq_rbegin - seq_rend,
-            1.0, 0.0);
-           */
           for (int seq_idx = seq_rbegin; seq_idx > seq_rend; --seq_idx)
             matmul_ex(m_cublas_handle,
                       i2h_weight_grad.dptr_,
@@ -912,11 +699,6 @@ class CUOpenLSTMRNNOp : public Operator {
                               param_.num_layers * 4 * param_.num_hidden_units * sizeof(float),
                               cudaMemcpyDeviceToDevice,
                               m_stream_h2h[0]));
-    /*
-    transpose(m_cublas_handle,
-      m_data_B_major_grad, m_data_T_major_grad,
-      m_seq_len * m_embed_dim, m_batch_size);
-     */
     transpose(m_cublas_handle,
               data_grad.dptr_,
               RE_CAST(m_data_T_major_grad.dptr),

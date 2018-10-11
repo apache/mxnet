@@ -30,7 +30,7 @@ namespace op {
 
 template <>
 Operator *CreateOp<cpu>(OpenLSTMRNNParam param, int dtype) {
-  LOG(FATAL) << "OpenLSTMRNN is only available for gpu at the moment.";
+  LOG(ERROR) << "OpenLSTMRNN is only available for gpu at the moment.";
 
   Operator * op = nullptr;
 

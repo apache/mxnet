@@ -175,7 +175,7 @@ class OpenLSTMRNNProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (std::size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1)
         (*in_type)[i] = dtype;
       else
@@ -234,7 +234,7 @@ class OpenLSTMRNNProp : public OperatorProperty {
   }
 
   Operator * CreateOperator(Context ctx) const override {
-    LOG(FATAL) << "OpenLSTMRNN can only run on the GPU.";
+    LOG(ERROR) << "OpenLSTMRNN can only run on the GPU.";
     return NULL;
   }
 

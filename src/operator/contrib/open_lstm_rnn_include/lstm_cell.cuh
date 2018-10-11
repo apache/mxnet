@@ -404,9 +404,6 @@ static __global__ void __cuda_fused_lstm_backward(
     // 1. tanh'(x) = 1 - tanh(x) * tanh(x)
     // 2. sigmoid'(x) = sigmoid(x) * (1 - sigmoid(x))
     // where the symbol ' denotes gradient.
-
-    // curr_hidden_state[g_threadIdx] =
-    //   output_gate * tanh(curr_cell_state[g_threadIdx]);
     float curr_hidden_state_grad = 0;
     curr_hidden_state_grad += i2h_grad_workspace == NULL ?
       0 : i2h_grad_workspace[g_threadIdx];
@@ -419,9 +416,6 @@ static __global__ void __cuda_fused_lstm_backward(
       cell_grad[g_threadIdx];
     float     output_gate_grad = curr_hidden_state_grad * curr_cell_state_actv;
 
-    // curr_cell_state[g_threadIdx] =
-    //   forget_gate * prev_cell_state[g_threadIdx] +
-    //   input_gate * input_actv;
     float forget_gate_grad = curr_cell_state_grad *
                              prev_cell_state[g_threadIdx];
     float  input_gate_grad = curr_cell_state_grad * input_actv;
@@ -429,29 +423,11 @@ static __global__ void __cuda_fused_lstm_backward(
 
     cell_grad[g_threadIdx] = curr_cell_state_grad * forget_gate;
 
-    /*
-    float  input_gate = __cu_sigmoidf(gate_input[0]);
-    float forget_gate = __cu_sigmoidf(gate_input[1]);
-    float  input_actv =          tanh(gate_input[2]);
-    float output_gate = __cu_sigmoidf(gate_input[3]);
-     */
      input_gate_input_grad =  input_gate_grad *  input_gate * (1 -  input_gate);
     forget_gate_input_grad = forget_gate_grad * forget_gate * (1 - forget_gate);
      input_actv_input_grad =  input_actv_grad * (1 - input_actv * input_actv);
     output_gate_input_grad = output_gate_grad * output_gate * (1 - output_gate);
 
-    /*
-  #pragma unroll
-    for (unsigned i = 0; i < 4; ++i)
-    {
-      gate_input[i] = 
-        i2h_workspace[i * num_hidden_units_x_batch_size + g_threadIdx] + 
-        h2h_workspace[i * num_hidden_units_x_batch_size + g_threadIdx] + 
-        i2h_bias[i * num_hidden_units + hidden_idx] + 
-        h2h_bias[i * num_hidden_units + hidden_idx];
-      linear_gates[i * num_hidden_units_x_batch_size + g_threadIdx] = gate_input[i];
-    }
-     */
     i2h_workspace[0 * num_hidden_units_x_batch_size + g_threadIdx] =
     h2h_workspace[0 * num_hidden_units_x_batch_size + g_threadIdx] =
        input_gate_input_grad;
