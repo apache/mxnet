@@ -748,7 +748,7 @@ class CosineEmbeddingLoss(Loss):
 
     def hybrid_forward(self, F, input1, input2, label):
         input1 = _reshape_like(F, input1, input2)
-        label = label.reshape((-1,1))
+        label = label.reshape((-1, 1))
         cos_sim = self._cosine_similarity(F, input1, input2)
         y_1 = label == 1
         y_minus_1 = label == -1
