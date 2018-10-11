@@ -110,11 +110,11 @@ def test_image_iter_exception():
 def _init_NDArrayIter_data(data_type, is_image=False):
     if is_image:
         data = nd.random.uniform(0, 255, shape=(5000, 1, 28, 28))
-        lables = nd.ones((5000, 1, 28, 28))
+        labels = nd.ones((5000, 1, 28, 28))
         return data, labels
     if data_type == 'NDArray':
         data = nd.ones((1000, 2, 2))
-        labels = nd.ones((1000, 2, 2))
+        labels = nd.ones((1000, 1))
     else:
         data = np.ones((1000, 2, 2))
         labels = np.ones((1000, 1))
