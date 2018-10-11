@@ -63,14 +63,15 @@ class QDense(Dense):
 
 
 class _QConv(_Conv):
-    def __init__(self, channels, kernel_size, bits, strides, padding, dilation, groups, layout,
-                 in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs):
+    def __init__(self, channels, kernel_size, bits, strides, padding, dilation, groups, layout, in_channels, activation,
+                 use_bias, weight_initializer, bias_initializer, no_offset=False, **kwargs):
         check_params(use_bias, activation)
         # set activation to None and padding to zero
         super(_QConv, self).__init__(
             channels, kernel_size, strides, 0, dilation, groups, layout,
             in_channels, None, use_bias, weight_initializer, bias_initializer, **kwargs)
         self._offset = 0
+        self.no_offset = no_offset
         self.bits = bits
         if isinstance(padding, numeric_types):
             padding = (padding,) * len(kernel_size)
@@ -96,9 +97,9 @@ class _QConv(_Conv):
         quantized_weight = quantize(F, weight, self.bits, use_dorefa_weight_activation=True)
         padded = self._apply_pre_padding(F, x)
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
-        if 1 < self.activation < 32:
-            return h
-        return (h + self._offset) / 2
+        if not self.no_offset and self.bits == 1:
+            return (h + self._offset) / 2
+        return h
 
 
 class QConv1D(_QConv):
