@@ -377,6 +377,7 @@ void TopKImpl(const RunContext &ctx,
   bool do_transpose = false;
   bool is_ascend = false;
   int k = 0;
+  size_t alignment = std::max(sizeof(DType), sizeof(int));
   TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
@@ -393,24 +394,25 @@ void TopKImpl(const RunContext &ctx,
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += sizeof(int) * src.Size();
   // Temp space for cpu sorts.
-  temp_size = std::max(temp_size, sizeof(DType) * src.Size());
-  size_t workspace_size = temp_size + sizeof(DType) * src.Size() + sizeof(int) * src.Size();
+  temp_size = PadBytes(std::max(temp_size, sizeof(DType) * src.Size()), alignment);
+  size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
+                                    + PadBytes(sizeof(int) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += sizeof(int) * batch_size * k;
+    workspace_size += PadBytes(sizeof(int) * batch_size * k, alignment);
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
                                       Shape1(src.Size()), s);  // contain sorted dat
-  workspace_curr_ptr += sizeof(DType) * src.Size();
+  workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);
   indices = Tensor<xpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
                                 Shape1(src.Size()), s);  // indices in the original matrix
-  workspace_curr_ptr += sizeof(int) * src.Size();
+  workspace_curr_ptr += PadBytes(sizeof(int) * src.Size(), alignment);
 
   if (param.ret_typ == topk_enum::kReturnMask) {
     sel_indices = Tensor<xpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
                                       Shape1(batch_size * k), s);
-    workspace_curr_ptr += sizeof(int) * batch_size * k;
+    workspace_curr_ptr += PadBytes(sizeof(int) * batch_size * k, alignment);
     CHECK_EQ(sel_indices.CheckContiguous(), true);
   }
 
