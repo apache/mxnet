@@ -2124,19 +2124,13 @@ def test_batchnorm_fallback():
         test = mx.symbol.BatchNorm(data, fix_gamma=True)
         assertRaises(MXNetError, check_numeric_gradient, test, in_location, mean_std, numeric_eps=1e-3, rtol=0.16, atol=1e-2)
 
-        test = mx.symbol.BatchNorm(data, fix_beta=True)
-        assertRaises(MXNetError, check_numeric_gradient, test, in_location, mean_std, numeric_eps=1e-3, rtol=0.16, atol=1e-2)
-
         test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
         assertRaises(MXNetError, check_numeric_gradient, test, in_location, mean_std, numeric_eps=1e-3, rtol=0.16, atol=1e-2)
 
-        test = mx.symbol.BatchNorm(data, fix_beta=True, use_global_stats=True)
-        assertRaises(MXNetError, check_numeric_gradient, test, in_location, mean_std, numeric_eps=1e-3, rtol=0.16, atol=1e-2)
-
-        test = mx.symbol.BatchNorm(data, fix_gamma=False, fix_beta=False)
+        test = mx.symbol.BatchNorm(data, fix_gamma=False)
         check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-3, rtol=0.16, atol=1e-2)
 
-        test = mx.symbol.BatchNorm(data, fix_gamma=False, fix_beta=False, use_global_stats=True)
+        test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
         check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-3, rtol=0.16, atol=1e-2)
 
         # Test varying channel axis
@@ -2167,20 +2161,14 @@ def test_batchnorm_fallback():
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, axis=chaxis)
             assertRaises(MXNetError, check_numeric_gradient, test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
-            
-            test = mx.symbol.BatchNorm(data, fix_beta=True, axis=chaxis)
-            assertRaises(MXNetError, check_numeric_gradient, test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True, axis=chaxis)
             assertRaises(MXNetError, check_numeric_gradient, test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
 
-            test = mx.symbol.BatchNorm(data, fix_beta=True, use_global_stats=True, axis=chaxis)
-            assertRaises(MXNetError, check_numeric_gradient, test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
-
-            test = mx.symbol.BatchNorm(data, fix_gamma=False, fix_beta=False, axis=chaxis)
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, axis=chaxis)
             check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
 
-            test = mx.symbol.BatchNorm(data, fix_gamma=False, fix_beta=False, use_global_stats=True, axis=chaxis)
+            test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True, axis=chaxis)
             check_numeric_gradient(test, in_location, xmean_std, numeric_eps=1e-3, rtol=0.2, atol=0.01)
 
 

@@ -324,7 +324,7 @@ class BatchNorm(HybridBlock):
                  in_channels=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
-                        'fix_gamma': not scale, 'fix_beta': not center, 'use_global_stats': use_global_stats}
+                        'fix_gamma': not scale, 'use_global_stats': use_global_stats}
         if in_channels != 0:
             self.in_channels = in_channels
 
