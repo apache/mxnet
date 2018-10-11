@@ -9,7 +9,7 @@ The inception score is refer to: [openai/improved-gan
 
 
 #### Generated pic(use dataset cifar10)
-![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/fake_img_iter_19520.png)
+![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/fake_img_iter_13900.png)
 
 #### Generated pic(use dataset mnist)
 ![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/fake_img_iter_21700.png)
