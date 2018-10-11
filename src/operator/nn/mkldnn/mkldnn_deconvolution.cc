@@ -166,7 +166,8 @@ class MKLDNNDeconvForward {
                       const NDArray &output);
   void SetDataHandle(const DeconvolutionParam& param,
                      const OpContext &ctx,
-                     const std::vector<NDArray> &in_data,
+                     const NDArray &in_data,
+                     const NDArray &weight,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
 
@@ -197,12 +198,12 @@ MKLDNNDeconvForward::MKLDNNDeconvForward(const DeconvolutionParam& param,
 
 void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
                                         const OpContext &ctx,
-                                        const std::vector<NDArray> &in_data,
+                                        const NDArray &in_data,
+                                        const NDArray &weight,
                                         const std::vector<OpReqType> &req,
                                         const std::vector<NDArray> &out_data) {
-  auto data_mem = in_data[deconv::kData].GetMKLDNNDataReorder(
+  auto data_mem = in_data.GetMKLDNNDataReorder(
       fwd_pd.diff_dst_primitive_desc());
-  NDArray weight = in_data[deconv::kWeight];
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
@@ -241,19 +242,19 @@ void MKLDNNDeconvForward::Execute(const std::vector<NDArray> &out_data) {
 
 static void MKLDNNDeconvFwdBiasPostProcess(const DeconvolutionParam& param,
                                            const OpContext &ctx,
-                                           const std::vector<NDArray> &in_data,
+                                           const NDArray &bias,
                                            const std::vector<NDArray> &out_data) {
   // add bias, broadcast bias to dim 1: channel
   if (!param.no_bias) {
     // MKLDNN only supports float right now.
     typedef float DType;
     Stream<cpu> *s = ctx.get_stream<cpu>();
-    Tensor<cpu, 1, DType> bias = in_data[deconv::kBias].data().get<cpu, 1, DType>(s);
+    Tensor<cpu, 1, DType> b = bias.data().get<cpu, 1, DType>(s);
     // If the output data is stored in a special MKLDNN format, data()
     // automatically converts its format to the default format.
     // Unfortunately, MKLDNN doesn't support broadcast.
     Tensor<cpu, 4, DType> out_cpu = out_data[deconv::kOut].data().get<cpu, 4, DType>(s);
-    out_cpu += mshadow::expr::broadcast<1>(bias, out_cpu.shape_);
+    out_cpu += mshadow::expr::broadcast<1>(b, out_cpu.shape_);
   }
 }
 
@@ -311,11 +312,11 @@ void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &c
   MKLDNNDeconvForward &deconvFwd = GetDeconvFwd(
       attrs, data, weight, bias, out_data[deconv::kOut]);
 
-  deconvFwd.SetDataHandle(param, ctx, in_data, req, out_data);
+  deconvFwd.SetDataHandle(param, ctx, data, weight, req, out_data);
 
   deconvFwd.Execute(out_data);
 
-  MKLDNNDeconvFwdBiasPostProcess(param, ctx, in_data, out_data);
+  MKLDNNDeconvFwdBiasPostProcess(param, ctx, *bias, out_data);
 }
 
 class MKLDNNDeconvBackwardData {
