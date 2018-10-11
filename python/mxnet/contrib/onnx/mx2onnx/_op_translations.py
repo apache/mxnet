@@ -1566,3 +1566,24 @@ def convert_hardsigmoid(node, **kwargs):
         name=name
     )
     return [node]
+
+@mx_op.register("broadcast_lesser")
+def convert_broadcast_lesser(node, **kwargs):
+    """Map MXNet's broadcast_lesser operator attributes to onnx's Less operator
+    and return the created node.
+    """
+    return create_basic_op_node('Less', node, kwargs)
+
+@mx_op.register("broadcast_greater")
+def convert_broadcast_greater(node, **kwargs):
+    """Map MXNet's broadcast_greater operator attributes to onnx's Greater operator
+    and return the created node.
+    """
+    return create_basic_op_node('Greater', node, kwargs)
+
+@mx_op.register("broadcast_equal")
+def convert_broadcast_equal(node, **kwargs):
+    """Map MXNet's broadcast_equal operator attributes to onnx's Equal operator
+    and return the created node.
+    """
+    return create_basic_op_node('Equal', node, kwargs)
