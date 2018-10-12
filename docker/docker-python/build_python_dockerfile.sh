@@ -23,14 +23,15 @@ set -e
 programname=$0
 
 function usage {
-    echo "usage: $programname [version] [path]"
+    echo "usage: $programname [version] [pip_tag] [path]"
     echo "  [version]  Mxnet Version to build"
+    echo "  [pip_tag]  Pip Tag to use"
     echo "  [path]     Path to MXNet repository (to run tests)"
     echo " "
     exit 1
 }
 
-if [ $# -le 1 ] || [ $# -ge 3 ]
+if [ $# -le 2 ] || [ $# -ge 4 ]
 then
     usage
     exit 1
@@ -39,16 +40,8 @@ fi
 # Two params provided
 echo "Building Docker Images for Apache MXNet (Incubating) v$1"
 mxnet_version="${1}"
-test_dir="${2}"
-
-docker_build_image(){
-    echo "Building docker image mxnet/python:${1}"
-    docker build -t mxnet/python:${1} -f ${2} .
-}
-
-docker_tag_image(){
-    docker tag mxnet/python:${1} mxnet/python:${2}
-}
+pip_tag="${2}"
+test_dir="${3}"
 
 docker_test_image_cpu(){
     echo "Running tests on mxnet/python:${1}"
@@ -95,6 +88,17 @@ docker_account_logout(){
 docker_push_image(){
     docker push mxnet/python:${1}
 }
+
+docker_build_image(){
+    echo "Building docker image mxnet/python:${1}"
+    docker build --build-arg mversion=${pip_tag} -t mxnet/python:${1} -f ${2} .
+
+}
+
+docker_tag_image(){
+    docker tag mxnet/python:${1} mxnet/python:${2}
+}
+
 
 
 # Build and Test dockerfiles - CPU

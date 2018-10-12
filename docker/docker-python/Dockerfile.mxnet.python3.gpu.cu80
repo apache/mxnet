@@ -19,10 +19,11 @@
 # Dockerfile to build MXNet for GPU
 
 FROM nvidia/cuda:8.0-cudnn5-devel
+ARG version
 
 RUN apt-get update
 RUN apt-get install -y wget python3 gcc
 RUN wget https://bootstrap.pypa.io/get-pip.py
 RUN python3 get-pip.py
 
-RUN pip3 install mxnet-cu80
+RUN pip3 install mxnet-cu80==$version
