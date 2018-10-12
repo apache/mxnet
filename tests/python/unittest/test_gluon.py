@@ -2552,6 +2552,41 @@ def test_slice_activation_reshape_activation():
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
 
+@with_seed()
+def test_multi_input_hybrid_block():
+    class Net(gluon.HybridBlock):
+        def __init__(self):
+            super(Net, self).__init__()
+            with self.name_scope():
+                self.dense = mx.gluon.nn.Dense(units=5)
+
+        def hybrid_forward(self, F, x, y):
+            # We apply same dense layer in the block
+            # for both the inputs.
+            # We expect output names should be different.
+            out_x = self.dense(x)
+            out_y = self.dense(y)
+            return out_x + out_y
+
+    # Create Hybrid block, export the model.
+    net1 = Net()
+    net1.initialize()
+    net1.hybridize()
+    data1 = mx.nd.random_normal(shape=(10,1))
+    data2 = mx.nd.random_normal(shape=(10,1))
+    out1 = net1(data1, data2)
+    net1.export('multi-input-net', epoch=0)
+
+    # Import the model and pass the same input. We expect:
+    # 1. No conflicts to import the model.
+    # 2. Same outputs.
+    net2 = gluon.SymbolBlock.imports(
+        'multi-input-net-symbol.json', ['data0', 'data1'],
+        'multi-input-net-0000.params')
+    out2 = net2(data1, data2)
+
+    assert_almost_equal(out1.asnumpy(), out2.asnumpy())
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
