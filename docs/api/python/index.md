@@ -136,6 +136,7 @@ Code examples are placed throughout the API documentation and these can be run a
    :maxdepth: 1
 
    optimization/optimization.md
+   optimization/contrib.md
 ```
 
 ## Profiler API
