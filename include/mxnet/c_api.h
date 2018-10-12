@@ -442,11 +442,11 @@ MXNET_DLL int MXGetGPUCount(int* out);
 /*!
  * \brief get the free and total available memory on a GPU
  * \param dev the GPU number to query
- * \param free_mem pointer to the size_t holding free GPU memory
- * \param total_mem pointer to the size_t holding total GPU memory
+ * \param free_mem pointer to the uint64_t holding free GPU memory
+ * \param total_mem pointer to the uint64_t holding total GPU memory
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXGetGPUMemoryInformation(int dev, size_t *free_mem, size_t *total_mem);
+MXNET_DLL int MXGetGPUMemoryInformation(int dev, uint64_t *free_mem, uint64_t *total_mem);
 
 /*!
  * \brief get the MXNet library version as an integer

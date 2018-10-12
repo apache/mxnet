@@ -349,7 +349,7 @@ int MXGetGPUCount(int* out);
  * \param total_mem pointer to the integer holding total GPU memory
  * \return 0 when success, -1 when failure happens
  */
-int MXGetGPUMemoryInformation(int dev, int *out, int *out);
+int MXGetGPUMemoryInformation(int dev, uint64_t *out, uint64_t *out);
 
 
 //-------------------------------------
