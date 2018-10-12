@@ -4762,6 +4762,16 @@ def test_quantization_op():
     assert same(qa.asnumpy(), qa_real.asnumpy())
     assert same(a_.asnumpy(),  a_real.asnumpy())
 
+@with_seed()
+def test_index_copy():
+    x = mx.nd.zeros((5,3))
+    t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
+    index = mx.nd.array([0,4,2])
+    out = mx.nd.contrib.index_copy(x, index, t)
+
+    tensor = mx.nd.array([[1,2,3],[0,0,0],[7,8,9],[0,0,0],[4,5,6]])
+
+    assert same(out.asnumpy(), tensor.asnumpy())
 
 @with_seed()
 def test_div_sqrt_dim():
