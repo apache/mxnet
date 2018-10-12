@@ -928,7 +928,8 @@ class HybridBlock(Block):
             # Without this change, prefix will be same for both the inputs
             # passing through this block producing same name output.
             # So, we append name of input to make it unique.
-            self.name_scope()._name_scope._prefix += x.name + "_"
+            if self.name_scope()._name_scope:
+                self.name_scope()._name_scope._prefix += x.name + "_"
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
