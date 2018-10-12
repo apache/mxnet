@@ -652,6 +652,9 @@ void TopKBackwardImpl(const OpContext &ctx,
   }
   CHECK_EQ(sel_indices.CheckContiguous(), true);
   if (kWriteTo == req[0] || kAddTo == req[0]) {
+    if (kWriteTo == req[0]) {
+      in_grad = scalar<DType>(0);
+    }
     mxnet_op::Kernel<fill_ind, xpu>::Launch(s, batch_size * k,
                                             sel_indices.dptr_,
                                             out_grad.dptr_,
