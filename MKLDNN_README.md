@@ -75,8 +75,6 @@ cd incubator-mxnet
 LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang++ CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
 ```
 
-*Note: Temporarily disable OPENCV.*
-
 <h2 id="3">Windows</h2>
 
 We recommend to build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), or you can also try experimentally the latest [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/).
