@@ -18,31 +18,66 @@
 package org.apache.mxnet
 
 import org.slf4j.LoggerFactory
+
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Try
+import scala.util.control.{ControlThrowable, NonFatal}
+import java.util.Comparator
 
+/**
+  * This class manages releasing of Nativeresources
+  */
 class ResourceScope extends AutoCloseable {
-  import ResourceScope.{logger, resourceScope}
 
-  private val resourceQ = new  ArrayBuffer[NativeResource]()
-  resourceScope.get().+=(this)
+  import ResourceScope.{logger, threadLocalScopes, addToLocalScope, removeFromLocalScope}
 
+  private[mxnet] val resourceQ = new ArrayBuffer[NativeResource] {
+    // this override is required for object equality check instead of content equality
+    override def indexOf[B >: NativeResource](elem: B, from: Int): Int = {
+      indexWhere(elem.asInstanceOf[NativeResource].nativeAddress ==
+        _.nativeAddress, from)
+    }
+    override def lastIndexOf[B >: NativeResource](elem: B): Int = {
+      lastIndexWhere(elem.asInstanceOf[NativeResource].nativeAddress == _.nativeAddress)
+    }
+  }
+
+  ResourceScope.addToLocalScope(this)
+
+  /**
+    * Releases all the [[NativeResource]] by calling
+    * the associated [[NativeResource.dispose()]] method
+    */
   override def close(): Unit = {
     resourceQ.foreach(resource => if (resource != null) {
       logger.info("releasing resource:%x\n".format(resource.nativeAddress))
-      resource.dispose(false)
-    } else {logger.info("found resource which is null")}
+      resource.close()
+    } else {
+      logger.info("found resource which is null")
+    }
     )
-    ResourceScope.resourceScope.get().-=(this)
+    resourceQ.clear()
+    ResourceScope.removeFromLocalScope(this)
   }
 
-  private[mxnet] def register(resource: NativeResource): Unit = {
+  /**
+    * Add a Native Resource to the scope
+    * @param resource
+    */
+  private[mxnet] def add(resource: NativeResource): Unit = {
     logger.info("ResourceScope: Registering Resource %x".format(resource.nativeAddress))
     resourceQ.+=(resource)
   }
 
-  private[mxnet] def deRegister(resource: NativeResource): Unit = {
+  /**
+    * Remove Native Resource from the Scope, this uses
+    * object equality to find the resource in the stack.
+    * @param resource
+    */
+  private[mxnet] def remove(resource: NativeResource): Unit = {
     logger.info("ResourceScope: DeRegistering Resource %x".format(resource.nativeAddress))
     resourceQ.-=(resource)
+    logger.info("resourceQ size: %d".format(resourceQ.size))
   }
 }
 
@@ -50,35 +85,124 @@ object ResourceScope {
 
   private val logger = LoggerFactory.getLogger(classOf[ResourceScope])
 
-  // inspired from slide 21 of
- def using[T](resource: ResourceScope)(block: => T): T = {
-   require(resource != null)
-   try {
-     val ret = block
-     ret match {
-       case nRes: NativeResource =>
-         resource.deRegister(nRes.asInstanceOf[NativeResource])
-       case _ => // do nothing
-     }
-     ret
-   } finally {
-     // TODO(nswamy@): handle exceptions
-     resource.close
-   }
- }
+  /**
+    * Captures all Native Resources created using the ResourceScope and
+    * at the end of the body, de allocates all the Native resources by calling close on them.
+    *
+    * @param localScope Scope in which to capture the native resources
+    * @param body  block of code to execute in this scope
+    * @tparam R the type of the resource
+    * @tparam A return type
+    * @return result of the operation, if the result is of type NativeResource, it is not
+    *         de allocated so the user can use it and then de allocate manually by calling
+    *         close or enclose in another resourceScope.
+    */
+  // inspired from slide 21 of https://www.slideshare.net/Odersky/fosdem-2009-1013261
+  // and https://github.com/scala/scala/blob/2.13.x/src/library/scala/util/Using.scala
+  // TODO: we should move to the Scala util's Using method when we move to Scala 2.13
+  def using[A](scope: ResourceScope = null)(body: => A): A = {
 
-  private[mxnet] val resourceScope = new ThreadLocal[ArrayBuffer[ResourceScope]] {
-   override def initialValue(): ArrayBuffer[ResourceScope] =
-     new ArrayBuffer[ResourceScope]()
- }
+    val curScope = if (scope != null) scope else new ResourceScope()
 
-  private[mxnet] def getScope(): ResourceScope = {
-    try {
-      resourceScope.get().last
-    } catch {
-      case _: ArrayIndexOutOfBoundsException => null
-      case _: NoSuchElementException => null
-      case e: Exception => throw e
+    val prevScope: Option[ResourceScope] = ResourceScope.getPrevScope()
+
+    @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
+      g.foreach( n =>
+        n match {
+          case nRes: NativeResource => {
+            removeAndAddToPrevScope(nRes)
+          }
+          case kv: scala.Tuple2[_, _] => {
+            if (kv._1.isInstanceOf[NativeResource]) removeAndAddToPrevScope(
+              kv._1.asInstanceOf[NativeResource])
+            if (kv._2.isInstanceOf[NativeResource]) removeAndAddToPrevScope(
+              kv._2.asInstanceOf[NativeResource])
+          }
+        }
+      )
     }
- }
+
+    @inline def removeAndAddToPrevScope(r: NativeResource) = {
+      curScope.remove(r)
+      if (prevScope.isDefined)  {
+        prevScope.get.add(r)
+        r.scope = prevScope.get
+      }
+    }
+
+    @inline def safeAddSuppressed(t: Throwable, suppressed: Throwable): Unit = {
+      if (!t.isInstanceOf[ControlThrowable]) t.addSuppressed(suppressed)
+    }
+
+    var retThrowable: Throwable = null
+
+    try {
+      val ret = body
+       ret match {
+          // don't de-allocate if returning any collection that contains NativeResource.
+        case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
+        case nRes: NativeResource => removeAndAddToPrevScope(nRes)
+        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => removeAndAddToPrevScope(nd) )
+        case _ => // do nothing
+      }
+      ret
+    } catch {
+      case t: Throwable =>
+        retThrowable = t
+        null.asInstanceOf[A] // we'll throw in finally
+    } finally {
+      var toThrow: Throwable = retThrowable
+      if (retThrowable eq null) curScope.close()
+      else {
+        try {
+          curScope.close
+        } catch {
+          case closeThrowable: Throwable =>
+            if (NonFatal(retThrowable) && !NonFatal(closeThrowable)) toThrow = closeThrowable
+            else safeAddSuppressed(retThrowable, closeThrowable)
+        } finally {
+          throw toThrow
+        }
+      }
+    }
+  }
+
+  // thread local Scopes
+  private[mxnet] val threadLocalScopes = new ThreadLocal[ArrayBuffer[ResourceScope]] {
+    override def initialValue(): ArrayBuffer[ResourceScope] =
+      new ArrayBuffer[ResourceScope]()
+  }
+
+  /**
+    * Add resource to current ThreadLocal DataStructure
+    * @param r ResourceScope to add.
+    */
+  private[mxnet] def addToLocalScope(r: ResourceScope): Unit = {
+    threadLocalScopes.get() += r
+  }
+
+  /**
+    * Remove resource from current ThreadLocal DataStructure
+    * @param r ResourceScope to remove
+    */
+  private[mxnet] def removeFromLocalScope(r: ResourceScope): Unit = {
+    threadLocalScopes.get() -= r
+  }
+
+  /**
+    * Get the latest Scope in the stack
+    * @return
+    */
+  private[mxnet] def getCurrentScope(): ResourceScope = {
+    Try(threadLocalScopes.get().last).getOrElse(null)
+  }
+
+  /**
+    * Get the Last but one Scope from threadLocal Scopes.
+    * @return n-1th scope or None when not found
+    */
+  private[mxnet] def getPrevScope(): Option[ResourceScope] = {
+    val scopes = threadLocalScopes.get()
+    Try(Some(scopes(scopes.size - 2))).getOrElse(None)
+  }
 }
