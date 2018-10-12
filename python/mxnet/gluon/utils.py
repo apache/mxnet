@@ -22,6 +22,7 @@ __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
 import os
+import math
 import hashlib
 import warnings
 import collections
@@ -72,7 +73,7 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    step = size // num_slice + 1
+    step = math.ceil(1.0 * size / num_slice)
     if batch_axis == 0:
         slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
                   for i in range(num_slice)]
