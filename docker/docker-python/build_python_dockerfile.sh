@@ -91,7 +91,7 @@ docker_push_image(){
 
 docker_build_image(){
     echo "Building docker image mxnet/python:${1}"
-    docker build --build-arg mversion=${pip_tag} -t mxnet/python:${1} -f ${2} .
+    docker build --build-arg version=${pip_tag} -t mxnet/python:${1} -f ${2} .
 
 }
 
