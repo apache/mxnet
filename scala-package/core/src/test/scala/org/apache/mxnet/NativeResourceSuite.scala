@@ -65,14 +65,5 @@ class NativeResourceSuite extends FunSuite with BeforeAndAfterAll with Matchers 
     assert(TestRef.getRefMap.containsKey(aRef) == false)
     assert(a.isDisposed == true, "isDisposed should be set to true after calling close")
   }
-
-  test(testName = "test dispose not removing from resourceScope") {
-    val a: NDArray = spy(NDArray.ones(Shape(3, 4)))
-    val r: ResourceScope = mock(classOf[ResourceScope])
-    when(a.scope).thenReturn(r)
-    a.dispose(false)
-    verify(r, times(0)).deRegister(any[NativeResource])
-  }
-
 }
 

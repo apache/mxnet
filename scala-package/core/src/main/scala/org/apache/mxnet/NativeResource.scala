@@ -63,14 +63,14 @@ private[mxnet] trait NativeResource
   override def isDisposed: Boolean = disposed || isDeAllocated
 
   /**
-    * Register this object for PhantomReference tracking and within
+    * Register this object for PhantomReference tracking and in
     * ResourceScope if used inside ResourceScope.
     * @return NativeResourceRef that tracks reachability of this object
     *         using PhantomReference
     */
   def register(): NativeResourceRef = {
-    scope = ResourceScope.getScope()
-    if (scope != null) scope.register(this)
+    scope = ResourceScope.getCurrentScope()
+    if (scope != null) scope.add(this)
 
     NativeResource.totalBytesAllocated.getAndAdd(bytesAllocated)
     // register with PhantomRef tracking to release incase the objects go
@@ -79,26 +79,22 @@ private[mxnet] trait NativeResource
  }
 
   // Removes this object from PhantomRef tracking and from ResourceScope
-  private def deRegister(removeFromScope: Boolean = true): Unit = {
+  private def deRegister(): Unit = {
     NativeResourceRef.deRegister(ref)
-    if (scope != null && removeFromScope) scope.deRegister(this)
+    if (scope != null) scope.remove(this)
   }
 
-  // Implements {@link AutoCloseable.close}
+  // Implements [[@link AutoCloseable.close]]
   override def close(): Unit = {
     dispose()
   }
 
-  // Implements {@link WarnIfNotDisposed.dispose}
+  // Implements [[@link WarnIfNotDisposed.dispose]]
   def dispose(): Unit = {
-    dispose(true)
-  }
-
-  def dispose(removeFromScope: Boolean): Unit = {
     if (!disposed) {
       print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
       checkCall(nativeDeAllocator(this.nativeAddress))
-      deRegister(removeFromScope)
+      deRegister()
       NativeResource.totalBytesAllocated.getAndAdd(-1*bytesAllocated)
       disposed = true
     }
