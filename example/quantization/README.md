@@ -23,7 +23,13 @@ by invoking `launch_quantize.sh`.
 
 # Model Quantization with Intel MKL-DNN
 
-MKL-DNN supports quantization well with subgraph feature on Intel® CPU Platform and can bring huge performance improvement on Intel® Xeon® Scalable Platform. A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with MKL-DNN. This script intergrates with Gluon-CV modelzoo so that more pre-trained models can be get from Gluon-CV and can be converted for quantization. This script also supports custom models.
+MKL-DNN supports quantization well with subgraph feature on Intel® CPU Platform and can bring huge performance improvement on Intel® Xeon® Scalable Platform. A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with MKL-DNN. This script intergrates with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html) so that more pre-trained models can be get from Gluon-CV and can be converted for quantization. This script also supports custom models.
+
+Use below command to install Gluon-CV:
+
+```
+pip install gluoncv
+```
 
 The following models have been tested on Linux systems.
 
@@ -49,10 +55,15 @@ After quantization, you will get a quantized symbol and parameter in `./model` d
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference 
-python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --param-file=./model/resnet50_v1-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=128 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
+python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --param-file=./model/resnet50_v1-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
 
 # Launch INT8 Inference
-python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --param-file=./model/resnet50_v1-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=128 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --param-file=./model/resnet50_v1-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+
+python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
 ## SqueezeNet1.0
@@ -70,10 +81,15 @@ The following command is to launch inference.
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 # Launch FP32 Inference
-python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --param-file=./model/squeezenet1.0-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=128 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
+python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --param-file=./model/squeezenet1.0-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
 
 # Launch INT8 Inference
-python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --param-file=./model/squeezenet1.0-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=128 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --param-file=./model/squeezenet1.0-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
+
+python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
 ## SSD-VGG
@@ -107,6 +123,10 @@ python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./mod
 
 # Launch INT8 Inference
 python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/cqssd_
+
+# Launch dummy data Inference
+python benchmark_score.py --deploy --prefix=./model/ssd_
+python benchmark_score.py --deploy --prefix=./model/cqssd_
 ```
 
 ## Custom Model
@@ -157,4 +177,7 @@ python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-
 ```
 # Launch INT8 Inference 
 python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/*.json --batch-size=* --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
