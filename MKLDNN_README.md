@@ -9,7 +9,8 @@ Building MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) will gain 
 * [3. Windows](#3)
 * [4. Verify MXNet with python](#4)
 * [5. Enable MKL BLAS](#5)
-* [6. Support](#6)
+* [6. Subgraph MKL-DNN](#6)
+* [7. Support](#7)
 
 <h2 id="1">Linux</h2>
 
@@ -292,7 +293,17 @@ MKL_VERBOSE Intel(R) MKL 2018.0 Update 1 Product build 20171007 for Intel(R) 64 
 MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
 ```
 
-<h2 id="6">Next Steps and Support</h2>
+<h2 id="6">Subgraph MKL-DNN</h2>
+
+MKL-DNN based graph optimization and quantization by subgraph feature are available in master branch. You can build from source and then use below command to enable this feature for extreme performance:
+
+```
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+```
+
+Technical and Performance details are available [here](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN). CNN quantization examples are available [here](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
+
+<h2 id="7">Next Steps and Support</h2>
 
 - For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl)
 
