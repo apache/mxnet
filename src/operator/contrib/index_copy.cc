@@ -16,12 +16,12 @@
   * specific language governing permissions and limitations
   * under the License.
   */
- 
+
  /*!
   * \file index_copy.cc
   * \brief
   */
- #include "./index_copy-inl.h"
+#include "./index_copy-inl.h"
 
 namespace mxnet {
 namespace op {

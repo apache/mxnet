@@ -16,7 +16,7 @@
   * specific language governing permissions and limitations
   * under the License.
   */
- 
+
   /*!
    * \file index_copy-inl.h
    * \brief implementation of index_copy tensor operation
@@ -46,10 +46,10 @@ struct copy_all {
 
 struct index_copy {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, 
+  MSHADOW_XINLINE static void Map(int i,
                                   int dim,
-                                  IType* index, 
-                                  DType* new_tensor, 
+                                  IType* index,
+                                  DType* new_tensor,
                                   DType* out_tensor) {
     DType* out_ptr = out_tensor + static_cast<int>(index[i]) * dim;
     DType* new_ptr = new_tensor + i * dim;

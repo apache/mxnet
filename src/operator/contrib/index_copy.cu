@@ -16,18 +16,18 @@
   * specific language governing permissions and limitations
   * under the License.
   */
- 
+
  /*!
   * \file index_copy.cc
   * \brief
   */
- #include "./index_copy-inl.h"
+#include "./index_copy-inl.h"
 
- namespace mxnet {
- namespace op {
+namespace mxnet {
+namespace op {
 
- NNVM_REGISTER_OP(_contrib_index_copy)
- .set_attr<FCompute>("FCompute<gpu>", IndexCopyCompute<gpu>);
+NNVM_REGISTER_OP(_contrib_index_copy)
+.set_attr<FCompute>("FCompute<gpu>", IndexCopyCompute<gpu>);
 
- }
- }
+}
+}
