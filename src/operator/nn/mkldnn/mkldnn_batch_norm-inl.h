@@ -224,6 +224,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
 
   // mxnet will always use scale shift.
   // But if fix_gamma is true, then all scale elements will be set to 1.0f
+  // If fix_beta is true, then all center elements will be set to 0.0f
   if (flags & use_scale_shift) {
     const NDArray &gamma    = in_data[batchnorm::kGamma];
     const NDArray &beta     = in_data[batchnorm::kBeta];
@@ -237,19 +238,32 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
     CHECK(weight_mem.get_primitive_desc().get_size() == channels_ * sizeof(DType) * 2);
     DType* weight_ptr = gamma.data().dptr<DType>();
     DType* bias_ptr = beta.data().dptr<DType>();
+
+    // Use or ignore gamma
     if (!param.fix_gamma) {
       memcpy(weight_buf, weight_ptr, sizeof(weight_buf[0]) * channels_);
-      memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
       for (int i = 0; i < channels_; i++) {
         weight_buf[i] = (DType)1.0f;
         weight_ptr[i] = (DType)1.0f;
-        weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     } else {
       for (int i = 0; i < channels_; i++) {
         weight_buf[i] = (DType)1.0f;
-        weight_buf[channels_ + i] = bias_ptr[i];  // bias
+      }
+    }
+
+    // Use or ignore beta
+    if (!param.fix_beta) {
+      memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
+    } else if (IsBNWriting(req[batchnorm::kBeta])) {
+      for (int i = 0; i < channels_; i++) {
+        weight_buf[channels_ + i] = (DType)0.0f;
+        bias_ptr[i] = (DType)0.0f;
+      }
+    } else {
+      for (int i = 0; i < channels_; i++) {
+        weight_buf[channels_ + i] = (DType)0.0f;
       }
     }
 
@@ -420,7 +434,10 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
     }
 
     for (int i = 0; i < channels_; i++) {
-      weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
+      if (!param.fix_beta)
+        weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
+      else
+        weight_buf[channels_ + i] = (DType)0.0f;
     }
 
     // training but no input mean and variance
@@ -461,7 +478,10 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
     }
 
     for (int i = 0; i < channels_; i++) {
-      (in_grad[2].data().dptr<DType>())[i] = gw_buf[i + channels_];
+      if (!param.fix_beta)
+        (in_grad[2].data().dptr<DType>())[i] = gw_buf[i + channels_];
+      else
+        (in_grad[2].data().dptr<DType>())[i] = 0.0f;
     }
   } else {
     LOG(FATAL) << "MKLDNN batch normalization backward: should not reach here ...";
