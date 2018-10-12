@@ -30,6 +30,7 @@ The following models have been tested on Linux systems.
 | Model | Source | Dataset | FP32 Accuracy | INT8 Accuracy |
 |:---|:---|---|:---:|:---:|
 | ResNet50-V1  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 75.87%/92.72%  |  75.71%/92.65% |
+|Squeezenet 1.0|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|57.01%/79.71%|56.62%/79.55%|
 | SSD-VGG | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.83 mAP  | 0.82 mAP  |
 
 ## ResNet50-V1
