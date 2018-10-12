@@ -19,7 +19,7 @@
  
   /*!
    * \file index_copy-inl.h
-   * \brief implementation of index_copy operation
+   * \brief implementation of index_copy tensor operation
    */
 
 #ifndef MXNET_OPERATOR_CONTRIB_INDEX_COPY_INL_H_
@@ -34,19 +34,27 @@
 
 namespace mxnet {
 namespace op {
-  
-// Perform index_copy in mshadow  
+
+struct copy_all {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  DType* old_tensor,
+                                  DType* out_tensor) {
+    *(out_tensor + i) = *(old_tensor + i);
+  }
+};
+
 struct index_copy {
+  template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, 
-                                  int* index, 
-                                  float* new_tensor, 
-                                  float* old_tensor,
-                                  int dim) {
-    float* old_ptr = old_tensor + index[i] * dim;
-    float* new_ptr = new_tensor + i * dim;
-    // Copy new tensor to old tensor
+                                  int dim,
+                                  IType* index, 
+                                  DType* new_tensor, 
+                                  DType* out_tensor) {
+    DType* out_ptr = out_tensor + static_cast<int>(index[i]) * dim;
+    DType* new_ptr = new_tensor + i * dim;
     for (int idx = 0; idx < dim; ++idx) {
-      *(old_ptr + idx) = *(new_ptr + idx);
+      *(out_ptr + idx) = *(new_ptr + idx);
     }
   }
 };
@@ -60,31 +68,50 @@ void IndexCopyCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mxnet_op;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-
-  Kernel<index_copy, xpu>::Launch(s, inputs[1].Size(),
-                            inputs[1].dptr<int>(),    // index_tensor
-                            inputs[2].dptr<float>(),  // new_tensor
-                            inputs[0].dptr<float>(),  // old_tensor
-                            inputs[2].Size() / inputs[1].Size());  // dim   
+  const TBlob& out = outputs[0];
+  const TBlob& idx = inputs[1];
+  int dim = inputs[2].Size() / inputs[1].Size();
+  // copy all
+  MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+    Kernel<copy_all, xpu>::Launch(s, inputs[0].Size(),
+                            inputs[0].dptr<DType>(),
+                            outputs[0].dptr<DType>());
+  })
+  // index copy
+  MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
+      Kernel<index_copy, xpu>::Launch(s, inputs[1].Size(),
+                            dim,
+                            inputs[1].dptr<IType>(),
+                            inputs[2].dptr<DType>(),
+                            outputs[0].dptr<DType>());
+    })
+  })
 }
 
 inline bool IndexCopyShape(const nnvm::NodeAttrs& attrs,
                            std::vector<TShape> *in_attrs,
                            std::vector<TShape> *out_attrs) {
-  // 0. original tensor
-  // 1. index tensot
-  // 2. new tensor
   CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_EQ(in_attrs->at(1).ndim(), 1);
+  CHECK_EQ(in_attrs->at(0).ndim(), in_attrs->at(2).ndim());
+  for (size_t i = 0; i < in_attrs->at(0).ndim(); ++i) {
+    if (i == 0) {
+      CHECK_GE(in_attrs->at(0)[i], in_attrs->at(2)[i]);
+    } else {
+      CHECK_EQ(in_attrs->at(0)[i], in_attrs->at(2)[i]);
+    }
+  }
+  CHECK_EQ(in_attrs->at(1)[0], in_attrs->at(2)[0]);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   return true;
 }
 
 inline bool IndexCopyType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_attrs,
                           std::vector<int> *out_attrs) {
-  // Check input tensor
-  CHECK_EQ((*in_attrs)[0], mshadow::kFloat32);
-  CHECK_EQ((*in_attrs)[1], mshadow::kInt32);
-  CHECK_EQ((*in_attrs)[2], mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   return true;
 }
 
