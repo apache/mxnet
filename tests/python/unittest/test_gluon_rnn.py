@@ -383,7 +383,7 @@ def test_rnn_cells():
 def test_rnn_cells_export_import():
     class RNNLayer(gluon.HybridBlock):
         def __init__(self):
-            super().__init__()
+            super(RNNLayer, self).__init__()
             with self.name_scope():
                 self.cell = gluon.rnn.RNNCell(hidden_size=1)
 
@@ -393,7 +393,7 @@ def test_rnn_cells_export_import():
 
     class LSTMLayer(gluon.HybridBlock):
         def __init__(self):
-            super().__init__()
+            super(LSTMLayer, self).__init__()
             with self.name_scope():
                 self.cell = gluon.rnn.LSTMCell(hidden_size=1)
 
@@ -403,7 +403,7 @@ def test_rnn_cells_export_import():
 
     class GRULayer(gluon.HybridBlock):
         def __init__(self):
-            super().__init__()
+            super(GRULayer, self).__init__()
             with self.name_scope():
                 self.cell = gluon.rnn.GRUCell(hidden_size=1)
 
