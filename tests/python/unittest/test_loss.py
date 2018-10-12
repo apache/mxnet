@@ -389,20 +389,21 @@ def test_poisson_nllloss():
 
 @with_seed()
 def test_poisson_nllloss_mod():
-    N = 30
-    data = mx.random.uniform(shape=(N, 10))
-    label = mx.random.poisson(shape=(N, 1))
-    data_iter = mx.io.NDArrayIter(data, label, batch_size=10, label_name='label', shuffle=True)
+    N = 1000
+    data = mx.random.poisson(shape=(N, 2))
+    label = mx.random.poisson(lam=4, shape=(N, 1))
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=20, label_name='label', shuffle=True)
     output = mx.sym.exp(get_net(1))
     l = mx.symbol.Variable('label')
     Loss = gluon.loss.PoissonNLLLoss(from_logits=False)
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+    mod.fit(data_iter, num_epoch=20, optimizer_params={'learning_rate': 0.01},
+            initializer=mx.init.Normal(sigma=0.1), eval_metric=mx.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 1
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
