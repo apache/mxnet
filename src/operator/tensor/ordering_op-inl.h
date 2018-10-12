@@ -184,6 +184,14 @@ struct fill_ind_to_one {
   }
 };
 
+struct fill_ind {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, const int* indices, const DType* val,
+                                  int req, DType* out) {
+    KERNEL_ASSIGN(out[indices[i]], req, val[i]);
+  }
+};
+
 template<typename DType>
 MSHADOW_FORCE_INLINE void TopKSort(const Tensor<cpu, 1, DType>& dat,
                                    const Tensor<cpu, 1, int>& ind,
@@ -610,14 +618,11 @@ void TopKBackwardImpl(const OpContext &ctx,
     << "The total element_num is " << element_num << ", but the selected IDType can only represent "
     << mxnet::common::MaxIntegerValue<IDType>() << " elements";
   Tensor<xpu, 1, int> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(batch_size * k * 2 + batch_size), s);
+    ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(batch_size * k + batch_size), s);
   Tensor<xpu, 1, int> sel_indices =
     Tensor<xpu, 1, int>(workspace.dptr_, Shape1(batch_size * k), s);
   Tensor<xpu, 1, int> batch_shift =
     Tensor<xpu, 1, int>(workspace.dptr_ + batch_size * k, Shape1(batch_size), s);
-  Tensor<xpu, 1, int> dummy_index =
-    Tensor<xpu, 1, int>(workspace.dptr_ + batch_size * k + batch_size,
-                           Shape1(batch_size * k), s);
 
   Tensor<xpu, 2, DType> out_grad =
     inputs[0].get_with_shape<xpu, 2, DType>(Shape2(inputs[0].shape_.Size(), 1), s);
@@ -646,17 +651,12 @@ void TopKBackwardImpl(const OpContext &ctx,
                           Shape1(batch_size * k));
   }
   CHECK_EQ(sel_indices.CheckContiguous(), true);
-  if (kWriteTo == req[0]) {
-    in_grad = scalar<DType>(0);
-    IndexFill(in_grad, sel_indices, out_grad);
-  } else if (kAddTo == req[0]) {
-    // TODO(sxjscience) We can use AddTakeGrad in the future.
-    // However, the current implementation of AddTakeGrad is not so efficient.
-    mxnet_op::Kernel<range_fwd, xpu>::Launch(s, sel_indices.shape_.Size(), 1, 0, 1, kWriteTo,
-                                             dummy_index.dptr_);
-    mxnet::op::AddTakeGradLargeBatch(in_grad, sel_indices, dummy_index, out_grad);
-  } else if (kNullOp == req[0]) {
-    return;
+  if (kWriteTo == req[0] || kAddTo == req[0]) {
+    mxnet_op::Kernel<fill_ind, xpu>::Launch(s, batch_size * k,
+                                            sel_indices.dptr_,
+                                            out_grad.dptr_,
+                                            req[0],
+                                            in_grad.dptr_);
   } else {
     LOG(FATAL) << "Not Implemented!";
   }
