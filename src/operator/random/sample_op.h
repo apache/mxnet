@@ -255,9 +255,7 @@ struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam> {
               " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
-    .add_enum("uint8", kUint8)
     .add_enum("int32", kInt32)
-    .add_enum("int8", kInt8)
     .add_enum("int64", kInt64)
     .set_default(-1)
     .describe("DType of the output in case this can't be inferred. "
