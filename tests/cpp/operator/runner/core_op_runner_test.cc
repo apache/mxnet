@@ -55,6 +55,27 @@ inline std::vector<TT> AsVect(const TT& t) {
 }
 
 /*!
+ * \brief Scan operators and check for registered FGradient
+ */
+TEST(CORE_OP_RUNNER, ScanOperatorsForFGradients) {
+    std::vector<std::string> names = dmlc::Registry<Op>::ListAllNames();
+    std::cout << "total ops: " << names.size() << "\n";
+    std::vector<std::string> opsWithOutGradient;
+    std::stringstream ss; 
+    ss << "The Following ops do not have an FGradient registered: ";
+
+    for (std::vector<std::string>::iterator i = names.begin(); i != names.end(); ++i) {
+        const Op* op = dmlc::Registry<Op>::Find(*i);
+        auto gradient = op->GetAttr<nnvm::FGradient>("FGradient");
+        if (gradient.count(op) == 0) {
+            ss << op->name << ", ";
+            opsWithOutGradient.push_back(op->name);
+        }
+    }
+    ASSERT_TRUE(opsWithOutGradient.size() == 0) << ss.str();
+}
+
+/*!
  * \brief Generic bidirectional sanity test for simple unary op
  */
 TEST(CORE_OP_RUNNER, ExecuteBidirectionalSimpleUnaryList) {
