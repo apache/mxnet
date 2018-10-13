@@ -61,7 +61,7 @@ TEST(CORE_OP_RUNNER, ScanOperatorsForFGradients) {
     std::vector<std::string> names = dmlc::Registry<Op>::ListAllNames();
     std::cout << "total ops: " << names.size() << "\n";
     std::vector<std::string> opsWithOutGradient;
-    std::stringstream ss; 
+    std::stringstream ss;
     ss << "The Following ops do not have an FGradient registered: ";
 
     for (std::vector<std::string>::iterator i = names.begin(); i != names.end(); ++i) {
