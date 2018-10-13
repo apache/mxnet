@@ -253,7 +253,6 @@ def test_large_models():
 
     net.hybridize()
     net.initialize(mx.init.Normal(sigma=0.01), ctx=ctx)
-    mx.nd.waitall()
 
     # Compute the height (=width) of the square tensor of the given size in bytes
     def tensor_size(big_tensor_bytes):
@@ -261,12 +260,12 @@ def test_large_models():
         sz = int(math.sqrt(big_tensor_bytes / largest_num_features / bytes_per_float))
         return (sz // 100) * 100
 
-    # The idea is to create models with large tensors of (say) 20% of the total memory.
+    # The idea is to create models with large tensors of (say) 25% of the total memory.
     # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
     # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
     (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(ctx.device_id)
-    start_size = tensor_size(0.20 * total_mem_bytes)
-    num_trials = 4
+    start_size = tensor_size(0.25 * total_mem_bytes)
+    num_trials = 8
     sys.stderr.write(' testing global memory of size {} ... '.format(total_mem_bytes))
     sys.stderr.flush()
     for i in range(num_trials):
