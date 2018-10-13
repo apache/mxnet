@@ -122,7 +122,7 @@ int MXGetGPUCount(int* out) {
   API_END();
 }
 
-int MXGetGPUMemoryInformation(int dev, size_t *free_mem, size_t *total_mem) {
+int MXGetGPUMemoryInformation(int dev, uint64_t *free_mem, uint64_t *total_mem) {
   API_BEGIN();
   Context::GetGPUMemoryInformation(dev, free_mem, total_mem);
   API_END();
