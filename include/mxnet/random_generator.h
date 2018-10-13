@@ -151,8 +151,8 @@ class RandGenerator<gpu, DType> {
     }
 
     template<typename IType>
-    MSHADOW_XINLINE FType discrete_uniform(const IType *lower, const IType *upper) {
-      std::uniform_int_distribution<FType> dist_discrete_uniform(*lower, *upper);
+    MSHADOW_XINLINE DType discrete_uniform(const IType *lower, const IType *upper) {
+      std::uniform_int_distribution<DType> dist_discrete_uniform(*lower, *upper);
       return dist_discrete_uniform(*engine_);
     }
 
