@@ -295,11 +295,17 @@ MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1
 
 <h2 id="6">Subgraph MKL-DNN</h2>
 
-MKL-DNN based graph optimization and quantization by subgraph feature are available in master branch. You can build from source and then use below command to enable this feature for extreme performance:
+Intel(R) MKL-DNN based graph optimization and quantization by subgraph feature are available in master branch. You can build from source and then use below command to enable this *experimental* feature for extreme performance:
 
 ```
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
 ```
+
+This limitations of this experimental feature are:
+
+- This feature only support inference optimization. You should unset this environment variable for training.
+
+- This feature will broken GPU pass when building MXNet both with MKL-DNN and CUDA. You should unset this environment variable to use CUDA.
 
 Technical and Performance details are available [here](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN). CNN quantization examples are available [here](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 

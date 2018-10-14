@@ -21,9 +21,9 @@ by invoking `launch_quantize.sh`.
 
 **NOTE**: This example has only been tested on Linux systems.
 
-# Model Quantization with Intel MKL-DNN
+# Model Quantization with Intel® MKL-DNN
 
-MKL-DNN supports quantization well with subgraph feature on Intel® CPU Platform and can bring huge performance improvement on Intel® Xeon® Scalable Platform. A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with MKL-DNN. This script intergrates with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html) so that more pre-trained models can be get from Gluon-CV and can be converted for quantization. This script also supports custom models.
+Intel® MKL-DNN supports quantization well with subgraph feature on Intel® CPU Platform and can bring huge performance improvement on Intel® Xeon® Scalable Platform. A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with Intel® MKL-DNN. This script intergrates with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html) so that more pre-trained models can be downloaded from Gluon-CV and can be converted for quantization. This script also supports custom models.
 
 Use below command to install Gluon-CV:
 
@@ -41,14 +41,13 @@ The following models have been tested on Linux systems.
 
 ## ResNet50-V1
 
-Use below command to convert pre-trained model from Gluon-CV and quantization. Use calib mode can get better accuracy and performance and the calibration dataset
-is the [validation dataset](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized.  The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
 ```
 python imagenet_gen_qsym_mkldnn.py --model=resnet50_v1 --num-calib-batches=5 --calib-mode=naive
 ```
 
-After quantization, you will get a quantized symbol and parameter in `./model` dictionary. Use below command to launch inference.
+The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary. The following command is to launch inference.
 
 ```
 # USE MKLDNN AS SUBGRAPH BACKEND
@@ -62,7 +61,6 @@ python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batche
 
 # Launch dummy data Inference
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
-
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
@@ -73,8 +71,7 @@ The following command is to download the pre-trained model from Gluon-CV and tra
 ```
 python imagenet_gen_qsym_mkldnn.py --model=squeezenet1.0 --num-calib-batches=5 --calib-mode=naive
 ```
-The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary
-The following command is to launch inference.
+The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary. The following command is to launch inference.
 
 ```
 # USE MKLDNN AS SUBGRAPH BACKEND
@@ -88,7 +85,6 @@ python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batc
 
 # Launch dummy data Inference
 python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
-
 python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
@@ -141,10 +137,10 @@ elif args.model == 'custom':
     calib_layer = lambda name: name.endswith('_output')
     # add layer names you donnot want to quantize.
     # add conv/pool layer names that has negative inputs
-    # since MKLDNN only support uint8 quantization temporary.
-    # add all fc layer names since MKLDNN does not support temporary.
+    # since Intel® MKL-DNN only support uint8 quantization temporary.
+    # add all fc layer names since Intel® MKL-DNN does not support temporary.
     excluded_sym_names += ['layers']
-    # add your first conv layer names since MKLDNN only support uint8 quantization temporary.
+    # add your first conv layer names since Intel® MKL-DNN only support uint8 quantization temporary.
     if exclude_first_conv:
         excluded_sym_names += ['layers']
 ```
@@ -162,7 +158,7 @@ export MXNET_SUBGRAPH_BACKEND=MKLDNN
 python imagenet_inference.py --symbol-file=./model/custom-symbol.json --param-file=./model/custom-0000.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu --data-nthreads=1
 ```
 
-3. Then, you should add `rgb_mean`, `rgb_std`and `excluded_sym_names` in this script. Notice that you should exxclude conv/pool layers that has negative data since MKLDNN only support uint8 quantization temporary. You should also exclude all fc layers in your mdoel.
+3. Then, you should add `rgb_mean`, `rgb_std` and `excluded_sym_names` in this script. Notice that you should exclude conv/pool layers that has negative data since Intel® MKL-DNN only support uint8 quantization temporary. You should also exclude all fc layers in your mdoel.
 
 4. Then, you can run below command for quantization:
 

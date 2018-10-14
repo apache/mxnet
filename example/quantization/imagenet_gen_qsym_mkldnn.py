@@ -90,7 +90,7 @@ def save_params(fname, arg_params, aux_params, logger=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with MKL-DNN support')
+    parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support')
     parser.add_argument('--model', type=str, choices=['resnet50_v1',
                                                       'squeezenet1.0',
                                                       'imagenet1k-resnet-152',
@@ -235,10 +235,10 @@ if __name__ == '__main__':
         calib_layer = lambda name: name.endswith('_output')
         # add layer names you donnot want to quantize.
         # add conv/pool layer names that has negative inputs
-        # since MKLDNN only support uint8 quantization temporary.
-        # add all fc layer names since MKLDNN does not support temporary.
+        # since Intel MKL-DNN only support uint8 quantization temporary.
+        # add all fc layer names since Intel MKL-DNN does not support temporary.
         excluded_sym_names += ['layers']
-        # add your first conv layer names since MKLDNN only support uint8 quantization temporary.
+        # add your first conv layer names since Intel MKL-DNN only support uint8 quantization temporary.
         if exclude_first_conv:
             excluded_sym_names += ['layers']
     else:
