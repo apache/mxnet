@@ -25,7 +25,7 @@ import scala.util.control.{ControlThrowable, NonFatal}
 import java.util.Comparator
 
 /**
-  * This class manages releasing of Nativeresources
+  * This class manages automatically releasing of [[NativeResource]]s
   */
 class ResourceScope extends AutoCloseable {
 
@@ -46,35 +46,29 @@ class ResourceScope extends AutoCloseable {
 
   /**
     * Releases all the [[NativeResource]] by calling
-    * the associated [[NativeResource.dispose()]] method
+    * the associated [[NativeResource.close()]] method
     */
   override def close(): Unit = {
-    resourceQ.foreach(resource => if (resource != null) {
-      logger.info("releasing resource:%x\n".format(resource.nativeAddress))
-      resource.close()
-    } else {
-      logger.info("found resource which is null")
-    }
-    )
+    resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
     resourceQ.clear()
     ResourceScope.removeFromLocalScope(this)
   }
 
   /**
-    * Add a Native Resource to the scope
+    * Add a NativeResource to the scope
     * @param resource
     */
-  private[mxnet] def add(resource: NativeResource): Unit = {
+  def add(resource: NativeResource): Unit = {
     logger.info("ResourceScope: Registering Resource %x".format(resource.nativeAddress))
     resourceQ.+=(resource)
   }
 
   /**
-    * Remove Native Resource from the Scope, this uses
+    * Remove NativeResource from the Scope, this uses
     * object equality to find the resource in the stack.
     * @param resource
     */
-  private[mxnet] def remove(resource: NativeResource): Unit = {
+  def remove(resource: NativeResource): Unit = {
     logger.info("ResourceScope: DeRegistering Resource %x".format(resource.nativeAddress))
     resourceQ.-=(resource)
     logger.info("resourceQ size: %d".format(resourceQ.size))
@@ -88,10 +82,9 @@ object ResourceScope {
   /**
     * Captures all Native Resources created using the ResourceScope and
     * at the end of the body, de allocates all the Native resources by calling close on them.
-    *
-    * @param localScope Scope in which to capture the native resources
+    * This method will not deAllocate NativeResources returned from the block.
+    * @param scope Scope in which to capture the native resources
     * @param body  block of code to execute in this scope
-    * @tparam R the type of the resource
     * @tparam A return type
     * @return result of the operation, if the result is of type NativeResource, it is not
     *         de allocated so the user can use it and then de allocate manually by calling

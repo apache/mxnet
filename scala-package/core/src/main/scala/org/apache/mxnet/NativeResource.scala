@@ -79,9 +79,9 @@ private[mxnet] trait NativeResource
  }
 
   // Removes this object from PhantomRef tracking and from ResourceScope
-  private def deRegister(): Unit = {
+  private def deRegister(removeFromScope: Boolean): Unit = {
     NativeResourceRef.deRegister(ref)
-    if (scope != null) scope.remove(this)
+    if (scope != null && removeFromScope) scope.remove(this)
   }
 
   // Implements [[@link AutoCloseable.close]]
@@ -90,11 +90,13 @@ private[mxnet] trait NativeResource
   }
 
   // Implements [[@link WarnIfNotDisposed.dispose]]
-  def dispose(): Unit = {
+  def dispose(): Unit = dispose(true)
+
+  private[mxnet] def dispose(removeFromScope: Boolean = true): Unit = {
     if (!disposed) {
       print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
       checkCall(nativeDeAllocator(this.nativeAddress))
-      deRegister()
+      deRegister(removeFromScope)
       NativeResource.totalBytesAllocated.getAndAdd(-1*bytesAllocated)
       disposed = true
     }
@@ -105,7 +107,7 @@ private[mxnet] trait NativeResource
   the object could be disposed by the GC without the need for explicit disposal
   but the finalizer might not have run, then the WarnIfNotDisposed throws a warning
    */
-  private def isDeAllocated(): Boolean = NativeResourceRef.isDeAllocated(ref)
+  private[mxnet] def isDeAllocated(): Boolean = NativeResourceRef.isDeAllocated(ref)
 
 }
 
