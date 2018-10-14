@@ -1,5 +1,7 @@
 # Model Quantization with Calibration Examples
 
+This folder contains examples of quantizing a FP32 model with Intel® MKL-DNN or CUDNN.
+
 <h2 id="0">Contents</h2>
 
 * [1. Model Quantization with Intel® MKL-DNN](#1)
@@ -215,6 +217,7 @@ python imagenet_inference.py --symbol-file=./model/*.json --batch-size=* --num-i
 ```
 
 <h2 id="2">Model Quantization with CUDNN</h2>
+
 This folder contains examples of quantizing a FP32 model with or without calibration and using the calibrated
 quantized for inference. Two pre-trained imagenet models are taken as examples for quantization. One is
 [Resnet-152](http://data.mxnet.io/models/imagenet/resnet/152-layers/), and the other one is
