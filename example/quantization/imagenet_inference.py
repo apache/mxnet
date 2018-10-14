@@ -136,7 +136,7 @@ if __name__ == '__main__':
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--dataset', type=str, required=False, help='dataset path')
     parser.add_argument('--rgb-mean', type=str, default='0,0,0')
-    parser.add_argument('--rgb-std', type=str, default='0,0,0')
+    parser.add_argument('--rgb-std', type=str, default='1,1,1')
     parser.add_argument('--image-shape', type=str, default='3,224,224')
     parser.add_argument('--data-nthreads', type=int, default=60, help='number of threads for data decoding')
     parser.add_argument('--num-skipped-batches', type=int, default=0, help='skip the number of batches for inference')

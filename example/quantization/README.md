@@ -1,27 +1,11 @@
 # Model Quantization with Calibration Examples
-This folder contains examples of quantizing a FP32 model with or without calibration and using the calibrated
-quantized for inference. Two pre-trained imagenet models are taken as examples for quantization. One is
-[Resnet-152](http://data.mxnet.io/models/imagenet/resnet/152-layers/), and the other one is
-[Inception with BatchNorm](http://data.mxnet.io/models/imagenet/inception-bn/). The calibration dataset
-is the [validation dataset](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models.
 
-Here are the details of the four files in this folder.
-- `imagenet_gen_qsym.py` This script provides an example of taking FP32 models and calibration dataset to generate
-calibrated quantized models. When launched for the first time, the script would download the user-specified model,
-either Resnet-152 or Inception,
-and calibration dataset into `model` and `data` folders, respectively. The generated quantized models can be found in
-the `model` folder.
-- `imagenet_inference.py` This script is used for calculating the accuracy of FP32 models or quantized models on the
-validation dataset which was downloaded for calibration in `imagenet_gen_qsym.py`.
-- `launch_quantize.sh` This is a shell script that generates various quantized models for Resnet-152 and
-Inception with BatchNorm with different configurations. Users can copy and paste the command from the script to
-the console to run model quantization for a specific configuration.
-- `launch_inference.sh` This is a shell script that calculate the accuracies of all the quantized models generated
-by invoking `launch_quantize.sh`.
+<h2 id="0">Contents</h2>
 
-**NOTE**: This example has only been tested on Linux systems.
+* [1. Model Quantization with Intel® MKL-DNN](#1)
+* [2. Model Quantization with CUDNN](#2)
 
-# Model Quantization with Intel® MKL-DNN
+<h2 id="1">Model Quantization with Intel® MKL-DNN</h2>
 
 Intel® MKL-DNN supports quantization well with subgraph feature on Intel® CPU Platform and can bring huge performance improvement on Intel® Xeon® Scalable Platform. A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with Intel® MKL-DNN. This script intergrates with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html) so that more pre-trained models can be downloaded from Gluon-CV and can be converted for quantization. This script also supports custom models.
 
@@ -35,13 +19,15 @@ The following models have been tested on Linux systems.
 
 | Model | Source | Dataset | FP32 Accuracy | INT8 Accuracy |
 |:---|:---|---|:---:|:---:|
-| ResNet50-V1  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 75.87%/92.72%  |  75.71%/92.65% |
-|Squeezenet 1.0|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|57.01%/79.71%|56.62%/79.55%|
-| SSD-VGG | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.83 mAP  | 0.82 mAP  |
+| [ResNet50-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 75.87%/92.72%  |  75.71%/92.65% |
+|[Squeezenet 1.0](#4)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|57.01%/79.71%|56.62%/79.55%|
+|[ResNet152-V2](#5)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.76%/93.03%|76.48%/92.96%|
+|[Inception-BN](#6)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.09%/90.60%|72.00%/90.53%|
+| [SSD-VGG](#7) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.83 mAP  | 0.82 mAP  |
 
-## ResNet50-V1
+<h3 id='3'>ResNet50-V1</h3>
 
-The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized.  The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
 ```
 python imagenet_gen_qsym_mkldnn.py --model=resnet50_v1 --num-calib-batches=5 --calib-mode=naive
@@ -64,9 +50,9 @@ python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --bat
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-## SqueezeNet1.0
+<h3 id='4'>SqueezeNet1.0</h3>
 
-The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized.  The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
 ```
 python imagenet_gen_qsym_mkldnn.py --model=squeezenet1.0 --num-calib-batches=5 --calib-mode=naive
@@ -88,7 +74,57 @@ python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --b
 python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-## SSD-VGG
+<h3 id='5'>ResNet152-V2</h3>
+
+The following command is to download the pre-trained model from [MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/) which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+
+```
+python imagenet_gen_qsym_mkldnn.py --model=imagenet1k-resnet-152 --num-calib-batches=5 --calib-mode=naive
+```
+
+The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary. The following command is to launch inference.
+
+```
+# USE MKLDNN AS SUBGRAPH BACKEND
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+
+# Launch FP32 Inference 
+python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.json --param-file=./model/imagenet1k-resnet-152-0000.params --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
+
+# Launch INT8 Inference
+python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-quantized-5batches-naive-symbol.json --param-file=./model/imagenet1k-resnet-152-quantized-0000.params --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+```
+
+<h3 id='6'>Inception-BN</h3>
+
+The following command is to download the pre-trained model from [MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/) which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+
+```
+python imagenet_gen_qsym_mkldnn.py --model=imagenet1k-inception-bn --num-calib-batches=5 --calib-mode=naive
+```
+
+The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary. The following command is to launch inference.
+
+```
+# USE MKLDNN AS SUBGRAPH BACKEND
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+
+# Launch FP32 Inference 
+python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbol.json --param-file=./model/imagenet1k-inception-bn-0000.params --rgb-mean=123.68,116.779,103.939 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
+
+# Launch INT8 Inference
+python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json --param-file=./model/imagenet1k-inception-bn-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+```
+
+<h3 id='7'>SSD-VGG</h3>
 
 Go to [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) dictionary. Following the [instruction](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model) in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip) then rename them and extract to `model/` and `data/` dictionary as below.
 
@@ -125,7 +161,7 @@ python benchmark_score.py --deploy --prefix=./model/ssd_
 python benchmark_score.py --deploy --prefix=./model/cqssd_
 ```
 
-## Custom Model
+<h3 id='8'>Custom Model</h3>
 
 This script also supports custom symbolic models. You can easily add some quantization layer configs in `imagenet_gen_qsym_mkldnn.py` like below:
 
@@ -177,3 +213,26 @@ python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*
 # Launch dummy data Inference
 python imagenet_inference.py --symbol-file=./model/*.json --batch-size=* --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
+
+<h2 id="2">Model Quantization with CUDNN</h2>
+This folder contains examples of quantizing a FP32 model with or without calibration and using the calibrated
+quantized for inference. Two pre-trained imagenet models are taken as examples for quantization. One is
+[Resnet-152](http://data.mxnet.io/models/imagenet/resnet/152-layers/), and the other one is
+[Inception with BatchNorm](http://data.mxnet.io/models/imagenet/inception-bn/). The calibration dataset
+is the [validation dataset](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models.
+
+Here are the details of the four files in this folder.
+- `imagenet_gen_qsym.py` This script provides an example of taking FP32 models and calibration dataset to generate
+calibrated quantized models. When launched for the first time, the script would download the user-specified model,
+either Resnet-152 or Inception,
+and calibration dataset into `model` and `data` folders, respectively. The generated quantized models can be found in
+the `model` folder.
+- `imagenet_inference.py` This script is used for calculating the accuracy of FP32 models or quantized models on the
+validation dataset which was downloaded for calibration in `imagenet_gen_qsym.py`.
+- `launch_quantize.sh` This is a shell script that generates various quantized models for Resnet-152 and
+Inception with BatchNorm with different configurations. Users can copy and paste the command from the script to
+the console to run model quantization for a specific configuration.
+- `launch_inference.sh` This is a shell script that calculate the accuracies of all the quantized models generated
+by invoking `launch_quantize.sh`.
+
+**NOTE**: This example has only been tested on Linux systems.
