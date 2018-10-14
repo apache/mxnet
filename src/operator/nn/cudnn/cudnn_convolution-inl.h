@@ -26,11 +26,11 @@
 #ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_CONVOLUTION_INL_H_
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_CONVOLUTION_INL_H_
 
+#include <mxnet/storage.h>
 #include <algorithm>
 #include <vector>
 #include <mutex>
 #include <string>
-#include <mxnet/storage.h>
 #include "../convolution-inl.h"
 #include "./cudnn_algoreg-inl.h"
 #include "../../../common/cuda_utils.h"
