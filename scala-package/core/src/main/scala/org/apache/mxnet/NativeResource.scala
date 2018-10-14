@@ -94,7 +94,6 @@ private[mxnet] trait NativeResource
 
   private[mxnet] def dispose(removeFromScope: Boolean = true): Unit = {
     if (!disposed) {
-      print("NativeResource: Disposing NativeResource:%x\n".format(nativeAddress))
       checkCall(nativeDeAllocator(this.nativeAddress))
       deRegister(removeFromScope)
       NativeResource.totalBytesAllocated.getAndAdd(-1*bytesAllocated)
@@ -115,9 +114,8 @@ private[mxnet] object NativeResource {
   var totalBytesAllocated : AtomicLong = new AtomicLong(0)
 }
 
-/* Do not make resource a member of the class,
-this will hold reference and GC will not clear the object.
- */
+// Do not make [[NativeResource.resource]] a member of the class,
+// this will hold reference and GC will not clear the object.
 private[mxnet] class NativeResourceRef(resource: NativeResource,
                                        val resourceDeAllocator: CPtrAddress => Int)
         extends PhantomReference[NativeResource](resource, NativeResourceRef.refQ) {}
@@ -159,14 +157,11 @@ private[mxnet] object NativeResourceRef {
   }
 
   def cleanup: Unit = {
-    print("NativeResourceRef: cleanup\n")
     // remove is a blocking call
     val ref: NativeResourceRef = refQ.remove().asInstanceOf[NativeResourceRef]
-    print("NativeResourceRef: got a reference with deAlloc\n")
     // phantomRef will be removed from the map when NativeResource.close is called.
     val resource = refMap.get(ref)
     if (resource != 0L)  { // since CPtrAddress is Scala a Long, it cannot be null
-      print("NativeResourceRef: got a reference for resource\n")
       ref.resourceDeAllocator(resource)
       refMap.remove(ref)
     }

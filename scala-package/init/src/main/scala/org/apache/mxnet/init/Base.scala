@@ -48,7 +48,6 @@ object Base {
     if (os.startsWith("Linux")) {
       System.load(s"$baseDir/linux-x86_64/target/libmxnet-init-scala-linux-x86_64.so")
     } else if (os.startsWith("Mac")) {
-      baseDir = "/Users/wamy/nswamy/deepengine/workspace/mxnet_scala/scala-package/init-native"
       System.load(s"$baseDir/osx-x86_64/target/libmxnet-init-scala-osx-x86_64.jnilib")
     } else {
       // TODO(yizhi) support windows later

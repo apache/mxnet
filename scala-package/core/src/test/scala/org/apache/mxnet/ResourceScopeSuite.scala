@@ -73,10 +73,8 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
     ResourceScope.using() {
       b = ResourceScope.using() {
           a = NDArray.ones(Shape(3, 4))
-          print("testAutoReleasefromScope: a address %x\n".format(a.nativeAddress))
           aRef = a.ref
           val x = NDArray.ones(Shape(3, 4))
-          print("testAutoReleasefromScope: x address %x\n".format(x.nativeAddress))
         x
       }
       val bRef: NativeResourceRef = b.ref

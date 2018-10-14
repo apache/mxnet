@@ -22,14 +22,11 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import scala.util.control.{ControlThrowable, NonFatal}
-import java.util.Comparator
 
 /**
   * This class manages automatically releasing of [[NativeResource]]s
   */
 class ResourceScope extends AutoCloseable {
-
-  import ResourceScope.{logger, threadLocalScopes, addToLocalScope, removeFromLocalScope}
 
   private[mxnet] val resourceQ = new ArrayBuffer[NativeResource] {
     // this override is required for object equality check instead of content equality
@@ -59,7 +56,6 @@ class ResourceScope extends AutoCloseable {
     * @param resource
     */
   def add(resource: NativeResource): Unit = {
-    logger.info("ResourceScope: Registering Resource %x".format(resource.nativeAddress))
     resourceQ.+=(resource)
   }
 
@@ -69,9 +65,7 @@ class ResourceScope extends AutoCloseable {
     * @param resource
     */
   def remove(resource: NativeResource): Unit = {
-    logger.info("ResourceScope: DeRegistering Resource %x".format(resource.nativeAddress))
     resourceQ.-=(resource)
-    logger.info("resourceQ size: %d".format(resourceQ.size))
   }
 }
 
@@ -83,7 +77,7 @@ object ResourceScope {
     * Captures all Native Resources created using the ResourceScope and
     * at the end of the body, de allocates all the Native resources by calling close on them.
     * This method will not deAllocate NativeResources returned from the block.
-    * @param scope Scope in which to capture the native resources
+    * @param scope (Optional). Scope in which to capture the native resources
     * @param body  block of code to execute in this scope
     * @tparam A return type
     * @return result of the operation, if the result is of type NativeResource, it is not
