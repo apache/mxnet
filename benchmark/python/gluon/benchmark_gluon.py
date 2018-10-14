@@ -41,11 +41,14 @@ parser.add_argument('--batch-size', type=int, default=0)
 parser.add_argument('--num-batches', type=int, default=10)
 parser.add_argument('--gpus', type=str, default='',
                     help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
+parser.add_argument('--global-batchsize', type=bool, default=True,
+                    help='for multi-gpu case, the batchsize will not be multiplied with GPU number if set true.') 
 parser.add_argument('--type', type=str, default='inference', choices=['all', 'training', 'inference'])
 
 opt = parser.parse_args()
 
 num_batches = opt.num_batches
+global_bs = opt.global_batchsize
 dry_run = 10  # use 10 iterations to warm up
 batch_inf = [1, 16, 32, 64, 128, 256]
 batch_train = [1, 2, 4, 8, 16, 32, 64, 126, 256]
@@ -143,25 +146,37 @@ if __name__ == '__main__':
         logging.info('device: %s', devs)
         if runtype == 'inference' or runtype == 'all':
             if bs != 0:
-                batch_sizes = bs * max(1, num_gpus)
+                if not global_bs:
+                    batch_sizes = bs * max(1, num_gpus)
+                else:
+                    batch_sizes = bs
                 fwd_time = score(network, batch_sizes, devs)
                 fps = (batch_sizes * num_batches)/fwd_time
                 logging.info(network + ' inference perf for BS %d is %f img/s', bs, fps)
             else:
                 for batch_size in batch_inf:
-                    batch_sizes = batch_size * max(1, num_gpus)
+                    if not global_bs:
+                        batch_sizes = batch_size * max(1, num_gpus)
+                    else:
+                        batch_sizes = batch_size
                     fwd_time = score(network, batch_sizes, devs)
                     fps = (batch_sizes * num_batches) / fwd_time
                     logging.info(network + ' inference perf for BS %d is %f img/s', batch_size, fps)
         if runtype == 'training' or runtype == 'all':
             if bs != 0:
-                batch_sizes = bs * max(1, num_gpus)
+                if not global_bs:
+                    batch_sizes = bs * max(1, num_gpus)
+                else:
+                    batch_sizes = bs
                 bwd_time = train(network, batch_sizes, devs)
                 fps = (batch_sizes * num_batches) / bwd_time
                 logging.info(network + ' training perf for BS %d is %f img/s', bs, fps)
             else:
                 for batch_size in batch_train:
-                    batch_sizes = batch_size * max(1, num_gpus)
+                    if not global_bs:
+                        batch_sizes = batch_size * max(1, num_gpus)
+                    else:
+                        batch_sizes = batch_size
                     bwd_time = train(network, batch_sizes, devs)
                     fps = (batch_sizes * num_batches) / bwd_time
                     logging.info(network + ' training perf for BS %d is %f img/s', batch_size, fps)
