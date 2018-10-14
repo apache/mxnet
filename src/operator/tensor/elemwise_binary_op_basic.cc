@@ -233,7 +233,17 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
                                 return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                               })
 .add_alias("_mul").add_alias("_Mul")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_mul"});
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto lhs_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward_lhs",
+                             {ograds[0], n->inputs[1]}, nullptr, &n);
+    auto rhs_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward_rhs",
+                             {ograds[0], n->inputs[0]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{lhs_grad, 0, 0});
+    ret.emplace_back(nnvm::NodeEntry{rhs_grad, 0, 0});
+    return ret;
+  });
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_num_inputs(3)
