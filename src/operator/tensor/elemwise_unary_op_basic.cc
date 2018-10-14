@@ -623,7 +623,13 @@ The storage type of ``negative`` output depends upon the input storage type:
    - negative(csr) = csr
 
 )code")
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"negative"});
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto in_grad = MakeNode("negative", n->attrs.name + "_backward", {ograds[0]}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{in_grad, 0, 0});
+    return ret;
+  });
 
 // reciprocal
 MXNET_OPERATOR_REGISTER_UNARY(reciprocal)
