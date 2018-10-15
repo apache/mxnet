@@ -790,47 +790,6 @@ def test_create_sparse_nd_from_sparse():
 
 
 @with_seed()
-def test_create_sparse_nd_empty():
-    def check_empty(shape, stype):
-        arr = mx.nd.empty(shape, stype=stype)
-        assert(arr.stype == stype)
-        assert same(arr.asnumpy(), np.zeros(shape))
-
-    def check_csr_empty(shape, dtype, ctx):
-        arr = mx.nd.sparse.csr_matrix(shape, dtype=dtype, ctx=ctx)
-        assert(arr.stype == 'csr')
-        assert(arr.dtype == dtype)
-        assert(arr.context == ctx)
-        assert same(arr.asnumpy(), np.zeros(shape))
-        # check the default value for dtype and ctx
-        arr = mx.nd.sparse.csr_matrix(shape)
-        assert(arr.dtype == np.float32)
-        assert(arr.context == Context.default_ctx)
-
-    def check_rsp_empty(shape, dtype, ctx):
-        arr = mx.nd.sparse.row_sparse_array(shape, dtype=dtype, ctx=ctx)
-        assert(arr.stype == 'row_sparse')
-        assert(arr.dtype == dtype)
-        assert(arr.context == ctx)
-        assert same(arr.asnumpy(), np.zeros(shape))
-        # check the default value for dtype and ctx
-        arr = mx.nd.sparse.row_sparse_array(shape)
-        assert(arr.dtype == np.float32)
-        assert(arr.context == Context.default_ctx)
-
-    stypes = ['csr', 'row_sparse']
-    shape = rand_shape_2d()
-    shape_3d = rand_shape_3d()
-    dtype = np.int32
-    ctx = mx.cpu(1)
-    for stype in stypes:
-        check_empty(shape, stype)
-    check_csr_empty(shape, dtype, ctx)
-    check_rsp_empty(shape, dtype, ctx)
-    check_rsp_empty(shape_3d, dtype, ctx)
-
-
-@with_seed()
 def test_synthetic_dataset_generator():
     def test_powerlaw_generator(csr_arr, final_row=1):
         """Test power law distribution
