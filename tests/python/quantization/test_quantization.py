@@ -374,7 +374,7 @@ def test_quantize_params():
     for name in offline_params:
         params[name] = mx.nd.uniform(shape=(2, 2))
     qsym = mx.contrib.quant._quantize_symbol(sym, offline_params=offline_params)
-    qparams = mx.contrib.quant._quantize_params(qsym, params)
+    qparams = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
     param_names = params.keys()
     qparam_names = qparams.keys()
     for name in qparam_names:
@@ -406,7 +406,7 @@ def get_fp32_residual():
     fc = mx.sym.FullyConnected(pool, num_hidden=10, flatten=True, name='fc')
     sym = mx.sym.SoftmaxOutput(fc, grad_scale=1, ignore_label=-1, multi_output=False,
                                out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
-    return sym 
+    return sym
 
 @with_seed()
 def test_quantize_model():
@@ -418,7 +418,7 @@ def test_quantize_model():
                     assert k in qparams
                     assert same(v.asnumpy(), qparams[k].asnumpy())
             else:
-                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params)
+                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
                 assert len(qparams) == len(qparams_ground_truth)
                 for k, v in qparams_ground_truth.items():
                     assert k in qparams
@@ -494,7 +494,7 @@ def test_quantize_residual_unit():
                     assert k in qparams
                     assert same(v.asnumpy(), qparams[k].asnumpy())
             else:
-                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params)
+                qparams_ground_truth = mx.contrib.quant._quantize_params(qsym, params, th_dict = {})
                 assert len(qparams) == len(qparams_ground_truth)
                 for k, v in qparams_ground_truth.items():
                     assert k in qparams
@@ -525,7 +525,7 @@ def test_quantize_residual_unit():
             mod.forward(batch, is_train=False)
             for output in mod.get_outputs():
                 output.wait_to_read()
-             
+
 
         sym = get_fp32_residual()
         mod = Module(symbol=sym)

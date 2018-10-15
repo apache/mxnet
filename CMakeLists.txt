@@ -302,7 +302,7 @@ else()
 endif()
 
 if(USE_ASAN)
-  set(CMAKE_CFLAGS "${CMAKE_CFLAGS} -fno-omit-frame-pointer -fsanitize=address")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
   set(GTEST_LIBRARIES "${GTEST_LIBRARIES} -fsanitize=address")

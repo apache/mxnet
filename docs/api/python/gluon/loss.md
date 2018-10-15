@@ -26,6 +26,7 @@ This package includes several commonly used loss functions in neural networks.
     TripletLoss
     CTCLoss
     CosineEmbeddingLoss
+    PoissonNLLLoss
 ```
 
 

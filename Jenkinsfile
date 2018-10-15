@@ -89,6 +89,30 @@ def python3_gpu_ut_nocudnn(docker_container_name) {
   }
 }
 
+def deploy_docs() {
+  parallel 'Docs': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/docs') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.init_git()
+          utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
+          sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+        }
+      }
+    }
+  },
+  'Julia docs': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/julia-docs') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init('cpu', mx_lib)
+          utils.docker_run('ubuntu_cpu', 'deploy_jl_docs', false)
+        }
+      }
+    }
+  }
+}
+
 node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
@@ -746,6 +770,16 @@ core_logic: {
         }
       }
     },
+    'Julia 0.6: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-julia06-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia06', false)
+          }
+        }
+      }
+    },
 
     'Python 2: CPU Win':{
       node(NODE_WINDOWS_CPU) {
@@ -911,15 +945,7 @@ core_logic: {
   }
 
   stage('Deploy') {
-    node(NODE_LINUX_CPU) {
-      ws('workspace/docs') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          utils.init_git()
-          utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-          sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-        }
-      }
-    }
+    deploy_docs()
   }
 }
 ,

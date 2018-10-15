@@ -31,6 +31,7 @@
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
+#include "../operator/subgraph/subgraph_property.h"
 
 namespace mxnet {
 namespace op {
@@ -645,30 +646,29 @@ int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHand
 
 int MXQuantizeSymbol(SymbolHandle sym_handle,
                      SymbolHandle *ret_sym_handle,
-                     const mx_uint num_excluded_symbols,
-                     const SymbolHandle *excluded_symbols,
+                     const mx_uint num_excluded_op_names,
+                     const char **excluded_op_names,
                      const mx_uint num_offline,
                      const char **offline_params,
-                     const char *quantized_dtype) {
+                     const char *quantized_dtype,
+                     const bool calib_quantize) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
-  std::unordered_set<nnvm::NodePtr> excluded_nodes;
-  for (size_t i = 0; i < num_excluded_symbols; ++i) {
-    nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(excluded_symbols[i]);
-    for (const auto& e : sym->outputs) {
-      excluded_nodes.emplace(e.node);
-    }
+  std::unordered_set<std::string> excluded_node_names;
+  for (size_t i = 0; i < num_excluded_op_names; ++i) {
+    excluded_node_names.emplace(excluded_op_names[i]);
   }
-  g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_nodes));
   std::unordered_set<std::string> offline;
   for (size_t i = 0; i < num_offline; ++i) {
     offline.emplace(offline_params[i]);
   }
   std::string quantized_type(quantized_dtype);
+  g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
+  g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(calib_quantize);
   g = ApplyPass(std::move(g), "QuantizeGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
@@ -694,5 +694,23 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   g = ApplyPass(std::move(g), "SetCalibTableToQuantizedGraph");
   s->outputs = g.outputs;
   *ret_qsym_handle = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
+int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
+                         SymbolHandle *ret_sym_handle) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  mxnet::op::SubgraphPropertyPtr property =
+      mxnet::op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(
+          backend);
+  g.attrs["subgraph_property"] =
+      std::make_shared<nnvm::any>(std::move(property));
+  g = ApplyPass(std::move(g), "PartitionGraph");
+  s->outputs = g.outputs;
+  *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }

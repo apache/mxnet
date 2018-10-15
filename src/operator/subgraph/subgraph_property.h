@@ -62,16 +62,22 @@ class SubgraphSelector {
    * \brief Determines if to select input_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its input_node should be selected
    * \param input_node the input node of the cur_node
+   * \return true if input_node is selected
    */
   virtual bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) = 0;
   /*!
    * \brief Determines if to select output_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its output_node should be selected
    * \param output_node the output node of the cur_node
+   * \return true if output_node is selected
    */
   virtual bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) = 0;
-  // Post processes pre-selected subgraph nodes. Return a list of nodes that
-  // users want to keep in subgraph(s).
+  /*!
+   * \brief Post processes pre-selected subgraph nodes. Return a list of nodes that
+   *        users want to keep in subgraph(s).
+   * \param candidates re-selected subgraph nodes to filt
+   * \return a list of nodes to keep
+   */
   virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
     return candidates;
   }
@@ -81,30 +87,65 @@ using SubgraphSelectorPtr = std::shared_ptr<SubgraphSelector>;
 
 /*!
  * \brief This provides a set of properties for partitioning a graph into subgraphs,
- * reconstructing a new graph from the subgraphs and creating a subgraph
- * operator to execute the subgraph.
+ *        reconstructing a new graph from the subgraphs and creating a subgraph
+ *        operator to execute the subgraph.
  */
 class SubgraphProperty {
  public:
-  // the criteria of selecting the subgraph nodes.
+  /*!
+   * \brief The criteria of selecting the subgraph nodes.
+   */
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const = 0;
-  // create an nnvm node for a given subgraph. Here users can customize how to
-  // execute the operators in the subgraph.
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &s,
+  /*!
+   * \brief Create an nnvm node for a given subgraph. Here users can customize how to
+   *        execute the operators in the subgraph.
+   * \param sym the symbol to create subgraph node
+   * \param subgraph_id subgraph id
+   */
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const = 0;
-  // set an attr with name in the attr map
+  /*!
+   * \brief Connect subgraph internal output with external output entries.
+   *        By default, each output entry will connect to an unique internal output.
+   * \param subgraph_node the subgraph node to connect output
+   * \param output_entries external output entries depending on this subgraph node
+   */
+  virtual void ConnectSubgraphOutputs(const nnvm::NodePtr subgraph_node,
+                                      std::vector<nnvm::NodeEntry*>* output_entries) const {
+    for (size_t i = 0; i < output_entries->size(); ++i) {
+      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
+    }
+  }
+  /*!
+   * \brief Connect subgraph internal input with external input entries.
+   * By default, each input entry will connect in top sorted order.
+   * \param subgraph_node the subgraph node to connect input
+   * \param input_entries input entries inside subgraph
+   * \param orig_input_entries input entries outside subgraph
+   */
+  virtual void ConnectSubgraphInputs(const nnvm::NodePtr subgraph_node,
+                                     std::vector<nnvm::NodeEntry*>* input_entries,
+                                     std::vector<nnvm::NodeEntry>* orig_input_entries) const {
+    subgraph_node->inputs = *orig_input_entries;
+  }
+  /*!
+   * \brief Set an attr with name in the attr map.
+   */
   template<typename T>
   SubgraphProperty& SetAttr(const std::string& name, const T& value) {
     attrs_[name] = std::make_shared<dmlc::any>(value);
     return *this;
   }
-  // get the attr with the name
+  /*!
+   * \brief Get the attr with the name.
+   */
   template<typename T>
   const T& GetAttr(const std::string& name) const {
     auto it = attrs_.find(name);
     CHECK(it != attrs_.end()) << "Cannot find attribute " << name << " in SubgraphProperty";
     return nnvm::get<T>(*it->second);
   }
+
  protected:
   std::unordered_map<std::string, std::shared_ptr<nnvm::any>> attrs_;
 };

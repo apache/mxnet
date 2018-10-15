@@ -122,4 +122,7 @@ juLog -name=BuildWithoutCUDNN -error=Error build
 # python: multi gpus lenet + mnist
 juLog -name=Python.Multi.Lenet.Mnist -error=Error python multi_lenet.py
 
+# python: large tensor
+juLog -name=Python.LargeTensor -error=Fail python test_large_array.py
+
 exit $errors
