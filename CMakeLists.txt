@@ -114,12 +114,12 @@ endif()
 #
 # It has following flavours:
 #
-# * MKL is a full library, containing all the functionality. It is free under
+# * MKL is a complete full math library, containing basic and LAPACK functions. It is free under
 #   community support licensing (https://software.intel.com/en-us/articles/free-mkl),
 #   but needs to be downloaded and installed manually.
 #
-# * MKLML is a subset of MKL. It contains smaller number of functions to reduce the
-#   size of the download and reduce the number of dynamic libraries user needs. This
+# * MKLML is a subset of MKL. It contains a smaller number of functions to reduce the
+#   size of the download and reduce the number of dynamic libraries the user needs. This
 #   is the most effective option since it can be downloaded and installed automatically
 #   by the cmake script (see cmake/DownloadMKLML.cmake).
 #
