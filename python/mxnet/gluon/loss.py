@@ -23,11 +23,7 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SigmoidBinaryCrossEntropyLoss', 'SigmoidBCELoss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
-<<<<<<< HEAD
-           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'CosineEmbeddingLoss']
-=======
-           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss']
->>>>>>> upstream/master
+           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss', 'CosineEmbeddingLoss']
 
 import numpy as np
 from .. import ndarray

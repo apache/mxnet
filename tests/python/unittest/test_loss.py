@@ -349,7 +349,6 @@ def test_triplet_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 @with_seed()
-<<<<<<< HEAD
 def test_cosine_loss():
     #Generating samples
     input1 = mx.nd.random.randn(3, 2)
@@ -366,7 +365,7 @@ def test_cosine_loss():
     numpy_loss = mx.nd.where(label == 1, 1-numerator/denominator, \
     mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1))
     assert_almost_equal(loss.asnumpy(), numpy_loss.asnumpy(), rtol=1e-3, atol=1e-5)
-=======
+
 def test_poisson_nllloss():
     pred = mx.nd.random.normal(shape=(3, 4))
     min_pred = mx.nd.min(pred)
@@ -421,7 +420,7 @@ def test_poisson_nllloss_mod():
             initializer=mx.init.Normal(sigma=0.1), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
->>>>>>> upstream/master
+
 
 if __name__ == '__main__':
     import nose
