@@ -44,6 +44,9 @@ def get_data_shapes(batch_size):
     image_shape = (3, 300, 300)
     return [('data', (batch_size,)+image_shape)]
 
+def get_label_shapes(batch_size):
+    return [('label', (batch_size,) + (42, 6))]
+
 def get_data(batch_size):
     data_shapes = get_data_shapes(batch_size)
     data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.cpu()) for _, shape in data_shapes]
@@ -80,16 +83,20 @@ if __name__ == '__main__':
     else:
         net = get_symbol(network, data_shape[1], num_classes=num_classes,
                          nms_thresh=0.4, force_suppress=True)
+    if not 'label' in net.list_arguments():
+        label = mx.sym.Variable(name='label')
+        net = mx.sym.Group([net, label])
     
     num_batches = 100
     dry_run = 5   # use 5 iterations to warm up
     
     for bs in batch_sizes:
         batch = get_data(bs)
-        mod = mx.mod.Module(net, label_names=None, context=mx.cpu())
+        mod = mx.mod.Module(net, label_names=('label',), context=mx.cpu())
         mod.bind(for_training = False,
                  inputs_need_grad = False,
-                 data_shapes = get_data_shapes(bs))
+                 data_shapes = get_data_shapes(bs),
+                 label_shapes = get_label_shapes(bs))
         mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
 
         # get data
