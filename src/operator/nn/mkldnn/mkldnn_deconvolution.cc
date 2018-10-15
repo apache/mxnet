@@ -282,6 +282,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     bool has_bias = (bias != nullptr);
+    MKLDNNDeconvForward fwd(param, data, weights, has_bias, output);
     auto ins_ret = AddToCache(fwds, key, fwd);
     CHECK(ins_ret.second);
     it = ins_ret.first;

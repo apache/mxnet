@@ -156,8 +156,7 @@ static inline int GetMKLDNNCacheSize() {
 template<class S, class I, class H>
 static std::pair<S,I> AddToCache(std::unordered_map<S,I,H> &cache, S &key, I &item) {
   int mkldnn_cache_size = GetMKLDNNCacheSize();
-  if (mkldnn_cache_size == -1) return;
-  if (static_cast<int>(cache.size()) > mkldnn_cache_size)
+  if (mkldnn_cache_size != -1 && static_cast<int>(cache.size()) > mkldnn_cache_size)
     cache.erase(cache.begin());
   return cache.insert(std::pair<S,I>(key,item));
 }
