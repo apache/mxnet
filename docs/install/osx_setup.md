@@ -65,10 +65,10 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install openblas
 	brew tap homebrew/core
 	brew install opencv
-	
+
 	# If building with MKLDNN
-    brew install llvm
-    
+	brew install llvm
+
 	# Get pip
 	easy_install pip
 	# For visualization of network graphs
