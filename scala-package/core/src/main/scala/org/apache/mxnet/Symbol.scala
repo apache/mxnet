@@ -787,7 +787,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
     }
 
     val execHandle = new ExecutorHandleRef
-    val sharedHadle = if (sharedExec != null) sharedExec.handle else 0L
+    val sharedHandle = if (sharedExec != null) sharedExec.handle else 0L
     checkCall(_LIB.mxExecutorBindEX(handle,
                                    ctx.deviceTypeid,
                                    ctx.deviceId,
@@ -800,7 +800,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
                                    argsGradHandle,
                                    reqsArray,
                                    auxArgsHandle,
-                                   sharedHadle,
+                                   sharedHandle,
                                    execHandle))
     val executor = new Executor(execHandle.value, this.clone())
     executor.argArrays = argsNDArray

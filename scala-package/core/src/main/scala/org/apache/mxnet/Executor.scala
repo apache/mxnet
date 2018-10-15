@@ -64,6 +64,12 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   // cannot determine the off-heap size of this object
   override val bytesAllocated: Long = 0
   override val ref: NativeResourceRef = super.register()
+  override def dispose(): Unit = {
+    if (!disposed) {
+      super.dispose()
+      outputs.foreach(o => o.dispose())
+    }
+  }
 
   /**
    * Return a new executor with the same symbol and shared memory,

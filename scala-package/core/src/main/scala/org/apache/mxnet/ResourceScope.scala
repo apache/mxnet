@@ -17,8 +17,11 @@
 
 package org.apache.mxnet
 
+import java.util.HashSet
+
 import org.slf4j.LoggerFactory
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import scala.util.control.{ControlThrowable, NonFatal}
@@ -28,14 +31,12 @@ import scala.util.control.{ControlThrowable, NonFatal}
   */
 class ResourceScope extends AutoCloseable {
 
-  private[mxnet] val resourceQ = new ArrayBuffer[NativeResource] {
-    // this override is required for object equality check instead of content equality
-    override def indexOf[B >: NativeResource](elem: B, from: Int): Int = {
-      indexWhere(elem.asInstanceOf[NativeResource].nativeAddress ==
-        _.nativeAddress, from)
-    }
-    override def lastIndexOf[B >: NativeResource](elem: B): Int = {
-      lastIndexWhere(elem.asInstanceOf[NativeResource].nativeAddress == _.nativeAddress)
+  // HashSet does not take a custom comparator
+  private[mxnet] val resourceQ = new mutable.TreeSet[NativeResource]()(nativeAddressOrdering)
+
+  private object nativeAddressOrdering extends Ordering[NativeResource] {
+    def compare(a: NativeResource, b: NativeResource): Int = {
+      a.nativeAddress compare  b.nativeAddress
     }
   }
 
