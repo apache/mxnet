@@ -80,34 +80,34 @@ private[mxnet] object JavaNDArrayMacro {
       // scalastyle:on
       // Construct Class Implementation (e.g normBuilder)
       var classImpl = ListBuffer[String]()
-      ndarrayfunction.listOfArgs.foreach({ ndarrayarg =>
+      ndarrayfunction.listOfArgs.foreach({ ndarrayArg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
-        var currArgName = ndarrayarg.argName match {
+        var currArgName = ndarrayArg.argName match {
           case "var" => "vari"
           case "type" => "typeOf"
-          case _ => ndarrayarg.argName
+          case _ => ndarrayArg.argName
         }
-        if (ndarrayarg.isOptional) {
-          OptionArgDef += s"private var $currArgName : ${ndarrayarg.argType} = null"
-          val tempDef = s"def set$currArgName($currArgName : ${ndarrayarg.argType})"
+        if (ndarrayArg.isOptional) {
+          OptionArgDef += s"private var $currArgName : ${ndarrayArg.argType} = null"
+          val tempDef = s"def set$currArgName($currArgName : ${ndarrayArg.argType})"
           val tempImpl = s"this.$currArgName = $currArgName\nthis"
           classImpl += s"$tempDef = {$tempImpl}"
         } else {
-          argDef += s"$currArgName : ${ndarrayarg.argType}"
+          argDef += s"$currArgName : ${ndarrayArg.argType}"
         }
         // NDArray arg implementation
         val returnType = "org.apache.mxnet.javaapi.NDArray"
         val base =
-          if (ndarrayarg.argType.equals(returnType)) {
+          if (ndarrayArg.argType.equals(returnType)) {
             s"args += this.$currArgName"
-          } else if (ndarrayarg.argType.equals(s"Array[$returnType]")){
+          } else if (ndarrayArg.argType.equals(s"Array[$returnType]")){
             s"this.$currArgName.foreach(args+=_)"
           } else {
-            "map(\"" + ndarrayarg.argName + "\") = this." + currArgName
+            "map(\"" + ndarrayArg.argName + "\") = this." + currArgName
           }
         impl.append(
-          if (ndarrayarg.isOptional) s"if (this.$currArgName != null) $base"
+          if (ndarrayArg.isOptional) s"if (this.$currArgName != null) $base"
           else base
         )
       })

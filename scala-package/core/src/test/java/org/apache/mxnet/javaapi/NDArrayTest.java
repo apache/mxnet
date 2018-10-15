@@ -34,11 +34,7 @@ public class NDArrayTest {
         int[] arr = new int[]{1, 3};
         assertTrue(Arrays.equals(nd.shape().toArray(), arr));
         assertTrue(nd.at(0).at(0).toArray()[0] == 1.0f);
-        List<Float> list = new ArrayList<Float>();
-        list.add(1.0f);
-        list.add(2.0f);
-        list.add(3.0f);
-        nd.dispose();
+        List<Float> list = Arrays.asList(1.0f, 2.0f, 3.0f);
         // Second way creating NDArray
         nd = NDArray.array(list,
                 new Shape(new int[]{1, 3}),
@@ -50,7 +46,7 @@ public class NDArrayTest {
     public void testZeroOneEmpty(){
         NDArray ones = NDArray.ones(new Context("cpu", 0), new int[]{100, 100});
         NDArray zeros = NDArray.zeros(new Context("cpu", 0), new int[]{100, 100});
-        NDArray empty = NDArray.zeros(new Context("cpu", 0), new int[]{100, 100});
+        NDArray empty = NDArray.empty(new Context("cpu", 0), new int[]{100, 100});
         int[] arr = new int[]{100, 100};
         assertTrue(Arrays.equals(ones.shape().toArray(), arr));
         assertTrue(Arrays.equals(zeros.shape().toArray(), arr));
