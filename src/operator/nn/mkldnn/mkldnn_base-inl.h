@@ -155,7 +155,7 @@ static inline int GetMKLDNNCacheSize() {
 
 // TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
 template<class S, class I>
-static std::pair<S,I> AddToCache(std::unordered_map<S,I,op::OpHash> &cache, std::pair<S,I> &item) {
+static std::pair<S,I> AddToCache(std::unordered_map<S,I,mxnet::op::OpHash> &cache, std::pair<S,I> &item) {
   int mkldnn_cache_size = GetMKLDNNCacheSize();
   if (mkldnn_cache_size == -1) return;
   if (static_cast<int>(cache.size()) > mkldnn_cache_size)
