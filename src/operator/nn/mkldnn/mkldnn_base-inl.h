@@ -154,11 +154,13 @@ static inline int GetMKLDNNCacheSize() {
 
 // TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
 template<class S, class I, class H>
-static std::pair<std::unordered_map<S,I,H>::iterator, bool> AddToCache(std::unordered_map<S,I,H> &cache, S &key, I &item) {
+static std::unordered_map<S,I,H>::iterator AddToCache(std::unordered_map<S,I,H> &cache, S &key, I &item) {
   int mkldnn_cache_size = GetMKLDNNCacheSize();
   if (mkldnn_cache_size != -1 && static_cast<int>(cache.size()) > mkldnn_cache_size)
     cache.erase(cache.begin());
-  return cache.insert(std::pair<S,I>(key,item));
+  auto ins_return = cache.insert(std::pair<S,I>(key,item));
+  CHECK(ins_return.second);
+  return ins_return.first;
 }
 
 /*
