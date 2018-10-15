@@ -772,15 +772,15 @@ class PoissonNLLLoss(Loss):
 class CosineEmbeddingLoss(Loss):
     r"""For a target label 1 or -1, vectors target and pred, the function computes the cosine distance
     between the vectors. This can be interpretted as how similar/dissimilar two input vectors are.
- 
+
     .. math::
- 
+
         L = \sum_i \begin{cases} 1 - {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = 1\\
                          {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = -1 \end{cases}\\
         cos\_sim(input1, input2) = \frac{{input1}_i.{input2}_i}{||{input1}_i||.||{input2}_i||}
- 
+
     `input1`, `input2` can have arbitrary shape as long as they have the same number of elements.
- 
+
     Parameters
     ----------
     weight : float or None
@@ -789,7 +789,7 @@ class CosineEmbeddingLoss(Loss):
         The axis that represents mini-batch.
     margin : float
         Margin of separation between correct and incorrect pair.
- 
+
 
     Inputs:
         - **input1**: a tensor with arbitrary shape
@@ -800,30 +800,29 @@ class CosineEmbeddingLoss(Loss):
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
         - **label**: A 1-D tensor indicating for each pair input1 and input2, target label is 1 or -1
- 
+
     Outputs:
         - **loss**: The loss tensor with shape (batch_size,).
     """
     def __init__(self, weight=None, batch_axis=0, margin=0, **kwargs):
         super(CosineEmbeddingLoss, self).__init__(weight, batch_axis, **kwargs)
         self._margin = margin
- 
+
     def hybrid_forward(self, F, input1, input2, label):
-        
         input1 = _reshape_like(F, input1, input2)
         label = label.reshape((-1, 1))
         cos_sim = self._cosine_similarity(F, input1, input2)
         y_1 = label == 1
         y_minus_1 = label == -1
         cos_sim_a = (1 - cos_sim) * y_1
- 
+
         if F is ndarray:
             z_array = F.array([0])
         else:
             z_array = F.zeros((1, 1))
         cos_sim_b = F.broadcast_maximum(z_array, y_minus_1 * (cos_sim - self._margin), axis=1)
         return cos_sim_a + cos_sim_b
- 
+
     def _cosine_similarity(self, F, x, y, axis=-1):
         # Calculates the cosine similarity between 2 vectors
         x_norm = F.norm(x, axis=axis).reshape(-1, 1)
