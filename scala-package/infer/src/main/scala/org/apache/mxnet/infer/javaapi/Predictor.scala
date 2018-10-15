@@ -32,7 +32,7 @@ class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
 
 
   /**
-    * Takes input as List one dimensional arrays and creates the NDArray needed for inference
+    * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
     *
     * @param input:            A List of a one-dimensional array.
@@ -50,7 +50,7 @@ class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
     * This method is useful when the input is a batch of data
     * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
     *
-    * @param input       IndexedSequence NDArrays
+    * @param input       List of NDArrays
     * @return                  Output of predictions as NDArrays
     */
   def predictWithNDArray(input: java.util.List[NDArray]): java.util.List[NDArray] = {
