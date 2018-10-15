@@ -398,7 +398,8 @@ class RNNCell(HybridRecurrentCell):
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
                                num_hidden=self._hidden_size,
                                name=prefix+'h2h')
-        output = self._get_activation(F, i2h + h2h, self._activation,
+        i2h_plus_h2h = F.elemwise_add(i2h, h2h, name=prefix+'plus0')
+        output = self._get_activation(F, i2h_plus_h2h, self._activation,
                                       name=prefix+'out')
 
         return output, [output]
@@ -511,7 +512,7 @@ class LSTMCell(HybridRecurrentCell):
                                num_hidden=self._hidden_size*4, name=prefix+'i2h')
         h2h = F.FullyConnected(data=states[0], weight=h2h_weight, bias=h2h_bias,
                                num_hidden=self._hidden_size*4, name=prefix+'h2h')
-        gates = i2h + h2h
+        gates = F.elemwise_add(i2h, h2h, name=prefix+'plus0')
         slice_gates = F.SliceChannel(gates, num_outputs=4, name=prefix+'slice')
         in_gate = self._get_activation(
             F, slice_gates[0], self._recurrent_activation, name=prefix+'i')
@@ -521,9 +522,10 @@ class LSTMCell(HybridRecurrentCell):
             F, slice_gates[2], self._activation, name=prefix+'c')
         out_gate = self._get_activation(
             F, slice_gates[3], self._recurrent_activation, name=prefix+'o')
-        next_c = F._internal._plus(forget_gate * states[1], in_gate * in_transform,
+        next_c = F._internal._plus(F.elemwise_mul(forget_gate, states[1], name=prefix+'mul0'),
+                                   F.elemwise_mul(in_gate, in_transform, name=prefix+'mul1'),
                                    name=prefix+'state')
-        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation),
+        next_h = F._internal._mul(out_gate, F.Activation(next_c, act_type=self._activation, name=prefix+'activation0'),
                                   name=prefix+'out')
 
         return next_h, [next_h, next_c]
@@ -635,15 +637,22 @@ class GRUCell(HybridRecurrentCell):
         h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3,
                                            name=prefix+'h2h_slice')
 
-        reset_gate = F.Activation(i2h_r + h2h_r, act_type="sigmoid",
+        reset_gate = F.Activation(F.elemwise_add(i2h_r, h2h_r, name=prefix+'plus0'), act_type="sigmoid",
                                   name=prefix+'r_act')
-        update_gate = F.Activation(i2h_z + h2h_z, act_type="sigmoid",
+        update_gate = F.Activation(F.elemwise_add(i2h_z, h2h_z, name=prefix+'plus1'), act_type="sigmoid",
                                    name=prefix+'z_act')
 
-        next_h_tmp = F.Activation(i2h + reset_gate * h2h, act_type="tanh",
+        next_h_tmp = F.Activation(F.elemwise_add(i2h,
+                                                 F.elemwise_mul(reset_gate, h2h, name=prefix+'mul0'),
+                                                 name=prefix+'plus2'),
+                                  act_type="tanh",
                                   name=prefix+'h_act')
 
-        next_h = F._internal._plus((1. - update_gate) * next_h_tmp, update_gate * prev_state_h,
+        ones = F.ones_like(update_gate, name=prefix+"ones_like0")
+        next_h = F._internal._plus(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
+                                                  next_h_tmp,
+                                                  name=prefix+'mul1'),
+                                   F.elemwise_mul(update_gate, prev_state_h, name=prefix+'mul20'),
                                    name=prefix+'out')
 
         return next_h, [next_h]
