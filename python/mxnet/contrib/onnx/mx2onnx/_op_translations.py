@@ -2086,7 +2086,31 @@ def convert_power(node, **kwargs):
         "Pow",
         [input_node_a, input_node_b],
         [name],
-        name=None
+        name=name
+    )
+    return [node]
+
+@mx_op.register("broadcast_power")
+def convert_broadcast_power(node, **kwargs):
+    """Map MXNet's _power operator attributes to onnx's Pow operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
+
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
+
+    node = onnx.helper.make_node(
+        "Pow",
+        [input_node_a, input_node_b],
+        [name],
+        name=name
     )
     return [node]
 
