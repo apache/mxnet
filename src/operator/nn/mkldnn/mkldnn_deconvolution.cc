@@ -282,7 +282,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     bool has_bias = (bias != nullptr);
-    auto ins_ret = AddToCache(fwds, std::pair<DeconvSignature, MKLDNNDeconvForward>(key, fwd));
+    auto ins_ret = AddToCache(fwds, key, fwd);
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
@@ -369,7 +369,7 @@ static inline MKLDNNDeconvBackwardData &GetDeconvBwdData(
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNDeconvBackwardData bwd(param, data, weights, output);
-    auto ins_ret = AddToCache(bwds, std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardData>(key, bwd));
+    auto ins_ret = AddToCache(bwds, key, bwd);
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
