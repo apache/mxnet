@@ -306,7 +306,7 @@ This limitations of this experimental feature are:
 
 - This feature only support inference optimization. You should unset this environment variable for training.
 
-- This feature will broken GPU pass when building MXNet both with MKL-DNN and CUDA. You should unset this environment variable to use CUDA.
+- On a build integrating both MKL-DNN and CUDA backends, only CPU features are fully supported.  
 
 Technical and Performance details are available [here](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
 
