@@ -820,7 +820,7 @@ class CosineEmbeddingLoss(Loss):
         if F is ndarray:
             z_array = F.array([0])
         else:
-            z_array = F.zeros((1,1))
+            z_array = F.zeros((1, 1))
         cos_sim_b = F.broadcast_maximum(z_array, y_minus_1 * (cos_sim - self._margin), axis=1)
         return cos_sim_a + cos_sim_b
  
@@ -832,5 +832,5 @@ class CosineEmbeddingLoss(Loss):
         if F is ndarray:
             eps_arr = F.array([1e-12])
         else:
-            eps_arr = F.full((1,1),1e-12)
+            eps_arr = F.full((1, 1), 1e-12)
         return (x_dot_y / F.broadcast_maximum(x_norm * y_norm, eps_arr))
