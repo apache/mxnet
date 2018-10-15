@@ -71,8 +71,11 @@ class RandGenerator<cpu, DType> {
       return dist_uniform(*engine_);
     }
 
-    MSHADOW_XINLINE FType discrete_uniform(const int lower, const int upper) {
-      std::uniform_int_distribution<FType> dist_discrete_uniform(lower, upper);
+    MSHADOW_XINLINE DType discrete_uniform(const int lower, const int upper) {
+      typedef typename std::conditional<std::is_integral<DType>::value,
+      std::uniform_int_distribution<DType>,
+      std::uniform_real_distribution<FType>>::type GType;
+      GType dist_discrete_uniform(lower, upper);
       return dist_discrete_uniform(*engine_);
     }
 
@@ -148,12 +151,6 @@ class RandGenerator<gpu, DType> {
 
     MSHADOW_FORCE_INLINE __device__ float normal() {
       return curand_normal(&state_);
-    }
-
-    template<typename IType>
-    MSHADOW_XINLINE DType discrete_uniform(const IType *lower, const IType *upper) {
-      std::uniform_int_distribution<DType> dist_discrete_uniform(*lower, *upper);
-      return dist_discrete_uniform(*engine_);
     }
 
    private:
