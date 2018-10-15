@@ -147,10 +147,7 @@ static MKLDNNActForward &GetActForward(const ActivationParam& param,
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNActForward fwd(param, ctx.is_train, in_data, in_mem);
-    if (MKLDNNCacheExceeded(fwds.size()))
-      fwds.clear();
-    auto ins_ret = fwds.insert(std::pair<MKLDNNActSignature, MKLDNNActForward>(
-            key, fwd));
+    auto ins_ret = AddToCache(fwds, std::pair<MKLDNNActSignature, MKLDNNActForward>(key, fwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
@@ -263,10 +260,7 @@ static inline MKLDNNActBackward &GetActBackward(const ActivationParam &param,
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNActBackward bwd(param, in_data, in_mem, *out_grad.GetMKLDNNData());
-    if (MKLDNNCacheExceeded(bwds.size()))
-      bwds.clear();
-    auto ins_ret =
-        bwds.insert(std::pair<MKLDNNActSignature, MKLDNNActBackward>(key, bwd));
+    auto ins_ret = AddToCache(bwds, std::pair<MKLDNNActSignature, MKLDNNActBackward>(key, bwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }

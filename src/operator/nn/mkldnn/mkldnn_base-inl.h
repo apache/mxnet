@@ -58,6 +58,7 @@
 #include "mxnet/ndarray.h"
 #include "mxnet/resource.h"
 #include "mxnet/op_attr_types.h"
+#include "../../operator_common.h"
 using namespace mkldnn;
 namespace mxnet {
 extern bool EnableMkldnnWarnGenerated();
@@ -147,16 +148,19 @@ static inline bool MKLDNNEnvSet() {
   return is_mkldnn_enabled;
 }
 
-static inline int GetMKLDNNSize() {
+static inline int GetMKLDNNCacheSize() {
   static int mkldnn_cache_size = dmlc::GetEnv("MXNET_MKLDNN_CACHE_SIZE", -1);
   return mkldnn_cache_size;
 }
 
 // TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
-static inline bool MKLDNNCacheExceeded(size_t cache_size) {
-  int mkldnn_cache_size = GetMKLDNNSize();
-  if (mkldnn_cache_size == -1) return false;
-  return static_cast<int>(cache_size) > mkldnn_cache_size;
+template<class S, class I>
+static std::pair<S,I> AddToCache(std::unordered_map<S,I,op::OpHash> &cache, std::pair<S,I> &item) {
+  int mkldnn_cache_size = GetMKLDNNCacheSize();
+  if (mkldnn_cache_size == -1) return;
+  if (static_cast<int>(cache.size()) > mkldnn_cache_size)
+    cache.erase(cache.begin());
+  return cache.insert(item);
 }
 
 /*
