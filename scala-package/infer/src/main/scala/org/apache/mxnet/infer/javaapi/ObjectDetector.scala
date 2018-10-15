@@ -35,16 +35,41 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
     new org.apache.mxnet.infer.ObjectDetector(modelPathPrefix, informationDesc, inContexts, Some(epoch))
   }
 
+  /**
+    * Detects objects and returns bounding boxes with corresponding class/label
+    *
+    * @param inputImage       Path prefix of the input image
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of
+    *                         (class, [probability, xmin, ymin, xmax, ymax])
+    */
   def imageObjectDetect(inputImage: BufferedImage, topK: Int): java.util.List[java.util.List[Pair[String, java.util.List[java.lang.Float]]]] = {
     val ret = objectDetector.imageObjectDetect(inputImage, Some(topK))
     (ret map {a=> (a map {entry => new Pair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
   }
 
+  /**
+    * Takes input images as NDArrays. Useful when you want to perform multiple operations on
+    * the input array, or when you want to pass a batch of input images.
+    *
+    * @param input            Indexed Sequence of NDArrays
+    * @param topK             (Optional) How many top_k (sorting will be based on the last axis)
+    *                         elements to return. If not passed, returns all unsorted output.
+    * @return                 List of list of tuples of
+    *                         (class, [probability, xmin, ymin, xmax, ymax])
+    */
   def objectDetectWithNDArray(input: java.util.List[NDArray], topK: Int): java.util.List[java.util.List[(String, java.util.List[java.lang.Float])]] = {
     val ret = objectDetector.objectDetectWithNDArray(convert(input.asScala.toIndexedSeq), Some(topK))
     (ret map {a=> (a map {entry => (entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
   }
 
+  /**
+    * To classify batch of input images according to the provided model
+    *
+    * @param inputBatch       Input array of buffered images
+    * @param topK             Number of result elements to return, sorted by probability
+    * @return                 List of list of tuples of (class, probability)
+    */
   def imageBatchObjectDetect(inputBatch: java.util.List[BufferedImage], topK: Int):
       java.util.List[java.util.List[Pair[String, java.util.List[java.lang.Float]]]] = {
     val ret = objectDetector.imageBatchObjectDetect(inputBatch.asScala, Some(topK))
