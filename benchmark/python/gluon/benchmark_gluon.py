@@ -25,7 +25,7 @@ import os
 import errno
 
 logging.basicConfig(level=logging.INFO)
-parser = argparse.ArgumentParser(description='Gluon modelzoo-based CNN perf benchmark')
+parser = argparse.ArgumentParser(description='Gluon modelzoo-based CNN performance benchmark')
 
 parser.add_argument('--model', type=str, default='all',
                                choices=['all', 'alexnet', 'densenet121', 'densenet161',
@@ -37,7 +37,8 @@ parser.add_argument('--model', type=str, default='all',
                                         'resnet50_v2', 'squeezenet1.0', 'squeezenet1.1', 'vgg11',
                                         'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
                                         'vgg19', 'vgg19_bn'])
-parser.add_argument('--batch-size', type=int, default=0)
+parser.add_argument('--batch-size', type=int, default=0,
+                     help='run batch size [1, 2, 4, 8, 16, 32] by default')
 parser.add_argument('--num-batches', type=int, default=10)
 parser.add_argument('--gpus', type=str, default='',
                     help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
@@ -154,6 +155,8 @@ if __name__ == '__main__':
                 fps = (batch_sizes * num_batches)/fwd_time
                 logging.info(network + ' inference perf for BS %d is %f img/s', bs, fps)
             else:
+                logging.info('run batchsize [1, 2, 4, 8, 16, 32] by default, '
+                             'set --batch-size to run a specific one')
                 for batch_size in batch_inf:
                     if not global_bs:
                         batch_sizes = batch_size * max(1, num_gpus)
@@ -172,6 +175,8 @@ if __name__ == '__main__':
                 fps = (batch_sizes * num_batches) / bwd_time
                 logging.info(network + ' training perf for BS %d is %f img/s', bs, fps)
             else:
+                logging.info('run batchsize [1, 2, 4, 8, 16, 32] by default, '
+                             'set --batch-size to run a specific one')
                 for batch_size in batch_train:
                     if not global_bs:
                         batch_sizes = batch_size * max(1, num_gpus)

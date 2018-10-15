@@ -29,13 +29,14 @@ import time
 import numpy as np
 logging.basicConfig(level=logging.DEBUG)
 
-parser = argparse.ArgumentParser(description='SymbolAPI-based CNN perf')
+parser = argparse.ArgumentParser(description='SymbolAPI-based CNN inference performance benchmark')
 parser.add_argument('--network', type=str, default='all', 
                                  choices=['all', 'alexnet', 'vgg-16', 'resnetv1-50', 'resnet-50',
                                           'resnet-152', 'inception-bn', 'inception-v3', 
                                           'inception-v4', 'inception-resnet-v2', 'mobilenet',
                                           'densenet121', 'squeezenet1.1'])
-parser.add_argument('--batch-size', type=int, default=0)
+parser.add_argument('--batch-size', type=int, default=0,
+                     help='run batch size [1, 2, 4, 8, 16, 32] by default')
 
 opt = parser.parse_args()
 
