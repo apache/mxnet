@@ -214,6 +214,30 @@ def test_spacetodepth():
 
     npt.assert_almost_equal(output[0], numpy_op)
 
+@with_seed()
+def test_square():
+    input1 = np.random.randint(1, 10, (2, 3)).astype("float32")
+
+    ipsym = mx.sym.Variable("input1")
+    square = mx.sym.square(data=ipsym)
+    model = mx.mod.Module(symbol=square, data_names=['input1'], label_names=None)
+    model.bind(for_training=False, data_shapes=[('input1', np.shape(input1))], label_shapes=None)
+    model.init_params()
+
+    args, auxs = model.get_params()
+    params = {}
+    params.update(args)
+    params.update(auxs)
+
+    converted_model = onnx_mxnet.export_model(square, params, [np.shape(input1)], np.float32, "square.onnx")
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+    result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+
+    numpy_op = np.square(input1)
+
+    npt.assert_almost_equal(result, numpy_op)
+
 if __name__ == '__main__':
     test_models("bvlc_googlenet", (1, 3, 224, 224), (1, 1000))
     test_models("bvlc_reference_caffenet", (1, 3, 224, 224), (1, 1000))

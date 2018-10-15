@@ -2185,6 +2185,42 @@ def convert_spacetodepth(node, **kwargs):
     )
     return [node]
 
+@mx_op.register("square")
+def convert_square(node, **kwargs):
+    """Map MXNet's square operator attributes to onnx's Pow operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_a = proc_nodes[input_node_a_id].name
+
+    initializer = kwargs["initializer"]
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
+
+    power2_name = "square_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(power2_name, data_type, (1,))
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=power2_name,
+            data_type=data_type,
+            dims=(1,),
+            vals=[2],
+            raw=False,
+        )
+    )
+
+    node = onnx.helper.make_node(
+        "Pow",
+        [input_node_a, power2_name],
+        [name],
+        name=name
+    )
+    return [tensor_node, node]
+
 @mx_op.register("sum")
 def convert_sum(node, **kwargs):
     """Map MXNet's sum operator attributes to onnx's ReduceSum operator
