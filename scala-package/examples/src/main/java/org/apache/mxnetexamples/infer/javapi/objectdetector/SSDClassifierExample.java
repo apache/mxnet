@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.mxnet.javaapi.*;
-import org.apache.mxnet.infer.javaapi.ImageClassifier;
 import org.apache.mxnet.infer.javaapi.ObjectDetector;
 
 import java.awt.image.BufferedImage;
@@ -49,7 +48,7 @@ public class SSDClassifierExample {
 		Shape inputShape = new Shape(new int[] {1, 3, 512, 512});
 		List<DataDesc> inputDescriptors = new ArrayList<DataDesc>();
 		inputDescriptors.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
-		BufferedImage img = ImageClassifier.loadImageFromFile(inputImagePath);
+		BufferedImage img = ObjectDetector.loadImageFromFile(inputImagePath);
 		ObjectDetector objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context, 0);
 		return objDetector.imageObjectDetect(img, 3);
 	}
@@ -65,7 +64,7 @@ public class SSDClassifierExample {
 		List<List<List<Pair<String, List<Float>>>>> outputList = new ArrayList<List<List<Pair<String, List<Float>>>>>();
 		
 		for (List<String> batchFile : batchFiles) {
-			List<BufferedImage> imgList = ImageClassifier.loadInputBatch(batchFile);
+			List<BufferedImage> imgList = ObjectDetector.loadInputBatch(batchFile);
 			// Running inference on batch of images loaded in previous step
 			List<List<Pair<String, List<Float>>>> tmp = objDetector.imageBatchObjectDetect(imgList, 5);
 			outputList.add(tmp);

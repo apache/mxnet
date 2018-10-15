@@ -64,4 +64,8 @@ object ObjectDetector {
   def loadImageFromFile(inputImagePath: String): BufferedImage = {
     org.apache.mxnet.infer.ImageClassifier.loadImageFromFile(inputImagePath)
   }
+
+  def loadInputBatch(inputImagePaths: java.util.List[String]): java.util.List[BufferedImage] = {
+    org.apache.mxnet.infer.ImageClassifier.loadInputBatch(inputImagePaths.asScala.toList).toList.asJava
+  }
 }
