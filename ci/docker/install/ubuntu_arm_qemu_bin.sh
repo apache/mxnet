@@ -22,6 +22,15 @@
 
 set -exuo pipefail
 
+#
+# This disk image and kernels for virtual testing with QEMU  is generated with some manual OS
+# installation steps with the scripts and documentation found in the ci/qemu/ folder. 
+#
+# The image has a base Debian OS and MXNet runtime dependencies installed.
+# The root password is empty and there's a "qemu" user without password. SSH access is enabled as
+# well.
+#
+
 REMOTE="https://s3-eu-west-1.amazonaws.com/mxnet-edge-public/qemu"
 curl -f ${REMOTE}/vda_debian_stretch.qcow2.bz2 | bunzip2 > vda.qcow2
 curl -f ${REMOTE}/vmlinuz-4.9.0-7-armmp-lpae -o vmlinuz

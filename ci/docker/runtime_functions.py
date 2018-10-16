@@ -34,8 +34,6 @@ import sys
 import types
 import glob
 
-
-
 def activate_this(base):
     import site
     import os
@@ -58,14 +56,6 @@ def activate_this(base):
 def pip_install(pkg):
     import pip._internal as pip
     pip.main(['install', pkg])
-
-def run_unittests_python():
-    pass
-#    import venv
-#    path = 'py_venv'
-#    venv.create(path)
-#    activate_this(path)
-#    pip_install('ipython')
 
 def run_unittests_python3_qemu():
     from vmcontrol import VM
