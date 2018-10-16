@@ -31,7 +31,7 @@ function usage {
     exit 1
 }
 
-if [ $# -le 2 ] || [ $# -ge 5 ]
+if [ $# -le 2 ] || [ $# -ge 4 ]
 then
     usage
     exit 1
