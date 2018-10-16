@@ -18,7 +18,7 @@
 package org.apache.mxnet.infer.javaapi
 
 import java.awt.image.BufferedImage
-import javafx.util.Pair
+import org.apache.commons.lang3.tuple.ImmutablePair
 
 import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
 
@@ -43,9 +43,9 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
     * @return                 List of list of tuples of
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
-  def imageObjectDetect(inputImage: BufferedImage, topK: Int): java.util.List[java.util.List[Pair[String, java.util.List[java.lang.Float]]]] = {
+  def imageObjectDetect(inputImage: BufferedImage, topK: Int): java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
     val ret = objectDetector.imageObjectDetect(inputImage, Some(topK))
-    (ret map {a=> (a map {entry => new Pair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
+    (ret map {a=> (a map {entry => new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
   }
 
   /**
@@ -71,9 +71,9 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
     * @return                 List of list of tuples of (class, probability)
     */
   def imageBatchObjectDetect(inputBatch: java.util.List[BufferedImage], topK: Int):
-      java.util.List[java.util.List[Pair[String, java.util.List[java.lang.Float]]]] = {
+      java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
     val ret = objectDetector.imageBatchObjectDetect(inputBatch.asScala, Some(topK))
-    (ret map {a=> (a map {entry => new Pair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
+    (ret map {a=> (a map {entry => new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
   }
 
   def convert[B, A <% B](l: IndexedSeq[A]): IndexedSeq[B] = l map { a => a: B }
