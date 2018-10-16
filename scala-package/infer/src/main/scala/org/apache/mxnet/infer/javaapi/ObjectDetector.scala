@@ -17,7 +17,10 @@
 
 package org.apache.mxnet.infer.javaapi
 
+// scalastyle:off
 import java.awt.image.BufferedImage
+// scalastyle:on
+
 import org.apache.commons.lang3.tuple.ImmutablePair
 
 import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
@@ -26,13 +29,17 @@ import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
 
 
-class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
+class ObjectDetector(val objDetector: org.apache.mxnet.infer.ObjectDetector){
 
-  def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc], contexts: java.util.List[Context], epoch: Int)
+  def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc], contexts:
+  java.util.List[Context], epoch: Int)
   = this {
-    val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator).asScala.toIndexedSeq map {a=>a: org.apache.mxnet.DataDesc}
+    val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator)
+      .asScala.toIndexedSeq map {a => a: org.apache.mxnet.DataDesc}
     val inContexts = (contexts.asScala.toList map {a => a: org.apache.mxnet.Context}).toArray
+    // scalastyle:off
     new org.apache.mxnet.infer.ObjectDetector(modelPathPrefix, informationDesc, inContexts, Some(epoch))
+    // scalastyle:on
   }
 
   /**
@@ -43,9 +50,13 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
     * @return                 List of list of tuples of
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
-  def imageObjectDetect(inputImage: BufferedImage, topK: Int): java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
-    val ret = objectDetector.imageObjectDetect(inputImage, Some(topK))
-    (ret map {a=> (a map {entry => new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
+  def imageObjectDetect(inputImage: BufferedImage, topK: Int):
+  java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
+    val ret = objDetector.imageObjectDetect(inputImage, Some(topK))
+    (ret map {a => (a map {entry =>
+      new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1,
+        entry._2.map(f => Float.box(f)).toList.asJava)}).asJava
+    }).asJava
   }
 
   /**
@@ -58,9 +69,11 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
     * @return                 List of list of tuples of
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
-  def objectDetectWithNDArray(input: java.util.List[NDArray], topK: Int): java.util.List[java.util.List[(String, java.util.List[java.lang.Float])]] = {
-    val ret = objectDetector.objectDetectWithNDArray(convert(input.asScala.toIndexedSeq), Some(topK))
-    (ret map {a=> (a map {entry => (entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
+  def objectDetectWithNDArray(input: java.util.List[NDArray], topK: Int):
+  java.util.List[java.util.List[(String, java.util.List[java.lang.Float])]] = {
+    val ret = objDetector.objectDetectWithNDArray(convert(input.asScala.toIndexedSeq), Some(topK))
+    (ret map {a => (a map {entry =>
+      (entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
   }
 
   /**
@@ -72,8 +85,11 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
     */
   def imageBatchObjectDetect(inputBatch: java.util.List[BufferedImage], topK: Int):
       java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
-    val ret = objectDetector.imageBatchObjectDetect(inputBatch.asScala, Some(topK))
-    (ret map {a=> (a map {entry => new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
+    val ret = objDetector.imageBatchObjectDetect(inputBatch.asScala, Some(topK))
+    (ret map {a => (a map {entry =>
+      new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1,
+        entry._2.map(f => Float.box(f)).toList.asJava)
+    }).asJava }).asJava
   }
 
   def convert[B, A <% B](l: IndexedSeq[A]): IndexedSeq[B] = l map { a => a: B }
@@ -82,15 +98,18 @@ class ObjectDetector(val objectDetector: org.apache.mxnet.infer.ObjectDetector){
 
 
 object ObjectDetector {
-  implicit def fromObjectDetector(OD: org.apache.mxnet.infer.ObjectDetector): ObjectDetector = new ObjectDetector(OD)
+  implicit def fromObjectDetector(OD: org.apache.mxnet.infer.ObjectDetector):
+    ObjectDetector = new ObjectDetector(OD)
 
-  implicit def toObjectDetector(jOD: ObjectDetector): org.apache.mxnet.infer.ObjectDetector = jOD.objectDetector
+  implicit def toObjectDetector(jOD: ObjectDetector):
+    org.apache.mxnet.infer.ObjectDetector = jOD.objDetector
 
   def loadImageFromFile(inputImagePath: String): BufferedImage = {
     org.apache.mxnet.infer.ImageClassifier.loadImageFromFile(inputImagePath)
   }
 
   def loadInputBatch(inputImagePaths: java.util.List[String]): java.util.List[BufferedImage] = {
-    org.apache.mxnet.infer.ImageClassifier.loadInputBatch(inputImagePaths.asScala.toList).toList.asJava
+    org.apache.mxnet.infer.ImageClassifier
+      .loadInputBatch(inputImagePaths.asScala.toList).toList.asJava
   }
 }

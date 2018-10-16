@@ -23,9 +23,11 @@ import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
 
 class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
-  def this(modelPathPrefix:String, inputDescriptors: java.util.List[DataDesc], contexts: java.util.List[Context], epoch: Int)
+  def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc],
+           contexts: java.util.List[Context], epoch: Int)
   = this {
-    val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator).asScala.toIndexedSeq map {a=>a: org.apache.mxnet.DataDesc}
+    val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator)
+      .asScala.toIndexedSeq map {a => a: org.apache.mxnet.DataDesc}
     val inContexts = (contexts.asScala.toList map {a => a: org.apache.mxnet.Context}).toArray
     new org.apache.mxnet.infer.Predictor(modelPathPrefix, informationDesc, inContexts, Some(epoch))
   }
@@ -39,7 +41,8 @@ class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
                               An extra List is needed for when the model has more than one input.
     * @return                  Indexed sequence array of outputs
     */
-  def predict(input: java.util.List[java.util.List[Float]]): java.util.List[java.util.List[Float]] = {
+  def predict(input: java.util.List[java.util.List[Float]]):
+  java.util.List[java.util.List[Float]] = {
     val in = JavaConverters.asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq
     (predictor.predict(in map {a => a.asScala.toArray}) map {b => b.toList.asJava}).asJava
   }
@@ -53,9 +56,12 @@ class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
     * @param input       List of NDArrays
     * @return                  Output of predictions as NDArrays
     */
-  def predictWithNDArray(input: java.util.List[NDArray]): java.util.List[NDArray] = {
-    val ret = predictor.predictWithNDArray(convert(JavaConverters.asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq))
-    // TODO: For some reason the implicit wasn't working here when trying to use convert. So did it this way. Needs to be figured out
+  def predictWithNDArray(input: java.util.List[NDArray]):
+  java.util.List[NDArray] = {
+    val ret = predictor.predictWithNDArray(convert(JavaConverters
+      .asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq))
+    // TODO: For some reason the implicit wasn't working here when trying to use convert.
+    // So did it this way. Needs to be figured out
     (ret map {a => new NDArray(a)}).asJava
   }
 

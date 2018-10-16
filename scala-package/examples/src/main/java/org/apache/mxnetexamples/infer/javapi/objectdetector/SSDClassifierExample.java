@@ -26,7 +26,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.mxnet.javaapi.*;
 import org.apache.mxnet.infer.javaapi.ObjectDetector;
 
+// scalastyle:off
 import java.awt.image.BufferedImage;
+// scalastyle:on
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,7 +38,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.io.File;
 
 public class SSDClassifierExample {
-	@Option(name = "--model-path-prefix", usage = "the input model directory and prefix of the model")
+	@Option(name = "--model-path-prefix", usage = "input model directory and prefix of the model")
 	private String modelPathPrefix = "/model/ssd_resnet50_512";
 	@Option(name = "--input-image", usage = "the input image")
 	private String inputImagePath = "/images/dog.jpg";
@@ -44,29 +47,33 @@ public class SSDClassifierExample {
 	
 	final static Logger logger = LoggerFactory.getLogger(SSDClassifierExample.class);
 	
-	static List<List<ImmutablePair<String, List<Float>>>> runObjectDetectionSingle(String modelPathPrefix, String inputImagePath, List<Context> context) {
+	static List<List<ImmutablePair<String, List<Float>>>>
+	runObjectDetectionSingle(String modelPathPrefix, String inputImagePath, List<Context> context) {
 		Shape inputShape = new Shape(new int[] {1, 3, 512, 512});
 		List<DataDesc> inputDescriptors = new ArrayList<DataDesc>();
 		inputDescriptors.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
 		BufferedImage img = ObjectDetector.loadImageFromFile(inputImagePath);
-		ObjectDetector objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context, 0);
-		return objDetector.imageObjectDetect(img, 3);
+		ObjectDetector objDet = new ObjectDetector(modelPathPrefix, inputDescriptors, context, 0);
+		return objDet.imageObjectDetect(img, 3);
 	}
 	
-	static List<List<List<ImmutablePair<String, List<Float>>>>> runObjectDetectionBatch(String modelPathPrefix, String inputImageDir, List<Context> context) {
+	static List<List<List<ImmutablePair<String, List<Float>>>>>
+	runObjectDetectionBatch(String modelPathPrefix, String inputImageDir, List<Context> context) {
 		Shape inputShape = new Shape(new int[]{1, 3, 512, 512});
 		List<DataDesc> inputDescriptors = new ArrayList<DataDesc>();
 		inputDescriptors.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
-		ObjectDetector objDetector = new ObjectDetector(modelPathPrefix, inputDescriptors, context, 0);
+		ObjectDetector objDet = new ObjectDetector(modelPathPrefix, inputDescriptors, context, 0);
 		
 		// Loading batch of images from the directory path
 		List<List<String>> batchFiles = generateBatches(inputImageDir, 20);
-		List<List<List<ImmutablePair<String, List<Float>>>>> outputList = new ArrayList<List<List<ImmutablePair<String, List<Float>>>>>();
+		List<List<List<ImmutablePair<String, List<Float>>>>> outputList
+				= new ArrayList<List<List<ImmutablePair<String, List<Float>>>>>();
 		
 		for (List<String> batchFile : batchFiles) {
 			List<BufferedImage> imgList = ObjectDetector.loadInputBatch(batchFile);
 			// Running inference on batch of images loaded in previous step
-			List<List<ImmutablePair<String, List<Float>>>> tmp = objDetector.imageBatchObjectDetect(imgList, 5);
+			List<List<ImmutablePair<String, List<Float>>>> tmp
+					= objDet.imageBatchObjectDetect(imgList, 5);
 			outputList.add(tmp);
 		}
 		return outputList;
@@ -127,7 +134,8 @@ public class SSDClassifierExample {
 			int height = inputShape.get(3);
 			String outputStr = "\n";
 			
-			List<List<ImmutablePair<String, List<Float>>>> output = runObjectDetectionSingle(mdprefixDir, imgPath, context);
+			List<List<ImmutablePair<String, List<Float>>>> output
+					= runObjectDetectionSingle(mdprefixDir, imgPath, context);
 			
 			for (List<ImmutablePair<String, List<Float>>> ele : output) {
 				for (ImmutablePair<String, List<Float>> i : ele) {
@@ -135,7 +143,8 @@ public class SSDClassifierExample {
 					List<Float> arr = i.getValue();
 					outputStr += "Probabilties: " + arr.get(0) + "\n";
 					
-					List<Float> coord = Arrays.asList(arr.get(1) * width, arr.get(2) * height, arr.get(3) * width, arr.get(4) * height);
+					List<Float> coord = Arrays.asList(arr.get(1) * width,
+							arr.get(2) * height, arr.get(3) * width, arr.get(4) * height);
 					StringBuilder sb = new StringBuilder();
 					for (float c: coord) {
 						sb.append(", ").append(c);
@@ -145,7 +154,8 @@ public class SSDClassifierExample {
 			}
 			logger.info(outputStr);
 			
-			List<List<List<ImmutablePair<String, List<Float>>>>> outputList = runObjectDetectionBatch(mdprefixDir, imgDir, context);
+			List<List<List<ImmutablePair<String, List<Float>>>>> outputList =
+					runObjectDetectionBatch(mdprefixDir, imgDir, context);
 			
 			outputStr = "\n";
 			int index = 0;
@@ -156,7 +166,8 @@ public class SSDClassifierExample {
 						outputStr += "Class: " + k.getKey() + "\n";
 						List<Float> arr = k.getValue();
 						outputStr += "Probabilties: " + arr.get(0) + "\n";
-						List<Float> coord = Arrays.asList(arr.get(1) * width, arr.get(2) * height, arr.get(3) * width, arr.get(4) * height);
+						List<Float> coord = Arrays.asList(arr.get(1) * width,
+								arr.get(2) * height, arr.get(3) * width, arr.get(4) * height);
 						
 						StringBuilder sb = new StringBuilder();
 						for (float c : coord) {
