@@ -776,7 +776,7 @@ def test_randint():
             'high': 3,
             'shape' : (500, 500),
             'dtype' : dtype,
-            'ctx' : mx.context.current_context()
+            'ctx' : mx.context.cpu()
             }
         mx.random.seed(128)
         ret1 = mx.nd.random.randint(**params).asnumpy()
