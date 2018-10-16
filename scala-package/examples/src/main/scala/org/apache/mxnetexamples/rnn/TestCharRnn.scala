@@ -123,9 +123,14 @@ class TestCharRnn(CLIParser: CLIParser) extends InferBase {
     val numLstmLayer = 3
     val (_, argParams, _) = Model.loadCheckpoint(CLIParser.modelPrefix, 75)
     this.vocab = Utils.buildVocab(CLIParser.dataPath)
+    var ctx = Context.cpu()
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      ctx = Context.gpu()
+    }
     val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1,
       numHidden = numHidden, numEmbed = numEmbed,
-      numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f)
+      numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f, ctx = ctx)
     model
   }
 
