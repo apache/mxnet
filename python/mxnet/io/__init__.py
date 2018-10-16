@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,10 +17,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Disable brew auto-update to avoid long running updates while running tests in CI.
-export HOMEBREW_NO_AUTO_UPDATE=1
+# coding: utf-8
+# pylint: disable=wildcard-import
+""" Data iterators for common data formats and utility functions."""
+from __future__ import absolute_import
 
-if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-    brew install opencv
-    python -m pip install --user nose numpy cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
-fi
+from . import io
+from .io import *
+
+from . import utils
+from .utils import *
