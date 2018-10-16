@@ -42,6 +42,5 @@ object Context {
   val gpu: Context = org.apache.mxnet.Context.gpu()
   val devtype2str = org.apache.mxnet.Context.devstr2type.asJava
   val devstr2type = org.apache.mxnet.Context.devstr2type.asJava
-
   def defaultCtx: Context = org.apache.mxnet.Context.defaultCtx
 }
