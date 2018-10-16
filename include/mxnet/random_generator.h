@@ -87,7 +87,7 @@ class RandGenerator<cpu, DType> {
 
    private:
     std::mt19937 *engine_;
-  };
+  };  // class RandGenerator<cpu, DType>::Impl
 
   static void AllocState(RandGenerator<cpu, DType> *inst) {
     inst->states_ = new std::mt19937[kNumRandomStates];
@@ -160,7 +160,7 @@ class RandGenerator<gpu, DType> {
       // std::uniform_real_distribution<FType>>::type GType;
       // GType dist_discrete_uniform(lower, upper);
       std::uniform_int_distribution<int> dist_discrete_uniform(lower, upper);
-      return dist_discrete_uniform(*engine_);
+      return dist_discrete_uniform(&state_);
     }
 
    private:
