@@ -128,10 +128,10 @@ Install OpenCV and OpenBLAS.
 
 ```bash
 brew install opencv
-brew install openblas
+brew install openblas@0.3.1
 ```
 
-Add a soft link the OpenBLAS installation. This example links the 0.3.1 version:
+Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
 
 ```bash
 ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
