@@ -18,6 +18,7 @@ images provided in
 
     image.imread
     image.imdecode
+    image.imresize
     image.scale_down
     image.resize_short
     image.fixed_crop
@@ -166,6 +167,7 @@ and a list of augmenters specific for `Object detection` is provided
 
 .. automethod:: mxnet.image.imread
 .. automethod:: mxnet.image.imdecode
+.. automethod:: mxnet.image.imresize
 .. automethod:: mxnet.image.scale_down
 .. automethod:: mxnet.image.resize_short
 .. automethod:: mxnet.image.fixed_crop

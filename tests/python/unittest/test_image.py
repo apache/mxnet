@@ -196,6 +196,22 @@ class TestImage(unittest.TestCase):
                     mx_resized = mx.image.resize_short(mx_img, new_size, interp)
                     assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
 
+    def test_imresize(self):
+        try:
+            import cv2
+        except ImportError:
+            return
+        for img in TestImage.IMAGES:
+            cv_img = cv2.imread(img)
+            mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
+            for _ in range(3):
+                new_h = np.random.randint(1, 1000)
+                new_w = np.random.randint(1, 1000)
+                for interp in range(0, 2):
+                    cv_resized = cv2.resize(cv_img, (new_w, new_h), interpolation=interp)
+                    mx_resized = mx.image.imresize(mx_img, new_w, new_h, interp)
+                    assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
+
     def test_color_normalize(self):
         for _ in range(10):
             mean = np.random.rand(3) * 255
