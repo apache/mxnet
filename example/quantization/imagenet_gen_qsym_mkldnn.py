@@ -42,7 +42,7 @@ def download_model(model_name, logger=None):
         logger.info('Downloading model %s... into path %s' % (model_name, model_path))
     return modelzoo.download_model(args.model, os.path.join(dir_path, 'model'))
 
-def convert_from_gluon(model_name, classes=1000, logger=None):
+def convert_from_gluon(model_name, image_shape, classes=1000, logger=None):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     model_path = os.path.join(dir_path, 'model')
     if logger is not None:
@@ -66,7 +66,8 @@ def convert_from_gluon(model_name, classes=1000, logger=None):
     mod = mx.mod.Module(symbol=symnet, context=mx.cpu(),
                         label_names = ['softmax_label'])
     mod.bind(for_training=False, 
-             data_shapes=[('data', (1, 3, 224, 224))])
+             data_shapes=[('data', (1,) + 
+                          tuple([int(i) for i in image_shape.split(',')]))])
     mod.set_params(arg_params=args, aux_params=auxs)
     dst_dir = os.path.join(dir_path, 'model')
     prefix = os.path.join(dir_path, 'model', model_name)
@@ -92,6 +93,8 @@ def save_params(fname, arg_params, aux_params, logger=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a calibrated quantized model from a FP32 model with Intel MKL-DNN support')
     parser.add_argument('--model', type=str, choices=['resnet50_v1',
+                                                      'resnet101_v1',
+                                                      'inceptionv3',
                                                       'squeezenet1.0',
                                                       'mobilenet1.0',
                                                       'imagenet1k-resnet-152',
@@ -160,11 +163,11 @@ if __name__ == '__main__':
         download_calib_dataset('http://data.mxnet.io/data/val_256_q90.rec', args.calib_dataset)
 
     # download model
-    if args.model in ['resnet50_v1', 'squeezenet1.0', 'mobilenet1.0']:
+    if args.model in ['resnet50_v1', 'resnet101_v1', 'squeezenet1.0', 'mobilenet1.0', 'inceptionv3']:
         logger.info('model %s is converted from GluonCV' % args.model)
         args.use_gluon_model = True
     if args.use_gluon_model == True:
-        prefix = convert_from_gluon(model_name=args.model, classes=1000, logger=logger)
+        prefix = convert_from_gluon(model_name=args.model, image_shape=args.image_shape, classes=1000, logger=logger)
         epoch = 0
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
     elif args.model == 'custom':
@@ -211,7 +214,7 @@ if __name__ == '__main__':
         excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
-    elif args.model == 'resnet50_v1':
+    elif args.model in ['resnet50_v1', 'resnet101_v1']:
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
         calib_layer = lambda name: name.endswith('_output')
@@ -238,6 +241,14 @@ if __name__ == '__main__':
                                'mobilenet0_pool0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['mobilenet0_conv0_fwd']
+    elif args.model == 'inceptionv3':
+        rgb_mean = '123.68,116.779,103.939'
+        rgb_std = '58.393, 57.12, 57.375'
+        calib_layer = lambda name: name.endswith('_output')
+        excluded_sym_names += ['inception30_dense0_fwd',
+                               'inception30_pool0_fwd']
+        if exclude_first_conv:
+            excluded_sym_names += ['inception30_conv0_fwd']
     elif args.model == 'custom':
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'

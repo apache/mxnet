@@ -22,11 +22,13 @@ The following models have been tested on Linux systems.
 | Model | Source | Dataset | FP32 Accuracy | INT8 Accuracy |
 |:---|:---|---|:---:|:---:|
 | [ResNet50-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 75.87%/92.72%  |  75.71%/92.65% |
-|[Squeezenet 1.0](#4)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|57.01%/79.71%|56.62%/79.55%|
-|[MobileNet 1.0](#5)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|69.76%/89.32%|69.61%/89.09%|
-|[ResNet152-V2](#6)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.76%/93.03%|76.48%/92.96%|
-|[Inception-BN](#7)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.09%/90.60%|72.00%/90.53%|
-| [SSD-VGG](#8) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.83 mAP  | 0.82 mAP  |
+| [ResNet101-V1](#4)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 77.3%/93.58%  | 77.09%/93.41%  |
+|[Squeezenet 1.0](#5)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|57.01%/79.71%|56.62%/79.55%|
+|[MobileNet 1.0](#6)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|69.76%/89.32%|69.61%/89.09%|
+|[Inception V3](#7)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.49%/93.10% |76.38%/93% |
+|[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.76%/93.03%|76.48%/92.96%|
+|[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.09%/90.60%|72.00%/90.53%|
+| [SSD-VGG](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.83 mAP  | 0.82 mAP  |
 
 <h3 id='3'>ResNet50-V1</h3>
 
@@ -53,7 +55,32 @@ python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --bat
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-<h3 id='4'>SqueezeNet1.0</h3>
+<h3 id='4'>ResNet101-V1</h3>
+
+The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+
+```
+python imagenet_gen_qsym_mkldnn.py --model=resnet101_v1 --num-calib-batches=5 --calib-mode=naive
+```
+
+The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary. The following command is to launch inference.
+
+```
+# USE MKLDNN AS SUBGRAPH BACKEND
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+
+# Launch FP32 Inference 
+python imagenet_inference.py --symbol-file=./model/resnet101_v1-symbol.json --param-file=./model/resnet101_v1-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
+
+# Launch INT8 Inference
+python imagenet_inference.py --symbol-file=./model/resnet101_v1-quantized-5batches-naive-symbol.json --param-file=./model/resnet101_v1-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/resnet101_v1-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+python imagenet_inference.py --symbol-file=./model/resnet101_v1-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+```
+
+<h3 id='5'>SqueezeNet1.0</h3>
 
 The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
@@ -77,7 +104,7 @@ python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --b
 python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-<h3 id='5'>MobileNet1.0</h3>
+<h3 id='6'>MobileNet1.0</h3>
 
 The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
@@ -101,7 +128,31 @@ python imagenet_inference.py --symbol-file=./model/mobilenet1.0-symbol.json --ba
 python imagenet_inference.py --symbol-file=./model/mobilenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-<h3 id='6'>ResNet152-V2</h3>
+<h3 id='7'>Inception-V3</h3>
+
+The following command is to download the pre-trained model from Gluon-CV and transfer it into the symbolic model which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
+
+```
+python imagenet_gen_qsym_mkldnn.py --model=inceptionv3 --image-shape=3,299,299 --num-calib-batches=5 --calib-mode=naive
+```
+The model would be automatically replaced in fusion and quantization format and saved as the quantized symbol and parameter fils in `./model` dictionary. The following command is to launch inference.
+
+```
+# USE MKLDNN AS SUBGRAPH BACKEND
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+
+# Launch FP32 Inference
+python imagenet_inference.py --symbol-file=./model/inceptionv3-symbol.json --param-file=./model/inceptionv3-0000.params --image-shape=3,299,299 --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu --data-nthreads=1
+
+# Launch INT8 Inference
+python imagenet_inference.py --symbol-file=./model/inceptionv3-quantized-5batches-naive-symbol.json --param-file=./model/inceptionv3-quantized-0000.params --image-shape=3,299,299 --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu  --data-nthreads=1
+
+# Launch dummy data Inference
+python imagenet_inference.py --symbol-file=./model/inceptionv3-symbol.json --image-shape=3,299,299 --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
+python imagenet_inference.py --symbol-file=./model/inceptionv3-quantized-5batches-naive-symbol.json --image-shape=3,299,299 --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+```
+
+<h3 id='8'>ResNet152-V2</h3>
 
 The following command is to download the pre-trained model from [MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/) which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
@@ -126,7 +177,7 @@ python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.
 python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-<h3 id='7'>Inception-BN</h3>
+<h3 id='9'>Inception-BN</h3>
 
 The following command is to download the pre-trained model from [MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/) which would be finally quantized. The validation dataset is available [here](http://data.mxnet.io/data/val_256_q90.rec) for testing the pre-trained models:
 
@@ -151,7 +202,7 @@ python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbo
 python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-<h3 id='8'>SSD-VGG</h3>
+<h3 id='10'>SSD-VGG</h3>
 
 Go to [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) dictionary. Following the [instruction](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model) in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip) then rename them and extract to `model/` and `data/` dictionary as below.
 
@@ -188,7 +239,7 @@ python benchmark_score.py --deploy --prefix=./model/ssd_
 python benchmark_score.py --deploy --prefix=./model/cqssd_
 ```
 
-<h3 id='9'>Custom Model</h3>
+<h3 id='11'>Custom Model</h3>
 
 This script also supports custom symbolic models. You can easily add some quantization layer configs in `imagenet_gen_qsym_mkldnn.py` like below:
 
