@@ -17,10 +17,10 @@
  * under the License.
  */
 
- /*!
-  * \file index_copy-inl.h
-  * \brief implementation of index_copy tensor operation
-  */
+/*!
+ * \file index_copy-inl.h
+ * \brief implementation of index_copy tensor operation
+ */
 
 #ifndef MXNET_OPERATOR_CONTRIB_INDEX_COPY_INL_H_
 #define MXNET_OPERATOR_CONTRIB_INDEX_COPY_INL_H_
@@ -34,15 +34,6 @@
 
 namespace mxnet {
 namespace op {
-
-struct copy_all {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
-                                  DType* old_tensor,
-                                  DType* out_tensor) {
-    *(out_tensor + i) = *(old_tensor + i);
-  }
-};
 
 struct index_copy {
   template<typename DType, typename IType>
@@ -72,11 +63,7 @@ void IndexCopyCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& idx = inputs[1];
   int dim = inputs[2].Size() / inputs[1].Size();
   // copy all
-  MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
-    Kernel<copy_all, xpu>::Launch(s, inputs[0].Size(),
-                            inputs[0].dptr<DType>(),
-                            outputs[0].dptr<DType>());
-  })
+  mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
   // index copy
   MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
