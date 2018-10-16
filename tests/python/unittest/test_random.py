@@ -769,7 +769,7 @@ def test_shuffle():
 
 @with_seed()
 def test_randint():
-    dtypes = ['uint8','int32','int8', 'int64']
+    dtypes = ['int32', 'int64']
     for dtype in dtypes:
         params = {
             'low': -1,
