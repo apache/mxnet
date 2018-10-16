@@ -38,7 +38,6 @@ except ImportError:
 from ..base import numeric_types
 from .. import ndarray as nd
 from ..ndarray import _internal
-from ..ndarray._internal import _cvimresize as imresize
 from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .. import recordio
@@ -83,6 +82,46 @@ def imread(filename, *args, **kwargs):
     <NDArray 224x224x3 @cpu(0)>
     """
     return _internal._cvimread(filename, *args, **kwargs)
+
+
+def imresize(src, w, h, interp):
+    r"""Resize image with OpenCV.
+
+    Note: `imread` uses OpenCV (not the CV2 Python library).
+    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+
+    Parameters
+    ----------
+    src : NDArray
+        source image
+    w : int, required
+        Width of resized image.
+    h : int, required
+        Height of resized image.
+    interp : int, optional, default='1'
+        Interpolation method (default=cv2.INTER_LINEAR).
+
+    out : NDArray, optional
+        The output NDArray to hold the result.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+
+    Example
+    -------
+    >>> with open("flower.jpeg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> new_image = mx.img.resize(image, 240, 360)
+    >>> new_image
+    <NDArray 2321x3482x3 @cpu(0)>
+    """
+    return _internal._cvimresize(src, w, h, interp)
 
 
 def imdecode(buf, *args, **kwargs):
