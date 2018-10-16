@@ -136,7 +136,7 @@ class VM:
             self.terminate()
 
 def run_qemu(ssh_port=2222):
-    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=2048)
+    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=4096)
     logging.info("QEMU command: %s", cmd)
     qemu_process = Popen(shlex.split(cmd), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
     return qemu_process
