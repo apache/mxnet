@@ -31,7 +31,7 @@ function usage {
     exit 1
 }
 
-if [ $# -le 2 ] || [ $# -ge 4 ]
+if [ $# -le 2 ] || [ $# -ge 5 ]
 then
     usage
     exit 1
@@ -44,31 +44,21 @@ pip_tag="${2}"
 test_dir="${3}"
 
 docker_test_image_cpu(){
-    echo "Running tests on mxnet/python:${1}"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py"
+    image_tag="${1}"
+    python_version="${2}"
+    echo "Running tests on mxnet/python:${image_tag}"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/tests/python/train/test_conv.py"
+    docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/example/image-classification/train_mnist.py"
 }
 
 docker_test_image_gpu(){
+    image_tag="${1}"
+    python_version="${2}"
     echo "Running tests on mxnet/python:${1}"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/tests/python/train/test_conv.py --gpu"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python /mxnet/example/image-classification/train_mnist.py --gpus 2"
-}
-
-docker_test_image_cpu_py3(){
-    echo "Running tests on mxnet/python:${1}"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/tests/python/train/test_conv.py"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/example/image-classification/train_mnist.py"
-}
-
-docker_test_image_gpu_py3(){
-    echo "Running tests on mxnet/python:${1}"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/tests/python/train/test_conv.py --gpu"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${1} bash -c "python3 /mxnet/example/image-classification/train_mnist.py --gpus 2"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/tests/python/train/test_conv.py --gpu"
+    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/example/image-classification/train_mnist.py --gpus 2"
 }
 
 # if both $MXNET_DOCKERHUB_PASSWORD and $MXNET_DOCKERHUB_USERNAME environment variables are set, docker will automatically login
@@ -86,83 +76,76 @@ docker_account_logout(){
 }
 
 docker_push_image(){
-    docker push mxnet/python:${1}
+    image_tag="${1}"
+    docker push mxnet/python:${image_tag}
 }
 
-docker_build_image(){
+docker_generate_image_cpu(){
+    image_tag="${1}"
+    dockerfile="${2}"
+    python_version="${3}"
+    echo "Building docker image mxnet/python:${image_tag}"
+    docker build --build-arg version=${pip_tag} -t mxnet/python:${image_tag} -f ${dockerfile} .
+    docker_test_image_cpu ${image_tag} ${python_version}
+}
+
+docker_tag_image_cpu(){
+    original_tag="${1}"
+    image_tag="${2}"
+    python_version="${3}"
+    docker tag mxnet/python:${original_tag} mxnet/python:${image_tag}
+    docker_test_image_cpu ${image_tag} ${python_version}
+}
+
+docker_generate_image_gpu(){
+    image_tag="${1}"
+    dockerfile="${2}"
+    python_version="${3}"
     echo "Building docker image mxnet/python:${1}"
-    docker build --build-arg version=${pip_tag} -t mxnet/python:${1} -f ${2} .
-
+    docker build --build-arg version=${pip_tag} -t mxnet/python:${image_tag} -f ${dockerfile} .
+    docker_test_image_gpu ${image_tag} ${python_version}
 }
 
-docker_tag_image(){
-    docker tag mxnet/python:${1} mxnet/python:${2}
+docker_tag_image_gpu(){
+    original_tag="${1}"
+    image_tag="${2}"
+    python_version="${3}"
+    docker tag mxnet/python:${original_tag} mxnet/python:${image_tag}
+    docker_test_image_gpu ${image_tag} ${python_version}
 }
-
 
 
 # Build and Test dockerfiles - CPU
-docker_build_image "${mxnet_version}_cpu" "Dockerfile.mxnet.python.cpu"
-docker_test_image_cpu "${mxnet_version}_cpu"
-
-docker_build_image "${mxnet_version}_cpu_mkl" "Dockerfile.mxnet.python.cpu.mkl"
-docker_test_image_cpu "${mxnet_version}_cpu_mkl"
-
-docker_tag_image "${mxnet_version}_cpu" "latest"
-docker_test_image_cpu "latest"
-
+docker_generate_image_cpu "${mxnet_version}_cpu" "Dockerfile.mxnet.python.cpu" "python" &
+docker_generate_image_cpu "${mxnet_version}_cpu_mkl" "Dockerfile.mxnet.python.cpu.mkl" "python" &
+docker_tag_image_cpu "${mxnet_version}_cpu" "latest" "python" &
 
 #Build and Test dockerfiles - GPU
-docker_build_image "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu.cu90"
-docker_test_image_gpu "${mxnet_version}_gpu_cu90"
+docker_generate_image_gpu "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu.cu90" "python" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.cu90.mkl" "python" &
+docker_tag_image_gpu "${mxnet_version}_gpu_cu90" "gpu" "python" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu80" "Dockerfile.mxnet.python.gpu.cu80" "python" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu80_mkl" "Dockerfile.mxnet.python.gpu.cu80.mkl" "python" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu92" "Dockerfile.mxnet.python.gpu.cu92" "python" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu92_mkl" "Dockerfile.mxnet.python.gpu.cu92.mkl" "python"
 
-docker_build_image "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.cu90.mkl"
-docker_test_image_gpu "${mxnet_version}_gpu_cu90_mkl"
-
-docker_tag_image "${mxnet_version}_gpu_cu90" "gpu"
-docker_test_image_gpu "gpu"
-
-docker_build_image "${mxnet_version}_gpu_cu80" "Dockerfile.mxnet.python.gpu.cu80"
-docker_test_image_gpu "${mxnet_version}_gpu_cu80"
-
-docker_build_image "${mxnet_version}_gpu_cu80_mkl" "Dockerfile.mxnet.python.gpu.cu80.mkl"
-docker_test_image_gpu "${mxnet_version}_gpu_cu80_mkl"
-
-docker_build_image "${mxnet_version}_gpu_cu92" "Dockerfile.mxnet.python.gpu.cu92"
-docker_test_image_gpu "${mxnet_version}_gpu_cu92"
-
-docker_build_image "${mxnet_version}_gpu_cu92_mkl" "Dockerfile.mxnet.python.gpu.cu92.mkl"
-docker_test_image_gpu "${mxnet_version}_gpu_cu92_mkl"
-
-
+echo "Waiting for MXNet Python2 Docker Images to Build"
+wait
 
 # Build and Test Python3 dockerfiles - CPU
-docker_build_image "${mxnet_version}_cpu_python3" "Dockerfile.mxnet.python3.cpu"
-docker_test_image_cpu_py3 "${mxnet_version}_cpu_python3"
-
-docker_build_image "${mxnet_version}_cpu_mkl_python3" "Dockerfile.mxnet.python3.cpu.mkl"
-docker_test_image_cpu_py3 "${mxnet_version}_cpu_mkl_py3"
-
+docker_generate_image_cpu "${mxnet_version}_cpu_py3" "Dockerfile.mxnet.python3.cpu" "python3" &
+docker_generate_image_cpu "${mxnet_version}_cpu_mkl_py3" "Dockerfile.mxnet.python3.cpu.mkl" "python3" &
 
 #Build and Test Python3 dockerfiles - GPU
-docker_build_image "${mxnet_version}_gpu_cu90_py3" "Dockerfile.mxnet.python3.gpu.cu90"
-docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu90_py3"
+docker_generate_image_gpu "${mxnet_version}_gpu_cu90_py3" "Dockerfile.mxnet.python3.gpu.cu90" "python3" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu90_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu90.mkl" "python3" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu80_py3" "Dockerfile.mxnet.python3.gpu.cu80" "python3" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu80_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu80.mkl" "python3" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu92_py3" "Dockerfile.mxnet.python3.gpu.cu92" "python3" &
+docker_generate_image_gpu "${mxnet_version}_gpu_cu92_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu92.mkl" "python3"
 
-docker_build_image "${mxnet_version}_gpu_cu90_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu90.mkl"
-docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu90_mkl_py3"
-
-docker_build_image "${mxnet_version}_gpu_cu80_py3" "Dockerfile.mxnet.python3.gpu.cu80"
-docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu80_py3"
-
-docker_build_image "${mxnet_version}_gpu_cu80_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu80.mkl"
-docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu80_mkl_py3"
-
-docker_build_image "${mxnet_version}_gpu_cu92_py3" "Dockerfile.mxnet.python3.gpu.cu92"
-docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu92_py3"
-
-docker_build_image "${mxnet_version}_gpu_cu92_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu92.mkl"
-docker_test_image_gpu_py3 "${mxnet_version}_gpu_cu92_mkl_py3"
-
+echo "Waiting for MXNet Python3 Docker Images to Build"
+wait
 
 # Push dockerfiles
 echo "All images were successfully built. Now login to dockerhub and push images"
