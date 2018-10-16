@@ -688,3 +688,15 @@ def max_roi_pooling(attrs, inputs, proto_obj):
                                                         'spatial_scale': 'spatial_scale'
                                                        })
     return 'ROIPooling', new_attrs, inputs
+
+def depthtospace(attrs, inputs, proto_obj):
+    """Rearranges data from depth into blocks of spatial data."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+
+    return "depth_to_space", new_attrs, inputs
+
+def spacetodepth(attrs, inputs, proto_obj):
+    """Rearranges blocks of spatial data into depth."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
+
+    return "space_to_depth", new_attrs, inputs
