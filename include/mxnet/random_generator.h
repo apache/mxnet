@@ -154,6 +154,15 @@ class RandGenerator<gpu, DType> {
       return curand_normal(&state_);
     }
 
+    MSHADOW_XINLINE int discrete_uniform(const int lower, const int upper) {
+      // typedef typename std::conditional<std::is_integral<DType>::value,
+      // std::uniform_int_distribution<DType>,
+      // std::uniform_real_distribution<FType>>::type GType;
+      // GType dist_discrete_uniform(lower, upper);
+      std::uniform_int_distribution<int> dist_discrete_uniform(lower, upper);
+      return dist_discrete_uniform(*engine_);
+    }
+
    private:
     RandGenerator<gpu, DType> *global_gen_;
     int global_state_idx_;
