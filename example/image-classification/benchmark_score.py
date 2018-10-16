@@ -36,7 +36,8 @@ parser.add_argument('--network', type=str, default='all',
                                           'inception-v4', 'inception-resnet-v2', 'mobilenet',
                                           'densenet121', 'squeezenet1.1'])
 parser.add_argument('--batch-size', type=int, default=0,
-                     help='run batch size [1, 2, 4, 8, 16, 32] by default')
+                     help='Batch size to use for benchmarking. Example: 32, 64, 128.'
+                          'By default, runs benchmark for batch sizes - 1, 32, 64, 128, 256')
 
 opt = parser.parse_args()
 
@@ -105,8 +106,8 @@ if __name__ == '__main__':
     devs.append(mx.cpu())
 
     if opt.batch_size == 0:
-        batch_sizes = [1, 2, 4, 8, 16, 32]
-        logging.info('run batchsize [1, 2, 4, 8, 16, 32] by default, '
+        batch_sizes = [1, 32, 64, 128, 256]
+        logging.info('run batchsize [1, 32, 64, 128, 256] by default, '
                      'set --batch-size to run a specific one')
     else:
         batch_sizes = [opt.batch_size]

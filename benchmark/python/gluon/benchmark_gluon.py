@@ -38,12 +38,17 @@ parser.add_argument('--model', type=str, default='all',
                                         'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn',
                                         'vgg19', 'vgg19_bn'])
 parser.add_argument('--batch-size', type=int, default=0,
-                     help='run batch size [1, 2, 4, 8, 16, 32] by default')
+                     help='Batch size to use for benchmarking. Example: 32, 64, 128.'
+                          'By default, runs benchmark for batch sizes - 1, 32, 64, 128, 256')
 parser.add_argument('--num-batches', type=int, default=10)
 parser.add_argument('--gpus', type=str, default='',
-                    help='ordinates of gpus to use, can be "0,1,2" or empty for cpu only.')
+                    help='GPU IDs to use for this benchmark task. Example: --gpus=0,1,2,3 to use 4 GPUs.'
+                         'By default, use CPU only.')
 parser.add_argument('--global-batchsize', type=bool, default=True,
-                    help='for multi-gpu case, the batchsize will not be multiplied with GPU number if set true.') 
+                    help='Optional. Set this to True if batch-size should be used as is.'
+                         'Example: If --batch-size=64, --gpus=0,1. With --global-batchsize=True,'
+                         'each of the 2 GPUs will get 64/2 = 32 samples per batch.'
+                         'With --global-batchsize=False, each of the 2 GPUs will get 64 samples per batch.') 
 parser.add_argument('--type', type=str, default='inference', choices=['all', 'training', 'inference'])
 
 opt = parser.parse_args()
@@ -51,8 +56,8 @@ opt = parser.parse_args()
 num_batches = opt.num_batches
 global_bs = opt.global_batchsize
 dry_run = 10  # use 10 iterations to warm up
-batch_inf = [1, 16, 32, 64, 128, 256]
-batch_train = [1, 2, 4, 8, 16, 32, 64, 126, 256]
+batch_inf = [1, 32, 64, 128, 256]
+batch_train = [1, 32, 64, 128, 256]
 image_shapes = [(3, 224, 224), (3, 299, 299)]
 
 def score(network, batch_size, ctx):
