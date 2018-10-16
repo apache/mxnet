@@ -141,7 +141,7 @@ class TestImage(unittest.TestCase):
         try:
             import cv2
         except ImportError:
-            return
+            raise unittest.SkipTest("Unable to import cv2.")
         for img in TestImage.IMAGES:
             with open(img, 'rb') as fp:
                 str_image = fp.read()
@@ -175,11 +175,12 @@ class TestImage(unittest.TestCase):
         assert mx.image.scale_down((360, 1000), (480, 500)) == (360, 375)
         assert mx.image.scale_down((300, 400), (0, 0)) == (0, 0)
 
+    @with_seed()
     def test_resize_short(self):
         try:
             import cv2
         except ImportError:
-            return
+            raise unittest.SkipTest("Unable to import cv2")
         for img in TestImage.IMAGES:
             cv_img = cv2.imread(img)
             mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
@@ -196,21 +197,25 @@ class TestImage(unittest.TestCase):
                     mx_resized = mx.image.resize_short(mx_img, new_size, interp)
                     assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
 
+    @with_seed()
     def test_imresize(self):
         try:
             import cv2
         except ImportError:
-            return
+            raise unittest.SkipTest("Unable to import cv2")
         for img in TestImage.IMAGES:
             cv_img = cv2.imread(img)
             mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
             for _ in range(3):
                 new_h = np.random.randint(1, 1000)
                 new_w = np.random.randint(1, 1000)
-                for interp in range(0, 2):
-                    cv_resized = cv2.resize(cv_img, (new_w, new_h), interpolation=interp)
-                    mx_resized = mx.image.imresize(mx_img, new_w, new_h, interp)
+                for interp_val in range(0, 2):
+                    cv_resized = cv2.resize(cv_img, (new_w, new_h), interpolation=interp_val)
+                    mx_resized = mx.image.imresize(mx_img, new_w, new_h, interp=interp_val)
                     assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
+                    out_img = mx.nd.zeros((new_h, new_w, 3), dtype=mx_img.dtype)
+                    mx.image.imresize(mx_img, new_w, new_h, interp=interp_val, out=out_img)
+                    assert_almost_equal(out_img.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
 
     def test_color_normalize(self):
         for _ in range(10):
