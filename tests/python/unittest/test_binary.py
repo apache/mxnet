@@ -261,3 +261,31 @@ def test_qactivation_grad(activation, input_shape, use_dorefa_weight_activation)
     exp_gradient = in_data.grad.asnumpy()
 
     np.testing.assert_almost_equal(exp_gradient, gradients)
+
+
+@pytest.mark.parametrize("bits", [1])
+@pytest.mark.parametrize("input_shape", [(1, 2, 4, 4)])
+def test_qconvolution_scaling(input_shape, bits, channel=16, kernel=(3, 3)):
+    d = np.random.uniform(-1, 1, input_shape)
+    in_data = mx.nd.array(d)
+    in_data.attach_grad()
+
+    qconv_scaled = nn.QConv2D(channel, kernel, bits, use_bias=False, no_offset=True, apply_scaling=True)
+    qconv_scaled.initialize(mx.init.Xavier(magnitude=2))
+    qconv_std = nn.QConv2D(channel, kernel, bits, use_bias=False, no_offset=True, apply_scaling=False,
+                           params=qconv_scaled.collect_params())
+    conv = nn.Conv2D(channel, kernel, use_bias=False, params=qconv_scaled.collect_params())
+
+    grad_scaled, result_scaled = forward(in_data, qconv_scaled)
+    grad_std, result_std = forward(in_data, qconv_std)
+    grad, result = forward(in_data, conv)
+
+    def mse(a, b):
+        return ((a - b)**2).mean()
+
+    def sign_match(a, b):
+        return np.mean(np.sign(a) * np.sign(b))
+
+    assert mse(result, result_scaled) < mse(result, result_std)
+    assert sign_match(result_std, result_scaled) > 0.95
+    assert sign_match(grad_std, grad_scaled) > 0.9
