@@ -13,7 +13,7 @@ The detailed performance data collected on Intel Xeon CPU with MXNET built with 
 * [3. Windows](#3)
 * [4. Verify MXNet with python](#4)
 * [5. Enable MKL BLAS](#5)
-* [6. Enable graph optimizaiton](#6)
+* [6. Enable graph optimization](#6)
 * [7. Quantization](#7)
 * [8. Support](#8)
 
@@ -299,9 +299,9 @@ MKL_VERBOSE Intel(R) MKL 2018.0 Update 1 Product build 20171007 for Intel(R) 64 
 MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
 ```
 
-<h2 id="6">Enable graph optimizaiton</h2>
+<h2 id="6">Enable graph optimization</h2>
 
-Intel(R) MKL-DNN based graph optimization by subgraph feature are available in master branch. You can build from source and then use below command to enable this *experimental* feature for extreme performance:
+Graph optimization by subgraph feature are available in master branch. You can build from source and then use below command to enable this *experimental* feature for better performance:
 
 ```
 export MXNET_SUBGRAPH_BACKEND=MKLDNN
@@ -309,20 +309,22 @@ export MXNET_SUBGRAPH_BACKEND=MKLDNN
 
 This limitations of this experimental feature are:
 
-- This feature only support inference optimization. You should unset this environment variable for training.
+- Use this feature only for inference. When training, be sure to turn the feature off by unsetting the `MXNET_SUBGRAPH_BACKEND` environment variable.
 
-- On a build integrating both MKL-DNN and CUDA backends, only CPU features are fully supported.  
+- This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet. 
 
-Technical and Performance details are available [here](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
+- [MXNet Graph Optimization and Quantization Technical Information and Performance Details](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
-Benefiting from Intel® MKL-DNN, MXNET built with Intel® MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel® CPU Platform on Intel® Xeon® Scalable Platform. CNN quantization examples are available [here](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
+Benefiting from Intel® MKL-DNN, MXNet built with Intel® MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel® CPU Platform on Intel® Xeon® Scalable Platform.
+
+- [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 
 <h2 id="8">Next Steps and Support</h2>
 
-- For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl)
+- For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl) website.
 
-- For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn)
+- For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn) website.
 
-- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN)
+- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).
