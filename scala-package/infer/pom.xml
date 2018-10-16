@@ -101,5 +101,12 @@
             <version>1.10.19</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.oracle</groupId>
+            <artifactId>javafx</artifactId>
+            <version>2.2</version>
+            <systemPath>${java.home}/lib/ext/jfxrt.jar</systemPath>
+            <scope>system</scope>
+        </dependency>
     </dependencies>
 </project>
