@@ -120,12 +120,12 @@ private[mxnet] object JavaNDArrayMacro {
       // scalastyle:off
       // Combine and build the function string
       impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
-      val classDef = s"class ${ndarrayfunction.name}Builder(${argDef.mkString(",")})"
+      val classDef = s"class ${ndarrayfunction.name}Builder(${argDef.mkString(",")}) extends ${ndarrayfunction.name}BuilderBase"
       val classBody = s"${OptionArgDef.mkString("\n")}\n${classImpl.mkString("\n")}\ndef invoke() : $returnType = {${impl.mkString("\n")}}"
       val classFinal = s"$classDef {$classBody}"
       val functionDef = s"def ${ndarrayfunction.name} (${argDef.mkString(",")})"
       val functionBody = s"new ${ndarrayfunction.name}Builder(${argDef.map(_.split(":")(0)).mkString(",")})"
-      val functionFinal = s"$functionDef = $functionBody"
+      val functionFinal = s"$functionDef : ${ndarrayfunction.name}BuilderBase = $functionBody"
       // scalastyle:on
       functionDefs += c.parse(functionFinal).asInstanceOf[DefDef]
       classDefs += c.parse(classFinal).asInstanceOf[ClassDef]

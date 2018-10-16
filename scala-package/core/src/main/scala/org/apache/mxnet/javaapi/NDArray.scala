@@ -22,7 +22,7 @@ import org.apache.mxnet.javaapi.DType.DType
 import collection.JavaConverters._
 
 @AddJNDArrayAPIs(false)
-object NDArray {
+object NDArray extends NDArrayBase {
   implicit def fromNDArray(nd: org.apache.mxnet.NDArray): NDArray = new NDArray(nd)
 
   implicit def toNDArray(jnd: NDArray): org.apache.mxnet.NDArray = jnd.nd
