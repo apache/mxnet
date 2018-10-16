@@ -46,7 +46,7 @@ from .. import recordio
 def imread(filename, *args, **kwargs):
     """Read and decode an image to an NDArray.
 
-    Note: `imread` uses OpenCV (not the CV2 Python library).
+    .. note:: `imread` uses OpenCV (not the CV2 Python library).
     MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
@@ -87,8 +87,8 @@ def imread(filename, *args, **kwargs):
 def imresize(src, w, h, interp):
     r"""Resize image with OpenCV.
 
-    Note: `imread` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+    .. note:: `imresize` uses OpenCV (not the CV2 Python library). MXNet must have been built
+    with USE_OPENCV=1 for `imresize` to work.
 
     Parameters
     ----------
@@ -98,8 +98,25 @@ def imresize(src, w, h, interp):
         Width of resized image.
     h : int, required
         Height of resized image.
-    interp : int, optional, default='1'
+    interp : int, optional, default=1
         Interpolation method (default=cv2.INTER_LINEAR).
+        Possible values:
+        0: Nearest Neighbors Interpolation.
+        1: Bilinear interpolation.
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+        9: Cubic for enlarge, area for shrink, bilinear for others
+        10: Random select from interpolation method metioned above.
+        Note:
+        When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
 
     out : NDArray, optional
         The output NDArray to hold the result.
@@ -127,7 +144,7 @@ def imresize(src, w, h, interp):
 def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
-    Note: `imdecode` uses OpenCV (not the CV2 Python library).
+    .. note:: `imdecode` uses OpenCV (not the CV2 Python library).
     MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
@@ -274,7 +291,7 @@ def _get_interp_method(interp, sizes=()):
 def resize_short(src, size, interp=2):
     """Resizes shorter edge to size.
 
-    Note: `resize_short` uses OpenCV (not the CV2 Python library).
+    .. note:: `resize_short` uses OpenCV (not the CV2 Python library).
     MXNet must have been built with OpenCV for `resize_short` to work.
 
     Resizes the original image by setting the shorter edge to size
