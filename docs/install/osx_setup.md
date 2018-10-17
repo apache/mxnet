@@ -65,6 +65,10 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install openblas
 	brew tap homebrew/core
 	brew install opencv
+
+	# If building with MKLDNN
+	brew install llvm
+
 	# Get pip
 	easy_install pip
 	# For visualization of network graphs
@@ -89,12 +93,18 @@ The file called ```osx.mk``` has the configuration required for building MXNet o
     make -j$(sysctl -n hw.ncpu)
 ```
 
+To build with MKLDNN
+
+```bash
+LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang++ CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
+```
+
 If building with ```GPU``` support, add the following configuration to config.mk and build:
 ```bash
     echo "USE_CUDA = 1" >> ./config.mk
     echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
     echo "USE_CUDNN = 1" >> ./config.mk
-    make
+    make -j$(sysctl -n hw.ncpu)
 ```
 **Note:** To change build parameters, edit ```config.mk```.
 
@@ -124,6 +134,18 @@ You have 2 options:
 2. Building MXNet from Source Code
 
 ### Building MXNet with the Prebuilt Binary Package
+Install OpenCV and OpenBLAS.
+
+```bash
+brew install opencv
+brew install openblas@0.3.1
+```
+
+Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+
+```bash
+ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+```
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
 For OS X (Mac) users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:
