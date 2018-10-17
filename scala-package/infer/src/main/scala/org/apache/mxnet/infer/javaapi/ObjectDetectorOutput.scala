@@ -25,16 +25,16 @@ class ObjectDetectorOutput (className: String, args: Array[Float]){
   private val yMin = args(3)
   private val yMax = args(4)
 
-  def getClassName = className
+  def getClassName: String = className
 
-  def getProbability = probability
+  def getProbability: Float = probability
 
-  def getXMin = xMin
+  def getXMin: Float= xMin
 
-  def getXMax = xMax
+  def getXMax: Float = xMax
 
-  def getYMin = yMin
+  def getYMin: Float = yMin
 
-  def getYMax = yMax
+  def getYMax: Float = yMax
 
 }
