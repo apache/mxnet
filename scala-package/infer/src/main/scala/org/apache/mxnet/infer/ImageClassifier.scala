@@ -76,7 +76,7 @@ class ImageClassifier(modelPathPrefix: String,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(0))
     inputImage.flush()
     scaledImage.flush()
 
@@ -100,7 +100,7 @@ class ImageClassifier(modelPathPrefix: String,
     val imageBatch = ListBuffer[NDArray]()
     for (image <- inputBatch) {
       val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+      val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(0))
       imageBatch += pixelsNDArray
     }
     val op = NDArray.concatenate(imageBatch)
@@ -147,7 +147,7 @@ object ImageClassifier {
     * returned by this method after the use.
     * </p>
     * @param resizedImage     BufferedImage to get pixels from
-    * @param inputImageShape  Input shape; for example for resnet it is (1,3,224,224).
+    * @param inputImageShape  Input shape; for example for resnet it is (3,224,224).
                               Should be same as inputDescriptor shape.
     * @return                 NDArray pixels array
     */
