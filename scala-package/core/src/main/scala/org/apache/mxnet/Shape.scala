@@ -34,7 +34,6 @@ class Shape(dims: Traversable[Int]) extends Serializable {
   def size: Int = shape.size
   def length: Int = shape.length
   def drop(dim: Int): Shape = new Shape(shape.drop(dim))
-  def dropBack(dim : Int) : Shape = new Shape(shape.dropRight(dim))
   def slice(from: Int, end: Int): Shape = new Shape(shape.slice(from, end))
   def product: Int = shape.product
   def head: Int = shape.head
