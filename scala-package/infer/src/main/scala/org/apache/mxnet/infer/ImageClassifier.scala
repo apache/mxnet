@@ -182,7 +182,7 @@ object ImageClassifier {
     resizedImage.flush()
 
     // creating NDArray according to the input shape
-    val pixelsArray = NDArray.array(result, shape = inputImageShape)
+    val pixelsArray = NDArray.array(result, shape = new Shape(1 +: inputImageShape.toVector))
     pixelsArray
   }
 
