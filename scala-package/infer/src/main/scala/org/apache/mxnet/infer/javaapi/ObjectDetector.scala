@@ -21,8 +21,6 @@ package org.apache.mxnet.infer.javaapi
 import java.awt.image.BufferedImage
 // scalastyle:on
 
-import org.apache.commons.lang3.tuple.ImmutablePair
-
 import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
 
 import scala.collection.JavaConverters

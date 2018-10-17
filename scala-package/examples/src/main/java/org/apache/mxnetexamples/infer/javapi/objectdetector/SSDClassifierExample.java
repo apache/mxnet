@@ -34,7 +34,6 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.io.File;
 
