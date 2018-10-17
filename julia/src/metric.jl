@@ -239,7 +239,6 @@ Mean Squared Error.
 Calculates the mean squared error regression loss.
 Requires that label and prediction have the same shape.
 """
-
 mutable struct MSE{N} <: AbstractEvalMetric
   mse_sum  :: Vector{NDArray{MX_float,N}}
   n_sample :: Int
@@ -271,7 +270,7 @@ function reset!(metric::MSE{N}) where N
   metric.n_sample = 0
 end
 
-doc"""
+@doc doc"""
     NMSE
 
 Normalized Mean Squared Error

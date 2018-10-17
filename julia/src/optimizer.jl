@@ -122,7 +122,7 @@ end
 
 get(a::Exp) = a.η₀ * a.γ^a.t
 
-doc"""
+@doc doc"""
     LearningRate.Inv(η₀; γ = 0.9, p = 0.5)
 
 ```math
@@ -194,7 +194,7 @@ end
 
 get(f::Fixed) = f.μ
 
-doc"""
+@doc doc"""
     NadamScheduler(; μ = 0.99, δ = 0.004, γ = 0.5, α = 0.96)
 
 Nesterov-accelerated adaptive momentum scheduler.

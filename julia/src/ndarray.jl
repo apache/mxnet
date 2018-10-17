@@ -71,7 +71,7 @@ function _ndarray_alloc(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: 
 end
 
 # create a NDArray handle of specific shape type
-function _ndarray_alloc(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool) where {T <: DType,N}
+function _ndarray_alloc(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool) where {T<:DType,N}
   h_ref  = Ref{MX_handle}(0)
   shape  = flipdim(MX_uint[shape...],1)
   dtype  = toTypeFlag(T)
@@ -501,6 +501,8 @@ end
 Create a copy of an array. When no `Context` is given, create a Julia `Array`.
 Otherwise, create an `NDArray` on the specified context.
 """
+copy
+
 # Create copy: NDArray -> Julia Array
 copy(x::NDArray{T,D}) where{T,D} = copy!(Array{T,D}(size(x)), x)
 
@@ -1258,7 +1260,7 @@ macro _remap(sig::Expr, imp::Expr)
 
   esc(quote
     $import_expr
-    @doc $docstr ->
+    @doc $docstr
     $func_def
   end)
 end
@@ -1767,7 +1769,7 @@ macro _import_ndarray_functions()
       # TODO the explicit exclusion of take will no longer be necessary when it is removed from Base
       $((isdefined(Base, func_name) && func_name ≠ :take) ? :(import Base.$func_name) : :())
       $func_def
-      @doc $desc ->
+      @doc $desc
       $func_def2
     end
   end

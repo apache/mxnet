@@ -611,7 +611,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
   end
 
   defun = quote
-    @doc $f_desc ->
+    @doc $f_desc
     function $iter_name(; kwargs...)
       arg_keys = String[string(k) for (k,v) in kwargs]
       arg_vals = String[dump_mx_param(v) for (k,v) in kwargs]

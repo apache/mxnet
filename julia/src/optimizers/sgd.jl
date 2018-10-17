@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-doc"""
+@doc doc"""
     SGD(; kwargs...)
 
 Stochastic gradient descent optimizer.

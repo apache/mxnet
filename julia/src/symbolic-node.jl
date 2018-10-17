@@ -936,7 +936,7 @@ function _define_atomic_symbol_creator(name :: String)
   end # quote
 
   func_def2 = quote
-  @doc $f_desc ->
+  @doc $f_desc
   function $func_name(args::SymbolicNode...; kwargs...)
     $func_name(SymbolicNode, args...; kwargs...)
   end # function

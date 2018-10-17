@@ -26,9 +26,10 @@ module mx
 
 import Base.Iterators: filter
 
-using Printf
 using Formatting
 using MacroTools
+using Markdown
+using Printf
 using TakingBroadcastSeriously: @unfuse
 import TakingBroadcastSeriously: broadcast_
 
