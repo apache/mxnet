@@ -19,7 +19,8 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
-           'BatchNorm', 'InstanceNorm', 'LayerNorm', 'Flatten', 'Lambda', 'HybridLambda']
+           'BatchNorm', 'InstanceNorm', 'LayerNorm', 'Flatten', 'Lambda', 'HybridLambda',
+           'GropNorm']
 import warnings
 import numpy as np
 
@@ -733,18 +734,18 @@ class GropNorm(Block):
                  beta_initializer='zeros', gamma_initializer='ones', **kwargs):
         super(GropNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': 0,
-                        'fix_gamma': True, 'use_global_stats': True}
+                        'fix_gamma': True, 'use_global_stats': False}
         self.ngroups = ngroups
         assert in_channels % ngroups == 0, "Channel number should be divisible by groups."
         if in_channels != 0:
             self.in_channels = in_channels
 
-        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+        self.gamma = self.params.get('gamma', grad_req='write',
                                      shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True, differentiable=scale)
-        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                     allow_deferred_init=True, differentiable=True)
+        self.beta = self.params.get('beta', grad_req='write',
                                     shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True, differentiable=center)
+                                    allow_deferred_init=True, differentiable=True)
         # hacky
         self.running_mean = self.params.get('running_mean', grad_req='null',
                                             shape=(in_channels,), init='zeros',
@@ -762,9 +763,10 @@ class GropNorm(Block):
     def forward(self, x):
         xshape = x.shape
         # normalization
-        y = F.BatchNorm(x.reshape(xshape[0], self.ngroups, -1),
-                        unning_mean, running_var, unning_mean, running_var,
-                        name='fwd', **self._kwargs)
+        y = nd.BatchNorm(x.reshape(xshape[0], self.ngroups, -1),
+                         self.running_var.data(), self.running_mean.data(),
+                         self.running_mean.data(), self.running_var.data(),
+                         name='fwd', **self._kwargs)
         # scale and shift
         y = y.reshape(xshape[0], xshape[1], -1)
         y = y * self.gamma.data().reshape(1, -1, 1) + self.beta.data().reshape(1, -1, 1)
