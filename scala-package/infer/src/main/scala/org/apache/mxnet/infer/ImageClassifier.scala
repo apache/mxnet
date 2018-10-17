@@ -97,14 +97,12 @@ class ImageClassifier(modelPathPrefix: String,
   def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
 
-    val imageBatch = ListBuffer[NDArray]()
-    for (image <- inputBatch) {
-      val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(1))
-      imageBatch += pixelsNDArray
-    }
+    val inputBatchSeq = inputBatch.toIndexedSeq
+    val imageBatch = inputBatchSeq.indices.par.map(idx => {
+      val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
+      ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(1))
+    }).toList
     val op = NDArray.concatenate(imageBatch)
-
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())
     handler.execute(imageBatch.foreach(_.dispose()))
