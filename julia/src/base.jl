@@ -51,6 +51,8 @@ const MXNET_LIB = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],
                                      [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
                                       get(ENV, "MXNET_HOME", ""),
                                       Pkg.dir("MXNet", "deps", "usr", "lib")])
+const LIB_VERSION = Ref{Int}(0)
+
 if isempty(MXNET_LIB)
   # touch this file, so that after the user properly build libmxnet, the precompiled
   # MXNet.ji will be re-compiled to get MXNET_LIB properly.
@@ -66,7 +68,7 @@ function __init__()
   _get_libmx_op_names()
   _populate_iter_creator_cache!()
 
-  global const LIB_VERSION = _get_lib_version()
+  global LIB_VERSION[] = _get_lib_version()
 
   atexit() do
     # notify libmxnet we are shutting down

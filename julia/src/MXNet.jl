@@ -27,6 +27,7 @@ module mx
 import Base.Iterators: filter
 
 using Formatting
+using Libdl
 using MacroTools
 using Markdown
 using Printf
