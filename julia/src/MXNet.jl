@@ -26,6 +26,7 @@ module mx
 
 import Base.Iterators: filter
 
+using Printf
 using Formatting
 using MacroTools
 using TakingBroadcastSeriously: @unfuse
