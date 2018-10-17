@@ -29,7 +29,7 @@ class ObjectDetectorOutput (className: String, args: Array[Float]){
 
   def getProbability: Float = probability
 
-  def getXMin: Float= xMin
+  def getXMin: Float = xMin
 
   def getXMax: Float = xMax
 
