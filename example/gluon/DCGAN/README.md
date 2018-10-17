@@ -7,16 +7,17 @@ You can use this reference implementation on MNIST and CIFAR10 dataset.
 
 
 #### Generated pic(use dataset cifar10)
-![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/fake_img_iter_13900.png)
+![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/fake_img_iter_13900.png)
 
 #### Generated pic(use dataset mnist)
-![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/fake_img_iter_21700.png)
+![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/fake_img_iter_21700.png)
 
 #### inception_score in cpu and gpu (the real image`s score is around 3.3)
 CPU & GPU
 
-![inception_socre_with_cpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/inception_score_cifar10_cpu.png)
-![inception_score_with_gpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCgan/pic/inception_score_cifar10.png)
+![inception_socre_with_cpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10_cpu.png)
+![inception_score_with_gpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10.png)
+
 ## Quick start
 use below code to see the configurations you can set:
 ```python
