@@ -20,7 +20,7 @@
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
            'BatchNorm', 'InstanceNorm', 'LayerNorm', 'Flatten', 'Lambda', 'HybridLambda',
-           'GropNorm']
+           'GroupNorm']
 import warnings
 import numpy as np
 
@@ -703,8 +703,8 @@ class HybridLambda(HybridBlock):
                                            function=self._func_name)
 
 
-class GropNorm(Block):
-    """GropNorm normalization layer (Wu and He, 2014).
+class GroupNorm(Block):
+    """GroupNorm normalization layer (Wu and He, 2014).
     Parameters
     ----------
     ngroups : int
@@ -716,7 +716,7 @@ class GropNorm(Block):
     axis : int, default 1
         The axis that should be normalized. This is typically the channels
         (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
-        set `axis=1` in `GropNorm`. If `layout='NHWC'`, then set `axis=3`.
+        set `axis=1` in `GroupNorm`. If `layout='NHWC'`, then set `axis=3`.
     epsilon: float, default 1e-5
         Small float added to variance to avoid dividing by zero.
     beta_initializer: str or `Initializer`, default 'zeros'
@@ -732,7 +732,7 @@ class GropNorm(Block):
     """
     def __init__(self, ngroups, in_channels=0, axis=1, epsilon=1e-5,
                  beta_initializer='zeros', gamma_initializer='ones', **kwargs):
-        super(GropNorm, self).__init__(**kwargs)
+        super(GroupNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': 0,
                         'fix_gamma': True, 'use_global_stats': False}
         self.ngroups = ngroups
@@ -758,7 +758,7 @@ class GropNorm(Block):
     def cast(self, dtype):
         if np.dtype(dtype).name == 'float16':
             dtype = 'float32'
-        super(GropNorm, self).cast(dtype)
+        super(GroupNorm, self).cast(dtype)
 
     def forward(self, x):
         xshape = x.shape
