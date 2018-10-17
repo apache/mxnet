@@ -17,6 +17,7 @@
 
 package org.apache.mxnetexamples.infer.javapi.objectdetector;
 
+import org.apache.mxnet.infer.javaapi.ObjectDetectorOutput;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
@@ -47,7 +48,7 @@ public class SSDClassifierExample {
 	
 	final static Logger logger = LoggerFactory.getLogger(SSDClassifierExample.class);
 	
-	static List<List<ImmutablePair<String, List<Float>>>>
+	static List<List<ObjectDetectorOutput>>
 	runObjectDetectionSingle(String modelPathPrefix, String inputImagePath, List<Context> context) {
 		Shape inputShape = new Shape(new int[] {1, 3, 512, 512});
 		List<DataDesc> inputDescriptors = new ArrayList<DataDesc>();
@@ -57,7 +58,7 @@ public class SSDClassifierExample {
 		return objDet.imageObjectDetect(img, 3);
 	}
 	
-	static List<List<List<ImmutablePair<String, List<Float>>>>>
+	static List<List<List<ObjectDetectorOutput>>>
 	runObjectDetectionBatch(String modelPathPrefix, String inputImageDir, List<Context> context) {
 		Shape inputShape = new Shape(new int[]{1, 3, 512, 512});
 		List<DataDesc> inputDescriptors = new ArrayList<DataDesc>();
@@ -66,13 +67,13 @@ public class SSDClassifierExample {
 		
 		// Loading batch of images from the directory path
 		List<List<String>> batchFiles = generateBatches(inputImageDir, 20);
-		List<List<List<ImmutablePair<String, List<Float>>>>> outputList
-				= new ArrayList<List<List<ImmutablePair<String, List<Float>>>>>();
+		List<List<List<ObjectDetectorOutput>>> outputList
+				= new ArrayList<List<List<ObjectDetectorOutput>>>();
 		
 		for (List<String> batchFile : batchFiles) {
 			List<BufferedImage> imgList = ObjectDetector.loadInputBatch(batchFile);
 			// Running inference on batch of images loaded in previous step
-			List<List<ImmutablePair<String, List<Float>>>> tmp
+			List<List<ObjectDetectorOutput>> tmp
 					= objDet.imageBatchObjectDetect(imgList, 5);
 			outputList.add(tmp);
 		}
@@ -134,17 +135,16 @@ public class SSDClassifierExample {
 			int height = inputShape.get(3);
 			String outputStr = "\n";
 			
-			List<List<ImmutablePair<String, List<Float>>>> output
+			List<List<ObjectDetectorOutput>> output
 					= runObjectDetectionSingle(mdprefixDir, imgPath, context);
 			
-			for (List<ImmutablePair<String, List<Float>>> ele : output) {
-				for (ImmutablePair<String, List<Float>> i : ele) {
-					outputStr += "Class: " + i.getKey() + "\n";
-					List<Float> arr = i.getValue();
-					outputStr += "Probabilties: " + arr.get(0) + "\n";
+			for (List<ObjectDetectorOutput> ele : output) {
+				for (ObjectDetectorOutput i : ele) {
+					outputStr += "Class: " + i.getClassName() + "\n";
+					outputStr += "Probabilties: " + i.getProbability() + "\n";
 					
-					List<Float> coord = Arrays.asList(arr.get(1) * width,
-							arr.get(2) * height, arr.get(3) * width, arr.get(4) * height);
+					List<Float> coord = Arrays.asList(i.getXMin() * width,
+							i.getXMax() * height, i.getYMin() * width, i.getYMax() * height);
 					StringBuilder sb = new StringBuilder();
 					for (float c: coord) {
 						sb.append(", ").append(c);
@@ -154,20 +154,19 @@ public class SSDClassifierExample {
 			}
 			logger.info(outputStr);
 			
-			List<List<List<ImmutablePair<String, List<Float>>>>> outputList =
+			List<List<List<ObjectDetectorOutput>>> outputList =
 					runObjectDetectionBatch(mdprefixDir, imgDir, context);
 			
 			outputStr = "\n";
 			int index = 0;
-			for (List<List<ImmutablePair<String, List<Float>>>> i: outputList) {
-				for (List<ImmutablePair<String, List<Float>>> j : i) {
+			for (List<List<ObjectDetectorOutput>> i: outputList) {
+				for (List<ObjectDetectorOutput> j : i) {
 					outputStr += "*** Image " + (index + 1) + "***" + "\n";
-					for (ImmutablePair<String, List<Float>> k : j) {
-						outputStr += "Class: " + k.getKey() + "\n";
-						List<Float> arr = k.getValue();
-						outputStr += "Probabilties: " + arr.get(0) + "\n";
-						List<Float> coord = Arrays.asList(arr.get(1) * width,
-								arr.get(2) * height, arr.get(3) * width, arr.get(4) * height);
+					for (ObjectDetectorOutput k : j) {
+						outputStr += "Class: " + k.getClassName() + "\n";
+						outputStr += "Probabilties: " + k.getProbability() + "\n";
+						List<Float> coord = Arrays.asList(k.getXMin() * width,
+								k.getXMax() * height, k.getYMin() * width, k.getYMax() * height);
 						
 						StringBuilder sb = new StringBuilder();
 						for (float c : coord) {

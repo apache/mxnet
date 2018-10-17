@@ -51,12 +51,9 @@ class ObjectDetector(val objDetector: org.apache.mxnet.infer.ObjectDetector){
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
   def imageObjectDetect(inputImage: BufferedImage, topK: Int):
-  java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
+  java.util.List[java.util.List[ObjectDetectorOutput]] = {
     val ret = objDetector.imageObjectDetect(inputImage, Some(topK))
-    (ret map {a => (a map {entry =>
-      new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1,
-        entry._2.map(f => Float.box(f)).toList.asJava)}).asJava
-    }).asJava
+    (ret map {a => (a map {e => new ObjectDetectorOutput(e._1, e._2)}).asJava}).asJava
   }
 
   /**
@@ -70,10 +67,9 @@ class ObjectDetector(val objDetector: org.apache.mxnet.infer.ObjectDetector){
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
   def objectDetectWithNDArray(input: java.util.List[NDArray], topK: Int):
-  java.util.List[java.util.List[(String, java.util.List[java.lang.Float])]] = {
+  java.util.List[java.util.List[ObjectDetectorOutput]] = {
     val ret = objDetector.objectDetectWithNDArray(convert(input.asScala.toIndexedSeq), Some(topK))
-    (ret map {a => (a map {entry =>
-      (entry._1, entry._2.map(f => Float.box(f)).toList.asJava)}).asJava }).asJava
+    (ret map {a => (a map {e => new ObjectDetectorOutput(e._1, e._2)}).asJava}).asJava
   }
 
   /**
@@ -84,12 +80,9 @@ class ObjectDetector(val objDetector: org.apache.mxnet.infer.ObjectDetector){
     * @return                 List of list of tuples of (class, probability)
     */
   def imageBatchObjectDetect(inputBatch: java.util.List[BufferedImage], topK: Int):
-      java.util.List[java.util.List[ImmutablePair[String, java.util.List[java.lang.Float]]]] = {
+      java.util.List[java.util.List[ObjectDetectorOutput]] = {
     val ret = objDetector.imageBatchObjectDetect(inputBatch.asScala, Some(topK))
-    (ret map {a => (a map {entry =>
-      new ImmutablePair[String, java.util.List[java.lang.Float]](entry._1,
-        entry._2.map(f => Float.box(f)).toList.asJava)
-    }).asJava }).asJava
+    (ret map {a => (a map {e => new ObjectDetectorOutput(e._1, e._2)}).asJava}).asJava
   }
 
   def convert[B, A <% B](l: IndexedSeq[A]): IndexedSeq[B] = l map { a => a: B }
