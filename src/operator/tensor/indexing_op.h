@@ -338,6 +338,7 @@ struct Take {
     in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
     out_data[i] = in_data[in_src_index];
   }
+
 };
 
 // Embedding forward implementation with dense weight
