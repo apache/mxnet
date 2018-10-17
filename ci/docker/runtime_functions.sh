@@ -893,7 +893,7 @@ unittest_ubuntu_gpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
-unittest_ubuntu_cpu_julia06() {
+unittest_ubuntu_cpu_julia07() {
     set -ex
     export PATH="/work/julia/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
