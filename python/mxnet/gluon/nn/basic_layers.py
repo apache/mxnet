@@ -748,12 +748,12 @@ class GroupNorm(Block):
                                     allow_deferred_init=True, differentiable=True)
         # hacky
         self.hacky_zeros = self.params.get('hacky_zeros', grad_req='null',
-                                            shape=(ngroups,), init='zeros',
-                                            allow_deferred_init=True, differentiable=False)
-        self.hacky_ones = self.params.get('hacky_ones', grad_req='null',
-                                           shape=(ngroups,), init='ones',
+                                           shape=(ngroups,), init='zeros',
                                            allow_deferred_init=True, differentiable=False)
-        
+        self.hacky_ones = self.params.get('hacky_ones', grad_req='null',
+                                          shape=(ngroups,), init='ones',
+                                          allow_deferred_init=True, differentiable=False)
+ 
 
     def cast(self, dtype):
         if np.dtype(dtype).name == 'float16':
@@ -780,4 +780,3 @@ class GroupNorm(Block):
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
-
