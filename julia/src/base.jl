@@ -27,7 +27,7 @@ Base.show(io::IO, e::MXError) = print(io, e.msg)
 ################################################################################
 const MX_uint = Cuint
 const MX_float = Cfloat
-const MX_handle = Ptr{Void}
+const MX_handle = Ptr{Cvoid}
 
 const char_p = Ptr{UInt8}
 const char_pp = Ptr{char_p}
@@ -50,7 +50,8 @@ const grad_req_map = Dict{Symbol,GRAD_REQ}(
 const MXNET_LIB = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],  # see build.jl
                                      [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
                                       get(ENV, "MXNET_HOME", ""),
-                                      Pkg.dir("MXNet", "deps", "usr", "lib")])
+                                      joinpath(dirname(@__FILE__), "..",
+                                               "deps", "usr", "lib")])
 const LIB_VERSION = Ref{Int}(0)
 
 if isempty(MXNET_LIB)
@@ -148,12 +149,12 @@ macro mx_define_handle_t(name, destructor)
   end
 end
 
-@mx_define_handle_t(MX_NDArrayHandle, MXNDArrayFree)
-@mx_define_handle_t(MX_OpHandle, nop)
-@mx_define_handle_t(MX_SymbolHandle, MXSymbolFree)
-@mx_define_handle_t(MX_ExecutorHandle, MXExecutorFree)
-@mx_define_handle_t(MX_DataIterHandle, MXDataIterFree)
-@mx_define_handle_t(MX_KVStoreHandle, MXKVStoreFree)
+@mx_define_handle_t MX_NDArrayHandle   MXNDArrayFree
+@mx_define_handle_t MX_OpHandle        nop
+@mx_define_handle_t MX_SymbolHandle    MXSymbolFree
+@mx_define_handle_t MX_ExecutorHandle  MXExecutorFree
+@mx_define_handle_t MX_DataIterHandle  MXDataIterFree
+@mx_define_handle_t MX_KVStoreHandle   MXKVStoreFree
 
 ################################################################################
 # MXNet Params
@@ -185,7 +186,7 @@ dump_mx_param(val::Float64)    = @sprintf("%.16e", val)
 dump_mx_param(val::Float32)    = @sprintf("%.8e", val)
 dump_mx_param(val::Float16)    = @sprintf("%.4e", val)
 dump_mx_param(val::Irrational) = @sprintf("%.16e", val)
-dump_mx_param(shape::NTuple{N, <:Integer}) where N =
+dump_mx_param(shape::NTuple{N,<:Integer}) where N =
   string(tuple(flipdim([shape...], 1)...))
 
 
