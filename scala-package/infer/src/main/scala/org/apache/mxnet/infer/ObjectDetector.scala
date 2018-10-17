@@ -72,7 +72,7 @@ class ObjectDetector(modelPathPrefix: String,
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(0))
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(1))
     val output = objectDetectWithNDArray(IndexedSeq(pixelsNDArray), topK)
     handler.execute(pixelsNDArray.dispose())
     output
@@ -150,7 +150,7 @@ class ObjectDetector(modelPathPrefix: String,
     val imageBatch = ListBuffer[NDArray]()
     for (image <- inputBatch) {
       val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(0))
+      val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(1))
       imageBatch += pixelsNdarray
     }
     val op = NDArray.concatenate(imageBatch)
