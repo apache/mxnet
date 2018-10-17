@@ -747,11 +747,11 @@ class GropNorm(Block):
                                     shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True, differentiable=True)
         # hacky
-        self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(in_channels,), init='zeros',
+        self.hacky_zeros = self.params.get('hacky_zeros', grad_req='null',
+                                            shape=(ngroups,), init='zeros',
                                             allow_deferred_init=True, differentiable=False)
-        self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(in_channels,), init='ones',
+        self.hacky_ones = self.params.get('hacky_ones', grad_req='null',
+                                           shape=(ngroups,), init='ones',
                                            allow_deferred_init=True, differentiable=False)
         
 
@@ -764,8 +764,8 @@ class GropNorm(Block):
         xshape = x.shape
         # normalization
         y = nd.BatchNorm(x.reshape(xshape[0], self.ngroups, -1),
-                         self.running_var.data(), self.running_mean.data(),
-                         self.running_mean.data(), self.running_var.data(),
+                         self.hacky_ones.data(), self.hacky_zeros.data(),
+                         self.hacky_zeros.data(), self.hacky_ones.data(),
                          name='fwd', **self._kwargs)
         # scale and shift
         y = y.reshape(xshape[0], xshape[1], -1)
