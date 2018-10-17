@@ -54,9 +54,10 @@ end
 function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
                   ::Val{true}) where T<: AbstractEvalMetric
   if length(labels) != length(preds)
-    Base.warn_once(
-      "The number of labels ($(length(labels))) does not correspond to the\
-      number of outputs ($(length(preds))). The calculated metric might not be accuracte.")
+    @warn(
+      "The number of labels ($(length(labels))) does not correspond to the " *
+      "number of outputs ($(length(preds))). The calculated metric might not be accuracte.",
+      maxlog = 1)
   end
   for (label, pred) in zip(labels, preds)
     _update_single_output(metric, label, pred)
@@ -64,11 +65,12 @@ function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
 end
 
 function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
-                  ::Val{false}) where T<: AbstractEvalMetric
+                  ::Val{false}) where {T<:AbstractEvalMetric}
   if length(labels) != length(preds)
-    Base.warn_once(
-      "The number of labels ($(length(labels))) does not correspond to the\
-      number of outputs ($(length(preds))). The calculated metric might not be accuracte.")
+    @warn(
+      "The number of labels ($(length(labels))) does not correspond to the " *
+      "number of outputs ($(length(preds))). The calculated metric might not be accuracte.",
+      maxlog = 1)
   end
   for (label, pred) in zip(labels, preds)
      @nd_as_jl ro=(label, pred) begin

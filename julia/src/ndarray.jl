@@ -1003,7 +1003,7 @@ macro nd_as_jl(m_args...)
   m_body = quote
     $wait_statements
     $save_statements
-    $let_statement
+    # $let_statement FIXME
     $clear_statements
     nothing # the final results is always nothing
   end

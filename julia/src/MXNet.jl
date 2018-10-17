@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-__precompile__()
-
 module MXNet
 
 using Reexport
