@@ -18,7 +18,7 @@
 #
 # Dockerfile to build and run MXNet on CentOS 7 for GPU
 
-FROM nvidia/cuda:9.1-cudnn7-devel-centos7
+FROM nvidia/cuda:10.0-cudnn7-devel-centos7
 
 WORKDIR /work/deps
 
@@ -34,6 +34,8 @@ COPY install/centos7_adduser.sh /work/
 RUN /work/centos7_adduser.sh
 
 ENV PYTHONPATH=./python/
+ENV CUDA_ARCH_LIST="5.2 7.0"
+
 WORKDIR /work/mxnet
 
 COPY runtime_functions.sh /work/

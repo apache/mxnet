@@ -15,10 +15,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to run MXNet on Ubuntu 16.04 for CPU
 
-FROM nvidia/cuda:9.1-cudnn7-devel
+FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
 
 WORKDIR /work/deps
 

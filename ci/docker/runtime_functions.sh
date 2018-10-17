@@ -292,20 +292,18 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/mxnet
-    # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    # build_ccache_wrappers
-    make \
-        DEV=1                                     \
-        ENABLE_TESTCOVERAGE=1                     \
-        USE_LAPACK=1                              \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
-        USE_BLAS=openblas                         \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        -j$(nproc)
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_CUDA=ON \
+        -DUSE_CUDNN=ON \
+        -DCUDA_ARCH_LIST="${CUDA_ARCH_LIST}" \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_DIST_KVSTORE=ON \
+        -G Ninja /work/mxnet
+    ninja -v
 }
 
 build_ubuntu_cpu() {
