@@ -24,11 +24,13 @@ set -exuo pipefail
 
 #
 # This disk image and kernels for virtual testing with QEMU  is generated with some manual OS
-# installation steps with the scripts and documentation found in the ci/qemu/ folder. 
+# installation steps with the scripts and documentation found in the ci/qemu/ folder.
 #
 # The image has a base Debian OS and MXNet runtime dependencies installed.
 # The root password is empty and there's a "qemu" user without password. SSH access is enabled as
 # well.
+#
+# See also: ci/qemu/README.md
 #
 
 REMOTE="https://s3-eu-west-1.amazonaws.com/mxnet-edge-public/qemu"

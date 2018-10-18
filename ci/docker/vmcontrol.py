@@ -18,7 +18,7 @@
 # under the License.
 
 # -*- coding: utf-8 -*-
-"""Utilities to control a guest VM"""
+"""Utilities to control a guest VM, used for virtual testing with QEMU"""
 
 __author__ = 'Pedro Larroy'
 __version__ = '0.1'
@@ -64,40 +64,40 @@ class VM:
         self.log = logging.getLogger(VM.__name__)
         self.ssh_port = ssh_port
         self.timeout_s = 300
-        #self.timeout_s = None
         self.qemu_process = None
+        self._detach = False
 
     def __enter__(self):
         self.start()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.terminate()
+        if not self._detach:
+            self.shutdown()
+            self.terminate()
 
     def start(self):
         self.log.info("Starting VM, ssh port redirected to localhost:%s", self.ssh_port)
-        if self.running():
+        if self.is_running():
             raise VMError("VM is running, shutdown first")
         self.qemu_process = run_qemu(self.ssh_port)
-        # give a bit of time for early execution failures
-        time.sleep(0)
         def keep_waiting():
-            return self.running()
+            return self.is_running()
 
         ssh_working = wait_ssh_open('127.0.0.1', self.ssh_port, keep_waiting, self.timeout_s)
 
-        if not self.running():
+        if not self.is_running():
             (_, stderr) = self.qemu_process.communicate()
             raise VMError("VM failed to start, retcode: {}, stderr: {}".format( self.retcode(), stderr.decode()))
 
         if not ssh_working:
-            if self.running():
+            if self.is_running():
                 self.log.error("VM running but SSH is not working")
             self.terminate()
             raise VMError("SSH is not working after {} seconds".format(self.timeout_s))
         self.log.info("VM is online and SSH is up")
 
-    def running(self):
+    def is_running(self):
         return self.qemu_process and self.qemu_process.poll() is None
 
     def retcode(self):
@@ -115,6 +115,11 @@ class VM:
             self.qemu_process.kill()
             self.qemu_process.wait()
             self.qemu_process = None
+        else:
+            logging.warn("VM.terminate: QEMU process not running")
+
+    def detach(self):
+        self._detach = True
 
     def shutdown(self):
         if self.qemu_process:
@@ -131,7 +136,7 @@ class VM:
             self.qemu_process.wait()
 
     def __del__(self):
-        if self.running:
+        if self.is_running and not self._detach:
             logging.info("VM destructor hit")
             self.terminate()
 

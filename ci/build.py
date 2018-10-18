@@ -394,7 +394,7 @@ def main() -> int:
                         help="platform",
                         type=str)
 
-    parser.add_argument("--build-only",
+    parser.add_argument("-b", "--build-only",
                         help="Only build the container, don't build the project",
                         action='store_true')
 

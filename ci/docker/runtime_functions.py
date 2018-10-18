@@ -53,11 +53,7 @@ def activate_this(base):
             sys.path.remove(item)
     sys.path[:0] = new_sys_path
 
-def pip_install(pkg):
-    import pip._internal as pip
-    pip.main(['install', pkg])
-
-def run_unittests_python3_qemu():
+def run_ut_py3_qemu():
     from vmcontrol import VM
     with VM() as vm:
         logging.info("VM provisioning with ansible")
@@ -66,11 +62,11 @@ def run_unittests_python3_qemu():
         logging.info("sync tests")
         check_call(['rsync', '-e', 'ssh -p{}'.format(vm.ssh_port), '-a', 'mxnet/tests', 'qemu@localhost:mxnet'])
         logging.info("execute tests")
-        check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(vm.ssh_port), "qemu@localhost", "./runtime_functions.py", "run_unittests_python3_qemu_"])
+        check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(vm.ssh_port), "qemu@localhost", "./runtime_functions.py", "run_ut_python3_qemu_internal"])
         logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 
-def run_unittests_python3_qemu_():
+def run_ut_python3_qemu_internal():
     """this runs inside the vm, it's run by the playbook above by ansible"""
     pkg = glob.glob('mxnet_dist/*.whl')[0]
     logging.info("=== NOW Running inside QEMU ===")
