@@ -78,12 +78,6 @@ private[mxnet] trait NativeResource
     NativeResourceRef.register(this, nativeDeAllocator)
  }
 
-  // Removes this object from PhantomRef tracking and from ResourceScope
-  private def deRegister(removeFromScope: Boolean): Unit = {
-    NativeResourceRef.deRegister(ref)
-    if (scope.isDefined && removeFromScope) scope.get.remove(this)
-  }
-
   // Implements [[@link AutoCloseable.close]]
   override def close(): Unit = {
     dispose()
@@ -92,10 +86,22 @@ private[mxnet] trait NativeResource
   // Implements [[@link WarnIfNotDisposed.dispose]]
   def dispose(): Unit = dispose(true)
 
+  /**
+    * This method deAllocates nativeResource and deRegisters
+    * from PhantomRef and removes from Scope if
+    * removeFromScope is set to true.
+    * @param removeFromScope remove from the currentScope if true
+    */
+  // the parameter here controls whether to remove from current scope.
+  // [[ResourceScope.close]] calls NativeResource.dispose
+  // if we remove from the ResourceScope ie., from the container in ResourceScope.
+  // while iterating on the container, calling iterator.next is undefined and not safe.
+  // Note that ResourceScope automatically disposes all the resources within.
   private[mxnet] def dispose(removeFromScope: Boolean = true): Unit = {
     if (!disposed) {
       checkCall(nativeDeAllocator(this.nativeAddress))
-      deRegister(removeFromScope)
+      NativeResourceRef.deRegister(ref) // removes from PhantomRef tracking
+      if (removeFromScope && scope.isDefined) scope.get.remove(this)
       NativeResource.totalBytesAllocated.getAndAdd(-1*bytesAllocated)
       disposed = true
     }
@@ -138,11 +144,8 @@ private[mxnet] object NativeResourceRef {
     ref
   }
 
-  def deRegister(ref: NativeResourceRef): Unit = {
-    if (refMap.containsKey(ref)) {
-      refMap.remove(ref)
-    }
-  }
+  // remove from PhantomRef tracking
+  def deRegister(ref: NativeResourceRef): Unit = refMap.remove(ref)
 
   /**
     * This method will check if the cleaner ran and deAllocated the object
