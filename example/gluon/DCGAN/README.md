@@ -15,7 +15,7 @@ You can use this reference implementation on the MNIST and CIFAR-10 datasets.
 #### inception_score in cpu and gpu (the real image`s score is around 3.3)
 CPU & GPU
 
-![inception_socre_with_cpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10_cpu.png)
+![inception score with CPU](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10_cpu.png)
 ![inception_score_with_gpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10.png)
 
 ## Quick start
