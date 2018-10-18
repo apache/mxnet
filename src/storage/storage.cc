@@ -153,7 +153,7 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
   // Will restore gpu device to before ActivateDevice if necessary
   bool restore = handle->ctx.dev_type == Context::kCPUPinned ||
                  handle->ctx.dev_type == Context::kGPU;
-  mxnet::common::cuda::SetDevice set_device(restore);
+  mxnet::common::cuda::DeviceStore device_store(restore);
 #endif
   this->ActivateDevice(handle->ctx);
   manager->Alloc(handle);
@@ -172,7 +172,7 @@ void StorageImpl::Free(Storage::Handle handle) {
 #if MXNET_USE_CUDA
   // Will restore gpu device to before ActivateDevice if necessary
   bool restore = ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU;
-  mxnet::common::cuda::SetDevice set_device(restore);
+  mxnet::common::cuda::DeviceStore device_store(restore);
 #endif
   this->ActivateDevice(ctx);
   manager->Free(handle);
@@ -191,7 +191,7 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
 #if MXNET_USE_CUDA
   // Will restore gpu device to before ActivateDevice if necessary
   bool restore = ctx.dev_type == Context::kCPUPinned || ctx.dev_type == Context::kGPU;
-  mxnet::common::cuda::SetDevice set_device(restore);
+  mxnet::common::cuda::DeviceStore device_store(restore);
 #endif
   this->ActivateDevice(ctx);
   manager->DirectFree(handle);
