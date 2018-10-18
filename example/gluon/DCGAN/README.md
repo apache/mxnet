@@ -46,7 +46,7 @@ python dcgan.py -h
                             To record the inception_score, default is True.
 
 
-use below code to train DCGAN model with default configurations and dataset(cifar10), and metric with inception_score:
+Use the following Python script to train a DCGAN model with default configurations using the CIFAR-10 dataset and record metrics with `inception_score`:
 ```python
 python dcgan.py
 ```
