@@ -19,22 +19,16 @@ package org.apache.mxnet.infer.javaapi
 
 class ObjectDetectorOutput (className: String, args: Array[Float]){
 
-  private val probability = args(0)
-  private val xMin = args(1)
-  private val xMax = args(2)
-  private val yMin = args(3)
-  private val yMax = args(4)
-
   def getClassName: String = className
 
-  def getProbability: Float = probability
+  def getProbability: Float = args(0)
 
-  def getXMin: Float = xMin
+  def getXMin: Float = args(1)
 
-  def getXMax: Float = xMax
+  def getXMax: Float = args(2)
 
-  def getYMin: Float = yMin
+  def getYMin: Float = args(3)
 
-  def getYMax: Float = yMax
+  def getYMax: Float = args(4)
 
 }
