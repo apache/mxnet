@@ -77,6 +77,8 @@ build_wheel() {
     export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
 
     cd ${PYTHON_DIR}
+
+    # If building for redistribution edit the name in this setup.py
     python setup.py bdist_wheel --universal
 
     # repackage
@@ -94,6 +96,8 @@ build_wheel() {
     rm -rf ${TMPDIR}
 
     popd
+
+    # If redistributing you may now run `twine upload -r pypi *.whl`
 }
 
 # Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
@@ -103,8 +107,56 @@ build_jetson() {
     set -ex
     pushd .
 
+    # Build ONNX
+    pushd .
+    echo "Installing ONNX."
+    cd 3rdparty/onnx-tensorrt/third_party/onnx
+    rm -rf build
+    mkdir -p build
+    cd build
+    cmake \
+        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} \
+        -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a \
+        -DBUILD_SHARED_LIBS=OFF .. \
+        -G Ninja
+    ninja -j 1 -v onnx/onnx.proto
+    ninja -j 1 -v
+    export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
+    export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    popd
+
+    # Build ONNX-TensorRT
+    pushd .
+    cd 3rdparty/onnx-tensorrt/
+    mkdir -p build
+    cd build
+
+    # Work around cmake findcuda issue by running twice.
+    cmake  -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda/ \
+           -DCUDA_CUDART_LIBRARY=/usr/local/cuda-9.0/targets/aarch64-linux/lib/libcudart.so \
+           -DCUDA_INCLUDE_DIRS=/usr/local/cuda-9.0/targets/aarch64-linux/include/ \
+           -DCUDA_TOOLKIT_TARGET_DIR=/usr/local/cuda-9.0/targets/aarch64-linux/ \
+           -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a  .. || \
+    cmake  -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda/ \
+           -DCUDA_CUDART_LIBRARY=/usr/local/cuda-9.0/targets/aarch64-linux/lib/libcudart.so \
+           -DCUDA_INCLUDE_DIRS=/usr/local/cuda-9.0/targets/aarch64-linux/include/ \
+           -DCUDA_TOOLKIT_TARGET_DIR=/usr/local/cuda-9.0/targets/aarch64-linux/ \
+           -DProtobuf_LIBRARY=/usr/aarch64-linux-gnu/lib/libprotobuf.a  ..
+    make -j$(nproc) gen_onnx_proto
+    make -j$(nproc) nvonnxparser_plugin
+    make -j$(nproc) onnx_proto
+    make -j$(nproc) nvonnxparser_runtime_static
+    make -j$(nproc) nvonnxparser_static
+    make -j$(nproc) nvonnxparser
+    make -j$(nproc) trt_onnxify
+    export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    export LIBRARY_PATH=$LIBRARY_PATH:`pwd`/third_party/onnx/
+    mv third_party/onnx/libonnx_proto.a third_party/onnx/libonnxtrt_proto.a
+    popd
+
     cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
+    echo $LIBRARY_PATH
+    make -j $(nproc)
 
     build_wheel /work/mxnet/python /work/mxnet/lib
     popd
@@ -495,7 +547,7 @@ build_ubuntu_gpu_tensorrt() {
     cd build
     cmake \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..\
+        -DBUILD_SHARED_LIBS=OFF ..\
         -G Ninja
     ninja -j 1 -v onnx/onnx.proto
     ninja -j 1 -v
@@ -511,16 +563,15 @@ build_ubuntu_gpu_tensorrt() {
     cmake ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
+    export LIBRARY_PATH=$LIBRARY_PATH:`pwd`/third_party/onnx/
+    mv third_party/onnx/libonnx_proto.a third_party/onnx/libonnxtrt_proto.a
     popd
 
     mkdir -p /work/mxnet/lib/
-    cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
     rm -rf build
     make \
-        DEV=1                                               \
+        DEV=0                                               \
         ENABLE_TESTCOVERAGE=1                               \
         USE_BLAS=openblas                                   \
         USE_CUDA=1                                          \
@@ -532,8 +583,10 @@ build_ubuntu_gpu_tensorrt() {
         USE_JEMALLOC=0                                      \
         USE_GPERFTOOLS=0                                    \
         ONNX_NAMESPACE=onnx                                 \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
+        CUDA_ARCH="-gencode arch=compute_53,code=compute_53"\
         -j$(nproc)
+
+    build_wheel /work/mxnet/python /work/mxnet/lib
 }
 
 build_ubuntu_gpu_mkldnn() {

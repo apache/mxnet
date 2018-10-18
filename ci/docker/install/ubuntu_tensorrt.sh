@@ -21,24 +21,6 @@
 pip2 install gluoncv==0.2.0
 pip3 install gluoncv==0.2.0
 
-# Install Protobuf
-# Install protoc 3.5 and build protobuf here (for onnx and onnx-tensorrt)
-pushd .
-cd ..
-apt-get update
-apt-get install -y automake libtool
-git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
-cd protobuf
-./autogen.sh
-./configure --disable-shared CXXFLAGS=-fPIC
-make -j$(nproc)
-make install
-rm -rf /usr/local/lib/libprotobuf-lite.so*
-rm -rf /usr/local/lib/libprotobuf.so*
-rm -rf /usr/local/lib/libprotoc.so*
-ldconfig
-popd
-
 # Install TensorRT
 echo "TensorRT build enabled. Installing TensorRT."
 wget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/nvinfer-runtime-trt-repo-ubuntu1604-4.0.1-ga-cuda9.0_1-1_amd64.deb
