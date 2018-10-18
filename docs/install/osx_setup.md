@@ -134,6 +134,18 @@ You have 2 options:
 2. Building MXNet from Source Code
 
 ### Building MXNet with the Prebuilt Binary Package
+Install OpenCV and OpenBLAS.
+
+```bash
+brew install opencv
+brew install openblas@0.3.1
+```
+
+Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+
+```bash
+ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+```
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
 For OS X (Mac) users, MXNet provides a prebuilt binary package for CPUs. The prebuilt package is updated weekly. You can install the package directly in the R console using the following commands:

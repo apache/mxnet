@@ -5037,10 +5037,33 @@ def test_psroipooling():
                                                      group_size=num_group, pooled_size=num_group,
                                                      output_dim=num_classes, name='test_op')
                     rtol, atol = 1e-2, 1e-3
-                    # By now we only have gpu implementation
-                    if default_context().device_type == 'gpu':
-                        check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
-                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                    check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
+                                           grad_nodes=grad_nodes)
+
+
+@with_seed()
+def test_psroipooling_with_type():
+    arg_params = {
+        'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
+
+    # plain psroipooling
+    sym = mx.sym.contrib.PSROIPooling(spatial_scale=0.0625, output_dim=2, pooled_size=3, name='psroipool')
+    ctx_list = [{'ctx': mx.cpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float64, 'psroipool_rois': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float32, 'psroipool_rois': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float16, 'psroipool_rois': np.float16}},
+                ]
+
+    check_consistency(sym, ctx_list, grad_req={'psroipool_data': 'write',
+                                               'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
 @with_seed()
@@ -6540,19 +6563,31 @@ def test_quadratic_function():
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
-    # check forward
-    for ndim in range(1, 6):
-        shape = rand_shape_nd(ndim, 5)
-        data = rand_ndarray(shape=shape, stype='default')
-        data_np = data.asnumpy()
-        expected = f(data_np, a, b, c)
-        output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
-        assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
+    data = mx.symbol.Variable('data')
+    quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+    for dtype in [np.float16, np.float32, np.float64]:
+        for ndim in range(1, 6):
+            shape = rand_shape_nd(ndim, 5)
+            data_np = np.random.randn(*shape).astype(dtype)
+            expected = f(data_np, a, b, c)
+            backward_expected = 2 * a * data_np + b
 
-        # check backward using finite difference
-        data = mx.sym.Variable('data')
-        quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
-        check_numeric_gradient(quad_sym, [data_np], atol=0.001)
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            assert_almost_equal(output.asnumpy(),expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check forward
+            check_symbolic_forward(quad_sym, [data_np], [expected],
+                                   rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                   atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward
+            check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
+                                    [backward_expected],
+                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward using finite difference
+            check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
 
 @with_seed()

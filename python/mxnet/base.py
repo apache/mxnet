@@ -165,8 +165,7 @@ class _MXClassPropertyDescriptor(object):
 
 class _MXClassPropertyMetaClass(type):
     def __setattr__(cls, key, value):
-        if key in cls.__dict__:
-            obj = cls.__dict__.get(key)
+        obj = cls.__dict__.get(key)
         if obj and isinstance(obj, _MXClassPropertyDescriptor):
             return obj.__set__(cls, value)
 
