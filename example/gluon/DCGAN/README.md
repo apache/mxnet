@@ -20,7 +20,7 @@ CPU & GPU
 
 ## Quick start
 Use the following code to see the configurations you can set:
-```python
+```bash
 python dcgan.py -h
 ```
     
