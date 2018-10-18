@@ -589,7 +589,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * The object shall never be used after it is disposed.
    */
   override def dispose(): Unit = {
-    if (!disposed) {
+    if (!super.isDisposed) {
       super.dispose()
       dependencies.clear()
     }

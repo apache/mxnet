@@ -40,16 +40,16 @@ class ResourceScope extends AutoCloseable {
     }
   }
 
-  ResourceScope.addToLocalScope(this)
+  ResourceScope.addToThreadLocal(this)
 
   /**
     * Releases all the [[NativeResource]] by calling
     * the associated [[NativeResource.close()]] method
     */
   override def close(): Unit = {
+    ResourceScope.removeFromThreadLocal(this)
     resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
     resourceQ.clear()
-    ResourceScope.removeFromLocalScope(this)
   }
 
   /**
@@ -114,7 +114,7 @@ object ResourceScope {
       curScope.remove(r)
       if (prevScope.isDefined)  {
         prevScope.get.add(r)
-        r.scope = prevScope.get
+        r.scope = prevScope
       }
     }
 
@@ -165,7 +165,7 @@ object ResourceScope {
     * Add resource to current ThreadLocal DataStructure
     * @param r ResourceScope to add.
     */
-  private[mxnet] def addToLocalScope(r: ResourceScope): Unit = {
+  private[mxnet] def addToThreadLocal(r: ResourceScope): Unit = {
     threadLocalScopes.get() += r
   }
 
@@ -173,7 +173,7 @@ object ResourceScope {
     * Remove resource from current ThreadLocal DataStructure
     * @param r ResourceScope to remove
     */
-  private[mxnet] def removeFromLocalScope(r: ResourceScope): Unit = {
+  private[mxnet] def removeFromThreadLocal(r: ResourceScope): Unit = {
     threadLocalScopes.get() -= r
   }
 
@@ -181,8 +181,8 @@ object ResourceScope {
     * Get the latest Scope in the stack
     * @return
     */
-  private[mxnet] def getCurrentScope(): ResourceScope = {
-    Try(threadLocalScopes.get().last).getOrElse(null)
+  private[mxnet] def getCurrentScope(): Option[ResourceScope] = {
+    Try(Some(threadLocalScopes.get().last)).getOrElse(None)
   }
 
   /**

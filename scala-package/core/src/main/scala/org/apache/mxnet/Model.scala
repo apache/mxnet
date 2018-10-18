@@ -259,7 +259,9 @@ object Model {
                                       workLoadList: Seq[Float] = Nil,
                                       monitor: Option[Monitor] = None,
                                       symGen: SymbolGenerator = null): Unit = {
-    val executorManager = new DataParallelExecutorManager(
+    ResourceScope.using() {
+
+      val executorManager = new DataParallelExecutorManager(
         symbol = symbol,
         symGen = symGen,
         ctx = ctx,
@@ -269,18 +271,18 @@ object Model {
         auxNames = auxNames,
         workLoadList = workLoadList)
 
-    monitor.foreach(executorManager.installMonitor)
-    executorManager.setParams(argParams, auxParams)
+      monitor.foreach(executorManager.installMonitor)
+      executorManager.setParams(argParams, auxParams)
 
-    // updater for updateOnKVStore = false
-    val updaterLocal = Optimizer.getUpdater(optimizer)
+      // updater for updateOnKVStore = false
+      val updaterLocal = Optimizer.getUpdater(optimizer)
 
-    kvStore.foreach(initializeKVStore(_, executorManager.paramArrays,
-      argParams, executorManager.paramNames, updateOnKVStore))
-    if (updateOnKVStore) {
-      kvStore.foreach(_.setOptimizer(optimizer))
-    }
-    ResourceScope.using() {
+      kvStore.foreach(initializeKVStore(_, executorManager.paramArrays,
+        argParams, executorManager.paramNames, updateOnKVStore))
+      if (updateOnKVStore) {
+        kvStore.foreach(_.setOptimizer(optimizer))
+      }
+
     // Now start training
     for (epoch <- beginEpoch until endEpoch) {
       // Training phase
@@ -290,7 +292,7 @@ object Model {
       var epochDone = false
       // Iterate over training data.
       trainData.reset()
-//      ResourceScope.using() {
+      ResourceScope.using() {
         while (!epochDone) {
           var doReset = true
           while (doReset && trainData.hasNext) {
@@ -329,7 +331,7 @@ object Model {
           // this epoch is done
           epochDone = (epochSize == -1 || nBatch >= epochSize)
         }
-//      }
+      }
       val (name, value) = evalMetric.get
       name.zip(value).foreach { case (n, v) =>
         logger.info(s"Epoch[$epoch] Train-$n=$v")
@@ -351,7 +353,7 @@ object Model {
 
           val (name, value) = evalMetric.get
           name.zip(value).foreach { case (n, v) =>
-            logger.info(s"Epoch[$epoch] Train-$n=$v")
+            logger.info(s"Epoch[$epoch] Validation-$n=$v")
           }
         }
       }
@@ -362,8 +364,6 @@ object Model {
       epochEndCallback.foreach(_.invoke(epoch, symbol, argParams, auxParams))
     }
 
-    updaterLocal.dispose()
-    executorManager.dispose()
     }
   }
   // scalastyle:on parameterNum

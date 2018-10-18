@@ -56,9 +56,9 @@ private[mxnet] trait NativeResource
   // intentionally making it a val, so it gets evaluated when defined
   val bytesAllocated: Long
 
-  private[mxnet] var scope: ResourceScope = null
+  private[mxnet] var scope: Option[ResourceScope] = None
 
-  @volatile var disposed = false
+  @volatile private var disposed = false
 
   override def isDisposed: Boolean = disposed || isDeAllocated
 
@@ -70,7 +70,7 @@ private[mxnet] trait NativeResource
     */
   def register(): NativeResourceRef = {
     scope = ResourceScope.getCurrentScope()
-    if (scope != null) scope.add(this)
+    if (scope.isDefined) scope.get.add(this)
 
     NativeResource.totalBytesAllocated.getAndAdd(bytesAllocated)
     // register with PhantomRef tracking to release incase the objects go
@@ -81,7 +81,7 @@ private[mxnet] trait NativeResource
   // Removes this object from PhantomRef tracking and from ResourceScope
   private def deRegister(removeFromScope: Boolean): Unit = {
     NativeResourceRef.deRegister(ref)
-    if (scope != null && removeFromScope) scope.remove(this)
+    if (scope.isDefined && removeFromScope) scope.get.remove(this)
   }
 
   // Implements [[@link AutoCloseable.close]]

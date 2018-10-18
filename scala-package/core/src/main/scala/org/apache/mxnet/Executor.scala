@@ -65,7 +65,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   override val bytesAllocated: Long = 0
   override val ref: NativeResourceRef = super.register()
   override def dispose(): Unit = {
-    if (!disposed) {
+    if (!super.isDisposed) {
       super.dispose()
       outputs.foreach(o => o.dispose())
     }
