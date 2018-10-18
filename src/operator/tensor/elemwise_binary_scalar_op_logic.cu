@@ -32,7 +32,7 @@ NNVM_REGISTER_OP(_equal_scalar)
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::eq>);
 
 NNVM_REGISTER_OP(_not_equal_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ne>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::ne>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::LogicComputeEx<gpu, mshadow_op::ne>);
 
 NNVM_REGISTER_OP(_greater_scalar)
