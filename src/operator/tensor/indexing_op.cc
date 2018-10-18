@@ -61,11 +61,8 @@ template<typename DType>
 bool CheckIndexOutOfBound(const DType* data_ptr, size_t data_size,
                           const DType min, const DType max) {
   bool is_valid = true;
-  // to avoid Jenkins omp check error
-  int64_t size = data_size;
-  int64_t check_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_CHECK_SIZE", 14000);
   int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  #pragma omp parallel for num_threads(omp_threads) if (size > check_block_size)
+  #pragma omp parallel for num_threads(omp_threads) if (data_size > 2000)
   for (size_t i = 0; i < data_size; i++) {
     if (data_ptr[i] > max || data_ptr[i] < min) {
       is_valid = false;
