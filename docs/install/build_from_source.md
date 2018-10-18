@@ -135,10 +135,11 @@ any one among [ATLAS](http://math-atlas.sourceforge.net/),
 [MKL](https://software.intel.com/en-us/intel-mkl).
 
 <div class="linux">
+For Ubuntu you can get Atlas and OpenBLAS from package repositories:
 <div class="ubuntu">
 
 ```bash
-sudo apt-get install libatlas-base-dev
+sudo apt-get install libatlas-base-dev libopenblas-dev
 ```
 
 </div>
@@ -197,12 +198,12 @@ sudo apt-get install opencv-devel
 
 To build OpenCV from source code, you need the [cmake](https://cmake.org) library.
 
-1. If you don't have cmake or if your version of cmake is earlier than 3.6.1, run the following commands to install a newer version of cmake:
+1. If you don't have cmake or if your version of cmake is earlier than 3.12.3, run the following commands to install a newer version of cmake:
 
    ```bash
-   wget https://cmake.org/files/v3.6/cmake-3.6.1-Linux-x86_64.tar.gz
-   tar -zxvf cmake-3.6.1-Linux-x86_64.tar.gz
-   alias cmake="cmake-3.6.1-Linux-x86_64/bin/cmake"
+   wget https://cmake.org/files/v3.12/cmake-3.12.3-Linux-x86_64.tar.gz
+   tar -zxvf cmake-3.12.3-Linux-x86_64.tar.gz
+   alias cmake="cmake-3.12.3-Linux-x86_64/bin/cmake"
    ```
 
 2. To download and extract the OpenCV source code, run the following commands:
@@ -244,21 +245,14 @@ the environment variable `OpenCV_DIR` to point to the OpenCV build directory.
 
 #### Optional: [CUDA](https://developer.nvidia.com/cuda-downloads)/[cuDNN](https://developer.nvidia.com/cudnn) for Nvidia GPUs
 
-MXNet is compatible with both CUDA 7.5 and 8.0. It is recommended to use cuDNN 5.
+BMXNet is compatible with CUDA 8.0, 9.2, and 10.0. It is recommended to use cuDNN 6 or 7.
 
 <div class="linux">
 <div class="ubuntu">
 
-Install CUDA 7.5 and cuDNN 5 on Ubuntu 14.04
+Download [CUDA](https://developer.nvidia.com/cuda-downloads)/[cuDNN](https://developer.nvidia.com/cudnn) from nvidia.
 
-```bash
-wget http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_7.5-18_amd64.deb
-sudo dpkg -i cuda-repo-ubuntu1404_7.5-18_amd64.deb
-echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1404/x86_64 /" | sudo tee /etc/apt/sources.list.d/nvidia-ml.list
-sudo apt-get update
-sudo apt-get install -y linux-image-extra-`uname -r` linux-headers-`uname -r` linux-image-`uname -r`
-sudo apt-get install -y cuda libcudnn5-dev=5.0.5-1+cuda7.5
-```
+Do not forget to take the [post-installation actions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#post-installation-actions).
 
 </div>
 </div>

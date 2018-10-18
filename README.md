@@ -8,9 +8,9 @@ Our current efforts are focused on binarizing the inputs and weights of convolut
 
 ## News
 
-- **Sep 01, 2018** - MXNet v1.2.0
+- **Sep 01, 2018** - MXNet v1.3.0
     - We are currently rebuilding BMXNet to utilize the new Gluon API for better maintainability
-    - To build binary neural networks, you can use drop in replacements of convolution and dense layers (see [](#usage)):
+    - To build binary neural networks, you can use drop in replacements of convolution and dense layers (see [Usage](#usage)):
     - Changes are now documented in the [Changelog](CHANGELOG.md)
 - **Dec 22, 2017** - MXNet v1.0.0 and cuDNN
     - We are updating the underlying MXNet to version 1.0.0, see changes and release notes [here](https://github.com/apache/incubator-mxnet/releases/tag/1.0.0).
@@ -18,34 +18,43 @@ Our current efforts are focused on binarizing the inputs and weights of convolut
 
 # Setup
 
-We use ``cmake`` to build the project. Make sure to install all the dependencies described [here](docs/install/build_from_source.md#prerequisites). 
+We use [CMake](https://cmake.org/download/) to build the project.
+Make sure to install all the dependencies described [here](docs/install/build_from_source.md#prerequisites).
+If you install CUDA 10, you will need CMake >=3.12.2
 
-Adjust settings in cmake (build-type ``Release`` or ``Debug``, configure CUDA, OpenBLAS or Atlas, OpenCV, OpenMP etc.)  
+Adjust settings in cmake (build-type ``Release`` or ``Debug``, configure CUDA, OpenBLAS or Atlas, OpenCV, OpenMP etc.).
 
-```shell
-$ git clone --recursive https://github.com/hpi-xnor/mxnet.git # remember to include the --recursive
-$ mkdir build/Release && cd build/Release
-$ cmake ../../ # if any error occurs, apply ccmake or cmake-gui to adjust the cmake config.
-$ ccmake . # or GUI cmake
-$ make -j `nproc`
+Further, we recommend [Ninja](https://ninja-build.org/) as a build system for faster builds (Ubuntu: `sudo apt-get install ninja-build`).
+
+```bash
+git clone --recursive git@gitlab.hpi.de:joseph.bethge/bmxnet.git # remember to include the --recursive
+mkdir build && cd build
+cmake .. -G Ninja # if any error occurs, apply ccmake or cmake-gui to adjust the cmake config.
+ccmake . # or GUI cmake
+ninja
 ```
 
 #### Build the MXNet Python binding
 
 Step 1 Install prerequisites - python, setup-tools, python-pip and numpy.
-```shell
-$ sudo apt-get install -y python-dev python-setuptools python-numpy python-pip
+```bash
+sudo apt-get install -y python-dev python3-dev virtualenv
+wget -nv https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+python2 get-pip.py
+# optionally create a virtualenv before this step
+pip2 install nose cpplint==1.3.0 pylint==1.9.3 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
+pip3 install nose cpplint==1.3.0 pylint==2.1.1 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
 ```
 
 Step 2 Install the MXNet Python binding.
-```shell
-$ cd <mxnet-root>/python
-$ pip install --upgrade pip
-$ pip install -e .
+```bash
+cd <mxnet-root>/python
+pip install -e .
 ```
 
 If your mxnet python binding still not works, you can add the location of the libray to your ``LD_LIBRARY_PATH`` as well as the mxnet python folder to your ``PYTHONPATH``:
-```shell
+```bash
 $ export LD_LIBRARY_PATH=<mxnet-root>/build/Release
 $ export PYTHONPATH=<mxnet-root>/python
 ```
@@ -53,7 +62,7 @@ $ export PYTHONPATH=<mxnet-root>/python
 
 There is a simple Dockerfile that you can use to ease the setup process. Once running, find mxnet at ``/mxnet`` and the build folder at ``/mxnet/release``. (Be *warned* though, CUDA will not work inside the container so training process can be quite tedious)
 
-```shell
+```bash
 $ cd <mxnet-root>/smd_hpi/tools/docker
 $ docker build -t mxnet
 $ docker run -t -i mxnet
@@ -64,12 +73,12 @@ You probably also want to map a folder to share files (trained models) inside do
 ## Tests
 
 To run BMXNet specific tests install `pytest`:
-```shell
+```bash
 pip install pytest
 ```
 
 Then simply run:
-```shell
+```bash
 pytest tests/python/unittest/test_binary.py
 ```
 
@@ -94,7 +103,7 @@ The rest of our code resides in the following folders/files:
 
 Please cite BMXNet in your publications if it helps your research work:
 
-```shell
+```text
 @inproceedings{bmxnet,
  author = {Yang, Haojin and Fritzsche, Martin and Bartz, Christian and Meinel, Christoph},
  title = {BMXNet: An Open-Source Binary Neural Network Implementation Based on MXNet},
