@@ -59,9 +59,9 @@ mx.nd.contrib.index_copy(x, index, t)
 .set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)
-.add_argument("old_tensor", "NDArray", "Old tensor")
-.add_argument("index_vector", "NDArray", "Index vector")
-.add_argument("new_tensor", "NDArray", "New tensor to be copied");
+.add_argument("old_tensor", "NDArray-or-Symbol", "Old tensor")
+.add_argument("index_vector", "NDArray-or-Symbol", "Index vector")
+.add_argument("new_tensor", "NDArray-or-Symbol", "New tensor to be copied");
 
 NNVM_REGISTER_OP(_contrib_backward_index_copy)
 .set_num_inputs(4)
