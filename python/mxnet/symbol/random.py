@@ -96,33 +96,6 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, **kwargs):
                           [loc, scale], shape, dtype, kwargs)
 
 
-def randn(loc=0, scale=1, shape=_Null, dtype=_Null, **kwargs):
-    """Draw random samples from a normal (Gaussian) distribution.
-
-    Samples are distributed according to a normal distribution parametrized
-    by *loc* (mean) and *scale* (standard deviation).
-
-
-    Parameters
-    ----------
-    loc : float or NDArray, optional
-        Mean (centre) of the distribution.
-    scale : float or NDArray, optional
-        Standard deviation (spread or width) of the distribution.
-    shape : int or tuple of ints, optional
-        The number of samples to draw. If shape is, e.g., `(m, n)` and `loc` and
-        `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
-        are NDArrays with shape, e.g., `(x, y)`, then output will have shape
-        `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
-    """
-    assert isinstance(loc, (int, float))
-    assert isinstance(scale, (int, float))
-    return _random_helper(_internal._random_normal, _internal._sample_normal,
-                          [loc, scale], shape, dtype, kwargs)
-
-
 def poisson(lam=1, shape=_Null, dtype=_Null, **kwargs):
     """Draw random samples from a Poisson distribution.
 
