@@ -21,18 +21,14 @@ It uses the appropriate pip binaries to build different docker images. Both pyth
 * gpu_cu92_py3
 * gpu_cu92_mkl_py3
 
-
-** Note: If you want to use a different pip binary (specific mxnet or cuda version, etc), you can edit the last line of the cpu or gpu dockerfile as required. 
-
 Refer: https://pypi.org/project/mxnet/
 
 ### Using the Build Script
-`./build_python_dockerfile.sh <mxnet_version> <path_to_cloned_mxnet_repo>`
+`./build_python_dockerfile.sh <mxnet_version> <pip_tag> <path_to_cloned_mxnet_repo>`
 
 For example: 
-`./build_python_dockerfile.sh 1.3.0 ~/build-docker/incubator-mxnet`
+`./build_python_dockerfile.sh 1.3.0 1.3.0.post0 ~/build-docker/incubator-mxnet`
 
-** Note: The build script picks up the latest pip binaries. This means it uses the latest released mxnet version. The version specified as a parameter to the script is only used to tag the built image correctly.  
 
 ### Tests run
 * [test_conv.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/train/test_conv.py)
