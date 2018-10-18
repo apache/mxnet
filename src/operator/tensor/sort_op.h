@@ -31,6 +31,18 @@
 #include <type_traits>
 
 namespace mxnet {
+
+/*!
+ * \brief Return the required number of bytes for aligning an object.
+          Because CUDA requires mandatory memory alignment, this function can be
+          used to determine the number of bytes to allocate in char*.
+ * \param num_bytes size of the object in bytes
+ * \param alignment desired alignment, like 2, 4, 8
+ */
+MSHADOW_XINLINE size_t PadBytes(size_t num_bytes, size_t alignment) {
+  return num_bytes + (alignment - num_bytes % alignment) % alignment;
+}
+
 namespace op {
 /*!
  * \brief CPU/GPU: Sort key-value pairs stored in separate places. (Stable sort is performed!)
