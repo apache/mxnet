@@ -154,8 +154,11 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
 
 def randn(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
+
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
+
+
     Parameters
     ----------
     loc : float or NDArray
@@ -174,6 +177,8 @@ def randn(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs
         `loc.context` when `loc` is an NDArray.
     out : NDArray
         Store output to an existing NDArray.
+
+
     Examples
     --------
     >>> mx.nd.random.randn()
