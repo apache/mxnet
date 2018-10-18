@@ -180,8 +180,12 @@ def test_sparse_nd_equal():
         y = sparse_nd_ones(shape, stype)
         z = x == y
         assert (z.asnumpy() == np.zeros(shape)).all()
-        z = 0 == x
+        z = 0 == y
+        assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == 'default'
+        z = 1 == y
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == stype
 
 
 @with_seed()
@@ -192,8 +196,12 @@ def test_sparse_nd_not_equal():
         y = sparse_nd_ones(shape, stype)
         z = x != y
         assert (z.asnumpy() == np.ones(shape)).all()
-        z = 0 != x
+        z = 0 != y
+        assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == stype
+        z = 1 != y
         assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == 'default'
 
 
 @with_seed()
@@ -206,8 +214,13 @@ def test_sparse_nd_greater():
         assert (z.asnumpy() == np.zeros(shape)).all()
         z = y > 0
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == stype
         z = 0 > y
         assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == stype
+        z = y > 1
+        assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == stype
 
 
 @with_seed()
@@ -220,10 +233,13 @@ def test_sparse_nd_greater_equal():
         assert (z.asnumpy() == np.zeros(shape)).all()
         z = y >= 0
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == 'default'
         z = 0 >= y
         assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == 'default'
         z = y >= 1
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == stype
 
 
 @with_seed()
@@ -236,8 +252,13 @@ def test_sparse_nd_lesser():
         assert (z.asnumpy() == np.zeros(shape)).all()
         z = 0 < y
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == stype
         z = y < 0
         assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == stype
+        z = y < 1
+        assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == 'default'
 
 
 @with_seed()
@@ -250,10 +271,13 @@ def test_sparse_nd_lesser_equal():
         assert (z.asnumpy() == np.zeros(shape)).all()
         z = 0 <= y
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == 'default'
         z = y <= 0
         assert (z.asnumpy() == np.zeros(shape)).all()
+        assert z.stype == 'default'
         z = 1 <= y
         assert (z.asnumpy() == np.ones(shape)).all()
+        assert z.stype == stype
 
 
 @with_seed()
