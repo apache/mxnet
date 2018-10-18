@@ -152,7 +152,7 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
                           [loc, scale], shape, dtype, ctx, out, kwargs)
 
 
-def randn(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
+def randn(*shape, **kwargs):
     """Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
@@ -161,21 +161,21 @@ def randn(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs
 
     Parameters
     ----------
-    loc : float or NDArray, optional
+    loc : float or NDArray
         Mean (centre) of the distribution.
-    scale : float or NDArray, optional
+    scale : float or NDArray
         Standard deviation (spread or width) of the distribution.
-    shape : int or tuple of ints, optional
+    shape : int or tuple of ints
         The number of samples to draw. If shape is, e.g., `(m, n)` and `loc` and
         `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16','float32', 'float64'}
         Data type of output samples. Default is 'float32'
-    ctx : Context, optional
+    ctx : Context
         Device context of output. Default is current context. Overridden by
         `loc.context` when `loc` is an NDArray.
-    out : NDArray, optional
+    out : NDArray
         Store output to an existing NDArray.
 
 
@@ -193,6 +193,11 @@ def randn(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs
     [5.357444  5.7793283 3.9896927]]
     <NDArray 2x3 @cpu(0)>
     """
+    loc = kwargs.pop('loc', 0)
+    scale = kwargs.pop('scale', 1)
+    dtype = kwargs.pop('dtype', _Null)
+    ctx = kwargs.pop('ctx', None)
+    out = kwargs.pop('out', None)
     assert isinstance(loc, (int, float))
     assert isinstance(scale, (int, float))
     return _random_helper(_internal._random_normal, _internal._sample_normal,
