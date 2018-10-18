@@ -28,6 +28,7 @@ from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import nd, sym
+from ... import autograd
 
 
 class Sequential(Block):
@@ -763,10 +764,11 @@ class GroupNorm(Block):
     def forward(self, x):
         xshape = x.shape
         # normalization
-        y = nd.BatchNorm(x.reshape(xshape[0], self.ngroups, -1),
-                         self.hacky_ones.data(), self.hacky_zeros.data(),
-                         self.hacky_zeros.data(), self.hacky_ones.data(),
-                         name='fwd', **self._kwargs)
+        with autograd.train_mode():
+            y = nd.BatchNorm(x.reshape(xshape[0], self.ngroups, -1),
+                             self.hacky_ones.data(), self.hacky_zeros.data(),
+                             self.hacky_zeros.data(), self.hacky_ones.data(),
+                             name='fwd', **self._kwargs)
         # scale and shift
         y = y.reshape(xshape[0], xshape[1], -1)
         y = y * self.gamma.data().reshape(1, -1, 1) + self.beta.data().reshape(1, -1, 1)
