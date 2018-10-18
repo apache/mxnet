@@ -19,7 +19,7 @@ CPU & GPU
 ![inception score with GPU](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10.png)
 
 ## Quick start
-use below code to see the configurations you can set:
+Use the following code to see the configurations you can set:
 ```python
 python dcgan.py -h
 ```
