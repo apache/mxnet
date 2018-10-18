@@ -320,6 +320,46 @@ struct Take {
     out_data[i] = in_data[j * M + i % M];
   }
 
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int overload, int N, DType* out_data, const DType* in_data,
+                                  const IType* idx, const int M, const int K) {
+    int row = N / M;
+    int col = N % M;
+    int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    #pragma omp parallel for num_threads(omp_threads) if (N > 2000)
+    for (int i = 0; i < row; i++) {
+      int j = static_cast<int>(idx[i]);
+      if (clip) {
+        if (j <= 0) j = 0;
+        else if (j >= K) j = K - 1;
+      } else {
+        j = j % K;
+        j += (j < 0) ? K : 0;
+      }
+      const int jM = j*M;
+      const int iM = i*M;
+      for (int n = 0; n < M; n++) {
+        out_data[iM + n] = in_data[jM + n];
+      }
+    }
+    if (col != 0) {
+      int j = static_cast<int>(idx[row]);
+      if (clip) {
+        if (j <= 0) j = 0;
+        else if (j >= K) j = K - 1;
+      } else {
+        j = j % K;
+        j += (j < 0) ? K : 0;
+      }
+      const int jM = j*M;
+      const int iM = row*M;
+      #pragma omp parallel for num_threads(omp_threads) if (col > 2000)
+      for (int n = 0; n < col; n++) {
+        out_data[iM + n] = in_data[jM + n];
+      }
+    }
+  }
+
   /*!
    * \brief Map function for take operator
    * \param i           global thread id
@@ -369,7 +409,6 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
   using namespace mxnet_op;
   const TShape& ishape = data.shape_;
   const TShape& oshape = output.shape_;
-
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
       Tensor<xpu, 1, IType> idx = data.get_with_shape<xpu, 1, IType>(
@@ -377,8 +416,16 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
       Tensor<xpu, 2, DType> wmat = weight.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> out = output.get_with_shape<xpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<Take<true>, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+      if (std::is_same<xpu, cpu>::value) {
+        // 1:loop times, call overload function for Take map which is more friendly for
+        // cpu platform. Using this function, embedding OP will has more than 3 times speedup
+        // when oshape.Size() is large
+        Kernel<Take<true>, xpu>::Launch(s, 1, oshape.Size(), out.dptr_, wmat.dptr_,
                                 idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+      } else {
+        Kernel<Take<true>, xpu>::Launch(s,  oshape.Size(), out.dptr_, wmat.dptr_,
+                                idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+      }
     });
   });
 }
