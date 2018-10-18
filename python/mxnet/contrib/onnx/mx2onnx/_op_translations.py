@@ -127,6 +127,14 @@ def convert_string_to_list(string_val):
 
     return result_list
 
+def get_boolean_attribute_value(attrs, attr_name):
+    """ Helper function to convert a string version
+    of Boolean attributes to integer for ONNX.
+    Takes attribute dictionary and attr_name as
+    parameters.
+    """
+    return 1 if attrs.get(attr_name, 0) in ["True", "1"] else 0
+
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
     """Helper function to convert weights and inputs.
@@ -214,17 +222,42 @@ def convert_fully_connected(node, **kwargs):
     onnx = import_onnx_modules()
     name = node["name"]
     inputs = node["inputs"]
+    attrs = node["attrs"]
+    initializer = kwargs["initializer"]
+
+    no_bias = get_boolean_attribute_value(attrs, "no_bias")
+
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
     weight_node_id = kwargs["index_lookup"][inputs[1][0]]
-    bias_node_id = kwargs["index_lookup"][inputs[2][0]]
-    proc_nodes = kwargs["proc_nodes"]
-    input_node = proc_nodes[input_node_id]
-    weights_node = proc_nodes[weight_node_id]
-    bias_node = proc_nodes[bias_node_id]
 
+    proc_nodes = kwargs["proc_nodes"]
+
+    input_node = proc_nodes[input_node_id]
     input_name = input_node.name
+
+    weights_node = proc_nodes[weight_node_id]
     weights_name = weights_node.name
-    bias_name = bias_node.name
+
+    fcnode = []
+
+    if no_bias == 0:
+        bias_node_id = kwargs["index_lookup"][inputs[2][0]]
+        bias_node = proc_nodes[bias_node_id]
+        bias_name = bias_node.name
+    else:
+        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
+        bias_name = "bias" + str(kwargs["idx"])
+        tensor_node = onnx.helper.make_tensor_value_info(bias_name, data_type, (1,))
+        initializer.append(
+            onnx.helper.make_tensor(
+                name=bias_name,
+                data_type=data_type,
+                dims=(1,),
+                vals=[0],
+                raw=False,
+            )
+        )
+        fcnode.append(tensor_node)
 
     node = onnx.helper.make_node(
         "Gemm",
@@ -237,7 +270,9 @@ def convert_fully_connected(node, **kwargs):
         name=name
     )
 
-    return [node]
+    fcnode.append(node)
+
+    return fcnode
 
 
 @mx_op.register("BatchNorm")
@@ -587,10 +622,8 @@ def convert_dot(node, **kwargs):
     trans_a_node = None
     trans_b_node = None
 
-    trans_a = 1 if ("transpose_a" in attrs) and \
-                   attrs.get("transpose_a") in ["True", "1"] else 0
-    trans_b = 1 if ("transpose_b" in attrs) and \
-                   attrs.get("transpose_b") in ["True", "1"] else 0
+    trans_a = get_boolean_attribute_value(attrs, "transpose_a")
+    trans_b = get_boolean_attribute_value(attrs, "transpose_b")
 
     op_name = "transpose" + str(kwargs["idx"])
     create_helper_trans_node(op_name, input_node_a, 'a')
@@ -732,8 +765,8 @@ def convert_pooling(node, **kwargs):
     kernel = eval(attrs["kernel"])
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
-    global_pool = True if "global_pool" in attrs and\
-                          attrs.get("global_pool") == "True" else False
+    global_pool = get_boolean_attribute_value(attrs, "global_pool")
+
     node_inputs = node["inputs"]
     input_node_idx = kwargs["index_lookup"][node_inputs[0][0]]
     input_node = proc_nodes[input_node_idx]
@@ -2053,7 +2086,31 @@ def convert_power(node, **kwargs):
         "Pow",
         [input_node_a, input_node_b],
         [name],
-        name=None
+        name=name
+    )
+    return [node]
+
+@mx_op.register("broadcast_power")
+def convert_broadcast_power(node, **kwargs):
+    """Map MXNet's _power operator attributes to onnx's Pow operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_b_id = kwargs["index_lookup"][inputs[1][0]]
+
+    input_node_a = proc_nodes[input_node_a_id].name
+    input_node_b = proc_nodes[input_node_b_id].name
+
+    node = onnx.helper.make_node(
+        "Pow",
+        [input_node_a, input_node_b],
+        [name],
+        name=name
     )
     return [node]
 
@@ -2126,4 +2183,78 @@ def convert_spacetodepth(node, **kwargs):
         blocksize=blksize,
         name=name,
     )
+    return [node]
+
+@mx_op.register("square")
+def convert_square(node, **kwargs):
+    """Map MXNet's square operator attributes to onnx's Pow operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_a_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node_a = proc_nodes[input_node_a_id].name
+
+    initializer = kwargs["initializer"]
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
+
+    power2_name = "square_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(power2_name, data_type, (1,))
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=power2_name,
+            data_type=data_type,
+            dims=(1,),
+            vals=[2],
+            raw=False,
+        )
+    )
+
+    node = onnx.helper.make_node(
+        "Pow",
+        [input_node_a, power2_name],
+        [name],
+        name=name
+    )
+    return [tensor_node, node]
+
+@mx_op.register("sum")
+def convert_sum(node, **kwargs):
+    """Map MXNet's sum operator attributes to onnx's ReduceSum operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+    attrs = node["attrs"]
+
+    mx_axis = attrs.get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    if axes:
+        node = onnx.helper.make_node(
+            'ReduceSum',
+            inputs=[input_node],
+            outputs=[name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+    else:
+        node = onnx.helper.make_node(
+            'ReduceSum',
+            inputs=[input_node],
+            outputs=[name],
+            keepdims=keepdims,
+            name=name
+        )
     return [node]

@@ -534,10 +534,15 @@ def squareroot(attrs, inputs, proto_obj):
 def power(attrs, inputs, proto_obj):
     """Returns element-wise result of base element raised to powers from exp element."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'exponent':'exp'})
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+    if 'broadcast' in attrs:
         new_attrs = translation_utils._remove_attributes(new_attrs, ['broadcast'])
-        return 'broadcast_power', new_attrs, inputs
-    return 'pow', new_attrs, inputs
+        if attrs['broadcast'] == 1:
+            return 'broadcast_power', new_attrs, inputs
+        else:
+            mxnet_op = symbol.pow(inputs[0], inputs[1])
+            return mxnet_op, new_attrs, inputs
+    mxnet_op = symbol.broadcast_power(inputs[0], inputs[1])
+    return mxnet_op, new_attrs, inputs
 
 def exponent(attrs, inputs, proto_obj):
     """Elementwise exponent of input array."""
