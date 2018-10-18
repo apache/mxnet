@@ -28,6 +28,7 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
+#include <algorithm>
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
@@ -51,7 +52,7 @@ struct index_copy {
 };
 
 template<typename xpu>
-void IndexCopyCompute(const nnvm::NodeAttrs& attrs,
+void IndexCopyForward(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
                       const std::vector<OpReqType>& req,
@@ -63,7 +64,7 @@ void IndexCopyCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& idx = inputs[1];
   int dim = inputs[2].Size() / inputs[1].Size();
   // copy all
-  mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
+  mxnet_op::copy(s, outputs[0], inputs[0]);
   // index copy
   MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
@@ -72,6 +73,54 @@ void IndexCopyCompute(const nnvm::NodeAttrs& attrs,
                             inputs[1].dptr<IType>(),
                             inputs[2].dptr<DType>(),
                             outputs[0].dptr<DType>());
+    })
+  })
+}
+
+struct index_copy_assign {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  int dim,
+                                  int index_size,
+                                  DType* i_grad,
+                                  IType* index,
+                                  DType* o_grad_0,
+                                  DType* o_grad_1) {
+    // Copy to o_grad_1
+    for (int p = 0; p < index_size; ++p) {
+      int idx = static_cast<int>(index[p]);
+      if (i >= idx*dim && i < (idx+1)*dim) {
+        int offset = i - idx*dim;
+        *(o_grad_1 + (p*dim) + offset) = *(i_grad + i);
+        return;
+      }
+    }
+    // Copy to o_grad_0
+    *(o_grad_0 + i) = *(i_grad + i);
+  }
+};
+
+template<typename xpu>
+void IndexCopyBackward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  int dim = inputs[3].Size() / inputs[2].Size();
+  int index_size = inputs[2].Size();
+  // index_copy_backward
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(inputs[2].type_flag_, IType, {
+      Kernel<index_copy_assign, xpu>::Launch(s, inputs[0].Size(),
+                                      dim,
+                                      index_size,
+                                      inputs[0].dptr<DType>(),
+                                      inputs[2].dptr<IType>(),
+                                      outputs[0].dptr<DType>(),
+                                      outputs[2].dptr<DType>());
     })
   })
 }

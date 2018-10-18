@@ -57,10 +57,17 @@ mx.nd.contrib.index_copy(x, index, t)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", IndexCopyShape)
 .set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
-.set_attr<FCompute>("FCompute<cpu>", IndexCopyCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
+.set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)
 .add_argument("old_tensor", "NDArray", "Old tensor")
-.add_argument("index", "NDArray", "Index vector")
+.add_argument("index_vector", "NDArray", "Index vector")
 .add_argument("new_tensor", "NDArray", "New tensor to be copied");
+
+NNVM_REGISTER_OP(_contrib_backward_index_copy)
+.set_num_inputs(4)
+.set_num_outputs(3)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", IndexCopyBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

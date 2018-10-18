@@ -27,7 +27,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_index_copy)
-.set_attr<FCompute>("FCompute<gpu>", IndexCopyCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", IndexCopyForward<gpu>);
 
-}
-}
+NNVM_REGISTER_OP(_contrib_backward_index_copy)
+.set_attr<FCompute>("FCompute<gpu>", IndexCopyBackward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet
