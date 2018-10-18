@@ -3,7 +3,7 @@
 [Deep Convolutional Generative Adversarial Networks(DCGAN)](https://arxiv.org/abs/1511.06434) implementation with Apache MXNet GLUON.
 This implementation uses [inception_score](https://github.com/openai/improved-gan) to evaluate the model.
 
-You can use this reference implementation on MNIST and CIFAR10 dataset.
+You can use this reference implementation on the MNIST and CIFAR-10 datasets.
 
 
 #### Generated pic(use dataset cifar10)
