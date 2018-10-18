@@ -33,8 +33,8 @@ set -exuo pipefail
 # See also: ci/qemu/README.md
 #
 
-REMOTE="https://s3-eu-west-1.amazonaws.com/mxnet-edge-public/qemu"
+REMOTE="https://s3-us-west-2.amazonaws.com/mxnet-ci-prod-slave-data"
 curl -f ${REMOTE}/vda_debian_stretch.qcow2.bz2 | bunzip2 > vda.qcow2
-curl -f ${REMOTE}/vmlinuz-4.9.0-7-armmp-lpae -o vmlinuz
-curl -f ${REMOTE}/initrd.img-4.9.0-7-armmp-lpae -o initrd.img
+curl -f ${REMOTE}/vmlinuz -o vmlinuz
+curl -f ${REMOTE}/initrd.img -o initrd.img
 
