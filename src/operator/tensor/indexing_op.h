@@ -323,12 +323,11 @@ struct Take {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int overload, int N, DType* out_data, const DType* in_data,
                                   const IType* idx, const int M, const int K) {
-
     int row = N / M;
     int col = N % M;
-
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) if (N > 2000)
-    for(int i=0; i<row; i++) {
+    int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    #pragma omp parallel for num_threads(omp_threads) if (N > 2000)
+    for (int i = 0; i < row; i++) {
       int j = static_cast<int>(idx[i]);
       if (clip) {
         if (j <= 0) j = 0;
@@ -339,11 +338,11 @@ struct Take {
       }
       const int jM = j*M;
       const int iM = i*M;
-      for(int n=0; n<M; n++) {
+      for (int n = 0; n < M; n++) {
         out_data[iM + n] = in_data[jM + n];
       }
     }
-    if(col != 0) {
+    if (col != 0) {
       int j = static_cast<int>(idx[row]);
       if (clip) {
         if (j <= 0) j = 0;
@@ -354,8 +353,8 @@ struct Take {
       }
       const int jM = j*M;
       const int iM = row*M;
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) if (col > 2000)
-      for(int n=0; n<col; n++) {
+      #pragma omp parallel for num_threads(omp_threads) if (col > 2000)
+      for (int n = 0; n < col; n++) {
         out_data[iM + n] = in_data[jM + n];
       }
     }
@@ -398,7 +397,6 @@ struct Take {
     in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
     out_data[i] = in_data[in_src_index];
   }
-
 };
 
 // Embedding forward implementation with dense weight
@@ -418,10 +416,10 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
       Tensor<xpu, 2, DType> wmat = weight.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> out = output.get_with_shape<xpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      if(std::is_same<xpu,cpu>::value) {
+      if (std::is_same<xpu, cpu>::value) {
         // 1:loop times, call overload function for Take map which is more friendly for
         // cpu platform. Using this function, embedding OP will has more than 3 times speedup
-        //when oshape.Size() is large
+        // when oshape.Size() is large
         Kernel<Take<true>, xpu>::Launch(s, 1, oshape.Size(), out.dptr_, wmat.dptr_,
                                 idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
       } else {

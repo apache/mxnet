@@ -39,7 +39,8 @@ template<typename DType>
 bool CheckIndexOutOfBound(const DType* data_ptr, size_t data_size,
                           const DType min, const DType max) {
   bool is_valid = true;
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) if (data_size > 2000)
+  int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  #pragma omp parallel for num_threads(omp_threads) if (data_size > 2000)
   for (size_t i = 0; i < data_size; i++) {
     if (data_ptr[i] > max || data_ptr[i] < min) {
       is_valid = false;
