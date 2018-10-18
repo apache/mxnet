@@ -123,8 +123,8 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr, const NDArr
   std::vector<dgl_id_t> row_idx(len + 1);
   std::vector<dgl_id_t> col_idx;
   col_idx.reserve(len * 50);
-  const dgl_id_t *indices = csr_arr.aux_data(0).dptr<dgl_id_t>();
-  const dgl_id_t *indptr = csr_arr.aux_data(1).dptr<dgl_id_t>();
+  const dgl_id_t *indptr = csr_arr.aux_data(csr::kIndPtr).dptr<dgl_id_t>();
+  const dgl_id_t *indices = csr_arr.aux_data(csr::kIdx).dptr<dgl_id_t>();
   for (int64_t i = 0; i < len; ++i) {
     const dgl_id_t oldvid = vid_data[i];
     size_t row_start = indptr[oldvid];
@@ -146,10 +146,10 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr, const NDArr
   TShape indptr_shape(1);
   indptr_shape[0] = row_idx.size();
   output.CheckAndAllocData(nz_shape);
-  output.CheckAndAllocAuxData(0, nz_shape);
-  output.CheckAndAllocAuxData(1, indptr_shape);
-  dgl_id_t *indices_out = output.aux_data(0).dptr<dgl_id_t>();
-  dgl_id_t *indptr_out = output.aux_data(1).dptr<dgl_id_t>();
+  output.CheckAndAllocAuxData(csr::kIdx, nz_shape);
+  output.CheckAndAllocAuxData(csr::kIndPtr, indptr_shape);
+  dgl_id_t *indices_out = output.aux_data(csr::kIdx).dptr<dgl_id_t>();
+  dgl_id_t *indptr_out = output.aux_data(csr::kIndPtr).dptr<dgl_id_t>();
   std::copy(col_idx.begin(), col_idx.end(), indices_out);
   std::copy(row_idx.begin(), row_idx.end(), indptr_out);
   dgl_id_t *eids = output.data().dptr<dgl_id_t>();
