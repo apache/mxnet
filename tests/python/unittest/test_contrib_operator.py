@@ -245,9 +245,9 @@ def test_bipartite_matching_op():
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 
 def test_multibox_target_op():
-    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
-    cls_pred = mx.nd.array(list(range(10))).reshape((1, -1, 2))
-    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6]).reshape((1, -1, 5))
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], ctx=default_context()).reshape((1, -1, 4))
+    cls_pred = mx.nd.array(list(range(10)), ctx=default_context()).reshape((1, -1, 2))
+    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6], ctx=default_context()).reshape((1, -1, 5))
 
     loc_target, loc_mask, cls_target = \
         mx.nd.contrib.MultiBoxTarget(anchors, label, cls_pred,
