@@ -96,7 +96,7 @@ build_wheel() {
     popd
 }
 
-# Build commands: Every platform in docker/Dockerfile.<platform> should have a corresponding
+# Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
 # function here with the same suffix:
 
 build_jetson() {
