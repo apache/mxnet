@@ -6,7 +6,7 @@ This implementation uses [inception_score](https://github.com/openai/improved-ga
 You can use this reference implementation on the MNIST and CIFAR-10 datasets.
 
 
-#### Generated pic(use dataset cifar10)
+#### Generated image output examples from the CIFAR-10 dataset
 ![Generated pic](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/fake_img_iter_13900.png)
 
 #### Generated pic(use dataset mnist)
