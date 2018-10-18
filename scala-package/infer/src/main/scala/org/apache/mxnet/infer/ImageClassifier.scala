@@ -76,7 +76,8 @@ class ImageClassifier(modelPathPrefix: String,
                     topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(1))
+    val imageShape = inputShape.drop(1)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
     inputImage.flush()
     scaledImage.flush()
 
@@ -100,7 +101,8 @@ class ImageClassifier(modelPathPrefix: String,
     val inputBatchSeq = inputBatch.toIndexedSeq
     val imageBatch = inputBatchSeq.indices.par.map(idx => {
       val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
-      ImageClassifier.bufferedImageToPixels(scaledImage, inputShape.drop(1))
+      val imageShape = inputShape.drop(1)
+      ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
     }).toList
     val op = NDArray.concatenate(imageBatch)
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
