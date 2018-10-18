@@ -16,7 +16,7 @@ You can use this reference implementation on the MNIST and CIFAR-10 datasets.
 CPU & GPU
 
 ![inception score with CPU](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10_cpu.png)
-![inception_score_with_gpu](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10.png)
+![inception score with GPU](https://github.com/pengxin99/incubator-mxnet/blob/dcgan-inception_score/example/gluon/DCGAN/pic/inception_score_cifar10.png)
 
 ## Quick start
 use below code to see the configurations you can set:
