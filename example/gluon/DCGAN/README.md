@@ -47,6 +47,6 @@ python dcgan.py -h
 
 
 Use the following Python script to train a DCGAN model with default configurations using the CIFAR-10 dataset and record metrics with `inception_score`:
-```python
+```bash
 python dcgan.py
 ```
