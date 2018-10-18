@@ -867,7 +867,8 @@ def convert_leakyrelu(node, **kwargs):
     act_type = attrs.get("act_type", "leaky")
     alpha = float(attrs.get("slope", 0.25))
 
-    act_name = {"elu": "Elu", "leaky": "LeakyRelu", "prelu": "PRelu"}
+    act_name = {"elu": "Elu", "leaky": "LeakyRelu", "prelu": "PRelu",
+                "selu": "Selu"}
 
     if act_type == "prelu":
         alpha_node_index = kwargs["index_lookup"][inputs[1][0]]
@@ -876,6 +877,12 @@ def convert_leakyrelu(node, **kwargs):
         node = onnx.helper.make_node(
             act_name[act_type],
             inputs=[input_node, alpha_node_name],
+            outputs=[name],
+            name=name)
+    elif act_type == "selu":
+        node = onnx.helper.make_node(
+            act_name[act_type],
+            inputs=[input_node],
             outputs=[name],
             name=name)
     else:

@@ -99,6 +99,7 @@ BASIC_MODEL_TESTS = [
     'test_MaxPool',
     'test_PReLU',
     'test_ReLU',
+    'test_selu_default',
     'test_Sigmoid',
     'test_Softmax',
     'test_softmax_functional',
