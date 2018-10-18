@@ -73,7 +73,6 @@ The configuration you should update is in the pom file's dependency for MXNet:
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.3.0</version>
 </dependency>
 ```
 
@@ -212,7 +211,6 @@ The project's `pom.xml` will be open for editing.
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-      <version>1.3.0</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -313,7 +311,7 @@ Click "Import Changes" in this prompt.
 
 **Step 5.** Setup log4j configuration
 
-Create a new file `target/classes/log4j.properties` with the contents:
+Create a folder `src/main/resources` and a new file in it `src/main/resources/log4j.properties` with the contents:
 
 ```
 log4j.rootLogger = info, stdout
@@ -381,22 +379,20 @@ This can be resolved be installing OpenCV.
 
 ### Using MXNet from source
 
-If you chose to "Build from Source" when following the [install instructions](https://mxnet.incubator.apache.org/install/index.html), you can use your custom build instead of the build from maven.  Use your build by editing the `pom.xml` file and replacing the `org.apache.mxnet` dependency with the following:
+If you chose to "Build from Source" when following the [install instructions](https://mxnet.incubator.apache.org/install/index.html) (or the detailed [build from source instructions](https://mxnet.incubator.apache.org/install/build_from_source.html#installing-mxnet-language-bindings)), you can use your custom build instead of the build from maven.  Use your build by editing the `pom.xml` file and replacing the `org.apache.mxnet` dependency with the following:
 
 ```
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.version}-${platform}-sources</artifactId>
-      <version>1.3.0</version>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT-sources.jar</systemPath>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.3.1-SNAPSHOT-sources.jar</systemPath>
     </dependency>
 
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_${scala.version}-${platform}</artifactId>
-      <version>1.3.0</version>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
     </dependency>
 ```
 
