@@ -64,6 +64,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_reduce_max',
     'test_reduce_mean',
     'test_reduce_prod',
+    'test_reduce_sum_d',
+    'test_reduce_sum_keepdims_random',
     'test_squeeze',
     'test_softmax_example',
     'test_softmax_large_number',
@@ -105,6 +107,7 @@ BASIC_MODEL_TESTS = [
     'test_MaxPool',
     'test_PReLU',
     'test_ReLU',
+    'test_selu_default'
     'test_Sigmoid',
     'test_Softmax',
     'test_softmax_functional',
