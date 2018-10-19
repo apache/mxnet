@@ -154,7 +154,7 @@ object ImageClassifier {
     * @param resizedImage     BufferedImage to get pixels from
     * @param inputImageShape  Input shape; for example for resnet it is (3,224,224).
                               Should be same as inputDescriptor shape.
-    * @return                 NDArray pixels array with shape (1, 3, 224, 224) in NCHW format
+    * @return                 NDArray pixels array with shape (3, 224, 224) in CHW format
     */
   def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
     // Get height and width of the image
