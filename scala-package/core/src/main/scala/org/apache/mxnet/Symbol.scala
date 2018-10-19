@@ -979,7 +979,9 @@ object Symbol extends SymbolBase {
    * @param stop End of interval.
    * @param step Spacing between values. The default step size is 1.
    * @param repeat Number of times to repeat each element. The default repeat count is 1.
-   * @param infer_range Infer the stop value from output shape
+   * @param infer_range
+   *          When set to True, infer the stop position from the start, step,
+   *          repeat, and output tensor size.
    * @param ctx Device context. Default context is the current default context.
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
