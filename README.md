@@ -95,7 +95,7 @@ We added binary versions of the following layers of the gluon API:
 We added three functions `det_sign` ([ada4ea1d](https://gitlab.hpi.de/joseph.bethge/bmxnet/commit/ada4ea1d4418cfdd6cbc6d0159e1a716cb01cd85)), `round_ste` ([044f81f0](https://gitlab.hpi.de/joseph.bethge/bmxnet/commit/044f81f028887b9842070df28b28de394bd07516)) and `contrib.gradcancel` to MXNet (see [src/operator/contrib/gradient_cancel[-inl.h|.cc|.cu]](src/operator/contrib)).
 
 The rest of our code resides in the following folders/files:
-- Examples are in [example/bmxnet-examples](example/bmxnet-examples)
+- Examples are in a submodule in [example/bmxnet-examples](https://gitlab.hpi.de/joseph.bethge/bmxnet-examples)
 - Tests are in [tests/python/unittest/test_binary.py](tests/python/unittest/test_binary.py)
 - Layers are in [python/mxnet/gluon/nn/binary_layers.py](python/mxnet/gluon/nn/binary_layers.py)
 
