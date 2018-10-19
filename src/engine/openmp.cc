@@ -73,11 +73,7 @@ void OpenMP::set_reserve_cores(int cores) {
   CHECK_GE(cores, 0);
   reserve_cores_ = cores;
 #ifdef _OPENMP
-  if (reserve_cores_ >= omp_thread_max_) {
-    omp_thread_max_ = 1;
-  } else {
-    omp_thread_max_ -= reserve_cores_;
-  }
+  omp_thread_max_ = std::max(omp_thread_max_ - reserve_cores_, 1);
 #endif
 }
 
