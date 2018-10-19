@@ -167,16 +167,6 @@ inline bool IndexCopyShape(const nnvm::NodeAttrs& attrs,
          out_attrs->at(0).Size() != 0U;
 }
 
-inline bool IndexCopyType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_attrs,
-                          std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 3U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0) != -1;
-}
-
 }  // namespace op
 }  // namespace mxnet
 
