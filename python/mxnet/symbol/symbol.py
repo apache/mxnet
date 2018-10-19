@@ -2900,6 +2900,9 @@ def arange(start, stop=None, step=1.0, repeat=1, name=None, dtype=None):
     repeat : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    infer_range : boolean, optional
+        When set to True, infer the stop position from the start, step,
+        repeat, and output tensor size.
     dtype : str or numpy.dtype, optional
         The value type of the inner value, default to ``np.float32``.
 
