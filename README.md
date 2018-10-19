@@ -58,17 +58,17 @@ If your mxnet python binding still not works, you can add the location of the li
 $ export LD_LIBRARY_PATH=<mxnet-root>/build/Release
 $ export PYTHONPATH=<mxnet-root>/python
 ```
-#### Docker
 
-There is a simple Dockerfile that you can use to ease the setup process. Once running, find mxnet at ``/mxnet`` and the build folder at ``/mxnet/release``. (Be *warned* though, CUDA will not work inside the container so training process can be quite tedious)
+## Training
 
+Make sure that you have a new version of our example submodule [example/bmxnet-examples](example/bmxnet-examples):
 ```bash
-$ cd <mxnet-root>/smd_hpi/tools/docker
-$ docker build -t mxnet
-$ docker run -t -i mxnet
+cd example/bmxnet-examples
+git checkout master
+git pull
 ```
 
-You probably also want to map a folder to share files (trained models) inside docker (``-v <absolute local path>:/shared``).
+The best hyperparameters are documented in the [Wiki](https://gitlab.hpi.de/joseph.bethge/bmxnet/wikis/hyperparameters).
 
 ## Tests
 
