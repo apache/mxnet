@@ -244,6 +244,22 @@ def test_bipartite_matching_op():
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [1, -1, 0], [2, 0], 1e-12, False)
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 
+def test_multibox_target_op():
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], ctx=default_context()).reshape((1, -1, 4))
+    cls_pred = mx.nd.array(list(range(10)), ctx=default_context()).reshape((1, -1, 2))
+    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6], ctx=default_context()).reshape((1, -1, 5))
+
+    loc_target, loc_mask, cls_target = \
+        mx.nd.contrib.MultiBoxTarget(anchors, label, cls_pred,
+                                     overlap_threshold=0.5,
+                                     negative_mining_ratio=3,
+                                     negative_mining_thresh=0.4)
+    expected_loc_target = np.array([[5.0, 2.5000005, 3.4657357, 4.581454, 0., 0., 0., 0.]])
+    expected_loc_mask = np.array([[1, 1, 1, 1, 0, 0, 0, 0]])
+    expected_cls_target = np.array([[2, 0]])
+    assert_allclose(loc_target.asnumpy(), expected_loc_target, rtol=1e-5, atol=1e-5)
+    assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
+    assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
 if __name__ == '__main__':
     import nose
