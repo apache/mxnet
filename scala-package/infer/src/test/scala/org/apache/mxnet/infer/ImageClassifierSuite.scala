@@ -67,7 +67,7 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
 
     val result = ImageClassifier.bufferedImageToPixels(image2, Shape(3, 2, 2))
 
-    assert(result.shape == inputDescriptor(0).shape)
+    assert(result.shape == inputDescriptor(0).shape.drop(1))
   }
 
   test("ImageClassifierSuite-testWithInputImage") {

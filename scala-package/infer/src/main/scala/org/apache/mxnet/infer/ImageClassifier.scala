@@ -78,12 +78,14 @@ class ImageClassifier(modelPathPrefix: String,
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
     val imageShape = inputShape.drop(1)
     val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+    val imgWithBatchNum = NDArray.api.expand_dims(pixelsNDArray, 0)
     inputImage.flush()
     scaledImage.flush()
-
-    val output = super.classifyWithNDArray(IndexedSeq(pixelsNDArray), topK)
-
     handler.execute(pixelsNDArray.dispose())
+
+    val output = super.classifyWithNDArray(IndexedSeq(imgWithBatchNum), topK)
+
+    handler.execute(imgWithBatchNum.dispose())
 
     IndexedSeq(output(0))
   }
@@ -102,7 +104,10 @@ class ImageClassifier(modelPathPrefix: String,
     val imageBatch = inputBatchSeq.indices.par.map(idx => {
       val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
       val imageShape = inputShape.drop(1)
-      ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+      val imgND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+      val imgWithBatch = NDArray.api.expand_dims(imgND, 0).get
+      handler.execute(imgND.dispose())
+      imgWithBatch
     }).toList
     val op = NDArray.concatenate(imageBatch)
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
@@ -182,7 +187,7 @@ object ImageClassifier {
     resizedImage.flush()
 
     // creating NDArray according to the input shape
-    val pixelsArray = NDArray.array(result, shape = new Shape(1 +: inputImageShape.toVector))
+    val pixelsArray = NDArray.array(result, shape = inputImageShape)
     pixelsArray
   }
 

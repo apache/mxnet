@@ -74,8 +74,10 @@ class ObjectDetector(modelPathPrefix: String,
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
     val imageShape = inputShape.drop(1)
     val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
-    val output = objectDetectWithNDArray(IndexedSeq(pixelsNDArray), topK)
+    val pixelsNDWithBatch = NDArray.api.expand_dims(pixelsNDArray, 0)
     handler.execute(pixelsNDArray.dispose())
+    val output = objectDetectWithNDArray(IndexedSeq(pixelsNDWithBatch), topK)
+    handler.execute(pixelsNDWithBatch.dispose())
     output
   }
 
@@ -152,7 +154,10 @@ class ObjectDetector(modelPathPrefix: String,
     val imageBatch = inputBatchSeq.indices.par.map(idx => {
       val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
       val imageShape = inputShape.drop(1)
-      ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+      val pixelsND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+      val pixelsNDWithBatch = NDArray.api.expand_dims(pixelsND, 0).get
+      handler.execute(pixelsND.dispose())
+      pixelsNDWithBatch
     })
     val op = NDArray.concatenate(imageBatch.toList)
 
