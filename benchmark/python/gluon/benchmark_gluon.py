@@ -44,30 +44,24 @@ parser.add_argument('--num-batches', type=int, default=10)
 parser.add_argument('--gpus', type=str, default='',
                     help='GPU IDs to use for this benchmark task. Example: --gpus=0,1,2,3 to use 4 GPUs.'
                          'By default, use CPU only.')
-parser.add_argument('--global-batchsize', type=bool, default=True,
-                    help='Optional. Set this to True if batch-size should be used as is.'
-                         'Example: If --batch-size=64, --gpus=0,1. With --global-batchsize=True,'
-                         'each of the 2 GPUs will get 64/2 = 32 samples per batch.'
-                         'With --global-batchsize=False, each of the 2 GPUs will get 64 samples per batch.') 
 parser.add_argument('--type', type=str, default='inference', choices=['all', 'training', 'inference'])
 
 opt = parser.parse_args()
 
 num_batches = opt.num_batches
-global_bs = opt.global_batchsize
 dry_run = 10  # use 10 iterations to warm up
 batch_inf = [1, 32, 64, 128, 256]
 batch_train = [1, 32, 64, 128, 256]
 image_shapes = [(3, 224, 224), (3, 299, 299)]
 
 def score(network, batch_size, ctx):
+    assert (batch_size >= len(ctx)), "ERROR: batch size should not be smaller than num of GPUs."
     net = models.get_model(network)
     if 'inceptionv3' == network:
         data_shape = [('data', (batch_size,) + image_shapes[1])]
     else:
         data_shape = [('data', (batch_size,) + image_shapes[0])]
 
-    net.hybridize()
     data = mx.sym.var('data')
     out = net(data)
     softmax = mx.sym.SoftmaxOutput(out, name='softmax')
@@ -76,10 +70,7 @@ def score(network, batch_size, ctx):
              inputs_need_grad = False,
              data_shapes      = data_shape)
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-    if mx.cpu() in ctx:
-        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.cpu()) for _, shape in mod.data_shapes]
-    elif mx.gpu(0) in ctx:
-        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.gpu()) for _, shape in mod.data_shapes]
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx[0]) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, [])
     for i in range(dry_run + num_batches):
         if i == dry_run:
@@ -92,13 +83,13 @@ def score(network, batch_size, ctx):
 
 
 def train(network, batch_size, ctx):
+    assert (batch_size >= len(ctx)), "ERROR: batch size should not be smaller than num of GPUs."
     net = models.get_model(network)
     if 'inceptionv3' == network:
         data_shape = [('data', (batch_size,) + image_shapes[1])]
     else:
         data_shape = [('data', (batch_size,) + image_shapes[0])]
 
-    net.hybridize()
     data = mx.sym.var('data')
     out = net(data)
     softmax = mx.sym.SoftmaxOutput(out, name='softmax')
@@ -111,10 +102,7 @@ def train(network, batch_size, ctx):
         mod.init_optimizer(kvstore='device', optimizer='sgd')
     else:
         mod.init_optimizer(kvstore='local', optimizer='sgd')
-    if mx.cpu() in ctx:
-        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.cpu()) for _, shape in mod.data_shapes]
-    elif mx.gpu(0) in ctx:
-        data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.gpu()) for _, shape in mod.data_shapes]
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx[0]) for _, shape in mod.data_shapes]
     batch = mx.io.DataBatch(data, [])
     for i in range(dry_run + num_batches):
         if i == dry_run:
@@ -152,41 +140,25 @@ if __name__ == '__main__':
         logging.info('device: %s', devs)
         if runtype == 'inference' or runtype == 'all':
             if bs != 0:
-                if not global_bs:
-                    batch_sizes = bs * max(1, num_gpus)
-                else:
-                    batch_sizes = bs
-                fwd_time = score(network, batch_sizes, devs)
-                fps = (batch_sizes * num_batches)/fwd_time
+                fwd_time = score(network, bs, devs)
+                fps = (bs * num_batches)/fwd_time
                 logging.info(network + ' inference perf for BS %d is %f img/s', bs, fps)
             else:
                 logging.info('run batchsize [1, 2, 4, 8, 16, 32] by default, '
                              'set --batch-size to run a specific one')
                 for batch_size in batch_inf:
-                    if not global_bs:
-                        batch_sizes = batch_size * max(1, num_gpus)
-                    else:
-                        batch_sizes = batch_size
-                    fwd_time = score(network, batch_sizes, devs)
-                    fps = (batch_sizes * num_batches) / fwd_time
+                    fwd_time = score(network, batch_size, devs)
+                    fps = (batch_size * num_batches) / fwd_time
                     logging.info(network + ' inference perf for BS %d is %f img/s', batch_size, fps)
         if runtype == 'training' or runtype == 'all':
             if bs != 0:
-                if not global_bs:
-                    batch_sizes = bs * max(1, num_gpus)
-                else:
-                    batch_sizes = bs
-                bwd_time = train(network, batch_sizes, devs)
-                fps = (batch_sizes * num_batches) / bwd_time
+                bwd_time = train(network, bs, devs)
+                fps = (bs * num_batches) / bwd_time
                 logging.info(network + ' training perf for BS %d is %f img/s', bs, fps)
             else:
                 logging.info('run batchsize [1, 2, 4, 8, 16, 32] by default, '
                              'set --batch-size to run a specific one')
                 for batch_size in batch_train:
-                    if not global_bs:
-                        batch_sizes = batch_size * max(1, num_gpus)
-                    else:
-                        batch_sizes = batch_size
-                    bwd_time = train(network, batch_sizes, devs)
-                    fps = (batch_sizes * num_batches) / bwd_time
+                    bwd_time = train(network, batch_size, devs)
+                    fps = (batch_size * num_batches) / bwd_time
                     logging.info(network + ' training perf for BS %d is %f img/s', batch_size, fps)
