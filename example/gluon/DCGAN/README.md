@@ -7,16 +7,16 @@ You can use this reference implementation on the MNIST and CIFAR-10 datasets.
 
 
 #### Generated image output examples from the CIFAR-10 dataset
-![Generated image output examples from the CIFAR-10 dataset](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/DCGAN/fake_img_iter_13900.png)
+![Generated image output examples from the CIFAR-10 dataset](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gluon/DCGAN/fake_img_iter_13900.png)
 
 #### Generated image output examples from the MNIST dataset
-![Generated image output examples from the MNIST dataset](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/DCGAN/fake_img_iter_21700.png)
+![Generated image output examples from the MNIST dataset](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gluon/DCGAN/fake_img_iter_21700.png)
 
 #### inception_score in cpu and gpu (the real image`s score is around 3.3)
 CPU & GPU
 
-![inception score with CPU](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/DCGAN/inception_score_cifar10_cpu.png)
-![inception score with GPU](https://github.com/dmlc/web-data/tree/master/mxnet/example/gluon/DCGAN/inception_score_cifar10.png)
+![inception score with CPU](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gluon/DCGAN/inception_score_cifar10_cpu.png)
+![inception score with GPU](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gluon/DCGAN/inception_score_cifar10.png)
 
 ## Quick start
 Use the following code to see the configurations you can set:
