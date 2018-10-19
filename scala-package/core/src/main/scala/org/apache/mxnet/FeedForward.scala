@@ -277,13 +277,15 @@ class FeedForward private(
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric, kvStoreType: String,
           epochEndCallback: EpochEndCallback, batchEndCallback: BatchEndCallback,
           logger: Logger, workLoadList: Seq[Float]): Unit = {
-    // init params first to allow kv store use _argParams to decide its type
-    initSymbolParams(trainData)
-    // create kvstore
-    val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
-    fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
-      epochEndCallback, batchEndCallback, logger, workLoadList)
-    kvStore.foreach(_.dispose())
+    ResourceScope.using() {
+      // init params first to allow kv store use _argParams to decide its type
+      initSymbolParams(trainData)
+      // create kvstore
+      val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
+      fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
+        epochEndCallback, batchEndCallback, logger, workLoadList)
+//      kvStore.foreach(_.dispose())
+    }
   }
 
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
@@ -313,11 +315,13 @@ class FeedForward private(
           batchEndCallback: BatchEndCallback, logger: Logger,
           workLoadList: Seq[Float]): Unit = {
     // init params first to allow kv store use _argParams to decide its type
-    initSymbolParams(trainData)
-    // create kvstore
-    val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
-    fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
-      epochEndCallback, batchEndCallback, logger, workLoadList)
+    ResourceScope.using() {
+      initSymbolParams(trainData)
+      // create kvstore
+      val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
+      fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
+        epochEndCallback, batchEndCallback, logger, workLoadList)
+    }
   }
 
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
@@ -352,44 +356,46 @@ class FeedForward private(
                   batchEndCallback: BatchEndCallback = null, logger: Logger = FeedForward.logger,
                   workLoadList: Seq[Float] = null): Unit = {
     require(evalMetric != null, "evalMetric cannot be null")
-    val (argNames, paramNames, auxNames) = initSymbolParams(trainData)
+    ResourceScope.using() {
+      val (argNames, paramNames, auxNames) = initSymbolParams(trainData)
 
-    // init optimizer
-    val batchSizeMultiplier = kvStore.map { kv =>
-      if (kv.`type` == "dist_sync") {
-        kv.numWorkers
-      } else {
-        1
+      // init optimizer
+      val batchSizeMultiplier = kvStore.map { kv =>
+        if (kv.`type` == "dist_sync") {
+          kv.numWorkers
+        } else {
+          1
+        }
       }
+      val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
+      this.optimizer.setArgNames(argNames)
+      this.optimizer.setRescaleGrad(1f / batchSize)
+      this.optimizer.setSymbol(this.symbol)
+      val paramIdx2Name =
+        if (updateOnKVStore) {
+          paramNames.zipWithIndex.map { case (name, idx) => idx -> name }.toMap
+        } else {
+          paramNames.zipWithIndex.flatMap { case (name, idx) =>
+            (0 until ctx.length).map(k => (idx * ctx.length + k) -> name).toMap
+          }.toMap
+        }
+      this.optimizer.setIdx2Name(paramIdx2Name)
+
+      logger.debug("Start training on multi-device")
+      Model.trainMultiDevice(
+        symbol, ctx, argNames, paramNames, auxNames,
+        _argParams, _auxParams,
+        this.beginEpoch, this.numEpoch,
+        this.epochSize, this.optimizer,
+        kvStore, updateOnKVStore,
+        trainData = trainData, evalData = Option(evalData),
+        evalMetric = evalMetric,
+        epochEndCallback = Option(epochEndCallback),
+        batchEndCallback = Option(batchEndCallback),
+        workLoadList = workLoadList,
+        monitor = monitor,
+        symGen = symGen)
     }
-    val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
-    this.optimizer.setArgNames(argNames)
-    this.optimizer.setRescaleGrad(1f / batchSize)
-    this.optimizer.setSymbol(this.symbol)
-    val paramIdx2Name =
-      if (updateOnKVStore) {
-        paramNames.zipWithIndex.map { case (name, idx) => idx -> name }.toMap
-      } else {
-        paramNames.zipWithIndex.flatMap { case (name, idx) =>
-          (0 until ctx.length).map(k => (idx * ctx.length + k) -> name).toMap
-        }.toMap
-      }
-    this.optimizer.setIdx2Name(paramIdx2Name)
-
-    logger.debug("Start training on multi-device")
-    Model.trainMultiDevice(
-      symbol, ctx, argNames, paramNames, auxNames,
-      _argParams, _auxParams,
-      this.beginEpoch, this.numEpoch,
-      this.epochSize, this.optimizer,
-      kvStore, updateOnKVStore,
-      trainData = trainData, evalData = Option(evalData),
-      evalMetric = evalMetric,
-      epochEndCallback = Option(epochEndCallback),
-      batchEndCallback = Option(batchEndCallback),
-      workLoadList = workLoadList,
-      monitor = monitor,
-      symGen = symGen)
   }
 
   /**
