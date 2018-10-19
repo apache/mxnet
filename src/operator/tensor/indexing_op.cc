@@ -63,7 +63,7 @@ bool CheckIndexOutOfBound(const DType* data_ptr, size_t data_size,
   bool is_valid = true;
   int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   #pragma omp parallel for num_threads(omp_threads) if (data_size > 2000)
-  for (size_t i = 0; i < data_size; i++) {
+  for (int i = 0; i < data_size; i++) {
     if (data_ptr[i] > max || data_ptr[i] < min) {
       is_valid = false;
     }
