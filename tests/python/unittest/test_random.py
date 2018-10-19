@@ -785,6 +785,32 @@ def test_randint():
         assert same(ret1, ret2), \
                 "ndarray test: `%s` should give the same result with the same seed"
 
+@with_seed()
+def test_randint_extremes():
+    a = mx.nd.random.randint(dtype='int64', low=50000000, high=50000010)
+    assert a>50000000 and a<50000010
+
+@with_seed()
+def test_randint_generator():
+    ctx = mx.context.cpu()
+    low = 50000000
+    high = 50001000
+    for dtype in ['int64']:
+        print("ctx=%s, dtype=%s, Low=%g, High=%g:" % (ctx, dtype, low, high))
+        scale = high - low
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
+        # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
+        buckets = np.array(buckets, dtype=dtype).tolist()
+        probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(5)]
+        generator_mx = lambda x: mx.nd.random.randint(low, high, shape=x, ctx=ctx, dtype=dtype).asnumpy()
+        verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+        generator_mx_same_seed = \
+            lambda x: np.concatenate(
+                [mx.nd.random.randint(low, high, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                    for _ in range(10)])
+        verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
