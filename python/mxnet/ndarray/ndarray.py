@@ -866,10 +866,10 @@ fixed-size items.
             except:
                 raise TypeError('array must consist of array-like data,' +
                                 'type %s is not supported' % str(type(array)))
-        source_array = np.ascontiguousarray(source_array, dtype=self.dtype)
+        source_array = np.asarray(source_array, dtype=self.dtype, order='C')
         if source_array.shape != self.shape:
             raise ValueError('Shape inconsistent: expected %s vs got %s'%(
-                str(self.shape), str(source_array.shape)))
+                str(source_array.shape), str(self.shape)))
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.c_void_p),

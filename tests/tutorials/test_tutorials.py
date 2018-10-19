@@ -189,3 +189,6 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
+
+def test_subgraphapi():
+    assert _test_tutorial_nb('c++/subgraphAPI')

@@ -298,6 +298,7 @@ def test_activation():
         check_activation_training(stype)
 
 
+@with_seed()
 def test_convolution():
     def check_convolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10)]:
@@ -322,6 +323,8 @@ def test_convolution():
         check_convolution_training(stype)
 
 
+@with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10)]:
