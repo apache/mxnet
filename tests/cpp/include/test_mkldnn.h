@@ -574,4 +574,5 @@ void VerifySumResult(const std::vector<NDArray *> &in_arrs,
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-#endif  // TEST_MKLDNN_H_
+#endif
+#endif // TEST_MKLDNN_H_
