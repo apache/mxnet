@@ -1013,6 +1013,19 @@ def test_sparse_fc():
     # test FC with row_sparse weight w/ density=1, csr data (fallback)
     check_sparse_fc(5, 10, 8, 'csr')
 
+@with_seed()
+def test_sparse_take():
+    def check_sparse_take(density):
+        data_shape = rand_shape_2d()
+        idx_shape = (np.random.randint(low=1, high=10),)
+        data = rand_ndarray(data_shape, 'csr', density=density)
+        idx = mx.nd.array(np.random.randint(low=0, high=data_shape[0], size=idx_shape))
+        result = mx.nd.take(data, idx)
+        assert_almost_equal(result.asnumpy(), data.asnumpy()[idx.asnumpy().astype('int32')])
+    densities = [0, 0.5, 1]
+    for d in densities:
+        check_sparse_take(d)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

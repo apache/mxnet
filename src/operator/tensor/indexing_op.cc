@@ -87,6 +87,100 @@ void SparseEmbeddingOpForwardRspImpl<cpu>(const OpContext& ctx,
   }
 }
 
+struct CsrTakeDataKernel {
+  /*!
+   * \brief Map function for general case of take grad
+   * \param tid           global thread id
+   * \param out_idx       ptr to out idx
+   * \param out_data      ptr to out data
+   * \param out_indptr    ptr to out indptr
+   * \param src_data      ptr to original csr data
+   * \param src_idx       ptr to original csr idx
+   * \param idx_ptr       ptr to indices
+   */
+  template<typename IType, typename DType, typename RType>
+  MSHADOW_XINLINE static void Map(int tid, RType* out_idx, DType* out_data,
+                                  const RType* out_indptr, const RType* src_idx,
+                                  const DType* src_data, const RType* src_indptr,
+                                  const IType* idx_ptr) {
+    nnvm::dim_t idx = static_cast<nnvm::dim_t>(idx_ptr[tid]);
+    int row_nnz = src_indptr[idx + 1] - src_indptr[idx];
+    for (int i = 0; i < row_nnz; i++) {
+        out_data[out_indptr[tid] + i] = src_data[src_indptr[tid] + i];
+        out_idx[out_indptr[tid] + i] = src_idx[src_indptr[tid] + i];
+    }
+  }
+};
+
+struct CsrTakeRowCountKernel {
+  /*!
+   * \brief Map function for general case of take grad
+   * \param tid           global thread id
+   * \param out_indptr    ptr to out indptr
+   * \param src_indptr    ptr to original csr indptr
+   * \param idx_ptr       ptr to indices
+   */
+  template<typename IType, typename RType>
+  MSHADOW_XINLINE static void Map(int tid, RType* out_indptr,
+                                  const RType* src_indptr, const IType* idx_ptr) {
+    if (tid == 0) out_indptr[0] = 0;
+    nnvm::dim_t idx = static_cast<nnvm::dim_t>(idx_ptr[tid - 1]);
+    out_indptr[tid - 1] = src_indptr[idx];
+  }
+};
+
+template<>
+void TakeOpForwardCsrImpl<cpu>(const TakeParam& params,
+                               const OpContext& ctx,
+                               const TBlob& idx,
+                               const NDArray& arr,
+                               OpReqType req,
+                               const NDArray& out) {
+  using namespace csr;
+  using namespace mxnet_op;
+  using nnvm::dim_t;
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  if (req == kNullOp) return;
+  if (!arr.storage_initialized()) {
+    FillZerosCsrImpl(s, out);
+    return;
+  }
+  CHECK_EQ(idx.shape_.ndim(), 1U)
+          << "Take with CSR array expects its indices to be one-dimensional. "
+          << idx.shape_.ndim() << " dimensional input is given instead";
+  CHECK_EQ(req, kWriteTo) << "req = " << req << " is not supported for take(csr)";
+  auto axis = params.axis;
+  CHECK_EQ(axis, 0) << "axis = " << axis << " is not supported for take(csr)";
+  const dim_t num_rows = out.shape()[0];
+  out.CheckAndAllocAuxData(kIndPtr, {Shape1(num_rows + 1)});
+
+  MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
+    MSHADOW_SGL_DBL_TYPE_SWITCH(arr.dtype(), DType, {
+      MSHADOW_IDX_TYPE_SWITCH(out.aux_type(kIdx), RType, {
+        RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
+        const RType* src_indptr = arr.aux_data(kIndPtr).dptr<RType>();
+        const IType* idx_ptr = idx.dptr<IType>();
+
+        Kernel<CsrTakeRowCountKernel, cpu>::Launch(s, num_rows + 1,
+            out_indptr, src_indptr, idx_ptr);
+        for (dim_t i = 0; i < num_rows; i++) {
+           out_indptr[i + 1] += out_indptr[i];
+        }
+        // total number of non-zero rows
+        const dim_t nnz = out_indptr[num_rows];
+        CHECK_GT(nnz, 0) << "Invalid nnz for take(csr)" << nnz;
+        out.CheckAndAllocAuxData(kIdx, {Shape1(nnz)});
+        out.CheckAndAllocData(Shape1(nnz));
+        RType* out_idx = out.aux_data(kIdx).dptr<RType>();
+        DType* out_data = out.data().dptr<DType>();
+        const RType* src_idx = arr.aux_data(kIdx).dptr<RType>();
+        const DType* src_data = arr.data().dptr<DType>();
+        Kernel<CsrTakeDataKernel, cpu>::Launch(s, num_rows, out_idx,
+            out_data, out_indptr, src_idx, src_data, src_indptr, idx_ptr);
+      });
+    });
+  });
+}
 
 template<>
 inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
@@ -441,6 +535,7 @@ Examples::
   })
 .set_attr<nnvm::FInferShape>("FInferShape", TakeOpShape)
 .set_attr<nnvm::FInferType>("FInferType", TakeOpType)
+.set_attr<FInferStorageType>("FInferStorageType", TakeOpForwardStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
