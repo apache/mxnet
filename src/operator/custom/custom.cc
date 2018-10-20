@@ -387,7 +387,7 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
     cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
-  for (const auto& ptr : ptrs) {
+  for (auto& ptr : ptrs) {
     NDArray* nd;
     if (ptr == nullptr) {
         nd = new NDArray();
