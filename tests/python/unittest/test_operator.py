@@ -4644,11 +4644,25 @@ def test_index_copy():
     x = mx.nd.zeros((5,3))
     t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
     index = mx.nd.array([0,4,2])
-    out = mx.nd.contrib.index_copy(x, index, t)
+
+    x.attach_grad()
+    t.attach_grad()
+    index.attach_grad()
+
+    with mx.autograd.record():
+        out = mx.nd.contrib.index_copy(x, index, t)
+
+    out.backward() 
 
     tensor = mx.nd.array([[1,2,3],[0,0,0],[7,8,9],[0,0,0],[4,5,6]])
+    x_grad = mx.nd.array([[0,0,0],[1,1,1],[0,0,0],[1,1,1],[0,0,0]])
+    t_grad = mx.nd.array([[1,1,1],[1,1,1],[1,1,1]])
+    index_grad = mx.nd.array([0,0,0])
 
     assert same(out.asnumpy(), tensor.asnumpy())
+    assert same(x.grad.asnumpy(), x_grad.asnumpy())
+    assert same(t.grad.asnumpy(), t_grad.asnumpy())
+    assert same(index.grad.asnumpy(), index_grad.asnumpy())
 
 @with_seed()
 def test_div_sqrt_dim():
