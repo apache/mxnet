@@ -117,8 +117,8 @@ struct CsrTakeDataKernel {
     }
     int row_nnz = src_indptr[idx + 1] - src_indptr[idx];
     for (int i = 0; i < row_nnz; i++) {
-        out_data[out_indptr[tid] + i] = src_data[src_indptr[tid] + i];
-        out_idx[out_indptr[tid] + i] = src_idx[src_indptr[tid] + i];
+        out_data[out_indptr[tid] + i] = src_data[src_indptr[idx] + i];
+        out_idx[out_indptr[tid] + i] = src_idx[src_indptr[idx] + i];
     }
   }
 };
@@ -148,7 +148,7 @@ struct CsrTakeRowCountKernel {
       idx = idx % num_rows;
       idx += (idx < 0) ? num_rows : 0;
     }
-    out_indptr[tid - 1] = src_indptr[idx];
+    out_indptr[tid] = src_indptr[idx + 1] - src_indptr[idx];
   }
 };
 
@@ -200,7 +200,10 @@ void TakeOpForwardCsrImpl<cpu>(const TakeParam& params,
         }
         // total number of non-zero rows
         const dim_t nnz = out_indptr[num_rows];
-        CHECK_GT(nnz, 0) << "Invalid nnz for take(csr)" << nnz;
+        if (nnz == 0) {
+          FillZerosCsrImpl(s, out);
+          return;
+        }
         out.CheckAndAllocAuxData(kIdx, {Shape1(nnz)});
         out.CheckAndAllocData(Shape1(nnz));
         RType* out_idx = out.aux_data(kIdx).dptr<RType>();
@@ -531,6 +534,7 @@ dimension of data (by default outer-most one as axis=0) indexed by indices, and 
 in an output tensor of rank q + (r - 1).
 
 Examples::
+
   x = [4.  5.  6.]
 
   // Trivial case, take the second element along the first axis.
@@ -562,6 +566,11 @@ Examples::
                                                       [[ 3.,  4.],
                                                        [ 5.,  6.]]]
 
+The storage type of ``take`` output depends upon the input storage type:
+
+   - take(default, default) = default
+   - take(csr, default, axis=0) = csr
+
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -578,6 +587,7 @@ Examples::
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", TakeOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_take", n, ograds,

@@ -812,7 +812,7 @@ void TakeOpForwardEx(const nnvm::NodeAttrs& attrs,
   const auto out_stype = out.storage_type();
   const auto params = nnvm::get<TakeParam>(attrs.parsed);
   if (idx_stype == kDefaultStorage && arr_stype == kCSRStorage &&
-      out_stype == kDefaultStorage) {
+      out_stype == kCSRStorage) {
     // dns, csr -> csr
     TakeOpForwardCsrImpl<xpu>(params, ctx, idx.data(), arr, req[0], out);
   } else {
