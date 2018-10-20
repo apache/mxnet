@@ -774,7 +774,7 @@ inline bool TakeOpForwardStorageType(const nnvm::NodeAttrs& attrs,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && idx_stype == kDefaultStorage && arr_stype == kCSRStorage &&
-      param.axis == 0) {
+      param.axis == 0 && (param.mode == take_::kWrap || param.mode == take_::kClip)) {
     // take(dns, csr, axis=0) -> csr
     dispatched = storage_type_assign(&out_stype, kCSRStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);

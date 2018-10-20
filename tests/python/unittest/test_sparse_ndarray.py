@@ -1015,16 +1015,21 @@ def test_sparse_fc():
 
 @with_seed()
 def test_sparse_take():
-    def check_sparse_take(density):
+    def check_sparse_take(density, mode):
         data_shape = rand_shape_2d()
         idx_shape = (np.random.randint(low=1, high=10),)
         data = rand_ndarray(data_shape, 'csr', density=density)
-        idx = mx.nd.array(np.random.randint(low=0, high=data_shape[0], size=idx_shape))
-        result = mx.nd.take(data, idx)
-        assert_almost_equal(result.asnumpy(), data.asnumpy()[idx.asnumpy().astype('int32')])
+        idx = mx.nd.array(np.random.randint(low=-5, high=15, size=idx_shape))
+        result = mx.nd.take(data, idx, mode=mode)
+        data_np = data.asnumpy()
+        idx_np = idx.asnumpy().astype('int32')
+        expected_result = np.take(data_np, idx_np, mode=mode, axis=0)
+        assert_almost_equal(result.asnumpy(), expected_result)
     densities = [0, 0.5, 1]
+    modes = ['clip', 'wrap']
     for d in densities:
-        check_sparse_take(d)
+        for m in modes:
+            check_sparse_take(d, m)
 
 if __name__ == '__main__':
     import nose
