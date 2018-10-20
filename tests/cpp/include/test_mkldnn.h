@@ -574,5 +574,5 @@ inline void VerifySumResult(const std::vector<NDArray *> &in_arrs,
     ASSERT_EQ(d1[i] + d2[i], o[i]);
 }
 
-#endif // MXNET_USE_MKLDNN
-#endif // TEST_MKLDNN_H_
+#endif  // MXNET_USE_MKLDNN
+#endif  // TEST_MKLDNN_H_
