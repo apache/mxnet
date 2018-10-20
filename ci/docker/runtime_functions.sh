@@ -23,6 +23,9 @@
 set -ex
 
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
+CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
+CI_CMAKE_CUDA_ARCH_BIN="52,70"
+CI_CMAKE_CUDA_ARCH_PTX="52"
 
 clean_repo() {
     set -ex
@@ -293,17 +296,16 @@ build_centos7_gpu() {
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
     make \
-        DEV=1                                           \
-        ENABLE_TESTCOVERAGE=1                           \
-        USE_LAPACK=1                                    \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so         \
-        USE_BLAS=openblas                               \
-        USE_CUDA=1                                      \
-        USE_CUDA_PATH=/usr/local/cuda                   \
-        USE_CUDNN=1                                     \
-        USE_DIST_KVSTORE=1                              \
-        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52  \
-                   -gencode=arch=compute_70,code=sm_70" \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_LAPACK=1                              \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
+        USE_BLAS=openblas                         \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -544,16 +546,15 @@ build_ubuntu_gpu_mkldnn() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                                           \
-        ENABLE_TESTCOVERAGE=1                           \
-        USE_CPP_PACKAGE=1                               \
-        USE_BLAS=openblas                               \
-        USE_MKLDNN=1                                    \
-        USE_CUDA=1                                      \
-        USE_CUDA_PATH=/usr/local/cuda                   \
-        USE_CUDNN=1                                     \
-        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52  \
-                   -gencode=arch=compute_70,code=sm_70" \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_CPP_PACKAGE=1                         \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -563,15 +564,14 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                                           \
-        ENABLE_TESTCOVERAGE=1                           \
-        USE_BLAS=openblas                               \
-        USE_MKLDNN=1                                    \
-        USE_CUDA=1                                      \
-        USE_CUDA_PATH=/usr/local/cuda                   \
-        USE_CUDNN=0                                     \
-        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52  \
-                   -gencode=arch=compute_70,code=sm_70" \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=0                               \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -580,16 +580,15 @@ build_ubuntu_gpu_cuda91_cudnn7() {
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
     make \
-        DEV=1                                           \
-        ENABLE_TESTCOVERAGE=1                           \
-        USE_BLAS=openblas                               \
-        USE_CUDA=1                                      \
-        USE_CUDA_PATH=/usr/local/cuda                   \
-        USE_CUDNN=1                                     \
-        USE_CPP_PACKAGE=1                               \
-        USE_DIST_KVSTORE=1                              \
-        CUDA_ARCH="-gencode=arch=compute_52,code=sm_52  \
-                   -gencode=arch=compute_70,code=sm_70" \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_BLAS=openblas                         \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -616,18 +615,18 @@ build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache   \
-        -DENABLE_TESTCOVERAGE=ON             \
-        -DUSE_CUDA=1                         \
-        -DUSE_CUDNN=1                        \
-        -DUSE_MKLML_MKL=1                    \
-        -DUSE_MKLDNN=1                       \
-        -DCMAKE_BUILD_TYPE=Release           \
-        -DCUDA_ARCH_NAME=Manual              \
-        -DCUDA_ARCH_BIN=52,70                \
-        -DCUDA_ARCH_PTX=52                   \
-        -G Ninja                             \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=1                            \
+        -DUSE_CUDNN=1                           \
+        -DUSE_MKLML_MKL=1                       \
+        -DUSE_MKLDNN=1                          \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DCUDA_ARCH_PTX=$CI_CMAKE_CUDA_ARCH_PTX \
+        -G Ninja                                \
         /work/mxnet
 
     ninja -v
@@ -640,19 +639,19 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache   \
-        -DENABLE_TESTCOVERAGE=ON             \
-        -DUSE_CUDA=1                         \
-        -DUSE_CUDNN=1                        \
-        -DUSE_MKLML_MKL=0                    \
-        -DUSE_MKLDNN=0                       \
-        -DUSE_DIST_KVSTORE=1                 \
-        -DCMAKE_BUILD_TYPE=Release           \
-        -DCUDA_ARCH_NAME=Manual              \
-        -DCUDA_ARCH_BIN=52,70                \
-        -DCUDA_ARCH_PTX=52                   \
-        -G Ninja                             \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=1                            \
+        -DUSE_CUDNN=1                           \
+        -DUSE_MKLML_MKL=0                       \
+        -DUSE_MKLDNN=0                          \
+        -DUSE_DIST_KVSTORE=1                    \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DCUDA_ARCH_PTX=$CI_CMAKE_CUDA_ARCH_PTX \
+        -G Ninja                                \
         /work/mxnet
 
     ninja -v
