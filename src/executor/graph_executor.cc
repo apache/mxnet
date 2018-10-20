@@ -1133,10 +1133,10 @@ void GraphExecutor::InitCachedOps() {
     for (const auto& nd : exec->in_array) {
       use_vars.push_back(nd.var());
     }
-    for (auto& r : exec->op_ctx.requested) {
+    for (const auto& r : exec->op_ctx.requested) {
       mutate_vars.push_back(r.var);
     }
-    for (auto& nd : exec->out_array) {
+    for (const auto& nd : exec->out_array) {
       mutate_vars.push_back(nd.var());
     }
     if (exec->var() != nullptr) {

@@ -485,8 +485,8 @@ class CommDeviceTree : public CommDevice {
       }
     }
 
-    for (auto& it : key_dist) {
-      LOG(INFO) << "Size " << it.first << " occurs " << it.second << " times";
+    for (auto& kv : key_dist) {
+      LOG(INFO) << "Size " << kv.first << " occurs " << kv.second << " times";
     }
     inited_ = true;
   }

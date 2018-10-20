@@ -784,7 +784,9 @@ OpStatePtr CachedOp::DynamicForward(
   states.reserve(idx.num_nodes());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto& i : buff) arrays.push_back(&i);
+  for (auto& buffered_array : buff) {
+    arrays.push_back(&buffered_array);
+  }
   for (size_t i = 0; i < num_inputs; ++i) {
     arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
   }
@@ -907,7 +909,9 @@ void CachedOp::DynamicBackward(
   buff.resize(idx.num_node_entries());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto& i : buff) arrays.push_back(&i);
+  for (auto& buffered_array : buff) {
+    arrays.push_back(&buffered_array);
+  }
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (runtime.info.bwd_input_eid[i] == kEidNotExist) {
       continue;

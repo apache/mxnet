@@ -375,8 +375,8 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<OpStatePtr> states;
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (auto& i : buff) {
-    arrays.push_back(&i);
+  for (auto& buffered_array : buff) {
+    arrays.push_back(&buffered_array);
   }
   if (create_graph) {
     states.resize(num_forward_nodes);
