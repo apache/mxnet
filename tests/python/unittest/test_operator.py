@@ -4651,7 +4651,6 @@ def test_index_copy():
 
     with mx.autograd.record():
         out = mx.nd.contrib.index_copy(x, index, t)
-
     out.backward() 
 
     tensor = mx.nd.array([[1,2,3],[0,0,0],[7,8,9],[0,0,0],[4,5,6]])
