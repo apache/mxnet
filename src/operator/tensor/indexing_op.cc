@@ -186,7 +186,7 @@ void TakeOpForwardCsrImpl<cpu>(const TakeParam& params,
         RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         const RType* src_indptr = arr.aux_data(kIndPtr).dptr<RType>();
         const IType* idx_ptr = idx.dptr<IType>();
-
+        // gather per row nnz information for output
         bool clip = params.mode == take_::kClip;
         if (clip) {
           Kernel<CsrTakeRowCountKernel<true>, cpu>::Launch(s, num_rows + 1,
@@ -211,6 +211,7 @@ void TakeOpForwardCsrImpl<cpu>(const TakeParam& params,
         DType* out_data = out.data().dptr<DType>();
         const RType* src_idx = arr.aux_data(kIdx).dptr<RType>();
         const DType* src_data = arr.data().dptr<DType>();
+        // copy indices and data for output
         if (clip) {
           Kernel<CsrTakeDataKernel<true>, cpu>::Launch(s, num_rows, out_idx,
               out_data, out_indptr, src_idx, src_data, src_indptr, idx_ptr, max_num_rows);
