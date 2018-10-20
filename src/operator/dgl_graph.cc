@@ -50,20 +50,14 @@ static bool DGLSubgraphStorageType(const nnvm::NodeAttrs& attrs,
                                    DispatchMode* dispatch_mode,
                                    std::vector<int> *in_attrs,
                                    std::vector<int> *out_attrs) {
-  const DGLSubgraphParam& params = nnvm::get<DGLSubgraphParam>(attrs.parsed);
   CHECK_EQ(in_attrs->at(0), kCSRStorage);
   for (size_t i = 1; i < in_attrs->size(); i++)
     CHECK_EQ(in_attrs->at(i), kDefaultStorage);
 
   bool success = true;
   *dispatch_mode = DispatchMode::kFComputeEx;
-  size_t num_g = params.num_args - 1;
-  for (size_t i = 0; i < num_g; i++) {
+  for (size_t i = 0; i < out_attrs->size(); i++) {
     if (!type_assign(&(*out_attrs)[i], mxnet::kCSRStorage))
-    success = false;
-  }
-  for (size_t i = num_g; i < out_attrs->size(); i++) {
-    if (!type_assign(&(*out_attrs)[i], mxnet::kDefaultStorage))
     success = false;
   }
   return success;
@@ -85,9 +79,10 @@ static bool DGLSubgraphShape(const nnvm::NodeAttrs& attrs,
     out_attrs->at(i) = gshape;
   }
   for (size_t i = num_g; i < out_attrs->size(); i++) {
-    TShape map_shape(1);
-    map_shape[0] = in_attrs->at(i - num_g + 1)[0];
-    out_attrs->at(i) = map_shape;
+    TShape gshape(2);
+    gshape[0] = in_attrs->at(i - num_g + 1)[0];
+    gshape[1] = in_attrs->at(i - num_g + 1)[0];
+    out_attrs->at(i) = gshape;
   }
   return true;
 }
@@ -100,19 +95,18 @@ static bool DGLSubgraphType(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_g; i++) {
     CHECK_EQ(in_attrs->at(i + 1), mshadow::kInt64);
   }
-  for (size_t i = 0; i < num_g; i++) {
+  for (size_t i = 0; i < out_attrs->size(); i++) {
     out_attrs->at(i) = in_attrs->at(0);
-  }
-  for (size_t i = num_g; i < out_attrs->size(); i++) {
-    out_attrs->at(i) = in_attrs->at(i - num_g + 1);
   }
   return true;
 }
 
 typedef int64_t dgl_id_t;
 
-static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr, const NDArray &output) {
+static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
+                        const NDArray &sub_csr, const NDArray *old_eids) {
   TBlob data = varr.data();
+  int64_t num_vertices = csr_arr.shape()[0];
   const auto len = varr.shape()[0];
   const dgl_id_t *vid_data = data.dptr<dgl_id_t>();
   std::unordered_map<dgl_id_t, dgl_id_t> oldv2newv;
@@ -120,22 +114,31 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr, const NDArr
     oldv2newv[vid_data[i]] = i;
   }
 
+  // Collect the non-zero entries in from the original graph.
   std::vector<dgl_id_t> row_idx(len + 1);
   std::vector<dgl_id_t> col_idx;
+  std::vector<dgl_id_t> orig_eids;
   col_idx.reserve(len * 50);
+  orig_eids.reserve(len * 50);
+  const dgl_id_t *eids = csr_arr.data().dptr<dgl_id_t>();
   const dgl_id_t *indptr = csr_arr.aux_data(csr::kIndPtr).dptr<dgl_id_t>();
   const dgl_id_t *indices = csr_arr.aux_data(csr::kIdx).dptr<dgl_id_t>();
   for (int64_t i = 0; i < len; ++i) {
     const dgl_id_t oldvid = vid_data[i];
+    CHECK_LT(oldvid, num_vertices) << "Vertex Id " << oldvid << " isn't in a graph of "
+        << num_vertices << " vertices";
     size_t row_start = indptr[oldvid];
     size_t row_len = indptr[oldvid + 1] - indptr[oldvid];
     // TODO(zhengda) I need to make sure the column index in each row is sorted.
     for (size_t j = 0; j < row_len; ++j) {
       const dgl_id_t oldsucc = indices[row_start + j];
+      const dgl_id_t eid = eids[row_start + j];
       auto it = oldv2newv.find(oldsucc);
       if (it != oldv2newv.end()) {
         const dgl_id_t newsucc = it->second;
         col_idx.push_back(newsucc);
+        if (old_eids)
+          orig_eids.push_back(eid);
       }
     }
     row_idx[i + 1] = col_idx.size();
@@ -145,16 +148,31 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr, const NDArr
   nz_shape[0] = col_idx.size();
   TShape indptr_shape(1);
   indptr_shape[0] = row_idx.size();
-  output.CheckAndAllocData(nz_shape);
-  output.CheckAndAllocAuxData(csr::kIdx, nz_shape);
-  output.CheckAndAllocAuxData(csr::kIndPtr, indptr_shape);
-  dgl_id_t *indices_out = output.aux_data(csr::kIdx).dptr<dgl_id_t>();
-  dgl_id_t *indptr_out = output.aux_data(csr::kIndPtr).dptr<dgl_id_t>();
+
+  // Store the non-zeros in a subgraph with edge attributes of new edge ids.
+  sub_csr.CheckAndAllocData(nz_shape);
+  sub_csr.CheckAndAllocAuxData(csr::kIdx, nz_shape);
+  sub_csr.CheckAndAllocAuxData(csr::kIndPtr, indptr_shape);
+  dgl_id_t *indices_out = sub_csr.aux_data(csr::kIdx).dptr<dgl_id_t>();
+  dgl_id_t *indptr_out = sub_csr.aux_data(csr::kIndPtr).dptr<dgl_id_t>();
   std::copy(col_idx.begin(), col_idx.end(), indices_out);
   std::copy(row_idx.begin(), row_idx.end(), indptr_out);
-  dgl_id_t *eids = output.data().dptr<dgl_id_t>();
+  dgl_id_t *sub_eids = sub_csr.data().dptr<dgl_id_t>();
   for (int64_t i = 0; i < nz_shape[0]; i++)
-    eids[i] = i;
+    sub_eids[i] = i;
+
+  // Store the non-zeros in a subgraph with edge attributes of old edge ids.
+  if (old_eids) {
+    old_eids->CheckAndAllocData(nz_shape);
+    old_eids->CheckAndAllocAuxData(csr::kIdx, nz_shape);
+    old_eids->CheckAndAllocAuxData(csr::kIndPtr, indptr_shape);
+    dgl_id_t *indices_out = old_eids->aux_data(csr::kIdx).dptr<dgl_id_t>();
+    dgl_id_t *indptr_out = old_eids->aux_data(csr::kIndPtr).dptr<dgl_id_t>();
+    dgl_id_t *sub_eids = old_eids->data().dptr<dgl_id_t>();
+    std::copy(col_idx.begin(), col_idx.end(), indices_out);
+    std::copy(row_idx.begin(), row_idx.end(), indptr_out);
+    std::copy(orig_eids.begin(), orig_eids.end(), sub_eids);
+  }
 }
 
 static void DGLSubgraphComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -166,7 +184,8 @@ static void DGLSubgraphComputeExCPU(const nnvm::NodeAttrs& attrs,
   size_t num_g = params.num_args - 1;
 #pragma omp parallel for
   for (size_t i = 0; i < num_g; i++) {
-    GetSubgraph(inputs[0], inputs[i + 1], outputs[i]);
+    const NDArray *old_eids = params.return_mapping ? &outputs[i + num_g] : nullptr ;
+    GetSubgraph(inputs[0], inputs[i + 1], outputs[i], old_eids);
   }
 }
 
@@ -181,7 +200,7 @@ NNVM_REGISTER_OP(_contrib_dgl_subgraph)
   const DGLSubgraphParam& params = nnvm::get<DGLSubgraphParam>(attrs.parsed);
   int num_varray = params.num_args - 1;
   if (params.return_mapping)
-    return num_varray * 3;
+    return num_varray * 2;
   else
     return num_varray;
 })
