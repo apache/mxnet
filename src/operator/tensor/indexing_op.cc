@@ -195,6 +195,7 @@ void TakeOpForwardCsrImpl<cpu>(const TakeParam& params,
           Kernel<CsrTakeRowCountKernel<false>, cpu>::Launch(s, num_rows + 1,
               out_indptr, src_indptr, idx_ptr, max_num_rows);
         }
+        // calculate prefix sum with single thread
         for (dim_t i = 0; i < num_rows; i++) {
            out_indptr[i + 1] += out_indptr[i];
         }
