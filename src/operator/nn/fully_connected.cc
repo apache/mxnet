@@ -213,10 +213,9 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   uint32_t out_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), out_expected);
-
-  bool dispatched = false;
   // TODO(zhengda) let's disable MKLDNN for FullyConnected for now.
   // It seems there is a bug.
+  bool dispatched = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
@@ -290,6 +289,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
     return std::vector<std::string>{"output"};
 })
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
@@ -322,6 +322,7 @@ NNVM_REGISTER_OP(_backward_FullyConnected)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardFCStorageType)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedGradCompute<cpu>);

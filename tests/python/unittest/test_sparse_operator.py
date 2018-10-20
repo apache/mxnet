@@ -1307,7 +1307,7 @@ def test_sparse_dot():
                     rhs = rhs_nd.tostype(rhs_stype)
                     out = mx.nd.dot(lhs, rhs, forward_stype=forward_stype,
                                     transpose_a=trans_a, transpose_b=trans_b)
-                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-3, atol=1e-4)
                     lhs_var = mx.symbol.Variable('lhs', stype=lhs_stype)
                     rhs_var = mx.symbol.Variable('rhs', stype=rhs_stype)
                     out = mx.symbol.sparse.dot(lhs_var, rhs_var,

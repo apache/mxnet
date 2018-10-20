@@ -44,7 +44,10 @@ enum BilinearSamplerOpOutputs {kOut, kTmp};
 }
 
 struct BilinearSamplerParam : public dmlc::Parameter<BilinearSamplerParam> {
+  dmlc::optional<bool> cudnn_off;
   DMLC_DECLARE_PARAMETER(BilinearSamplerParam) {
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>())
+        .describe("whether to turn cudnn off");
   }
 };
 
@@ -92,19 +95,16 @@ class BilinearSamplerOp : public Operator {
     Tensor<xpu, 4, DType> gdata = in_grad[bs::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> ggrid = in_grad[bs::kGrid].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> grad = out_grad[bs::kOut].get<xpu, 4, DType>(s);
-    if (req[bs::kData] != kNullOp && req[bs::kGrid] != kNullOp) {
+    if (req[bs::kData] == kNullOp && req[bs::kGrid] == kNullOp) {
+      return;
+    } else {
       if (req[bs::kData] == kWriteTo) {
         gdata = scalar<DType>(0.0f);
       }
       if (req[bs::kGrid] == kWriteTo) {
         ggrid = scalar<DType>(0.0f);
       }
-      BilinearSamplerBackward(gdata, ggrid, grad, data, grid);
-    } else if (req[bs::kData] == kNullOp && req[bs::kGrid] == kNullOp) {
-      return;
-    } else {
-      LOG(FATAL) << "Have not implemented the data req combinations! gdata_req="
-                 << req[bs::kData] << " ggrid_req=" << req[bs::kGrid];
+      BilinearSamplerBackward(gdata, ggrid, grad, data, grid, req[bs::kData], req[bs::kGrid]);
     }
   }
 

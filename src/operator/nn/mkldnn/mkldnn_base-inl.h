@@ -132,6 +132,11 @@ static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
+static inline bool SupportMKLDNNQuantize(int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kUint8;
+}
+
 static inline bool SupportMKLDNN(const NDArray &input) {
   return SupportMKLDNN(input.dtype(), input.shape())
       && SupportStorageMKLDNN(input.storage_type());
@@ -183,6 +188,23 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
     default:
       LOG(FATAL) << "unknown type for MKLDNN";
       return mkldnn::memory::data_type::data_undef;
+  }
+}
+
+static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
+  auto mkldnn_dtype = static_cast<mkldnn::memory::data_type>(dtype);
+  switch (mkldnn_dtype) {
+    case mkldnn::memory::data_type::f32:
+      return mshadow::kFloat32;
+    case mkldnn::memory::data_type::s32:
+      return mshadow::kInt32;
+    case mkldnn::memory::data_type::s8:
+      return mshadow::kInt8;
+    case mkldnn::memory::data_type::u8:
+      return mshadow::kUint8;
+    default:
+      LOG(FATAL) << "unknown MKLDNN type";
+      return mshadow::kFloat32;
   }
 }
 
@@ -328,6 +350,24 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
+ * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
+ * the given one. operator== can't guarantee that. == can return true even if
+ * the formats are different. I need to double check its format.
+ */
+static inline mkldnn::memory *GetMKLDNNExact(
+    const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
+  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
+  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
+    return const_cast<mkldnn::memory *>(mem);
+  } else {
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
+            desc, mem->get_data_handle()));
+    MKLDNNStream::Get()->RegisterMem(ret);
+    return ret.get();
+  }
+}
+
+/*
  * These two functions try to create MKLDNN memory in an NDArray based on `req'.
  * The difference is that the first function can create MKLDNN memory with
  * special layouts in an NDArray, while the second one can only create MKLDNN
@@ -353,6 +393,18 @@ static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
     if (reqs[i] == kWriteTo || reqs[i] == kNullOp) {
       const_cast<NDArray &>(arrs[i]).InvalidateMKLDNNData();
     }
+  }
+}
+
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
+static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
+                                       std::vector<NDArray> *out_arrs) {
+  out_arrs->clear();
+  for (size_t i = 0; i < arrs.size(); ++i) {
+    if (arrs[i].IsMKLDNNData())
+      out_arrs->push_back(arrs[i].Reorder2Default());
+    else
+      out_arrs->push_back(arrs[i]);
   }
 }
 
@@ -497,6 +549,9 @@ class OpCheck {
            const std::vector<mxnet::NDArray> &inputs_,
            const std::vector<mxnet::OpReqType> &req,
            const std::vector<mxnet::NDArray> &outputs_);
+
+  void CopyResult(const std::vector<mxnet::NDArray> &outputs_,
+                  const std::vector<size_t>& indice);
 };
 
 bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
@@ -513,6 +568,8 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
 
 #define MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs)    \
     if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
+#define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
+    if (debug) check.CopyResult(outputs, indice);
 
 }  // namespace mxnet
 #endif

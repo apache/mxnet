@@ -2423,6 +2423,14 @@ class Symbol(SymbolBase):
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def softmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmin`.
+
+        The arguments are the same as for :py:func:`softmin`, with
+        this array as data.
+        """
+        return op.softmin(self, *args, **kwargs)
+
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
 
@@ -2430,6 +2438,23 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.squeeze(self, *args, **kwargs)
+
+    def get_backend_symbol(self, backend):
+        """Return symbol for target backend.
+
+        Parameters
+        ----------
+        backend : str
+            The backend names.
+
+        Returns
+        -------
+        out : Symbol
+            The created Symbol for target backend.
+        """
+        out = SymbolHandle()
+        check_call(_LIB.MXGenBackendSubgraph(self.handle, c_str(backend), ctypes.byref(out)))
+        return Symbol(out)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)

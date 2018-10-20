@@ -17,6 +17,7 @@
 
 import os
 import contextlib
+import logging
 import requests
 
 def get_mxnet_root() -> str:

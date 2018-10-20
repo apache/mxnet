@@ -367,6 +367,7 @@ Example::
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<bool>("TIsMKLDNN", true)
 #endif
 CONCAT_FORWARD_ATTRS
 .set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
@@ -387,6 +388,7 @@ NNVM_REGISTER_OP(_backward_Concat)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BackwardConcatStorageType)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ConcatGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ConcatGradCompute<cpu>);

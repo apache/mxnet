@@ -248,7 +248,7 @@ static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
-  for (index_t i = 0; i < in_type->size(); ++i) {
+  for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
     } else {
@@ -413,6 +413,7 @@ NNVM_REGISTER_OP(Deconvolution)
 })
 .set_attr<FCompute>("FCompute<cpu>", DeconvolutionCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionComputeExCPU)
 #endif
 .set_attr<nnvm::FGradient>("FGradient", DeconvolutionGrad{"_backward_Deconvolution"})
@@ -436,6 +437,7 @@ NNVM_REGISTER_OP(_backward_Deconvolution)
 })
 .set_attr_parser(DeconvolutionParamParser)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DeconvolutionGradComputeExCPU)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", DeconvolutionGradCompute<cpu>);

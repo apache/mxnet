@@ -1,0 +1,13 @@
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+*.pyc
+.ipynb_checkpoints
+data
+deps/src
+deps/usr
+deps/deps.jl
+docs/_build
+docs/build/
+docs/site/
+.vscode

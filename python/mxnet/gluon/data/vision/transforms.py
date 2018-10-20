@@ -245,6 +245,7 @@ class CenterCrop(Block):
 
 class Resize(Block):
     """Resize an image to the given size.
+    Should be applied before `mxnet.gluon.data.vision.transforms.ToTensor`.
 
     Parameters
     ----------

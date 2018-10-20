@@ -179,6 +179,9 @@ The storage type of ``add_n`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
 .set_attr<FInferStorageType>("FInferStorageType", ElementWiseSumForwardInferStorageType)
