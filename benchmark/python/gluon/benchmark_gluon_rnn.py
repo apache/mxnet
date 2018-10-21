@@ -102,20 +102,6 @@ def get_rnn_layer(input_shape, num_layer, cell_type, dropout=0, bidirection=Fals
     return rnn_layer
 
 
-class Net(gluon.HybridBlock):
-    def __init__(self, input_shape, need_fc, rnn_layer, **kwargs):
-        super(Net, self).__init__(**kwargs)
-        with self.name_scope():
-            self.features = nn.HybridSequential()
-            with self.features.name_scope():
-                self.features.add(rnn_layer)
-                if need_fc:
-                    self.features.add(nn.Dense(input_shape[1], flatten=False))
-
-    def hybrid_forward(self, F, x):
-        out = self.features(x)
-        return out
-
 def rnn_cell_score(input_shape, cell_type, ctx, num_layer, dropout=0, bidirection=False, layout='TNC', unfuse=False, hybridize=True, is_train=False):
     bs = input_shape[0]
     seq_len = input_shape[1]
@@ -129,9 +115,7 @@ def rnn_cell_score(input_shape, cell_type, ctx, num_layer, dropout=0, bidirectio
         if hybridize:
             rnn_cell.hybridize()
         out, _ = rnn_cell.unroll(length=seq_len, inputs = input_data, layout=layout, merge_outputs=True)
-        #hidden = mx.sym.Reshape(data=out, shape=(-1, hidden_size))
     else:
-        #net = Net(input_shape, False, rnn_layer)
         if hybridize:
             rnn_layer.hybridize()
         out = rnn_layer(input_data)
