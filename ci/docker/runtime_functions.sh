@@ -25,7 +25,6 @@ set -ex
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
 CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
 CI_CMAKE_CUDA_ARCH_BIN="52,70"
-CI_CMAKE_CUDA_ARCH_PTX="52"
 
 clean_repo() {
     set -ex
@@ -625,7 +624,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
-        -DCUDA_ARCH_PTX=$CI_CMAKE_CUDA_ARCH_PTX \
         -G Ninja                                \
         /work/mxnet
 
@@ -650,7 +648,6 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
-        -DCUDA_ARCH_PTX=$CI_CMAKE_CUDA_ARCH_PTX \
         -G Ninja                                \
         /work/mxnet
 
