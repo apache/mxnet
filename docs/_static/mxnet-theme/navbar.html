@@ -11,7 +11,9 @@
           <a href="#" class="main-nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Gluon <span class="caret"></span></a>
           <ul id="package-dropdown-menu" class="dropdown-menu navbar-menu">
             <li><a class="main-nav-link" href="{{url_root}}gluon/index.html">About</a></li>
-            <li><a class="main-nav-link" href="http://gluon.mxnet.io">Tutorials</a></li>
+            <li><a class="main-nav-link" href="http://gluon.mxnet.io">The Straight Dope (Tutorials)</a></li>
+            <li><a class="main-nav-link" href="https://gluon-cv.mxnet.io">GluonCV Toolkit</a></li>
+            <li><a class="main-nav-link" href="https://gluon-nlp.mxnet.io/">GluonNLP Toolkit</a></li>
           </ul>
         </span>
 
@@ -35,6 +37,7 @@
             <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a>
             <li><a class="main-nav-link" href="https://github.com/apache/incubator-mxnet/tree/master/example">Examples</a></li>
             <li><a class="main-nav-link" href="{{url_root}}architecture/index.html">Architecture</a></li>
+            <li><a class="main-nav-link" href="https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home">Developer Wiki</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/python/gluon/model_zoo.html">Model Zoo</a></li>
             <li><a class="main-nav-link" href="{{url_root}}api/python/contrib/onnx.html">ONNX</a></li>
           </ul>
@@ -59,6 +62,39 @@
               <li><a href="{{url_root}}install/index.html">Install</a></li>
               <li><a class="main-nav-link" href="{{url_root}}tutorials/index.html">Tutorials</a></li>
               <li class="dropdown-submenu dropdown">
+                <a href="#" tabindex="-1" aria-haspopup="true" aria-expanded="true" class="dropdown-toggle burger-link" data-toggle="dropdown">Gluon</a>
+                <ul id="package-dropdown-menu" class="dropdown-menu navbar-menu">
+                  <li><a class="main-nav-link" href="{{url_root}}gluon/index.html">About</a></li>
+                  <li><a class="main-nav-link" href="http://gluon.mxnet.io">The Straight Dope (Tutorials)</a></li>
+                  <li><a class="main-nav-link" href="https://gluon-cv.mxnet.io">GluonCV Toolkit</a></li>
+                  <li><a class="main-nav-link" href="https://gluon-nlp.mxnet.io/">GluonNLP Toolkit</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu">
+                <a href="#" tabindex="-1" aria-haspopup="true" aria-expanded="true" class="dropdown-toggle burger-link" data-toggle="dropdown">API</a>
+                <ul class="dropdown-menu">
+                  <li><a class="main-nav-link" href="{{url_root}}api/python/index.html">Python</a></li>
+                  <li><a class="main-nav-link" href="{{url_root}}api/c++/index.html">C++</a></li>
+                  <li><a class="main-nav-link" href="{{url_root}}api/clojure/index.html">Clojure</a></li>
+                  <li><a class="main-nav-link" href="{{url_root}}api/julia/index.html">Julia</a></li>
+                  <li><a class="main-nav-link" href="{{url_root}}api/perl/index.html">Perl</a></li>
+                  <li><a class="main-nav-link" href="{{url_root}}api/r/index.html">R</a></li>
+                  <li><a class="main-nav-link" href="{{url_root}}api/scala/index.html">Scala</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu">
+                <a href="#" tabindex="-1" aria-haspopup="true" aria-expanded="true" class="dropdown-toggle burger-link" data-toggle="dropdown">Docs</a>
+                <ul class="dropdown-menu">
+                  <li><a tabindex="-1"  href="{{url_root}}faq/index.html">FAQ</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}tutorials/index.html">Tutorials</a></li>
+                  <li><a tabindex="-1"  href="https://github.com/apache/incubator-mxnet/tree/master/example">Examples</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}architecture/index.html">Architecture</a></li>
+                  <li><a tabindex="-1"  href="https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home">Developer Wiki</a></li>
+                  <li><a tabindex="-1"  href="{{url_root}}api/python/gluon/model_zoo.html">Gluon Model Zoo</a></li>
+                  <li><a tabindex="-1" href="{{url_root}}api/python/contrib/onnx.html">ONNX</a></li>
+                </ul>
+              </li>
+              <li class="dropdown-submenu dropdown">
                 <a href="#" tabindex="-1" aria-haspopup="true" role="button" class="dropdown-toggle burger-link" data-toggle="dropdown">Community</a>
                 <ul class="dropdown-menu">
                   <li><a tabindex="-1"  href="http://discuss.mxnet.io">Forum</a></li>
@@ -68,30 +104,9 @@
                   <li><a tabindex="-1"  href="{{url_root}}community/powered_by.html">Powered By</a></li>
                 </ul>
               </li>
-              {% for name in ['API'] %}
-              <li class="dropdown-submenu">
-                <a href="#" tabindex="-1" role="button" aria-haspopup="true" class="dropdown-toggle burger-link" data-toggle="dropdown">{{name}}</a>
-                <ul class="dropdown-menu">
-                  {% for lang in ['Python', 'C++', 'Clojure', 'Julia',  'Perl', 'R', 'Scala'] %}
-                    <li><a tabindex="-1" href="{{url_root}}{{name.lower()|replace(" ", "_")}}/{{lang.lower()}}/index.html">{{lang}}</a>
-                    </li>
-                  {% endfor %}
-                </ul>
-              </li>
-              {% endfor %}
-              <li class="dropdown-submenu">
-                <a href="#" tabindex="-1" aria-haspopup="true" aria-expanded="true" class="dropdown-toggle burger-link" data-toggle="dropdown">Docs</a>
-                <ul class="dropdown-menu">
-                  <li><a tabindex="-1"  href="{{url_root}}tutorials/index.html">Tutorials</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}faq/index.html">FAQ</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}architecture/index.html">Architecture</a></li>
-                  <li><a tabindex="-1"  href="https://github.com/apache/incubator-mxnet/tree/master/example">Examples</a></li>
-                  <li><a tabindex="-1"  href="{{url_root}}api/python/gluon/model_zoo.html">Gluon Model Zoo</a></li>
-                </ul>
-              </li>
-	      <li><a class="main-nav-link" href="https://github.com/dmlc/mxnet">Github</a></li>
           </ul>
       </div>
+      
       <div class="plusIcon dropdown">
         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"><span class="glyphicon glyphicon-plus" aria-hidden="true"></span></a>
         <ul id="plusMenu" class="dropdown-menu dropdown-menu-right"></ul>
@@ -103,6 +118,7 @@
       <div id='searchIcon'>
           <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
       </div>
+
       <!-- <div id="lang-select-wrap"> -->
       <!--   <label id="lang-select-label"> -->
       <!--     <\!-- <i class="fa fa-globe"></i> -\-> -->

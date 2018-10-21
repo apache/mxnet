@@ -90,6 +90,20 @@ sub AUTOLOAD {
     );
     my @args;
     my @tmp = @_;
+    if($sub eq 'randn')
+    {
+        $sub = 'normal';
+        my @shape;
+        while(defined $tmp[0] and $tmp[0] =~ /^\d+$/)
+        {
+            push @shape, shift(@tmp);
+        }
+        if(@shape)
+        {
+            push @tmp, (shape => \@shape);
+        }
+        %defaults = (%defaults, loc => 0, scale => 1);
+    }
     if(ref $tmp[-1] eq 'HASH')
     {
         my @kwargs = %{ pop(@tmp) };

@@ -44,6 +44,11 @@ The committers are the granted write access to the project.
 * [Sergey Kolychev](https://github.com/sergeykolychev)
   - Sergey is original author and current maintainer of Perl5 interface.
 * [Naveen Swamy](https://github.com/nswamy)
+* [Marco de Abreu](https://github.com/marcoabreu)
+ - Marco is the creator of the current MXNet CI.
+* [Carin Meier](https://github.com/gigasquid)
+  - Carin created and is the current maintainer for the Clojure interface.
+
 
 ### Become a Committer
 MXNet is a opensource project and we are actively looking for new committers
@@ -153,8 +158,6 @@ List of Contributors
 * [Manu Seth](https://github.com/mseth10/)
 * [Calum Leslie](https://github.com/calumleslie)
 * [Andre Tamm](https://github.com/andretamm)
-* [Marco de Abreu](https://github.com/marcoabreu)
- - Marco is the creator of the current MXNet CI.
 * [Julian Salazar](https://github.com/JulianSlzr)
 * [Meghna Baijal](https://github.com/mbaijal)
 * [Tao Hu](https://github.com/dongzhuoyao)
@@ -181,4 +184,6 @@ List of Contributors
 * [Zhijingcheng Yu](https://github.com/jasonyu1996)
 * [Cheng-Che Lee](https://github.com/stu1130)
 * [Chaitanya Bapat](https://github.com/ChaiBapchya)
+* [LuckyPigeon](https://github.com/LuckyPigeon)
+* [Anton Chernov](https://github.com/lebeg)
 * [Denisa Roberts](https://github.com/D-Roberts)

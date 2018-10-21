@@ -201,16 +201,9 @@ package AI::MXNet::Gluon::NN::SELU;
 use AI::MXNet::Gluon::Mouse;
 extends 'AI::MXNet::Gluon::HybridBlock';
 
-sub BUILD
-{
-    my $self = shift;
-    $self->scale(1.0507009873554804934193349852946);
-    $self->alpha(1.6732632423543772848170429916717);
-}
-
 method hybrid_forward(GluonClass $F, GluonInput $x)
 {
-    return $self->scale * $F->where($x > 0, $x, $self->alpha * ($F->exp($x) - 1));
+    $F->LeakyReLU($x, act_type=>'selu', name=>'fwd');
 }
 
 __PACKAGE__->register('AI::MXNet::Gluon::NN');

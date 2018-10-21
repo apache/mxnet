@@ -182,11 +182,17 @@ USE_GPERFTOOLS = 1
 # path to gperftools (tcmalloc) library in case of a non-standard installation
 USE_GPERFTOOLS_PATH =
 
+# Link gperftools statically
+USE_GPERFTOOLS_STATIC =
+
 # Use JEMalloc if found, and not using gperftools
 USE_JEMALLOC = 1
 
 # path to jemalloc library in case of a non-standard installation
 USE_JEMALLOC_PATH =
+
+# Link jemalloc statically
+USE_JEMALLOC_STATIC =
 
 #----------------------------
 # additional operators

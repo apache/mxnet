@@ -496,6 +496,11 @@ class CuDNNRNNOp : public Operator{
         if (cudnn_tensor_core_ && rnn_algo == CUDNN_RNN_ALGO_STANDARD) {
           math_type = CUDNN_TENSOR_OP_MATH;
         }
+      #if CUDNN_VERSION >= 7200
+            if (GetEnvAllowTensorCore() && GetEnvAllowTensorCoreConversion() &&
+                (DataType<DType>::kFlag != kFloat16))
+              math_type = CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION;
+      #endif
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
       #endif
       // Get temp space sizes

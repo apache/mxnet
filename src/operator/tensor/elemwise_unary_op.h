@@ -126,10 +126,10 @@ class OpBase {
     in_blobs.reserve(inputs.size());
     out_blobs.reserve(outputs.size());
     for (size_t i = 0, n = inputs.size(); i < n; ++i) {
-      in_blobs.emplace_back(std::move(inputs[i].data()));
+      in_blobs.emplace_back(inputs[i].data());
     }
     for (size_t i = 0, n = outputs.size(); i < n; ++i) {
-      out_blobs.emplace_back(std::move(outputs[i].data()));
+      out_blobs.emplace_back(outputs[i].data());
     }
     computer(attrs, ctx, in_blobs, req, out_blobs);
   }
