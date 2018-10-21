@@ -4766,7 +4766,7 @@ def test_quantization_op():
 def test_index_copy():
     x = mx.nd.zeros((5,3))
     t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
-    index = mx.nd.array([0,4,2])
+    index = mx.nd.array([0,4,2], dtype=np.int64)
 
     x.attach_grad()
     t.attach_grad()

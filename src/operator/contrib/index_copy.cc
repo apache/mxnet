@@ -26,6 +26,16 @@
 namespace mxnet {
 namespace op {
 
+static bool IndexCopyType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return out_attrs->at(0) != -1;
+}
+
 NNVM_REGISTER_OP(_contrib_index_copy)
 .describe(R"code(Copies the elements of a `new_tensor` into the `old_tensor` by 
 selecting the indices in the order given in `index`. The output will be a new tensor 
@@ -56,7 +66,7 @@ mx.nd.contrib.index_copy(x, index, t)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", IndexCopyShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)
 .add_argument("old_tensor", "NDArray-or-Symbol", "Old tensor")
