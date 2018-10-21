@@ -532,15 +532,16 @@ class LSTMCell(HybridRecurrentCell):
 class GRUCell(HybridRecurrentCell):
     r"""Gated Rectified Unit (GRU) network cell.
     Note: this is an implementation of the cuDNN version of GRUs
-    (slight modification compared to Cho et al. 2014).
+    (slight modification compared to Cho et al. 2014; the reset gate :math:`r_t`
+    is applied after matrix multiplication).
 
     Each call computes the following function:
 
     .. math::
         \begin{array}{ll}
         r_t = sigmoid(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
-        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_hi h_{(t-1)} + b_{hi}) \\
-        n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{hi} h_{(t-1)} + b_{hi}) \\
+        n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)} + b_{hn})) \\
         h_t = (1 - i_t) * n_t + i_t * h_{(t-1)} \\
         \end{array}
 
