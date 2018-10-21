@@ -178,6 +178,7 @@ if __name__ == '__main__':
     num_layer = opt.num_layer
     layout = opt.layout
     latency = opt.latency
+    hybridize = not(opt.no_hybridize)
     
     if layout not in input_layout:
         logging.warning('Only TNC or NTC are supported!')
@@ -186,7 +187,6 @@ if __name__ == '__main__':
     if celltype not in rnncell_type:
         logging.warning('Only LSTM and GRU cell are supported!')
         sys.exit(0)
-
     
     if celltype == 'all':
         cell_lst = ['lstm', 'gru']
@@ -209,7 +209,7 @@ if __name__ == '__main__':
                 if i == dry_run:
                     tic = time.time()
                 rnn_cell_score(input_shape, cell, ctx, num_layer, dropout=dropout, bidirection=bidirection,
-                    layout=opt.layout, unfuse=unfuse, hybridize=True, is_train=opt.train)
+                    layout=opt.layout, unfuse=unfuse, hybridize=hybridize, is_train=opt.train)
             toc = time.time() - tic
             bs = input_shape[0]
             seq_len = input_shape[1]
