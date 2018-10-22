@@ -53,7 +53,7 @@ The Clojure MXNet jars are found on [maven.org](https://search.maven.org/search?
 You also might need the following dependencies installed depending on your system because of the native dependencies assumed in the clojure-mxnet jars.
 
 *For OSX you will need:*
-
+`brew install wget`
 `brew install opencv`
 
 *For Ubuntu Linux you will need:*
