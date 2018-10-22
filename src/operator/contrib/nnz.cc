@@ -121,7 +121,7 @@ void NNZComputeCsrImpl<cpu>(const NNZParam& param,
         out_ptr[0] = indptr[num_rows];
       } else if (param.axis.value() == 0) {
         // column
-        LOG(FATAL) << "getnnz with axis = 1 is not supported yet";
+        LOG(FATAL) << "getnnz with axis = 0 is not supported yet";
       } else if (param.axis.value() == 1) {
         // row
         mxnet_op::Kernel<CsrNNZRowKernel, cpu>::Launch(s, num_rows, out_ptr, indptr);
