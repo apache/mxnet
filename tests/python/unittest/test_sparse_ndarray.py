@@ -1031,6 +1031,22 @@ def test_sparse_take():
         for m in modes:
             check_sparse_take(d, m)
 
+@with_seed()
+def test_sparse_getnnz():
+    def check_sparse_getnnz(density, axis):
+        shape = rand_shape_2d()
+        data = rand_ndarray(shape, 'csr', density=density)
+        data_sp = data.asscipy()
+        result = mx.nd.contrib.getnnz(data, axis=axis)
+        expected_result = data_sp.getnnz(axis=axis)
+        assert_almost_equal(result.asnumpy(), expected_result)
+
+    densities = [0, 0.5, 1]
+    axis = [1, None]
+    for d in densities:
+        for a in axis:
+            check_sparse_getnnz(d, a)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
