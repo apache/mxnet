@@ -137,8 +137,25 @@ Please contribute an example!
 
 ### Perl
 
-Please contribute an example!
+Start the pdl2 terminal.
 
+```bash
+$ pdl2
+```
+
+Run a short *MXNet* Perl program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.
+
+```perl
+pdl> use AI::MXNet qw(mx)
+pdl> $a = mx->nd->ones([2, 3])
+pdl> $b = $a * 2 + 1
+pdl> print $b->aspdl
+
+[
+ [3 3 3]
+ [3 3 3]
+]
+```
 
 ### R
 

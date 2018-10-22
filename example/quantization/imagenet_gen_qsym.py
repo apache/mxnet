@@ -92,7 +92,7 @@ if __name__ == '__main__':
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
                              ' kinds of quantized models if the calibration dataset is representative enough of the'
                              ' inference dataset.')
-    parser.add_argument('--quantized-dtype', type=str, default='int8', 
+    parser.add_argument('--quantized-dtype', type=str, default='int8',
                         choices=['int8', 'uint8'],
                         help='quantization destination data type for input data')
     args = parser.parse_args()

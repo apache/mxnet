@@ -28,7 +28,7 @@ With rich functionalities and convenience explained above, you can build your ow
 <pre>
 <code>pip install soundfile</code>
 </pre>
-- Warp CTC: Follow [this instruction](https://github.com/dmlc/mxnet/tree/master/example/warpctc) to install Baidu's Warp CTC.
+- Warp CTC: Follow [this instruction](https://github.com/baidu-research/warp-ctc) to compile Baidu's Warp CTC.
 - **We strongly recommend that you first test a model of small networks.**
 
 

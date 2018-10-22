@@ -51,7 +51,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_reciprocal',
     'test_sqrt',
     'test_pow',
-    'test_exp',
+    'test_exp_',
     'test_argmax',
     'test_argmin',
     'test_min',
@@ -79,12 +79,14 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_averagepool_2d_strides',
     'test_averagepool_3d',
     'test_LpPool_',
-    'test_instancenorm_epsilon',
+    'test_cast',
+    'test_instancenorm',
     #pytorch operator tests
     'test_operator_exp',
     'test_operator_maxpool',
     'test_operator_params',
-    'test_operator_permute2'
+    'test_operator_permute2',
+    'test_depthtospace'
     ]
 
 BASIC_MODEL_TESTS = [
@@ -97,6 +99,7 @@ BASIC_MODEL_TESTS = [
     'test_MaxPool',
     'test_PReLU',
     'test_ReLU',
+    'test_selu_default',
     'test_Sigmoid',
     'test_Softmax',
     'test_softmax_functional',

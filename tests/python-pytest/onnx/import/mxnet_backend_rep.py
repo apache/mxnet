@@ -73,16 +73,26 @@ class MXNetBackendRep(BackendRep):
         for idx, input_name in enumerate(data_names):
             data_shapes.append((input_name, inputs[idx].shape))
 
-        mod = mx.mod.Module(symbol=self.symbol, data_names=data_names, context=ctx,
-                            label_names=None)
-        mod.bind(for_training=False, data_shapes=data_shapes,
-                 label_shapes=None)
-        mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
+        # module bind method requires all data to have same batch size,
+        # using module if all data have same batch size
+        if len(set([data_shape[1][0] for data_shape in data_shapes])) == 1:
+            mod = mx.mod.Module(symbol=self.symbol, data_names=data_names, context=ctx,
+                                label_names=None)
+            mod.bind(for_training=False, data_shapes=data_shapes,
+                     label_shapes=None)
+            mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
 
-        # run inference
-        mod.forward(mx.io.DataBatch(data_forward))
-        result = mod.get_outputs()[0].asnumpy()
-        # split operator inference returns 1 less dimension
-        if self.symbol.name.startswith('split'):
-            return [i.asnumpy() for i in mod.get_outputs()]
-        return [result]
+            # run inference
+            mod.forward(mx.io.DataBatch(data_forward))
+            result = mod.get_outputs()[0].asnumpy()
+            # split operator inference returns 1 less dimension
+            if self.symbol.name.startswith('split'):
+                return [i.asnumpy() for i in mod.get_outputs()]
+            return [result]
+        # using symbol bind method if data have different batch size
+        else:
+            exec1 = self.symbol.bind(ctx, args=dict(zip(data_names, data_forward)))
+            exec1.forward(is_train=False)
+            result = exec1.outputs[0].asnumpy()
+            return [result]
+
