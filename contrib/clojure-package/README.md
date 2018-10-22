@@ -62,14 +62,9 @@ You also might need the following dependencies installed depending on your syste
 sudo add-apt-repository ppa:timsc/opencv-3.4
 sudo apt-get update
 sudo apt install libopencv-imgcodecs3.4
-```
-
-You may also need
-
-```
-libopenblas-base
-libatlas3-base
-libcurl3
+sudo apt install libopenblas-base
+sudo apt install libatlas3-base
+sudo apt install libcurl3
 ```
 
 *For Arch Linux you will need:*
