@@ -19,7 +19,7 @@ Help is needed testing and generally making the package better. A list of the pa
 
 ## Getting Started
 
-The Clojure MXNet framework consists of a core C library, a Scala Api that talks to it through JNI bindings, and finally a Clojure wrapper around the Scala api.
+The Clojure MXNet framework consists of a core C library, a Scala Api that talks to it through JNI bindings, and finally a Clojure wrapper around the Scala Api.
 
 Since there is a native code involved in the framework, what OS you are running matters.
 
@@ -31,9 +31,10 @@ The following systems are supported:
 
 There are three ways of getting started:
 
-* Use the Clojure jars with the native dependencies baked in. This the easiest way to get going.
-* Checkout the MXNet project from a release tag using the Scala jars with native deps. This is also a pretty easy way to get started.
-* Build from the MXNet project master. This option can be used to build the whole project yourself.
+* [Use the Clojure jars with the native dependencies baked in](#getting-started-with-the-clojure-jars-on-maven). This the easiest way to get going.
+* [Checkout the MXNet project from a release tag using the Scala jars with native dependencies](#getting-started-with-mxnet-project-with-the-prebuilt-scala-jars). This is also a pretty easy way to get started.
+* [Build from the MXNet project master](#getting-started-with-mxnet-project-with-building-from-source). This option can be used to build the whole project yourself.
+
 
 ### Getting Started with the Clojure Jars on Maven
 
@@ -42,13 +43,14 @@ This option is one of the fastest. If you are looking to use MXNet in your own C
 The Clojure MXNet jars are found on [maven.org](https://search.maven.org/search?q=clojure%20mxnet).
 
 - Create your own project with `lein new my-mxnet`
-- Edit your `project.clj` based on your system with the desired jar from maven.
+- Edit your `project.clj` based on your system with the desired jar from maven. Replace `x.x.x` with the latest version on [maven](https://search.maven.org/search?q=g:org.apache.mxnet.contrib.clojure).
 
-   - clojure-mxnet-linux-gpu
-   - clojure-mxnet-linux-cpu
-   - clojure-mxnet-osx-cpu
+   - [org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "x.x.x"]
+   - [org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "x.x.x"]
+   - [org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "x.x.0"]
 
-You also might need the following dependencies installed depending on your system.
+
+You also might need the following dependencies installed depending on your system because of the native dependencies assumed in the clojure-mxnet jars.
 
 *For OSX you will need:*
 
@@ -90,53 +92,43 @@ At this point you should be able to run your own example like this [NDArray Tuto
 
 ### Getting Started with MXNet project with the Prebuilt Scala Jars
 
-This option is also fast. It doesn't require you to build the native C library or the Scala jars, it gets them from [Maven](https://search.maven.org/search?q=g:org.apache.mxnet) as well. 
+This option is also fast. It doesn't require you to build the native C library or the Scala jars, it gets them from [Maven](https://search.maven.org/search?q=g:org.apache.mxnet) as well. Use this if you want to clone the repo and be able to run the tests and examples in the Clojure package.
 
 - `git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
 - `cd mxnet`
-- `git tag —list` (find the tag that corresponds the the version of the latest Scala jar)
+- `git tag —list` (find the tag that corresponds the version of the latest Scala jar)
 - `git checkout tags/<tag_name> -b <branch_name>`
 - `cd contrib/clojure`
 - edit `project.clj` to include your Scala jar from maven. It should match your system. Example `[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "x.y.z”]`
 - run `lein test`. All the tests should run without an error
-- At this point you can do `lein install` to build and install the clojure jar locally. Now, you can run the examples by doing `cd examples/imclassification` and then `lein run`  or `lein run :cpu 2` (for 2 cpus) (for gpu `lein run :gpu`)
+- At this point you can do `lein install` to build and install the Clojure jar locally. Now, you can run the examples by doing `cd examples/imclassification` and then `lein run`  or `lein run :cpu 2` (for 2 cpus) (for gpu `lein run :gpu`)
 
-You also might need dependencies installed based on your system. Please see the dependency section in above in _Getting Started with the Clojure Jars on Maven_
+You also might need dependencies installed based on your system. Please see the dependency section above in [Getting Started with the Clojure Jars on Maven](#getting-started-with-the-clojure-jars-on-maven))
 
 
 ### Getting Started with MXNet project with Building from Source
 
 This option will build the C lib locally and then the Scala jars as well. You can use this option when you are developing changes for the project.
 
-For your dependencies look at https://mxnet.incubator.apache.org/install/osx_setup.html or https://mxnet.incubator.apache.org/install/ubuntu_setup.html
-about _Prepare Environment for GPU Installation_
-and _Install MXNet dependencies_
-
-Also, ensure you have JDK 8 on your system. Later versions may produce cryptic build errors mentioning `scala.reflect.internal.MissingRequirementError`. 
-
-Checkout the latest SHA from the main package:
-
-`git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
-`cd ~/mxnet`
-
-If you need to checkout a particular release you can do it with:
-
-`git checkout tags/<tag_name> -b <branch_name>`
-
-`git submodule update --init --recursive`
-
-Sometimes it useful to use this script to clean hard using this [gist](https://gist.github.com/nicktoumpelis/11214362)
-
-
-Go here to do the base package installation https://mxnet.incubator.apache.org/install/index.html.
-This will create an `lib/libmxnet.so` file that is the c api we need for the next step.
-
-Run `make scalapkg` then `make scalainstall`. This will create the Scala jars and install them in your local maven.
- 
-Next, `cd contrib/clojure` and edit the project.clj to include the Scala jar that was just created and installed in your maven. Example `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0-SNAPSHOT"]`.
-
-- run `lein test`. All the tests should run without an error
-- At this point you can do `lein install` to build and install the clojure jar locally. Now, you can run the examples by doing `cd examples/imclassification` and then `lein run`  or `lein run :cpu 2` (for 2 cpus) (for gpu `lein run :gpu`)
+* For your dependencies look at https://mxnet.incubator.apache.org/install/osx_setup.html or https://mx	net.incubator.apache.org/install/ubuntu_setup.html
+	about _Prepare Environment for GPU Installation_
+	and	 _Install MXNet dependencies_
+* Also, ensure you have JDK 8 on your system. Later versions may produce cryptic build errors mentioning `scala.reflect.internal.MissingRequirementError`. 
+* Checkout the latest SHA from the main package:
+* `git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet`
+* `cd ~/mxnet`
+* `git tag —list` (find the tag that corresponds the version of the latest Scala jar)
+* `git checkout tags/<tag_name> -b <branch_name>` To checkout a particular release
+* `git submodule update --init --recursive` - To updated all the submodules to the commit
+  * Sometimes it is useful to use this script to clean hard, (remove any extra files and reset everything), using this [gist](https://gist.github.com/nick	toumpelis/11214362)
+* Go here to do the base package installation https://mxnet.incubator.apache.org/install/index.html.
+  * This will create an `lib/libmxnet.so` file that is the c api we need for the next step.
+* Run `make scalapkg` This will create the Scala jars.
+* Run `make scalainstall`. This will install them in your local maven.
+* `cd contrib/clojure` and edit the project.clj to include the Scala jar that was just created and installed in your maven. Example `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.3.0-SNAPSHOT"]`.
+* run `lein test`. All the tests should run without an error
+*  At this point you can do `lein install` to build and install the clojure jar locally
+*  Now, you can run the examples by doing `cd examples/imclassification` and then `lein run`  or `lein run :cpu 2` (for 2 cpus) (for gpu `lein run :gpu`)
 
 
 ## Docker Files
@@ -153,7 +145,7 @@ There are Dockerfiles available as well.
 
 If you are having trouble getting started or have a question, feel free to reach out at:
 
-- Clojurian Slack #mxnet channel
+- Clojurian Slack #mxnet channel. To join, go to [http://clojurians.net/](http://clojurians.net/).
 - Apache Slack #mxnet and #mxnet-scala channel (To join this slack send an email to dev@mxnet.apache.org)
 - Create an Issue on [https://github.com/apache/incubator-mxnet/issues](https://github.com/apache/incubator-mxnet/issues)
 
