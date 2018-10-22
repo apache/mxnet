@@ -1033,6 +1033,8 @@ def test_sparse_take():
 
 @with_seed()
 def test_sparse_getnnz():
+    if default_context().device_type is 'gpu':
+        return
     def check_sparse_getnnz(density, axis):
         shape = rand_shape_2d()
         data = rand_ndarray(shape, 'csr', density=density)
