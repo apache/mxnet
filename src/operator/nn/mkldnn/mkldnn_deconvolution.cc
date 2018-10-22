@@ -47,7 +47,7 @@ static inline mkldnn::memory::desc GetBiasDesc(mkldnn::memory::desc md) {
       mkldnn::memory::format::any);
 }
 
-static mkldnn::convolution_forward::primitive_desc GetDeconvBwd_(
+static mkldnn::convolution_forward::primitive_desc GetDeconvBwdAuto(
     const mkldnn::memory::desc &data_md, const mkldnn::memory::desc &weights_md,
     bool has_bias, const mkldnn::memory::desc &out_md,
     const mkldnn::engine &engine, const mkldnn::memory::dims &strides,
@@ -64,6 +64,23 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwd_(
         data_md, strides, dilates, padding, padding, mkldnn::padding_kind::zero);
     return mkldnn::convolution_forward::primitive_desc(desc, engine);
   }
+}
+
+static mkldnn::convolution_forward::primitive_desc GetDeconvBwd_(
+    const mkldnn::memory::desc &data_md, const mkldnn::memory::desc &weights_md,
+    bool has_bias, const mkldnn::memory::desc &out_md,
+    const mkldnn::engine &engine, const mkldnn::memory::dims &strides,
+    const mkldnn::memory::dims &padding, const mkldnn::memory::dims &dilates) {
+  auto deconv_pd = GetDeconvBwdAuto(data_md, weights_md, has_bias, out_md, engine, strides,
+                                    padding, dilates);
+
+  while (deconv_pd.dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+         deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+         deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weights_md)) {
+    CHECK(deconv_pd.next_impl()) << "No implementation";
+  }
+
+  return deconv_pd;
 }
 
 static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
@@ -90,7 +107,13 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
   mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
       out_md, weight_md, data_md, strides, dilate, padding, padding,
       mkldnn::padding_kind::zero);
-  return mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
+  auto deconv_pd = mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
+  while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+         deconv_pd.diff_src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+         deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+    CHECK(deconv_pd.next_impl()) << "No implementation";
+  }
+  return deconv_pd;
 }
 
 static mkldnn::convolution_forward::primitive_desc GetDeconvBwdDataImpl(
@@ -117,7 +140,7 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwdDataImpl(
 }
 
 static mkldnn::convolution_backward_weights::primitive_desc
-GetDeconvBwdWeightsImpl(
+GetDeconvBwdWeightsImplAuto(
     const DeconvolutionParam &param, const NDArray &data,
     const NDArray &weights, bool has_bias, const NDArray &output,
     const mkldnn::convolution_forward::primitive_desc &fwd_pd) {
@@ -148,6 +171,21 @@ GetDeconvBwdWeightsImpl(
         mkldnn::padding_kind::zero);
     return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
   }
+}
+
+static mkldnn::convolution_backward_weights::primitive_desc
+GetDeconvBwdWeightsImpl(
+    const DeconvolutionParam &param, const NDArray &data,
+    const NDArray &weights, bool has_bias, const NDArray &output,
+    const mkldnn::convolution_forward::primitive_desc &fwd_pd) {
+  auto deconv_pd = GetDeconvBwdWeightsImplAuto(param, data, weights, has_bias, output, fwd_pd);
+  while (deconv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(data) ||
+         deconv_pd.src_primitive_desc().get_size() != GetArraySize(output) ||
+         deconv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
+    CHECK(deconv_pd.next_impl()) << "No implementation";
+  }
+
+  return deconv_pd;
 }
 
 class MKLDNNDeconvForward {
