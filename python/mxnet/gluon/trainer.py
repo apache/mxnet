@@ -273,7 +273,15 @@ class Trainer(object):
             If true, ignores Parameters with stale gradient (gradient that has not
             been updated by `backward` after last step) and skip update.
         """
-        self._optimizer.rescale_grad = self._scale / batch_size
+        rescale_grad = self._scale / batch_size
+        if self._update_on_kvstore and self._distributed and \
+           self._optimizer.rescale_grad != rescale_grad:
+            raise UserWarning(
+                            "Possible change in the `batch_size` from previous `step` detected."
+                            "Optimizer's gradient normalizing factor will not change w.r.t new batch_size when "
+                            "update_on_kvstore=True and when distributed `kvstore` is used.")
+
+        self._optimizer.rescale_grad = rescale_grad
 
         if not self._kv_initialized:
             self._init_kvstore()
