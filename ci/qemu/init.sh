@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash -exuo pipefail
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,27 +16,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
 
-FROM centos:7
-
-WORKDIR /work/deps
-
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/ubuntu_mklml.sh /work/
-RUN /work/ubuntu_mklml.sh
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh 
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
+# Download the installer and ramdisk for intallation
+set -ex
+wget -O installer-vmlinuz http://http.us.debian.org/debian/dists/jessie/main/installer-armhf/current/images/netboot/vmlinuz
+wget -O installer-initrd.gz http://http.us.debian.org/debian/dists/jessie/main/installer-armhf/current/images/netboot/initrd.gz

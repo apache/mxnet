@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,27 +16,25 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
+
+set -exuo pipefail
+
 #
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
+# This disk image and kernels for virtual testing with QEMU  is generated with some manual OS
+# installation steps with the scripts and documentation found in the ci/qemu/ folder.
+#
+# The image has a base Debian OS and MXNet runtime dependencies installed.
+# The root password is empty and there's a "qemu" user without password. SSH access is enabled as
+# well.
+#
+# See also: ci/qemu/README.md
+#
 
-FROM centos:7
+REMOTE="https://s3-us-west-2.amazonaws.com/mxnet-ci-prod-slave-data"
+curl -f ${REMOTE}/vda_debian_stretch.qcow2.bz2 | bunzip2 > vda.qcow2
+curl -f ${REMOTE}/vmlinuz -o vmlinuz
+curl -f ${REMOTE}/initrd.img -o initrd.img
 
-WORKDIR /work/deps
-
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/ubuntu_mklml.sh /work/
-RUN /work/ubuntu_mklml.sh
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh 
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/

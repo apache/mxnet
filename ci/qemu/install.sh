@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,27 +16,17 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
 
-FROM centos:7
-
-WORKDIR /work/deps
-
-COPY install/centos7_core.sh /work/
-RUN /work/centos7_core.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/ubuntu_mklml.sh /work/
-RUN /work/ubuntu_mklml.sh
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh 
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
+set -ex
+rm -f vda.qcow2
+sudo ./preseed.sh
+qemu-img create -f qcow2 vda.qcow2 10G
+qemu-system-arm -M virt -m 1024 \
+  -kernel installer-vmlinuz \
+  -append BOOT_DEBUG=2,DEBIAN_FRONTEND=noninteractive \
+  -initrd installer-initrd_automated.gz \
+  -drive if=none,file=vda.qcow2,format=qcow2,id=hd \
+  -device virtio-blk-device,drive=hd \
+  -netdev user,id=mynet \
+  -device virtio-net-device,netdev=mynet \
+  -nographic -no-reboot
