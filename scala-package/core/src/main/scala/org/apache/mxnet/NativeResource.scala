@@ -46,7 +46,8 @@ private[mxnet] trait NativeResource
     */
   def nativeDeAllocator: (CPtrAddress => Int)
 
-  /** Call NativeResource.register to get the reference
+  /**
+    * Call NativeResource.register to get the reference
     */
   val ref: NativeResourceRef
 
@@ -56,6 +57,7 @@ private[mxnet] trait NativeResource
   // intentionally making it a val, so it gets evaluated when defined
   val bytesAllocated: Long
 
+  // this is set and unset by [[ResourceScope.add]] and [[ResourceScope.remove]]
   private[mxnet] var scope: Option[ResourceScope] = None
 
   @volatile private var disposed = false
@@ -69,11 +71,11 @@ private[mxnet] trait NativeResource
     *         using PhantomReference
     */
   def register(): NativeResourceRef = {
-    scope = ResourceScope.getCurrentScope()
+    val scope = ResourceScope.getCurrentScope()
     if (scope.isDefined) scope.get.add(this)
 
     NativeResource.totalBytesAllocated.getAndAdd(bytesAllocated)
-    // register with PhantomRef tracking to release incase the objects go
+    // register with PhantomRef tracking to release in case the objects go
     // out of reference within scope but are held for long time
     NativeResourceRef.register(this, nativeDeAllocator)
  }
