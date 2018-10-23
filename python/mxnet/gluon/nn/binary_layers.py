@@ -100,10 +100,14 @@ class _QConv(_Conv):
         padded = self._apply_pre_padding(F, x)
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
         if self.scaling:
-            return F.broadcast_mul(h, weight.abs().mean(axis=0, exclude=True, keepdims=True).transpose(
-                self._scaling_transpose))
-        if self.bits == 1 and not self.no_offset:
-            return (h + self._offset) / 2
+            scale = weight.abs().mean(axis=0, exclude=True, keepdims=True).transpose(self._scaling_transpose)
+            scale = F.stop_gradient(scale)
+            h = F.broadcast_mul(h, scale)
+        if self.bits == 1 and not self.no_offset and not self.scaling:
+            h = (h + self._offset) / 2
+        if self.bits == 32:
+            # non linearity for FP
+            h = F.relu(h)
         return h
 
 
