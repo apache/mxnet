@@ -269,7 +269,10 @@ def test_quantized_pooling():
 @with_seed()
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
-        if qdtype == 'uint8' and is_test_for_gpu():
+        if mx.current_context().device_type != 'gpu':
+            print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
+            return
+        elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return
 
