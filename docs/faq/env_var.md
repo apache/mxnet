@@ -202,6 +202,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
   of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
 
+* MXNET_CPU_PARALLEL_COPY_SIZE
+  - Values: Int ```(default=200000)```
+  - The minimum size to call parallel copy by openMP in CPU2CPU mode.
+  - When the array size is bigger than this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
+  - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by mshadow::Copy(to, from) in single thread.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
