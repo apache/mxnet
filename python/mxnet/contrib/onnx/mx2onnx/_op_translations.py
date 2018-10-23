@@ -625,7 +625,7 @@ def convert_copy(node, **kwargs):
 
 @mx_op.register("identity")
 def convert_identity(node, **kwargs):
-    """Map MXNet's _copy operator attributes to onnx's Identity operator
+    """Map MXNet's identity operator attributes to onnx's ConstantFill operator
     and return the created node.
     """
     onnx = import_onnx_modules()
@@ -636,17 +636,13 @@ def convert_identity(node, **kwargs):
     input_node_id = kwargs["index_lookup"][inputs[0][0]]
     input_node = proc_nodes[input_node_id].name
 
-    const_tensor = inputs[0]
-
     node = onnx.helper.make_node(
         "ConstantFill",
         [input_node],
         [name],
-        value=const_tensor,
         name=name,
     )
     return [node]
-
 
 @mx_op.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
