@@ -9,4 +9,6 @@ For example:
 `500 30 999 10 130` should give us `10 30 130 500 999`
 
 ![](https://cdn-images-1.medium.com/max/1200/1*6QnPUSv_t9BY9Fv8_aLb-Q.png)
+
+
 ([Diagram source](http://colah.github.io/posts/2015-09-NN-Types-FP/))
