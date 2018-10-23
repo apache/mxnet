@@ -106,8 +106,9 @@ Predictor::Predictor(const std::string model_json,
    * Load the synset file containing the image labels, if provided.
    * The data will be used to output the exact label that matches highest output of the model.
    */
-  LoadSynset(synset_file);
-
+  if (!synset_file.empty()) {
+    LoadSynset(synset_file);
+  }
   // Create an executor after binding the model to input parameters.
   args_map["data"] = NDArray(input_shape, global_ctx, false);
   executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
