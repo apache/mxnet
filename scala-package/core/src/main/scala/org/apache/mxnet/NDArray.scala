@@ -821,6 +821,9 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     require(source.length == size,
       s"array size (${source.length}) do not match the size of NDArray ($size)")
     checkCall(_LIB.mxFloat64NDArraySyncCopyFromCPU(handle, source, source.length))
+
+  override def toString() : String = {
+    s"${this.visualize}<NDArray ${this.shape} ${this.context}>"
   }
 
   /**
