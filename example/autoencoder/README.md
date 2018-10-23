@@ -1,4 +1,4 @@
-# Example of a Convolutionnal Autencoder
+# Example of a Convolutional Autencoder
 
 Autoencoder architecture is often used for unsupervised feature learning. This [link](http://ufldl.stanford.edu/tutorial/unsupervised/Autoencoders/) contains an introduction tutorial to autoencoders. This example illustrates a simple autoencoder using stack of convolutionnal layers for both encoder and decoder. 
 
