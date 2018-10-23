@@ -44,6 +44,7 @@ from ._op_translations import mean, depthtospace, spacetodepth
 _convert_map = {
     # Generator Functions
     'Constant'          : identity,
+    'ConstantFill'      : identity,
     'RandomUniform'     : random_uniform,
     'RandomNormal'      : random_normal,
     'RandomUniformLike' : random_uniform,
@@ -143,5 +144,5 @@ _convert_map = {
     'HardSigmoid'       : hardsigmoid,
     'LpPool'            : lp_pooling,
     'DepthToSpace'      : depthtospace,
-    'SpaceToDepth'      : spacetodepth
+    'SpaceToDepth'      : spacetodepth,
 }

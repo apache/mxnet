@@ -81,7 +81,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_squeeze_',
     'test_reciprocal',
     'test_sqrt',
-    'test_pow',
+    #'test_pow',
     'test_exp_',
     'test_argmax',
     'test_argmin',
@@ -92,9 +92,14 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_maxpool',
     'test_operator_params',
     'test_operator_permute2',
+<<<<<<< HEAD
     'test_clip'
     'test_cast',
     'test_depthtospace'
+=======
+    'test_clip',
+    'test_cast',
+>>>>>>> fixing some issues and adding more operators
     ]
 
 BASIC_MODEL_TESTS = [

@@ -436,6 +436,19 @@ def reshape(attrs, inputs, proto_obj):
     new_attrs = {'shape': reshape_shape}
     return 'reshape', new_attrs, inputs[:1]
 
+def tile(attrs, inputs, proto_obj):
+    """Tile function"""
+    if len(inputs) == 1:
+        return 'tile', attrs, inputs[0]
+    # reshape_shape = list(proto_obj._params[inputs[1].name].asnumpy())
+    # reshape_shape = [int(i) for i in reshape_shape]
+    # new_attrs = {'reps': reshape_shape}
+    internal = inputs[1].get_internals()
+    input_data = proto_obj.model_metadata.get('input_tensor_data')
+    input_name, tile_reps = input_data[1]
+    new_attrs = {'reps': tile_reps}
+    return 'tile', new_attrs, inputs[:1]
+
 def cast(attrs, inputs, proto_obj):
     """ Cast input to a given dtype"""
     try:

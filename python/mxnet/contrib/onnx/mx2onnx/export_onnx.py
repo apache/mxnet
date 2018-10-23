@@ -96,7 +96,7 @@ class MXNetGraph(object):
         return convert_func(node, **kwargs)
 
     @staticmethod
-    def forward_pass(inputs, sym, arg_params, aux_params, output_label):
+    def forward_pass(inputs, sym, arg_params, aux_params, label_name):
         """Do a forward pass based on the sym and params to get the shape
         of the output using dummy data
 
@@ -120,7 +120,7 @@ class MXNetGraph(object):
         # while running load_checkpoint which is not actually a graph input. So ignoring it here
         data_names = [graph_input for graph_input in sym.list_inputs()
                       if graph_input not in arg_params and graph_input not in aux_params
-                      and graph_input != output_label]
+                      and graph_input not in label_name]
 
         data_shapes = []
         # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
@@ -144,9 +144,9 @@ class MXNetGraph(object):
             data_forward.append(nd.array(val))
 
         test_mod.forward(io.DataBatch(data_forward))
-        result = test_mod.get_outputs()[0].asnumpy()
+        result = [i.asnumpy().shape for i in test_mod.get_outputs()]
 
-        return result.shape
+        return result
 
 
     @staticmethod
@@ -179,12 +179,12 @@ class MXNetGraph(object):
 
 
     @staticmethod
-    def infer_output_shape(sym, params, in_shape, output_label):
+    def infer_output_shape(sym, params, in_shape, label_name):
         """Infer output shape by doing a forward pass using dummy inputs """
         # create dummy input
         inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
         arg, aux = MXNetGraph.split_params(sym, params)
-        return MXNetGraph.forward_pass(inputs, sym, arg, aux, output_label)
+        return MXNetGraph.forward_pass(inputs, sym, arg, aux, label_name)
 
 
     @staticmethod
@@ -193,7 +193,7 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, verbose=False):
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, out_label=None, out_shape=None, verbose=False):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -206,6 +206,10 @@ class MXNetGraph(object):
             Input shape of the model e.g [(1,3,224,224)]
         in_type : data type
             Input data type e.g. np.float32
+        out_label : List of str
+            Optional list of output label names
+        out_shape : List of tuple
+            Optional output shape of the model e.g [(1,3,224,224)]
         verbose : Boolean
             If true will print logs of the model conversion
 
@@ -226,10 +230,22 @@ class MXNetGraph(object):
         # name is "Softmax", this node will have a name "Softmax_label". Also, the new node
         # will always be second last node in the json graph.
         # Deriving the output_label name.
-        output_label = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
+        output_suffix = '_output'
+        output_names = [o[:-len(output_suffix)] for o in sym.list_outputs() if o.endswith(output_suffix)]
+
+        if not out_label:
+          #  label_name = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
+            label_names = [output_name + '_label' for output_name in output_names]
+        else:
+            label_names = out_label
 
         # Determine output shape
-        output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape, output_label)
+        if not out_shape:
+            label_shapes = MXNetGraph.infer_output_shape(sym, params, in_shape, label_names)
+        else:
+            label_shapes = out_shape
+
+        graph_inputs = sym.list_inputs()
 
         weights = MXNetGraph.convert_weights_to_numpy(params)
 
@@ -253,14 +269,17 @@ class MXNetGraph(object):
             # in params dict
             if op == "null" and name not in params:
                 # Handling graph input
-
+                is_input = True
                 # Skipping output_label node, as this node is not part of graph
                 # Refer "output_label" assignment above for more details.
-                if name == output_label:
+                # if name in label_names and name in graph_inputs:
+                #     is_input = False
+                if name in label_names and name not in graph_inputs:
+                    #"_label" in name:
                     continue
                 converted = MXNetGraph.convert_layer(
                     node,
-                    is_input=True,
+                    is_input=is_input,
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape[graph_input_idx],
@@ -294,14 +313,14 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
-                        if idx == (len(mx_graph) - 1):
+                        if idx == (len(mx_graph) - 1) or converted_node.name in output_names:
                             # If converted node doesnt have name, use it from output field
                             if not converted_node.name:
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
                                         name=converted_node.output[0],
                                         elem_type=in_type,
-                                        shape=output_shape
+                                        shape=label_shapes[0]
                                     )
                                 )
                             else:
@@ -309,7 +328,7 @@ class MXNetGraph(object):
                                     make_tensor_value_info(
                                         name=converted_node.name,
                                         elem_type=in_type,
-                                        shape=output_shape
+                                        shape=label_shapes[0]
                                     )
                                 )
                             if verbose:
@@ -327,12 +346,12 @@ class MXNetGraph(object):
                     # refer "output_label" initialization above for more details.
                     # if extra node was added then prev_index to the last node is adjusted.
                     if idx == (len(mx_graph) - 1) and \
-                            mx_graph[len(mx_graph)-2]["name"] == output_label:
+                            mx_graph[len(mx_graph) - 2]["name"] in label_names:
                         prev_index = index_lookup[idx - 2]
                     else:
                         prev_index = index_lookup[idx - 1]
 
-                    index_lookup.append(prev_index+len(converted))
+                    index_lookup.append(prev_index + len(converted))
                 else:
                     index_lookup.append(len(converted) - 1)
             else:

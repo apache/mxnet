@@ -218,6 +218,13 @@ def convert_convolution(node, **kwargs):
 
     return [conv_node]
 
+def convert_bool_to_int(attrs, attr_name):
+    """ Helper function to convert a string version
+    of Boolean attributes to integer for ONNX.
+    Takes attribute dictionary and attr_name as
+    parameters.
+    """
+    return 1 if attrs.get(attr_name, 0) in ["True", "1"] else 0
 
 @mx_op.register("FullyConnected")
 def convert_fully_connected(node, **kwargs):
@@ -617,11 +624,36 @@ def convert_exp(node, **kwargs):
     return create_basic_op_node('Exp', node, kwargs)
 
 @mx_op.register("_copy")
-def convert_identity(node, **kwargs):
+def convert_copy(node, **kwargs):
     """Map MXNet's _copy operator attributes to onnx's Identity operator
     and return the created node.
     """
     return create_basic_op_node('Identity', node, kwargs)
+
+
+@mx_op.register("identity")
+def convert_identity(node, **kwargs):
+    """Map MXNet's _copy operator attributes to onnx's Identity operator
+    and return the created node.
+    """
+    onnx = import_onnx_modules()
+    name = node["name"]
+    proc_nodes = kwargs["proc_nodes"]
+    inputs = node["inputs"]
+
+    input_node_id = kwargs["index_lookup"][inputs[0][0]]
+    input_node = proc_nodes[input_node_id].name
+
+    const_tensor = inputs[0]
+
+    node = onnx.helper.make_node(
+        "ConstantFill",
+        [input_node],
+        [name],
+        value=const_tensor,
+        name=name,
+    )
+    return [node]
 
 
 @mx_op.register("LeakyReLU")
@@ -695,6 +727,58 @@ def convert_softmax_output(node, **kwargs):
     )
 
     return [softmax_node]
+
+
+@mx_op.register("LogisticRegressionOutput")
+def convert_logistic_regression_output(node, **kwargs):
+    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
+    and return the created node.
+    """
+    name, _, _ = get_inputs(node, kwargs)
+    input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
+    input1 = kwargs["proc_nodes"][input1_idx]
+
+    sigmoid_node = onnx.helper.make_node(
+        "Sigmoid",
+        [input1.output[0]],
+        [name],
+        name=name
+    )
+
+    return [sigmoid_node]
+
+@mx_op.register("BlockGrad")
+def convert_blockgrad(node, **kwargs):
+    """ Skip operator  """
+    name, _, _ = get_inputs(node, kwargs)
+
+    input_node_id = kwargs["index_lookup"][node["inputs"][0][0]]
+    input_node = kwargs["proc_nodes"][input_node_id].name
+
+    node = onnx.helper.make_node(
+        "ConstantFill",
+        [input_node],
+        [name],
+        name=name,
+    )
+    return [node]
+
+
+@mx_op.register("make_loss")
+def convert_makeloss(node, **kwargs):
+    """ Skip operator  """
+    name, _, _ = get_inputs(node, kwargs)
+
+    input_node_id = kwargs["index_lookup"][node["inputs"][0][0]]
+    input_node = kwargs["proc_nodes"][input_node_id].name
+
+    node = onnx.helper.make_node(
+        "ConstantFill",
+        [input_node],
+        [name],
+        name=name,
+    )
+    return [node]
 
 
 @mx_op.register("Concat")
@@ -843,6 +927,8 @@ def scalar_op_helper(node, op_name, **kwargs):
     """Helper function for scalar arithmetic operations"""
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
+    from onnx import numpy_helper
+
     scalar_value = [float(attrs.get("scalar", 1))]
 
     initializer = kwargs["initializer"]
@@ -852,13 +938,16 @@ def scalar_op_helper(node, op_name, **kwargs):
     for i in initializer:
         if i.name == input_nodes[0]:
             if op_name == 'Mul':
-                new_initializer = onnx.numpy_helper.to_array(i) * scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) * scalar_value[0]
             elif op_name == 'Sub':
-                new_initializer = onnx.numpy_helper.to_array(i) - scalar_value[0]
+                if name.startswith("_rminusscalar"):
+                    new_initializer = scalar_value[0] - numpy_helper.to_array(i)
+                else:
+                    new_initializer = numpy_helper.to_array(i) - scalar_value[0]
             elif op_name == 'Add':
-                new_initializer = onnx.numpy_helper.to_array(i) + scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) + scalar_value[0]
             elif op_name == 'Div':
-                new_initializer = onnx.numpy_helper.to_array(i) / scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) / scalar_value[0]
             flag = False
             break
 
@@ -921,6 +1010,15 @@ def convert_mul_scalar(node, **kwargs):
 @mx_op.register("_minus_scalar")
 def convert_minus_scalar(node, **kwargs):
     """Map MXNet's _minus_scalar operator attributes to onnx's Minus operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Sub', **kwargs)
+
+# Convert scalar value into node and pass it as input to mul_node
+@mx_op.register("_rminus_scalar")
+def convert_minus_scalar(node, **kwargs):
+    """Map MXNet's _rminus_scalar operator attributes to onnx's Minus operator.
     Creates a new node for the input scalar value, adds it to the initializer
     and return multiple created nodes.
     """
