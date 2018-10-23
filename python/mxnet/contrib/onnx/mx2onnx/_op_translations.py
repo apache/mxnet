@@ -1005,7 +1005,7 @@ def convert_minus_scalar(node, **kwargs):
     return scalar_op_helper(node, 'Sub', **kwargs)
 
 @mx_op.register("_rminus_scalar")
-def convert_minus_scalar(node, **kwargs):
+def convert_rminus_scalar(node, **kwargs):
     """Map MXNet's _rminus_scalar operator attributes to onnx's Minus operator.
     Creates a new node for the input scalar value, adds it to the initializer
     and return multiple created nodes.
@@ -1029,7 +1029,7 @@ def convert_div_scalar(node, **kwargs):
     return scalar_op_helper(node, 'Div', **kwargs)
 
 @mx_op.register("_rdiv_scalar")
-def convert_div_scalar(node, **kwargs):
+def convert_rdiv_scalar(node, **kwargs):
     """Map MXNet's _rdiv_scalar operator attributes to onnx's Div operator.
     Creates a new node for the input scalar value, adds it to the initializer
     and return multiple created nodes.
