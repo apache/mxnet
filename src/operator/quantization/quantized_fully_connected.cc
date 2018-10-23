@@ -24,6 +24,7 @@
  * \author Ziheng Jiang, Jun Wu
 */
 #include "../nn/fully_connected-inl.h"
+#include "./quantized_fully_connected-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -79,6 +80,20 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int> *in_attrs,
+                                        std::vector<int> *out_attrs) {
+  *dispatch_mode = DispatchMode::kFCompute;
+  if (dev_mask == mshadow::cpu::kDevMask) {
+    *dispatch_mode = DispatchMode::kFComputeEx;
+  }
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    (*out_attrs)[i] = kDefaultStorage;
+  return true;
+}
+
 NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
 .describe(R"code(Fully Connected operator for input, weight and bias data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
@@ -112,6 +127,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
   })
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizedFullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedFullyConnectedType)
+.set_attr<FInferStorageType>("FInferStorageType", QuantizedFullyConnectedStorageType)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("weight", "NDArray-or-Symbol", "weight.")
@@ -135,6 +151,5 @@ NNVM_REGISTER_OP(FullyConnected)
     }
     return node;
   });
-
 }  // namespace op
 }  // namespace mxnet
