@@ -603,6 +603,14 @@ scalaclean:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
 
+scalatestcompile:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn test-compile -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dcurrent_libdir="$(ROOTDIR)/lib" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+
 scalapkg:
 	(cd $(ROOTDIR)/scala-package; \
 		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
