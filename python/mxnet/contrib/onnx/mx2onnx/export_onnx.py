@@ -234,7 +234,6 @@ class MXNetGraph(object):
         output_names = [o[:-len(output_suffix)] for o in sym.list_outputs() if o.endswith(output_suffix)]
 
         if not out_label:
-          #  label_name = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
             label_names = [output_name + '_label' for output_name in output_names]
         else:
             label_names = out_label
@@ -269,17 +268,13 @@ class MXNetGraph(object):
             # in params dict
             if op == "null" and name not in params:
                 # Handling graph input
-                is_input = True
                 # Skipping output_label node, as this node is not part of graph
                 # Refer "output_label" assignment above for more details.
-                # if name in label_names and name in graph_inputs:
-                #     is_input = False
                 if name in label_names and name not in graph_inputs:
-                    #"_label" in name:
                     continue
                 converted = MXNetGraph.convert_layer(
                     node,
-                    is_input=is_input,
+                    is_input=True,
                     mx_graph=mx_graph,
                     weights=weights,
                     in_shape=in_shape[graph_input_idx],

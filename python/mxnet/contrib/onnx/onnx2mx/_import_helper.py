@@ -144,5 +144,5 @@ _convert_map = {
     'HardSigmoid'       : hardsigmoid,
     'LpPool'            : lp_pooling,
     'DepthToSpace'      : depthtospace,
-    'SpaceToDepth'      : spacetodepth,
+    'SpaceToDepth'      : spacetodepth
 }

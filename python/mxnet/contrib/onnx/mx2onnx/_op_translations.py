@@ -218,14 +218,6 @@ def convert_convolution(node, **kwargs):
 
     return [conv_node]
 
-def convert_bool_to_int(attrs, attr_name):
-    """ Helper function to convert a string version
-    of Boolean attributes to integer for ONNX.
-    Takes attribute dictionary and attr_name as
-    parameters.
-    """
-    return 1 if attrs.get(attr_name, 0) in ["True", "1"] else 0
-
 @mx_op.register("FullyConnected")
 def convert_fully_connected(node, **kwargs):
     """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
@@ -947,7 +939,10 @@ def scalar_op_helper(node, op_name, **kwargs):
             elif op_name == 'Add':
                 new_initializer = numpy_helper.to_array(i) + scalar_value[0]
             elif op_name == 'Div':
-                new_initializer = numpy_helper.to_array(i) / scalar_value[0]
+                if name.startswith("_rdivscalar"):
+                    new_initializer = scalar_value[0] / numpy_helper.to_array(i)
+                else:
+                    new_initializer = numpy_helper.to_array(i) / scalar_value[0]
             flag = False
             break
 
@@ -958,6 +953,7 @@ def scalar_op_helper(node, op_name, **kwargs):
         dims = np.shape(np_arr)
 
         scalar_op_name = "scalar_op" + str(kwargs["idx"])
+        # Convert scalar value into node
         tensor_node = onnx.helper.make_tensor_value_info(scalar_op_name, data_type, dims)
 
         initializer.append(
@@ -996,7 +992,6 @@ def scalar_op_helper(node, op_name, **kwargs):
         )
         return [tensor_node]
 
-# Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_mul_scalar")
 def convert_mul_scalar(node, **kwargs):
     """Map MXNet's _mul_scalar operator attributes to onnx's Mul operator.
@@ -1005,8 +1000,6 @@ def convert_mul_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Mul', **kwargs)
 
-
-# Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_minus_scalar")
 def convert_minus_scalar(node, **kwargs):
     """Map MXNet's _minus_scalar operator attributes to onnx's Minus operator.
@@ -1015,7 +1008,6 @@ def convert_minus_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Sub', **kwargs)
 
-# Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_rminus_scalar")
 def convert_minus_scalar(node, **kwargs):
     """Map MXNet's _rminus_scalar operator attributes to onnx's Minus operator.
@@ -1024,8 +1016,6 @@ def convert_minus_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Sub', **kwargs)
 
-
-# Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_plus_scalar")
 def convert_add_scalar(node, **kwargs):
     """Map MXNet's _plus_scalar operator attributes to onnx's Add operator.
@@ -1034,10 +1024,17 @@ def convert_add_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Add', **kwargs)
 
-# Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_div_scalar")
 def convert_div_scalar(node, **kwargs):
     """Map MXNet's _div_scalar operator attributes to onnx's Div operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Div', **kwargs)
+
+@mx_op.register("_rdiv_scalar")
+def convert_div_scalar(node, **kwargs):
+    """Map MXNet's _rdiv_scalar operator attributes to onnx's Div operator.
     Creates a new node for the input scalar value, adds it to the initializer
     and return multiple created nodes.
     """
