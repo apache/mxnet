@@ -11,3 +11,8 @@ The idea of an autoencoder is to learn to use bottleneck architecture to encode 
 ## Dataset
 
 The dataset used in this example is [FashionMNIST](https://github.com/zalandoresearch/fashion-mnist) dataset. 
+
+## Variationnal Autoencoder
+
+You can check an example of variational autoencoder [here](https://gluon.mxnet.io/chapter13_unsupervised-learning/vae-gluon.html)
+
