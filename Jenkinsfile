@@ -228,12 +228,12 @@ core_logic: {
         }
       }
     },
-    'CPU: Clang Tidy': {
+    'GPU: Clang Tidy': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang60_tidy') {
+        ws('workspace/build-gpu-clang60_tidy') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang_tidy', false)
+            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_clang_tidy', false)
           }
         }
       }

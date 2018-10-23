@@ -405,24 +405,29 @@ build_ubuntu_cpu_clang60() {
         -j$(nproc)
 }
 
-build_ubuntu_cpu_clang_tidy() {
+build_ubuntu_gpu_clang_tidy() {
     set -ex
 
-    export CXX=clang++-6.0
-    export CC=clang-6.0
+    export CC="gcc"
+    export CXX="g++"
     export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
 
     pushd .
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=OFF \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_OPENCV=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
-        -G Ninja \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DCUDA_HOST_COMPILER=/usr/bin/gcc       \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DUSE_OPENMP=OFF                        \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_OPENCV=ON                         \
+        -DCMAKE_BUILD_TYPE=Debug                \
+        -G Ninja                                \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON      \
         /work/mxnet
 
     ninja -v
