@@ -43,7 +43,7 @@ object TrainModel {
     */
   def test(model: String, dataPath: String, numExamples: Int = 60000,
            numEpochs: Int = 10, benchmark: Boolean = false): Float = {
-    NDArrayCollector.auto().withScope {
+    ResourceScope.using() {
       val devs = Array(Context.cpu(0))
       val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
       val (dataLoader, net) = dataLoaderAndModel("mnist", model, dataPath,
@@ -110,44 +110,46 @@ object TrainModel {
     val inst = new TrainModel
     val parser: CmdLineParser = new CmdLineParser(inst)
     try {
-      parser.parseArgument(args.toList.asJava)
+      ResourceScope.using() {
+        parser.parseArgument(args.toList.asJava)
 
-      val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
-      else inst.dataDir
+        val dataPath = if (inst.dataDir == null) System.getenv("MXNET_HOME")
+        else inst.dataDir
 
-      val (dataLoader, net) = dataLoaderAndModel(inst.dataset, inst.network, dataPath,
-        inst.numLayers, inst.numExamples, inst.benchmark)
+        val (dataLoader, net) = dataLoaderAndModel(inst.dataset, inst.network, dataPath,
+          inst.numLayers, inst.numExamples, inst.benchmark)
 
-      val devs =
-        if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
-        else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
-        else Array(Context.cpu(0))
+        val devs =
+          if (inst.gpus != null) inst.gpus.split(',').map(id => Context.gpu(id.trim.toInt))
+          else if (inst.cpus != null) inst.cpus.split(',').map(id => Context.cpu(id.trim.toInt))
+          else Array(Context.cpu(0))
 
-      val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
-      envs.put("DMLC_ROLE", inst.role)
-      if (inst.schedulerHost != null) {
-        require(inst.schedulerPort > 0, "scheduler port not specified")
-        envs.put("DMLC_PS_ROOT_URI", inst.schedulerHost)
-        envs.put("DMLC_PS_ROOT_PORT", inst.schedulerPort.toString)
-        require(inst.numWorker > 0, "Num of workers must > 0")
-        envs.put("DMLC_NUM_WORKER", inst.numWorker.toString)
-        require(inst.numServer > 0, "Num of servers must > 0")
-        envs.put("DMLC_NUM_SERVER", inst.numServer.toString)
-        logger.info("Init PS environments")
-        KVStoreServer.init(envs.toMap)
-      }
+        val envs: mutable.Map[String, String] = mutable.HashMap.empty[String, String]
+        envs.put("DMLC_ROLE", inst.role)
+        if (inst.schedulerHost != null) {
+          require(inst.schedulerPort > 0, "scheduler port not specified")
+          envs.put("DMLC_PS_ROOT_URI", inst.schedulerHost)
+          envs.put("DMLC_PS_ROOT_PORT", inst.schedulerPort.toString)
+          require(inst.numWorker > 0, "Num of workers must > 0")
+          envs.put("DMLC_NUM_WORKER", inst.numWorker.toString)
+          require(inst.numServer > 0, "Num of servers must > 0")
+          envs.put("DMLC_NUM_SERVER", inst.numServer.toString)
+          logger.info("Init PS environments")
+          KVStoreServer.init(envs.toMap)
+        }
 
-      if (inst.role != "worker") {
-        logger.info("Start KVStoreServer for scheduler & servers")
-        KVStoreServer.start()
-      } else {
-        Trainer.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
-          network = net, dataLoader = dataLoader,
-          kvStore = inst.kvStore, numEpochs = inst.numEpochs,
-          modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
-          lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
-          monitorSize = inst.monitor)
-        logger.info("Finish fit ...")
+        if (inst.role != "worker") {
+          logger.info("Start KVStoreServer for scheduler & servers")
+          KVStoreServer.start()
+        } else {
+          Trainer.fit(batchSize = inst.batchSize, numExamples = inst.numExamples, devs = devs,
+            network = net, dataLoader = dataLoader,
+            kvStore = inst.kvStore, numEpochs = inst.numEpochs,
+            modelPrefix = inst.modelPrefix, loadEpoch = inst.loadEpoch,
+            lr = inst.lr, lrFactor = inst.lrFactor, lrFactorEpoch = inst.lrFactorEpoch,
+            monitorSize = inst.monitor)
+          logger.info("Finish fit ...")
+        }
       }
     } catch {
       case ex: Exception => {
