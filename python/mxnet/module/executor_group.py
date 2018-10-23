@@ -428,24 +428,22 @@ class DataParallelExecutorGroup(object):
         -----
         - This function will inplace update the NDArrays in arg_params and aux_params.
         """
-        if copy_to_cpu:
-            for name, block in zip(self.param_names, self.param_arrays):
-                weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
-                weight.astype(arg_params[name].dtype).copyto(arg_params[name])
-            for name, block in zip(self.aux_names, self.aux_arrays):
-                weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
-                weight.astype(aux_params[name].dtype).copyto(aux_params[name])
-        else:
-            for name, block in zip(self.param_names, self.param_arrays):
+        for name, block in zip(self.param_names, self.param_arrays):
+            if copy_to_cpu:
+                context = ctx.cpu()
+            else:
                 context = block[0].context
-                weight = sum(w.copyto(context) for w in block) / len(block)
-                weight.astype(arg_params[name].dtype).copyto(arg_params[name])
-                arg_params[name] = arg_params[name].as_in_context(context)
-            for name, block in zip(self.aux_names, self.aux_arrays):
+            weight = sum(w.copyto(context) for w in block) / len(block)
+            weight.astype(arg_params[name].dtype).copyto(arg_params[name])
+            arg_params[name] = arg_params[name].as_in_context(context)
+        for name, block in zip(self.aux_names, self.aux_arrays):
+            if copy_to_cpu:
+                context = ctx.cpu()
+            else:
                 context = block[0].context
-                weight = sum(w.copyto(context) for w in block) / len(block)
-                weight.astype(aux_params[name].dtype).copyto(aux_params[name])
-                aux_params[name] = aux_params[name].as_in_context(context)
+            weight = sum(w.copyto(context) for w in block) / len(block)
+            weight.astype(aux_params[name].dtype).copyto(aux_params[name])
+            aux_params[name] = aux_params[name].as_in_context(context)
 
     def forward(self, data_batch, is_train=None):
         """Split `data_batch` according to workload and run forward on each devices.

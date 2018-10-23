@@ -410,7 +410,6 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
     ├── dmlc
     ├── mxnet
     ├── mshadow
-<<<<<<< fce5154ce4cc71fa5899c9690d2c571a30f3716c
     └── nnvm
 
 ```
@@ -430,27 +429,6 @@ These dlls can be found in `prebuildbase_win10_x64_vc14/3rdparty`, `mxnet_x64_vc
 }
 
 ```
-=======
-    └── nnvm 
-    
-```
-6. Make sure that R executable is added to your ```PATH``` in the environment variables. Running the ```where R``` command at the command prompt should return the location.
-7. Also make sure that Rtools is installed and the executable is added to your ```PATH``` in the environment variables.
-8. Temporary patch - im2rec currently results in crashes during the build. Remove the im2rec.h and im2rec.cc files in R-package/src/ from cloned repository and comment out the two im2rec lines in [R-package/src/mxnet.cc](https://github.com/apache/incubator-mxnet/blob/master/R-package/src/mxnet.cc) as shown below.
-```bat
-#include "./kvstore.h"
-#include "./export.h"
-//#include "./im2rec.h"
-......
-......
-  DataIterCreateFunction::InitRcppModule();
-  KVStore::InitRcppModule();
-  Exporter::InitRcppModule();
-//  IM2REC::InitRcppModule();
-}
-
-```
->>>>>>> squash commit
 9. Now open the Windows CMD with admin rights and change the directory to the `mxnet` folder(cloned repository). Then use the following commands
 to build R package:
 
