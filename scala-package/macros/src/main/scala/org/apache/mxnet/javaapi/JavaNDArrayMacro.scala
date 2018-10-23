@@ -195,7 +195,7 @@ private[mxnet] object JavaNDArrayMacro {
     val argList = argNames zip argTypes map { case (argName, argType) =>
       val typeAndOption =
         CToScalaUtils.argumentCleaner(argName, argType,
-          "org.apache.mxnet.javaapi.NDArray", "javaapi.Shape")
+          "org.apache.mxnet.javaapi.NDArray")
       new NDArrayArg(argName, typeAndOption._1, typeAndOption._2)
     }
     new NDArrayFunction(aliasName, argList.toList)
