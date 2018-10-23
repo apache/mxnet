@@ -109,6 +109,7 @@ Predictor::Predictor(const std::string model_json,
   if (!synset_file.empty()) {
     LoadSynset(synset_file);
   }
+
   // Create an executor after binding the model to input parameters.
   args_map["data"] = NDArray(input_shape, global_ctx, false);
   executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
