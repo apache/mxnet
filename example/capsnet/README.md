@@ -13,9 +13,9 @@ Install scipy with pip
 ```
 pip install scipy
 ```
-Install tensorboard with pip
+Install tensorboard and mxboard with pip
 ```
-pip install tensorboard
+pip install mxboard tensorflow
 ```
 
 On Single gpu
