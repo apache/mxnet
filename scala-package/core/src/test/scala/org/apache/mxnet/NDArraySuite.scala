@@ -21,6 +21,7 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.mxnet.NDArrayConversions._
+import org.apache.mxnet.util.Visualize
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import scala.collection.mutable.ArrayBuffer
 
@@ -106,9 +107,9 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
 
   test("test Visualize") {
     var nd = NDArray.ones(Shape(1, 2, 100, 1))
-    nd.visualize
+    Visualize.toString(nd)
     nd = NDArray.ones(Shape(1, 4))
-    nd.visualize
+    Visualize.toString(nd)
   }
 
   test("plus") {
