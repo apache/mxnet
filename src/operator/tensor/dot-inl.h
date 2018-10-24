@@ -521,18 +521,22 @@ struct DotCsrRspDnsByRowBlocks {
       const RType* row_idx_ptr = first;
       // end of binary search
       if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr > col_idx_l[indptr_l[j+1]-1]) continue;
-      for (IType k = indptr_l[j]; k < indptr_l[j+1] && row_idx_ptr != row_idx_r+nnr_r;) {
-        if (col_idx_l[k] == *row_idx_ptr) {
-          const dim_t offset_r = (row_idx_ptr - row_idx_r) * num_cols;
-          for (dim_t l = 0; l < num_cols; ++l) {
-            out[offset_out+l] += data_l[k] * data_r[offset_r+l];
-          }
-          ++k;
-          ++row_idx_ptr;
-        } else if (col_idx_l[k] < *row_idx_ptr) {
-          ++k;
-        } else {
-          ++row_idx_ptr;
+      const auto end = row_idx_r + nnr_r;
+      auto start = row_idx_ptr;
+      for (IType k = indptr_l[j]; k < indptr_l[j+1] && start < end; ++k) {
+        const auto v = col_idx_l[k];
+        if (v < *start) {
+          continue;
+        }
+        const auto p = std::lower_bound(start, end, v);
+        start = p;
+        if (p >= end || v < *p) {
+          continue;
+        }
+        start += 1;
+        const dim_t offset_r = (p - row_idx_r) * num_cols;
+        for (dim_t l = 0; l < num_cols; ++l) {
+          out[offset_out+l] += data_l[k] * data_r[offset_r+l];
         }
       }
     }
