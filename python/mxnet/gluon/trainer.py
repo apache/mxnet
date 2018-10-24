@@ -201,7 +201,7 @@ class Trainer(object):
             self._distributed = 'dist' in kvstore.type
             if self._distributed:
                 # kv.pull(row_sparse_grad) is not supported for dist kvstore
-                # captures condition for dist_async, dist_device_sync or based on config for
+                # Captures condition for dist_async, dist_device_sync or based on config for
                 # update_on_kvstore
                 update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad \
                                     or 'device' in kvstore.type or 'async' in kvstore.type \
