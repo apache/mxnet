@@ -1,6 +1,10 @@
 # Build/Install MXNet with MKL-DNN
 
-Building MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) will gain better performance when using Intel Xeon CPUs for training and inference. The improvement of performance can be seen in this [page](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu). Below are instructions for linux, MacOS and Windows platform.
+A better training and inference perforamce are expected to achieved on Intel-Architecture CPUs with MXNET built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
+In the following sections, you will find building instructions for MXNET with Intel MKL-DNN on Linux, MacOS and Windows.
+
+The detailed performance data collected on Intel Xeon CPU with MXNET built with Intel MKL-DNN can be found at [here](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu).
+
 
 <h2 id="0">Contents</h2>
 
@@ -9,7 +13,9 @@ Building MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) will gain 
 * [3. Windows](#3)
 * [4. Verify MXNet with python](#4)
 * [5. Enable MKL BLAS](#5)
-* [6. Support](#6)
+* [6. Enable graph optimization](#6)
+* [7. Quantization](#7)
+* [8. Support](#8)
 
 <h2 id="1">Linux</h2>
 
@@ -36,7 +42,7 @@ cd incubator-mxnet
 make -j $(nproc) USE_OPENCV=1 USE_MKLDNN=1 USE_BLAS=mkl USE_INTEL_PATH=/opt/intel
 ```
 
-If you don't have full [MKL](https://software.intel.com/en-us/intel-mkl) library installed, you can use OpenBLAS by setting `USE_BLAS=openblas`.
+If you don't have the full [MKL](https://software.intel.com/en-us/intel-mkl) library installation, you might use OpenBLAS as the blas library, by setting USE_BLAS=openblas.
 
 <h2 id="2">MacOS</h2>
 
@@ -77,7 +83,8 @@ LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew -
 
 <h2 id="3">Windows</h2>
 
-We recommend to build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), or you can also try experimentally the latest [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/).
+On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNET with Intel MKL-DNN.
+[Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
 
 **Visual Studio 2015**
 
@@ -211,11 +218,11 @@ o = exe.outputs[0]
 t = o.asnumpy()
 ```
 
-You can open the `MKLDNN_VERBOSE` flag by setting environment variable:
+More detailed debugging and profiling information can be logged by setting the environment variable 'MKLDNN_VERBOSE':
 ```
 export MKLDNN_VERBOSE=1
 ```
-Then by running above code snippet, you probably will get the following output message which means `convolution` and `reorder` primitive from MKL-DNN are called. Layout information and primitive execution performance are also demonstrated in the log message.
+For example, by running above code snippet, the following debugging logs providing more insights on MKL-DNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
 ```
 mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nchw out:f32_nChw16c,num:1,32x32x256x256,6.47681
 mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_oihw out:f32_OIhw16i16o,num:1,32x32x3x3,0.0429688
@@ -226,9 +233,9 @@ mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nChw16c out:f32_nchw,num:1,32x3
 
 <h2 id="5">Enable MKL BLAS</h2>
 
-To make it convenient for customers, Intel introduced a new license called [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license) that allows to redistribute not only dynamic libraries but also headers, examples and static libraries.
-
-Installing and enabling the full MKL installation enables MKL support for all operators under the linalg namespace.
+With MKL BLAS, the performace is expected to furtherly improved with variable range depending on the computation load of the models.
+You can redistribute not only dynamic libraries but also headers, examples and static libraries on accepting the license [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license).
+Installing the full MKL installation enables MKL support for all operators under the linalg namespace.
 
   1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl)
 
@@ -275,10 +282,32 @@ MKL_VERBOSE Intel(R) MKL 2018.0 Update 1 Product build 20171007 for Intel(R) 64 
 MKL_VERBOSE SGEMM(T,N,12,10,8,0x7f7f927b1378,0x1bc2140,8,0x1ba8040,8,0x7f7f927b1380,0x7f7f7400a280,12) 8.93ms CNR:OFF Dyn:1 FastMM:1 TID:0  NThr:40 WDiv:HOST:+0.000
 ```
 
-<h2 id="6">Next Steps and Support</h2>
+<h2 id="6">Enable graph optimization</h2>
 
-- For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl)
+Graph optimization by subgraph feature are available in master branch. You can build from source and then use below command to enable this *experimental* feature for better performance:
 
-- For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn)
+```
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+```
 
-- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN)
+This limitations of this experimental feature are:
+
+- Use this feature only for inference. When training, be sure to turn the feature off by unsetting the `MXNET_SUBGRAPH_BACKEND` environment variable.
+
+- This feature will only run on the CPU, even if you're using a GPU-enabled build of MXNet. 
+
+- [MXNet Graph Optimization and Quantization Technical Information and Performance Details](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN).
+
+<h2 id="7">Quantization and Inference with INT8</h2>
+
+Benefiting from Intel® MKL-DNN, MXNet built with Intel® MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel® CPU Platform on Intel® Xeon® Scalable Platform.
+
+- [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
+
+<h2 id="8">Next Steps and Support</h2>
+
+- For questions or support specific to MKL, visit the [Intel MKL](https://software.intel.com/en-us/mkl) website.
+
+- For questions or support specific to MKL, visit the [Intel MKLDNN](https://github.com/intel/mkl-dnn) website.
+
+- If you find bugs, please open an issue on GitHub for [MXNet with MKL](https://github.com/apache/incubator-mxnet/labels/MKL) or [MXNet with MKLDNN](https://github.com/apache/incubator-mxnet/labels/MKLDNN).

@@ -12,12 +12,12 @@ To construct a module, refer to the constructors for the module class. For examp
 
     // construct a simple MLP
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected(name = "fc1")(data)(Map("num_hidden" -> 128))
-    val act1 = Symbol.Activation(name = "relu1")(fc1)(Map("act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected(name = "fc2")(act1)(Map("num_hidden" -> 64))
-    val act2 = Symbol.Activation(name = "relu2")(fc2)(Map("act_type" -> "relu"))
-    val fc3 = Symbol.FullyConnected(name = "fc3")(act2)(Map("num_hidden" -> 10))
-    val out = Symbol.SoftmaxOutput(name = "softmax")(fc3)()
+    val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
+    val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
+    val act2 = Symbol.api.Activation(Some(fc2), "relu", "relu2")
+    val fc3 = Symbol.api.FullyConnected(Some(act2), num_hidden = 10, name = "fc3")
+    val out = Symbol.api.SoftmaxOutput(fc3, name = "softmax")
 
     // construct the module
     val mod = new Module(out)

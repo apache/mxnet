@@ -157,6 +157,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             if show_shape:
                 num_filter = shape_dict[key][1]
                 cur_param = int(num_filter) * 2
+        elif op == 'Embedding':
+            cur_param = int(node["attrs"]['input_dim']) * int(node["attrs"]['output_dim'])
         if not pre_node:
             first_connection = ''
         else:

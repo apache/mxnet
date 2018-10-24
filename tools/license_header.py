@@ -77,7 +77,8 @@ _WHITE_LIST = ['R-package/',
                'prepare_mkl.sh',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
                'src/operator/contrib/ctc_include/',
-               'julia/REQUIRE']
+               'julia/REQUIRE'
+               ]
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
