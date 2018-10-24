@@ -241,9 +241,10 @@ if(USE_MKLDNN)
   endif()
   set(WITH_TEST OFF)
   set(WITH_EXAMPLE OFF)
-  add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn)
+  add_subdirectory(3rdparty/mkldnn)
+
   include_directories(3rdparty/mkldnn/include)
   add_definitions(-DUSE_MKL=1)
   add_definitions(-DCUB_MKL=1)
