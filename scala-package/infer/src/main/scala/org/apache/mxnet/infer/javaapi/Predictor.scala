@@ -22,6 +22,21 @@ import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
 
+/**
+  * Implementation of prediction routines.
+  *
+  * @param modelPathPrefix     Path prefix from where to load the model artifacts.
+  *                            These include the symbol, parameters, and synset.txt
+  *                            Example: file://model-dir/resnet-152 (containing
+  *                            resnet-152-symbol.json, resnet-152-0000.params, and synset.txt).
+  * @param inputDescriptors    Descriptors defining the input node names, shape,
+  *                            layout and type parameters
+  *                            <p>Note: If the input Descriptors is missing batchSize
+  *                            ('N' in layout), a batchSize of 1 is assumed for the model.
+  * @param contexts            Device contexts on which you want to run inference; defaults to CPU
+  * @param epoch               Model epoch to load; defaults to 0
+
+  */
 class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
   def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc],
            contexts: java.util.List[Context], epoch: Int)

@@ -26,7 +26,20 @@ import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
 
-
+/**
+  * A class for object detection tasks
+  *
+  * @param modelPathPrefix    Path prefix from where to load the model artifacts.
+  *                           These include the symbol, parameters, and synset.txt.
+  *                           Example: file://model-dir/ssd_resnet50_512 (containing
+  *                           ssd_resnet50_512-symbol.json, ssd_resnet50_512-0000.params,
+  *                           and synset.txt)
+  * @param inputDescriptors   Descriptors defining the input node names, shape,
+  *                           layout and type parameters
+  * @param contexts           Device contexts on which you want to run inference.
+  *                           Defaults to CPU.
+  * @param epoch              Model epoch to load; defaults to 0
+  */
 class ObjectDetector(val objDetector: org.apache.mxnet.infer.ObjectDetector){
 
   def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc], contexts:
