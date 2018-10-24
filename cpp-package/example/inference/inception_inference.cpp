@@ -56,16 +56,16 @@ class Predictor {
               const std::string model_params,
               const std::string& synset_file,
               const Shape& input_shape);
-    void LoadModel(const std::string& model_json_file);
-    void LoadParameters(const std::string& model_parameters_file);
     void LoadInputImage(const std::string& image_file);
-    void LoadSynset(const std::string& synset_file);
     void NormalizeInput(const std::string& mean_image_file);
     void RunForwardPass();
-    NDArray GetImageData() {return image_data;}
     ~Predictor();
 
  private:
+    void LoadModel(const std::string& model_json_file);
+    void LoadParameters(const std::string& model_parameters_file);
+    void LoadSynset(const std::string& synset_file);
+
     NDArray mean_img;
     map<string, NDArray> args_map;
     map<string, NDArray> aux_map;
@@ -109,7 +109,6 @@ Predictor::Predictor(const std::string model_json,
   if (!synset_file.empty()) {
     LoadSynset(synset_file);
   }
-
   // Create an executor after binding the model to input parameters.
   args_map["data"] = NDArray(input_shape, global_ctx, false);
   executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
@@ -348,18 +347,26 @@ int main(int argc, char** argv) {
 
   Shape input_data_shape(input_dimensions);
 
-  // Initialize the predictor object
-  Predictor predict(model_file_json, model_file_params, synset_file, input_data_shape);
+  try {
+    // Initialize the predictor object
+    Predictor predict(model_file_json, model_file_params, synset_file, input_data_shape);
 
-  // Load the input image
-  predict.LoadInputImage(input_image);
+    // Load the input image
+    predict.LoadInputImage(input_image);
 
-  // Normalize teh image
-  if (!mean_image.empty()) {
-    predict.NormalizeInput(mean_image);
+    // Normalize teh image
+    if (!mean_image.empty()) {
+      predict.NormalizeInput(mean_image);
+    }
+
+    // Run the forward pass.
+    predict.RunForwardPass();
+  } catch (...) {
+    /*
+     * If underlying MXNet code has thrown an exception the error message is
+     * accessible through MXGetLastError() function.
+     */
+    LG << MXGetLastError();
   }
-
-  // Run the forward pass.
-  predict.RunForwardPass();
   return 0;
 }
