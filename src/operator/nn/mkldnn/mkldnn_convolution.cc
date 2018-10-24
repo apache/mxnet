@@ -160,10 +160,10 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     auto conv_pd = mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
     while (conv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(output) ||
-             conv_pd.diff_src_primitive_desc().get_size() != GetArraySize(data) ||
-             conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights)) {
-        CHECK(conv_pd.next_impl()) << "No implementation";
-      }
+           conv_pd.diff_src_primitive_desc().get_size() != GetArraySize(data) ||
+           conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights)) {
+      CHECK(conv_pd.next_impl()) << "No implementation";
+    }
     return conv_pd;
   } else {
     mkldnn::memory::dims dilates{0, 0};
@@ -174,10 +174,10 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
         mkldnn::padding_kind::zero);
     auto conv_pd = mkldnn::convolution_backward_data::primitive_desc(desc, engine, fwd_pd);
     while (conv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(output) ||
-             conv_pd.diff_src_primitive_desc().get_size() != GetArraySize(data) ||
-             conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights)) {
-        CHECK(conv_pd.next_impl()) << "No implementation";
-      }
+           conv_pd.diff_src_primitive_desc().get_size() != GetArraySize(data) ||
+           conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights)) {
+      CHECK(conv_pd.next_impl()) << "No implementation";
+    }
     return conv_pd;
   }
 }
@@ -204,10 +204,10 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
         data_md, weight_md, out_md, strides, padding, padding, mkldnn::padding_kind::zero);
     auto conv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
     while (conv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(output) ||
-             conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
-             conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
-        CHECK(conv_pd.next_impl()) << "No implementation";
-      }
+           conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
+           conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
+      CHECK(conv_pd.next_impl()) << "No implementation";
+    }
     return conv_pd;
   } else if (param.dilate.ndim() == 0) {
     auto bias_md = GetMemDesc(*bias);
@@ -216,10 +216,10 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
         mkldnn::padding_kind::zero);
     auto conv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
     while (conv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(output) ||
-             conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
-             conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
-        CHECK(conv_pd.next_impl()) << "No implementation";
-      }
+           conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
+           conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
+      CHECK(conv_pd.next_impl()) << "No implementation";
+    }
     return conv_pd;
   } else {
     mkldnn::memory::dims dilates{0, 0};
@@ -231,10 +231,10 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
           mkldnn::padding_kind::zero);
     auto conv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
     while (conv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(output) ||
-             conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
-             conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
-        CHECK(conv_pd.next_impl()) << "No implementation";
-      }
+           conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
+           conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
+      CHECK(conv_pd.next_impl()) << "No implementation";
+    }
     return conv_pd;
     } else {
       auto bias_md = GetMemDesc(*bias);
@@ -244,10 +244,10 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
                                                       mkldnn::padding_kind::zero);
     auto conv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
     while (conv_pd.diff_dst_primitive_desc().get_size() != GetArraySize(output) ||
-             conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
-             conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
-        CHECK(conv_pd.next_impl()) << "No implementation";
-      }
+           conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
+           conv_pd.diff_weights_primitive_desc().get_size() != GetArraySize(weights)) {
+      CHECK(conv_pd.next_impl()) << "No implementation";
+    }
     return conv_pd;
     }
   }

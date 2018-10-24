@@ -104,9 +104,9 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
       mkldnn::padding_kind::zero);
   auto deconv_pd = mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
   while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
-           deconv_pd.diff_src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
-           deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
-      CHECK(deconv_pd.next_impl()) << "No implementation";
+         deconv_pd.diff_src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+         deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+    CHECK(deconv_pd.next_impl()) << "No implementation";
   }
   return deconv_pd;
 }
