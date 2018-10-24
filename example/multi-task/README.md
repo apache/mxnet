@@ -8,5 +8,6 @@ For example:
 
 Should be jointly classified as 4, and Even.
 
-Please refer to the notebook for a fully worked example.
+In this example we don't expect the tasks to contribute to each other much, but for example multi-task learning has been successfully applied to the domain of image captioning. In [A Multi-task Learning Approach for Image Captioning](https://www.ijcai.org/proceedings/2018/0168.pdf) by Wei Zhao, Benyou Wang, Jianbo Ye, Min Yang, Zhou Zhao, Ruotian Luo, Yu Qiao, they train a network to jointly classify images and generate text captions
 
+Please refer to the notebook for a fully worked example.
