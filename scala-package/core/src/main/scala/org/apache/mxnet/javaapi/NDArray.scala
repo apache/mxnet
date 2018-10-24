@@ -132,7 +132,7 @@ object NDArray {
   /**
     * Returns the result of element-wise **greater than or equal to** (>=) comparison
     * operation with broadcasting.
-    * For each element in input arrays, return 1(true) if lhs elements are greater than equal to rhs,
+    * For each element in input arrays, return 1(true) if lhs elements are greater than equal to rhs
     * otherwise return 0(false).
     */
   def greaterEqual(lhs: NDArray, rhs: NDArray): NDArray
