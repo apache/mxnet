@@ -23,7 +23,7 @@ def quantize(F, x, bits, use_dorefa_weight_activation=False):
         return F.det_sign(x)
     elif bits < 32:
         if use_dorefa_weight_activation:
-            act_x = 0.5 * F.tanh(x) / F.max(F.abs(F.tanh(x))) + 0.5
+            act_x = 0.5 * F.broadcast_div(F.tanh(x), F.max(F.abs(F.tanh(x)))) + 0.5
             return 2 * quantize_k(act_x) - 1
         else:
             return quantize_k(x.clip(0, 1))
