@@ -73,7 +73,9 @@ public class ResourceScopeTestSuite {
         }
 
         assertEquals(list.size() , 10);
-        list.forEach(n -> assertTrue(n.verifyIsDisposed()));
+        for (TestNDArray item : list) {
+            assertTrue(item.verifyIsDisposed());
+        }
     }
 
     @Test
@@ -87,7 +89,9 @@ public class ResourceScopeTestSuite {
         }
 
         assertEquals(stringToNDArrayMap.size(), 10);
-        stringToNDArrayMap.forEach((key, value) ->  assertTrue(value.verifyIsDisposed()));
+        for (Map.Entry<String, TestNDArray> entry : stringToNDArrayMap.entrySet()) {
+            assertTrue(entry.getValue().verifyIsDisposed());
+        }
 
         Map<TestNDArray, String> ndArrayToStringMap = new HashMap<>();
 
@@ -98,7 +102,9 @@ public class ResourceScopeTestSuite {
         }
 
         assertEquals(ndArrayToStringMap.size(), 10);
-        ndArrayToStringMap.forEach((key, value) ->  assertTrue(key.verifyIsDisposed()));
+        for (Map.Entry<TestNDArray, String> entry : ndArrayToStringMap.entrySet()) {
+            assertTrue(entry.getKey().verifyIsDisposed());
+        }
 
     }
 }
