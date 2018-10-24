@@ -137,7 +137,10 @@ struct CsrTakeRowCountKernel {
   MSHADOW_XINLINE static void Map(int tid, RType* out_indptr,
                                   const RType* src_indptr, const IType* idx_ptr,
                                   const nnvm::dim_t num_rows) {
-    if (tid == 0) out_indptr[0] = 0;
+    if (tid == 0) {
+      out_indptr[0] = 0;
+      return;
+    }
     nnvm::dim_t idx = static_cast<nnvm::dim_t>(idx_ptr[tid - 1]);
     // clip mode
     if (clip) {
@@ -181,7 +184,7 @@ void TakeOpForwardCsrImpl<cpu>(const TakeParam& params,
   out.CheckAndAllocAuxData(kIndPtr, {Shape1(num_rows + 1)});
 
   MSHADOW_TYPE_SWITCH(idx.type_flag_, IType, {
-    MSHADOW_SGL_DBL_TYPE_SWITCH(arr.dtype(), DType, {
+    MSHADOW_TYPE_SWITCH(arr.dtype(), DType, {
       MSHADOW_IDX_TYPE_SWITCH(out.aux_type(kIdx), RType, {
         RType* out_indptr = out.aux_data(kIndPtr).dptr<RType>();
         const RType* src_indptr = arr.aux_data(kIndPtr).dptr<RType>();
