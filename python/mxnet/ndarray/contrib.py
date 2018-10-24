@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib NDArray API of MXNet."""
 import math
+import numpy as np
 from ..context import current_context
 from ..random import uniform
 from ..base import _as_list
@@ -28,7 +29,7 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -460,3 +461,65 @@ def cond(pred, then_func, else_func):
         return then_func()
     else:
         return else_func()
+
+def isinf(data, ctx=None):
+    """Checks whether a given NDArray has infinity or not
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+    ctx : Context
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray with 1 and 0 indicating whether infinite or not.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    >>> output = mx.nd.contrib.isinf(data)
+    >>> output
+    [1. 1. 1. 0.]
+    <NDArray 4 @cpu(0)>
+    """
+    if ctx is None:
+        ctx = current_context()
+    # any(x in data for x in [np.inf, -np.inf])
+    # abs(data) == np.inf > TypeError: bad operand type for abs(): 'NDArray'
+    # [abs(x) == np.inf for x in data] > TypeError: bad operand type for abs(): 'NDArray'
+    return ndarray.NDArray.abs(data) == np.inf
+
+def isfinite(data, ctx=None):
+    """Checks whether a given NDArray has finit value or not
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+    ctx : Context
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray with 1 and 0 indicating whether finite or not.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    >>> output = mx.nd.contrib.isfinite(data)
+    >>> output
+    [0. 0. 0. 1.]
+    <NDArray 4 @cpu(0)>
+    """
+    if ctx is None:
+        ctx = current_context()
+    # any(x in data for x in [np.inf, -np.inf])
+    # abs(data) == np.inf > TypeError: bad operand type for abs(): 'NDArray'
+    # [abs(x) == np.inf for x in data] > TypeError: bad operand type for abs(): 'NDArray'
+    return ndarray.NDArray.abs(data) != np.inf

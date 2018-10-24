@@ -1495,6 +1495,12 @@ def test_dlpack():
             mx.test_utils.assert_almost_equal(a_np, d_np)
             mx.test_utils.assert_almost_equal(a_np, e_np)
 
+@with_seed()
+def test_ndarray_is_inf():
+    shape = (3, 4, 2)
+    x = mx.nd.zeros(shape)
+    assert_almost_equal(mx.nd.contrib.isinf(x),False)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
