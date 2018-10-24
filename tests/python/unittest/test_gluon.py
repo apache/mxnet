@@ -2007,6 +2007,7 @@ def test_reshape_batchnorm_reshape_batchnorm():
 
 
 @with_seed()
+@unittest.skip('Flaky test: https://github.com/apache/incubator-mxnet/issues/12767')
 def test_slice_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
