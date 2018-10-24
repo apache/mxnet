@@ -175,7 +175,12 @@ def _recursive_fork_recordio(obj, depth, max_depth=1000):
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
     # re-fork a new recordio handler in new process if applicable
-    _recursive_fork_recordio(dataset, 0, 1000)
+    # for a dataset with transform function, the depth of MXRecordIO is 1
+    # for a lazy transformer, the depth is 2
+    # for a user defined transformer, the depth is unknown, try a reasonable depth
+    limit = sys.getrecursionlimit()
+    max_recursion_depth = min(limit - 5, max(10, limit // 2))
+    _recursive_fork_recordio(dataset, 0, max_recursion_depth)
 
     while True:
         idx, samples = key_queue.get()

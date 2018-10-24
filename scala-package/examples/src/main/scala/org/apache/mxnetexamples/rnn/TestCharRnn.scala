@@ -18,8 +18,11 @@
 package org.apache.mxnetexamples.rnn
 
 import org.apache.mxnet._
+import org.apache.mxnetexamples.InferBase
+import org.apache.mxnetexamples.benchmark.CLIParserBase
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
+
 import scala.collection.JavaConverters._
 
 /**
@@ -83,7 +86,7 @@ object TestCharRnn {
   }
 
   def main(args: Array[String]): Unit = {
-    val stcr = new TestCharRnn
+    val stcr = new CLIParser
     val parser: CmdLineParser = new CmdLineParser(stcr)
     try {
       parser.parseArgument(args.toList.asJava)
@@ -99,11 +102,68 @@ object TestCharRnn {
   }
 }
 
-class TestCharRnn {
+class CLIParser extends CLIParserBase {
   @Option(name = "--data-path", usage = "the input train data file")
-  private val dataPath: String = "./data/obama.txt"
+  val dataPath: String = "./data/obama.txt"
   @Option(name = "--model-prefix", usage = "the model prefix")
-  private val modelPrefix: String = "./model/obama"
+  val modelPrefix: String = "./model/obama"
   @Option(name = "--starter-sentence", usage = "the starter sentence")
-  private val starterSentence: String = "The joke"
+  val starterSentence: String = "The joke"
+}
+
+class TestCharRnn(CLIParser: CLIParser) extends InferBase {
+
+  private var vocab : Map[String, Int] = null
+
+  override def loadModel(context: Array[Context], batchInference : Boolean = false): Any = {
+    val batchSize = 32
+    val buckets = List(129)
+    val numHidden = 512
+    val numEmbed = 256
+    val numLstmLayer = 3
+    val (_, argParams, _) = Model.loadCheckpoint(CLIParser.modelPrefix, 75)
+    this.vocab = Utils.buildVocab(CLIParser.dataPath)
+    var ctx = Context.cpu()
+    if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+      System.getenv("SCALA_TEST_ON_GPU").toInt == 1) {
+      ctx = Context.gpu()
+    }
+    val model = new RnnModel.LSTMInferenceModel(numLstmLayer, vocab.size + 1,
+      numHidden = numHidden, numEmbed = numEmbed,
+      numLabel = vocab.size + 1, argParams = argParams, dropout = 0.2f, ctx = ctx)
+    model
+  }
+
+  override def loadSingleData(): Any = {
+    val revertVocab = Utils.makeRevertVocab(vocab)
+    revertVocab
+  }
+
+  override def runSingleInference(loadedModel: Any, input: Any): Any = {
+    val model = loadedModel.asInstanceOf[RnnModel.LSTMInferenceModel]
+    val revertVocab = input.asInstanceOf[Map[Int, String]]
+    // generate a sequence of 1200 chars
+    val seqLength = 1200
+    val inputNdarray = NDArray.zeros(1)
+    // Feel free to change the starter sentence
+    var output = CLIParser.starterSentence
+    val randomSample = true
+    var newSentence = true
+    val ignoreLength = output.length()
+
+    for (i <- 0 until seqLength) {
+      if (i <= ignoreLength - 1) Utils.makeInput(output(i), vocab, inputNdarray)
+      else Utils.makeInput(output.takeRight(1)(0), vocab, inputNdarray)
+      val prob = model.forward(inputNdarray, newSentence)
+      newSentence = false
+      val nextChar = Utils.makeOutput(prob, revertVocab, randomSample)
+      if (nextChar == "") newSentence = true
+      if (i >= ignoreLength) output = output ++ nextChar
+    }
+    output
+  }
+
+  override def loadBatchFileList(batchSize: Int): List[Any] = null
+  override def loadInputBatch(source: Any): Any = null
+  override def runBatchInference(loadedModel: Any, input: Any): Any = null
 }

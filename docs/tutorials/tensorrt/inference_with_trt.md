@@ -29,6 +29,7 @@ TensorRT is an inference only library, so for the purposes of this blog post we 
 import mxnet as mx
 from mxnet.gluon.model_zoo import vision
 import time
+import os
 
 batch_shape = (1, 3, 224, 224)
 resnet18 = vision.resnet18_v2(pretrained=True)

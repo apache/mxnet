@@ -356,7 +356,6 @@ inline void MultiBoxTargetForward(const Tensor<gpu, 2, DType> &loc_target,
   const int num_anchors = anchors.size(0);
   const int num_classes = cls_preds.size(1);
   CHECK_GE(num_batches, 1);
-  CHECK_GT(num_labels, 2);
   CHECK_GE(num_anchors, 1);
   CHECK_EQ(variances.ndim(), 4);
 

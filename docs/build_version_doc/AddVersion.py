@@ -47,7 +47,7 @@ if __name__ == '__main__':
                          'style="position: relative">' \
                          '<a href="#" tabindex="-1">Versions(%s)</a><ul class="dropdown-menu">' % (args.current_version)
     for i, tag in enumerate(tag_list):
-        url = root_url if tag == args.tag_default else root_url + 'versions/%s/index.html' % (tag)
+        url = root_url + 'versions/%s/index.html' % (tag)
         version_str += '<li><a class="main-nav-link" href=%s>%s</a></li>' % (url, tag)
         version_str_mobile += '<li><a tabindex="-1" href=%s>%s</a></li>' % (url, tag)
     version_str += '</ul></span>'

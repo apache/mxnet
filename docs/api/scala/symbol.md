@@ -22,10 +22,10 @@ The following example configures a two-layer neural network.
 ```scala
     scala> import org.apache.mxnet._
     scala> val data = Symbol.Variable("data")
-    scala> val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    scala> val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    scala> val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    scala> val net = Symbol.SoftmaxOutput(name = "out")()(Map("data" -> fc2))
+    scala> val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
+    scala> val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
+    scala> val fc2 = Symbol.api.FullyConnected(some(act1), num_hidden = 64, name = "fc2")
+    scala> val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
     scala> :type net
     org.apache.mxnet.Symbol
 ```
@@ -48,8 +48,7 @@ You can add an attribute to a symbol by providing an attribute dictionary when y
 
 ```scala
     val data = Symbol.Variable("data", Map("mood"-> "angry"))
-    val op   = Symbol.Convolution()()(
-      Map("data" -> data, "kernel" -> "(1, 1)", "num_filter" -> 1, "mood"-> "so so"))
+    val op = Symbol.api.Convolution(Some(data), kernel = Shape(1, 1), num_filter = 1, attr = Map("mood" -> "so so"))
 ```
 For proper communication with the C++ backend, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use `attr(key)`:
 
@@ -114,10 +113,10 @@ To group the symbols together, use the [mxnet.symbol.Group](#mxnet.symbol.Group)
 ```scala
     scala> import org.apache.mxnet._
     scala> val data = Symbol.Variable("data")
-    scala> val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    scala> val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    scala> val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    scala> val net = Symbol.SoftmaxOutput(name = "out")()(Map("data" -> fc2))
+    scala> val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
+    scala> val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
+    scala> val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
+    scala> val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
     scala> val group = Symbol.Group(fc1, net)
     scala> group.listOutputs()
     IndexedSeq[String] = ArrayBuffer(fc1_output, out_output)
