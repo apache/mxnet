@@ -57,7 +57,6 @@ def get_cifar10(data_dir):
         os.rmdir(os.path.join(dirname, "cifar"))
     os.chdir(cwd)
 
-# data
 def get_cifar10_iterator(args, kv):
     data_shape = (3, 28, 28)
     data_dir = args.data_dir
