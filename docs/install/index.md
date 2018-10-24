@@ -598,17 +598,6 @@ MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.
 <div class="cpu">
 </br>
 
-
-Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
-You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
-
-```r
-cran <- getOption("repos")
-cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/"
-options(repos = cran)
-install.packages("mxnet")
-```
-
 To run MXNet you also should have OpenCV and OpenBLAS installed. You may install them with `brew` as follows:
 
 ```bash
@@ -620,6 +609,16 @@ Add a soft link to the OpenBLAS installation. This example links the 0.3.1 versi
 
 ```bash
 ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+```
+
+Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
+You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
+
+```r
+cran <- getOption("repos")
+cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CRAN/"
+options(repos = cran)
+install.packages("mxnet")
 ```
 
 </div> <!-- END of CPU -->
