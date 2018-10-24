@@ -12,7 +12,7 @@ Clustering is central to many data-driven application domains and has been studi
 
 ## Data
 
-The script is using MNIST dataset
+The script is using MNIST dataset.
 
 ## Usage
 run `python dec.py`
