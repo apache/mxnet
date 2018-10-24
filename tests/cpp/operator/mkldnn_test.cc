@@ -393,4 +393,24 @@ TEST(MKLDNN_NDArray, GetTestOutputArraysConcat) {
   }
 }
 
+TEST(MKLDNN_NDArray, CopyFrom) {
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays();
+  for (auto &in_arr : in_arrs) {
+    if (in_arr.arr.IsMKLDNNData() && in_arr.arr.IsView())
+      continue;
+    std::vector<NDArrayAttrs> out_arrs = GetTestOutputArrays(in_arr.arr.shape(), pds);
+    for (auto &out_arr : out_arrs) {
+      const mkldnn::memory *mem = in_arr.arr.GetMKLDNNData();
+      out_arr.arr.CopyFrom(*mem);
+      MKLDNNStream::Get()->Submit();
+      std::vector<NDArray *> inputs(1);
+      inputs[0] = &in_arr.arr;
+      VerifyCopyResult(inputs, {&out_arr.arr});
+    }
+  }
+}
+
 #endif
