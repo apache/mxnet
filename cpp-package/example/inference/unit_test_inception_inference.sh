@@ -27,7 +27,7 @@ make all USE_MXNET_CPU=1
 
 
 # Running the example with dog image.
-LD_LIBRARY_PATH=../../../lib ./inception_inference --symbol "./model/Inception-BN-Symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+LD_LIBRARY_PATH=../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
 result=`grep -c "pug-dog" inception_inference.log`
 if [ $result == 1 ];
 then
