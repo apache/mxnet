@@ -537,7 +537,6 @@ OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped |
       ArrayTypes::NormalReused |
       ArrayTypes::MKLDNNReused |
       ArrayTypes::NormalReshapedReused;
@@ -578,7 +577,6 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped |
       ArrayTypes::NormalReused |
       ArrayTypes::MKLDNNReused |
       ArrayTypes::NormalReshapedReused;
