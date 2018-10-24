@@ -50,6 +50,6 @@ For namespaces, classes, and code files for the MXNet C++ package, see the  foll
 The classes and functions in MXNet C++ API are available under **mxnet::cpp** namespace. The links to the documenation are as follows:
 
 1. [Namespaces](http://mxnet.io/doxygen/namespaces.html)
-2. [Classes](http://mxnet.io/doxygen/annotated.html)
+2. [Classes in mxnet::cpp namespace](http://mxnet.io/doxygen/namespacemxnet_1_1cpp.html)
 3. [Code Files](http://mxnet.io/doxygen/files.html)
 4. [MXNet CPP Package](https://github.com/dmlc/mxnet/tree/master/cpp-package)
