@@ -21,8 +21,8 @@ from mxnet.gluon import Block, nn, rnn
 import mxnet.optimizer as optim
 import sys
 
-# This example demonstrates how LSTM-CRF model can be implemented in Gluon to perform
-# noun-phrase chunking as a sequence labeling task.
+# This example demonstrates how the LSTM-CRF model can be implemented 
+# in Gluon to perform noun-phrase chunking as a sequence labeling task.
 
 mx.random.seed(1)
 
