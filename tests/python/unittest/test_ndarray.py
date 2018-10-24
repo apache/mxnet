@@ -1497,9 +1497,17 @@ def test_dlpack():
 
 @with_seed()
 def test_ndarray_is_inf():
-    shape = (3, 4, 2)
-    x = mx.nd.zeros(shape)
-    assert_almost_equal(mx.nd.contrib.isinf(x),False)
+    data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    output = mx.nd.contrib.isinf(data)
+    expected_output = mx.nd.array([1,1,1,0])
+    assert_almost_equal(output.asnumpy(), expected_output.asnumpy())
+
+@with_seed()
+def test_ndarray_is_finite():
+    data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    output = mx.nd.contrib.isfinite(data)
+    expected_output = mx.nd.array([0,0,0,1])
+    assert_almost_equal(output.asnumpy(), expected_output.asnumpy())
 
 if __name__ == '__main__':
     import nose
