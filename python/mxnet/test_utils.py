@@ -1379,7 +1379,7 @@ def list_gpus():
     for cmd in nvidia_smi:
         try:
             re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
-        except (subprocess.CalledProcessError, OSError) as e:
+        except (subprocess.CalledProcessError, OSError):
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
