@@ -207,7 +207,7 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
     while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
            pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
            pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
-      CHECK(pd.next_imple()) << "No implementation";
+      CHECK(pd.next_impl()) << "No implementation";
     }
 
     std::vector<mkldnn::memory::format> ret(2);
@@ -236,7 +236,7 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
     while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
            pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
            pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
-      CHECK(pd.next_imple()) << "No implementation";
+      CHECK(pd.next_impl()) << "No implementation";
     }
 
     std::vector<mkldnn::memory::format> ret(1);
