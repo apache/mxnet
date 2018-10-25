@@ -1509,6 +1509,15 @@ def test_dtype():
         assert np.dtype(dtype).name == np.dtype(data.dtype).name
         assert np.dtype(dtype).name == np.dtype(data_np.dtype).name
         mx.test_utils.assert_almost_equal(data_np, values)
+    """Test case from https://github.com/apache/incubator-mxnet/issues/12843"""
+    try:
+        import scipy as sp
+        one = np.ones((2, 2), dtype='int64')
+        sp_one = sp.sparse.csr_matrix(one).data
+        mx.nd.array(sp_one, dtype=sp_one.dtype)
+        assert np.dtype(dtype).name == 'int64'
+    except ImportError:
+        pass
 
 
 if __name__ == '__main__':
