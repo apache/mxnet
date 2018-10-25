@@ -808,7 +808,7 @@ class CosineEmbeddingLoss(Loss):
         super(CosineEmbeddingLoss, self).__init__(weight, batch_axis, **kwargs)
         self._margin = margin
 
-    def hybrid_forward(self, F, input1, input2, label):
+    def hybrid_forward(self, F, input1, input2, label, sample_weight=None):
         input1 = _reshape_like(F, input1, input2)
         label = label.reshape((-1, 1))
         cos_sim = self._cosine_similarity(F, input1, input2)
@@ -821,7 +821,9 @@ class CosineEmbeddingLoss(Loss):
         else:
             z_array = F.zeros((1, 1))
         cos_sim_b = F.broadcast_maximum(z_array, y_minus_1 * (cos_sim - self._margin), axis=1)
-        return cos_sim_a + cos_sim_b
+        loss = cos_sim_a + cos_sim_b
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return loss
 
     def _cosine_similarity(self, F, x, y, axis=-1):
         # Calculates the cosine similarity between 2 vectors
