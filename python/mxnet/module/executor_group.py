@@ -412,7 +412,7 @@ class DataParallelExecutorGroup(object):
         for exec_ in self.execs:
             exec_.copy_params_from(arg_params, aux_params, allow_extra_params=allow_extra)
 
-    def get_params(self, arg_params, aux_params, copy_to_cpu):
+    def get_params(self, arg_params, aux_params):
         """ Copy data from each executor to `arg_params` and `aux_params`.
 
         Parameters
@@ -421,29 +421,17 @@ class DataParallelExecutorGroup(object):
             Target parameter arrays.
         aux_params : list of NDArray
             Target aux arrays.
-        copy_to_cpu : boolean
-            Whether or not to copy parameters to CPU. (default to 'true')
 
         Notes
         -----
         - This function will inplace update the NDArrays in arg_params and aux_params.
         """
         for name, block in zip(self.param_names, self.param_arrays):
-            if copy_to_cpu:
-                context = ctx.cpu()
-            else:
-                context = block[0].context
-            weight = sum(w.copyto(context) for w in block) / len(block)
+            weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
             weight.astype(arg_params[name].dtype).copyto(arg_params[name])
-            arg_params[name] = arg_params[name].as_in_context(context)
         for name, block in zip(self.aux_names, self.aux_arrays):
-            if copy_to_cpu:
-                context = ctx.cpu()
-            else:
-                context = block[0].context
-            weight = sum(w.copyto(context) for w in block) / len(block)
+            weight = sum(w.copyto(ctx.cpu()) for w in block) / len(block)
             weight.astype(aux_params[name].dtype).copyto(aux_params[name])
-            aux_params[name] = aux_params[name].as_in_context(context)
 
     def forward(self, data_batch, is_train=None):
         """Split `data_batch` according to workload and run forward on each devices.
