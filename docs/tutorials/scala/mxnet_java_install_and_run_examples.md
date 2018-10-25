@@ -18,9 +18,9 @@ If you are using a computer with Ubuntu16.04 or Mac, you can install IntelliJ to
 
 3. In the next window choose your `Project name` and the `Project location` and click on `Finish`.
 
-4. Let’s add the Java Inference API jars that we grabbed from Maven Central. At the top of the window, Go to the `File -> Project Structure`. In the popup window that opens up, click on `Libraries -> +` and select the path to the jar files downloaded. Click `Apply` and then click `OK`.
+4. Let's add the Java Inference API jars that we grabbed from Maven Central. At the top of the window, Go to the `File -> Project Structure`. In the popup window that opens up, click on `Libraries -> +` and select the path to the jar files downloaded. Click `Apply` and then click `OK`.
 
-6. Create a new Java class under the folder `your-project-name/src`. Let’s call this class `JavaSample.java`. Type in the following code snippet and run it. In this code snippet, we create an NDArray object in Java and print its shape.
+6. Create a new Java class under the folder `your-project-name/src`. Let's call this class `JavaSample.java`. Type in the following code snippet and run it. In this code snippet, we create an NDArray object in Java and print its shape.
 ```java
 import org.apache.mxnet.javaapi.Context;
 import org.apache.mxnet.javaapi.NDArray;
