@@ -204,6 +204,12 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
                                            data_md, weight_md, out_md, strides,
                                            padding, padding, mkldnn::padding_kind::zero);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
+    while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(pd.next_imple()) << "No implementation";
+    }
+
     std::vector<mkldnn::memory::format> ret(2);
     ret[0] = static_cast<mkldnn::memory::format>(pd.dst_primitive_desc().desc().data.format);
     ret[1] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
@@ -227,6 +233,12 @@ static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dims, int 
                                            data_md, weight_md, out_md, strides,
                                            padding, padding, mkldnn::padding_kind::zero);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
+    while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(pd.next_imple()) << "No implementation";
+    }
+
     std::vector<mkldnn::memory::format> ret(1);
     ret[0] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
     printf("format: %d\n", ret[0]);
