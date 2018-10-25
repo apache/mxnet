@@ -117,9 +117,10 @@ inline bool NeedQuantize(NodePtr node, const std::unordered_set<std::string>& ex
 }
 
 Graph QuantizeGraph(Graph &&src) {
-  static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
-  static auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
-  static auto& avoid_quantize_input_map =
+  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  static const auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
+  static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
+  static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
   auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
@@ -130,6 +131,7 @@ Graph QuantizeGraph(Graph &&src) {
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
   // node. The existing key's value may be updated with the newly created quantize/dequantize op.
   std::unordered_map<Node*, NodePtr> mirror_map;
+  nnvm::NodeEntryMap<NodeEntry> multiple_outputs_entry_map;
   DFSVisit(src.outputs, [&](const NodePtr& node) {
     NodePtr new_node = Node::Create();
     // If the currently visited node needs quantization, insert a quantize op node before the
@@ -156,29 +158,53 @@ Graph QuantizeGraph(Graph &&src) {
           new_node->inputs.emplace_back(mirror_entry);
         } else if (!NeedQuantize(e.node, excluded_nodes) &&
                    (mirror_node->op() == nullptr ||
-                    mirror_node->op()->name != "_contrib_quantize")) {
+                    mirror_node->op()->name != "_contrib_quantize") &&
+                    (!multiple_outputs_entry_map.count(e))) {
+          // When there're multiple entrys outgoing from a single node, need to add entry
+          // index (or output name) into quantize/min/max node to distinguish them.
+          // Or the output name is not ending with 'output', just put the output name here
+          // to better align with calibration phase. No need to change name to weights/bias.
+          std::string subfix = "";
+          if (mirror_node->op() != nullptr) {
+            auto list_output_names_func = flist_outputs.get(e.node->op(), nullptr);
+            if (list_output_names_func != nullptr) {
+              std::vector<std::string> names = list_output_names_func(e.node->attrs);
+              subfix = "_" + names[e.index];
+            } else {
+              subfix = "_" + std::to_string(e.index);
+            }
+          }
+
           NodePtr quantize_node = InsertNode("_contrib_quantize",
-            e.node->attrs.name + "_quantize", new_node, mirror_entry);
+            e.node->attrs.name + subfix + "_quantize", new_node, mirror_entry);
           quantize_node->attrs.dict["out_type"] = quantized_dtype;
           quantize_node->op()->attr_parser(&(quantize_node->attrs));
           if (calib_quantize) {
-            NodePtr min_var = CreateNode("nullptr", e.node->attrs.name + "_min");
+            NodePtr min_var = CreateNode("nullptr", e.node->attrs.name + subfix + "_min");
             quantize_node->inputs.emplace_back(NodeEntry{min_var, 0, 0});
-            NodePtr max_var = CreateNode("nullptr", e.node->attrs.name + "_max");
+            NodePtr max_var = CreateNode("nullptr", e.node->attrs.name + subfix + "_max");
             quantize_node->inputs.emplace_back(NodeEntry{max_var, 0, 0});
           } else {
             NodePtr min_node = InsertNode("min",
-                e.node->attrs.name + "_min", quantize_node, mirror_entry);
+                e.node->attrs.name + subfix + "_min", quantize_node, mirror_entry);
             min_node->op()->attr_parser(&(min_node->attrs));
 
             NodePtr max_node = InsertNode("max",
-                e.node->attrs.name + "_max", quantize_node, mirror_entry);
+                e.node->attrs.name + subfix + "_max", quantize_node, mirror_entry);
             max_node->op()->attr_parser(&(max_node->attrs));
           }
-          mirror_map[e.node.get()] = std::move(quantize_node);
+          // Only update the mapping when there's only 1 output from e.node.
+          // Need to insert "_contrib_quantize"/"min"/"max" for each entry when there's more than one.
+          if (e.node->num_outputs() == 1) {
+            mirror_map[e.node.get()] = std::move(quantize_node);
+          } else {
+            multiple_outputs_entry_map[e] = NodeEntry{quantize_node, 0, e.version};
+          }
         } else if (mirror_node->op() != nullptr
                    && mirror_node->op()->name == "_contrib_dequantize") {
           new_node->inputs.emplace_back(NodeEntry{mirror_node->inputs[0].node, e.index, e.version});
+        } else if (multiple_outputs_entry_map.count(e)) {
+          new_node->inputs.emplace_back(multiple_outputs_entry_map[e]);
         } else {
           // If the entry e's node needs quantization, or mirror_entry is from a quantize op,
           // simply add mirror_entry to the input of the new_node.
@@ -215,12 +241,19 @@ Graph QuantizeGraph(Graph &&src) {
           min_index = num_outputs + 2 * e.index;
           max_index = num_outputs + 2 * e.index + 1;
         } else {
-          CHECK(mirror_node->op() != nullptr &&
-                mirror_node->op()->name == "_contrib_quantize")
+          CHECK((mirror_node->op() != nullptr &&
+                mirror_node->op()->name == "_contrib_quantize") ||
+                (multiple_outputs_entry_map.count(e)))
               << "The input is not quantize or quantized_op";
         }
-        new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-        new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
+        if (multiple_outputs_entry_map.count(e)) {
+          auto quantize_entry = multiple_outputs_entry_map[e];
+          new_node->inputs.emplace_back(NodeEntry{quantize_entry.node, min_index, 0});
+          new_node->inputs.emplace_back(NodeEntry{quantize_entry.node, max_index, 0});
+        } else {
+          new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
+          new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
+        }
       }
 
       // If the new_node op registered attr FNeedRequantize, insert requantize node after it.

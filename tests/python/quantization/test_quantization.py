@@ -416,6 +416,21 @@ def get_fp32_residual():
                                out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
     return sym
 
+def get_fp32_sym_with_multiple_outputs(length=1):
+    data = mx.sym.Variable('data')
+    inputs = list(mx.sym.split(data, axis=0, num_outputs=length, squeeze_axis=1))
+
+    _conv_outs = []
+    for i in range(length):
+        _conv_outs.append(mx.sym.Convolution(data=inputs[i], kernel=(1, 1), num_filter=16, name='conv_{0}'.format(i)))
+    conv_out = [mx.sym.expand_dims(i, axis=0) for i in _conv_outs]
+    conv_out = mx.sym.Concat(*conv_out, dim=0)
+    reshape_out = mx.sym.reshape(data=conv_out, shape=((length, -1)), name='reshape')
+    fc_out = mx.sym.FullyConnected(reshape_out, num_hidden=10, flatten=True, name='fc')
+    sym= mx.sym.SoftmaxOutput(fc_out, grad_scale=1, ignore_label=-1, multi_output=False,
+                              out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
+    return sym
+
 @with_seed()
 def test_quantize_model():
     def check_quantize_model(qdtype):
@@ -447,52 +462,60 @@ def test_quantize_model():
                     assert v['out_type'] == qdtype
 
         sym = get_fp32_sym()
-        mod = Module(symbol=sym)
         batch_size = 4
-        data_shape = (batch_size, 4, 10, 10)
         label_shape = (batch_size, 10)
-        mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
-        mod.init_params()
-        arg_params, aux_params = mod.get_params()
-        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
-                                                                         arg_params=arg_params,
-                                                                         aux_params=aux_params,
-                                                                         ctx=mx.current_context(),
-                                                                         quantized_dtype=qdtype,
-                                                                         calib_mode='none')
-        check_params(arg_params, qarg_params, qsym)
-        check_params(aux_params, qaux_params)
+        data_shape = (batch_size, 4, 10, 10)
 
-        calib_data = mx.nd.random.uniform(shape=data_shape)
-        calib_data = NDArrayIter(data=calib_data)
-        calib_data = DummyIter(calib_data)
-        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
-                                                                         arg_params=arg_params,
-                                                                         aux_params=aux_params,
-                                                                         ctx=mx.current_context(),
-                                                                         quantized_dtype=qdtype,
-                                                                         calib_mode='naive',
-                                                                         calib_data=calib_data,
-                                                                         num_calib_examples=20)
-        check_params(arg_params, qarg_params, qsym)
-        check_params(aux_params, qaux_params)
-        check_qsym_calibrated(qsym)
-        check_qsym_qdtype(qsym, qdtype)
+        length = batch_size  # specify num of outputs from split op
+        msym = get_fp32_sym_with_multiple_outputs(length)
+        msym_label_shape = (length, 10)
+        msym_data_shape = (length, 4, 4, 10, 10)
+
+        for s, dshape, lshape in zip((sym, msym), (data_shape, msym_data_shape),
+                                     (label_shape, msym_label_shape)):
+            mod = Module(symbol=s)
+            mod.bind(data_shapes=[('data', dshape)], label_shapes=[('softmax_label', lshape)])
+            mod.init_params()
+            arg_params, aux_params = mod.get_params()
+            qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
+                                                                             arg_params=arg_params,
+                                                                             aux_params=aux_params,
+                                                                             ctx=mx.current_context(),
+                                                                             quantized_dtype=qdtype,
+                                                                             calib_mode='none')
+            check_params(arg_params, qarg_params, qsym)
+            check_params(aux_params, qaux_params)
+
+            calib_data = mx.nd.random.uniform(shape=dshape)
+            calib_data = NDArrayIter(data=calib_data, batch_size=batch_size)
+            calib_data = DummyIter(calib_data)
+            qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
+                                                                             arg_params=arg_params,
+                                                                             aux_params=aux_params,
+                                                                             ctx=mx.current_context(),
+                                                                             quantized_dtype=qdtype,
+                                                                             calib_mode='naive',
+                                                                             calib_data=calib_data,
+                                                                             num_calib_examples=20)
+            check_params(arg_params, qarg_params, qsym)
+            check_params(aux_params, qaux_params)
+            check_qsym_calibrated(qsym)
+            check_qsym_qdtype(qsym, qdtype)
 
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
 
 @with_seed()
-def test_quantize_residual_unit():
+def test_quantize_model_with_forward():
     def check_quantize_model(qdtype):
         if is_test_for_native_cpu():
-            print('skipped testing quantized_residual_unit for native cpu since it is not supported yet')
+            print('skipped testing test_quantize_model_with_forward for native cpu since it is not supported yet')
             return
         elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantized_residual_unit for mkldnn cpu int8 since it is not supported yet')
+            print('skipped testing test_quantize_model_with_forward for mkldnn cpu int8 since it is not supported yet')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
-            print('skipped testing quantized_residual_unit for gpu uint8 since it is not supported yet')
+            print('skipped testing test_quantize_model_with_forward for gpu uint8 since it is not supported yet')
             return
 
         def check_params(params, qparams, qsym=None):
@@ -534,46 +557,54 @@ def test_quantize_residual_unit():
             for output in mod.get_outputs():
                 output.wait_to_read()
 
-
         sym = get_fp32_residual()
-        mod = Module(symbol=sym)
         batch_size = 4
         data_shape = (batch_size, 4, 10, 10)
         label_shape = (batch_size, 10)
-        mod.bind(data_shapes=[('data', data_shape)], label_shapes=[('softmax_label', label_shape)])
-        mod.init_params()
-        arg_params, aux_params = mod.get_params()
-        excluded_sym_names = []
-        if mx.current_context() == mx.cpu():
-           excluded_sym_names += ['fc']
-        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
-                                                                         arg_params=arg_params,
-                                                                         aux_params=aux_params,
-                                                                         excluded_sym_names=excluded_sym_names,
-                                                                         ctx=mx.current_context(),
-                                                                         quantized_dtype=qdtype,
-                                                                         calib_mode='none')
-        check_params(arg_params, qarg_params, qsym)
-        check_params(aux_params, qaux_params)
-        check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, label_shape)
 
-        calib_data = mx.nd.random.uniform(shape=data_shape)
-        calib_data = NDArrayIter(data=calib_data)
-        calib_data = DummyIter(calib_data)
-        qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
-                                                                         arg_params=arg_params,
-                                                                         aux_params=aux_params,
-                                                                         excluded_sym_names=excluded_sym_names,
-                                                                         ctx=mx.current_context(),
-                                                                         quantized_dtype=qdtype,
-                                                                         calib_mode='naive',
-                                                                         calib_data=calib_data,
-                                                                         num_calib_examples=20)
-        check_params(arg_params, qarg_params, qsym)
-        check_params(aux_params, qaux_params)
-        check_qsym_calibrated(qsym)
-        check_qsym_qdtype(qsym, qdtype)
-        check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, label_shape)
+        length = batch_size  # specify num of outputs from split op
+        msym = get_fp32_sym_with_multiple_outputs(length)
+        msym_label_shape = (length, 10)
+        msym_data_shape = (length, 4, 4, 10, 10)
+
+        for s, dshape, lshape in zip((sym, msym), (data_shape, msym_data_shape),
+                                     (label_shape, msym_label_shape)):
+            mod = Module(symbol=s)
+            mod.bind(data_shapes=[('data', dshape)], label_shapes=[('softmax_label', lshape)])
+
+            mod.init_params()
+            arg_params, aux_params = mod.get_params()
+            excluded_sym_names = []
+            if mx.current_context() == mx.cpu():
+               excluded_sym_names += ['fc']
+            qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
+                                                                             arg_params=arg_params,
+                                                                             aux_params=aux_params,
+                                                                             excluded_sym_names=excluded_sym_names,
+                                                                             ctx=mx.current_context(),
+                                                                             quantized_dtype=qdtype,
+                                                                             calib_mode='none')
+            check_params(arg_params, qarg_params, qsym)
+            check_params(aux_params, qaux_params)
+            check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
+
+            calib_data = mx.nd.random.uniform(shape=dshape)
+            calib_data = NDArrayIter(data=calib_data, batch_size=batch_size)
+            calib_data = DummyIter(calib_data)
+            qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
+                                                                             arg_params=arg_params,
+                                                                             aux_params=aux_params,
+                                                                             excluded_sym_names=excluded_sym_names,
+                                                                             ctx=mx.current_context(),
+                                                                             quantized_dtype=qdtype,
+                                                                             calib_mode='naive',
+                                                                             calib_data=calib_data,
+                                                                             num_calib_examples=20)
+            check_params(arg_params, qarg_params, qsym)
+            check_params(aux_params, qaux_params)
+            check_qsym_calibrated(qsym)
+            check_qsym_qdtype(qsym, qdtype)
+            check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
 
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)
