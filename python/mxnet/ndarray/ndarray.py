@@ -66,9 +66,11 @@ _DTYPE_NP_TO_MX = {
     np.int64: 6,
 }
 
+# pylint: disable= redefined-outer-name
 _DTYPE_NAME_NP_TO_MX = dict(
     [(np.dtype(k).name, v) if k is not None else (None, v) \
     for k, v in _DTYPE_NP_TO_MX.items()])
+# pylint: enable= redefined-outer-name
 
 _DTYPE_MX_TO_NP = {
     -1: None,
