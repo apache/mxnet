@@ -62,7 +62,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   double eps;
   float momentum;
   bool fix_gamma;
-  bool fix_beta;
   bool use_global_stats;
   bool output_mean_var;
   int axis;
@@ -76,8 +75,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .describe("Momentum for moving average");
     DMLC_DECLARE_FIELD(fix_gamma).set_default(true)
     .describe("Fix gamma while training");
-    DMLC_DECLARE_FIELD(fix_beta).set_default(false)
-    .describe("Fix beta while training");
     DMLC_DECLARE_FIELD(use_global_stats).set_default(false)
     .describe("Whether use global moving statistics instead of local batch-norm. "
               "This will force change batch-norm into a scale shift operator.");
@@ -93,7 +90,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     return this->eps == other.eps &&
            this->momentum == other.momentum &&
            this->fix_gamma == other.fix_gamma &&
-           this->fix_beta == other.fix_beta &&
            this->use_global_stats == other.use_global_stats &&
            this->output_mean_var == other.output_mean_var &&
            this->axis == other.axis &&
@@ -111,7 +107,6 @@ struct hash<mxnet::op::BatchNormParam> {
     size_t ret = 0;
     ret = dmlc::HashCombine(ret, val.momentum);
     ret = dmlc::HashCombine(ret, val.fix_gamma);
-    ret = dmlc::HashCombine(ret, val.fix_beta);
     ret = dmlc::HashCombine(ret, val.use_global_stats);
     ret = dmlc::HashCombine(ret, val.output_mean_var);
     ret = dmlc::HashCombine(ret, val.axis);

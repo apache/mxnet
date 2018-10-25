@@ -153,10 +153,10 @@ struct Context {
     return dev_type;
   }
   /*!
-   * \brief Returns dev_id for kGPU, 0 otherwise
+   * \brief Returns dev_id for kGPU and kCPUPinned, 0 otherwise
    */
   inline int real_dev_id() const {
-    if (dev_type == kGPU) return dev_id;
+    if (dev_type == kCPUPinned || dev_type == kGPU) return dev_id;
     return 0;
   }
   /*!

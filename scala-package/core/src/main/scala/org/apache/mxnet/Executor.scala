@@ -45,7 +45,7 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) extends WarnIfNotDisposed {
+                              private[mxnet] val symbol: Symbol) extends NativeResource {
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -59,14 +59,15 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
-  private var disposed = false
-  protected def isDisposed = disposed
-
-  def dispose(): Unit = {
-    if (!disposed) {
-      outputs.foreach(_.dispose())
-      _LIB.mxExecutorFree(handle)
-      disposed = true
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
+  // cannot determine the off-heap size of this object
+  override val bytesAllocated: Long = 0
+  override val ref: NativeResourceRef = super.register()
+  override def dispose(): Unit = {
+    if (!super.isDisposed) {
+      super.dispose()
+      outputs.foreach(o => o.dispose())
     }
   }
 
@@ -305,4 +306,5 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     checkCall(_LIB.mxExecutorPrint(handle, str))
     str.value
   }
+
 }

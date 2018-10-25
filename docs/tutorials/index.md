@@ -159,6 +159,9 @@ Select API:&nbsp;
 * Models
     * [MNIST Handwritten Digit Recognition with Fully Connected Network](/tutorials/c%2B%2B/basics.html)
 
+* Backends
+    * [Subgraph API](/tutorials/c%2B%2B/subgraphAPI.html)
+
 <hr>
 
 ## R Tutorials
