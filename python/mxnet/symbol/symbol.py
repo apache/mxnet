@@ -38,7 +38,8 @@ from ..base import mx_uint, py_str, string_types, integer_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_NAME_NP_TO_MX
+from ..ndarray import _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from ..ndarray import _ndarray_cls
 from ..executor import Executor
@@ -891,19 +892,19 @@ class Symbol(SymbolBase):
             keys = c_array(ctypes.c_char_p, [])
             for s in args:
                 if s is not None:
-                    s = _numpy.dtype(s).type
-                    if s not in _DTYPE_NP_TO_MX:
+                    s_name = _numpy.dtype(s).name
+                    if s_name not in _DTYPE_NAME_NP_TO_MX:
                         raise TypeError('Argument need to be one of ' + str(_DTYPE_NP_TO_MX))
-                    sdata.append(_DTYPE_NP_TO_MX[s])
+                    sdata.append(_DTYPE_NAME_NP_TO_MX[s_name])
                 else:
                     sdata.append(-1)
         else:
             str_keys = []
             for k, v in kwargs.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
+                v_name = _numpy.dtype(v).name
+                if v_name in _DTYPE_NAME_NP_TO_MX:
                     str_keys.append(k)
-                    sdata.append(_DTYPE_NP_TO_MX[v])
+                    sdata.append(_DTYPE_NAME_NP_TO_MX[v_name])
             keys = c_str_array(str_keys)
         arg_type_size = mx_uint()
         arg_type_data = ctypes.POINTER(ctypes.c_int)()
@@ -1366,10 +1367,10 @@ class Symbol(SymbolBase):
             provided_arg_type_names = []
             provided_arg_type_data = []
             for k, v in type_dict.items():
-                v = _numpy.dtype(v).type
-                if v in _DTYPE_NP_TO_MX:
+                v_name = _numpy.dtype(v).name
+                if v_name in _DTYPE_NAME_NP_TO_MX:
                     provided_arg_type_names.append(k)
-                    provided_arg_type_data.append(_DTYPE_NP_TO_MX[v])
+                    provided_arg_type_data.append(_DTYPE_NAME_NP_TO_MX[v_name])
             num_provided_arg_types = mx_uint(len(provided_arg_type_names))
             provided_arg_type_names = c_str_array(provided_arg_type_names)
             provided_arg_type_data = c_array_buf(ctypes.c_int, array('i', provided_arg_type_data))
@@ -2537,7 +2538,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        attr['__dtype__'] = str(_DTYPE_NAME_NP_TO_MX[_numpy.dtype(dtype).name])
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()

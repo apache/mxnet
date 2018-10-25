@@ -42,7 +42,7 @@ from . import _internal
 from . import op
 from ._internal import NDArrayBase
 
-__all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
+__all__ = ["NDArray", "concatenate", "_DTYPE_NAME_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
@@ -65,6 +65,10 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
 }
+
+_DTYPE_NAME_NP_TO_MX = dict(
+    [(np.dtype(k).name, v) if k is not None else (None, v) \
+    for k, v in _DTYPE_NP_TO_MX.items()])
 
 _DTYPE_MX_TO_NP = {
     -1: None,
@@ -136,7 +140,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
         ctypes.c_int(int(delay_alloc)),
-        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.c_int(int(_DTYPE_NAME_NP_TO_MX[np.dtype(dtype).name])),
         ctypes.byref(hdl)))
     return hdl
 
@@ -148,7 +152,7 @@ def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
         ctypes.c_int(shared_id),
         c_array(mx_uint, shape),
         mx_uint(len(shape)),
-        ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+        ctypes.c_int(int(_DTYPE_NAME_NP_TO_MX[np.dtype(dtype).name])),
         ctypes.byref(hdl)))
     return hdl
 

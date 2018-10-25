@@ -1495,6 +1495,22 @@ def test_dlpack():
             mx.test_utils.assert_almost_equal(a_np, d_np)
             mx.test_utils.assert_almost_equal(a_np, e_np)
 
+
+@with_seed()
+def test_dtype():
+    dtypes = [np.int8, np.uint8,
+              np.int32, np.int64,
+              np.float16, np.float32, np.float64,
+              np.long, np.longlong]
+    for dtype in dtypes:
+        values = np.array([1, 2, 3], dtype=dtype)
+        data = mx.nd.array(values, dtype=dtype)
+        data_np = data.asnumpy()
+        assert np.dtype(dtype).name == np.dtype(data.dtype).name
+        assert np.dtype(dtype).name == np.dtype(data_np.dtype).name
+        mx.test_utils.assert_almost_equal(data_np, values)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
