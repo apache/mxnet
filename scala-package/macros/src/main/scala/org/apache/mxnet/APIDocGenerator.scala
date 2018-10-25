@@ -204,29 +204,33 @@ private[mxnet] object APIDocGenerator{
   }
 
   def generateJavaAPISignature(func : absClassFunction) : String = {
-    // scalastyle:off
     var argDef = ListBuffer[String]()
     var classDef = ListBuffer[String]()
     func.listOfArgs.foreach(absClassArg => {
       val currArgName = safetyNameCheck(absClassArg.argName)
+      // scalastyle:off
       if (absClassArg.isOptional) {
         classDef += s"def set${absClassArg.argName}(${absClassArg.argName} : ${absClassArg.argType}) : ${func.name}BuilderBase"
       }
       else {
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
+      // scalastyle:on
     })
     classDef += s"def setout(out : NDArray) : ${func.name}BuilderBase"
     classDef += s"def invoke() : org.apache.mxnet.javaapi.NDArrayFuncReturn"
     val experimentalTag = "@Experimental"
+    // scalastyle:off
     var finalStr = s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : ${func.name}BuilderBase\n"
+    // scalastyle:on
     finalStr += s"abstract class ${func.name}BuilderBase {\n  ${classDef.mkString("\n  ")}\n}"
     finalStr
   }
 
 
   // List and add all the atomic symbol functions to current module.
-  private def getSymbolNDArrayMethods(isSymbol : Boolean, isJava : Boolean = false): List[absClassFunction] = {
+  private def getSymbolNDArrayMethods(isSymbol : Boolean,
+                                      isJava : Boolean = false): List[absClassFunction] = {
     val opNames = ListBuffer.empty[String]
     val returnType = if (isSymbol) "Symbol" else "NDArray"
     val returnHeader = if (isJava) "org.apache.mxnet.javaapi." else "org.apache.mxnet."
@@ -248,7 +252,8 @@ private[mxnet] object APIDocGenerator{
   }
 
   // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String, returnType : String)
+  private def makeAtomicSymbolFunction(handle: SymbolHandle,
+                                       aliasName: String, returnType : String)
   : absClassFunction = {
     val name = new RefString
     val desc = new RefString
