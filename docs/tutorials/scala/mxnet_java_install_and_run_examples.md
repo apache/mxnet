@@ -2,41 +2,40 @@
 
 ## Prerequisites:
 Please follow the Step 1 in the [Scala configuration](http://mxnet.incubator.apache.org/install/scala_setup.html#setup-instructions)
-These should help you install the correct Java version and all dependecies.
+These should help you install the correct Java version and all dependencies.
 
 ## Import and run the Java package
-For users using a desktop/laptop, we recommend to use IntelliJ IDE as it is tested and supported to provide necessary documentation for the Java API.
+For users using a desktop/laptop, we recommend using IntelliJ IDE as it is tested and supported to provide the necessary documentation for the Java API.
 
-Alternatively, users can follow the second instruction to setup a empty Maven project for Java.
+Alternatively, users can follow the second instruction to set up an empty Maven project for Java.
 
 ### IntelliJ instruction
 If you are using a computer with Ubuntu16.04 or Mac, you can install IntelliJ to run the Java package. Please follow the instruction below:
 
-1. Create a new Java project in IntelliJ. Fire up IntelliJ and click `Create New Project`. It should open a popup window like this :
+1. Create a new Java project in IntelliJ. Fire up IntelliJ and click `Create New Project`.
 
 2. Click `Next`, and in the `Create project from template` window, do not select anything and click `Next` again.
 
 3. In the next window choose your `Project name` and the `Project location` and click on `Finish`.
 
-4. Let’s add the Java Inference API jars that we grabbed from Mavel Central. At the top of the window, Go to the `File -> Project Structure`. In the popup window that opens up, click on `Libraries -> +` and select the path to the jar files downloaded. Click `Apply` and then click `OK`.
+4. Let’s add the Java Inference API jars that we grabbed from Maven Central. At the top of the window, Go to the `File -> Project Structure`. In the popup window that opens up, click on `Libraries -> +` and select the path to the jar files downloaded. Click `Apply` and then click `OK`.
 
-6. Create a new Java class under the folder `your-project-name/src`. Let’s call this class `JavaSample.java`. Type in the following code snippet and run it. In this code snippet we create an NDArray object in Java and print it’s shape.
+6. Create a new Java class under the folder `your-project-name/src`. Let’s call this class `JavaSample.java`. Type in the following code snippet and run it. In this code snippet, we create an NDArray object in Java and print its shape.
 ```java
 import org.apache.mxnet.javaapi.Context;
 import org.apache.mxnet.javaapi.NDArray;
 
 public class JavaSample {
-    public static void main(String[] args) {
-        System.out.println("Hello");
-        NDArray nd = NDArray.ones(Context.cpu(), new int[] {10, 20});
+public static void main(String[] args) {
+  System.out.println("Hello");
+  NDArray nd = NDArray.ones(Context.cpu(), new int[] {10, 20});
 
-        System.out.println("Shape of NDarray is : "  + nd.shape());
-
-    }
+  System.out.println("Shape of NDarray is : "  + nd.shape());
+}
 }
 ```
 
-7. If all went well, you should see an output like this : (Ignore the SLF4J warnings). 
+7. If all went well, you should see an output like this : (Ignore the SLF4J warnings).
 ```
 Hello
 SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
@@ -57,31 +56,32 @@ mvn archetype:generate -DgroupId=com.mycompany.app -DartifactId=my-app -Darchety
 You can specify the `groupId` and `artifactId` to your favourite names. You can also create a maven project using empty archetype.
 
 2. then go to `pom.xml` file in your project folder and add the following content.
+
 - Change the `osx-x86_64` to `linux-x86_64` if your platform is linux.
 - Change `cpu` into `gpu` if you are using gpu
 - Change the version of your package from `1.3.1` to the matched jar version.
 ```xml
 <dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-    <version>1.3.1</version>
-    <scope>system</scope>
-    <systemPath>path-to-your-jar/jarName.jar</systemPath>
+  <groupId>org.apache.mxnet</groupId>
+  <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+  <version>1.3.1</version>
+  <scope>system</scope>
+  <systemPath>path-to-your-jar/jarName.jar</systemPath>
 </dependency>
 <dependency>
-    <groupId>args4j</groupId>
-    <artifactId>args4j</artifactId>
-    <version>2.0.29</version>
+  <groupId>args4j</groupId>
+  <artifactId>args4j</artifactId>
+  <version>2.0.29</version>
+  </dependency>
+<dependency>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-api</artifactId>
+  <version>1.7.7</version>
 </dependency>
 <dependency>
-    <groupId>org.slf4j</groupId>
-    <artifactId>slf4j-api</artifactId>
-    <version>1.7.7</version>
-</dependency>
-<dependency>
-    <groupId>org.slf4j</groupId>
-    <artifactId>slf4j-log4j12</artifactId>
-    <version>1.7.7</version>
+  <groupId>org.slf4j</groupId>
+  <artifactId>slf4j-log4j12</artifactId>
+  <version>1.7.7</version>
 </dependency>
 ```
 3. Finally you can replace the code in `App.java`
@@ -90,13 +90,13 @@ import org.apache.mxnet.javaapi.Context;
 import org.apache.mxnet.javaapi.NDArray;
 
 public class App {
-    public static void main(String[] args) {
-        System.out.println("Hello");
-        NDArray nd = NDArray.ones(Context.cpu(), new int[] {10, 20});
+public static void main(String[] args) {
+  System.out.println("Hello");
+  NDArray nd = NDArray.ones(Context.cpu(), new int[] {10, 20});
 
-        System.out.println("Shape of NDarray is : "  + nd.shape());
+  System.out.println("Shape of NDarray is : "  + nd.shape());
 
-    }
+}
 }
 ```
 make the package by
@@ -118,7 +118,7 @@ Shape of NDarray is : (10,20)
 ```
 
 ### (Optional) add log4j configuration
-As you may notice, all of the examples contains the SLF4J error logs.
+As you may notice, all of the examples contain the SLF4J error logs.
 It caused by the missing configuration file. This problem can be solved easily by following steps:
 
 1. go to `target/classes` folder
@@ -133,5 +133,4 @@ log4j.appender.stdout.layout = org.apache.log4j.PatternLayout
 log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] [%c] [%p] - %m%n
 ```
 You can set the `info` to `warn` or `debug` if you would like to see less/more information when you run the code
-
 
