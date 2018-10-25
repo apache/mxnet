@@ -525,7 +525,7 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
     out_grad = out_grad.Reorder2Default();
 
   mkldnn::convolution_forward::primitive_desc fwd_pd = GetConvFwdImpl(
-      full_param, ctx.is_train, data, weight, bias, inputs[conv::kOut]);
+      full_param, ctx.is_train, data, weight, bias, out_grad);
   const ConvolutionParam &param = full_param.conv_param;
 
   CHECK_NE(req[conv::kWeight], kWriteInplace) << "cannot write weight inplace";
