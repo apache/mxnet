@@ -38,11 +38,6 @@ using namespace std;
 using namespace mxnet::cpp;
 
 
-Context global_ctx(kCPU, 0);
-#if MXNET_USE_GPU
-Context global_ctx(kGPU, 0);
-#endif
-
 /*
  * class Predictor
  *
@@ -54,17 +49,19 @@ class Predictor {
     Predictor() {}
     Predictor(const std::string model_json,
               const std::string model_params,
-              const std::string& synset_file,
-              const Shape& input_shape);
-    void LoadInputImage(const std::string& image_file);
-    void NormalizeInput(const std::string& mean_image_file);
-    void RunForwardPass();
+              const Shape& input_shape,
+              bool gpu_context_type = false,
+              const std::string& synset_file = "",
+              const std::string& mean_image_file = "");
+    void PredictImage(const std::string& image_file);
     ~Predictor();
 
  private:
     void LoadModel(const std::string& model_json_file);
     void LoadParameters(const std::string& model_parameters_file);
     void LoadSynset(const std::string& synset_file);
+    void LoadInputImage(const std::string& image_file);
+    void NormalizeInput(const std::string& mean_image_file);
 
     NDArray mean_img;
     map<string, NDArray> args_map;
@@ -74,6 +71,8 @@ class Predictor {
     Executor *executor;
     Shape input_shape;
     NDArray image_data;
+    Context global_ctx = Context::cpu();
+    string mean_image_file;
 };
 
 
@@ -94,8 +93,15 @@ class Predictor {
  */
 Predictor::Predictor(const std::string model_json,
                      const std::string model_params,
+                     const Shape& input_shape,
+                     bool gpu_context_type,
                      const std::string& synset_file,
-                     const Shape& input_shape):input_shape(input_shape) {
+                     const std::string& mean_image_file):
+                     input_shape(input_shape),
+                     mean_image_file(mean_image_file) {
+  if (gpu_context_type) {
+    global_ctx = Context::gpu();
+  }
   // Load the model
   LoadModel(model_json);
 
@@ -167,62 +173,6 @@ void Predictor::LoadSynset(const string& synset_file) {
 
 
 /*
- * The following function runs the forward pass on the model.
- * The executor is created in the constructor.
- *
- */
-void Predictor::RunForwardPass() {
-  LG << "Running the forward pass";
-  /*
-   * The executor->arg_arrays represent the arguments to the model.
-   *
-   * The model expects the NDArray representing the image to be classified at
-   * index 0.
-   * Hence, the image_data that contains the NDArray of input image is copied
-   * to index 0 of executor->args_arrays.
-   *
-   */
-  int input_position_in_args = 0;
-  image_data.CopyTo(&(executor->arg_arrays[input_position_in_args]));
-  NDArray::WaitAll();
-
-  // Run the forward pass.
-  executor->Forward(false);
-
-  // The output is available in executor->outputs.
-  auto array = executor->outputs[0].Copy(global_ctx);
-  NDArray::WaitAll();
-
-  float best_accuracy = 0.0;
-  std::size_t best_idx = 0;
-
-  // Find out the maximum accuracy and the index associated with that accuracy.
-  for (std::size_t i = 0; i < array.Size(); ++i) {
-    if (array.At(0, i) > best_accuracy) {
-      best_accuracy = array.At(0, i);
-      best_idx = i;
-    }
-  }
-
-  if (output_labels.empty()) {
-    LG << "The model predicts the highest accuracy of " << best_accuracy << " at index "
-       << best_idx;
-  } else {
-    LG << "The model predicts the input image to be a [" << output_labels[best_idx]
-       << " ] with Accuracy = " << array.At(0, best_idx) << std::endl;
-  }
-}
-
-
-Predictor::~Predictor() {
-  if (executor) {
-    delete executor;
-  }
-  MXNotifyShutdown();
-}
-
-
-/*
  * The following function loads the input image.
  */
 void Predictor::LoadInputImage(const std::string& image_file) {
@@ -264,6 +214,67 @@ void Predictor::NormalizeInput(const std::string& mean_image_file) {
 
 
 /*
+ * The following function runs the forward pass on the model.
+ * The executor is created in the constructor.
+ *
+ */
+void Predictor::PredictImage(const std::string& image_file) {
+  // Load the input image
+  LoadInputImage(image_file);
+
+  // Normalize the image
+  if (!mean_image_file.empty()) {
+    NormalizeInput(mean_image_file);
+  }
+
+  LG << "Running the forward pass on model to predict the image";
+  /*
+   * The executor->arg_arrays represent the arguments to the model.
+   *
+   * Copying the image_data that contains the NDArray of input image
+   * to the arg map of the executor. The input is stored with the key "data" in the map.
+   *
+   */
+  image_data.CopyTo(&(executor->arg_dict()["data"]));
+  NDArray::WaitAll();
+
+  // Run the forward pass.
+  executor->Forward(false);
+
+  // The output is available in executor->outputs.
+  auto array = executor->outputs[0].Copy(global_ctx);
+  NDArray::WaitAll();
+
+  float best_accuracy = 0.0;
+  std::size_t best_idx = 0;
+
+  // Find out the maximum accuracy and the index associated with that accuracy.
+  for (std::size_t i = 0; i < array.Size(); ++i) {
+    if (array.At(0, i) > best_accuracy) {
+      best_accuracy = array.At(0, i);
+      best_idx = i;
+    }
+  }
+
+  if (output_labels.empty()) {
+    LG << "The model predicts the highest accuracy of " << best_accuracy << " at index "
+       << best_idx;
+  } else {
+    LG << "The model predicts the input image to be a [" << output_labels[best_idx]
+       << " ] with Accuracy = " << array.At(0, best_idx) << std::endl;
+  }
+}
+
+
+Predictor::~Predictor() {
+  if (executor) {
+    delete executor;
+  }
+  MXNotifyShutdown();
+}
+
+
+/*
  * Convert the input string of number of hidden units into the vector of integers.
  */
 std::vector<index_t> getShapeDimensions(const std::string& hidden_units_string) {
@@ -286,6 +297,7 @@ void printUsage() {
               << "[--input_shape <dimensions of input image e.g \"3 224 224\"]"
               << "[--synset file containing labels for prediction] "
               << "[--mean file containing mean image for normalizing the input image "
+              << "[--gpu]  Specify this option if workflow needs to be run in gpu context "
               << std::endl;
 }
 
@@ -295,6 +307,7 @@ int main(int argc, char** argv) {
   string synset_file = "";
   string mean_image = "";
   string input_image = "";
+  bool gpu_context_type = false;
 
   std::string input_shape = "3 224 224";
     int index = 1;
@@ -317,6 +330,8 @@ int main(int argc, char** argv) {
         } else if (strcmp("--input_shape", argv[index]) == 0) {
             index++;
             input_shape = argv[index];
+        } else if (strcmp("--gpu", argv[index]) == 0) {
+            gpu_context_type = true;
         } else if (strcmp("--help", argv[index]) == 0) {
             printUsage();
             return 0;
@@ -349,18 +364,11 @@ int main(int argc, char** argv) {
 
   try {
     // Initialize the predictor object
-    Predictor predict(model_file_json, model_file_params, synset_file, input_data_shape);
+    Predictor predict(model_file_json, model_file_params, input_data_shape, gpu_context_type,
+                      synset_file, mean_image);
 
-    // Load the input image
-    predict.LoadInputImage(input_image);
-
-    // Normalize teh image
-    if (!mean_image.empty()) {
-      predict.NormalizeInput(mean_image);
-    }
-
-    // Run the forward pass.
-    predict.RunForwardPass();
+    // Run the forward pass to predict the image.
+    predict.PredictImage(input_image);
   } catch (...) {
     /*
      * If underlying MXNet code has thrown an exception the error message is

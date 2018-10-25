@@ -23,7 +23,7 @@ wget -nc -O model/mean_224.nd https://github.com/dmlc/web-data/raw/master/mxnet/
 tar -xvzf inception-bn.tar.gz -C model
 
 # Building
-make all USE_MXNET_CPU=1
+make all
 
 
 # Running the example with dog image.
