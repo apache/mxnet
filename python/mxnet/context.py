@@ -279,7 +279,7 @@ def gpu_memory_info(device_id=0):
     free = ctypes.c_uint64()
     total = ctypes.c_uint64()
     dev_id = ctypes.c_int(device_id)
-    check_call(_LIB.MXGetGPUMemoryInformation(dev_id, ctypes.byref(free), ctypes.byref(total)))
+    check_call(_LIB.MXGetGPUMemoryInformation64(dev_id, ctypes.byref(free), ctypes.byref(total)))
     return (free.value, total.value)
 
 def current_context():

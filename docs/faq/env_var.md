@@ -58,6 +58,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
   - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.  
+* MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
+  - The default was chosen to minimize global memory fragmentation within the GPU driver.  Set this to 1 to disable.
 
 ## Engine Type
 
