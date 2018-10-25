@@ -131,6 +131,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             key = input_name
                         if key in shape_dict:
                             shape = shape_dict[key][1:]
+                            if len(shape) == 0:
+                                continue
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
         if op == 'Convolution':
@@ -193,22 +195,33 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
-def shrink_binary_layers(nodes):
+def shrink_qlayers(nodes):
     delete = None
     for i, node in enumerate(nodes):
         op = node["op"]
         name = node["name"]
 
-        if "_qconv" in name and any(x in name for x in ["__plusscalar", "__divscalar", "_det_sign", "_pad"]):
+        qconv_hide_functions = ["__plusscalar", "__minusscalar", "__divscalar", "__mulscalar", "_det_sign", "_pad",
+                                "_round_ste", "_broadcast_div", "_tanh", "_max", "_abs",
+                                "_stop_gradient", "transpose"]
+
+        if ("_qconv" in name or "_scaledbinaryconv" in name) and any(x in name for x in qconv_hide_functions):
             delete = i
             break
 
-        if "_qactivation" in name and ("_gradcancel" in name):
+        qactivation_hide_functions = ["_gradcancel", "_clip", "__divscalar", "__mulscalar"]
+
+        if "_qactivation" in name and any(x in name for x in qactivation_hide_functions):
             delete = i
             break
 
     if delete is None:
         return nodes, False
+
+    deleted_node = nodes[delete].copy()
+    deleted_node_inputs = deleted_node["inputs"]
+    first_previous_input = deleted_node_inputs[0]
+    assert len(deleted_node_inputs) == 1 or all(a == first_previous_input[0] for a, _, _ in deleted_node_inputs)
 
     del nodes[delete]
 
@@ -216,7 +229,9 @@ def shrink_binary_layers(nodes):
         inputs = node["inputs"]
         new_inputs = []
         for a, b, c in inputs:
-            if a >= delete:
+            if a == delete:
+                a, b, c = first_previous_input
+            elif a > delete:
                 a = a-1
             new_inputs.append([a, b, c])
         node["inputs"] = new_inputs
@@ -308,9 +323,9 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         return name.endswith(weight_like)
 
     if consolidate_binary_layers:
-        nodes, changed = shrink_binary_layers(nodes)
+        nodes, changed = shrink_qlayers(nodes)
         while changed:
-            nodes, changed = shrink_binary_layers(nodes)
+            nodes, changed = shrink_qlayers(nodes)
 
     # make nodes
     hidden_nodes = set()
@@ -337,7 +352,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                                                  "x".join(_str2tuple(node["attrs"]["stride"]))
                                                  if "stride" in node["attrs"] else "1",
                                                  node["attrs"]["num_filter"])
-            if "qconv" in name:
+            if "qconv" in name or "scaledbinaryconv" in name:
                 label = "Q%s" % label
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
@@ -347,7 +362,8 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             attr["fillcolor"] = cm[3]
         elif op in ('Activation', 'LeakyReLU') or "_qactivation" in name:
             if "_qactivation" in name:
-                label = "QActivation"
+                if consolidate_binary_layers:
+                    label = "QActivation"
             else:
                 label = r"%s\n%s" % (op, node["attrs"]["act_type"])
             attr["fillcolor"] = cm[2]
