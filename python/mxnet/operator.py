@@ -27,6 +27,7 @@ from array import array
 from threading import Lock
 from ctypes import CFUNCTYPE, POINTER, Structure, pointer
 from ctypes import c_void_p, c_int, c_char, c_char_p, cast, c_bool
+import numpy as np
 
 from .base import _LIB, check_call, MXCallbackList, c_array, c_array_buf
 from .base import c_str, mx_uint, mx_float, ctypes2numpy_shared, NDArrayHandle, py_str
