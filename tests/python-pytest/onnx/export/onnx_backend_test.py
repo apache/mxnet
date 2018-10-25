@@ -96,7 +96,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_cast',
     'test_depthtospace',
     'test_hardsigmoid',
-    'test_instancenorm'
+    'test_instancenorm',
+    'test_shape'
     ]
 
 BASIC_MODEL_TESTS = [

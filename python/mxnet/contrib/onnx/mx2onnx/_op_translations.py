@@ -1563,6 +1563,15 @@ def convert_sum(node, **kwargs):
         )
     return [node]
 
+
+@mx_op.register("shape_array")
+def convert_shape(node, **kwargs):
+    """Map MXNet's shape_array operator attributes to onnx's Shape operator
+    and return the created node.
+    """
+    return create_basic_op_node('Shape', node, kwargs)
+
+
 @mx_op.register("hard_sigmoid")
 def convert_hardsigmoid(node, **kwargs):
     """Map MXNet's hard_sigmoid operator attributes to onnx's HardSigmoid operator
