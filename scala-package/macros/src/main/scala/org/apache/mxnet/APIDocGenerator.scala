@@ -17,8 +17,6 @@
 
 package org.apache.mxnet
 
-import org.apache.mxnet.init.Base._
-import org.apache.mxnet.utils.CToScalaUtils
 import java.io._
 import java.security.MessageDigest
 
@@ -29,13 +27,11 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   * Two file namely: SymbolAPIBase.scala and NDArrayAPIBase.scala
   * The code will be executed during Macros stage and file live in Core stage
   */
-private[mxnet] object APIDocGenerator{
-  case class absClassArg(argName : String, argType : String, argDesc : String, isOptional : Boolean)
-  case class absClassFunction(name : String, desc : String,
-                           listOfArgs: List[absClassArg], returnType : String)
+private[mxnet] object APIDocGenerator extends GeneratorBase {
+  type absClassArg = Arg
+  type absClassFunction = Func
 
-
-  def main(args: Array[String]) : Unit = {
+  def main(args: Array[String]): Unit = {
     val FILE_PATH = args(0)
     val hashCollector = ListBuffer[String]()
     hashCollector += absClassGen(FILE_PATH, true)
@@ -47,68 +43,70 @@ private[mxnet] object APIDocGenerator{
     val finalHash = hashCollector.mkString("\n")
   }
 
-  def MD5Generator(input : String) : String = {
+  def MD5Generator(input: String): String = {
     val md = MessageDigest.getInstance("MD5")
     md.update(input.getBytes("UTF-8"))
     val digest = md.digest()
     org.apache.commons.codec.binary.Base64.encodeBase64URLSafeString(digest)
   }
 
-  def absRndClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
-    typeSafeClassGen(
-      getSymbolNDArrayMethods(isSymbol)
-        .filter(f => f.name.startsWith("_random") || f.name.startsWith("_sample"))
-        .map(f => f.copy(name = f.name.stripPrefix("_"))),
+  def absRndClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
+    val funcs = getSymbolNDArrayMethods(isSymbol)
+      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+      .map(f => f.copy(name = f.name.stripPrefix("_")))
+    val body = funcs.map(func => {
+      val scalaDoc = generateAPIDocFromBackend(func)
+      val decl = generateRandomAPISignature(func, isSymbol)
+      s"$scalaDoc\n$decl"
+    })
+    writeFile(
       FILE_PATH,
       if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
-      isSymbol
-    )
+      body)
   }
 
-  def absClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
+  def absClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
     val notGenerated = Set("Custom")
-    typeSafeClassGen(
-      getSymbolNDArrayMethods(isSymbol)
-        .filterNot(_.name.startsWith("_"))
-        .filterNot(ele => notGenerated.contains(ele.name)),
+    val funcs = getSymbolNDArrayMethods(isSymbol)
+      .filterNot(_.name.startsWith("_"))
+      .filterNot(ele => notGenerated.contains(ele.name))
+    val body = funcs.map(func => {
+      val scalaDoc = generateAPIDocFromBackend(func)
+      val decl = generateAPISignature(func, isSymbol)
+      s"$scalaDoc\n$decl"
+    })
+    writeFile(
       FILE_PATH,
       if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
-      isSymbol
-    )
+      body)
   }
 
-  def typeSafeClassGen(absClassFunctions: Seq[absClassFunction], FILE_PATH: String,
-                       packageName: String, isSymbol: Boolean): String = {
-    val absFuncs = absClassFunctions
-      .map(absClassFunction => {
-        val scalaDoc = generateAPIDocFromBackend(absClassFunction)
-        val defBody = generateAPISignature(absClassFunction, isSymbol)
-        s"$scalaDoc\n$defBody"
-      })
-    writeFile(FILE_PATH, packageName, absFuncs)
-  }
-
-  def nonTypeSafeClassGen(FILE_PATH : String, isSymbol : Boolean) : String = {
-    // scalastyle:off
+  def nonTypeSafeClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
     val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
     val absFuncs = absClassFunctions
       .filterNot(_.name.startsWith("_"))
       .map(absClassFunction => {
-      val scalaDoc = generateAPIDocFromBackend(absClassFunction, false)
-      if (isSymbol) {
-        val defBody = s"def ${absClassFunction.name}(name : String = null, attr : Map[String, String] = null)(args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null): org.apache.mxnet.Symbol"
-        s"$scalaDoc\n$defBody"
-      } else {
-        val defBodyWithKwargs = s"def ${absClassFunction.name}(kwargs: Map[String, Any] = null)(args: Any*) : org.apache.mxnet.NDArrayFuncReturn"
-        val defBody = s"def ${absClassFunction.name}(args: Any*) : org.apache.mxnet.NDArrayFuncReturn"
-        s"$scalaDoc\n$defBodyWithKwargs\n$scalaDoc\n$defBody"
-      }
-    })
+        val scalaDoc = generateAPIDocFromBackend(absClassFunction, false)
+        if (isSymbol) {
+          val defBody =
+            s"def ${absClassFunction.name}(name : String = null, attr : Map[String, String] = null)" +
+              s"(args : org.apache.mxnet.Symbol*)(kwargs : Map[String, Any] = null): " +
+              s"org.apache.mxnet.Symbol"
+          s"$scalaDoc\n$defBody"
+        } else {
+          val defBodyWithKwargs = s"def ${absClassFunction.name}(kwargs: Map[String, Any] = null)" +
+            s"(args: Any*): " +
+            s"org.apache.mxnet.NDArrayFuncReturn"
+          val defBody = s"def ${absClassFunction.name}(args: Any*): " +
+            s"org.apache.mxnet.NDArrayFuncReturn"
+          s"$scalaDoc\n$defBodyWithKwargs\n$scalaDoc\n$defBody"
+        }
+      })
     val packageName = if (isSymbol) "SymbolBase" else "NDArrayBase"
     writeFile(FILE_PATH, packageName, absFuncs)
   }
 
-  def writeFile(FILE_PATH: String, packageName: String, absFuncs: Seq[String]): String = {
+  def writeFile(FILE_PATH: String, packageName: String, body: Seq[String]): String = {
     val apacheLicence =
       """/*
         |* Licensed to the Apache Software Foundation (ASF) under one or more
@@ -137,7 +135,7 @@ private[mxnet] object APIDocGenerator{
          |$packageDef
          |$imports
          |$absClassDef {
-         |${absFuncs.mkString("\n")}
+         |${body.mkString("\n")}
          |}""".stripMargin
     val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
     pw.write(finalStr)
@@ -146,20 +144,15 @@ private[mxnet] object APIDocGenerator{
   }
 
   // Generate ScalaDoc type
-  def generateAPIDocFromBackend(func : absClassFunction, withParam : Boolean = true) : String = {
+  def generateAPIDocFromBackend(func: absClassFunction, withParam: Boolean = true): String = {
     val desc = ArrayBuffer[String]()
     desc += "  * <pre>"
-      func.desc.split("\n").foreach({ currStr =>
+    func.desc.split("\n").foreach({ currStr =>
       desc += s"  * $currStr"
     })
     desc += "  * </pre>"
     val params = func.listOfArgs.map({ absClassArg =>
-      val currArgName = absClassArg.argName match {
-                case "var" => "vari"
-                case "type" => "typeOf"
-                case _ => absClassArg.argName
-      }
-      s"  * @param $currArgName\t\t${absClassArg.argDesc}"
+      s"  * @param ${absClassArg.safeArgName}\t\t${absClassArg.argDesc}"
     })
     val returnType = s"  * @return ${func.returnType}"
     if (withParam) {
@@ -169,64 +162,31 @@ private[mxnet] object APIDocGenerator{
     }
   }
 
-  def generateAPISignature(func : absClassFunction, isSymbol : Boolean) : String = {
-    var argDef = ListBuffer[String]()
-    func.listOfArgs.foreach(absClassArg => {
-      val currArgName = absClassArg.argName match {
-        case "var" => "vari"
-        case "type" => "typeOf"
-        case _ => absClassArg.argName
-      }
-      if (absClassArg.isOptional) {
-        argDef += s"$currArgName : Option[${absClassArg.argType}] = None"
-      }
-      else {
-        argDef += s"$currArgName : ${absClassArg.argType}"
-      }
-    })
-    var returnType = func.returnType
+  def generateRandomAPISignature(func: absClassFunction, isSymbol: Boolean): String = {
+    generateAPISignature(func, isSymbol)
+  }
+
+  def generateAPISignature(func: absClassFunction, isSymbol: Boolean): String = {
+    val argDef = ListBuffer[String]()
+
+    argDef ++= buildArgDefs(func)
+
     if (isSymbol) {
       argDef += "name : String = null"
       argDef += "attr : Map[String, String] = null"
     } else {
       argDef += "out : Option[NDArray] = None"
-      returnType = "org.apache.mxnet.NDArrayFuncReturn"
     }
+
+    val returnType = func.returnType
+
     val experimentalTag = "@Experimental"
     s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : $returnType"
   }
 
   // List and add all the atomic symbol functions to current module.
-  private def getSymbolNDArrayMethods(isSymbol : Boolean): List[absClassFunction] = {
-    val opNames = ListBuffer.empty[String]
-    val returnType = if (isSymbol) "Symbol" else "NDArray"
-    _LIB.mxListAllOpNames(opNames)
-    // TODO: Add '_linalg_', '_sparse_', '_image_' support
-    // TODO: Add Filter to the same location in case of refactor
-    opNames.map(opName => {
-      val opHandle = new RefLong
-      _LIB.nnGetOpHandle(opName, opHandle)
-      makeAtomicSymbolFunction(opHandle.value, opName, "org.apache.mxnet." + returnType)
-    }).toList
+  private def getSymbolNDArrayMethods(isSymbol: Boolean): List[absClassFunction] = {
+    buildFunctionList(isSymbol)
   }
 
-  // Create an atomic symbol function by handle and function name.
-  private def makeAtomicSymbolFunction(handle: SymbolHandle, aliasName: String, returnType : String)
-  : absClassFunction = {
-    val name = new RefString
-    val desc = new RefString
-    val keyVarNumArgs = new RefString
-    val numArgs = new RefInt
-    val argNames = ListBuffer.empty[String]
-    val argTypes = ListBuffer.empty[String]
-    val argDescs = ListBuffer.empty[String]
-
-    _LIB.mxSymbolGetAtomicSymbolInfo(
-      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-    val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val typeAndOption = CToScalaUtils.argumentCleaner(argName, argType, returnType)
-      absClassArg(argName, typeAndOption._1, argDesc, typeAndOption._2)
-    }
-    absClassFunction(aliasName, desc.value, argList.toList, returnType)
-  }
 }

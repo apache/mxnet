@@ -22,12 +22,12 @@ private[mxnet] object CToScalaUtils {
 
   // Convert C++ Types to Scala Types
   def typeConversion(in : String, argType : String = "",
-                     argName : String, returnType : String) : String = {
+                     argName : String, familyType : String) : String = {
     in match {
       case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
-      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
+      case "Symbol" | "NDArray" | "NDArray-or-Symbol" => familyType
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
-      => s"Array[$returnType]"
+      => s"Array[$familyType]"
       case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
       case "int" | "intorNone" | "int(non-negative)" => "Int"
       case "long" | "long(non-negative)" => "Long"
@@ -53,7 +53,7 @@ private[mxnet] object CToScalaUtils {
     * @return (Scala_Type, isOptional)
     */
   def argumentCleaner(argName: String,
-                      argType : String, returnType : String) : (String, Boolean) = {
+                      argType : String, familyType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
     // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
@@ -71,9 +71,9 @@ private[mxnet] object CToScalaUtils {
         s"""expected "optional" got ${commaRemoved(1)}""")
       require(commaRemoved(2).startsWith("default="),
         s"""expected "default=..." got ${commaRemoved(2)}""")
-      (typeConversion(commaRemoved(0), argType, argName, returnType), true)
+      (typeConversion(commaRemoved(0), argType, argName, familyType), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType, argName, returnType)
+      val tempType = typeConversion(commaRemoved(0), argType, argName, familyType)
       val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
       (tempType, tempOptional)
     } else {

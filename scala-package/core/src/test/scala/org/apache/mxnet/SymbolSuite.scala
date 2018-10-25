@@ -19,6 +19,7 @@ package org.apache.mxnet
 
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
+
 class SymbolSuite extends FunSuite with BeforeAndAfterAll {
 
   test("symbol compose") {
