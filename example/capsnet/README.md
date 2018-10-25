@@ -34,7 +34,7 @@ python capsulenet.py --batch_size 100 --devices gpu0,gpu1 --num_epoch 100 --lr 0
 * * *
 ## **Prerequisities**
 
-MXNet version above (0.11.0)  
+MXNet version above (1.2.0)  
 scipy version above (0.19.0)
 
 ***
