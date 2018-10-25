@@ -463,7 +463,8 @@ def cond(pred, then_func, else_func):
         return else_func()
 
 def isinf(data, ctx=None):
-    """Checks whether a given NDArray has infinity or not
+    """Performs an element-wise check to determine if the NDArray contains an infinite element
+    or not.
 
 
     Parameters
@@ -476,7 +477,8 @@ def isinf(data, ctx=None):
     Returns
     -------
     output: NDArray
-        The output NDarray with 1 and 0 indicating whether infinite or not.
+        The output NDarray, with same shape as input, where 1 indicates the array element is
+        equal to positive or negative infinity and 0 otherwise.
 
     Examples
     --------
@@ -488,13 +490,11 @@ def isinf(data, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    # any(x in data for x in [np.inf, -np.inf])
-    # abs(data) == np.inf > TypeError: bad operand type for abs(): 'NDArray'
-    # [abs(x) == np.inf for x in data] > TypeError: bad operand type for abs(): 'NDArray'
     return ndarray.NDArray.abs(data) == np.inf
 
 def isfinite(data, ctx=None):
-    """Checks whether a given NDArray has finit value or not
+    """Performs an element-wise check to determine if the NDArray contains an infinite element
+    or not.
 
 
     Parameters
@@ -507,7 +507,9 @@ def isfinite(data, ctx=None):
     Returns
     -------
     output: NDArray
-        The output NDarray with 1 and 0 indicating whether finite or not.
+        The output NDarray, with same shape as input, where 1 indicates the array element is
+        finite i.e. not equal to positive or negative infinity and 0 in places where it is
+        positive or negative infinity.
 
     Examples
     --------
@@ -519,7 +521,36 @@ def isfinite(data, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    # any(x in data for x in [np.inf, -np.inf])
-    # abs(data) == np.inf > TypeError: bad operand type for abs(): 'NDArray'
-    # [abs(x) == np.inf for x in data] > TypeError: bad operand type for abs(): 'NDArray'
-    return ndarray.NDArray.abs(data) != np.inf
+    is_data_not_nan = data == data
+    is_data_not_infinite = ndarray.NDArray.abs(data) != np.inf
+    return ndarray.logical_and(is_data_not_infinite, is_data_not_nan)
+
+def isnan(data, ctx=None):
+    """Performs an element-wise check to determine if the NDArray contains a NaN element
+    or not.
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+    ctx : Context
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray, with same shape as input, where 1 indicates the array element is
+        NaN i.e. Not a Number and 0 otherwise.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([np.nan, -1])
+    >>> output = mx.nd.contrib.isnan(data)
+    >>> output
+    [1. 0.]
+    <NDArray 2 @cpu(0)>
+    """
+    if ctx is None:
+        ctx = current_context()
+    return data != data

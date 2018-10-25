@@ -1497,17 +1497,40 @@ def test_dlpack():
 
 @with_seed()
 def test_ndarray_is_inf():
-    data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    random_dimensions = np.random.randint(3, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0][0]=np.inf
+    data[0][0][1]=-np.inf
+    data[0][0][2]=np.nan
     output = mx.nd.contrib.isinf(data)
-    expected_output = mx.nd.array([1,1,1,0])
-    assert_almost_equal(output.asnumpy(), expected_output.asnumpy())
+    expected_output = np.isinf(data.asnumpy())
+    assert_almost_equal(output.asnumpy(), expected_output.astype(int))
 
 @with_seed()
 def test_ndarray_is_finite():
-    data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    random_dimensions = np.random.randint(3, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0][0]=np.inf
+    data[0][0][1]=-np.inf
+    data[0][1][0]=np.nan
     output = mx.nd.contrib.isfinite(data)
-    expected_output = mx.nd.array([0,0,0,1])
-    assert_almost_equal(output.asnumpy(), expected_output.asnumpy())
+    expected_output = np.isfinite(data.asnumpy())
+    assert_almost_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_nan():
+    random_dimensions = np.random.randint(3, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0][0]=np.inf
+    data[0][0][1]=-np.inf
+    data[0][1][0]=np.nan
+    output = mx.nd.contrib.isnan(data)
+    expected_output = np.isnan(data.asnumpy())
+    assert_almost_equal(output.asnumpy(), expected_output.astype(int))
 
 if __name__ == '__main__':
     import nose
