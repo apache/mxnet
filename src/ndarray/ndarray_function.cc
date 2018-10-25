@@ -32,26 +32,17 @@
 
 namespace mxnet {
 namespace ndarray {
-template<typename DType>
-void OMPCopy(const TBlob &from, TBlob *to, const index_t size) {
-  DType* dst_dptr = to->dptr<DType>();
-  DType* src_dptr = from.dptr<DType>();
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index_t i = 0; i < size; ++i) {
-    dst_dptr[i] = src_dptr[i];
-  }
-}
-
 template<>
 void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
                     Context from_ctx, Context to_ctx,
                     RunContext ctx) {
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
     if (to->type_flag_ == from.type_flag_) {
-      index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_COPY_SIZE", 200000);
+      static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_COPY_SIZE", 200000);
       const index_t size = from.Size();
+      CHECK_EQ(size, to->Size());
       if (size >= copy_block_size) {
-        OMPCopy<DType>(from, to, size);
+        common::OMPCopy<DType>(from, to, size);
       } else {
         mshadow::Copy(to->FlatTo1D<cpu, DType>(), from.FlatTo1D<cpu, DType>());
       }

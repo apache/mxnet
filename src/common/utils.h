@@ -713,6 +713,20 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape
   }
 }
 
+
+/*!
+ * \brief parallelize copy by OpenMP.
+ */
+template<typename DType>
+void OMPCopy(const TBlob &from, TBlob *to, const index_t size) {
+  DType* dst_dptr = to->dptr<DType>();
+  const DType* src_dptr = from.dptr<DType>();
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (index_t i = 0; i < size; ++i) {
+    dst_dptr[i] = src_dptr[i];
+  }
+}
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
