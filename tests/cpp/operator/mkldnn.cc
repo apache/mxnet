@@ -242,7 +242,7 @@ struct TestArrayShapes {
   std::vector<mkldnn::memory::primitive_desc> pds;
 };
 
-static TestArrayShapes GetTestArrayShapes() {
+static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = false) {
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   std::vector<TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
@@ -281,8 +281,10 @@ static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s2, dtype, mkldnn::memory::format::oihw));
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
-    pds.push_back(GetMemPD(s1, dtype, formats[0]));
-    pds.push_back(GetMemPD(s2, dtype, formats[1]));
+    if (!spatial_data_format) {
+      pds.push_back(GetMemPD(s1, dtype, formats[0]));
+      pds.push_back(GetMemPD(s2, dtype, formats[1]));
+    }
   }
   {
     // 5D
@@ -292,7 +294,9 @@ static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::goihw));
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(5, dtype);
-    pds.push_back(GetMemPD(s, dtype, formats[0]));
+    if (!spatial_data_format) {
+      pds.push_back(GetMemPD(s, dtype, formats[0]));
+    }
   }
 
   TestArrayShapes ret;
@@ -711,8 +715,8 @@ OpAttrs GetLRNBackwardsOp() {
  */
 std::vector<NDArrayAttrs> GetTestInputArrays(
     int types = ArrayTypes::All, bool rand = false,
-    std::vector<float> scale = {1}) {
-  TestArrayShapes tas = GetTestArrayShapes();
+    std::vector<float> scale = {1}, bool spatial_data_format = false) {
+  TestArrayShapes tas = GetTestArrayShapes(spatial_data_format);
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
@@ -1575,7 +1579,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   TShape stride = param.stride;
   int num_filter = param.num_filter;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true, {1}, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
