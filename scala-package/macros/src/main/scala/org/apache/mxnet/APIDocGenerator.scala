@@ -57,7 +57,7 @@ private[mxnet] object APIDocGenerator{
   def fileGen(filePath : String, packageName : String, packageDef : String,
               absFuncs : List[String]) : String = {
     // Copied from @mdespriee in PR #12489
-    val apacheLicence =
+    val apacheLicense =
       """/*
         |* Licensed to the Apache Software Foundation (ASF) under one or more
         |* contributor license agreements.  See the NOTICE file distributed with
@@ -80,7 +80,7 @@ private[mxnet] object APIDocGenerator{
     val absClassDef = s"abstract class $packageName"
 
     val finalStr =
-      s"""$apacheLicence
+      s"""$apacheLicense
          |$scalaStyle
          |$packageDef
          |$imports
