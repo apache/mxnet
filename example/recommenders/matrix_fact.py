@@ -15,48 +15,63 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import math
-import mxnet as mx
-import numpy as np
-import mxnet.notebook.callback
-
 import logging
+import math
+import random
+
+import mxnet as mx
+from mxnet import gluon, autograd, nd
+import numpy as np
+
 logging.basicConfig(level=logging.DEBUG)
 
-def RMSE(label, pred):
-    ret = 0.0
-    n = 0.0
-    pred = pred.flatten()
-    for i in range(len(label)):
-        ret += (label[i] - pred[i]) * (label[i] - pred[i])
-        n += 1.0
-    return math.sqrt(ret / n)
+def evaluate_network(net, data_iterator, ctx):
+    loss_acc = 0.
+    l2 = gluon.loss.L2Loss()
+    for i, (user, item, score) in enumerate(data_iterator):
+        user = user.as_in_context(ctx)
+        item = item.as_in_context(ctx)
+        score = score.as_in_context(ctx)
+        pred = net(user, item)
+        loss = l2(pred, score)            
+        loss_acc += loss.mean()
+    return loss_acc.asscalar()/(i+1)
+    
 
+def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer='sgd', ctx=mx.gpu(0), num_epoch_lr=5, factor=0.2):
 
-def train(network, data_pair, num_epoch, learning_rate, optimizer='sgd', opt_args=None, ctx=[mx.gpu(0)]):
     np.random.seed(123)  # Fix random seed for consistent demos
     mx.random.seed(123)  # Fix random seed for consistent demos
-    if not opt_args:
-        opt_args = {}
-    if optimizer=='sgd' and (not opt_args):
-        opt_args['momentum'] = 0.9
+    random.seed(123)  # Fix random seed for consistent demos
 
-    model = mx.model.FeedForward(
-        ctx = ctx,
-        symbol = network,
-        num_epoch = num_epoch,
-        optimizer = optimizer,
-        learning_rate = learning_rate,
-        wd = 1e-4,
-        **opt_args
-    )
+    schedule = mx.lr_scheduler.FactorScheduler(step=len(train_data)*num_epoch_lr, factor=factor)
 
-    train, test = (data_pair)
+    trainer = gluon.Trainer(network.collect_params(), optimizer, 
+                            {'learning_rate':learning_rate, 'wd':0.0001, 'lr_scheduler':schedule})
 
-    lc = mxnet.notebook.callback.LiveLearningCurve('RMSE', 1)
-    model.fit(X = train,
-              eval_data = test,
-              eval_metric = RMSE,
-              **mxnet.notebook.callback.args_wrapper(lc)
-              )
-    return lc
+    l2 = gluon.loss.L2Loss()
+
+    network.hybridize()
+    
+    losses = []
+    for e in range(epochs):
+        loss_acc = 0.
+        for i, (user, item, score) in enumerate(train_data):
+            user = user.as_in_context(ctx)
+            item = item.as_in_context(ctx)
+            score = score.as_in_context(ctx)
+
+            with autograd.record():
+                pred = network(user, item)
+                loss = l2(pred, score)
+
+            loss.backward()
+            loss_acc += loss.mean()
+            trainer.update(user.shape[0])
+
+        test_loss = evaluate_network(network, test_data, ctx)
+        train_loss = loss_acc.asscalar()/(i+1)
+        print("Epoch [{}], Training RMSE {:.4f}, Test RMSE {:.4f}".format(e, train_loss, test_loss))
+        losses.append((train_loss, test_loss))
+    return losses
+
