@@ -186,3 +186,4 @@ List of Contributors
 * [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [LuckyPigeon](https://github.com/LuckyPigeon)
 * [Anton Chernov](https://github.com/lebeg)
+* [Dick Carter](https://github.com/DickJC123)

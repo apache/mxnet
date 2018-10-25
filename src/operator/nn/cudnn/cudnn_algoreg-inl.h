@@ -81,7 +81,8 @@ class CuDNNAlgoReg {
             bool add_to_weight,
             CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *fwd,
             CuDNNAlgo<cudnnConvolutionBwdDataAlgo_t> *bwd,
-            CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *flt, AlgoSetter_t algo_setter) {
+            CuDNNAlgo<cudnnConvolutionBwdFilterAlgo_t> *flt,
+            const AlgoSetter_t &algo_setter) {
     CHECK(in_shape.size() == 2 || in_shape.size() == 3);
     ParamKey key{param, in_shape[0], in_shape[1], out_shape[0], cudnn_data_type,
                  cudnn_forward_compute_type, cudnn_backward_compute_type, sm_arch, add_to_weight};

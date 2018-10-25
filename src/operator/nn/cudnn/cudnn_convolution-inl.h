@@ -733,10 +733,7 @@ class CuDNNConvolutionOp {
           (i == 0) ? fwd_algo[i].memory : std::min(min_memory_needs, fwd_algo[i].memory);
       }
       if (i == nalgo) {
-        LOG(FATAL) << nalgo << " forward algorithms with minimum memory requirement "
-                   << min_memory_needs << " bytes have been tried. Workspace size is set to "
-                   << workspace_byte << " bytes, please consider reducing the batch/model size, "
-                   << "or increasing workspace size.";
+        LogNoSuitableAlgoAndExit(nalgo, min_memory_needs, workspace_byte, "forward");
       } else {
         fwd->Set(fwd_algo[i].algo, false);
       }
@@ -774,10 +771,7 @@ class CuDNNConvolutionOp {
                            std::min(min_memory_needs, bwd_filter_algo[i].memory);
       }
       if (i == nalgo) {
-        LOG(FATAL) << nalgo << " backward filter algorithms with minimum memory requirement "
-                   << min_memory_needs << " bytes have been tried. Workspace size is set to "
-                   << workspace_byte << " bytes, please consider reducing the batch/model size, "
-                   << "or increasing workspace size.";
+        LogNoSuitableAlgoAndExit(nalgo, min_memory_needs, workspace_byte, "backward filter");
       } else {
         flt->Set(bwd_filter_algo[i].algo, false);
       }
@@ -815,10 +809,7 @@ class CuDNNConvolutionOp {
                            std::min(min_memory_needs, bwd_data_algo[i].memory);
       }
       if (i == nalgo) {
-        LOG(FATAL) << nalgo << " backward data algorithms with minimum memory requirement "
-                   << min_memory_needs << " bytes have been tried. Workspace size is set to "
-                   << workspace_byte << " bytes, please consider reducing the batch/model size, "
-                   << "or increasing workspace size.";
+        LogNoSuitableAlgoAndExit(nalgo, min_memory_needs, workspace_byte, "backward data");
       } else {
         bwd->Set(bwd_data_algo[i].algo, false);
       }
@@ -1023,6 +1014,15 @@ class CuDNNConvolutionOp {
         handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()));
     for (auto &handle : handles)
         Storage::Get()->DirectFree(handle);
+  }
+
+  // Log that no suitable algo was found that met the workspace constraints, then exit.
+  void LogNoSuitableAlgoAndExit(int num_algos_tried, size_t min_memory_needs,
+                                size_t workspace_byte, std::string algo_kind) {
+    LOG(FATAL) << num_algos_tried << " " << algo_kind << " with minimum memory requirement "
+               << min_memory_needs << " bytes have been tried. Workspace size is set to "
+               << workspace_byte << " bytes, please consider reducing the batch/model size, "
+               << "or increasing workspace size.";
   }
 
   std::vector<int> param_stride_;

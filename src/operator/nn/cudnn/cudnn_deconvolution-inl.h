@@ -660,12 +660,8 @@ class CuDNNDeconvolutionOp {
                            std::min(min_memory_needs, fwd_algo[i].memory);
       }
       if (i == nalgo) {
-        LOG(FATAL) << nalgo << " forward algorithms"
-                   << " (for use in deconvolution operator backprop-to-data)"
-                   << " with minimum memory requirement " << min_memory_needs
-                   << " bytes have been tried. Workspace size is set to " << workspace_byte
-                   << " bytes, please consider reducing the batch/model size,"
-                   << " or increasing workspace size.";
+        LogNoSuitableAlgoAndExit(nalgo, min_memory_needs, workspace_byte,
+                                 "forward algos (for use in deconv op backprop-to-data)");
       } else {
         fwd->Set(fwd_algo[i].algo, false);
       }
@@ -703,12 +699,8 @@ class CuDNNDeconvolutionOp {
                            std::min(min_memory_needs, bwd_filter_algo[i].memory);
       }
       if (i == nalgo) {
-        LOG(FATAL) << nalgo << " backward filter algorithms"
-                   << " (for use in deconvolution operator backprop-to-filter)"
-                   << " with minimum memory requirement " << min_memory_needs
-                   << " bytes have been tried. Workspace size is set to " << workspace_byte
-                   << " bytes, please consider reducing the batch/model size,"
-                   << " or increasing workspace size.";
+        LogNoSuitableAlgoAndExit(nalgo, min_memory_needs, workspace_byte,
+                                 "backward filter algos (for use in deconv op backprop-to-filter)");
       } else {
         flt->Set(bwd_filter_algo[i].algo, false);
       }
@@ -746,12 +738,8 @@ class CuDNNDeconvolutionOp {
                            std::min(min_memory_needs, bwd_data_algo[i].memory);
       }
       if (i == nalgo) {
-        LOG(FATAL) << nalgo << " backward data algorithms"
-                   << " (for use in deconvolution operator forward inference) with"
-                   << " minimum memory requirement " << min_memory_needs
-                   << " bytes have been tried. Workspace size is set to " << workspace_byte
-                   << " bytes, please consider reducing the batch/model size,"
-                   << " or increasing workspace size.";
+        LogNoSuitableAlgoAndExit(nalgo, min_memory_needs, workspace_byte,
+                                 "backward data algos (for use in deconv op forward inference)");
       } else {
         bwd->Set(bwd_data_algo[i].algo, false);
       }
@@ -971,6 +959,16 @@ class CuDNNDeconvolutionOp {
         handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()));
     for (auto &handle : handles)
         Storage::Get()->DirectFree(handle);
+  }
+
+
+  // Log that no suitable algo was found that met the workspace constraints, then exit.
+  void LogNoSuitableAlgoAndExit(int num_algos_tried, size_t min_memory_needs,
+                                size_t workspace_byte, std::string algo_kind) {
+    LOG(FATAL) << num_algos_tried << " " << algo_kind << " with minimum memory requirement "
+               << min_memory_needs << " bytes have been tried. Workspace size is set to "
+               << workspace_byte << " bytes, please consider reducing the batch/model size, "
+               << "or increasing workspace size.";
   }
 
   std::vector<int> param_stride_;
