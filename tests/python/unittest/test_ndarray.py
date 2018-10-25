@@ -1502,10 +1502,11 @@ def test_ndarray_is_inf():
     data = mxnet.test_utils.rand_ndarray(random_shape,'default')
     data[0][0][0]=np.inf
     data[0][0][1]=-np.inf
-    data[0][0][2]=np.nan
+    data[0][1][0]=np.nan
     output = mx.nd.contrib.isinf(data)
     expected_output = np.isinf(data.asnumpy())
     assert_almost_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
 
 @with_seed()
 def test_ndarray_is_finite():
@@ -1531,6 +1532,7 @@ def test_ndarray_is_nan():
     output = mx.nd.contrib.isnan(data)
     expected_output = np.isnan(data.asnumpy())
     assert_almost_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
 
 if __name__ == '__main__':
     import nose
