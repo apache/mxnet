@@ -125,7 +125,8 @@ int MXGetGPUCount(int* out) {
 // Deprecated: use MXGetGPUMemoryInformation64() instead.
 int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem) {
   API_BEGIN();
-  uint64_t free_mem64, total_mem64;
+  uint64_t free_mem64 = 0UL;
+  uint64_t total_mem64 = 0UL;
   Context::GetGPUMemoryInformation(dev, &free_mem64, &total_mem64);
   *free_mem = static_cast<int>(free_mem64);
   *total_mem = static_cast<int>(total_mem64);
