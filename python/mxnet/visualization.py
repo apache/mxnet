@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import re
 import copy
 import json
+import math
 import warnings
 from .symbol import Symbol
 
@@ -44,7 +45,18 @@ def _str2tuple(string):
     """
     return re.findall(r"\d+", string)
 
-def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.]):
+
+def convert_size(size_bytes):
+    if size_bytes == 0:
+        return "0B"
+    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    i = int(math.floor(math.log(size_bytes, 1024)))
+    p = math.pow(1024, i)
+    s = round(size_bytes / p, 2)
+    return "%s %s" % (s, size_name[i])
+
+
+def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.], quantized_bitwidth=32):
     """Convert symbol for detail information.
 
     Parameters
@@ -135,6 +147,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                                 continue
                             pre_filter = pre_filter + int(shape[0])
         cur_param = 0
+        quantized_params = "_qconv" in node["name"] or "_scaledbinaryconv" in node["name"]
         if op == 'Convolution':
             if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
                 num_group = int(node['attrs'].get('num_group', '1'))
@@ -172,8 +185,10 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             for i in range(1, len(pre_node)):
                 fields = ['', '', '', pre_node[i]]
                 print_row(fields, positions)
-        return cur_param
+        return cur_param, quantized_params
     total_params = 0
+    quantized_params = 0
+    compressed_bytes = 0
     for i, node in enumerate(nodes):
         out_shape = []
         op = node["op"]
@@ -187,12 +202,19 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                     key = node["name"]
                 if key in shape_dict:
                     out_shape = shape_dict[key][1:]
-        total_params += print_layer_summary(nodes[i], out_shape)
+        params, is_quantized = print_layer_summary(nodes[i], out_shape)
+        total_params += params
+        if is_quantized:
+            quantized_params += params
+        compressed_bytes += params * (quantized_bitwidth if is_quantized else 32) / 8
         if i == len(nodes) - 1:
             print('=' * line_length)
         else:
             print('_' * line_length)
     print('Total params: %s' % total_params)
+    print('Quantized params: %s (%.2f%%)' % (quantized_params, 100 * quantized_params / total_params))
+    print('Model size (full-precision): ~%s' % convert_size(total_params * 4))
+    print('Model size (compressed):     ~%s' % convert_size(compressed_bytes))
     print('_' * line_length)
 
 def shrink_qlayers(nodes):
