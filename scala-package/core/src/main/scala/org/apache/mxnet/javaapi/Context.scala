@@ -19,10 +19,11 @@ package org.apache.mxnet.javaapi
 import collection.JavaConverters._
 
 /**
-  * Constructing a context.
-
+  * Constructing a context which is used to specify the device and device type that will
+  * be utilized by the engine.
+  *
   * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
-  * @param deviceId (default=0) The device id of the device, needed for GPU
+  * @param deviceId The device id of the device, needed for GPU
   */
 class Context(val context: org.apache.mxnet.Context) {
 

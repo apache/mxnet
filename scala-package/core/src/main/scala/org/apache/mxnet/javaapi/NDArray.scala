@@ -192,7 +192,10 @@ object NDArray {
   * NDArray object in mxnet.
   * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
   * <b>
-  * WARNING: it is your responsibility to clear this object through dispose().
+  * NOTE: NDArray is stored in native memory. Use NDArray in a try-with-resources() construct
+  * or a [[ResourceScope]] in a try-with-resource to have them automatically disposed. You can
+  * explicitly control the lifetime of NDArray by calling dispose manually. Failure to do this
+  * will result in leaking native memory.
   * </b>
   */
 class NDArray(val nd : org.apache.mxnet.NDArray ) {

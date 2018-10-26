@@ -37,6 +37,8 @@ import scala.collection.JavaConverters._
   * @param epoch               Model epoch to load; defaults to 0
 
   */
+
+// JavaDoc description of class to be updated in https://issues.apache.org/jira/browse/MXNET-1178
 class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
   def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc],
            contexts: java.util.List[Context], epoch: Int)
