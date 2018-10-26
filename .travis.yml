@@ -34,7 +34,9 @@ script:
   - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - mv make/osx.mk config.mk
   - make -j 2
+
   # We ignore several tests to avoid possible timeouts on large PRs.
   # This lowers our test coverage, but is required for consistent Travis runs.
   # These tests will be tested in a variety of environments in Jenkins based tests.
   - python -m nose --with-timer --exclude-test=test_sparse_operator.test_elemwise_binary_ops --exclude-test=test_gluon_model_zoo.test_models --exclude-test=test_random.test_shuffle --exclude-test=test_operator.test_broadcast_binary_op --exclude-test=test_operator.test_pick --exclude-test=test_profiler.test_continuous_profile_and_instant_marker --exclude-test=test_metric_perf.test_metric_performance --exclude-test=test_operator.test_order --verbose tests/python/unittest/
+  - python2 -m nose --verbose tools/coreml/test --exclude-test=test_mxnet_image
