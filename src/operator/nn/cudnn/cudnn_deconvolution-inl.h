@@ -829,6 +829,7 @@ class CuDNNDeconvolutionOp {
   void AlgoFinalSelect(const std::vector<PerfType> &perf_results, std::string kernel_name,
                        size_t workspace_byte, CuDNNAlgo<AlgoType> *algo) {
     // Determine the fastest acceptable algo regardless of mathType.
+    bool enforce_determinism = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", 0);
     for (decltype(perf_results.size()) i = 0; i != perf_results.size(); ++i) {
       const auto &result = perf_results[i];
       bool algo_is_tensor_core = false;
@@ -836,6 +837,7 @@ class CuDNNDeconvolutionOp {
         algo_is_tensor_core = result.mathType == CUDNN_TENSOR_OP_MATH;
       #endif
       if (result.status == CUDNN_STATUS_SUCCESS &&
+          (!enforce_determinism || result.determinism == cudnnDeterminism_t::CUDNN_DETERMINISTIC) &&
           (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)) {
         algo->Set(result.algo, algo_is_tensor_core);
         return;
