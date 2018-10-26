@@ -261,6 +261,27 @@ def test_multibox_target_op():
     assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
+def test_edge_id():
+    shape = rand_shape_2d()
+    data = rand_ndarray(shape, stype='csr', density=0.4)
+    ground_truth = np.zeros(shape, dtype=np.float32)
+    ground_truth -= 1.0
+    indptr_np = data.indptr.asnumpy()
+    data_np = data.data.asnumpy()
+    indices_np = data.indices.asnumpy()
+    for i in range(shape[0]):
+        for j in range(indptr_np[i], indptr_np[i+1]):
+            idx = indices_np[j]
+            ground_truth[i, idx] = data_np[j]
+
+    np_u = np.random.randint(0, shape[0], size=(5, ))
+    np_v = np.random.randint(0, shape[1], size=(5, ))
+    mx_u = mx.nd.array(np_u)
+    mx_v = mx.nd.array(np_v)
+    assert_almost_equal(mx.nd.contrib.edge_id(data, mx_u, mx_v).asnumpy(),
+                        ground_truth[np_u, np_v], rtol=1e-5, atol=1e-6)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
