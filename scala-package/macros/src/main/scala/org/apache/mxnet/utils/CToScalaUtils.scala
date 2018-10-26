@@ -22,9 +22,10 @@ private[mxnet] object CToScalaUtils {
 
   // Convert C++ Types to Scala Types
   def typeConversion(in : String, argType : String = "", argName : String,
-                     returnType : String, shapeType : String = "Shape") : String = {
+                     returnType : String) : String = {
+    val header = returnType.split("\\.").dropRight(1)
     in match {
-      case "Shape(tuple)" | "ShapeorNone" => s"org.apache.mxnet.$shapeType"
+      case "Shape(tuple)" | "ShapeorNone" => s"${header.mkString(".")}.Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
       => s"Array[$returnType]"
@@ -53,7 +54,7 @@ private[mxnet] object CToScalaUtils {
     * @return (Scala_Type, isOptional)
     */
   def argumentCleaner(argName: String, argType : String,
-                      returnType : String, shapeType : String = "Shape") : (String, Boolean) = {
+                      returnType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
     // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}
@@ -73,7 +74,7 @@ private[mxnet] object CToScalaUtils {
         s"""expected "default=..." got ${commaRemoved(2)}""")
       (typeConversion(commaRemoved(0), argType, argName, returnType), true)
     } else if (commaRemoved.length == 2 || commaRemoved.length == 1) {
-      val tempType = typeConversion(commaRemoved(0), argType, argName, returnType, shapeType)
+      val tempType = typeConversion(commaRemoved(0), argType, argName, returnType)
       val tempOptional = tempType.equals("org.apache.mxnet.Symbol")
       (tempType, tempOptional)
     } else {
