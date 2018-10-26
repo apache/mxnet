@@ -203,6 +203,7 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s2, dtype, formats[1]));
   }
   {
+    /*
     // 5D
     TShape s(5);
     s[0] = 96; s[1] = 1; s[2] = 3; s[3] = 11; s[4] = 11;
@@ -211,6 +212,7 @@ inline static TestArrayShapes GetTestArrayShapes() {
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(5, dtype);
     pds.push_back(GetMemPD(s, dtype, formats[0]));
+    */
   }
 
   TestArrayShapes ret;
