@@ -276,10 +276,9 @@ class Trainer(object):
         rescale_grad = self._scale / batch_size
         if self._update_on_kvstore and self._distributed and \
            self._optimizer.rescale_grad != rescale_grad:
-            raise UserWarning(
-                            "Possible change in the `batch_size` from previous `step` detected."
-                            "Optimizer's gradient normalizing factor will not change w.r.t new batch_size when "
-                            "update_on_kvstore=True and when distributed `kvstore` is used.")
+            raise UserWarning('Possible change in the `batch_size` from previous `step` detected.' \
+                            'Optimizer gradient normalizing factor will not change w.r.t new batch_size when ' \
+                            'update_on_kvstore=True and when distributed `kvstore` is used.')
 
         self._optimizer.rescale_grad = rescale_grad
 
