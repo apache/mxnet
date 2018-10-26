@@ -61,7 +61,7 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("Test load image from Socket") {
-    val nd = Image.imDecode("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
+    val nd = Image.imDecodeURL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
     logger.info(s"OpenCV load image with shape: ${nd.shape}")
     require(nd.shape == Shape(576, 1024, 3), "image shape not Match!")
   }
@@ -71,6 +71,20 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     val resizeIm = Image.imResize(nd, 224, 224)
     logger.info(s"OpenCV resize image with shape: ${resizeIm.shape}")
     require(resizeIm.shape == Shape(224, 224, 3), "image shape not Match!")
+  }
+
+  test("Test crop image") {
+    val nd = Image.imRead(imLocation)
+    val nd2 = Image.fixedCrop(nd, 0, 0, 224, 224)
+    require(nd2.shape == Shape(224, 224, 3), "image shape not Match!")
+  }
+
+  test("Test convert to Image") {
+    val nd = Image.imRead(imLocation)
+    val resizeIm = Image.imResize(nd, 224, 224)
+    val tempDirPath = System.getProperty("java.io.tmpdir")
+    Image.toImage(resizeIm, tempDirPath + "/inputImages/out.png")
+    logger.info(s"converted image stored in ${tempDirPath + "/inputImages/out.png"}")
   }
 
 }

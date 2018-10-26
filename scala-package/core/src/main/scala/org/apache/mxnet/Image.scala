@@ -16,7 +16,12 @@
  */
 
 package org.apache.mxnet
+// scalastyle:off
+import java.awt.image.BufferedImage
+import java.io.File
 
+import javax.imageio.ImageIO
+// scalastyle:on
 import java.net.URL
 
 import scala.collection.mutable
@@ -28,18 +33,6 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
   */
 object Image {
 
-  def imDecode (urlStr : String) : NDArrayFuncReturn = {
-    val url = new URL(urlStr)
-    val inputStream = url.openStream
-    val buffer = new Array[Byte](2048)
-    val arrBuffer = ArrayBuffer[Byte]()
-    var length = 0
-    while (length != -1) {
-      length = inputStream.read(buffer)
-      if (length != -1) arrBuffer ++= buffer.slice(0, length)
-    }
-    imDecode(arrBuffer.toArray)
-  }
   /**
     * Decode image with OpenCV.
     * Note: return image in RGB by default, instead of OpenCV's default BGR.
@@ -47,7 +40,7 @@ object Image {
     * @param flag   Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb Whether to convert decoded image
     *               to mxnet's default RGB format (instead of opencv's default BGR).
-    * @return org.apache.mxnet.NDArray
+    * @return NDArray in HWC format
     */
   def imDecode (buf : Array[Byte], flag : Option[Int] = None,
                 to_rgb : Option[Boolean] = None,
@@ -61,6 +54,26 @@ object Image {
     if (to_rgb.isDefined) map("to_rgb") = to_rgb.get
     if (out.isDefined) map("out") = out.get
     NDArray.genericNDArrayFunctionInvoke("_cvimdecode", args, map.toMap)
+  }
+
+  /**
+    * Same imageDecode with URL Enabled
+    * @param urlStr URL link to the image
+    * @return NDArray in HWC format
+    */
+  def imDecodeURL (urlStr : String, flag : Option[Int] = None,
+                to_rgb : Option[Boolean] = None,
+                out : Option[NDArray] = None) : NDArrayFuncReturn = {
+    val url = new URL(urlStr)
+    val inputStream = url.openStream
+    val buffer = new Array[Byte](2048)
+    val arrBuffer = ArrayBuffer[Byte]()
+    var length = 0
+    while (length != -1) {
+      length = inputStream.read(buffer)
+      if (length != -1) arrBuffer ++= buffer.slice(0, length)
+    }
+    imDecode(arrBuffer.toArray)
   }
 
   /**
@@ -133,6 +146,47 @@ object Image {
     if (values.isDefined) map("values") = values.get
     if (out.isDefined) map("out") = out.get
     NDArray.genericNDArrayFunctionInvoke("_cvcopyMakeBorder", args, map.toMap)
+  }
+
+  /**
+    * Do a fixed crop on the image
+    * @param src Src image in NDArray
+    * @param x0 starting x point
+    * @param y0 starting y point
+    * @param w width of the image
+    * @param h height of the image
+    * @return cropped NDArray
+    */
+  def fixedCrop(src : NDArray, x0 : Int, y0 : Int, w : Int, h : Int) : NDArray = {
+    NDArray.api.crop(src, Shape(y0, x0, 0), Shape(y0 + h, x0 + w, src.shape.get(2)))
+  }
+
+  /**
+    * Convert a NDArray image to a real image
+    * The time cost will increase if the image resolution is big
+    * @param src Source image file in RGB
+    * @param filePath output file path
+    * @param fileType decoding type, such as png, jpg
+    */
+  def toImage(src : NDArray, filePath : String, fileType : Option[String] = None) : Unit = {
+    require(src.dtype == DType.UInt8, "The input NDArray must be bytes")
+    require(src.shape.length == 3, "The input should contains height, width and channel")
+    val height = src.shape.get(0)
+    val width = src.shape.get(1)
+    val img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
+    (0 until height).par.foreach(r => {
+      (0 until width).par.foreach(c => {
+        val arr = src.at(r).at(c).toArray
+        // NDArray in RGB
+        val red = arr(0).toByte & 0xFF
+        val green = arr(1).toByte & 0xFF
+        val blue = arr(2).toByte & 0xFF
+        val rgb = (red << 16) | (green << 8) | blue
+        img.setRGB(c, r, rgb)
+      })
+    })
+    val temp = if (fileType.isDefined) fileType.get else "png"
+    ImageIO.write(img, temp, new File(filePath))
   }
 
 }
