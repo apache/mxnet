@@ -193,7 +193,8 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
     if(arg.isOptional) {
       impl +=
         s"""val target = ${arg.safeArgName} match {
-           |   case _:Option[$arrayType] => "sample_${function.name}"
+           |   case Some(a:$arrayType) => "sample_${function.name}"
+           |   case None => "sample_${function.name}"
            |   case _ => "random_${function.name}"
            |}
       """.stripMargin
