@@ -74,12 +74,22 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     assert(data.toJson === data2.toJson)
   }
 
-  test("random module is present") {
+  test("random module is generated properly") {
+    val lam = Symbol.Variable("lam")
+    val rnd = Symbol.random.poisson(lam = Some(lam), shape = Some(Shape(2, 2)))
+    val rnd2 = Symbol.random.poisson(lam = Some(1f), shape = Some(Shape(2, 2)))
+    // scalastyle:off println
+    println(s"Symbol.random.poisson debug info: ${rnd.debugStr}")
+    println(s"Symbol.random.poisson debug info: ${rnd2.debugStr}")
+    // scalastyle:on println
+  }
+
+  test("random module is generated properly - special case of 'normal'") {
     val loc = Symbol.Variable("loc")
     val scale = Symbol.Variable("scale")
-    val rnd = Symbol.random.sample_normal(mu = Some(loc), sigma = Some(scale),
+    val rnd = Symbol.random.normal(mu = Some(loc), sigma = Some(scale),
       shape = Some(Shape(2, 2)))
-    val rnd2 = Symbol.random.random_normal(loc = Some(1f), scale = Some(2f),
+    val rnd2 = Symbol.random.normal(mu = Some(1f), sigma = Some(2f),
       shape = Some(Shape(2, 2)))
     // scalastyle:off println
     println(s"Symbol.random.sample_normal debug info: ${rnd.debugStr}")

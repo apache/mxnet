@@ -25,9 +25,11 @@ import scala.reflect.macros.blackbox
 private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.addDefs
 }
+
 private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.typeSafeAPIDefs
 }
+
 private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro SymbolImplMacros.typedRandomAPIDefs
 }
@@ -35,20 +37,24 @@ private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnot
 private[mxnet] object SymbolImplMacros extends GeneratorBase {
   type SymbolArg = Arg
   type SymbolFunction = Func
-  
+
   // scalastyle:off havetype
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     impl(c)(annottees: _*)
   }
+
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     typedAPIImpl(c)(annottees: _*)
   }
+
   def typedRandomAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     typedRandomAPIImpl(c)(annottees: _*)
   }
   // scalastyle:on havetype
 
-  private val symbolFunctions: List[SymbolFunction] = buildFunctionList(true)
+  private val symbolFunctions = buildFunctionList(true)
+
+  private val rndFunctions = buildRandomFunctionList(true)
 
   /**
     * Implementation for fixed input API structure
@@ -107,24 +113,20 @@ private[mxnet] object SymbolImplMacros extends GeneratorBase {
   }
 
   private def typedRandomAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    val rndFunctions = symbolFunctions
-      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
-      .map(f => f.copy(name = f.name.stripPrefix("_")))
-
-    val functionDefs = rndFunctions.map(f => buildTypedFunction(c)(f))
+    val functionDefs = rndFunctions.map(f => buildRandomTypedFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
   private def buildTypedFunction(c: blackbox.Context)
-                                (symbolfunction: SymbolFunction): c.universe.DefDef = {
+                                (function: SymbolFunction): c.universe.DefDef = {
     import c.universe._
 
     val returnType = "org.apache.mxnet.Symbol"
+    val symbolType = "org.apache.mxnet.Symbol"
 
     // Construct argument field
     val argDef = ListBuffer[String]()
-
-    argDef ++= buildArgDefs(symbolfunction)
+    argDef ++= buildArgDefs(function)
     argDef += "name : String = null"
     argDef += "attr : Map[String, String] = null"
 
@@ -133,34 +135,95 @@ private[mxnet] object SymbolImplMacros extends GeneratorBase {
     impl += "val map = scala.collection.mutable.Map[String, Any]()"
     impl += "var args = Seq[org.apache.mxnet.Symbol]()"
 
-    symbolfunction.listOfArgs.foreach({ symbolarg =>
-      // Symbol arg implementation
-      val symbolType = "org.apache.mxnet.Symbol"
-
-      val base =
-        if (symbolarg.argType.equals(s"Array[$symbolType]")) {
-          if (symbolarg.isOptional)
-            s"if (!${symbolarg.safeArgName}.isEmpty) args = ${symbolarg.safeArgName}.get.toSeq"
-          else
-            s"args = ${symbolarg.safeArgName}.toSeq"
-        } else {
-          if (symbolarg.isOptional) {
-            // scalastyle:off
-            s"if (!${symbolarg.safeArgName}.isEmpty) map(" + "\"" + symbolarg.argName + "\"" + s") = ${symbolarg.safeArgName}.get"
-            // scalastyle:on
-          }
-          else "map(\"" + symbolarg.argName + "\"" + s") = ${symbolarg.safeArgName}"
+    // Symbol arg implementation
+    impl ++= function.listOfArgs.map { symbolarg =>
+      if (symbolarg.argType.equals(s"Array[$symbolType]")) {
+        if (symbolarg.isOptional)
+          s"if (!${symbolarg.safeArgName}.isEmpty) args = ${symbolarg.safeArgName}.get.toSeq"
+        else
+          s"args = ${symbolarg.safeArgName}.toSeq"
+      } else {
+        if (symbolarg.isOptional) {
+          s"if (!${symbolarg.safeArgName}.isEmpty) " +
+            s"""map("${symbolarg.argName}") = ${symbolarg.safeArgName}.get"""
         }
+        else {
+          s"""map("${symbolarg.argName}") = ${symbolarg.safeArgName}"""
+        }
+      }
+    }
 
-      impl += base
-    })
-
-    // scalastyle:off
-    impl += "org.apache.mxnet.Symbol.createSymbolGeneral(\"" + symbolfunction.name + "\", name, attr, args, map.toMap)"
-    // scalastyle:on
+    impl += "org.apache.mxnet.Symbol.createSymbolGeneral(" +
+      s""""${function.name}", name, attr, args, map.toMap)"""
 
     // Combine and build the function string
-    var finalStr = s"def ${symbolfunction.name}"
+    var finalStr = s"def ${function.name}"
+    finalStr += s" (${argDef.mkString(",")}) : $returnType"
+    finalStr += s" = {${impl.mkString("\n")}}"
+    c.parse(finalStr).asInstanceOf[DefDef]
+  }
+
+
+  private def buildRandomTypedFunction(c: blackbox.Context)
+                                      (function: SymbolFunction): c.universe.DefDef = {
+
+    import c.universe._
+
+    val returnType = "org.apache.mxnet.Symbol"
+    val symbolType = "org.apache.mxnet.Symbol"
+
+    // Construct argument field
+    val argDef = ListBuffer[String]()
+    argDef ++= buildArgDefs(function)
+    argDef += "name : String = null"
+    argDef += "attr : Map[String, String] = null"
+
+    // Construct Implementation field
+    var impl = ListBuffer[String]()
+    impl += "val map = scala.collection.mutable.Map[String, Any]()"
+    impl += "var args = Seq[org.apache.mxnet.Symbol]()"
+
+    // determine what target to call
+    val arg = function.listOfArgs.filter(arg => arg.argType == "Any").head
+    if(arg.isOptional) {
+      impl +=
+        s"""val target = ${arg.safeArgName} match {
+           |   case _:Option[$symbolType] => "sample_${function.name}"
+           |   case _ => "random_${function.name}"
+           |}
+      """.stripMargin
+    } else {
+      impl +=
+        s"""val target = ${arg.safeArgName} match {
+           |   case _:$symbolType => "sample_${function.name}"
+           |   case _ => "random_${function.name}"
+           |}
+      """.stripMargin
+    }
+
+    // Symbol arg implementation
+    impl ++= function.listOfArgs.map { symbolarg =>
+      // no Array[] in random/sample module, but let's keep that for a future case
+      if (symbolarg.argType.equals(s"Array[$symbolType]")) {
+        if (symbolarg.isOptional)
+          s"if (!${symbolarg.safeArgName}.isEmpty) args = ${symbolarg.safeArgName}.get.toSeq"
+        else
+          s"args = ${symbolarg.safeArgName}.toSeq"
+      } else {
+        if (symbolarg.isOptional) {
+          s"if (!${symbolarg.safeArgName}.isEmpty) " +
+            s"""map("${symbolarg.argName}") = ${symbolarg.safeArgName}.get"""
+        }
+        else
+          s"""map("${symbolarg.argName}") = ${symbolarg.safeArgName}"""
+      }
+    }
+
+    impl += "org.apache.mxnet.Symbol.createSymbolGeneral(" +
+      s"target, name, attr, args, map.toMap)"
+
+    // Combine and build the function string
+    var finalStr = s"def ${function.name}"
     finalStr += s" (${argDef.mkString(",")}) : $returnType"
     finalStr += s" = {${impl.mkString("\n")}}"
     c.parse(finalStr).asInstanceOf[DefDef]

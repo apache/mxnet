@@ -51,12 +51,11 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
   }
 
   def absRndClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
-    val funcs = getSymbolNDArrayMethods(isSymbol)
-      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
-      .map(f => f.copy(name = f.name.stripPrefix("_")))
+    val funcs = buildRandomFunctionList(isSymbol)
+
     val body = funcs.map(func => {
       val scalaDoc = generateAPIDocFromBackend(func)
-      val decl = generateRandomAPISignature(func, isSymbol)
+      val decl = generateAPISignature(func, isSymbol)
       s"$scalaDoc\n$decl"
     })
     writeFile(
@@ -67,7 +66,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
 
   def absClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
     val notGenerated = Set("Custom")
-    val funcs = getSymbolNDArrayMethods(isSymbol)
+    val funcs = buildFunctionList(isSymbol)
       .filterNot(_.name.startsWith("_"))
       .filterNot(ele => notGenerated.contains(ele.name))
     val body = funcs.map(func => {
@@ -82,7 +81,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
   }
 
   def nonTypeSafeClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
-    val absClassFunctions = getSymbolNDArrayMethods(isSymbol)
+    val absClassFunctions = buildFunctionList(isSymbol)
     val absFuncs = absClassFunctions
       .filterNot(_.name.startsWith("_"))
       .map(absClassFunction => {
@@ -162,10 +161,6 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     }
   }
 
-  def generateRandomAPISignature(func: absClassFunction, isSymbol: Boolean): String = {
-    generateAPISignature(func, isSymbol)
-  }
-
   def generateAPISignature(func: absClassFunction, isSymbol: Boolean): String = {
     val argDef = ListBuffer[String]()
 
@@ -184,9 +179,5 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : $returnType"
   }
 
-  // List and add all the atomic symbol functions to current module.
-  private def getSymbolNDArrayMethods(isSymbol: Boolean): List[absClassFunction] = {
-    buildFunctionList(isSymbol)
-  }
 
 }

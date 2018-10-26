@@ -29,6 +29,49 @@ abstract class GeneratorBase {
     }).toList
   }
 
+  protected def buildRandomFunctionList(isSymbol: Boolean): List[Func] = {
+    buildFunctionList(isSymbol)
+      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+      .map(f => f.copy(name = f.name.stripPrefix("_")))
+      // unify _random and _sample
+      .map(f => unifyRandom(f, isSymbol))
+      // deduplicate
+      .groupBy(_.name)
+      .mapValues(_.head)
+      .values
+      .toList
+  }
+
+  protected def unifyRandom(func: Func, isSymbol: Boolean): Func = {
+    var typeConv = if (isSymbol)
+      Map(
+        "org.apache.mxnet.Symbol" -> "Any",
+        "org.apache.mxnet.Base.MXFloat" -> "Any",
+        "Int" -> "Any"
+      )
+    else
+      Map(
+        "org.apache.mxnet.NDArray" -> "Any",
+        "org.apache.mxnet.Base.MXFloat" -> "Any",
+        "Int" -> "Any"
+      )
+
+    func.copy(
+      name = func.name.replaceAll("(random|sample)_", ""),
+      listOfArgs = func.listOfArgs
+        .map { arg =>
+          // This is hack to manage the fact that random_normal and sample_normal have
+          //  non-consistent parameter naming in the back-end
+          if (arg.argName == "loc") arg.copy(argName = "mu")
+          else if (arg.argName == "scale") arg.copy(argName = "sigma")
+          else arg
+        }
+        .map { arg =>
+          arg.copy(argType = typeConv.getOrElse(arg.argType, arg.argType))
+        }
+    )
+  }
+
   protected def makeAtomicFunction(handle: Handle, aliasName: String, isSymbol: Boolean): Func = {
     val name = new RefString
     val desc = new RefString
@@ -55,12 +98,12 @@ abstract class GeneratorBase {
     }
     // scalastyle:on println
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val family = if(isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArray"
+      val family = if (isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArray"
       val typeAndOption =
         CToScalaUtils.argumentCleaner(argName, argType, family)
       Arg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
-    val returnType = if(isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArrayFuncReturn"
+    val returnType = if (isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArrayFuncReturn"
     Func(aliasName, desc.value, argList.toList, returnType)
   }
 

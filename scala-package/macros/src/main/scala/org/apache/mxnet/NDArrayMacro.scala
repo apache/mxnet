@@ -25,9 +25,11 @@ import scala.reflect.macros.blackbox
 private[mxnet] class AddNDArrayFunctions(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
 }
+
 private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.typeSafeAPIDefs
 }
+
 private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
   private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.typeSafeRandomAPIDefs
 }
@@ -41,15 +43,20 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     impl(c)(annottees: _*)
   }
+
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    typeSafeAPIImpl(c)(annottees: _*)
+    typedAPIImpl(c)(annottees: _*)
   }
+
   def typeSafeRandomAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
-    typeSafeRandomAPIImpl(c)(annottees: _*)
+    typedRandomAPIImpl(c)(annottees: _*)
   }
+
   // scalastyle:off havetype
 
-  private val ndarrayFunctions: List[NDArrayFunction] = buildFunctionList(false)
+  private val ndarrayFunctions = buildFunctionList(false)
+
+  private val rndFunctions = buildRandomFunctionList(false)
 
   /**
     * Implementation for fixed input API structure
@@ -66,43 +73,29 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
       else ndarrayFunctions.filterNot(_.name.startsWith("_"))
     }
 
-     val functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
-        val funcName = NDArrayfunction.name
-        val termName = TermName(funcName)
-       Seq(
-            // scalastyle:off
-            // (yizhi) We are investigating a way to make these functions type-safe
-            // and waiting to see the new approach is stable enough.
-            // Thus these functions may be deprecated in the future.
-            // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
-            q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
-            // e.g def transpose(args: Any*)
-            q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
-            // scalastyle:on
-          )
-        }
+    val functionDefs = newNDArrayFunctions flatMap { NDArrayfunction =>
+      val funcName = NDArrayfunction.name
+      val termName = TermName(funcName)
+      Seq(
+        // scalastyle:off
+        // (yizhi) We are investigating a way to make these functions type-safe
+        // and waiting to see the new approach is stable enough.
+        // Thus these functions may be deprecated in the future.
+        // e.g def transpose(kwargs: Map[String, Any] = null)(args: Any*)
+        q"def $termName(kwargs: Map[String, Any] = null)(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, kwargs)}".asInstanceOf[DefDef],
+        // e.g def transpose(args: Any*)
+        q"def $termName(args: Any*) = {genericNDArrayFunctionInvoke($funcName, args, null)}".asInstanceOf[DefDef]
+        // scalastyle:on
+      )
+    }
 
-    structGeneration(c)(functionDefs, annottees : _*)
-  }
-
-  /**
-    * Implementation for Dynamic typed API NDArray.random.<functioname>
-    */
-  private def typeSafeRandomAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
-
-    val rndFunctions = ndarrayFunctions
-      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
-      .map(f => f.copy(name = f.name.stripPrefix("_")))
-
-    val functionDefs = rndFunctions.map(f => buildTypeSafeFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
   /**
     * Implementation for Dynamic typed API NDArray.api.<functioname>
     */
-  private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
+  private def typedAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
     import c.universe._
 
     val isContrib: Boolean = c.prefix.tree match {
@@ -117,57 +110,124 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
       else ndarrayFunctions.filterNot(f => f.name.startsWith("_"))
     }.filterNot(ele => notGenerated.contains(ele.name))
 
-    val functionDefs = newNDArrayFunctions.map(f => buildTypeSafeFunction(c)(f))
+    val functionDefs = newNDArrayFunctions.map(f => buildTypedFunction(c)(f))
 
-    structGeneration(c)(functionDefs, annottees : _*)
+    structGeneration(c)(functionDefs, annottees: _*)
   }
 
-  private def buildTypeSafeFunction(c: blackbox.Context)
-                                (ndarrayfunction: NDArrayFunction): c.universe.DefDef = {
+  /**
+    * Implementation for Dynamic typed API NDArray.random.<functioname>
+    */
+  private def typedRandomAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    val functionDefs = rndFunctions.map(f => buildRandomTypedFunction(c)(f))
+    structGeneration(c)(functionDefs, annottees: _*)
+  }
+
+  private def buildTypedFunction(c: blackbox.Context)
+                                (function: NDArrayFunction): c.universe.DefDef = {
     import c.universe._
 
     val returnType = "org.apache.mxnet.NDArrayFuncReturn"
+    val arrayType = "org.apache.mxnet.NDArray"
 
     // Construct argument field
     val argDef = ListBuffer[String]()
-    argDef ++= buildArgDefs(ndarrayfunction)
+    argDef ++= buildArgDefs(function)
+    argDef += "out : Option[NDArray] = None"
 
     // Construct Implementation field
     var impl = ListBuffer[String]()
     impl += "val map = scala.collection.mutable.Map[String, Any]()"
     impl += "val args = scala.collection.mutable.ArrayBuffer.empty[NDArray]"
 
-    ndarrayfunction.listOfArgs.foreach({ ndarrayarg =>
-      // NDArray arg implementation
-      val arrayType = "org.apache.mxnet.NDArray"
-
-      // TODO: Currently we do not add place holder for NDArray
-      // Example: an NDArray operator like the following format
-      // nd.foo(arg1: NDArray(required), arg2: NDArray(Optional), arg3: NDArray(Optional)
-      // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
-      // What it should be?
-      val base =
-      if (ndarrayarg.argType.equals(arrayType)) {
-        s"args += ${ndarrayarg.safeArgName}"
-      } else if (ndarrayarg.argType.equals(s"Array[$arrayType]")) {
-        s"args ++= ${ndarrayarg.safeArgName}"
-      } else {
-        "map(\"" + ndarrayarg.argName + "\") = " + ndarrayarg.safeArgName
-      }
-      impl.append(
+    // NDArray arg implementation
+    impl ++=
+      function.listOfArgs.map { ndarrayarg =>
+        // TODO: Currently we do not add place holder for NDArray
+        // Example: an NDArray operator like the following format
+        // nd.foo(arg1: NDArray(required), arg2: NDArray(Optional), arg3: NDArray(Optional)
+        // If we place nd.foo(arg1, arg3 = arg3), do we need to add place holder for arg2?
+        // What it should be?
+        val base =
+          if (ndarrayarg.argType.equals(arrayType)) {
+            s"args += ${ndarrayarg.safeArgName}"
+          } else if (ndarrayarg.argType.equals(s"Array[$arrayType]")) {
+            s"args ++= ${ndarrayarg.safeArgName}"
+          } else {
+            s"""map("${ndarrayarg.argName}") = ${ndarrayarg.safeArgName}"""
+          }
         if (ndarrayarg.isOptional) s"if (!${ndarrayarg.safeArgName}.isEmpty) $base.get"
         else base
-      )
-    })
+      }
 
-    // add default out parameter
-    argDef += "out : Option[NDArray] = None"
     impl += "if (!out.isEmpty) map(\"out\") = out.get"
-    // scalastyle:off
-    impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
-    // scalastyle:on
+    impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(" +
+      s""""${function.name}", args.toSeq, map.toMap)"""
+
     // Combine and build the function string
-    var finalStr = s"def ${ndarrayfunction.name}"
+    var finalStr = s"def ${function.name}"
+    finalStr += s" (${argDef.mkString(",")}) : $returnType"
+    finalStr += s" = {${impl.mkString("\n")}}"
+    c.parse(finalStr).asInstanceOf[DefDef]
+  }
+
+  private def buildRandomTypedFunction(c: blackbox.Context)
+                                      (function: NDArrayFunction): c.universe.DefDef = {
+    import c.universe._
+
+    val returnType = "org.apache.mxnet.NDArrayFuncReturn"
+    val arrayType = "org.apache.mxnet.NDArray"
+
+    // Construct argument field
+    val argDef = ListBuffer[String]()
+    argDef ++= buildArgDefs(function)
+    argDef += "out : Option[NDArray] = None"
+
+    // Construct Implementation field
+    var impl = ListBuffer[String]()
+    impl += "val map = scala.collection.mutable.Map[String, Any]()"
+    impl += "val args = scala.collection.mutable.ArrayBuffer.empty[NDArray]"
+
+    // determine what target to call
+    val arg = function.listOfArgs.filter(arg => arg.argType == "Any").head
+    if(arg.isOptional) {
+      impl +=
+        s"""val target = ${arg.safeArgName} match {
+           |   case _:Option[$arrayType] => "sample_${function.name}"
+           |   case _ => "random_${function.name}"
+           |}
+      """.stripMargin
+    } else {
+      impl +=
+        s"""val target = ${arg.safeArgName} match {
+           |   case _:$arrayType => "sample_${function.name}"
+           |   case _ => "random_${function.name}"
+           |}
+      """.stripMargin
+    }
+
+    // NDArray arg implementation
+    impl ++=
+      function.listOfArgs.map { ndarrayarg =>
+        // no Array[] in random/sample module, but let's keep that for a future case
+        val base =
+          if (ndarrayarg.argType.equals(arrayType)) {
+            s"args += ${ndarrayarg.safeArgName}"
+          } else if (ndarrayarg.argType.equals(s"Array[$arrayType]")) {
+            s"args ++= ${ndarrayarg.safeArgName}"
+          } else {
+            s"""map("${ndarrayarg.argName}") = ${ndarrayarg.safeArgName}"""
+          }
+        if (ndarrayarg.isOptional) s"if (!${ndarrayarg.safeArgName}.isEmpty) $base.get"
+        else base
+      }
+
+    impl += "if (!out.isEmpty) map(\"out\") = out.get"
+    impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(" +
+      s"target, args.toSeq, map.toMap)"
+
+    // Combine and build the function string
+    var finalStr = s"def ${function.name}"
     finalStr += s" (${argDef.mkString(",")}) : $returnType"
     finalStr += s" = {${impl.mkString("\n")}}"
     c.parse(finalStr).asInstanceOf[DefDef]
