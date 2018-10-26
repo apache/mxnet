@@ -103,6 +103,39 @@ DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 
+static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+#if MXNET_USE_MKLDNN == 1
+  // If inputs are supposed to be in MKLDNN format and
+  // MKLDNNsupport the data type or the shape. Then convert
+  // it to the output format and shape
+  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
+    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req,
+                    outputs);
+#endif
+}
+
+#if MXNET_USE_MKLDNN == 1
+inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int>* in_attrs,
+                                      std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
+}
+#endif
+
 NNVM_REGISTER_OP(Reshape)
 .add_alias("reshape")
 .describe(R"code(Reshapes the input array.
@@ -171,9 +204,19 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReshapeParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", ReshapeShape)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<FInferStorageType>("FInferStorageType", ReshapeStorageType)
+#endif
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
+#else
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -182,6 +225,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Input data to reshape.")
 .add_arguments(ReshapeParam::__FIELDS__());
 
@@ -210,6 +254,7 @@ static void FlattenEx(const nnvm::NodeAttrs& attrs,
 #endif
 }
 
+#if MXNET_USE_MKLDNN == 1
 static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                    const int dev_mask,
                                    DispatchMode* dispatch_mode,
@@ -217,17 +262,10 @@ static inline bool FlattenStorageType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 1);
-  bool ret = ElemwiseStorageType<1, 1, false, false, false>(attrs, dev_mask, dispatch_mode,
-                                                            in_attrs, out_attrs);
-#if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask
-      && in_attrs->at(0) == kDefaultStorage
-      && out_attrs->at(0) == kDefaultStorage) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-  }
-#endif
-  return ret;
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
 }
+#endif
 
 NNVM_REGISTER_OP(Flatten)
 .add_alias("flatten")
@@ -914,7 +952,7 @@ NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
 Similar to ONNX DepthToSpace operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
-The output is a new tensor where the values from depth dimension are moved in spatial blocks 
+The output is a new tensor where the values from depth dimension are moved in spatial blocks
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
 
 .. math::
@@ -925,7 +963,7 @@ to height and width dimension. The reverse of this operation is ``space_to_depth
     y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
 
 Example::
@@ -965,9 +1003,9 @@ Example::
 NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
 Similar to ONNX SpaceToDepth operator:
-https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth 
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth
 
-The output is a new tensor where the values from height and width dimension are 
+The output is a new tensor where the values from height and width dimension are
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 
 .. math::
@@ -978,7 +1016,7 @@ moved to the depth dimension. The reverse of this operation is ``depth_to_space`
     y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
 and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
 
 Example::
@@ -987,8 +1025,8 @@ Example::
          [12, 18, 13, 19, 14, 20],
          [3, 9, 4, 10, 5, 11],
          [15, 21, 16, 22, 17, 23]]]]
-  
-  
+
+
   space_to_depth(x, 2) = [[[[0, 1, 2],
                             [3, 4, 5]],
                            [[6, 7, 8],
