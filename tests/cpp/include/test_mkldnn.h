@@ -187,6 +187,7 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::nc));
   }
   {
+    /*
     // 4D
     TShape s1(4);
     s1[0] = 10; s1[1] = 96; s1[2] = 54; s1[3] = 54;
@@ -201,6 +202,7 @@ inline static TestArrayShapes GetTestArrayShapes() {
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
     pds.push_back(GetMemPD(s1, dtype, formats[0]));
     pds.push_back(GetMemPD(s2, dtype, formats[1]));
+    */
   }
   {
     /*
