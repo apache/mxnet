@@ -770,7 +770,7 @@ class PoissonNLLLoss(Loss):
 
 
 class CosineEmbeddingLoss(Loss):
-    r"""For a target label 1 or -1, vectors input1 and inout2, the function computes the cosine distance
+    r"""For a target label 1 or -1, vectors input1 and input2, the function computes the cosine distance
     between the vectors. This can be interpreted as how similar/dissimilar two input vectors are.
 
     .. math::
