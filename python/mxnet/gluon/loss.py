@@ -795,11 +795,11 @@ class CosineEmbeddingLoss(Loss):
         - **input1**: a tensor with arbitrary shape
         - **input2**: another tensor with same shape as pred to which input1 is
           compared for similarity and loss calculation
+        - **label**: A 1-D tensor indicating for each pair input1 and input2, target label is 1 or -1
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
           to the same shape as input1. For example, if input1 has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
-        - **label**: A 1-D tensor indicating for each pair input1 and input2, target label is 1 or -1
 
     Outputs:
         - **loss**: The loss tensor with shape (batch_size,).
