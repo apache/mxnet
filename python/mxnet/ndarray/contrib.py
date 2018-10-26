@@ -29,7 +29,7 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite", "isnan"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -490,7 +490,7 @@ def isinf(data, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return ndarray.NDArray.abs(data) == np.inf
+    return data.abs() == np.inf
 
 def isfinite(data, ctx=None):
     """Performs an element-wise check to determine if the NDArray contains an infinite element
