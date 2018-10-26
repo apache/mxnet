@@ -992,7 +992,7 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
-  real_t scalar;
+  double scalar;
   nnvm::Tuple<dmlc::optional<int>> begin, end;
   nnvm::Tuple<dmlc::optional<int>> step;
   DMLC_DECLARE_PARAMETER(SliceAssignScalarParam) {
