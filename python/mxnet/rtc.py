@@ -25,7 +25,7 @@ import numpy as np
 
 from .base import _LIB, mx_uint, c_array, c_array_buf, c_str_array, check_call
 from .base import c_str, CudaModuleHandle, CudaKernelHandle, numeric_types, string_types
-from .ndarray import _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, NDArray
+from .ndarray import _DTYPE_NAME_NP_TO_MX, _DTYPE_MX_TO_NP, NDArray
 
 _DTYPE_CPP_TO_NP = {
     'float': np.float32,
@@ -38,6 +38,10 @@ _DTYPE_CPP_TO_NP = {
     'char': np.int8,
     'int64_t': np.int64,
 }
+
+_DTYPE_CPP_TO_NP_NAME = dict(
+    [(_ctype, np.dtype(_dtype).name) \
+    for _ctype, _dtype in _DTYPE_CPP_TO_NP.items()])
 
 class CudaModule(object):
     r"""Compile and run CUDA code from Python.
@@ -153,11 +157,11 @@ class CudaModule(object):
             is_const.append(bool(match.groups()[0]))
             dtype = match.groups()[1]
             is_ndarray.append(bool(match.groups()[2]))
-            if dtype not in _DTYPE_CPP_TO_NP:
+            if dtype not in _DTYPE_CPP_TO_NP_NAME:
                 raise TypeError(
                     "Unsupported kernel argument type %s. Supported types are: %s."%(
-                        arg, ','.join(_DTYPE_CPP_TO_NP.keys())))
-            dtypes.append(_DTYPE_NP_TO_MX[_DTYPE_CPP_TO_NP[dtype]])
+                        arg, ','.join(_DTYPE_CPP_TO_NP_NAME.keys())))
+            dtypes.append(_DTYPE_NAME_NP_TO_MX[_DTYPE_CPP_TO_NP_NAME[dtype]])
 
         check_call(_LIB.MXRtcCudaKernelCreate(
             self.handle,
