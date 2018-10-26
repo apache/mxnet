@@ -209,3 +209,7 @@ export in this case creates flower-recognitio-symbol.json and flower-recognitio-
 ## Load and inference using C API
 
 (WIP)
+
+## References
+
+https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html
