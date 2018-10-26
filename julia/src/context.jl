@@ -23,10 +23,11 @@
 A context describes the device type and id on which computation should be carried on.
 """
 struct Context
-  device_type :: CONTEXT_TYPE
-  device_id   :: Int
+  device_type::CONTEXT_TYPE
+  device_id::Int
 end
-Context(dev_type :: Union{CONTEXT_TYPE, Int}, dev_id :: Int = 0) =
+
+Context(dev_type::Union{CONTEXT_TYPE,Int}, dev_id::Int = 0) =
     Context(convert(CONTEXT_TYPE, dev_type), dev_id)
 
 Base.show(io::IO, ctx::Context) =
@@ -51,4 +52,4 @@ Get a GPU context with a specific id. The K GPUs on a node is typically numbered
 # Arguments
 * `dev_id :: Int = 0` the GPU device id.
 """
-gpu(dev_id::Int = 0) = return Context(GPU, dev_id)
+gpu(dev_id::Int = 0) = Context(GPU, dev_id)
