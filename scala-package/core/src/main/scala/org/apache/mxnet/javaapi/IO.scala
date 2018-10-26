@@ -30,5 +30,13 @@ object DataDesc{
 
   implicit def toDataDesc(dataDesc: DataDesc): org.apache.mxnet.DataDesc = dataDesc.dataDesc
 
+  /**
+    * Get the dimension that corresponds to the batch size.
+    * @param layout layout string. For example, "NCHW".
+    * @return An axis indicating the batch_size dimension. When data-parallelism is used,
+    *         the data will be automatically split and concatenate along the batch_size dimension.
+    *         Axis can be -1, which means the whole array will be copied
+    *         for each data-parallelism device.
+    */
   def getBatchAxis(layout: String): Int = org.apache.mxnet.DataDesc.getBatchAxis(Some(layout))
 }
