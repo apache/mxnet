@@ -63,20 +63,20 @@ end
 # create a NDArray handle of specific shape
 function _ndarray_alloc(shape::NTuple{N,Int}, ctx::Context, delay_alloc::Bool) where N
   h_ref  = Ref{MX_handle}(0)
-  shape  = flipdim(MX_uint[shape...],1)
+  shape  = collect(reverse(MX_uint.(shape)))
   @mxcall(:MXNDArrayCreate, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Ref{MX_handle}),
-      shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, h_ref)
+      shape, N, ctx.device_type, ctx.device_id, delay_alloc, h_ref)
   handle = MX_NDArrayHandle(h_ref[])
   return handle
 end
 
 # create a NDArray handle of specific shape type
-function _ndarray_alloc(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool) where {T<:DType,N}
+function _ndarray_alloc(::Type{T}, shape::NTuple{N,Int}, ctx::Context, delay_alloc::Bool) where {T<:DType,N}
   h_ref  = Ref{MX_handle}(0)
-  shape  = flipdim(MX_uint[shape...],1)
+  shape  = collect(reverse(MX_uint.(shape)))
   dtype  = toTypeFlag(T)
   @mxcall(:MXNDArrayCreateEx, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Cint, Ref{MX_handle}),
-      shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, dtype, h_ref)
+      shape, N, ctx.device_type, ctx.device_id, delay_alloc, dtype, h_ref)
   handle = MX_NDArrayHandle(h_ref[])
   return handle
 end
@@ -113,8 +113,8 @@ mutable struct NDArray{T,N}
   NDArray{T,N}(handle, writable = true) where {T,N} = new(handle, writable)
 end
 
-NDArray(x::AbstractArray{T}) where {T<:DType} = copy(collect(x), cpu())
-NDArray(x::Array{T}) where {T<:DType} = copy(x, cpu())
+NDArray(x::AbstractArray{<:DType}) = copy(collect(x), cpu())
+NDArray(x::Array{<:DType})         = copy(x, cpu())
 NDArray(::Type{T}, x::AbstractArray) where {T<:DType} =
   copy(convert(AbstractArray{T}, x), cpu())
 NDArray(handle, writable = true) =
