@@ -869,7 +869,7 @@ fixed-size items.
         source_array = np.asarray(source_array, dtype=self.dtype, order='C')
         if source_array.shape != self.shape:
             raise ValueError('Shape inconsistent: expected %s vs got %s'%(
-                str(self.shape), str(source_array.shape)))
+                str(source_array.shape), str(self.shape)))
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.c_void_p),
@@ -2547,6 +2547,9 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dt
         Spacing between values. The default step size is 1.
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.
+    infer_range : boolean, optional
+        When set to True, infer the stop position from the start, step,
+        repeat, and output tensor size.
     ctx : Context, optional
         Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional

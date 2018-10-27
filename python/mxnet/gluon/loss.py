@@ -23,8 +23,9 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SigmoidBinaryCrossEntropyLoss', 'SigmoidBCELoss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
-           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss']
+           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss']
 
+import numpy as np
 from .. import ndarray
 from ..base import numeric_types
 from .block import HybridBlock
@@ -706,3 +707,63 @@ class TripletLoss(Loss):
                      axis=self._batch_axis, exclude=True)
         loss = F.relu(loss + self._margin)
         return _apply_weighting(F, loss, self._weight, None)
+
+
+class PoissonNLLLoss(Loss):
+    r"""For a target (Random Variable) in a Poisson distribution, the function calculates the Negative
+    Log likelihood loss.
+    PoissonNLLLoss measures the loss accrued from a poisson regression prediction made by the model.
+
+    .. math::
+        L = \text{pred} - \text{target} * \log(\text{pred}) +\log(\text{target!})
+
+    `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
+
+    Parameters
+    ----------
+    from_logits : boolean, default True
+        indicating whether log(predicted) value has already been computed. If True, the loss is computed as
+        :math:`\exp(\text{pred}) - \text{target} * \text{pred}`, and if False, then loss is computed as
+        :math:`\text{pred} - \text{target} * \log(\text{pred}+\text{epsilon})`.The default value
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    compute_full: boolean, default False
+        Indicates whether to add an approximation(Stirling factor) for the Factorial term in the formula for the loss.
+        The Stirling factor is:
+        :math:`\text{target} * \log(\text{target}) - \text{target} + 0.5 * \log(2 * \pi * \text{target})`
+    epsilon: float, default 1e-08
+        This is to avoid calculating log(0) which is not defined.
+
+
+    Inputs:
+        - **pred**:   Predicted value
+        - **target**: Random variable(count or number) which belongs to a Poisson distribution.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+        - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
+    """
+    def __init__(self, weight=None, from_logits=True, batch_axis=0, compute_full=False, **kwargs):
+        super(PoissonNLLLoss, self).__init__(weight, batch_axis, **kwargs)
+        self._from_logits = from_logits
+        self._compute_full = compute_full
+
+    def hybrid_forward(self, F, pred, target, sample_weight=None, epsilon=1e-08):
+        target = _reshape_like(F, target, pred)
+        if self._from_logits:
+            loss = F.exp(pred) - target * pred
+        else:
+            loss = pred - target * F.log(pred + epsilon)
+        if self._compute_full:
+            # Using numpy's pi value
+            stirling_factor = target * F.log(target)- target + 0.5 * F.log(2 * target * np.pi)
+            target_gt_1 = target > 1
+            stirling_factor *= target_gt_1
+            loss += stirling_factor
+        loss = _apply_weighting(F, loss, self._weight, sample_weight)
+        return F.mean(loss)
