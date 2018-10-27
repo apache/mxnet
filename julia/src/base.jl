@@ -90,8 +90,8 @@ macro mxcall(fv, argtypes, args...)
   f = eval(fv)
   args = map(esc, args)
   quote
-    _mxret = ccall( ($(Meta.quot(f)), $MXNET_LIB),
-                    Cint, $argtypes, $(args...) )
+    _mxret = ccall(($(QuoteNode(f)), $MXNET_LIB),
+                   Cint, $argtypes, $(args...))
     if _mxret != 0
       err_msg = mx_get_last_error()
       throw(MXError(err_msg))
@@ -121,7 +121,7 @@ macro mx_define_handle_t(name, destructor)
         hdr = new(value)
 
         $(if destructor != :nop
-          :(finalizer(hdr, delete!))
+          :(finalizer(delete!, hdr))
         end)
 
         return hdr
@@ -132,7 +132,7 @@ macro mx_define_handle_t(name, destructor)
       quote
         function delete!(h :: $name)
           if h.value != C_NULL
-            @mxcall($(Meta.quot(destructor)), (MX_handle,), h.value)
+            @mxcall($(QuoteNode(destructor)), (MX_handle,), h.value)
             h.value = C_NULL
           end
         end
@@ -187,7 +187,7 @@ dump_mx_param(val::Float32)    = @sprintf("%.8e", val)
 dump_mx_param(val::Float16)    = @sprintf("%.4e", val)
 dump_mx_param(val::Irrational) = @sprintf("%.16e", val)
 dump_mx_param(shape::NTuple{N,<:Integer}) where N =
-  string(tuple(flipdim([shape...], 1)...))
+  string(reverse(shape)...)
 
 
 """
