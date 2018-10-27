@@ -1508,41 +1508,44 @@ def test_dlpack():
 
 @with_seed()
 def test_ndarray_is_inf():
-    random_dimensions = np.random.randint(3, 5)
+    random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
     data = mxnet.test_utils.rand_ndarray(random_shape,'default')
-    data[0][0][0]=np.inf
-    data[0][0][1]=-np.inf
-    data[0][1][0]=np.nan
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
     output = mx.nd.contrib.isinf(data)
     expected_output = np.isinf(data.asnumpy())
-    assert_almost_equal(output.asnumpy(), expected_output.astype(int))
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
 @with_seed()
 def test_ndarray_is_finite():
-    random_dimensions = np.random.randint(3, 5)
+    random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
     data = mxnet.test_utils.rand_ndarray(random_shape,'default')
-    data[0][0][0]=np.inf
-    data[0][0][1]=-np.inf
-    data[0][1][0]=np.nan
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
     output = mx.nd.contrib.isfinite(data)
     expected_output = np.isfinite(data.asnumpy())
-    assert_almost_equal(output.asnumpy(), expected_output.astype(int))
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
 @with_seed()
 def test_ndarray_is_nan():
-    random_dimensions = np.random.randint(3, 5)
+    random_dimensions = np.random.randint(2, 5)
     random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
     data = mxnet.test_utils.rand_ndarray(random_shape,'default')
-    data[0][0][0]=np.inf
-    data[0][0][1]=-np.inf
-    data[0][1][0]=np.nan
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
     output = mx.nd.contrib.isnan(data)
     expected_output = np.isnan(data.asnumpy())
-    assert_almost_equal(output.asnumpy(), expected_output.astype(int))
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
 if __name__ == '__main__':

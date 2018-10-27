@@ -462,7 +462,7 @@ def cond(pred, then_func, else_func):
     else:
         return else_func()
 
-def isinf(data, ctx=None):
+def isinf(data):
     """Performs an element-wise check to determine if the NDArray contains an infinite element
     or not.
 
@@ -471,8 +471,6 @@ def isinf(data, ctx=None):
     ----------
     input : NDArray
         An N-D NDArray.
-    ctx : Context
-        Device context of output. Default is current context.
 
     Returns
     -------
@@ -488,11 +486,9 @@ def isinf(data, ctx=None):
     [1. 1. 1. 0.]
     <NDArray 4 @cpu(0)>
     """
-    if ctx is None:
-        ctx = current_context()
     return data.abs() == np.inf
 
-def isfinite(data, ctx=None):
+def isfinite(data):
     """Performs an element-wise check to determine if the NDArray contains an infinite element
     or not.
 
@@ -501,8 +497,6 @@ def isfinite(data, ctx=None):
     ----------
     input : NDArray
         An N-D NDArray.
-    ctx : Context
-        Device context of output. Default is current context.
 
     Returns
     -------
@@ -519,13 +513,11 @@ def isfinite(data, ctx=None):
     [0. 0. 0. 1.]
     <NDArray 4 @cpu(0)>
     """
-    if ctx is None:
-        ctx = current_context()
     is_data_not_nan = data == data
-    is_data_not_infinite = ndarray.NDArray.abs(data) != np.inf
+    is_data_not_infinite = data.abs() != np.inf
     return ndarray.logical_and(is_data_not_infinite, is_data_not_nan)
 
-def isnan(data, ctx=None):
+def isnan(data):
     """Performs an element-wise check to determine if the NDArray contains a NaN element
     or not.
 
@@ -534,8 +526,6 @@ def isnan(data, ctx=None):
     ----------
     input : NDArray
         An N-D NDArray.
-    ctx : Context
-        Device context of output. Default is current context.
 
     Returns
     -------
@@ -551,6 +541,4 @@ def isnan(data, ctx=None):
     [1. 0.]
     <NDArray 2 @cpu(0)>
     """
-    if ctx is None:
-        ctx = current_context()
     return data != data
