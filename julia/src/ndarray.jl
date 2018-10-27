@@ -466,7 +466,7 @@ end
 
 function copy!(dst::Array{T}, src::NDArray{T}) where T<:DType
   @assert size(dst) == size(src)
-  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{Void}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{Cvoid}, Csize_t),
           src, pointer(dst), length(dst))
   dst
 end
@@ -478,7 +478,7 @@ function copy!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable
   @assert size(dst) == size(src)
   src = convert(Array{T}, src) # this might involve copying
-  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Cvoid}, Csize_t),
           dst.handle, pointer(src), length(src))
   dst
 end
@@ -487,7 +487,7 @@ function copy_ignore_shape!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable
   @assert length(dst) == length(src)
   src = convert(Array{T}, src) # this might involve copying
-  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Cvoid}, Csize_t),
           dst.handle, pointer(src), length(src))
   dst
 end
