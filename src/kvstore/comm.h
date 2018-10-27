@@ -43,7 +43,7 @@ namespace kvstore {
 class Comm {
  public:
   Comm() {
-    pinned_ctx_ = Context::CPU(0);
+    pinned_ctx_ = Context::CPUPinned(0);
   }
   virtual ~Comm() { }
   /**
