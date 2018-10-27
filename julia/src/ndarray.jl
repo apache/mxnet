@@ -236,7 +236,7 @@ ones(dims::Int...) = ones(dims)
 ones(x::NDArray)::typeof(x)      = ones_like(x)
 Base.ones(x::NDArray)::typeof(x) = ones_like(x)
 
-import Base: size, length, ndims, eltype
+import Base: size, length, ndims
 
 """
     size(x::NDArray)
@@ -250,7 +250,7 @@ function size(x::NDArray)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
           x, ref_ndim, ref_shape)
-  tuple(map(Int, flipdim(unsafe_wrap(Array, ref_shape[], ref_ndim[]),1))...)
+  tuple(map(Int, reverse(unsafe_wrap(Array, ref_shape[], ref_ndim[])))...)
 end
 
 function size(x::NDArray{T,N}, dim::Int) where {T,N}
@@ -291,18 +291,16 @@ end
 
 Get the element type of an `NDArray`.
 """
-function eltype(x::Union{NDArray, MX_NDArrayHandle})
+function Base.eltype(x::Union{NDArray,MX_NDArrayHandle})
   dtype_ref = Ref{Cint}(0)
   @mxcall(:MXNDArrayGetDType, (MX_handle, Ptr{Cint}), x, dtype_ref)
 
   if dtype_ref[] == -1 # x->is_none()
-    warn("Eltype of $x is not defined")
-    Base.show_backtrace(STDOUT, backtrace())
-    println()
-    Float32
-  else
-    fromTypeFlag(TypeFlag(dtype_ref[]))
+    # TODO: unit test for this branch
+    throw(MXError("Eltype of $x is not defined"))
   end
+
+  fromTypeFlag(TypeFlag(dtype_ref[]))
 end
 
 @inline _first(x::NDArray) = try_get_shared(x, sync = :read) |> first
