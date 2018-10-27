@@ -73,7 +73,7 @@ object Image {
       length = inputStream.read(buffer)
       if (length != -1) arrBuffer ++= buffer.slice(0, length)
     }
-    imDecode(arrBuffer.toArray)
+    imDecode(arrBuffer.toArray, flag, to_rgb, out)
   }
 
   /**
