@@ -61,7 +61,7 @@ function fromTypeFlag(T::TypeFlag)
 end
 
 # create a NDArray handle of specific shape
-function _ndarray_alloc(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool) where N
+function _ndarray_alloc(shape::NTuple{N,Int}, ctx::Context, delay_alloc::Bool) where N
   h_ref  = Ref{MX_handle}(0)
   shape  = flipdim(MX_uint[shape...],1)
   @mxcall(:MXNDArrayCreate, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Ref{MX_handle}),
@@ -127,16 +127,18 @@ const VecOfNDArray = AbstractVector{<:NDArray}
 @unfuse NDArray
 
 function Base.show(io::IO, x::NDArray)
-  print(io, "NDArray ")
-  Base.showarray(io, try_get_shared(x, sync = :read), header = false)
+  print(io, "NDArray(")
+  Base.show(io, try_get_shared(x, sync = :read))
+  print(io, ")")
 end
 
 # for REPL
-function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T, N}) where {T, N}
+function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T,N}) where {T,N}
   type_ = split(string(typeof(x)), '.', limit=2)[end]
-  size_ = N == 1 ? "$(length(x))-element" : join(size(x), "×")
-  println(io, "$size_ $type_ @ $(context(x)):")
-  Base.showarray(io, try_get_shared(x, sync = :read), false, header = false)
+  n = length(x)
+  size_ = N == 1 ? "$n-element" : join(size(x), "×")
+  print(io, "$size_ $type_ @ $(context(x))", (n == 0) ? "" : ":\n")
+  Base.print_array(io, try_get_shared(x, sync = :read))
 end
 
 Base.unsafe_convert(::Type{MX_handle}, obj::NDArray) =
