@@ -4,6 +4,9 @@
 Please follow the Step 1 in the [Scala configuration](http://mxnet.incubator.apache.org/install/scala_setup.html#setup-instructions)
 These should help you install the correct Java version and all dependencies.
 
+## Run the Java example project
+We have provided a general MXNet Java template under `scala-package/mxnet-demo/java-demo` which contains complete instruction on running the Hello world and Object detection examples. Please copy the downloaded MXNet Java package jar file to the `java-demo` folder before build the package there.
+
 ## Import and run the Java package
 For users using a desktop/laptop, we recommend using IntelliJ IDE as it is tested and supported to provide the necessary documentation for the Java API.
 
@@ -59,7 +62,7 @@ You can specify the `groupId` and `artifactId` to your favourite names. You can 
 
 - Change the `osx-x86_64` to `linux-x86_64` if your platform is linux.
 - Change `cpu` into `gpu` if you are using gpu
-- Change the version of your package from `1.3.1` to the matched jar version.
+- Change the version of your package from `1.3.1-SNAPSHOT` to the matched jar version.
 ```xml
 <dependency>
   <groupId>org.apache.mxnet</groupId>
@@ -116,21 +119,3 @@ SLF4J: Defaulting to no-operation (NOP) logger implementation
 SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
 Shape of NDarray is : (10,20)
 ```
-
-### (Optional) add log4j configuration
-As you may notice, all of the examples contain the SLF4J error logs.
-It caused by the missing configuration file. This problem can be solved easily by following steps:
-
-1. go to `target/classes` folder
-
-2. create a file namely `log4j.properties` and paste the following content inside:
-```
-log4j.rootLogger = info, stdout
-
-log4j.appender.stdout = org.apache.log4j.ConsoleAppender
-log4j.appender.stdout.Target = System.out
-log4j.appender.stdout.layout = org.apache.log4j.PatternLayout
-log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] [%c] [%p] - %m%n
-```
-You can set the `info` to `warn` or `debug` if you would like to see less/more information when you run the code
-
