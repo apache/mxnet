@@ -141,25 +141,25 @@ function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T,N}) where 
   Base.print_array(io, try_get_shared(x, sync = :read))
 end
 
-Base.unsafe_convert(::Type{MX_handle}, obj::NDArray) =
-  Base.unsafe_convert(MX_handle, obj.handle)
-Base.convert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
-Base.cconvert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
+Base.unsafe_convert(::Type{MX_handle}, x::NDArray) =
+  Base.unsafe_convert(MX_handle, x.handle)
+Base.convert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
+Base.cconvert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
 
 ################################################################################
 # NDArray functions exported to the users
 ################################################################################
 """
-    context(arr::NDArray)
+    context(x::NDArray)
 
 Get the context that this `NDArray` lives on.
 """
-function context(arr::NDArray)
+function context(x::NDArray)
   ref_typeid = Ref{Cint}(0)
   ref_devid  = Ref{Cint}(0)
   @mxcall(:MXNDArrayGetContext, (MX_handle, Ref{Cint}, Ref{Cint}),
-          arr, ref_typeid, ref_devid)
-  return Context(ref_typeid[], ref_devid[])
+          x, ref_typeid, ref_devid)
+  Context(ref_typeid[], ref_devid[])
 end
 
 """
@@ -170,7 +170,7 @@ end
 Allocate memory for an uninitialized `NDArray` with a specified type.
 """
 empty(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType} =
-  NDArray{T, N}(_ndarray_alloc(T, dims, ctx, false))
+  NDArray{T,N}(_ndarray_alloc(T, dims, ctx, false))
 empty(::Type{T}, dims::Int...) where {T<:DType} = empty(T, dims)
 
 """
@@ -200,9 +200,9 @@ Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
 Create zero-ed `NDArray` with specific shape and type.
 """
 function zeros(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
-  arr = empty(T, dims, ctx)
-  arr[:] = zero(T)
-  arr
+  x = empty(T, dims, ctx)
+  x[:] = zero(T)
+  x
 end
 
 zeros(::Type{T}, dims::Int...) where {T<:DType} = zeros(T, dims)
@@ -236,16 +236,16 @@ ones(dims::Int...) = ones(dims)
 ones(x::NDArray)::typeof(x)      = ones_like(x)
 Base.ones(x::NDArray)::typeof(x) = ones_like(x)
 
-import Base: size, length, ndims
+import Base: length, ndims
 
 """
     size(x::NDArray)
-    size(x::NDArray, dims...)
+    size(x::NDArray, dims)
 
 Get the shape of an `NDArray`. The shape is in Julia's column-major convention.
 See also the notes on NDArray shapes [`NDArray`](@ref).
 """
-function size(x::NDArray)
+function Base.size(x::NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
@@ -253,15 +253,7 @@ function size(x::NDArray)
   tuple(map(Int, reverse(unsafe_wrap(Array, ref_shape[], ref_ndim[])))...)
 end
 
-function size(x::NDArray{T,N}, dim::Int) where {T,N}
-  if dim > N
-    1
-  else
-    size(x)[dim]
-  end
-end
-
-size(x::NDArray, dims::Int...) = map(d -> size(x, d), dims)
+Base.size(x::NDArray{T,N}, dims::Integer) where {T,N} = (dim > N) ? 1 : size(x)[dim]
 
 """
     length(x::NDArray)
