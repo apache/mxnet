@@ -1018,18 +1018,37 @@ def test_sparse_take():
     def check_sparse_take(density, mode):
         data_shape = rand_shape_2d()
         idx_shape = (np.random.randint(low=1, high=10),)
-        data = rand_ndarray(data_shape, 'csr', density=density)
+        data = rand_ndarray(data_shape, 'csr', density=density).astype('int32')
         idx = mx.nd.array(np.random.randint(low=-5, high=15, size=idx_shape))
-        result = mx.nd.take(data, idx, mode=mode)
         data_np = data.asnumpy()
         idx_np = idx.asnumpy().astype('int32')
         expected_result = np.take(data_np, idx_np, mode=mode, axis=0)
+        result = mx.nd.take(data, idx, mode=mode)
         assert_almost_equal(result.asnumpy(), expected_result)
+        assert result.indptr[0].asscalar() == 0
     densities = [0, 0.5, 1]
     modes = ['clip', 'wrap']
     for d in densities:
         for m in modes:
             check_sparse_take(d, m)
+
+@with_seed()
+def test_sparse_getnnz():
+    if default_context().device_type is 'gpu':
+        return
+    def check_sparse_getnnz(density, axis):
+        shape = rand_shape_2d()
+        data = rand_ndarray(shape, 'csr', density=density)
+        data_sp = data.asscipy()
+        result = mx.nd.contrib.getnnz(data, axis=axis)
+        expected_result = data_sp.getnnz(axis=axis)
+        assert_almost_equal(result.asnumpy(), expected_result)
+
+    densities = [0, 0.5, 1]
+    axis = [1, None]
+    for d in densities:
+        for a in axis:
+            check_sparse_getnnz(d, a)
 
 if __name__ == '__main__':
     import nose
