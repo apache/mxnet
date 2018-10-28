@@ -143,11 +143,8 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   cv::Mat dst;
   if (out->is_none()) {
     cv::Mat res = cv::imdecode(buf, flag);
-    if (res.empty()) {
-      LOG(INFO) << "Decoding failed. Invalid image file.";
-      *out = NDArray();
-      return;
-    }
+    CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
+
     *out = NDArray(mshadow::Shape3(res.rows, res.cols, flag == 0 ? 1 : 3),
                    Context::CPU(), false, mshadow::kUint8);
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
