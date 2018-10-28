@@ -108,6 +108,11 @@ class TestImage(unittest.TestCase):
     def test_imdecode_empty_buffer(self):
         mx.image.imdecode(b'', to_rgb=0)
 
+    @raises(mx.base.MXNetError)
+    def test_imdecode_invalid_image(self):
+        image = mx.image.imdecode(b'clearly not image content')
+        assert_equal(image, None)
+
     def test_scale_down(self):
         assert mx.image.scale_down((640, 480), (720, 120)) == (640, 106)
         assert mx.image.scale_down((360, 1000), (480, 500)) == (360, 375)
