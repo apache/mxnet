@@ -38,10 +38,14 @@ parser.add_argument('--latency', action='store_true', default=False,
                     help='Measursing the latency, batchsize will be set to 1.')
 parser.add_argument('--train', action='store_true', default=False,
                     help='Run backward benchmark.')
-parser.add_argument('--dropout', type=float, default=0)
-parser.add_argument('--gpu', action='store_true', default=False)
-parser.add_argument('--no-hybridize', action='store_true', default=False)
-parser.add_argument('--bidirection', action='store_true', default=False)
+parser.add_argument('--dropout', type=float, default=0, 
+                    help='float, default 0; Fraction of the input that gets dropped out during training time.')
+parser.add_argument('--gpu', action='store_true', default=False,
+                    help='bool, default Flase; set True to run benchmarks on GPU.')
+parser.add_argument('--no-hybridize', action='store_true', default=False,
+                    help='bool, default False; hybridize will introduce a better perf.')
+parser.add_argument('--bidirection', action='store_true', default=False,
+                    help='bool, default False; Whether to use bidirectional unroll.')
 
 opt = parser.parse_args()
 logging.basicConfig(level=logging.INFO)
