@@ -27,13 +27,15 @@ import scala.collection.mutable.ListBuffer
   * Two file namely: SymbolAPIBase.scala and NDArrayAPIBase.scala
   * The code will be executed during Macros stage and file live in Core stage
   */
-private[mxnet] object APIDocGenerator extends GeneratorBase {
+private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
   def main(args: Array[String]): Unit = {
     val FILE_PATH = args(0)
     val hashCollector = ListBuffer[String]()
     hashCollector += typeSafeClassGen(FILE_PATH, true)
     hashCollector += typeSafeClassGen(FILE_PATH, false)
+    hashCollector += typeSafeRandomClassGen(FILE_PATH, true)
+    hashCollector += typeSafeRandomClassGen(FILE_PATH, false)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     val finalHash = hashCollector.mkString("\n")
@@ -57,6 +59,22 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     writeFile(
       FILE_PATH,
       if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
+      "package org.apache.mxnet",
+      generated)
+  }
+
+  def typeSafeRandomClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
+    val generated = typeSafeRandomFunctionsToGenerate(isSymbol)
+      .map { func =>
+        val scalaDoc = generateAPIDocFromBackend(func)
+        val typeParameter = randomGenericTypeSpec(isSymbol)
+        val decl = generateAPISignature(func, isSymbol, typeParameter)
+        s"$scalaDoc\n$decl"
+      }
+
+    writeFile(
+      FILE_PATH,
+      if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
       "package org.apache.mxnet",
       generated)
   }
@@ -113,22 +131,22 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     }
   }
 
-  def generateAPISignature(func: Func, isSymbol: Boolean): String = {
-    val argDef = ListBuffer[String]()
+  def generateAPISignature(func: Func, isSymbol: Boolean, typeParameter: String = ""): String = {
+    val argDecl = ListBuffer[String]()
 
-    argDef ++= typedFunctionCommonArgDef(func)
+    argDecl ++= buildArgDecl(func)
 
     if (isSymbol) {
-      argDef += "name : String = null"
-      argDef += "attr : Map[String, String] = null"
+      argDecl += "name : String = null"
+      argDecl += "attr : Map[String, String] = null"
     } else {
-      argDef += "out : Option[NDArray] = None"
+      argDecl += "out : Option[NDArray] = None"
     }
 
     val returnType = func.returnType
 
     s"""@Experimental
-       |def ${func.name} (${argDef.mkString(", ")}): $returnType""".stripMargin
+       |def ${func.name}$typeParameter (${argDecl.mkString(", ")}): $returnType""".stripMargin
   }
 
   def writeFile(FILE_PATH: String, className: String, packageDef: String,

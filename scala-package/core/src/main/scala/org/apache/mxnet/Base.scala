@@ -153,3 +153,19 @@ private[mxnet] object Base {
 }
 
 class MXNetError(val err: String) extends Exception(err)
+
+// used in the API Symbol.random for functions accepting multiple input types
+class SymbolOrValue[T]
+object SymbolOrValue {
+  implicit object FSymbolWitness extends SymbolOrValue[Float]
+  implicit object ISymbolWitness extends SymbolOrValue[Int]
+  implicit object SymbolWitness extends SymbolOrValue[Symbol]
+}
+
+// used in the API NDArray.random for functions accepting multiple input types
+class NDArrayOrValue[T]
+object NDArrayOrValue {
+  implicit object FArrayWitness extends NDArrayOrValue[Float]
+  implicit object IArrayWitness extends NDArrayOrValue[Int]
+  implicit object ArrayWitness extends NDArrayOrValue[NDArray]
+}

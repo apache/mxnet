@@ -15,11 +15,22 @@
  * limitations under the License.
  */
 package org.apache.mxnet
-@AddNDArrayAPIs(false)
+
 /**
   * typesafe NDArray API: NDArray.api._
   * Main code will be generated during compile time through Macros
   */
+@AddNDArrayAPIs(false)
 object NDArrayAPI extends NDArrayAPIBase {
   // TODO: Implement CustomOp for NDArray
 }
+
+/**
+  * typesafe NDArray random module: NDArray.random._
+  * Main code will be generated during compile time through Macros
+  */
+@AddNDArrayRandomAPIs(false)
+object NDArrayRandomAPI extends NDArrayRandomAPIBase {
+
+}
+

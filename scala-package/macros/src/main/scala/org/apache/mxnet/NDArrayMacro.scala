@@ -18,7 +18,6 @@
 package org.apache.mxnet
 
 import scala.annotation.StaticAnnotation
-import scala.collection.mutable.ListBuffer
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox
 
@@ -30,6 +29,14 @@ private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation
   private[mxnet] def macroTransform(annottees: Any*) = macro TypedNDArrayAPIMacro.typeSafeAPIDefs
 }
 
+private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
+  private[mxnet] def macroTransform(annottees: Any*) =
+  macro TypedNDArrayRandomAPIMacro.typeSafeAPIDefs
+}
+
+/**
+  * For non-typed NDArray API
+  */
 private[mxnet] object NDArrayMacro extends GeneratorBase {
 
   def addDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
@@ -70,6 +77,9 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   }
 }
 
+/**
+  * NDArray.api code generation
+  */
 private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
 
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
@@ -78,9 +88,9 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
       case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
     }
 
-    val functions = typeSafeFunctionsToGenerate(isSymbol = false, isContrib)
+    val functionDefs = typeSafeFunctionsToGenerate(isSymbol = false, isContrib)
+      .map(f => buildTypedFunction(c)(f))
 
-    val functionDefs = functions.map(f => buildTypedFunction(c)(f))
     structGeneration(c)(functionDefs, annottees: _*)
   }
 
@@ -88,50 +98,139 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
 
-    val returnType = "org.apache.mxnet.NDArrayFuncReturn"
-    val ndarrayType = "org.apache.mxnet.NDArray"
+    val apiReturnType = "org.apache.mxnet.NDArrayFuncReturn"
 
-    // Construct argument field
-    val argDef = ListBuffer[String]()
-    argDef ++= typedFunctionCommonArgDef(function)
-    argDef += "out : Option[NDArray] = None"
+    // Construct API arguments declaration
+    val argDecl = super.buildArgDecl(function) :+ "out : Option[NDArray] = None"
 
-    // Construct Implementation field
-    var impl = ListBuffer[String]()
-    impl += "val map = scala.collection.mutable.Map[String, Any]()"
-    impl += s"val args = scala.collection.mutable.ArrayBuffer.empty[$ndarrayType]"
-
-    // NDArray arg implementation
-    impl ++= function.listOfArgs.map { arg =>
-      if (arg.argType.equals(s"Array[$ndarrayType]")) {
-        s"args ++= ${arg.safeArgName}"
-      } else {
-        val base =
-          if (arg.argType.equals(ndarrayType)) {
-            // ndarrays go to args
+    // Map API input args to backend args
+    val backendArgsMapping =
+      function.listOfArgs.map { arg =>
+        // ndarrays go to args, other types go to kwargs
+        if (arg.argType.equals(s"Array[org.apache.mxnet.NDArray]")) {
+          s"args ++= ${arg.safeArgName}.toSeq"
+        } else {
+          val base = if (arg.argType.equals("org.apache.mxnet.NDArray")) {
             s"args += ${arg.safeArgName}"
           } else {
-            // other types go to kwargs
             s"""map("${arg.argName}") = ${arg.safeArgName}"""
           }
-        if (arg.isOptional) s"if (!${arg.safeArgName}.isEmpty) $base.get"
-        else base
+          if (arg.isOptional) s"if (!${arg.safeArgName}.isEmpty) $base.get"
+          else base
+        }
       }
-    }
 
-    impl +=
-      s"""if (!out.isEmpty) map("out") = out.get
-         |org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(
-         |  "${function.name}", args.toSeq, map.toMap)
+    val impl =
+      s"""
+         |def ${function.name}
+         |  (${argDecl.mkString(",")}): $apiReturnType = {
+         |
+         |  val map = scala.collection.mutable.Map[String, Any]()
+         |  val args = scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]
+         |
+         |  if (!out.isEmpty) map("out") = out.get
+         |
+         |  ${backendArgsMapping.mkString("\n")}
+         |
+         |  org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(
+         |    "${function.name}", args.toSeq, map.toMap)
+         |}
        """.stripMargin
 
-    // Combine and build the function string
-    val finalStr =
-      s"""def ${function.name}
-         |   (${argDef.mkString(",")}) : $returnType
-         | = {${impl.mkString("\n")}}
-       """.stripMargin
-
-    c.parse(finalStr).asInstanceOf[DefDef]
+    c.parse(impl).asInstanceOf[DefDef]
   }
+}
+
+
+/**
+  * NDArray.random code generation
+  */
+private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
+  with RandomHelpers {
+
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    // Note: no contrib managed in this module
+
+    val functionDefs = typeSafeRandomFunctionsToGenerate(isSymbol = false)
+      .map(f => buildTypedFunction(c)(f))
+
+    structGeneration(c)(functionDefs, annottees: _*)
+  }
+
+  protected def buildTypedFunction(c: blackbox.Context)
+                                  (function: Func): c.universe.DefDef = {
+    import c.universe._
+
+    val apiReturnType = "org.apache.mxnet.NDArrayFuncReturn"
+
+    // Construct API arguments declaration
+    val argDecl = super.buildArgDecl(function) :+ "out : Option[NDArray] = None"
+
+    // Map API input args to backend args
+    val backendArgsMapping =
+      function.listOfArgs.map { arg =>
+        // ndarrays go to args, other types go to kwargs
+        if (arg.argType.equals("Array[org.apache.mxnet.NDArray]")) {
+          s"args ++= ${arg.safeArgName}.toSeq"
+        } else {
+          if (arg.argType.equals("T")) {
+            if (arg.isOptional) {
+              s"""${arg.safeArgName} match {
+                 |   case None =>
+                 |   case Some(a) if typeOf[T] =:= typeOf[org.apache.mxnet.NDArray] =>
+                 |       args += a.asInstanceOf[org.apache.mxnet.NDArray]
+                 |   case Some(b) => map("${arg.argName}") = b
+                 |}
+             """.stripMargin
+            } else {
+              s"""${arg.safeArgName} match {
+                 |   case a if typeOf[T] =:= typeOf[org.apache.mxnet.NDArray] =>
+                 |       args += a.asInstanceOf[org.apache.mxnet.NDArray]
+                 |   case b => map("${arg.argName}") = b
+                 |}
+             """.stripMargin
+            }
+          } else {
+            if (arg.isOptional) {
+              s"""if (!${arg.safeArgName}.isEmpty) map("${arg.argName}") = ${arg.safeArgName}.get"""
+            } else {
+              s"""map("${arg.argName}") = ${arg.safeArgName}"""
+            }
+          }
+        }
+      }
+
+    // since the API is mixing calls using NDArrays or Float through template (see unifyRandom),
+    // to determine the target call, we pick the first arg that is using the template type
+    val firstArg = function.listOfArgs.filter(arg => arg.argType == "T").head
+
+    val impl =
+      s"""
+         |def ${function.name}${randomGenericTypeSpec(false)}
+         |  (${argDecl.mkString(",")}): $apiReturnType = {
+         |
+         |  import scala.reflect.runtime.universe.typeOf
+         |  val map = scala.collection.mutable.Map[String, Any]()
+         |  val args = scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]
+         |
+         |  if (!out.isEmpty) map("out") = out.get
+         |
+         |  ${backendArgsMapping.mkString("\n")}
+         |
+         |  val target = ${firstArg.safeArgName} match {
+         |    case _ if typeOf[T] =:= typeOf[org.apache.mxnet.NDArray] => "sample_${function.name}"
+         |    case _ => "random_${function.name}"
+         |  }
+         |
+         |  ${unhackNormalFunc(function)}
+         |
+         |  org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(
+         |    target, args.toSeq, map.toMap)
+         |}
+       """.stripMargin
+
+    c.parse(impl).asInstanceOf[DefDef]
+  }
+
+
 }

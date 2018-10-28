@@ -23,7 +23,7 @@ import org.apache.mxnet.utils.{CToScalaUtils, OperatorBuildUtils}
 import scala.collection.mutable.ListBuffer
 import scala.reflect.macros.blackbox
 
-abstract class GeneratorBase {
+private[mxnet] abstract class GeneratorBase {
   type Handle = Long
 
   case class Arg(argName: String, argType: String, argDesc: String, isOptional: Boolean) {
@@ -36,7 +36,8 @@ abstract class GeneratorBase {
 
   case class Func(name: String, desc: String, listOfArgs: List[Arg], returnType: String)
 
-  def functionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
+  // filter the operators to generate (in the non type-safe apis)
+  protected def functionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
     val l = getBackEndFunctions(isSymbol)
     if (isContrib) {
       l.filter(func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
@@ -45,7 +46,8 @@ abstract class GeneratorBase {
     }
   }
 
-  def typeSafeFunctionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
+  // filter the operators to generate in the type-safe Symbol.api and NDArray.api
+  protected def typeSafeFunctionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
     // Operators that should not be generated
     val notGenerated = Set("Custom")
 
@@ -138,8 +140,8 @@ abstract class GeneratorBase {
     result
   }
 
-  protected def typedFunctionCommonArgDef(func: Func): List[String] = {
-    // build function argument definition, with optionality, and safe names
+  // build function argument definition, with optionality, and safe names
+  protected def buildArgDecl(func: Func): List[String] = {
     func.listOfArgs.map(arg =>
       if (arg.isOptional) {
         // let's avoid a stupid Option[Array[...]]
@@ -154,4 +156,71 @@ abstract class GeneratorBase {
       }
     )
   }
+}
+
+// a mixin to ease generating the Random module
+private[mxnet] trait RandomHelpers {
+  self: GeneratorBase =>
+
+  // a generic type spec used in Symbol.random and NDArray.random modules
+  protected def randomGenericTypeSpec(isSymbol: Boolean): String = {
+    if (isSymbol) "[T: SymbolOrValue : scala.reflect.runtime.universe.TypeTag]"
+    else "[T: NDArrayOrValue : scala.reflect.runtime.universe.TypeTag]"
+  }
+
+  // filter the operators to generate in the type-safe Symbol.random and NDArray.random
+  protected def typeSafeRandomFunctionsToGenerate(isSymbol: Boolean): List[Func] = {
+    getBackEndFunctions(isSymbol)
+      .filter(f => f.name.startsWith("_sample_") || f.name.startsWith("_random_"))
+      .map(f => f.copy(name = f.name.stripPrefix("_")))
+      // unify _random and _sample
+      .map(f => unifyRandom(f, isSymbol))
+      // deduplicate
+      .groupBy(_.name)
+      .mapValues(_.head)
+      .values
+      .toList
+  }
+
+  // unify call targets (random_xyz and sample_xyz) and unify their argument types
+  private def unifyRandom(func: Func, isSymbol: Boolean): Func = {
+    var typeConv = Set("org.apache.mxnet.NDArray", "org.apache.mxnet.Symbol",
+      "org.apache.mxnet.Base.MXFloat", "Int")
+
+    func.copy(
+      name = func.name.replaceAll("(random|sample)_", ""),
+      listOfArgs = func.listOfArgs
+        .map(hackNormalFunc)
+        .map(arg =>
+          if (typeConv(arg.argType)) arg.copy(argType = "T")
+          else arg
+        )
+      // TODO: some functions are non consistent in random_ vs sample_ regarding optionality
+      // we may try to unify that as well here.
+    )
+  }
+
+  // hacks to manage the fact that random_normal and sample_normal have
+  // non-consistent parameter naming in the back-end
+  // this first one, merge loc/scale and mu/sigma
+  protected def hackNormalFunc(arg: Arg): Arg = {
+    if (arg.argName == "loc") arg.copy(argName = "mu")
+    else if (arg.argName == "scale") arg.copy(argName = "sigma")
+    else arg
+  }
+
+  // this second one reverts this merge prior to back-end call
+  protected def unhackNormalFunc(func: Func): String = {
+    if (func.name.equals("normal")) {
+      s"""if(target.equals("random_normal")) {
+         |  if(map.contains("mu")) { map("loc") = map("mu"); map.remove("mu")  }
+         |  if(map.contains("sigma")) { map("scale") = map("sigma"); map.remove("sigma") }
+         |}
+       """.stripMargin
+    } else {
+      ""
+    }
+
+  }
+
 }
