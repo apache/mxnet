@@ -584,14 +584,15 @@ rpkg:
 	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
-	echo "import(Rcpp)" > R-package/NAMESPACE
-	echo "import(methods)" >> R-package/NAMESPACE
+	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
+	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
-	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
-	devtools::install_version('roxygen2',version='5.0.1',\
-	repo='https://cloud.r-project.org/',quiet=TRUE)}"
-	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
+	#Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
+	#	devtools::install_version('roxygen2',version='5.0.1', \
+	#	repo='https://cloud.r-project.org/',quiet=TRUE)}"
+	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
+	rm R-package/NAMESPACE
+	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package'); warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
