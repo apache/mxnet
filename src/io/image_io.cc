@@ -189,6 +189,8 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 
   uint8_t* str_img = inputs[0].data().dptr<uint8_t>();
   size_t len = inputs[0].shape().Size();
+  CHECK(len > 0) << "Input cannot be an empty buffer";
+
   TShape oshape(3);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {

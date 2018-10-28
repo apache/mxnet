@@ -104,7 +104,7 @@ class TestImage(unittest.TestCase):
             cv_image = cv2.imread(img)
             assert_almost_equal(image.asnumpy(), cv_image)
 
-    @raises(ValueError)
+    @raises(mx.base.MXNetError)
     def test_imdecode_empty_buffer(self):
         mx.image.imdecode(b'', to_rgb=0)
 
