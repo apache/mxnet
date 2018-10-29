@@ -48,7 +48,7 @@ class CuDNNPoolingOp {
     param_ = p;
     switch (param_.pool_type) {
       case pool_enum::kMaxPooling:
-        mode_ = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", 0) ?
+        mode_ = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", false) ?
           CUDNN_POOLING_MAX_DETERMINISTIC : CUDNN_POOLING_MAX;
         break;
       case pool_enum::kAvgPooling:
