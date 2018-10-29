@@ -794,7 +794,7 @@ def test_randint_extremes():
 def test_randint_generator():
     ctx = mx.context.cpu()
     low = 50000000
-    high = 50001000
+    high = 50010000
     for dtype in ['int64']:
         print("ctx=%s, dtype=%s, Low=%g, High=%g:" % (ctx, dtype, low, high))
         scale = high - low
