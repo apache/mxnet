@@ -862,7 +862,9 @@ class CuDNNConvolutionOp {
         algo_is_tensor_core = result.mathType == CUDNN_TENSOR_OP_MATH;
       #endif
       if (result.status == CUDNN_STATUS_SUCCESS &&
+        #if CUDNN_MAJOR >= 7
           (!enforce_determinism || result.determinism == cudnnDeterminism_t::CUDNN_DETERMINISTIC) &&
+        #endif
           (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)) {
         algo->Set(result.algo, algo_is_tensor_core);
         return;
