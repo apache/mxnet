@@ -1355,6 +1355,17 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+def test_assign_large_int_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/11639"""
+    a = mx.nd.zeros((4, 1), dtype=np.int32)
+    a[1,0] = int(16800001)
+    a[2,0] = int(16800002)
+    b = a.asnumpy()
+    assert same(b[1,0], 16800001)
+    a = a-1
+    b = a.asnumpy()
+    assert same(b[1,0], 16800000)
+
 @with_seed()
 def test_assign_a_row_to_ndarray():
     """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
@@ -1519,6 +1530,48 @@ def test_dtype():
     except ImportError:
         pass
 
+
+@with_seed()
+def test_ndarray_is_inf():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isinf(data)
+    expected_output = np.isinf(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_finite():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isfinite(data)
+    expected_output = np.isfinite(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_nan():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isnan(data)
+    expected_output = np.isnan(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
 
 if __name__ == '__main__':
     import nose

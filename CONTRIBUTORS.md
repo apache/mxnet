@@ -187,3 +187,5 @@ List of Contributors
 * [LuckyPigeon](https://github.com/LuckyPigeon)
 * [Anton Chernov](https://github.com/lebeg)
 * [Denisa Roberts](https://github.com/D-Roberts)
+* [Dick Carter](https://github.com/DickJC123)
+* [Rahul Padmanabhan](https://github.com/rahul3)
