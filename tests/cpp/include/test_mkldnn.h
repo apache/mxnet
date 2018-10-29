@@ -240,6 +240,37 @@ enum ArrayTypes {
   All = 8191,
 };
 
+
+NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input, bool is_deconv = false) {
+  CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
+  TShape target_shape(4);
+  target_shape[0] = is_deconv ? input[1] : num_filters;
+  target_shape[1] = is_deconv ? num_filters : input[1];
+  target_shape[2] = kernel[0];
+  target_shape[3] = kernel[1];
+  int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  NDArray arr(target_shape, Context());
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nchw);
+  InitMKLDNNArray(&arr, pd);
+  return arr;
+}
+
+NDArray CreateBiasNDArray(TShape target_shape) {
+  int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  NDArray arr(target_shape, Context());
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::x);
+  InitMKLDNNArray(&arr, pd);
+  return arr;
+}
+
+int CalculateWidthConvOutput(int width, int kernel, int padding, int stride) {
+  return (width - kernel + 2 * padding) / stride  + 1;
+}
+
+int CalculateWidthDeconvOutput(int width, int kernel, int padding, int stride) {
+  return stride * (width - 1) + kernel - 2 * padding;
+}
+
 inline std::string CreateShapeString(int value, int dim) {
   std::stringstream ss;
   ss << "(";

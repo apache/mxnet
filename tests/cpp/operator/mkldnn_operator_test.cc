@@ -213,6 +213,88 @@ OpAttrs GetLRNBackwardsOp() {
   return attrs;
 }
 
+OpAttrs GetConvOp(int kernel, int num_filters, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Convolution");
+  attrs.num_inputs = 3;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused |
+      ArrayTypes::NormalReusedDiffDtype;
+  return attrs;
+}
+
+OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Convolution");
+  attrs.num_inputs = 4;
+  attrs.num_outputs = 3;
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  return attrs;
+}
+
+OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("Deconvolution");
+  attrs.num_inputs = 2;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::NormalReused |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused |
+      ArrayTypes::NormalReusedDiffDtype;
+  return attrs;
+}
+
+OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, int pad) {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_Deconvolution");
+  attrs.num_inputs = 3;
+  attrs.num_outputs = 2;
+  attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
+  attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
+  attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
+  attrs.attrs.dict.insert({"pad" , CreateShapeString(pad, dim)});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  return attrs;
+}
+
 void AssertEqual(const std::vector<NDArray *> &in_arrs,
                       const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
@@ -554,6 +636,122 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   }
 }
 
+void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
+                bool is_deconv = false) {
+  std::vector<NDArray*> inputs(forward_attrs.num_inputs);
+  std::vector<NDArray*> outputs(forward_attrs.num_outputs);
+  std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
+
+  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
+  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
+
+
+  std::vector<OpReqType> req(forward_attrs.num_outputs);
+  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
+  std::vector<DispatchMode> dispatches = forward_attrs.dispatches;
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  mxnet::op::ConvolutionParam param;
+  param.Init(forward_attrs.attrs.dict);
+  TShape kernel = param.kernel;
+  TShape padding = param.pad;
+  TShape stride = param.stride;
+  int num_filter = param.num_filter;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
+  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
+
+  for (size_t i1 = 0; i1 < in_arrs.size(); ++i1) {
+    auto in_arr = in_arrs[i1];
+
+    // can only conv only 4D inputs
+    TShape input_shape = in_arr.arr.shape();
+    if (input_shape.ndim() != kernel.ndim() + 2)
+      continue;
+
+    float scale = CalculateWidthConvOutput(input_shape[2], kernel[0], padding[0], stride[0])
+        / static_cast<float>(input_shape[2]);
+
+    if (is_deconv) {
+      scale = CalculateWidthDeconvOutput(input_shape[2], kernel[0], padding[0], stride[0])
+          / static_cast<float>(input_shape[2]);
+    }
+    std::vector<float> scale_vector(in_arr.arr.shape().ndim());
+    scale_vector[0] = 1;
+    scale_vector[1] = static_cast<float>(num_filter) / input_shape[1];
+    scale_vector[2] = scale;
+    scale_vector[3] = scale;
+
+    for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
+      out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds,
+                                        scale_vector, true, forward_attrs.output_types);
+      ex_out_arrs[i] = GetTestOutputArrays(in_arr.arr.shape(), pds,
+                                           scale_vector, true, forward_attrs.output_types);
+    }
+    NDArray ndkernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
+    TShape bias_shape = {num_filter};
+    NDArray ndbias = CreateBiasNDArray(bias_shape);
+    inputs[0] = &in_arr.arr;
+    inputs[1] = &ndkernel;
+    inputs[2] = &ndbias;
+    for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+      for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
+        req[i] = kWriteTo;
+        outputs[i] = &out_arrs[i][output_i].arr;
+        ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+      }
+      Imperative::Get()->set_is_training(true);
+
+      PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                  outputs, req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(Context(), forward_attrs.attrs, inputs,
+                                  ex_outputs, req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(outputs, ex_outputs);
+
+      // backwards test performed same time since output needed
+      backwards_input[0] = outputs[0];  // output grad
+      backwards_input[1] = inputs[0];  // input
+      backwards_input[2] = inputs[1];  // kernel
+      backwards_input[3] = inputs[2];  // bias
+
+      auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
+      NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
+      NDArray tmp_bias = CreateBiasNDArray(bias_shape);
+
+      backwards_outputs[0] = &tmp_output.arr;
+      backwards_outputs[1] = &tmp_kernel;
+      backwards_outputs[2] = &tmp_bias;
+
+      auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true)[i1];
+      NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
+      NDArray tmp_bias2 = CreateBiasNDArray(num_filter);
+      backwards_ex_outputs[0] = &tmp_output2.arr;
+      backwards_ex_outputs[1] = &tmp_kernel2;
+      backwards_ex_outputs[2] = &tmp_bias2;
+
+      for (size_t i = 0; i < backwards_attrs.num_outputs; ++i)
+        back_req[i] = kWriteTo;
+
+      std::cout << "Backwards: ";
+      PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+          back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(
+          Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+          back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      VerifyCopyResult(backwards_outputs, backwards_ex_outputs);
+    }
+  }
+}
+
 void TestPoolingOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
@@ -724,6 +922,40 @@ TEST(IMPERATIVE, PoolingOp) {
           OpAttrs forward_attrs = GetPoolingOp(kernel, dim, stride, pad);
           OpAttrs backwards_attrs = GetPoolingBackwardsOp(kernel, dim, stride, pad);
           TestPoolingOp(forward_attrs, backwards_attrs);
+        }
+      }
+    }
+  }
+}
+
+TEST(IMPERATIVE, ConvOp) {
+  int dim = 2;  // MKLDNN conv only supports 2d kernels
+  for (size_t num_filters = 2; num_filters < 3; ++num_filters) {
+    for (size_t kernel = 1; kernel < 4; ++kernel) {
+      for (size_t stride = 1; stride < 3; ++stride) {
+        for (size_t pad = 0; pad < 2; ++pad) {
+          if (kernel / 2. < pad)
+            continue;
+          OpAttrs forward_attrs = GetConvOp(kernel, num_filters, dim, stride, pad);
+          OpAttrs backwards_attrs = GetConvBackwardOp(kernel, num_filters, dim, stride, pad);
+          TestConvOp(forward_attrs, backwards_attrs);
+        }
+      }
+    }
+  }
+}
+
+TEST(IMPERATIVE, DeconvOp) {
+  int dim = 2;  // MKLDNN conv only supports 2d kernels
+  for (size_t num_filters = 2; num_filters < 3; ++num_filters) {
+    for (size_t kernel = 1; kernel < 4; ++kernel) {
+      for (size_t stride = 1; stride < 3; ++stride) {
+        for (size_t pad = 0; pad < 2; ++pad) {
+          if (kernel / 2. < pad)
+            continue;
+          OpAttrs forward_attrs = GetDeconvOp(kernel, num_filters, dim, stride, pad);
+          OpAttrs backwards_attrs = GetDeconvBackwardOp(kernel, num_filters, dim, stride, pad);
+          TestConvOp(forward_attrs, backwards_attrs, true);
         }
       }
     }
