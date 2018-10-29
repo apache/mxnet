@@ -194,7 +194,8 @@ Graph QuantizeGraph(Graph &&src) {
             max_node->op()->attr_parser(&(max_node->attrs));
           }
           // Only update the mapping when there's only 1 output from e.node.
-          // Need to insert "_contrib_quantize"/"min"/"max" for each entry when there's more than one.
+          // Need to insert "_contrib_quantize"/"min"/"max" for each entry when there's
+          // more than one.
           if (e.node->num_outputs() == 1) {
             mirror_map[e.node.get()] = std::move(quantize_node);
           } else {
