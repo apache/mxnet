@@ -800,7 +800,7 @@ class CuDNNDeconvolutionOp {
   void AlgoFinalSelect(const std::vector<PerfType> &perf_results, std::string kernel_name,
                        size_t workspace_byte, CuDNNAlgo<AlgoType> *algo) {
     // Determine the fastest acceptable algo regardless of mathType.
-    bool enforce_determinism = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", 0);
+    bool enforce_determinism = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", false);
     for (decltype(perf_results.size()) i = 0; i != perf_results.size(); ++i) {
       const auto &result = perf_results[i];
       bool algo_is_tensor_core = false;
