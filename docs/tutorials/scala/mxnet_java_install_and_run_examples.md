@@ -5,7 +5,9 @@ Please follow the Step 1 in the [Scala configuration](http://mxnet.incubator.apa
 These should help you install the correct Java version and all dependencies.
 
 ## Run the Java example project
-We have provided a general MXNet Java template under `scala-package/mxnet-demo/java-demo` which contains complete instruction on running the Hello world and Object detection examples. Please copy the downloaded MXNet Java package jar file to the `java-demo` folder before build the package there.
+We have provided a general MXNet Java template under `scala-package/mxnet-demo/java-demo` which contains the necessary project files for you to get started. It contains a simple Hello world! equivalent program `JavaSample.java` and a full fledged `ObjectDetection.java `that shows how to run Object Detection on images using MXNet and pre-trained SSD model.
+
+Alternatively you could build project from scratch following the below instructions.
 
 ## Import and run the Java package
 For users using a desktop/laptop, we recommend using IntelliJ IDE as it is tested and supported to provide the necessary documentation for the Java API.
@@ -38,7 +40,7 @@ public static void main(String[] args) {
 }
 ```
 
-7. If all went well, you should see an output like this : (Ignore the SLF4J warnings).
+7. If all went well, you should see an output like this :
 ```
 Hello
 SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
