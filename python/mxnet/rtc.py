@@ -39,8 +39,8 @@ _DTYPE_CPP_TO_NP = {
     'int64_t': np.int64,
 }
 
-_DTYPE_CPP_TO_NAME_NP = dict(
-    [(_ctype, np.dtype(_dtype).name) \
+_DTYPE_CPP_TO_MX = dict(
+    [(_ctype, _DTYPE_NAME_NP_TO_MX[np.dtype(_dtype).name]) \
     for _ctype, _dtype in _DTYPE_CPP_TO_NP.items()])
 
 class CudaModule(object):
@@ -157,11 +157,11 @@ class CudaModule(object):
             is_const.append(bool(match.groups()[0]))
             dtype = match.groups()[1]
             is_ndarray.append(bool(match.groups()[2]))
-            if dtype not in _DTYPE_CPP_TO_NAME_NP:
+            if dtype not in _DTYPE_CPP_TO_MX:
                 raise TypeError(
                     "Unsupported kernel argument type %s. Supported types are: %s."%(
-                        arg, ','.join(_DTYPE_CPP_TO_NAME_NP.keys())))
-            dtypes.append(_DTYPE_NAME_NP_TO_MX[_DTYPE_CPP_TO_NAME_NP[dtype]])
+                        arg, ','.join(_DTYPE_CPP_TO_MX.keys())))
+            dtypes.append(_DTYPE_CPP_TO_MX[dtype])
 
         check_call(_LIB.MXRtcCudaKernelCreate(
             self.handle,
