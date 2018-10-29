@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>Demo</groupId>
+    <artifactId>mxnet-java-demo</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>MXNet Java Demo</name>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.mxnet</groupId>
+            <artifactId>mxnet-full_${mxnet.scalaprofile}-${mxnet.profile}</artifactId>
+            <version>${mxnet.version}</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/mxnet-full_${mxnet.scalaprofile}-${mxnet.profile}-${mxnet.version}.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.4</version>
+        </dependency>
+    </dependencies>
+</project>
