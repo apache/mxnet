@@ -897,7 +897,7 @@ class CuDNNConvolutionOp {
         algo_is_tensor_core = result.mathType == CUDNN_TENSOR_OP_MATH;
       #endif
       if (result.status == CUDNN_STATUS_SUCCESS &&
-          (!enforce_determinism || result.determinism == cudnnDeterminism_t::CUDNN_DETERMINISTIC) &&
+          (!enforce_determinism || result.determinism == PerfType::CUDNN_DETERMINISTIC) &&
           (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte)) {
         algo->Set(result.algo, algo_is_tensor_core);
         return;
