@@ -67,7 +67,7 @@ You can specify the `groupId` and `artifactId` to your favourite names. You can 
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.3.1</version>
+  <version>1.3.1-SNAPSHOT</version>
   <scope>system</scope>
   <systemPath>path-to-your-jar/jarName.jar</systemPath>
 </dependency>

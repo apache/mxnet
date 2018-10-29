@@ -27,7 +27,7 @@ This will load the default parameter for all the environment variable.
 ### Hello World
 The Scala file is being executed using Java. You can execute the helloWorld example as follows:
 ```Bash
-java -Xmx8G  -cp $CLASSPATH sample.HelloWorld
+java -cp $CLASSPATH sample.HelloWorld
 ```
 However, you have to define the Classpath before you run the demo code. More information can be found in the `demo.sh` And you can run the bash script as follows:
 ```Bash
@@ -43,7 +43,7 @@ You can review the complete example [here](https://github.com/apache/incubator-m
 
 you can run using the command shown below:
 ```Bash
-java -Xmx8G  -cp $CLASSPATH sample.ImageClassificationExample
+java -cp $CLASSPATH sample.ImageClassificationExample
 ```
 or script as follows:
 ```Bash

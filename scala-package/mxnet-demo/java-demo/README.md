@@ -27,11 +27,11 @@ This will load the default parameter for all the environment variable.
 ### Hello World
 The Scala file is being executed using Java. You can execute the helloWorld example as follows:
 ```Bash
-java -Xmx8G  -cp $CLASSPATH sample.HelloWorld
+java -cp $CLASSPATH sample.HelloWorld
 ```
 However, you have to define the Classpath before you run the demo code. More information can be found in the `demo.sh` And you can run the bash script as follows:
 ```Bash
-bash bin/demo.sh
+bash bin/java_sample.sh
 ```
 It will load the library automatically and run the example
 ### Object Detection using Inference API
@@ -50,7 +50,7 @@ Coord:83.82356, 179.14001, 206.63783, 476.78754
 
 you can run using the command shown below:
 ```Bash
-java -Xmx8G  -cp $CLASSPATH sample.ObjectDetection
+java -cp $CLASSPATH sample.ObjectDetection
 ```
 or script as follows:
 ```Bash
