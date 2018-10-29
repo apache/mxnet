@@ -517,19 +517,51 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   }
 }
 
+void TestOpExBackward(const OpAttrs &forward_attrs,
+                      const OpAttrs &backwards_attrs,
+                      const OpReqType &req,
+                      const std::vector<NDArray*> &inputs,
+                      const std::vector<NDArray*> &outputs,
+                      const NDArrayAttrs &in_arr,
+                      const NDArrayAttrs &out_arr) {
+  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
+  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
+  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
+
+  if (req == kWriteTo) {
+    // backwards test performed same time since output needed
+    backwards_input[0] = outputs[0];  // output grad
+    backwards_input[1] = inputs[0];  // input
+    backwards_input[2] = outputs[1];  // out norm
+
+    auto tmp_output = in_arr.arr;
+    backwards_outputs[0] = &tmp_output;
+    backwards_ex_outputs[0] = &tmp_output;
+
+    for (int i = 0; i < backwards_attrs.num_outputs; i++)
+      back_req[i] = kWriteTo;
+
+    std::cout << "Backwards: ";
+    PrintVerifyMsg(out_arr, in_arr);
+    Imperative::Get()->InvokeOp(
+        Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+        back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+    Imperative::Get()->InvokeOp(
+        Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+        back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+    Engine::Get()->WaitForAll();
+    AssertEqual(backwards_outputs, backwards_ex_outputs);
+  }
+}
+
+
 // compares output of fcompute with fcomputex
 void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
-
-  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
-  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
-  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
-
-
   std::vector<OpReqType> req(forward_attrs.num_outputs);
-  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
 
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -577,93 +609,29 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs);
 
-        // backwards test performed same time since output needed
-        backwards_input[0] = outputs[0];  // output grad
-        backwards_input[1] = inputs[0];  // input
-        backwards_input[2] = outputs[1];  // out norm
-
-        auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
-        backwards_outputs[0] = &tmp_output.arr;
-
-        auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true)[i1];
-        backwards_ex_outputs[0] = &tmp_output2.arr;
-
-        for (int i = 0; i < backwards_attrs.num_outputs; i++)
-          back_req[i] = kWriteTo;
-
-        std::cout << "Backwards: ";
-        PrintVerifyMsg(out_arrs[0][output_i], tmp_output);
-        Imperative::Get()->InvokeOp(
-            Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
-            back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(
-            Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
-            back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
-        Engine::Get()->WaitForAll();
-        AssertEqual(backwards_outputs, backwards_ex_outputs);
+        if (!backwards_attrs.requests.empty()) {
+          TestOpExBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo,
+                           inputs, outputs, in_arr, out_arrs[0][output_i]);
       }
     }
   }
-}
 
-// To be merged with TestOpEx function
-void TestSoftmaxOp(const OpAttrs &forward_attrs) {
-  std::vector<NDArray*> inputs(forward_attrs.num_inputs);
-  std::vector<NDArray*> outputs(forward_attrs.num_outputs);
-  std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
-  std::vector<OpReqType> req(forward_attrs.num_outputs);
-  TestArrayShapes tas = GetTestArrayShapes();
-  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
-  std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
-  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
-  if (forward_attrs.requests.find(OpReqType::kWriteTo) != forward_attrs.requests.end()) {
-    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
-      auto in_arr = in_arrs[i1];
-      // TODO(alex): (MXNET-845) Remove when MKLDNN supports other dims
-      if (in_arr.arr.shape().ndim() != 4)
-        continue;
-      for (int i = 0; i < forward_attrs.num_outputs; i++) {
-        out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
-        ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
-      }
-      for (int i = 0; i < forward_attrs.num_inputs; i++)
-        inputs[i] = &in_arr.arr;
-      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        if (out_arrs[0][output_i].arr.IsMKLDNNData())
-          continue;
-        for (int i = 0; i < forward_attrs.num_outputs; i++) {
-          req[i] = kWriteTo;
-          outputs[i] = &out_arrs[i][output_i].arr;
-          ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
-        }
-        Imperative::Get()->set_is_training(true);
-        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
-        Imperative::Get()->InvokeOp(
-            Context(), forward_attrs.attrs, inputs, outputs, req,
-            DispatchMode::kFCompute, mxnet::OpStatePtr());
-        Imperative::Get()->InvokeOp(
-            Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-            DispatchMode::kFComputeEx, mxnet::OpStatePtr());
-        Engine::Get()->WaitForAll();
-        AssertEqual(outputs, ex_outputs);
-      }
-    }
-  }
   if (forward_attrs.requests.find(OpReqType::kWriteInplace) != forward_attrs.requests.end()) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
+
       // If the array is a view, we shouldn't write data to it.
       if (in_arr.arr.IsView())
-        continue;
+          continue;
+
       // TODO(alex): (MXNET-845) Remove when MKLDNN supports other dims
       if (in_arr.arr.shape().ndim() != 4)
         continue;
+
       NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
       for (int i = 0; i < forward_attrs.num_inputs; i++)
         inputs[i] = &in_arr.arr;
+
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         req[i] = kWriteInplace;
         outputs[i] = &in_arr.arr;
@@ -968,7 +936,8 @@ TEST(IMPERATIVE, LRNOp) {
 
 TEST(IMPERATIVE, SoftmaxOp) {
   OpAttrs forward_attrs = GetSoftmaxOp();
-  TestSoftmaxOp(forward_attrs);
+  OpAttrs backwards_attrs;
+  TestOpEx(forward_attrs, backwards_attrs);
 }
 
 TEST(IMPERATIVE, FullyConnectedOp) {
