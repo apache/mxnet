@@ -587,9 +587,9 @@ rpkg:
 	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	#Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
-	#	devtools::install_version('roxygen2',version='5.0.1', \
-	#	repo='https://cloud.r-project.org/',quiet=TRUE)}"
+	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2') < '5.0.1'){\
+	    devtools::install_version('roxygen2',version='5.0.1',\
+	    repos='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
 	rm R-package/NAMESPACE
 	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package'); warnings()"
