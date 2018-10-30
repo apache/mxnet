@@ -34,7 +34,7 @@ import sys
 import types
 import glob
 import vmcontrol
-from vmcontrol import run_qemu_interactive
+from vmcontrol import qemu_ssh, qemu_provision, VM
 
 def activate_this(base):
     import site
@@ -56,36 +56,14 @@ def activate_this(base):
     sys.path[:0] = new_sys_path
 
 
-def provision(ssh_port=vmcontrol.QEMU_SSH_PORT):
-    import glob
-    logging.info("Provisioning the VM with artifacts and sources")
-    def rsync(local_path, remote_path):
-        check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
-
-    artifact = glob.glob('/work/mxnet/build/*.whl')
-    for x in artifact:
-        rsync(x, 'mxnet_dist/')
-    rsync('/work/runtime_functions.py','')
-    rsync('/work/vmcontrol.py','')
-    rsync('mxnet/tests', 'mxnet')
-
-
-def qemu_ssh(ssh_port=vmcontrol.QEMU_SSH_PORT, *args):
-    cmd = ["ssh", "-o", "ServerAliveInterval=5", "-o", "StrictHostKeyChecking=no", "-p{}".format(ssh_port), "qemu@localhost", *args]
-    print(cmd)
-    check_call(["ssh", "-o", "ServerAliveInterval=5", "-o", "StrictHostKeyChecking=no", "-p{}".format(ssh_port), "qemu@localhost", *args])
-
-
-def rsync(local_path, remote_path):
-    check_call(['rsync', '-e', 'ssh -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
 
 
 def run_ut_py3_qemu():
     from vmcontrol import VM
     with VM() as vm:
-        provision(vm.ssh_port)
+        qemu_provision(vm.ssh_port)
         logging.info("execute tests")
-        qemu_ssh(vm.ssh_port, "./runtime_functions.py", "run_ut_python3_qemu_internal")
+        qemu_ssh("./runtime_functions.py", "run_ut_python3_qemu_internal", vm.ssh_port)
         logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 
@@ -100,6 +78,15 @@ def run_ut_python3_qemu_internal():
     logging.info("Running tests in mxnet/tests/python/unittest/")
     check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/'])
 
+
+def run_qemu_interactive():
+    vm = VM(interactive=True)
+    vm.detach()
+    vm.start()
+    qemu_provision(vm.ssh_port)
+    vm.wait()
+
+################################
 
 def parsed_args():
     parser = argparse.ArgumentParser(description="""python runtime functions""", epilog="")

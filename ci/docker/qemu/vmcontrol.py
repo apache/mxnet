@@ -75,12 +75,14 @@ class VMError(RuntimeError):
 
 class VM:
     """Control of the virtual machine"""
-    def __init__(self, ssh_port=QEMU_SSH_PORT):
+    def __init__(self, ssh_port=QEMU_SSH_PORT, ram=QEMU_RAM, interactive=False):
         self.log = logging.getLogger(VM.__name__)
         self.ssh_port = ssh_port
         self.timeout_s = 300
         self.qemu_process = None
         self._detach = False
+        self._interactive = interactive
+        self.ram = ram
 
     def __enter__(self):
         self.start()
@@ -96,7 +98,10 @@ class VM:
         self.log.info("Starting VM, ssh port redirected to localhost:%s (inside docker, not exposed by default)", self.ssh_port)
         if self.is_running():
             raise VMError("VM is running, shutdown first")
-        self.qemu_process = run_qemu(self.ssh_port)
+        if self._interactive:
+            self.qemu_process = Popen(shlex.split(QEMU_RUN_INTERACTIVE.format(ssh_port=self.ssh_port, ram=self.ram)))
+        else:
+            self.qemu_process = Popen(shlex.split(QEMU_RUN.format(ssh_port=self.ssh_port, ram=self.ram)), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
         def keep_waiting():
             return self.is_running()
 
@@ -157,17 +162,26 @@ class VM:
             logging.info("VM destructor hit")
             self.terminate()
 
-def run_qemu(ssh_port=QEMU_SSH_PORT, ram=QEMU_RAM):
-    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=ram)
-    logging.info("QEMU command: %s", cmd)
-    qemu_process = Popen(shlex.split(cmd), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
-    return qemu_process
+
+def qemu_ssh(ssh_port=QEMU_SSH_PORT, *args):
+    check_call(["ssh", "-o", "ServerAliveInterval=5", "-o", "StrictHostKeyChecking=no", "-p{}".format(ssh_port), "qemu@localhost", *args])
 
 
-def run_qemu_interactive(ssh_port=QEMU_SSH_PORT, ram=QEMU_RAM):
-    cmd = QEMU_RUN_INTERACTIVE.format(ssh_port=ssh_port, ram=ram)
-    logging.info("QEMU command: %s", cmd)
-    check_call(shlex.split(cmd))
+def qemu_rsync(ssh_port, local_path, remote_path):
+    check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
+
+
+def qemu_provision(ssh_port=QEMU_SSH_PORT):
+    import glob
+    logging.info("Provisioning the VM with artifacts and sources")
+
+    artifact = glob.glob('/work/mxnet/build/*.whl')
+    for x in artifact:
+        qemu_rsync(ssh_port, x, 'mxnet_dist/')
+    qemu_rsync(ssh_port, '/work/runtime_functions.py','')
+    qemu_rsync(ssh_port, '/work/vmcontrol.py','')
+    qemu_rsync(ssh_port, 'mxnet/tests', 'mxnet')
+    logging.info("Provisioning completed successfully.")
 
 
 def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
