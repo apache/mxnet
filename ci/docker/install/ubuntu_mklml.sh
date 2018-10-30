@@ -21,5 +21,5 @@
 # the whole docker cache for the image
 
 set -ex
-wget -q --no-check-certificate -O /tmp/mklml.tgz https://github.com/intel/mkl-dnn/releases/download/v0.16/mklml_lnx_2019.0.20180710.tgz
+wget -q --no-check-certificate -O /tmp/mklml.tgz https://github.com/intel/mkl-dnn/releases/download/v0.16/mklml_lnx_2019.0.3.20180710.tgz
 tar -zxf /tmp/mklml.tgz && cp -rf mklml_*/* /usr/local/ && rm -rf mklml_*
