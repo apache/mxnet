@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
- * \brief CPU Implementation of unary function.
+ * \file elemwise_binary_scalar_op_logic.cc
+ * \brief CPU Implementation of binary scalar logic functions.
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
