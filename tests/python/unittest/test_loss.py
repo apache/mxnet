@@ -351,9 +351,9 @@ def test_triplet_loss():
 @with_seed()
 def test_cosine_loss():
     #Generating samples
-    input1 = mx.nd.random.randn(3, 2)
-    input2 = mx.nd.random.randn(3, 2)
-    label = mx.nd.sign(mx.nd.random.randn(input1.shape[0]))
+    input1 = mx.nd.random.randn(shape=(3, 2))
+    input2 = mx.nd.random.randn(shape=(3, 2))
+    label = mx.nd.sign(mx.nd.random.randn(shape=(input1.shape[0])))
     #Calculating loss from cosine embedding loss function in Gluon
     Loss = gluon.loss.CosineEmbeddingLoss()
     loss = Loss(input1, input2, label)
