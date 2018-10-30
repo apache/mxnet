@@ -31,6 +31,7 @@ apt-get install -y \
     qemu-system-arm \
     unzip \
     bzip2 \
-    vim-nox
+    vim-nox \
+    toilet
 
 pip3 install ansible ipython

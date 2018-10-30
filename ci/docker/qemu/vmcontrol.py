@@ -42,6 +42,8 @@ import shlex
 #
 # The VMs are provisioned after boot, tests are run and then they are stopped
 #
+QEMU_SSH_PORT=2222
+QEMU_RAM=4096
 
 QEMU_RUN="""
 qemu-system-arm -M virt -m {ram} \
@@ -73,7 +75,7 @@ class VMError(RuntimeError):
 
 class VM:
     """Control of the virtual machine"""
-    def __init__(self, ssh_port=2222):
+    def __init__(self, ssh_port=QEMU_SSH_PORT):
         self.log = logging.getLogger(VM.__name__)
         self.ssh_port = ssh_port
         self.timeout_s = 300
@@ -90,6 +92,7 @@ class VM:
             self.terminate()
 
     def start(self):
+        call(['toilet', '-f', 'smbraille', 'Starting QEMU'])
         self.log.info("Starting VM, ssh port redirected to localhost:%s", self.ssh_port)
         if self.is_running():
             raise VMError("VM is running, shutdown first")
@@ -97,6 +100,7 @@ class VM:
         def keep_waiting():
             return self.is_running()
 
+        logging.info("waiting for ssh to be open in the VM for {}s".format(self.timeout_s))
         ssh_working = wait_ssh_open('127.0.0.1', self.ssh_port, keep_waiting, self.timeout_s)
 
         if not self.is_running():
@@ -153,14 +157,14 @@ class VM:
             logging.info("VM destructor hit")
             self.terminate()
 
-def run_qemu(ssh_port=2222, ram=4096):
+def run_qemu(ssh_port=QEMU_SSH_PORT, ram=QEMU_RAM):
     cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=ram)
     logging.info("QEMU command: %s", cmd)
     qemu_process = Popen(shlex.split(cmd), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
     return qemu_process
 
 
-def run_qemu_interactive(ssh_port=2222, ram=4096):
+def run_qemu_interactive(ssh_port=QEMU_SSH_PORT, ram=QEMU_RAM):
     cmd = QEMU_RUN_INTERACTIVE.format(ssh_port=ssh_port, ram=ram)
     logging.info("QEMU command: %s", cmd)
     check_call(shlex.split(cmd))

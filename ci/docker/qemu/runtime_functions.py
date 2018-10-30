@@ -33,6 +33,7 @@ import time
 import sys
 import types
 import glob
+import vmcontrol
 from vmcontrol import run_qemu_interactive
 
 def activate_this(base):
@@ -54,16 +55,34 @@ def activate_this(base):
             sys.path.remove(item)
     sys.path[:0] = new_sys_path
 
+
+def provision(ssh_port=vmcontrol.QEMU_SSH_PORT):
+    import glob
+    logging.info("Provisioning the VM with artifacts and sources")
+    def rsync(local_path, remote_path):
+        check_call(['rsync', '-e', 'ssh -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
+
+    artifact = glob.glob('/work/mxnet/build/*.whl')
+    for x in artifact:
+        rsync(x, 'mxnet_dist/')
+    rsync('/work/runtime_functions.py','')
+    rsync('mxnet/tests', 'mxnet')
+
+
+def qemu_ssh(ssh_port=vmcontrol.QEMU_SSH_PORT, *args):
+    check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(ssh_port), "qemu@localhost", *args])
+
+
+def rsync(local_path, remote_path):
+    check_call(['rsync', '-e', 'ssh -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
+
+
 def run_ut_py3_qemu():
     from vmcontrol import VM
     with VM() as vm:
-        logging.info("VM provisioning with ansible")
-        check_call(["ansible-playbook", "-v", "-u", "qemu", "-i", "localhost:{},".format(vm.ssh_port), "playbook.yml"])
-        logging.info("VM provisioned successfully.")
-        logging.info("sync tests")
-        check_call(['rsync', '-e', 'ssh -p{}'.format(vm.ssh_port), '-a', 'mxnet/tests', 'qemu@localhost:mxnet'])
+        provision(vm.ssh_port)
         logging.info("execute tests")
-        check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(vm.ssh_port), "qemu@localhost", "./runtime_functions.py", "run_ut_python3_qemu_internal"])
+        qemu_ssh(vm.ssh_port, "./runtime_functions.py", "run_ut_python3_qemu_internal")
         logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 
