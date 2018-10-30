@@ -642,6 +642,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   }
 }
 
+template<typename P>
 void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
                 bool is_deconv = false) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
@@ -660,11 +661,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  mxnet::op::ConvolutionParam param;
-  if (is_deconv) {
-    mxnet::op::DeconvolutionParam param;
-  }
-  
+  P param;
   param.Init(forward_attrs.attrs.dict);
   TShape kernel = param.kernel;
   TShape padding = param.pad;
@@ -958,7 +955,7 @@ TEST(IMPERATIVE, ConvOp) {
             continue;
           OpAttrs forward_attrs = GetConvOp(kernel, num_filters, dim, stride, pad);
           OpAttrs backwards_attrs = GetConvBackwardOp(kernel, num_filters, dim, stride, pad);
-          TestConvOp(forward_attrs, backwards_attrs);
+          TestConvOp<mxnet::op::ConvolutionParam>(forward_attrs, backwards_attrs);
         }
       }
     }
@@ -975,7 +972,7 @@ TEST(IMPERATIVE, DeconvOp) {
             continue;
           OpAttrs forward_attrs = GetDeconvOp(kernel, num_filters, dim, stride, pad);
           OpAttrs backwards_attrs = GetDeconvBackwardOp(kernel, num_filters, dim, stride, pad);
-          TestConvOp(forward_attrs, backwards_attrs, true);
+          TestConvOp<mxnet::op::DeconvolutionParam>(forward_attrs, backwards_attrs, true);
         }
       }
     }
