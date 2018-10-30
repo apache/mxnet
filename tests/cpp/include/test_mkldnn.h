@@ -318,7 +318,7 @@ inline void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  */
 inline std::vector<NDArrayAttrs> GetTestInputArrays(
     int types = ArrayTypes::All, bool rand = false,
-    int num_inputs = 1, int dim = 0, bool spatial_data_format = false) {
+    std::vector<float> scale = {1}, bool spatial_data_format = false) {
   TestArrayShapes tas = GetTestArrayShapes(spatial_data_format);
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
@@ -326,13 +326,13 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
 
-  int slice_amount = 1;
-  if (dim == 0)
-    slice_amount = num_inputs;
+  int slice_amount = scale[0];
   for (auto shape : shapes) {
-    if (dim >= shape.ndim())
+    if (scale.size() > shape.ndim())
       continue;
-    shape[dim] = shape[dim] * num_inputs;
+
+    for (size_t dim = 0; dim < scale.size(); ++dim)
+      shape[dim] = static_cast<int>(round(shape[dim] * scale[dim]));
 
     // Type 1.
     NDArray arr(shape, Context());
@@ -351,12 +351,12 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
 
 
     for (auto pd : pds) {
-      if (num_inputs > 1) {
+      for (size_t dim = 0; dim < scale.size(); ++dim) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
-          pd = GetExpandedMemPD(pd, num_inputs, dim);
+          pd = GetExpandedMemPD(pd, scale[dim], dim);
         else
-          pd = GetExpandedMemPD(pd, num_inputs);
+          pd = GetExpandedMemPD(pd, scale[dim]);
       }
 
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
