@@ -1,5 +1,23 @@
 # Installing MXNet
 
+```eval_rst
+.. toctree::
+   :hidden:
+
+   amazonlinux_setup.md
+   build_from_source.md
+   c_plus_plus.md
+   centos_setup.md
+   download.md
+   osx_setup.md
+   raspbian_setup.md
+   scala_setup.md
+   tx2_setup.md
+   ubuntu_setup.md
+   validate_mxnet.md
+   windows_setup.md
+```
+
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
@@ -597,7 +615,8 @@ MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.
 <div class="r">
 <div class="cpu">
 </br>
-Install OpenCV and OpenBLAS.
+
+To run MXNet you also should have OpenCV and OpenBLAS installed. You may install them with `brew` as follows:
 
 ```bash
 brew install opencv
@@ -757,7 +776,7 @@ All MKL pip packages are experimental prior to version 1.3.0.
 </div> <!-- End of pip -->
 
 
-<div class="docker build-from-source">
+<div class="docker">
 <br/>
 
 Docker images with *MXNet* are available at [Docker Hub](https://hub.docker.com/r/mxnet/).
@@ -800,7 +819,13 @@ mxnet/python        1.3.0_cpu_mkl       deaf9bf61d29        4 days ago          
 **Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
 
 
-</div> <!-- End of docker build-from-source -->
+</div> <!-- End of docker -->
+
+<div class="build-from-source">
+<br/>
+Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>
+
+</div> <!-- End of Build from source -->
 </div> <!-- End of CPU -->
 
 
@@ -886,7 +911,7 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 
 You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
-</div>
+</div> <!-- End of pip -->
 
 <div class="build-from-source">
 <br/>
@@ -894,7 +919,7 @@ You can either upgrade your CUDA install or install the MXNet package that suppo
 To build from source, refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 
-</div> <!-- End of pip -->
+</div> <!-- End of build from source -->
 </div> <!-- End of GPU -->
 </div> <!-- End of Python -->
 
@@ -914,6 +939,8 @@ cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CR
 options(repos = cran)
 install.packages("mxnet")
 ```
+
+To run MXNet you also should have OpenCV and OpenBLAS installed.
 
 </div> <!-- END - Windows R CPU -->
 
