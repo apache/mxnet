@@ -152,6 +152,12 @@ class Initializer(object):
             elif desc.endswith('beta'):
                 self._init_beta(desc, arr)
                 self._verbose_print(desc, 'beta', arr)
+            elif desc.endswith('min'):
+                self._init_zero(desc, arr)
+                self._verbose_print(desc, 'min', arr)
+            elif desc.endswith('max'):
+                self._init_one(desc, arr)
+                self._verbose_print(desc, 'max', arr)
             else:
                 self._init_default(desc, arr)
 
@@ -196,6 +202,10 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
+        elif name.endswith('min'):
+            self._init_zero(name, arr)
+        elif name.endswith('max'):
+            self._init_one(name, arr)
         else:
             self._init_default(name, arr)
 

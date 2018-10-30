@@ -266,6 +266,11 @@ def _prelu(attrs, inputs, proto_obj):
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
     return 'LeakyReLU', new_attrs, inputs
 
+def _selu(attrs, inputs, proto_obj):
+    """Selu function"""
+    new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'selu'})
+    return 'LeakyReLU', new_attrs, inputs
+
 def softmax(attrs, inputs, proto_obj):
     """Softmax function."""
     if 'axis' not in attrs:

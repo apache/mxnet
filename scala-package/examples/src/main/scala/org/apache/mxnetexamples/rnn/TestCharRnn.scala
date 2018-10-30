@@ -115,7 +115,7 @@ class TestCharRnn(CLIParser: CLIParser) extends InferBase {
 
   private var vocab : Map[String, Int] = null
 
-  override def loadModel(context: Array[Context]): Any = {
+  override def loadModel(context: Array[Context], batchInference : Boolean = false): Any = {
     val batchSize = 32
     val buckets = List(129)
     val numHidden = 512

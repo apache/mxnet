@@ -15,23 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import random
+# /etc/inittab
+# busybox init configuration for debian-installer
 
-vocab = [str(x) for x in range(100, 1000)]
-sw_train = open("sort.train.txt", "w")
-sw_test = open("sort.test.txt", "w")
-sw_valid = open("sort.valid.txt", "w")
+# main rc script
+::sysinit:/sbin/reopen-console /sbin/debian-installer-startup
 
-for i in range(1000000):
-    seq = " ".join([vocab[random.randint(0, len(vocab) - 1)] for j in range(5)])
-    k = i % 50
-    if k == 0:
-        sw_test.write(seq + "\n")
-    elif k == 1:
-        sw_valid.write(seq + "\n")
-    else:
-        sw_train.write(seq + "\n")
+# main setup program
+::respawn:/sbin/reopen-console /sbin/debian-installer
 
-sw_train.close()
-sw_test.close()
-sw_valid.close()
+# convenience shells
+tty2::askfirst:-/bin/sh
+tty3::askfirst:-/bin/sh
+
+# logging
+#tty4::respawn:/usr/bin/tail -f /var/log/syslog
+
+# Stuff to do before rebooting
+::ctrlaltdel:/sbin/shutdown > /dev/null 2>&1
+
+# re-exec init on receipt of SIGHUP/SIGUSR1
+::restart:/sbin/init

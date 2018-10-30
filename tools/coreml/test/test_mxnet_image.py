@@ -69,7 +69,7 @@ class ImageNetTest(unittest.TestCase):
             download_data()
             data = read_image(VAL_DATA, label_name=label_name)
 
-        mod = load_model(
+        mod = utils.load_model(
             model_name=model_name,
             epoch_num=epoch,
             data_shapes=data.provide_data,

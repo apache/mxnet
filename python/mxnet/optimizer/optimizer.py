@@ -33,8 +33,8 @@ from ..random import normal
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
-    'NAG', 'NDArray', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD',
-    'Signum', 'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
+    'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum',
+    'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
 
 
