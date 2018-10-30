@@ -612,6 +612,7 @@ build_ubuntu_amalgamation_min() {
 
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
+    lscpu
     cd /work/build
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
@@ -631,6 +632,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
     # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
     cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
     mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
+    ldd libmxnet.so
 }
 
 build_ubuntu_gpu_cmake() {
@@ -794,6 +796,8 @@ unittest_ubuntu_cpugpu_perl() {
 
 unittest_ubuntu_gpu_cpp() {
     set -ex
+    lscpu
+    ldd build/libmxnet.so
     build/tests/mxnet_unit_tests
 }
 
