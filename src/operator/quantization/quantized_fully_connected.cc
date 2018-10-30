@@ -95,7 +95,6 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
   for (size_t i = 0; i < out_attrs->size(); i++) {
-    (*out_attrs)[i] = kDefaultStorage;
     STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, kDefaultStorage);
     if (common::stype_string((*out_attrs)[i]).compare("unknown") == 0) {
       return false;
@@ -103,7 +102,6 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   }
 
   for (size_t i = 0; i < in_attrs->size(); i++) {
-    (*in_attrs)[i] = kDefaultStorage;
     STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, kDefaultStorage);
     if (common::stype_string((*in_attrs)[i]).compare("unknown") == 0) {
       return false;
