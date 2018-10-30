@@ -101,10 +101,11 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
         s"if (!${arg.safeArgName}.isEmpty) args = ${arg.safeArgName}.toSeq"
       } else {
         // all go in kwargs
-        if (arg.isOptional)
+        if (arg.isOptional) {
           s"""if (!${arg.safeArgName}.isEmpty) map("${arg.argName}") = ${arg.safeArgName}.get"""
-        else
+        } else {
           s"""map("${arg.argName}") = ${arg.safeArgName}"""
+        }
       }
     }
 

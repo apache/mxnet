@@ -38,10 +38,11 @@ abstract class GeneratorBase {
 
   def functionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
     val l = getBackEndFunctions(isSymbol)
-    if (isContrib)
+    if (isContrib) {
       l.filter(func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-    else
+    } else {
       l.filterNot(_.name.startsWith("_"))
+    }
   }
 
   def typeSafeFunctionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
@@ -49,11 +50,11 @@ abstract class GeneratorBase {
     val notGenerated = Set("Custom")
 
     val l = getBackEndFunctions(isSymbol)
-    val res = if (isContrib)
+    val res = if (isContrib) {
       l.filter(func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-    else
+    } else {
       l.filterNot(_.name.startsWith("_"))
-
+    }
     res.filterNot(ele => notGenerated.contains(ele.name))
   }
 
@@ -98,7 +99,8 @@ abstract class GeneratorBase {
         CToScalaUtils.argumentCleaner(argName, argType, family)
       Arg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
-    val returnType = if (isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArrayFuncReturn"
+    val returnType =
+      if (isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArrayFuncReturn"
     Func(aliasName, desc.value, argList.toList, returnType)
   }
 
