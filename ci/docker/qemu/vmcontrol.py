@@ -93,7 +93,7 @@ class VM:
 
     def start(self):
         call(['toilet', '-f', 'smbraille', 'Starting QEMU'])
-        self.log.info("Starting VM, ssh port redirected to localhost:%s", self.ssh_port)
+        self.log.info("Starting VM, ssh port redirected to localhost:%s (inside docker, not exposed by default)", self.ssh_port)
         if self.is_running():
             raise VMError("VM is running, shutdown first")
         self.qemu_process = run_qemu(self.ssh_port)

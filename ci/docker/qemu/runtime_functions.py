@@ -60,17 +60,20 @@ def provision(ssh_port=vmcontrol.QEMU_SSH_PORT):
     import glob
     logging.info("Provisioning the VM with artifacts and sources")
     def rsync(local_path, remote_path):
-        check_call(['rsync', '-e', 'ssh -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
+        check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
 
     artifact = glob.glob('/work/mxnet/build/*.whl')
     for x in artifact:
         rsync(x, 'mxnet_dist/')
     rsync('/work/runtime_functions.py','')
+    rsync('/work/vmcontrol.py','')
     rsync('mxnet/tests', 'mxnet')
 
 
 def qemu_ssh(ssh_port=vmcontrol.QEMU_SSH_PORT, *args):
-    check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(ssh_port), "qemu@localhost", *args])
+    cmd = ["ssh", "-o", "ServerAliveInterval=5", "-o", "StrictHostKeyChecking=no", "-p{}".format(ssh_port), "qemu@localhost", *args]
+    print(cmd)
+    check_call(["ssh", "-o", "ServerAliveInterval=5", "-o", "StrictHostKeyChecking=no", "-p{}".format(ssh_port), "qemu@localhost", *args])
 
 
 def rsync(local_path, remote_path):
