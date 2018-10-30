@@ -287,7 +287,7 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Deconvolution");
   attrs.num_inputs = 3;
-  attrs.num_outputs = 2;
+  attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
