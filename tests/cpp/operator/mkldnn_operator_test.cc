@@ -258,7 +258,7 @@ OpAttrs GetConvBackwardOp(int kernel, int num_filters, int dim, int stride, int 
 OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("Deconvolution");
-  attrs.num_inputs = 3;
+  attrs.num_inputs = 2;
   attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
@@ -286,7 +286,7 @@ OpAttrs GetDeconvOp(int kernel, int num_filters, int dim, int stride, int pad) {
 OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, int pad) {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Deconvolution");
-  attrs.num_inputs = 4;
+  attrs.num_inputs = 3;
   attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
@@ -702,7 +702,11 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
     NDArray ndbias = CreateBiasNDArray(bias_shape);
     inputs[0] = &in_arr.arr;
     inputs[1] = &ndkernel;
-    inputs[2] = &ndbias;
+
+    if (!param.no_bias) {
+      inputs[2] = &ndbias;
+    }
+
     for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
       for (size_t i = 0; i < forward_attrs.num_outputs; ++i) {
         req[i] = kWriteTo;
@@ -723,7 +727,10 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       backwards_input[0] = outputs[0];  // output grad
       backwards_input[1] = inputs[0];  // input
       backwards_input[2] = inputs[1];  // kernel
-      backwards_input[3] = inputs[2];  // bias
+
+      if (!param.no_bias) {
+        backwards_input[3] = inputs[2];  // bias
+      }
 
       auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true, {1}, true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
@@ -738,7 +745,10 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       NDArray tmp_bias2 = CreateBiasNDArray(bias_shape);
       backwards_ex_outputs[0] = &tmp_output2.arr;
       backwards_ex_outputs[1] = &tmp_kernel2;
-      backwards_ex_outputs[2] = &tmp_bias2;
+
+      if (!param.no_bias) {
+        backwards_ex_outputs[2] = &tmp_bias2;
+      }
 
       for (size_t i = 0; i < backwards_attrs.num_outputs; ++i)
         back_req[i] = kWriteTo;
