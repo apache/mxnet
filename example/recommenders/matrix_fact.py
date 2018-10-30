@@ -25,18 +25,17 @@ import numpy as np
 
 logging.basicConfig(level=logging.DEBUG)
 
-def evaluate_network(net, data_iterator, ctx):
+def evaluate_network(network, data_iterator, ctx):
     loss_acc = 0.
     l2 = gluon.loss.L2Loss()
-    for i, (user, item, score) in enumerate(data_iterator):
-        user = user.as_in_context(ctx)
-        item = item.as_in_context(ctx)
-        score = score.as_in_context(ctx)
-        pred = net(user, item)
-        loss = l2(pred, score)            
-        loss_acc += loss.mean()
-    return loss_acc.asscalar()/(i+1)
-    
+    for i, (users, items, scores) in enumerate(data_iterator):
+        users_ = gluon.utils.split_and_load(users, ctx)
+        items_ = gluon.utils.split_and_load(items, ctx)
+        scores_ =gluon.utils.split_and_load(scores, ctx)
+        preds = [network(u, i) for u, i in zip(users_, items_)]
+        losses = [l2(p, s).asnumpy() for p, s in zip(preds, scores_)]         
+        loss_acc += sum(losses).mean()/len(ctx)
+    return loss_acc/(i+1)
 
 def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer='sgd', ctx=mx.gpu(0), num_epoch_lr=5, factor=0.2):
 
@@ -44,10 +43,11 @@ def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer=
     mx.random.seed(123)  # Fix random seed for consistent demos
     random.seed(123)  # Fix random seed for consistent demos
 
-    schedule = mx.lr_scheduler.FactorScheduler(step=len(train_data)*num_epoch_lr, factor=factor)
+    schedule = mx.lr_scheduler.FactorScheduler(step=len(train_data)*len(ctx)*num_epoch_lr, factor=factor)
 
-    trainer = gluon.Trainer(network.collect_params(), optimizer, 
-                            {'learning_rate':learning_rate, 'wd':0.0001, 'lr_scheduler':schedule})
+    trainer = gluon.Trainer(network.collect_params(), optimizer,
+                            {'learning_rate':learning_rate, 'wd':0.0001, 'lr_scheduler':schedule})  
+                            #update_on_kvstore=False)
 
     l2 = gluon.loss.L2Loss()
 
@@ -56,22 +56,22 @@ def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer=
     losses = []
     for e in range(epochs):
         loss_acc = 0.
-        for i, (user, item, score) in enumerate(train_data):
-            user = user.as_in_context(ctx)
-            item = item.as_in_context(ctx)
-            score = score.as_in_context(ctx)
+        for i, (users, items, scores) in enumerate(train_data):
+            
+            users_ = gluon.utils.split_and_load(users, ctx)
+            items_ = gluon.utils.split_and_load(items, ctx)
+            scores_ =gluon.utils.split_and_load(scores, ctx)
 
             with autograd.record():
-                pred = network(user, item)
-                loss = l2(pred, score)
+                preds = [network(u, i) for u, i in zip(users_, items_)]
+                losses = [l2(p, s) for p, s in zip(preds, scores_)]
 
-            loss.backward()
-            loss_acc += loss.mean()
-            trainer.update(user.shape[0])
+            [l.backward() for l in losses]
+            loss_acc += sum([l.asnumpy() for l in losses]).mean()/len(ctx)
+            trainer.update(users.shape[0])
 
         test_loss = evaluate_network(network, test_data, ctx)
-        train_loss = loss_acc.asscalar()/(i+1)
+        train_loss = loss_acc/(i+1)
         print("Epoch [{}], Training RMSE {:.4f}, Test RMSE {:.4f}".format(e, train_loss, test_loss))
         losses.append((train_loss, test_loss))
     return losses
-
