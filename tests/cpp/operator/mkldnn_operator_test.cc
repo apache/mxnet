@@ -36,6 +36,7 @@
 #include "../../src/operator/nn/mkldnn/mkldnn_pooling-inl.h"
 #include "../../src/operator/nn/pooling-inl.h"
 #include "../../src/operator/nn/convolution-inl.h"
+#include "../../src/operator/nn/deconvolution-inl.h"
 #include "../include/test_mkldnn.h"
 
 using namespace mxnet;
@@ -660,6 +661,10 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   mxnet::op::ConvolutionParam param;
+  if (is_deconv) {
+    mxnet::op::DeconvolutionParam param;
+  }
+  
   param.Init(forward_attrs.attrs.dict);
   TShape kernel = param.kernel;
   TShape padding = param.pad;
