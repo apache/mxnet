@@ -212,10 +212,10 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
-.set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
 #else
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
@@ -304,9 +304,9 @@ Example::
 #endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
