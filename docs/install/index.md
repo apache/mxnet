@@ -1,5 +1,23 @@
 # Installing MXNet
 
+```eval_rst
+.. toctree::
+   :hidden:
+
+   amazonlinux_setup.md
+   build_from_source.md
+   c_plus_plus.md
+   centos_setup.md
+   download.md
+   osx_setup.md
+   raspbian_setup.md
+   scala_setup.md
+   tx2_setup.md
+   ubuntu_setup.md
+   validate_mxnet.md
+   windows_setup.md
+```
+
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
