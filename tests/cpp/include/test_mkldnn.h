@@ -148,7 +148,7 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
   }
 }
 
-inline static TestArrayShapes GetTestArrayShapes() {
+inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = false) {
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   std::vector<TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
@@ -187,8 +187,10 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s2, dtype, mkldnn::memory::format::oihw));
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
-    pds.push_back(GetMemPD(s1, dtype, formats[0]));
-    pds.push_back(GetMemPD(s2, dtype, formats[1]));
+    if (!spatial_data_format) {
+      pds.push_back(GetMemPD(s1, dtype, formats[0]));
+      pds.push_back(GetMemPD(s2, dtype, formats[1]));
+    }
   }
   {
     // 5D
@@ -198,7 +200,9 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::goihw));
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(5, dtype);
-    pds.push_back(GetMemPD(s, dtype, formats[0]));
+    if (!spatial_data_format) {
+      pds.push_back(GetMemPD(s, dtype, formats[0]));
+    }
   }
 
   TestArrayShapes ret;
@@ -314,8 +318,8 @@ inline void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  */
 inline std::vector<NDArrayAttrs> GetTestInputArrays(
     int types = ArrayTypes::All, bool rand = false,
-    int num_inputs = 1, int dim = 0) {
-  TestArrayShapes tas = GetTestArrayShapes();
+    int num_inputs = 1, int dim = 0, bool spatial_data_format = false) {
+  TestArrayShapes tas = GetTestArrayShapes(spatial_data_format);
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 

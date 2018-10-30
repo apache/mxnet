@@ -662,7 +662,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   TShape stride = param.stride;
   int num_filter = param.num_filter;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true, {1}, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -721,7 +721,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       backwards_input[2] = inputs[1];  // kernel
       backwards_input[3] = inputs[2];  // bias
 
-      auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true)[i1];
+      auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true, {1}, true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias = CreateBiasNDArray(bias_shape);
 
@@ -729,7 +729,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       backwards_outputs[1] = &tmp_kernel;
       backwards_outputs[2] = &tmp_bias;
 
-      auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true)[i1];
+      auto tmp_output2 = GetTestInputArrays(forward_attrs.input_types, true, {1}, true)[i1];
       NDArray tmp_kernel2 = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias2 = CreateBiasNDArray(bias_shape);
       backwards_ex_outputs[0] = &tmp_output2.arr;
