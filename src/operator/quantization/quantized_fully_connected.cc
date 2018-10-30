@@ -100,7 +100,6 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
       return false;
     }
   }
-
   for (size_t i = 0; i < in_attrs->size(); i++) {
     STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, kDefaultStorage);
     if (common::stype_string((*in_attrs)[i]).compare("unknown") == 0) {
