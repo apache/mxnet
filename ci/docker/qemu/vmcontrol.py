@@ -222,7 +222,7 @@ def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
                     log.debug("connect timeout %d s", next_timeout)
                     s.settimeout(next_timeout)
 
-            log.info("connect %s:%d", server, port)
+            log.debug("connect %s:%d", server, port)
             s.connect((server, port))
             ret = s.recv(1024).decode()
             if ret and ret.startswith('SSH'):
