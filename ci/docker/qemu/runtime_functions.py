@@ -63,7 +63,7 @@ def run_ut_py3_qemu():
     with VM() as vm:
         qemu_provision(vm.ssh_port)
         logging.info("execute tests")
-        qemu_ssh("./runtime_functions.py", "run_ut_python3_qemu_internal", vm.ssh_port)
+        qemu_ssh(vm.ssh_port, "./runtime_functions.py", "run_ut_python3_qemu_internal")
         logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 

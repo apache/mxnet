@@ -100,12 +100,14 @@ class VM:
             raise VMError("VM is running, shutdown first")
         if self._interactive:
             self.qemu_process = Popen(shlex.split(QEMU_RUN_INTERACTIVE.format(ssh_port=self.ssh_port, ram=self.ram)))
+            return
         else:
+            self.log.info("Starting in non-interactive mode. Terminal output is disabled.")
             self.qemu_process = Popen(shlex.split(QEMU_RUN.format(ssh_port=self.ssh_port, ram=self.ram)), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
         def keep_waiting():
             return self.is_running()
 
-        logging.info("waiting for ssh to be open in the VM for {}s".format(self.timeout_s))
+        logging.info("waiting for ssh to be open in the VM (timeout {}s)".format(self.timeout_s))
         ssh_working = wait_ssh_open('127.0.0.1', self.ssh_port, keep_waiting, self.timeout_s)
 
         if not self.is_running():
