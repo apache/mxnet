@@ -509,7 +509,11 @@ void TestConcatOp(const OpAttrs &attrs, VerifyFunc verify_fn,
   if (backwards) {
     std::string str_dim = const_cast<OpAttrs&>(attrs).attrs.dict["dim"];
     int dim = std::stoi(str_dim);
-    in_arrs = GetTestInputArrays(ArrayTypes::All, false, attrs.num_outputs, dim);
+    std::vector<float> scale_vector(dim+1);
+    for (size_t i = 0; i < dim+1; ++i)
+      scale_vector[i] = 1;
+    scale_vector[dim] = attrs.num_outputs;
+    in_arrs = GetTestInputArrays(ArrayTypes::All, false, scale_vector);
   }
 
   for (auto &in_arr : in_arrs) {
