@@ -314,6 +314,23 @@ struct det_sign : public mxnet_op::tunable {
   }
 };
 
+MXNET_UNARY_MATH_OP(approx_sign_grad, a < 0 ? 2 - 2*a : 2 + 2*a );
+
+/*! \brief used for generate element of sign */
+struct approx_sign : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
+    if (a < DType(0)) return DType(-DType(1));
+    return DType(1);
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_unsigned<DType>::value, DType>::type
+  Map(DType a) {
+    return DType(1);
+  }
+};
+
 /*! \brief used for generate element of power */
 MXNET_BINARY_MATH_OP(power, math::pow(a, b));
 

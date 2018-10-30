@@ -1254,6 +1254,14 @@ fixed-size items.
         """
         return op.det_sign(self, *args, **kwargs)
 
+    def approx_sign(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`approx_sign`.
+
+        The arguments are the same as for :py:func:`approx_sign`, with
+        this array as data.
+        """
+        return op.approx_sign(self, *args, **kwargs)
+
     def flatten(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flatten`.
 

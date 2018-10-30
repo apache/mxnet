@@ -33,15 +33,25 @@ def quantize(F, x, bits, use_dorefa_weight_activation=False):
 
 class QActivation(HybridBlock):
     def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0,
-                 use_dorefa_weight_activation=False, **kwargs):
+                 use_dorefa_weight_activation=False, forward='sign', derivative='clip', **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
         self.bits = bits
         self.threshold = gradient_cancel_threshold
         self.use_dorefa = use_dorefa_weight_activation
+        self.forward = forward
+        self.derivative = derivative
 
     def hybrid_forward(self, F, x):
         x = F.contrib.gradcancel(x, threshold=self.threshold)
-        x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
+        if self.forward == 'sign' and self.derivative == 'clip':
+            x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
+        elif self.activation == 'approxsign' and self.derivative == 'approxsign':
+            F.where(x <= -1, -1, \
+                    F.where(x < 0, 2*x + x ** 2, \
+                            F.where(x < 1, 2*x - x ** 2, 1)))
+        elif self.activation == 'sign' and self.derivative == 'approxsign':
+            return F.approx_sign(x)
+
         return x
 
 

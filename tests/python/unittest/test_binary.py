@@ -168,6 +168,19 @@ def test_det_sign():
     assert_almost_equal(exp_grad, x.grad.asnumpy())
 
 
+def test_approx_sign():
+    exp_y = np.array([1.0, 1.0, -1.0])
+    exp_grad = np.array([2.0, 0.8, 1.4])
+
+    x = mx.nd.array([0.0, 0.6, -0.3])
+    x.attach_grad()
+    with autograd.record():
+        y = x.approx_sign()
+        assert_almost_equal(exp_y, y.asnumpy())
+    y.backward()
+    assert_almost_equal(exp_grad, x.grad.asnumpy())
+
+
 def test_round_ste():
     npy = np.random.uniform(-10, 10, (2, 3, 4))
 

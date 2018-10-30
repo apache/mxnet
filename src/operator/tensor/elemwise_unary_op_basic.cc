@@ -690,7 +690,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sign, unary_bwd<mshadow
 // det_sign
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(det_sign, cpu, mshadow_op::det_sign)
 MXNET_ADD_SPARSE_OP_ALIAS(det_sign)
-.describe(R"code(Returns element-wise sign of the input (but with +1 for 0 values and Straigth Through Estimator).
+.describe(R"code(Returns element-wise sign of the input (but with +1 for 0 values and Straight Through Estimator).
 
 Example::
 
@@ -705,6 +705,25 @@ The storage type of ``det_sign`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_det_sign"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_det_sign, unary_bwd<mshadow_op::identity_grad>);
+
+// approx_sign
+MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP(approx_sign, cpu, mshadow_op::approx_sign)
+MXNET_ADD_SPARSE_OP_ALIAS(approx_sign)
+.describe(R"code(Returns element-wise sign of the input (but with +1 for 0 values and an approximate function to calculate the gradients).
+
+Example::
+
+   det_sign([-2, 0, 3]) = [-1, 1, 1]
+
+The storage type of ``approx_sign`` output depends upon the input storage type:
+
+   - approx_sign(default) = default
+   - approx_sign(row_sparse) = row_sparse
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_approx_sign"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_approx_sign, unary_bwd<mshadow_op::approx_sign_grad>);
 
 // round
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
