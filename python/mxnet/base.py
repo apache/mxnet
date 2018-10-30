@@ -560,7 +560,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_']
 
 
 def _get_op_name_prefix(op_name):
@@ -616,9 +616,13 @@ def _init_op_module(root_namespace, module_name, make_op_func):
         op_name_prefix = _get_op_name_prefix(name)
         module_name_local = module_name
         if len(op_name_prefix) > 0:
-            func_name = name[len(op_name_prefix):]
-            cur_module = submodule_dict[op_name_prefix]
-            module_name_local = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+            if op_name_prefix != '_random_' or name.endswith('_like'):
+                func_name = name[len(op_name_prefix):]
+                cur_module = submodule_dict[op_name_prefix]
+                module_name_local = "%s.%s.%s" % (root_namespace, module_name, op_name_prefix[1:-1])
+            else:
+                func_name = name
+                cur_module = module_internal
         elif name.startswith('_'):
             func_name = name
             cur_module = module_internal
