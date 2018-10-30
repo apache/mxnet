@@ -19,11 +19,11 @@
 
 /*!
  * Copyright (c) 2017 by Contributors
- * \file la_op_inline.h
+ * \file la_op-inl.h
  * \brief Operators for advanced linear algebra.
  */
-#ifndef MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
-#define MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
+#ifndef MXNET_OPERATOR_TENSOR_LA_OP_INL_H_
+#define MXNET_OPERATOR_TENSOR_LA_OP_INL_H_
 
 #include "../linalg.h"
 
@@ -672,4 +672,4 @@ struct syevd_backward {
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_LA_OP_INLINE_H_
+#endif  // MXNET_OPERATOR_TENSOR_LA_OP_INL_H_

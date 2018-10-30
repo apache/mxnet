@@ -23,7 +23,7 @@
  * \brief CPU-Operators for advanced linear algebra.
  */
 #include "./la_op.h"
-#include "./la_op_inline.h"
+#include "./la_op-inl.h"
 
 namespace mxnet {
 namespace op {
