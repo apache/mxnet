@@ -584,6 +584,30 @@ NDArray NDArray::Reorder2Default() const {
   return ret;
 }
 
+void NDArray::ReorderShape(const NDArray &output) const {
+  CHECK(storage_type() == kDefaultStorage);
+
+  if (output.IsMKLDNNData())
+    output.ptr_->mkl_mem_ = nullptr;
+
+  if (output.ptr_->shandle.dptr == nullptr)
+    output.ptr_->CheckAndAlloc();
+
+  auto this_mem = GetMKLDNNData();
+  mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
+  mkldnn::memory::desc this_desc = this_pd.desc();
+
+  mkldnn::memory::dims dims(this_desc.data.dims,
+                            this_desc.data.dims + this_desc.data.ndims);
+  auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
+  auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
+  mkldnn::memory::desc data_md(dims, this_dtype, this_format);
+  mkldnn::memory::primitive_desc pd(data_md, this_pd.get_engine());
+  mkldnn_mem_ptr temp_mem(new mkldnn::memory(pd, output.ptr_->shandle.dptr));
+  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, *temp_mem));
+  MKLDNNStream::Get()->Submit();
+}
+
 void NDArray::Reorder2DefaultAsync() {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());

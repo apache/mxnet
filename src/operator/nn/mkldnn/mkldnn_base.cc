@@ -105,14 +105,18 @@ void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem) {
     stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
   } else if (!same_shape(this_desc, from_desc)) {
     // In this case, the source memory stores data in a customized layout. We
-    // need to reorganize the data in memory before reshape.
+    // need to reorganize the data in memory before we can reshape.
+    mkldnn::memory::primitive_desc def_pd = GetPrimitiveDesc(from_pd, from_def_format);
+    mkldnn::memory *def_mem = TmpMemMgr::Get()->Alloc(def_pd);
+    stream->RegisterPrim(mkldnn::reorder(mem, *def_mem));
+    // Now we can reshape it
     mkldnn::memory::dims dims(this_desc.data.dims,
                               this_desc.data.dims + this_desc.data.ndims);
     auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
     auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
     mkldnn::memory::desc data_md(dims, this_dtype, this_format);
     mkldnn::memory::primitive_desc pd(data_md, from_pd.get_engine());
-    mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, mem.get_data_handle()));
+    mkldnn_mem_ptr tmp_mem(new mkldnn::memory(pd, def_mem->get_data_handle()));
     stream->RegisterMem(tmp_mem);
     stream->RegisterPrim(mkldnn::reorder(*tmp_mem, *this_mem));
   } else if (from_pd == this_pd) {

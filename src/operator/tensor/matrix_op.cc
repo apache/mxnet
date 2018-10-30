@@ -115,7 +115,7 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
   if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
-    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    inputs[0].ReorderShape(outputs[0]);
     return;
   }
   FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req,
@@ -299,7 +299,9 @@ Example::
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+#if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
+#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_copy" })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FlattenEx)

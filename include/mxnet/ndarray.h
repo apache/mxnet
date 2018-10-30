@@ -734,6 +734,7 @@ class NDArray {
    * It doesn't affect the data of the original NDArray.
    */
   NDArray Reorder2Default() const;
+  void ReorderShape(const NDArray &ndarray) const;
 
   void InvalidateMKLDNNData();
 
