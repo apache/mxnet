@@ -798,7 +798,6 @@ unittest_ubuntu_gpu_cpp() {
     set -ex
     lscpu
     ldd build/libmxnet.so
-    ldd build/tests/mxnet_unit_tests
     build/tests/mxnet_unit_tests
 }
 
