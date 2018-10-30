@@ -188,7 +188,7 @@ OpAttrs GetLRNOp() {
   attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"nsize" , "3"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(2);
+  attrs.accept_dims.insert(4); // TODO(alex): (MXNET-845)
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
@@ -219,7 +219,7 @@ OpAttrs GetSoftmaxOp() {
   attrs.num_inputs = 1;
   attrs.num_outputs = 1;
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(2);
+  attrs.accept_dims.insert({1,2,3,4,5});
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
   attrs.input_types = ArrayTypes::Normal |
@@ -542,8 +542,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
 
-      // TODO(alex): (MXNET-845) Remove when MKLDNN supports other dims
-      if (in_arr.arr.shape().ndim() != 4)
+      if (forward_attrs.accept_dims.find(in_arr.arr.shape().ndim()) ==
+          forward_attrs.accept_dims.end())
         continue;
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
@@ -557,9 +557,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         inputs[i] = &in_arr.arr;
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        if (out_arrs[0][output_i].arr.IsMKLDNNData())
-          continue;
-
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
@@ -592,10 +589,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       // If the array is a view, we shouldn't write data to it.
       if (in_arr.arr.IsView())
           continue;
-
-      // TODO(alex): (MXNET-845) Remove when MKLDNN supports other dims
-      if (in_arr.arr.shape().ndim() != 4)
-        continue;
 
       NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
       for (int i = 0; i < forward_attrs.num_inputs; i++)
