@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file indexing_op.cu
- * \brief
+ * \brief GPU implementation of indexing operator
  * \author Siyi Li, Chi Zhang
 */
 

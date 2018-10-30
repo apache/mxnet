@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
- * \brief CPU Implementation of unary function.
+ * \file elemwise_binary_op_basic.cc
+ * \brief CPU Implementation of basic elementwise binary broadcast operators
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"

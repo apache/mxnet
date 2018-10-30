@@ -19,7 +19,7 @@
 
 /*!
  * \file elemwise_unary_op_trig.cc
- * \brief CPU Implementation of unary trigometric functions.
+ * \brief CPU Implementation of unary trigonometric functions.
  */
 #include <mxnet/base.h>
 #include "elemwise_unary_op.h"
