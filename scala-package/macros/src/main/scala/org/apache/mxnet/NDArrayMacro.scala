@@ -70,7 +70,19 @@ private[mxnet] object NDArrayMacro extends GeneratorBase {
   }
 }
 
-private[mxnet] abstract class TypedNDArrayAPIMacroBase extends GeneratorBase {
+private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
+
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    import c.universe._
+    val isContrib: Boolean = c.prefix.tree match {
+      case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
+    }
+
+    val functions = typeSafeFunctionsToGenerate(isSymbol = false, isContrib)
+
+    val functionDefs = functions.map(f => buildTypedFunction(c)(f))
+    structGeneration(c)(functionDefs, annottees: _*)
+  }
 
   protected def buildTypedFunction(c: blackbox.Context)
                                   (function: Func): c.universe.DefDef = {
@@ -121,21 +133,5 @@ private[mxnet] abstract class TypedNDArrayAPIMacroBase extends GeneratorBase {
        """.stripMargin
 
     c.parse(finalStr).asInstanceOf[DefDef]
-  }
-
-}
-
-private[mxnet] object TypedNDArrayAPIMacro extends TypedNDArrayAPIMacroBase {
-
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
-    val isContrib: Boolean = c.prefix.tree match {
-      case q"new AddNDArrayAPIs($b)" => c.eval[Boolean](c.Expr(b))
-    }
-
-    val functions = typeSafeFunctionsToGenerate(isSymbol = false, isContrib)
-
-    val functionDefs = functions.map(f => buildTypedFunction(c)(f))
-    structGeneration(c)(functionDefs, annottees: _*)
   }
 }

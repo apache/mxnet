@@ -63,7 +63,19 @@ private[mxnet] object SymbolMacro extends GeneratorBase {
   }
 }
 
-private[mxnet] abstract class TypedSymbolAPIMacroBase extends GeneratorBase {
+private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
+
+  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
+    import c.universe._
+    val isContrib: Boolean = c.prefix.tree match {
+      case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
+    }
+
+    val functions = typeSafeFunctionsToGenerate(isSymbol = true, isContrib)
+
+    val functionDefs = functions.map(f => buildTypedFunction(c)(f))
+    structGeneration(c)(functionDefs, annottees: _*)
+  }
 
   protected def buildTypedFunction(c: blackbox.Context)
                                   (function: Func): c.universe.DefDef = {
@@ -110,21 +122,4 @@ private[mxnet] abstract class TypedSymbolAPIMacroBase extends GeneratorBase {
 
     c.parse(finalStr).asInstanceOf[DefDef]
   }
-
-}
-
-private[mxnet] object TypedSymbolAPIMacro extends TypedSymbolAPIMacroBase {
-
-  def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*): c.Expr[Any] = {
-    import c.universe._
-    val isContrib: Boolean = c.prefix.tree match {
-      case q"new AddSymbolAPIs($b)" => c.eval[Boolean](c.Expr(b))
-    }
-
-    val functions = typeSafeFunctionsToGenerate(isSymbol = true, isContrib)
-
-    val functionDefs = functions.map(f => buildTypedFunction(c)(f))
-    structGeneration(c)(functionDefs, annottees: _*)
-  }
-
 }

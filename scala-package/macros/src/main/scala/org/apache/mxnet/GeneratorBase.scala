@@ -157,5 +157,4 @@ abstract class GeneratorBase {
       }
     )
   }
-
 }
