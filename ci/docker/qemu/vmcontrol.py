@@ -55,6 +55,19 @@ qemu-system-arm -M virt -m {ram} \
   -display none -nographic
 """
 
+QEMU_RUN_INTERACTIVE="""
+qemu-system-arm -M virt -m {ram} \
+  -kernel vmlinuz \
+  -initrd initrd.img \
+  -append 'root=/dev/vda1' \
+  -drive if=none,file=vda.qcow2,format=qcow2,id=hd \
+  -device virtio-blk-device,drive=hd \
+  -netdev user,id=mynet,hostfwd=tcp::{ssh_port}-:22 \
+  -device virtio-net-device,netdev=mynet \
+  -nographic
+"""
+
+
 class VMError(RuntimeError):
     pass
 
@@ -140,11 +153,17 @@ class VM:
             logging.info("VM destructor hit")
             self.terminate()
 
-def run_qemu(ssh_port=2222):
-    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=4096)
+def run_qemu(ssh_port=2222, ram=4096):
+    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=ram)
     logging.info("QEMU command: %s", cmd)
     qemu_process = Popen(shlex.split(cmd), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
     return qemu_process
+
+
+def run_qemu_interactive(ssh_port=2222, ram=4096):
+    cmd = QEMU_RUN_INTERACTIVE.format(ssh_port=ssh_port, ram=ram)
+    logging.info("QEMU command: %s", cmd)
+    check_call(shlex.split(cmd))
 
 
 def wait_ssh_open(server, port, keep_waiting=None, timeout=None):

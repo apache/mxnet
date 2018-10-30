@@ -19,13 +19,4 @@
 
 set -exuo pipefail
 
-qemu-system-arm -M virt -m 1024 \
-  -kernel vmlinuz \
-  -initrd initrd.img \
-  -append 'root=/dev/vda1' \
-  -drive if=none,file=vda.qcow2,format=qcow2,id=hd \
-  -device virtio-blk-device,drive=hd \
-  -netdev user,id=mynet,hostfwd=tcp::2222-:22 \
-  -device virtio-net-device,netdev=mynet \
-  -nographic \
-  -display none
+qemu-system-arm -readconfig qemu_arm.cfg -nographic
