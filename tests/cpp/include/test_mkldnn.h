@@ -175,7 +175,6 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::x));
   }
   {
-    /*
     // 2D
     TShape s(2);
     s[0] = 96;
@@ -186,7 +185,6 @@ inline static TestArrayShapes GetTestArrayShapes() {
     s[1] = 363;
     shapes.push_back(s);
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::nc));
-    */
   }
   {
     /*
