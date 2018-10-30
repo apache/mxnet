@@ -287,7 +287,7 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_Deconvolution");
   attrs.num_inputs = 3;
-  attrs.num_outputs = 1;
+  attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"kernel" , CreateShapeString(kernel, dim)});
   attrs.attrs.dict.insert({"num_filter" , std::to_string(num_filters)});
   attrs.attrs.dict.insert({"stride" , CreateShapeString(stride, dim)});
@@ -735,7 +735,6 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       auto tmp_output = GetTestInputArrays(forward_attrs.input_types, true, {1}, true)[i1];
       NDArray tmp_kernel = CreateKernelNDArray(kernel, num_filter, in_arr.arr.shape(), is_deconv);
       NDArray tmp_bias = CreateBiasNDArray(bias_shape);
-
       backwards_outputs[0] = &tmp_output.arr;
       backwards_outputs[1] = &tmp_kernel;
       if (!param.no_bias) {
@@ -747,7 +746,6 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
       NDArray tmp_bias2 = CreateBiasNDArray(bias_shape);
       backwards_ex_outputs[0] = &tmp_output2.arr;
       backwards_ex_outputs[1] = &tmp_kernel2;
-
       if (!param.no_bias) {
         backwards_ex_outputs[2] = &tmp_bias2;
       }
