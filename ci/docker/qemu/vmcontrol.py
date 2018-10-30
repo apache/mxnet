@@ -94,7 +94,9 @@ class VM:
             self.terminate()
 
     def start(self):
+        sys.stderr.flush()
         call(['toilet', '-f', 'smbraille', 'Starting QEMU'])
+        sys.stdout.flush()
         self.log.info("Starting VM, ssh port redirected to localhost:%s (inside docker, not exposed by default)", self.ssh_port)
         if self.is_running():
             raise VMError("VM is running, shutdown first")
