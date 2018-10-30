@@ -20,6 +20,7 @@ package org.apache.mxnet
 import java.io.File
 import java.net.URL
 
+import javax.imageio.ImageIO
 import org.apache.commons.io.FileUtils
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -61,7 +62,9 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("Test load image from Socket") {
-    val nd = Image.imDecodeURL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
+    val url = new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
+    val inputStream = url.openStream
+    val nd = Image.imDecode(inputStream)
     logger.info(s"OpenCV load image with shape: ${nd.shape}")
     require(nd.shape == Shape(576, 1024, 3), "image shape not Match!")
   }
@@ -83,7 +86,8 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     val nd = Image.imRead(imLocation)
     val resizeIm = Image.imResize(nd, 224, 224)
     val tempDirPath = System.getProperty("java.io.tmpdir")
-    Image.toImage(resizeIm, tempDirPath + "/inputImages/out.png")
+    val img = Image.toImage(resizeIm)
+    ImageIO.write(img, "png", new File(tempDirPath + "/inputImages/out.png"))
     logger.info(s"converted image stored in ${tempDirPath + "/inputImages/out.png"}")
   }
 

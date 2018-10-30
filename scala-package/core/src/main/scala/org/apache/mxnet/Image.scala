@@ -18,11 +18,8 @@
 package org.apache.mxnet
 // scalastyle:off
 import java.awt.image.BufferedImage
-import java.io.File
-
-import javax.imageio.ImageIO
 // scalastyle:on
-import java.net.URL
+import java.io.InputStream
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -42,30 +39,28 @@ object Image {
     *               to mxnet's default RGB format (instead of opencv's default BGR).
     * @return NDArray in HWC format
     */
-  def imDecode (buf : Array[Byte], flag : Option[Int] = None,
-                to_rgb : Option[Boolean] = None,
-                out : Option[NDArray] = None) : org.apache.mxnet.NDArrayFuncReturn = {
+  def imDecode (buf : Array[Byte], flag : Int,
+                to_rgb : Boolean,
+                out : Option[NDArray]) : NDArray = {
     val nd = NDArray.array(buf.map(_.toFloat), Shape(buf.length))
     val byteND = NDArray.api.cast(nd, "uint8")
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     args += byteND
-    if (flag.isDefined) map("flag") = flag.get
-    if (to_rgb.isDefined) map("to_rgb") = to_rgb.get
+    map("flag") = flag
+    map("to_rgb") = to_rgb
     if (out.isDefined) map("out") = out.get
     NDArray.genericNDArrayFunctionInvoke("_cvimdecode", args, map.toMap)
   }
 
   /**
-    * Same imageDecode with URL Enabled
-    * @param urlStr URL link to the image
+    * Same imageDecode with InputStream
+    * @param inputStream the inputStream of the image
     * @return NDArray in HWC format
     */
-  def imDecodeURL (urlStr : String, flag : Option[Int] = None,
-                to_rgb : Option[Boolean] = None,
-                out : Option[NDArray] = None) : NDArrayFuncReturn = {
-    val url = new URL(urlStr)
-    val inputStream = url.openStream
+  def imDecode (inputStream : InputStream, flag : Int = 1,
+                to_rgb : Boolean = true,
+                out : Option[NDArray] = None) : NDArray = {
     val buffer = new Array[Byte](2048)
     val arrBuffer = ArrayBuffer[Byte]()
     var length = 0
@@ -87,7 +82,7 @@ object Image {
     */
   def imRead (filename : String, flag : Option[Int] = None,
                  to_rgb : Option[Boolean] = None,
-                 out : Option[NDArray] = None) : org.apache.mxnet.NDArrayFuncReturn = {
+                 out : Option[NDArray] = None) : NDArray = {
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     map("filename") = filename
@@ -107,7 +102,7 @@ object Image {
     */
   def imResize (src : org.apache.mxnet.NDArray, w : Int, h : Int,
                    interp : Option[Int] = None,
-                   out : Option[NDArray] = None) : org.apache.mxnet.NDArrayFuncReturn = {
+                   out : Option[NDArray] = None) : NDArray = {
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     args += src
@@ -133,7 +128,7 @@ object Image {
   def copyMakeBorder (src : org.apache.mxnet.NDArray, top : Int, bot : Int,
                       left : Int, right : Int, typeOf : Option[Int] = None,
                       value : Option[Double] = None, values : Option[Any] = None,
-                      out : Option[NDArray] = None) : org.apache.mxnet.NDArrayFuncReturn = {
+                      out : Option[NDArray] = None) : NDArray = {
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     args += src
@@ -165,10 +160,9 @@ object Image {
     * Convert a NDArray image to a real image
     * The time cost will increase if the image resolution is big
     * @param src Source image file in RGB
-    * @param filePath output file path
-    * @param fileType decoding type, such as png, jpg
+    * @return Buffered Image
     */
-  def toImage(src : NDArray, filePath : String, fileType : Option[String] = None) : Unit = {
+  def toImage(src : NDArray) : BufferedImage = {
     require(src.dtype == DType.UInt8, "The input NDArray must be bytes")
     require(src.shape.length == 3, "The input should contains height, width and channel")
     val height = src.shape.get(0)
@@ -185,8 +179,7 @@ object Image {
         img.setRGB(c, r, rgb)
       })
     })
-    val temp = if (fileType.isDefined) fileType.get else "png"
-    ImageIO.write(img, temp, new File(filePath))
+    img
   }
 
 }
