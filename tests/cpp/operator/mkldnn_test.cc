@@ -351,8 +351,12 @@ TEST(MKLDNN_NDArray, GetTestInputArraysConcat) {
   auto in_arrs = GetTestInputArrays();
   for (int dim = 0; dim < 5; dim++) {
     for (int num_inputs = 2; num_inputs < 5; num_inputs++) {
+      std::vector<float> scale_vector(dim + 1);
+      for (size_t i = 0; i < dim + 1; ++i)
+        scale_vector[i] = 1;
+      scale_vector[dim] = num_inputs;
       std::vector<NDArrayAttrs> expanded_arrs = GetTestInputArrays(
-          ArrayTypes::All, false, num_inputs, dim);
+          ArrayTypes::All, false, scale_vector);
       int i = 0;
       for (auto &arr : in_arrs) {
         if (dim >= arr.arr.shape().ndim())
