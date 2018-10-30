@@ -685,7 +685,7 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
 
     if (is_deconv) {
       scale = CalculateWidthDeconvOutput(input_shape[2], kernel[0], padding[0], stride[0])
-          / static_cast<float>(input_shape[2]);
+        / static_cast<float>(input_shape[2]);
     }
     std::vector<float> scale_vector(in_arr.arr.shape().ndim());
     scale_vector[0] = 1;
@@ -965,7 +965,7 @@ TEST(IMPERATIVE, ConvOp) {
 TEST(IMPERATIVE, DeconvOp) {
   int dim = 2;  // MKLDNN conv only supports 2d kernels
   for (size_t num_filters = 2; num_filters < 3; ++num_filters) {
-    for (size_t kernel = 1; kernel < 4; ++kernel) {
+    for (size_t kernel = 1; kernel < 3; ++kernel) {
       for (size_t stride = 1; stride < 3; ++stride) {
         for (size_t pad = 0; pad < 2; ++pad) {
           if (kernel / 2. < pad)
