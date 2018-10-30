@@ -173,6 +173,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Flag to enable or disable MKLDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
 
+* MXNET_ENFORCE_DETERMINISM
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If set to true, MXNet will only use deterministic algorithms in forward and backward computation.
+  If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
+  of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
