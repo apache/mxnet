@@ -17,6 +17,10 @@
  * under the License.
  */
 
+/*!
+ * \file histogram.cu
+ * \brief GPU implementation of histogram operator
+*/
 #include "./histogram-inl.h"
 #include "./util/tensor_util-inl.cuh"
 

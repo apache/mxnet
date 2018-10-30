@@ -19,7 +19,7 @@
 
 /*!
  * \file sparse_retain.cc
- * \brief
+ * \brief CPU implementation of sparse_retain operator
 */
 
 #include "./sparse_retain-inl.h"

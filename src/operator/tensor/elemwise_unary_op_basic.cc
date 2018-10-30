@@ -19,7 +19,7 @@
 
 /*!
  * \file elemwise_unary_op_basic.cc
- * \brief CPU Implementation of unary function.
+ * \brief CPU Implementation of elementwise unary function.
  */
 #include <mxnet/base.h>
 #include "elemwise_unary_op.h"
