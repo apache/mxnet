@@ -198,7 +198,7 @@ def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
     import errno
     import time
     log = logging.getLogger('wait_ssh_open')
-    sleep_s = 0
+    sleep_s = 1
     if timeout:
         from time import time as now
         # time module is needed to calc timeout shared between two exceptions

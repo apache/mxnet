@@ -84,6 +84,7 @@ def run_qemu_interactive():
     vm.detach()
     vm.start()
     vm.wait()
+    logging.info("QEMU finished")
 
 ################################
 
@@ -104,7 +105,7 @@ def chdir_to_script_directory():
     os.chdir(base)
 
 def main():
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
     chdir_to_script_directory()
 
