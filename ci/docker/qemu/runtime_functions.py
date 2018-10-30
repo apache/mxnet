@@ -83,7 +83,6 @@ def run_qemu_interactive():
     vm = VM(interactive=True)
     vm.detach()
     vm.start()
-    qemu_provision(vm.ssh_port)
     vm.wait()
 
 ################################
