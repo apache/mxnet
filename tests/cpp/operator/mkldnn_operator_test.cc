@@ -618,11 +618,9 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
   if (forward_attrs.requests.find(OpReqType::kWriteTo) != forward_attrs.requests.end()) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
-
-      if (in_arr.arr.shape().ndim() < 2)
-        continue;
-
       auto in_shape = in_arr.arr.shape();
+      if (in_shape.ndim() < 2)
+        continue;
 
       nnvm::TShape wt_shape(2);
       wt_shape[0] = num_hid;
