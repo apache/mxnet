@@ -245,7 +245,8 @@ enum ArrayTypes {
 };
 
 
-inline NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input, bool is_deconv = false) {
+inline NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input,
+    bool is_deconv = false) {
   CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
   TShape target_shape(4);
   target_shape[0] = is_deconv ? input[1] : num_filters;

@@ -668,7 +668,8 @@ void TestConvOp(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs,
   TShape stride = param.stride;
   int num_filter = param.num_filter;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true, {1}, true);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(
+      forward_attrs.input_types, true, {1}, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
