@@ -103,6 +103,25 @@ DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 
+void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
+  auto this_mem = in_data.GetMKLDNNData();
+  auto out_mem = out_data.GetMKLDNNData();
+  mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
+  mkldnn::memory::desc this_desc = this_pd.desc();
+  mkldnn::memory::dims dims(this_desc.data.dims,
+                            this_desc.data.dims + this_desc.data.ndims);
+  auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
+  auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
+  mkldnn::memory::desc data_md(dims, this_dtype, this_format);
+  mkldnn::memory::primitive_desc pd(data_md, this_pd.get_engine());
+  auto temp_mem = mkldnn::memory(pd, out_mem->get_data_handle());
+  // mkldnn_mem_ptr temp_mem(new mkldnn::memory(pd, out_mem->get_data_handle()));
+  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, temp_mem));
+  MKLDNNStream::Get()->Submit();
+
+  const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
+}
+
 static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<NDArray>& inputs,
@@ -114,8 +133,8 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
-  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape())) {
-    inputs[0].ReorderShape(outputs[0]);
+  if (SupportMKLDNNArray(inputs[0].dtype(), inputs[0].shape()) && req[0] != kAddTo) {
+    MKLDNNReshape(inputs[0], outputs[0]);
     return;
   }
   FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req,
