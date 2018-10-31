@@ -220,7 +220,6 @@ OpAttrs GetFullyConnectedOp() {
   attrs.num_inputs = 3;
   attrs.num_outputs = 1;
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
@@ -240,7 +239,6 @@ OpAttrs GetFullyConnectedBackwardsOp() {
   attrs.num_inputs = 3;
   attrs.num_outputs = 3;
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
   return attrs;
 }
@@ -586,7 +584,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   }
 }
 
-uint32_t weight_dim2(const nnvm::TShape arr) {
+// Computes second dimension of FC weight matrix based on input shape
+uint32_t GetFCWeightDim2(const nnvm::TShape arr) {
   uint32_t dim = 1;
   for (int i = 1; i < arr.ndim(); i++) {
     dim *= arr[i];
@@ -627,7 +626,7 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
 
       nnvm::TShape wt_shape(2);
       wt_shape[0] = num_hid;
-      wt_shape[1] = weight_dim2(in_shape);
+      wt_shape[1] = GetFCWeightDim2(in_shape);
       NDArray weights(wt_shape, Context());
       InitDefaultArray(&weights, false);
 
@@ -652,9 +651,6 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
       }
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        if (out_arrs[0][output_i].arr.IsMKLDNNData())
-          continue;
-
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
