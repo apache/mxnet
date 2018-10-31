@@ -148,3 +148,30 @@ class QConv3D(_QConv):
         super(QConv3D, self).__init__(
             channels, kernel_size, bits, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+
+
+class ScaledBinaryConv(HybridBlock):
+    r"""ScaledBinaryConv implements scaled binarized 2D convolution,
+        introduced by XNOR-Net Paper
+    """
+
+    def __init__(self, bits, bits_a, channels, kernel_size=3, stride=1, padding=0, in_channels=0, clip_threshold=1.0,
+                 prefix=None, **kwargs):
+        super(ScaledBinaryConv, self).__init__(**kwargs)
+        self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold)
+        self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
+                             in_channels=in_channels, prefix=prefix, no_offset=True, apply_scaling=True)
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.in_channels = in_channels
+
+    def hybrid_forward(self, F, x):
+        y = self.qconv(self.qact(x))
+        A = x.abs().mean(axis=1, keepdims=True)
+        k = F.full((1, 1, self.kernel_size, self.kernel_size), 1 / self.kernel_size ** 2)
+        K = F.Convolution(A, k, bias=None, name='scaling_conv', num_filter=1,
+                          kernel=(self.kernel_size, self.kernel_size), no_bias=True, stride=(self.stride, self.stride),
+                          pad=(self.padding, self.padding), layout='NCHW')
+        K = F.stop_gradient(K)
+        return F.broadcast_mul(K, y)
