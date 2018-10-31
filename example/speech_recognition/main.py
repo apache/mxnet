@@ -91,7 +91,7 @@ def load_data(args):
     max_duration = args.config.getfloat('data', 'max_duration')
     language = args.config.get('data', 'language')
 
-    log = LogUtil().getlogger()
+    log = LogUtil.getInstance().getlogger()
     labelUtil = LabelUtil.getInstance()
     if mode == "train" or mode == "load":
         data_json = args.config.get('data', 'train_json')
@@ -276,7 +276,7 @@ if __name__ == '__main__':
         mx.random.seed(hash(datetime.now()))
     # set log file name
     log_filename = args.config.get('common', 'log_filename')
-    log = LogUtil(filename=log_filename).getlogger()
+    log = LogUtil.getInstance().getlogger(filename=log_filename)
 
     # set parameters from data section(common)
     mode = args.config.get('common', 'mode')

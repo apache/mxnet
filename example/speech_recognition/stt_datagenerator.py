@@ -86,7 +86,7 @@ class DataGenerator(object):
             max_duration (float): In seconds, the maximum duration of
                 utterances to train or test on
         """
-        logger = LogUtil().getlogger()
+        logger = LogUtil.getInstance().getlogger()
         logger.info('Reading description file: {} for partition: {}'
                     .format(desc_file, partition))
         audio_paths, durations, texts = [], [], []
@@ -245,7 +245,7 @@ class DataGenerator(object):
         Params:
             k_samples (int): Use this number of samples for estimation
         """
-        log = LogUtil().getlogger()
+        log = LogUtil.getInstance().getlogger()
         log.info("Calculating mean and std from samples")
         # if k_samples is negative then it goes through total dataset
         if k_samples < 0:
