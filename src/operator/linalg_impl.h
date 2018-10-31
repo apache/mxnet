@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file linalg.h
+ * \file linalg_impl.h
  * \brief Implementation of unified tensor interface for advanced linear algebra functions
  * (specifically BLAS3/LAPACK) from within mxnet.
  */
