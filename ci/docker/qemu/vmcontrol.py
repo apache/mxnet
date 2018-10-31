@@ -174,6 +174,8 @@ def qemu_ssh(ssh_port=QEMU_SSH_PORT, *args):
 def qemu_rsync(ssh_port, local_path, remote_path):
     check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
 
+def qemu_rsync_to_host(ssh_port, remote_path, local_path):
+    check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-va', 'qemu@localhost:{}'.format(remote_path), local_path])
 
 def qemu_provision(ssh_port=QEMU_SSH_PORT):
     import glob

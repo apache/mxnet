@@ -34,7 +34,7 @@ import sys
 import types
 import glob
 import vmcontrol
-from vmcontrol import qemu_ssh, qemu_provision, VM
+from vmcontrol import qemu_ssh, qemu_provision, qemu_rsync_to_host, VM
 
 def activate_this(base):
     import site
@@ -59,16 +59,20 @@ def activate_this(base):
 
 
 def run_ut_py3_qemu():
+    """Run unit tests in the emulator and copy the results back to the host through the mounted
+    volume in /mxnet"""
     from vmcontrol import VM
     with VM() as vm:
         qemu_provision(vm.ssh_port)
         logging.info("execute tests")
         qemu_ssh(vm.ssh_port, "./runtime_functions.py", "run_ut_python3_qemu_internal")
+        qemu_rsync_to_host(vm.ssh_port, "*.xml", "mxnet")
+        logging.info("copied to host")
         logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 
 def run_ut_python3_qemu_internal():
-    """this runs inside the vm, it's run by the playbook above by ansible"""
+    """this runs inside the vm"""
     pkg = glob.glob('mxnet_dist/*.whl')[0]
     logging.info("=== NOW Running inside QEMU ===")
     logging.info("PIP Installing %s", pkg)
@@ -77,6 +81,9 @@ def run_ut_python3_qemu_internal():
     check_call(['sudo', 'pip3', 'install', '-r', 'mxnet/tests/requirements.txt'])
     logging.info("Running tests in mxnet/tests/python/unittest/")
     check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/'])
+    # Example to run a single unit test:
+    # check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/test_ndarray.py:test_ndarray_fluent'])
+
 
 
 def run_qemu_interactive():
