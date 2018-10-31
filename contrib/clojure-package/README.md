@@ -30,9 +30,9 @@ The following combinations of operating system and compute device are supported:
 
 There are three ways of getting started:
 
-1. Install [prebuilt Clojure jars](https://search.maven.org/search?q=clojure%20mxnet) with the native dependencies baked in. This the quickest way to get going.
-2. Install the Clojure package from source, but use prebuilt jars for the native dependencies. Choose this option if you want pre-release features of the Clojure package but don't want to build (compile) native dependencies yourself.
-3. Build everything from source. This option is for developers or advanced users who want cutting-edge features in all parts of the dependency chain.
+1. [Install prebuilt Clojure jars](#option-1-clojure-package-from-prebuilt-jar) with the native dependencies baked in. This the quickest way to get going.
+2. [Install the Clojure package from source, but use prebuilt jars for the native dependencies](#option-2-clojure-package-from-source-scala-package-from-jar). Choose this option if you want pre-release features of the Clojure package but don't want to build (compile) native dependencies yourself.
+3. [Build everything from source](#option-3-everything-from-source). This option is for developers or advanced users who want cutting-edge features in all parts of the dependency chain.
 
 **Note:** This guide assumes that you are familiar with the basics of creating Clojure projects and managing dependencies. See [here](https://github.com/technomancy/leiningen/blob/stable/doc/TUTORIAL.md) for the official Leiningen tutorial.
 
