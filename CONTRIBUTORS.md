@@ -58,12 +58,6 @@ who are willing to help maintaining and leading the project. Committers come fro
 
 New committers will be proposed by current committers, with support from more than two of current committers.
 
-Label Bot
----------
-* [mxnet-label-bot](https://github.com/mxnet-label-bot)
-  - mxnet-label-bot provides users with the functionality to add labels from the repository to issues
-  - To use me, comment: @mxnet-label-bot add [specify label here]
-  - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)
 
 List of Contributors
 --------------------
@@ -196,3 +190,10 @@ List of Contributors
 * [Denisa Roberts](https://github.com/D-Roberts)
 * [Dick Carter](https://github.com/DickJC123)
 * [Rahul Padmanabhan](https://github.com/rahul3)
+
+Label Bot
+---------
+* [mxnet-label-bot](https://github.com/mxnet-label-bot)
+  - mxnet-label-bot provides users with the functionality to add labels from the repository to issues
+  - To use me, comment: @mxnet-label-bot add [specify label here]
+  - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)
