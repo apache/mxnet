@@ -37,7 +37,7 @@ from mxnet.test_utils import rand_ndarray
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -81,7 +81,7 @@ def check_rnn_layer_w_rand_inputs(layer):
 
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='7.1.1')
 def test_lstmp():
     hidden_size, projection_size = 3, 2
     rtol, atol = 1e-2, 1e-2
@@ -120,19 +120,6 @@ def test_lstmp():
         print('checking gradient for {}'.format('lstm0_l0_'+k))
         assert_almost_equal(layer_grad.asnumpy(), cell_grad.asnumpy(),
                             rtol=rtol, atol=atol)
-
-
-@with_seed()
-@assert_raises_cudnn_disabled()
-def test_rnn_layer():
-    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
-    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
-    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
-    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
-
-    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-    check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
-
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5), mx.nd.ones((8, 3, 20)))
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.nd.ones((8, 3, 20)), [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))])
 
@@ -143,8 +130,19 @@ def test_rnn_layer():
                             [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))], run_only=True)
 
 
-@assert_raises_cudnn_disabled()
-def test_layer_bidirectional():
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_rnn_layer():
+    check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.RNN(100, activation='tanh', num_layers=3))
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3))
+    check_rnn_layer(gluon.rnn.GRU(100, num_layers=3))
+
+    check_rnn_layer(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+    check_rnn_layer_w_rand_inputs(gluon.rnn.LSTM(100, num_layers=3, bidirectional=True))
+
+
+def check_layer_bidirectional(size, in_size, proj_size):
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, proj_size, **kwargs):
             super(RefBiLSTM, self).__init__(**kwargs)
@@ -158,15 +156,14 @@ def test_layer_bidirectional():
             bwd = self._lstm_bwd(bwd_inpt)
             bwd = nd.flip(bwd, 0)
             return nd.concat(fwd, bwd, dim=2)
-
-    size = 7
-    in_size = 5
-    proj_size = 3
     weights = {}
     for d in ['l', 'r']:
         weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
-        weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, proj_size))
-        weights['lstm_{}0_h2r_weight'.format(d)] = mx.random.uniform(shape=(proj_size, size))
+        if proj_size:
+            weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, proj_size))
+            weights['lstm_{}0_h2r_weight'.format(d)] = mx.random.uniform(shape=(proj_size, size))
+        else:
+            weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, size))
         weights['lstm_{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
         weights['lstm_{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
 
@@ -183,9 +180,19 @@ def test_layer_bidirectional():
     data = mx.random.uniform(shape=(11, 10, in_size))
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
 
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_layer_bidirectional():
+    check_layer_bidirectional(7, 5, 0)
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='7.1.1')
+def test_layer_bidirectional_proj():
+    check_layer_bidirectional(7, 5, 3)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layer_begin_state_type():
     fake_data = nd.random.uniform(shape=(3, 5, 7), dtype='float16')
     modeling_layer = gluon.rnn.LSTM(hidden_size=11, num_layers=2, dropout=0.2, bidirectional=True)

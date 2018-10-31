@@ -22,7 +22,7 @@ import copy
 from numpy.testing import assert_allclose
 import unittest
 from mxnet.test_utils import almost_equal, assert_almost_equal
-from common import assert_raises_cudnn_disabled
+from common import assert_raises_cudnn_not_satisfied
 
 
 def test_rnn():
@@ -71,7 +71,7 @@ def test_lstm_forget_bias():
     assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
 
 
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_cpu_inference():
     # should behave the same as lstm cell
     EXPECTED_LSTM_OUTPUT = np.array([[[0.72045636, 0.72045636, 0.95215213, 0.95215213],
@@ -243,7 +243,7 @@ def test_bidirectional():
     assert outs == [(10, 200), (10, 200), (10, 200)]
 
 
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_layer_bidirectional():
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, **kwargs):
@@ -467,7 +467,7 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layers():
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
     check_rnn_layer_forward(gluon.rnn.RNN(10, 2, bidirectional=True), mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)))
@@ -591,7 +591,7 @@ def test_cell_fill_shape():
     assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
 
 
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_layer_fill_shape():
     layer = gluon.rnn.LSTM(10)
     check_rnn_layer_forward(layer, mx.nd.ones((3, 2, 7)))
