@@ -131,6 +131,30 @@ def test_lstmp():
 
 
 @with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+def test_lstm_clip():
+    hidden_size, projection_size = 4096, 2048
+    batch_size, seq_len = 32, 80
+    input_size = 50
+    clip_min, clip_max, clip_nan = -5, 5, True
+    lstm_input = mx.nd.uniform(shape=(seq_len, batch_size, input_size), ctx=mx.gpu(0))
+    lstm_states = [mx.nd.uniform(shape=(2, batch_size, projection_size), ctx=mx.gpu(0)),
+                   mx.nd.uniform(shape=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
+    lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
+                                input_size=input_size, prefix='lstm0_',
+                                bidirectional=True,
+                                state_clip_min=clip_min,
+                                state_clip_max=clip_max,
+                                state_clip_nan=clip_nan)
+    lstm_layer.initialize(ctx=mx.gpu(0))
+    with autograd.record():
+        _, layer_output_states = lstm_layer(lstm_input, lstm_states)
+    cell_states = layer_output_states[0].asnumpy()
+    assert (cell_states >= clip_min).all() and (cell_states <= clip_max).all()
+    assert not np.isnan(cell_states).any()
+
+
+@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layer():
     check_rnn_layer(gluon.rnn.RNN(100, num_layers=3))

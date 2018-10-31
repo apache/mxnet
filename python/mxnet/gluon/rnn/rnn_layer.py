@@ -36,12 +36,13 @@ class _RNNLayer(HybridBlock):
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  mode, projection_size, h2r_weight_initializer,
+                 lstm_state_clip_min, lstm_state_clip_max, lstm_state_clip_nan,
                  **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
         assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
         self._hidden_size = hidden_size
-        self._projection_size = projection_size
+        self._projection_size = projection_size if projection_size else None
         self._num_layers = num_layers
         self._mode = mode
         self._layout = layout
@@ -53,11 +54,14 @@ class _RNNLayer(HybridBlock):
         self._i2h_bias_initializer = i2h_bias_initializer
         self._h2h_bias_initializer = h2h_bias_initializer
         self._h2r_weight_initializer = h2r_weight_initializer
+        self._lstm_state_clip_min = lstm_state_clip_min
+        self._lstm_state_clip_max = lstm_state_clip_max
+        self._lstm_state_clip_nan = lstm_state_clip_nan
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
         ng, ni, nh = self._gates, input_size, hidden_size
-        if projection_size is None:
+        if not projection_size:
             for i in range(num_layers):
                 for j in ['l', 'r'][:self._dir]:
                     self._register_param('{}{}_i2h_weight'.format(j, i),
@@ -138,7 +142,9 @@ class _RNNLayer(HybridBlock):
 
     def _unfuse(self):
         """Unfuses the fused RNN in to a stack of rnn cells."""
-        assert self._projection_size is None, "_unfuse does not support projection layer yet!"
+        assert not self._projection_size, "_unfuse does not support projection layer yet!"
+        assert not self._lstm_state_clip_min and not self._lstm_state_clip_max, \
+                "_unfuse does not support state clipping yet!"
         get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
                                                                   activation='relu',
                                                                   **kwargs),
@@ -253,7 +259,10 @@ class _RNNLayer(HybridBlock):
         rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
                     projection_size=self._projection_size,
                     num_layers=self._num_layers, bidirectional=self._dir == 2,
-                    p=self._dropout, state_outputs=True, mode=self._mode)
+                    p=self._dropout, state_outputs=True, mode=self._mode,
+                    lstm_state_clip_min=self._lstm_state_clip_min,
+                    lstm_state_clip_max=self._lstm_state_clip_max,
+                    lstm_state_clip_nan=self._lstm_state_clip_nan)
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
@@ -353,7 +362,8 @@ class RNN(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'rnn_'+activation, None, None, **kwargs)
+                                  'rnn_'+activation, None, None, None, None, None,
+                                  **kwargs)
 
     def state_info(self, batch_size=0):
         return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
@@ -410,6 +420,18 @@ class LSTM(_RNNLayer):
         Initializer for the bias vector.
     projection_size: int, default None
         The number of features after projection.
+    h2r_weight_initializer : str or Initializer, default None
+        Initializer for the projected recurrent weights matrix, used for the linear
+        transformation of the recurrent state to the projected space.
+    state_clip_min : float or None, default None
+        Minimum clip value of LSTM states. This option must be used together with
+        state_clip_max. If None, clipping is not applied.
+    state_clip_max : float or None, default None
+        Maximum clip value of LSTM states. This option must be used together with
+        state_clip_min. If None, clipping is not applied.
+    state_clip_nan : boolean, default False
+        Whether to stop NaN from propagating in state by clipping it to min/max.
+        If the clipping range is not specified, this option is ignored.
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
@@ -453,12 +475,16 @@ class LSTM(_RNNLayer):
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 projection_size=None, h2r_weight_initializer=None, **kwargs):
+                 projection_size=None, h2r_weight_initializer=None,
+                 state_clip_min=None, state_clip_max=None, state_clip_nan=False,
+                 **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
                                    i2h_weight_initializer, h2h_weight_initializer,
                                    i2h_bias_initializer, h2h_bias_initializer,
-                                   'lstm', projection_size, h2r_weight_initializer, **kwargs)
+                                   'lstm', projection_size, h2r_weight_initializer,
+                                   state_clip_min, state_clip_max, state_clip_nan,
+                                   **kwargs)
 
     def state_info(self, batch_size=0):
         if self._projection_size is None:
@@ -565,7 +591,8 @@ class GRU(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'gru', None, None, **kwargs)
+                                  'gru', None, None, None, None, None,
+                                  **kwargs)
 
     def state_info(self, batch_size=0):
         return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),

@@ -164,6 +164,8 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   int seq_length_, batch_size_, input_size_;
   bool lstm_q_;  // whether type is lstm
   dmlc::optional<int> projection_size;
+  dmlc::optional<double> lstm_state_clip_min, lstm_state_clip_max;
+  bool lstm_state_clip_nan;
 
   DMLC_DECLARE_PARAMETER(RNNParam) {
     DMLC_DECLARE_FIELD(state_size)
@@ -192,6 +194,21 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     DMLC_DECLARE_FIELD(projection_size)
     .set_default(dmlc::optional<int>())
     .describe("size of project size");
+
+    DMLC_DECLARE_FIELD(lstm_state_clip_min)
+    .set_default(dmlc::optional<double>())
+    .describe("Minimum clip value of LSTM states. This option must be used together with "
+              "lstm_state_clip_max.");
+
+    DMLC_DECLARE_FIELD(lstm_state_clip_max)
+    .set_default(dmlc::optional<double>())
+    .describe("Maximum clip value of LSTM states. This option must be used together with "
+              "lstm_state_clip_min.");
+
+    DMLC_DECLARE_FIELD(lstm_state_clip_nan)
+    .set_default(false)
+    .describe("Whether to stop NaN from propagating in state by clipping it to min/max. "
+              "If clipping range is not specified, this option is ignored.");
   }
 };
 
@@ -366,6 +383,10 @@ class RNNOp : public Operator{
     :param_(p), init_space_(false), reserve_space_size_(0) {
     if (param_.projection_size.has_value()) {
       LOG(FATAL) << "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
+    }
+    if (param_.lstm_state_clip_min.has_value()
+        || param_.lstm_state_clip_max.has_value()) {
+      LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
     }
   }
 

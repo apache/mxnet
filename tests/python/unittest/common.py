@@ -101,12 +101,11 @@ def assert_raises_cudnn_not_satisfied(min_version):
         def test_new(*args, **kwargs):
             cudnn_off = os.getenv('CUDNN_OFF_TEST_ONLY') == 'true'
             cudnn_env_version = os.getenv('CUDNN_VERSION', None if cudnn_off else '7.3.1')
-            cudnn_test_disabled = not cudnn_env_version or cudnn_env_version < min_version
+            cudnn_test_disabled = cudnn_off or cudnn_env_version < min_version
             if not cudnn_test_disabled or mx.context.current_context().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
-                errors = (MXNetError, RuntimeError)
-                assert_raises(errors, orig_test, *args, **kwargs)
+                assert_raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
         return test_new
     return test_helper
 
