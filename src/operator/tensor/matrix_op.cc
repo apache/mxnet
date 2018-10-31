@@ -103,6 +103,7 @@ DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 
+#if MXNET_USE_MKLDNN == 1
 void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
   auto this_mem = in_data.GetMKLDNNData();
   auto out_mem = out_data.GetMKLDNNData();
@@ -121,6 +122,7 @@ void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
 
   const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
 }
+#endif
 
 static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
