@@ -38,19 +38,21 @@ class QActivation(HybridBlock):
         self.bits = bits
         self.threshold = gradient_cancel_threshold
         self.use_dorefa = use_dorefa_weight_activation
-        self.forward = forward
+        self.forward_type = forward
         self.derivative = derivative
 
     def hybrid_forward(self, F, x):
         x = F.contrib.gradcancel(x, threshold=self.threshold)
-        if self.forward == 'sign' and self.derivative == 'clip':
+        if self.forward_type == 'sign' and self.derivative == 'clip':
             x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
-        elif self.activation == 'approxsign' and self.derivative == 'approxsign':
-            F.where(x <= -1, -1, \
+        elif self.forward_type == 'approxsign' and self.derivative == 'approxsign':
+            x = F.where(x <= -1, -1 * F.ones_like(x), \
                     F.where(x < 0, 2*x + x ** 2, \
-                            F.where(x < 1, 2*x - x ** 2, 1)))
-        elif self.activation == 'sign' and self.derivative == 'approxsign':
-            return F.approx_sign(x)
+                            F.where(x < 1, 2*x - x ** 2, F.ones_like(x))))
+        elif self.forward_type == 'sign' and self.derivative == 'approxsign':
+            x = F.approx_sign(x)
+        else:
+            raise NotImplementedError
 
         return x
 

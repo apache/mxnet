@@ -314,7 +314,7 @@ struct det_sign : public mxnet_op::tunable {
   }
 };
 
-MXNET_UNARY_MATH_OP(approx_sign_grad, a < 0 ? 2 - 2*a : 2 + 2*a );
+MXNET_UNARY_MATH_OP(approx_sign_grad, a < 0 ? 2 + 2*a : 2 - 2*a );
 
 /*! \brief used for generate element of sign */
 struct approx_sign : public mxnet_op::tunable {
