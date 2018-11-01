@@ -207,7 +207,8 @@ class MXNetGraph(object):
             if throw:
                 raise ValueError(msg)
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, label_names=None, label_shapes=None, verbose=False):
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type,
+                                label_names=None, label_shapes=None, verbose=False):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -252,11 +253,9 @@ class MXNetGraph(object):
 
         # Determine output shape
         if not label_shapes:
-           label_shapes = MXNetGraph.infer_output_shape(sym, params, in_shape, label_names)
+            label_shapes = MXNetGraph.infer_output_shape(sym, params, in_shape, label_names)
         else:
             MXNetGraph.verify_provided_labels(label_names, label_shapes, 'label', True)
-
-        graph_inputs = sym.list_inputs()
 
         weights = MXNetGraph.convert_weights_to_numpy(params)
 

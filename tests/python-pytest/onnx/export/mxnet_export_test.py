@@ -118,7 +118,7 @@ def test_models(model_name, input_shape, output_shape):
     onnx_file = os.path.join(dir_path, new_model_name)
 
     logging.info("Translating converted model from mxnet to ONNX")
-    converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
+    converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file_path=onnx_file)
 
     sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model_path)
 
@@ -166,7 +166,7 @@ def test_model_accuracy(model_name, input_shape):
 
     logging.info("Translating converted model from mxnet to ONNX")
     converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32,
-                                                   onnx_file)
+                                                   onnx_file_path=onnx_file)
 
     sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model_path)
 
@@ -229,7 +229,7 @@ def test_square():
     params.update(args)
     params.update(auxs)
 
-    converted_model = onnx_mxnet.export_model(square, params, [np.shape(input1)], np.float32, "square.onnx")
+    converted_model = onnx_mxnet.export_model(square, params, [np.shape(input1)], np.float32, onnx_file_path="square.onnx")
 
     sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
     result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)

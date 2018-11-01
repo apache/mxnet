@@ -442,20 +442,19 @@ def convert_dot(node, **kwargs):
     transpose_a, transpose_b attributes."""
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    trans_a_node = None
-    trans_b_node = None
+    trans_a_node = trans_b_node = None
 
     trans_a = get_boolean_attribute_value(attrs, "transpose_a")
     trans_b = get_boolean_attribute_value(attrs, "transpose_b")
 
     op_name = "transpose" + str(kwargs["idx"])
+    input_node_a = op_name + "_a"
+    input_node_b = op_name + "_b"
 
     if trans_a:
         trans_a_node = create_helper_trans_node(op_name, input_nodes[0], 'a')
-        input_node_a = op_name+"_a"
     if trans_b:
         trans_b_node = create_helper_trans_node(op_name, input_nodes[1], 'b')
-        input_node_b = op_name+"_b"
 
     matmul_node = onnx.helper.make_node(
         'MatMul',
@@ -688,7 +687,7 @@ def convert_softmax_output(node, **kwargs):
     """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
     and return the created node.
     """
-    name, _, _ = get_inputs(node, kwargs)
+    name = node["name"]
 
     input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     input1 = kwargs["proc_nodes"][input1_idx]
@@ -700,7 +699,6 @@ def convert_softmax_output(node, **kwargs):
         axis=1,
         name=name
     )
-
     return [softmax_node]
 
 
@@ -709,7 +707,7 @@ def convert_logistic_regression_output(node, **kwargs):
     """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
     and return the created node.
     """
-    name, _, _ = get_inputs(node, kwargs)
+    name = node["name"]
     input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     input1 = kwargs["proc_nodes"][input1_idx]
 
@@ -719,7 +717,6 @@ def convert_logistic_regression_output(node, **kwargs):
         [name],
         name=name
     )
-
     return [sigmoid_node]
 
 @mx_op.register("BlockGrad")
