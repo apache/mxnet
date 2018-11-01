@@ -241,7 +241,7 @@ See the Confluence page: https://cwiki.apache.org/confluence/display/MXNET/MXNet
 
 ## Building and Deploying Jars
 
-The release process for deploying the Clojure jars is on the [wiki](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Release+Process).
+The release process for deploying the Clojure jars is on the [Apache MXNet developer wiki](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Release+Process).
 
 
 ## Special Thanks
