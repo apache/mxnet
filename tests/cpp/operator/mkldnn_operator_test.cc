@@ -297,6 +297,38 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
   return attrs;
 }
 
+OpAttrs GetBNOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("LRN");
+  attrs.num_inputs = 1;
+  attrs.num_outputs = 2;
+  attrs.attrs.dict.insert({"nsize" , "3"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.requests.insert(OpReqType::kWriteTo);
+  attrs.input_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped;
+  attrs.output_types = ArrayTypes::Normal |
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped;
+  return attrs;
+}
+
+OpAttrs GetBNBackwardsOp() {
+  OpAttrs attrs;
+  attrs.attrs.op = Op::Get("_backward_LRN");
+  attrs.num_inputs = 3;
+  attrs.num_outputs = 1;
+  attrs.attrs.dict.insert({"nsize" , "3"});
+  attrs.attrs.op->attr_parser(&attrs.attrs);
+  attrs.dispatches.resize(2);
+  attrs.requests.insert(OpReqType::kWriteTo);
+  return attrs;
+}
+
 void AssertEqual(const std::vector<NDArray *> &in_arrs,
                       const std::vector<NDArray *> &out_arrs) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
@@ -978,6 +1010,12 @@ TEST(IMPERATIVE, DeconvOp) {
       }
     }
   }
+}
+
+TEST(IMPERATIVE, BNOp) {
+  OpAttrs forward_attrs = GetBNOp();
+  OpAttrs backwards_attrs = GetBNBackwardsOp();
+  TestOpEx(forward_attrs, backwards_attrs);
 }
 
 #endif
