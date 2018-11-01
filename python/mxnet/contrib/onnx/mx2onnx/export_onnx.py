@@ -146,7 +146,11 @@ class MXNetGraph(object):
         test_mod.forward(io.DataBatch(data_forward))
         result = [i.asnumpy().shape for i in test_mod.get_outputs()]
 
-        return result
+        result_shape = []
+        for idx, label in enumerate(label_name):
+            result_shape.append((label, result[idx]))
+
+        return result_shape
 
 
     @staticmethod
@@ -193,7 +197,17 @@ class MXNetGraph(object):
         return dict([(k.replace("arg:", "").replace("aux:", ""), v.asnumpy())
                      for k, v in weights_dict.items()])
 
-    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, out_label=None, out_shape=None, verbose=False):
+    @staticmethod
+    def verify_provided_labels(data_names, data_shapes, name, throw):
+        """Check that input labels matches input data shape."""
+        actual = [x[0] for x in data_shapes]
+        if sorted(data_names) != sorted(actual):
+            msg = "Data provided by %s_shapes don't match names specified by %s_names (%s vs. %s)" % (
+                name, name, str(data_shapes), str(data_names))
+            if throw:
+                raise ValueError(msg)
+
+    def create_onnx_graph_proto(self, sym, params, in_shape, in_type, label_names=None, label_shapes=None, verbose=False):
         """Convert MXNet graph to ONNX graph
 
         Parameters
@@ -233,16 +247,14 @@ class MXNetGraph(object):
         output_suffix = '_output'
         output_names = [o[:-len(output_suffix)] for o in sym.list_outputs() if o.endswith(output_suffix)]
 
-        if not out_label:
+        if not label_names:
             label_names = [output_name + '_label' for output_name in output_names]
-        else:
-            label_names = out_label
 
         # Determine output shape
-        if not out_shape:
-            label_shapes = MXNetGraph.infer_output_shape(sym, params, in_shape, label_names)
+        if not label_shapes:
+           label_shapes = MXNetGraph.infer_output_shape(sym, params, in_shape, label_names)
         else:
-            label_shapes = out_shape
+            MXNetGraph.verify_provided_labels(label_names, label_shapes, 'label', True)
 
         graph_inputs = sym.list_inputs()
 
@@ -270,7 +282,7 @@ class MXNetGraph(object):
                 # Handling graph input
                 # Skipping output_label node, as this node is not part of graph
                 # Refer "output_label" assignment above for more details.
-                if name in label_names and name not in graph_inputs:
+                if name in label_names:
                     continue
                 converted = MXNetGraph.convert_layer(
                     node,
@@ -308,14 +320,15 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
-                        if idx == (len(mx_graph) - 1) or converted_node.name in output_names:
+                        if converted_node.name in output_names:
+                            label_shape = [i[1] for i in label_shapes if converted_node.name + "_label" == i[0]]
                             # If converted node doesnt have name, use it from output field
                             if not converted_node.name:
                                 onnx_processed_outputs.append(
                                     make_tensor_value_info(
                                         name=converted_node.output[0],
                                         elem_type=in_type,
-                                        shape=label_shapes[0]
+                                        shape=label_shape[0]
                                     )
                                 )
                             else:
@@ -323,7 +336,7 @@ class MXNetGraph(object):
                                     make_tensor_value_info(
                                         name=converted_node.name,
                                         elem_type=in_type,
-                                        shape=label_shapes[0]
+                                        shape=label_shape[0]
                                     )
                                 )
                             if verbose:

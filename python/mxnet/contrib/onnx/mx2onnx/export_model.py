@@ -32,7 +32,7 @@ from .export_onnx import MXNetGraph
 from ._export_helper import load_module
 
 
-def export_model(sym, params, input_shape, input_type=np.float32, output_label=None, output_shape=None,
+def export_model(sym, params, input_shape, input_type=np.float32, label_names=None, label_shapes=None,
                  onnx_file_path='model.onnx', verbose=False):
     """Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
@@ -49,10 +49,10 @@ def export_model(sym, params, input_shape, input_type=np.float32, output_label=N
         Input shape of the model e.g [(1,3,224,224)]
     input_type : data type
         Input data type e.g. np.float32
-    output_label : List of str
-        Optional list of output node labels
-    output_shape : List of tuple
-        Input shape of the model e.g [(1,3,224,224)]
+    label_names : List of str
+        Optional list of label e.g. ['regression_label']
+    label_shapes : List of tuple
+        Optional a list of (name, shape) pairs e.g [('regression_label', (1,3,224,224))]
     onnx_file_path : str
         Path where to save the generated onnx file
     verbose : Boolean
@@ -79,11 +79,11 @@ def export_model(sym, params, input_shape, input_type=np.float32, output_label=N
         sym_obj, params_obj = load_module(sym, params)
         onnx_graph = converter.create_onnx_graph_proto(sym_obj, params_obj, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
-                                                       output_label, output_shape, verbose=verbose)
+                                                       label_names, label_shapes, verbose=verbose)
     elif isinstance(sym, symbol.Symbol) and isinstance(params, dict):
         onnx_graph = converter.create_onnx_graph_proto(sym, params, input_shape,
                                                        mapping.NP_TYPE_TO_TENSOR_TYPE[data_format],
-                                                       output_label, output_shape, verbose=verbose)
+                                                       label_names, label_shapes, verbose=verbose)
     else:
         raise ValueError("Input sym and params should either be files or objects")
 
