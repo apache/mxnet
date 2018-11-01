@@ -39,9 +39,9 @@ object Image {
     *               to mxnet's default RGB format (instead of opencv's default BGR).
     * @return NDArray in HWC format
     */
-  def imDecode (buf : Array[Byte], flag : Int,
-                to_rgb : Boolean,
-                out : Option[NDArray]) : NDArray = {
+  def imDecode(buf: Array[Byte], flag: Int,
+               to_rgb: Boolean,
+               out: Option[NDArray]): NDArray = {
     val nd = NDArray.array(buf.map(_.toFloat), Shape(buf.length))
     val byteND = NDArray.api.cast(nd, "uint8")
     val args : ListBuffer[Any] = ListBuffer()
@@ -58,9 +58,9 @@ object Image {
     * @param inputStream the inputStream of the image
     * @return NDArray in HWC format
     */
-  def imDecode (inputStream : InputStream, flag : Int = 1,
-                to_rgb : Boolean = true,
-                out : Option[NDArray] = None) : NDArray = {
+  def imDecode(inputStream: InputStream, flag: Int = 1,
+               to_rgb: Boolean = true,
+               out: Option[NDArray] = None): NDArray = {
     val buffer = new Array[Byte](2048)
     val arrBuffer = ArrayBuffer[Byte]()
     var length = 0
@@ -80,9 +80,9 @@ object Image {
     *                 (instead of opencv's default BGR).
     * @return org.apache.mxnet.NDArray in HWC format
     */
-  def imRead (filename : String, flag : Option[Int] = None,
-                 to_rgb : Option[Boolean] = None,
-                 out : Option[NDArray] = None) : NDArray = {
+  def imRead(filename: String, flag: Option[Int] = None,
+             to_rgb: Option[Boolean] = None,
+             out: Option[NDArray] = None): NDArray = {
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     map("filename") = filename
@@ -100,9 +100,9 @@ object Image {
     * @param interp  Interpolation method (default=cv2.INTER_LINEAR).
     * @return org.apache.mxnet.NDArray
     */
-  def imResize (src : org.apache.mxnet.NDArray, w : Int, h : Int,
-                   interp : Option[Int] = None,
-                   out : Option[NDArray] = None) : NDArray = {
+  def imResize(src: org.apache.mxnet.NDArray, w: Int, h: Int,
+               interp: Option[Int] = None,
+               out: Option[NDArray] = None): NDArray = {
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     args += src
@@ -125,10 +125,10 @@ object Image {
     * @param values Fill with value(RGB[A] or gray), up to 4 channels.
     * @return org.apache.mxnet.NDArray
     */
-  def copyMakeBorder (src : org.apache.mxnet.NDArray, top : Int, bot : Int,
-                      left : Int, right : Int, typeOf : Option[Int] = None,
-                      value : Option[Double] = None, values : Option[Any] = None,
-                      out : Option[NDArray] = None) : NDArray = {
+  def copyMakeBorder(src: org.apache.mxnet.NDArray, top: Int, bot: Int,
+                     left: Int, right: Int, typeOf: Option[Int] = None,
+                     value: Option[Double] = None, values: Option[Any] = None,
+                     out: Option[NDArray] = None): NDArray = {
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
     args += src
@@ -152,7 +152,7 @@ object Image {
     * @param h height of the image
     * @return cropped NDArray
     */
-  def fixedCrop(src : NDArray, x0 : Int, y0 : Int, w : Int, h : Int) : NDArray = {
+  def fixedCrop(src: NDArray, x0: Int, y0: Int, w: Int, h: Int): NDArray = {
     NDArray.api.crop(src, Shape(y0, x0, 0), Shape(y0 + h, x0 + w, src.shape.get(2)))
   }
 
@@ -162,7 +162,7 @@ object Image {
     * @param src Source image file in RGB
     * @return Buffered Image
     */
-  def toImage(src : NDArray) : BufferedImage = {
+  def toImage(src: NDArray): BufferedImage = {
     require(src.dtype == DType.UInt8, "The input NDArray must be bytes")
     require(src.shape.length == 3, "The input should contains height, width and channel")
     val height = src.shape.get(0)
