@@ -628,21 +628,8 @@ def convert_identity(node, **kwargs):
     """Map MXNet's identity operator attributes to onnx's ConstantFill operator
     and return the created node.
     """
-    onnx = import_onnx_modules()
-    name = node["name"]
-    proc_nodes = kwargs["proc_nodes"]
-    inputs = node["inputs"]
+    return create_basic_op_node('ConstantFill', node, kwargs)
 
-    input_node_id = kwargs["index_lookup"][inputs[0][0]]
-    input_node = proc_nodes[input_node_id].name
-
-    node = onnx.helper.make_node(
-        "ConstantFill",
-        [input_node],
-        [name],
-        name=name,
-    )
-    return [node]
 
 @mx_op.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
@@ -738,35 +725,13 @@ def convert_logistic_regression_output(node, **kwargs):
 @mx_op.register("BlockGrad")
 def convert_blockgrad(node, **kwargs):
     """ Skip operator  """
-    name, _, _ = get_inputs(node, kwargs)
-
-    input_node_id = kwargs["index_lookup"][node["inputs"][0][0]]
-    input_node = kwargs["proc_nodes"][input_node_id].name
-
-    node = onnx.helper.make_node(
-        "ConstantFill",
-        [input_node],
-        [name],
-        name=name,
-    )
-    return [node]
+    return create_basic_op_node('ConstantFill', node, kwargs)
 
 
 @mx_op.register("make_loss")
 def convert_makeloss(node, **kwargs):
     """ Skip operator  """
-    name, _, _ = get_inputs(node, kwargs)
-
-    input_node_id = kwargs["index_lookup"][node["inputs"][0][0]]
-    input_node = kwargs["proc_nodes"][input_node_id].name
-
-    node = onnx.helper.make_node(
-        "ConstantFill",
-        [input_node],
-        [name],
-        name=name,
-    )
-    return [node]
+    return create_basic_op_node('ConstantFill', node, kwargs)
 
 
 @mx_op.register("Concat")
