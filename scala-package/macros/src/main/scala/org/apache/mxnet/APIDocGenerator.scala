@@ -20,7 +20,7 @@ package org.apache.mxnet
 import java.io._
 import java.security.MessageDigest
 
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.ListBuffer
 
 /**
   * This object will generate the Scala documentation of the new Scala API
@@ -57,6 +57,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     writeFile(
       FILE_PATH,
       if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
+      "package org.apache.mxnet",
       generated)
   }
 
@@ -84,6 +85,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     writeFile(
       FILE_PATH,
       if (isSymbol) "SymbolBase" else "NDArrayBase",
+      "package org.apache.mxnet",
       absFuncs)
   }
 
@@ -129,38 +131,37 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
        |def ${func.name} (${argDef.mkString(", ")}): $returnType""".stripMargin
   }
 
-  def writeFile(FILE_PATH: String, packageName: String, body: Seq[String]): String = {
-    val apacheLicence =
-      """/*
-        |* Licensed to the Apache Software Foundation (ASF) under one or more
-        |* contributor license agreements.  See the NOTICE file distributed with
-        |* this work for additional information regarding copyright ownership.
-        |* The ASF licenses this file to You under the Apache License, Version 2.0
-        |* (the "License"); you may not use this file except in compliance with
-        |* the License.  You may obtain a copy of the License at
-        |*
-        |*    http://www.apache.org/licenses/LICENSE-2.0
-        |*
-        |* Unless required by applicable law or agreed to in writing, software
-        |* distributed under the License is distributed on an "AS IS" BASIS,
-        |* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-        |* See the License for the specific language governing permissions and
-        |* limitations under the License.
-        |*/
-        |""".stripMargin
-    val scalaStyle = "// scalastyle:off"
-    val packageDef = "package org.apache.mxnet"
-    val imports = "import org.apache.mxnet.annotation.Experimental"
-    val absClassDef = s"abstract class $packageName"
+  def writeFile(FILE_PATH: String, className: String, packageDef: String,
+                absFuncs: Seq[String]): String = {
+
     val finalStr =
-      s"""$apacheLicence
-         |$scalaStyle
+      s"""/*
+         |* Licensed to the Apache Software Foundation (ASF) under one or more
+         |* contributor license agreements.  See the NOTICE file distributed with
+         |* this work for additional information regarding copyright ownership.
+         |* The ASF licenses this file to You under the Apache License, Version 2.0
+         |* (the "License"); you may not use this file except in compliance with
+         |* the License.  You may obtain a copy of the License at
+         |*
+         |*    http://www.apache.org/licenses/LICENSE-2.0
+         |*
+         |* Unless required by applicable law or agreed to in writing, software
+         |* distributed under the License is distributed on an "AS IS" BASIS,
+         |* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+         |* See the License for the specific language governing permissions and
+         |* limitations under the License.
+         |*/
+         |
          |$packageDef
-         |$imports
-         |$absClassDef {
-         |${body.mkString("\n")}
+         |
+         |import org.apache.mxnet.annotation.Experimental
+         |
+         |// scalastyle:off
+         |abstract class $className {
+         |${absFuncs.mkString("\n")}
          |}""".stripMargin
-    val pw = new PrintWriter(new File(FILE_PATH + s"$packageName.scala"))
+
+    val pw = new PrintWriter(new File(FILE_PATH + s"$className.scala"))
     pw.write(finalStr)
     pw.close()
     MD5Generator(finalStr)
