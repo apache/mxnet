@@ -34,6 +34,9 @@
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
 #include "../../ndarray/ndarray_function.h"
+#if MSHADOW_USE_MKL == 1
+#include "mkl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -347,6 +350,40 @@ class UnaryOp : public OpBase {
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
+  }
+
+#if MSHADOW_USE_MKL == 1
+#define MKLLOG(fname, DType) \
+static void MKLLog(size_t size, const DType* pIn, DType* pOut) { \
+  fname(size, pIn, pOut); \
+}
+
+MKLLOG(vsLn, float)
+MKLLOG(vdLn, double)
+#endif
+
+  template<typename xpu, typename OP>
+  static void LogCompute(const nnvm::NodeAttrs& attrs,
+            const OpContext& ctx,
+            const std::vector<TBlob>& inputs,
+            const std::vector<OpReqType>& req,
+            const std::vector<TBlob>& outputs) {
+    if (req[0] == kNullOp) return;
+    // if defined MSHADOW_USE_MKL then call mkl log when req is KWriteTo and type_flag
+    // is mshadow::kFloat32 or mshadow::kFloat64
+#if MSHADOW_USE_MKL == 1
+    auto type_flag = inputs[0].type_flag_;
+    if (req[0] == kWriteTo && (type_flag == mshadow::kFloat32
+          || type_flag == mshadow::kFloat64)) {
+      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+        MKLLog(inputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+      })
+    } else {
+      Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    }
+#else
+    Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+#endif
   }
 };
 
