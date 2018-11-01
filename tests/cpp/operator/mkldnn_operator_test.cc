@@ -740,7 +740,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       }
     }
   }
-
 }
 
 template<typename P>
