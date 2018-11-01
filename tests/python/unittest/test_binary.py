@@ -302,10 +302,3 @@ def test_qconvolution_scaling(input_shape, bits, channel=16, kernel=(3, 3)):
     assert mse(result, result_scaled) < mse(result, result_std)
     assert sign_match(result_std, result_scaled) > 0.95
     # assert sign_match(grad_std, grad_scaled) > 0.9
-
-
-if __name__ == "__main__":
-
-    # @pytest.mark.parametrize("input_shape", [(1, 2, 5, 5), (10, 1000)])
-    # @pytest.mark.parametrize("threshold", [0.01, 0.1, 0.5, 1.0, 2.0])
-    test_qactivation((1, 2, 5, 5), 0.1)
