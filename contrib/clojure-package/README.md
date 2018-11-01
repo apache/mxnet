@@ -20,7 +20,7 @@ Help is needed testing and generally making the package better. A list of the pa
 
 The Clojure MXNet framework consists of a core C library, a Scala API that talks to the core through [JNI (Java Native Interface)](https://en.wikipedia.org/wiki/Java_Native_Interface) bindings, and finally a Clojure wrapper around the Scala API.
 
-Since there is a native code involved in the framework, what OS you are running matters.
+Since there is native code involved in the framework, what OS you are running matters.
 
 The following combinations of operating system and compute device are supported:
 
