@@ -35,11 +35,6 @@
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 
-/* VisualStudio only supports openmp 2.0 */
-#ifdef _MSC_VER
-#define collapse(x)
-#endif
-
 namespace mxnet {
 namespace op {
 
@@ -91,7 +86,6 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(out_data.size(), 2U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     TShape orig_shape = in_data[l2_normalization::kData].shape_;
-    auto omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (param_.mode == l2_normalization::kInstance) {
       Shape<2> dshape = Shape2(orig_shape[0],
         orig_shape.ProdShape(1, orig_shape.ndim()));
@@ -100,17 +94,13 @@ class L2NormalizationOp : public Operator {
       Tensor<xpu, 2, DType> out = out_data[l2_normalization::kOut]
         .get_with_shape<xpu, 2, DType>(dshape, s);
       Tensor<xpu, 1, DType> norm = out_data[l2_normalization::kNorm].get<xpu, 1, DType>(s);
-#pragma omp parallel for num_threads(omp_threads)
-      for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
-        norm[shape0] = DType(param_.eps);
-        for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
-          norm[shape0] += data[shape0][shape1] * data[shape0][shape1];
-        }
-        norm[shape0] = std::sqrt(norm[shape0]);
-        for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
-          out[shape0][shape1] = data[shape0][shape1] / norm[shape0];
-        }
-      }
+      norm = sumall_except_dim<0>(F<mxnet::op::mshadow_op::square>(data));
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::plus, Req>, xpu>::Launch(
+          s, norm.size(0), norm.dptr_, norm.dptr_, DType(param_.eps));
+      });
+      norm = F<mxnet::op::mshadow_op::square_root>(norm);
+      out = data / broadcast<0>(norm, out.shape_);
     } else if (param_.mode == l2_normalization::kChannel) {
       CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
@@ -122,19 +112,13 @@ class L2NormalizationOp : public Operator {
       Shape<2> norm_shape = Shape2(dshape[0], dshape[2]);
       Tensor<xpu, 2, DType> norm = out_data[l2_normalization::kNorm]
         .get_with_shape<xpu, 2, DType>(norm_shape, s);
-#pragma omp parallel for num_threads(omp_threads) collapse(2)
-      for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
-        for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
-          norm[shape0][shape2] = DType(param_.eps);
-          for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
-            norm[shape0][shape2] += data[shape0][shape1][shape2] * data[shape0][shape1][shape2];
-          }
-          norm[shape0][shape2] = std::sqrt(norm[shape0][shape2]);
-          for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
-            out[shape0][shape1][shape2] = data[shape0][shape1][shape2] / norm[shape0][shape2];
-          }
-        }
-      }
+      norm = reduce_with_axis<red::sum, false>(F<mxnet::op::mshadow_op::square>(data), 1);
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::plus, Req>, xpu>::Launch(
+          s, norm.size(0) * norm.size(1), norm.dptr_, norm.dptr_, DType(param_.eps));
+      });
+      norm = F<mxnet::op::mshadow_op::square_root>(norm);
+      out = data / broadcast_with_axis(norm, 0, orig_shape[1]);
     } else if (param_.mode == l2_normalization::kSpatial) {
       CHECK_GE(orig_shape.ndim(), 3U);
       Shape<3> dshape = Shape3(orig_shape[0], orig_shape[1],
@@ -146,19 +130,13 @@ class L2NormalizationOp : public Operator {
       Shape<2> norm_shape = Shape2(dshape[0], dshape[1]);
       Tensor<xpu, 2, DType> norm = out_data[l2_normalization::kNorm]
         .get_with_shape<xpu, 2, DType>(norm_shape, s);
-#pragma omp parallel for num_threads(omp_threads) collapse(2)
-      for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
-        for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
-          norm[shape0][shape1] = DType(param_.eps);
-          for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
-            norm[shape0][shape1] += data[shape0][shape1][shape2] * data[shape0][shape1][shape2];
-          }
-          norm[shape0][shape1] = std::sqrt(norm[shape0][shape1]);
-          for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
-            out[shape0][shape1][shape2] = data[shape0][shape1][shape2] / norm[shape0][shape1];
-          }
-        }
-      }
+      norm = reduce_with_axis<red::sum, false>(F<mxnet::op::mshadow_op::square>(data), 2);
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<mxnet::op::mshadow_op::plus, Req>, xpu>::Launch(
+          s, norm.size(0) * norm.size(1), norm.dptr_, norm.dptr_, DType(param_.eps));
+      });
+      norm = F<mxnet::op::mshadow_op::square_root>(norm);
+      out = data / broadcast_with_axis(norm, 1, dshape[2]);
     } else {
       LOG(FATAL) << "Unexpected mode in l2 normalization";
     }
@@ -238,7 +216,7 @@ class L2NormalizationOp : public Operator {
     }
   }
 
- private:
+ protected:
   L2NormalizationParam param_;
 };  // class L2NormalizationOp
 
