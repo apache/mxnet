@@ -40,11 +40,12 @@ if _DOC_SET not in parser.sections():
 
 for section in [ _DOC_SET ]:
     print("Document sets to generate:")
-    for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
+    for candidate in [ 'scala_docs', 'java_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
         print('%-12s  : %s' % (candidate, parser.get(section, candidate)))
 
 _MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
 _SCALA_DOCS = parser.getboolean(_DOC_SET, 'scala_docs')
+_JAVA_DOCS = parser.getboolean(_DOC_SET, 'java_docs')
 _CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
 _DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
 _R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
@@ -109,13 +110,25 @@ def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
+    _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite|javaapi\"`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
-    scaladocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
+    scaladocs = ['index.html', 'org', 'lib', 'index.js']
     for doc_file in scaladocs:
         _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+
+def build_java_docs(app):
+    """build java docs and then move the outdir"""
+    java_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/org/apache/mxnet/'
+    # scaldoc fails on some apis, so exit 0 to pass the check
+    _run_cmd('cd ' + java_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/javaapi\" | egrep -v \"Suite\"`; exit 0')
+    dest_path = app.builder.outdir + '/api/java/docs'
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    javadocs = ['index.html', 'org', 'lib', 'index.js']
+    for doc_file in javadocs:
+        _run_cmd('cd ' + java_path + ' && mv -f ' + doc_file + ' ' + dest_path)
 
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
@@ -419,6 +432,9 @@ def setup(app):
     if _SCALA_DOCS:
         print("Building Scala Docs!")
         app.connect("builder-inited", build_scala_docs)
+    if _JAVA_DOCS:
+        print("Building Java Docs!")
+        app.connect("builder-inited", build_java_docs)
     if _CLOJURE_DOCS:
         print("Building Clojure Docs!")
         app.connect("builder-inited", build_clojure_docs)
