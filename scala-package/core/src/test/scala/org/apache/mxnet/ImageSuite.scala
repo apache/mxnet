@@ -82,6 +82,12 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     require(nd2.shape == Shape(224, 224, 3), "image shape not Match!")
   }
 
+  test("Test apply border") {
+    val nd = Image.imRead(imLocation)
+    val nd2 = Image.copyMakeBorder(nd, 1, 1, 1, 1)
+    require(nd2.shape == Shape(578, 1026, 3), s"image shape not Match!")
+  }
+
   test("Test convert to Image") {
     val nd = Image.imRead(imLocation)
     val resizeIm = Image.imResize(nd, 224, 224)
