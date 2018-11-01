@@ -35,6 +35,11 @@
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 
+/* VisualStudio only supports openmp 2.0 */
+#ifdef _MSC_VER
+#define collapse(x)
+#endif
+
 namespace mxnet {
 namespace op {
 
