@@ -964,7 +964,7 @@ TEST(IMPERATIVE, ConvOp) {
 }
 
 TEST(IMPERATIVE, DeconvOp) {
-  int dim = 2;  // MKLDNN conv only supports 2d kernels
+  int dim = 2;  // MKLDNN deconv only supports 2d kernels
   for (size_t num_filters = 2; num_filters < 3; ++num_filters) {
     for (size_t kernel = 1; kernel < 3; ++kernel) {
       for (size_t stride = 1; stride < 3; ++stride) {
