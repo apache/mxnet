@@ -101,13 +101,13 @@ class L2NormalizationOp : public Operator {
         .get_with_shape<xpu, 2, DType>(dshape, s);
       Tensor<xpu, 1, DType> norm = out_data[l2_normalization::kNorm].get<xpu, 1, DType>(s);
 #pragma omp parallel for num_threads(omp_threads)
-      for (size_t shape0 = 0; shape0 < dshape[0]; shape0++) {
+      for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
         norm[shape0] = DType(param_.eps);
-        for (size_t shape1 = 0; shape1 < dshape[1]; shape1++) {
+        for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
           norm[shape0] += data[shape0][shape1] * data[shape0][shape1];
         }
         norm[shape0] = std::sqrt(norm[shape0]);
-        for (size_t shape1 = 0; shape1 < dshape[1]; shape1++) {
+        for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
           out[shape0][shape1] = data[shape0][shape1] / norm[shape0];
         }
       }
@@ -123,14 +123,14 @@ class L2NormalizationOp : public Operator {
       Tensor<xpu, 2, DType> norm = out_data[l2_normalization::kNorm]
         .get_with_shape<xpu, 2, DType>(norm_shape, s);
 #pragma omp parallel for num_threads(omp_threads) collapse(2)
-      for (size_t shape0 = 0; shape0 < dshape[0]; shape0++) {
-        for (size_t shape2 = 0; shape2 < dshape[2]; shape2++) {
+      for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
+        for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
           norm[shape0][shape2] = DType(param_.eps);
-          for (size_t shape1 = 0; shape1 < dshape[1]; shape1++) {
+          for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
             norm[shape0][shape2] += data[shape0][shape1][shape2] * data[shape0][shape1][shape2];
           }
           norm[shape0][shape2] = std::sqrt(norm[shape0][shape2]);
-          for (size_t shape1 = 0; shape1 < dshape[1]; shape1++) {
+          for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
             out[shape0][shape1][shape2] = data[shape0][shape1][shape2] / norm[shape0][shape2];
           }
         }
@@ -147,14 +147,14 @@ class L2NormalizationOp : public Operator {
       Tensor<xpu, 2, DType> norm = out_data[l2_normalization::kNorm]
         .get_with_shape<xpu, 2, DType>(norm_shape, s);
 #pragma omp parallel for num_threads(omp_threads) collapse(2)
-      for (size_t shape0 = 0; shape0 < dshape[0]; shape0++) {
-        for (size_t shape1 = 0; shape1 < dshape[1]; shape1++) {
+      for (int shape0 = 0; shape0 < static_cast<int>(dshape[0]); shape0++) {
+        for (int shape1 = 0; shape1 < static_cast<int>(dshape[1]); shape1++) {
           norm[shape0][shape1] = DType(param_.eps);
-          for (size_t shape2 = 0; shape2 < dshape[2]; shape2++) {
+          for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
             norm[shape0][shape1] += data[shape0][shape1][shape2] * data[shape0][shape1][shape2];
           }
           norm[shape0][shape1] = std::sqrt(norm[shape0][shape1]);
-          for (size_t shape2 = 0; shape2 < dshape[2]; shape2++) {
+          for (int shape2 = 0; shape2 < static_cast<int>(dshape[2]); shape2++) {
             out[shape0][shape1][shape2] = data[shape0][shape1][shape2] / norm[shape0][shape1];
           }
         }
