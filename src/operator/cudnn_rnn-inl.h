@@ -26,10 +26,7 @@
 #ifndef MXNET_OPERATOR_CUDNN_RNN_INL_H_
 #define MXNET_OPERATOR_CUDNN_RNN_INL_H_
 
-#define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7100
-
-#define USE_CUDNN_LSTM_CLIP MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
-
+#define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
 
 #include <mxnet/storage.h>
 #include <vector>
@@ -85,7 +82,7 @@ class CuDNNRNNOp : public Operator {
     CHECK(!param_.projection_size.has_value())
       << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
 #endif
-#if USE_CUDNN_LSTM_CLIP
+#if USE_CUDNN_LSTM_PROJ
     if (param_.lstm_state_clip_min.has_value()
         || param_.lstm_state_clip_max.has_value()) {
       CHECK_EQ(param_.mode, rnn_enum::kLstm)
@@ -254,7 +251,7 @@ class CuDNNRNNOp : public Operator {
     }
     #endif
 
-    #if USE_CUDNN_LSTM_CLIP
+    #if USE_CUDNN_LSTM_PROJ
     bool clip_state = param_.lstm_state_clip_min.has_value();
     bool clip_nan = param_.lstm_state_clip_nan;
     CUDNN_CALL(cudnnRNNSetClip(s->dnn_handle_,
