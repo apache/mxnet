@@ -112,7 +112,7 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
     return "nvidia-docker" if use_nvidia_docker else "docker"
 
 
-def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, use_cache: bool) -> str:
+def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, use_cache: bool, no_cache: bool) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
@@ -144,8 +144,10 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
            "-f", get_dockerfile(platform),
            "--build-arg", "USER_ID={}".format(os.getuid()),
            "--build-arg", "GROUP_ID={}".format(os.getgid())]
-    if use_cache:
+    if use_cache and not no_cache:
         cmd.extend(["--cache-from", tag])
+    if no_cache:
+        cmd.append("--no-cache")
     cmd.extend(["-t", tag, get_dockerfiles_path()])
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
@@ -436,6 +438,9 @@ def main() -> int:
                         " to use local layers for caching. If absent, we use the cache from dockerhub"
                         " which is the default.")
 
+    parser.add_argument("--no-cache", action="store_true",
+                        help="passes --no-cache to docker build")
+
     parser.add_argument("command",
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
@@ -475,7 +480,8 @@ def main() -> int:
         if use_cache():
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
-                     num_retries=args.docker_build_retries, use_cache=use_cache())
+                     num_retries=args.docker_build_retries, use_cache=use_cache(),
+                     no_cache=args.no_cache)
         if args.build_only:
             logging.warning("Container was just built. Exiting due to build-only.")
             return 0
