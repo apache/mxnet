@@ -417,7 +417,6 @@ def add_buttons(app, docname, source):
         # source[i] = '\n'.join(lines)
 
 def setup(app):
-
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
     if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1' or _MXNET_DOCS_BUILD_MXNET:
