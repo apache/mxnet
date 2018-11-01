@@ -362,7 +362,7 @@ class RNN(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'rnn_'+activation, None, None, None, None, None,
+                                  'rnn_'+activation, None, None, None, None, False,
                                   **kwargs)
 
     def state_info(self, batch_size=0):
@@ -591,7 +591,7 @@ class GRU(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'gru', None, None, None, None, None,
+                                  'gru', None, None, None, None, False,
                                   **kwargs)
 
     def state_info(self, batch_size=0):
