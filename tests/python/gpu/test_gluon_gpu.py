@@ -81,7 +81,7 @@ def check_rnn_layer_w_rand_inputs(layer):
 
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='7.1.1')
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_lstmp():
     hidden_size, projection_size = 3, 2
     rtol, atol = 1e-2, 1e-2
@@ -210,7 +210,7 @@ def test_layer_bidirectional():
     check_layer_bidirectional(7, 5, 0)
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='7.1.1')
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 def test_layer_bidirectional_proj():
     check_layer_bidirectional(7, 5, 3)
 
