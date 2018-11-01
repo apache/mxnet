@@ -17,6 +17,10 @@
  * under the License.
  */
 
+/*!
+ * \file histogram-inl.h
+ * \brief Function definition of histogram operator
+*/
 #ifndef MXNET_OPERATOR_TENSOR_HISTOGRAM_INL_H_
 #define MXNET_OPERATOR_TENSOR_HISTOGRAM_INL_H_
 

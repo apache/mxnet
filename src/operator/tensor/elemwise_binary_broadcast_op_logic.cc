@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file elemwise_binary_broadcast_op_logic.cc
- * \brief CPU Implementation of unary function.
+ * \brief CPU Implementation of elementwise binary broadcast logical operators.
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
