@@ -39,7 +39,6 @@ RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 COPY qemu/* /work/
-COPY qemu/ansible.cfg /etc/ansible/ansible.cfg 
 
 # SSH to the Qemu VM
 EXPOSE 2222/tcp

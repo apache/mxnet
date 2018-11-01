@@ -34,4 +34,4 @@ apt-get install -y \
     vim-nox \
     toilet
 
-pip3 install ansible ipython
+pip3 install ipython
