@@ -29,7 +29,7 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite", "isnan"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite", "isnan", "hardmax"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -542,3 +542,21 @@ def isnan(data):
     <NDArray 2 @cpu(0)>
     """
     return data != data
+
+def hardmax(data):
+    """Returns batched one-hot vectors.
+
+    The depth index containing the `1` is that of the maximum logit value.
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray, is a batched one-hot tensor.
+    """
+    return data.argmax(-1).one_hot(data.shape[-1])

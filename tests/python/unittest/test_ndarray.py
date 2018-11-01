@@ -1548,6 +1548,13 @@ def test_ndarray_is_nan():
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
+@with_seed()
+def test_ndarray_hardmax():
+    data = mx.nd.array([[[2,3,4],[1,2,3]],[[1,1,1],[1,2,3]]])
+    output = mx.nd.contrib.hardmax(data)
+    expected_output = np.asarray([[[0,0,1],[0,0,1]],[[1,0,0],[0,0,1]]])
+    np.testing.assert_equal(output.asnumpy(), expected_output)    
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
