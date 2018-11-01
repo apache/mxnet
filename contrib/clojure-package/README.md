@@ -183,7 +183,7 @@ If you are having trouble getting started or have a question, feel free to reach
 
 - Clojurian Slack #mxnet channel. To join, go to [http://clojurians.net/](http://clojurians.net/).
 - Apache Slack #mxnet and #mxnet-scala channel. To join this slack send an email to dev@mxnet.apache.org.
-- Create an Issue on [https://github.com/apache/incubator-mxnet/issues](https://github.com/apache/incubator-mxnet/issues)
+- Create an Issue on [https://github.com/apache/incubator-mxnet/issues](https://github.com/apache/incubator-mxnet/issues).
 
 
 ## Examples
