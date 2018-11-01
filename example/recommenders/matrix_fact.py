@@ -53,7 +53,7 @@ def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer=
 
     network.hybridize()
     
-    losses = []
+    losses_output = []
     for e in range(epochs):
         loss_acc = 0.
         for i, (users, items, scores) in enumerate(train_data):
@@ -73,5 +73,5 @@ def train(network, train_data, test_data, epochs, learning_rate=0.01, optimizer=
         test_loss = evaluate_network(network, test_data, ctx)
         train_loss = loss_acc/(i+1)
         print("Epoch [{}], Training RMSE {:.4f}, Test RMSE {:.4f}".format(e, train_loss, test_loss))
-        losses.append((train_loss, test_loss))
-    return losses
+        losses_output.append((train_loss, test_loss))
+    return losses_output
