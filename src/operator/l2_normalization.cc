@@ -50,6 +50,7 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
     Stream<cpu> *s = ctx.get_stream<cpu>();
     TShape orig_shape = in_data[l2_normalization::kData].shape_;
     auto omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+
     if (this->param_.mode == l2_normalization::kInstance) {
       Shape<2> dshape = Shape2(orig_shape[0],
         orig_shape.ProdShape(1, orig_shape.ndim()));
