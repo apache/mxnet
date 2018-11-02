@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnetexamples.infer.javapi.objectdetector;
+package org.apache.mxnetexamples.javaapi.infer.objectdetector;
 
 import org.apache.mxnet.infer.javaapi.ObjectDetectorOutput;
 import org.kohsuke.args4j.CmdLineParser;
