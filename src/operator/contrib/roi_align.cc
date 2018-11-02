@@ -20,7 +20,7 @@
  * Copyright (c) 2018 by Contributors
  * \file roi_align.cc
  * \brief roi align operator
- * \author Hang Zhang
+ * \author Hang Zhang, Shesung
  * Adapted from Caffe2
 */
 #include "./roi_align-inl.h"
@@ -142,6 +142,7 @@ void ROIAlignForward(
     const int nthreads,
     const T* bottom_data,
     const T& spatial_scale,
+    const bool position_sensitive,
     const int channels,
     const int height,
     const int width,
@@ -213,14 +214,21 @@ void ROIAlignForward(
 num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (c = 0; c < channels; c++) {
       int index_n_c = index_n + c * pooled_width * pooled_height;
-      const T* offset_bottom_data =
-          bottom_data + (roi_batch_ind * channels + c) * height * width;
       int pre_calc_index = 0;
 
       for (int ph = 0; ph < pooled_height; ph++) {
         for (int pw = 0; pw < pooled_width; pw++) {
           int index = index_n_c + ph * pooled_width + pw;
 
+          int c_unpooled = c;
+          int channels_unpooled = channels;
+          if (position_sensitive) {
+            c_unpooled = c * pooled_height * pooled_width + ph * pooled_width + pw;
+            channels_unpooled = channels * pooled_height * pooled_width;
+          }
+          const T* offset_bottom_data =
+              bottom_data + (roi_batch_ind * channels_unpooled + c_unpooled) 
+              * height * width;
           T output_val = 0.;
           for (int iy = 0; iy < roi_bin_grid_h; iy++) {
             for (int ix = 0; ix < roi_bin_grid_w; ix++) {
@@ -310,6 +318,7 @@ void ROIAlignBackward(
     const T* top_diff,
     const int /*num_rois*/,
     const T& spatial_scale,
+    const bool position_sensitive,
     const int channels,
     const int height,
     const int width,
@@ -347,8 +356,15 @@ void ROIAlignBackward(
     T bin_size_h = static_cast<T>(roi_height) / static_cast<T>(pooled_height);
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
+    int c_unpooled = c;
+    int channels_unpooled = channels;
+    if (position_sensitive) {
+      c_unpooled = c * pooled_height * pooled_width + ph * pooled_width + pw;
+      channels_unpooled = channels * pooled_height * pooled_width;
+    }
     T* offset_bottom_diff =
-        bottom_diff + (roi_batch_ind * channels + c) * height * width;
+        bottom_diff + (roi_batch_ind * channels_unpooled + c_unpooled) 
+        * height * width;
 
     int top_offset = (n * channels + c) * pooled_height * pooled_width;
     const T* offset_top_diff = top_diff + top_offset;
@@ -439,9 +455,9 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
     const DType *bottom_rois = in_data[roialign::kBox].dptr<DType>();
     DType *top_data = out_data[roialign::kOut].dptr<DType>();
 
-    ROIAlignForward<DType>(count, bottom_data, param.spatial_scale, channels,
-                           height, width, pooled_height, pooled_width, param.sample_ratio,
-                           bottom_rois, rois_cols, top_data);
+    ROIAlignForward<DType>(count, bottom_data, param.spatial_scale, param.position_sensitive, 
+                           channels, height, width, pooled_height, pooled_width, 
+                           param.sample_ratio, bottom_rois, rois_cols, top_data);
   })
 }
 
@@ -470,7 +486,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
 
   const int count = out_grad[0].Size();
   const int num_rois = in_data[0].size(0);
-  const int channels = outputs[0].size(1);
+  const int channels = out_grad[0].size(1);  // channels of pooled output
   const int height = outputs[0].size(2);
   const int width = outputs[0].size(3);
   const int pooled_height = out_grad[0].size(2);
@@ -489,8 +505,9 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
         Fill<false>(s, outputs[0], kWriteTo, static_cast<DType>(0));
       }
       ROIAlignBackward<DType>(count, top_diff, num_rois, param.spatial_scale,
-                     channels, height, width, pooled_height, pooled_width,
-                     param.sample_ratio, grad_in, bottom_rois, rois_cols);
+                     param.position_sensitive, channels, height, width, 
+                     pooled_height, pooled_width, param.sample_ratio, grad_in, 
+                     bottom_rois, rois_cols);
     }
     if (kWriteTo == req[roialign::kBox]) {
       Fill<false>(s, outputs[1], kWriteTo, static_cast<DType>(0));
@@ -545,8 +562,14 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
   CHECK_EQ(bshape[1], 5) << "bbox should be a 2D tensor of shape [batch, 5]";
   // out: [num_rois, c, pooled_h, pooled_w]
   out_shape->clear();
-  out_shape->push_back(
-       Shape4(bshape[0], dshape[1], param.pooled_size[0], param.pooled_size[1]));
+  if (param.position_sensitive) {
+    out_shape->push_back(
+         Shape4(bshape[0], dshape[1]/param.pooled_size[0]/param.pooled_size[1], 
+                param.pooled_size[0], param.pooled_size[1]));
+  } else {
+    out_shape->push_back(
+         Shape4(bshape[0], dshape[1], param.pooled_size[0], param.pooled_size[1]));
+  }
   return true;
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
