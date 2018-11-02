@@ -233,7 +233,6 @@ if(USE_MKLDNN)
   set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
   set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
 
-  include_directories(3rdparty/mkldnn)
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
