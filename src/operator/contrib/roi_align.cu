@@ -373,7 +373,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
 
   const int count = out_data[roialign::kOut].Size();
   const int num_rois = in_data[roialign::kBox].size(0);
-  const int channels = in_data[roialign::kOut].size(1); // channels of pooled output
+  const int channels = out_data[roialign::kOut].size(1); // channels of pooled output
   const int height = in_data[roialign::kData].size(2);
   const int width = in_data[roialign::kData].size(3);
   const int pooled_height = out_data[roialign::kOut].size(2);
