@@ -7,6 +7,20 @@ from ...base import numeric_types
 from ...symbol import Symbol
 
 
+class BinaryActFunction():
+    def __init__(self):
+        self.function = "det_sign"
+
+    def __call__(self, F, x):
+        return getattr(F, self.function)(x)
+
+    def set_function(self, value):
+        self.function = value
+
+
+binary_act_function = BinaryActFunction()
+
+
 def check_params(use_bias, activation):
     if use_bias:
         raise ValueError("Bias is not supported for a binary layer.")
@@ -20,7 +34,7 @@ def quantize(F, x, bits, use_dorefa_weight_activation=False):
         return F.round_ste(x * vmax) / vmax
 
     if bits == 1:
-        return F.det_sign(x)
+        return binary_act_function(F, x)
     elif bits < 32:
         if use_dorefa_weight_activation:
             act_x = 0.5 * F.broadcast_div(F.tanh(x), F.max(F.abs(F.tanh(x)))) + 0.5
@@ -33,27 +47,15 @@ def quantize(F, x, bits, use_dorefa_weight_activation=False):
 
 class QActivation(HybridBlock):
     def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0,
-                 use_dorefa_weight_activation=False, forward='sign', derivative='clip', **kwargs):
+                 use_dorefa_weight_activation=False, **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
         self.bits = bits
         self.threshold = gradient_cancel_threshold
         self.use_dorefa = use_dorefa_weight_activation
-        self.forward_type = forward
-        self.derivative = derivative
 
     def hybrid_forward(self, F, x):
         x = F.contrib.gradcancel(x, threshold=self.threshold)
-        if self.forward_type == 'sign' and self.derivative == 'clip':
-            x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
-        elif self.forward_type == 'approxsign' and self.derivative == 'approxsign':
-            x = F.where(x <= -1, -1 * F.ones_like(x), \
-                    F.where(x < 0, 2*x + x ** 2, \
-                            F.where(x < 1, 2*x - x ** 2, F.ones_like(x))))
-        elif self.forward_type == 'sign' and self.derivative == 'approxsign':
-            x = F.approx_sign(x)
-        else:
-            raise NotImplementedError
-
+        x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
         return x
 
 
