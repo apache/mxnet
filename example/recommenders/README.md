@@ -4,6 +4,7 @@ This directory has a set of examples of how to build various kinds of recommende
 using MXNet. The sparsity of user / item data is handled through the embedding layers that accept
 indices as input rather than one-hot encoded vectors.
 
+
 ## Examples
 
 The examples are driven by notebook files.
