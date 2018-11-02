@@ -14,10 +14,10 @@ imperative fashion.
 This is based on the Mnist tutorial with symbolic approach. You can find it [here](http://mxnet.io/tutorials/python/mnist.html).
 
 ## Prerequisites
+
 To complete this tutorial, we need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
-
 - [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
 
 ```
@@ -100,8 +100,7 @@ We will use [Trainer](http://mxnet.io/api/python/gluon/gluon.html#trainer) class
 initialized parameters.
 
 ```python
-gpus = mx.test_utils.list_gpus()
-ctx =  [mx.gpu()] if gpus else [mx.cpu(0), mx.cpu(1)]
+ctx = mx.gpu(0) if mx.context.num_gpus() > 0 else mx.cpu(0)
 net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.02})
 ```
@@ -126,41 +125,39 @@ training scope which is defined by `autograd.record()`.
 
 ```python
 %%time
-epoch = 10
-# Use Accuracy as the evaluation metric.
+
+num_epochs = 10
 metric = mx.metric.Accuracy()
 softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
-for i in range(epoch):
-    # Reset the train data iterator.
+for epoch in range(num_epochs):
+    # Restart the training data iterator at the beginning of each epoch
     train_data.reset()
-    # Loop over the train data iterator.
+
     for batch in train_data:
-        # Splits train data into multiple slices along batch_axis
-        # and copy each slice into a context.
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        # Splits train labels into multiple slices along batch_axis
-        # and copy each slice into a context.
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
-        outputs = []
-        # Inside training scope
+        # Possibly copy data and labels to the GPU
+        data = batch.data[0].copyto(ctx)
+        labels = batch.label[0].copyto(ctx)
+
+        # The forward pass and the loss computation need to be wrapped
+        # in an `ag.record()` scope to indicate that the results will
+        # be needed in the backward pass (gradient computation).
         with ag.record():
-            for x, y in zip(data, label):
-                z = net(x)
-                # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y)
-                # Backpropagate the error for one iteration.
-                loss.backward()
-                outputs.append(z)
-        # Updates internal evaluation
-        metric.update(label, outputs)
-        # Make one step of parameter update. Trainer needs to know the
-        # batch size of data to normalize the gradient by 1/batch_size.
-        trainer.step(batch.data[0].shape[0])
-    # Gets the evaluation result.
+            out = net(data)
+            loss = softmax_cross_entropy_loss(out, labels)
+
+        # Compute gradients by backpropagation and update the evaluation
+        # metric
+        loss.backward()
+        metric.update(labels, out)
+
+        # Update the parameters by stepping the trainer; the batch size
+        # is required to normalize the gradients by `1 / batch_size`.
+        trainer.step(batch_size=batch.data[0].shape[0])
+
+    # Print the evaluation metric and reset it for the next epoch
     name, acc = metric.get()
-    # Reset evaluation result to initial state.
+    print('After epoch {}: {} = {}'.format(epoch + 1, name, acc))
     metric.reset()
-    print('training acc at epoch %d: %s=%f'%(i, name, acc))
 ```
 
 #### Prediction
@@ -168,28 +165,75 @@ for i in range(epoch):
 After the above training completes, we can evaluate the trained model by running predictions on validation dataset. Since the dataset also has labels for all test images, we can compute the accuracy metric over validation data as follows:
 
 ```python
-# Use Accuracy as the evaluation metric.
 metric = mx.metric.Accuracy()
-# Reset the validation data iterator.
 val_data.reset()
-# Loop over the validation data iterator.
 for batch in val_data:
-    # Splits validation data into multiple slices along batch_axis
-    # and copy each slice into a context.
-    data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-    # Splits validation label into multiple slices along batch_axis
-    # and copy each slice into a context.
-    label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
-    outputs = []
-    for x in data:
-        outputs.append(net(x))
-    # Updates internal evaluation
-    metric.update(label, outputs)
-print('validation acc: %s=%f'%metric.get())
+    # Possibly copy data and labels to the GPU
+    data = batch.data[0].copyto(ctx)
+    labels = batch.label[0].copyto(ctx)
+    metric.update(labels, net(data))
+print('Validaton: {} = {}'.format(*metric.get()))
 assert metric.get()[1] > 0.94
 ```
 
 If everything went well, we should see an accuracy value that is around 0.96, which means that we are able to accurately predict the digit in 96% of test images. This is a pretty good result. But as we will see in the next part of this tutorial, we can do a lot better than that.
+
+That said, a single numer only gives us very limited information on the performance of our neural network. It is always a good idea to actually look at the images on which the network performed poorly, and check for clues on how to improve the performance. We do that with the help of a small function that produces a list of the images where the network got it wrong, together with the predicted and true labels:
+
+```python
+def get_mislabelled(it):
+    """Return list of ``(input, pred_lbl, true_lbl)`` for mislabelled samples."""
+    mislabelled = []
+    it.reset()
+    for batch in it:
+        data = batch.data[0].copyto(ctx)
+        labels = batch.label[0].copyto(ctx)
+        out = net(data)
+        # Predicted label is the index is where the output is maximal
+        preds = nd.argmax(out, axis=1)
+        for d, p, l in zip(data, preds, labels):
+            if p != l:
+                mislabelled.append(
+                    (d.asnumpy(), int(p.asnumpy()), int(l.asnumpy()))
+                )
+    return mislabelled
+```
+
+We can now get the mislabelled images in the training and validation sets and plot a selection of them:
+
+```python
+import numpy as np
+
+sample_size = 8
+wrong_train = get_mislabelled(train_data)
+wrong_val = get_mislabelled(val_data)
+wrong_train_sample = [wrong_train[i] for i in np.random.randint(0, len(wrong_train), size=sample_size)]
+wrong_val_sample = [wrong_val[i] for i in np.random.randint(0, len(wrong_val), size=sample_size)]
+
+import matplotlib.pyplot as plt
+
+fig, axs = plt.subplots(ncols=sample_size)
+for ax, (img, pred, lbl) in zip(axs, wrong_train_sample):
+    fig.set_size_inches(18, 4)
+    fig.suptitle("Sample of wrong predictions in the training set", fontsize=20)
+    ax.imshow(img[0], cmap="gray")
+    ax.set_title("Predicted: {}\nActual: {}".format(pred, lbl))
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+
+fig, axs = plt.subplots(ncols=sample_size)
+for ax, (img, pred, lbl) in zip(axs, wrong_val_sample):
+    fig.set_size_inches(18, 4)
+    fig.suptitle("Sample of wrong predictions in the validation set", fontsize=20)
+    ax.imshow(img[0], cmap="gray")
+    ax.set_title("Predicted: {}\nActual: {}".format(pred, lbl))
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+```
+![png](./wrong_train.png)
+![png](./wrong_val.png)
+
+In this case, it is rather obvious that our MLP network is too simple to perform really great on this dataset, as can be seen from the fact that some of the mislabelled examples are rather "simple" and should not be a challenge for our neural net. As it turns out, moving to the CNN architecture presented in the following section will give a big performance boost.
 
 ### Convolutional Neural Network
 
@@ -265,7 +309,7 @@ trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
 metric = mx.metric.Accuracy()
 softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
-for i in range(epoch):
+for i in range(num_epochs):
     # Reset the train data iterator.
     train_data.reset()
     # Loop over the train data iterator.
