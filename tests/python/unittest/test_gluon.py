@@ -20,7 +20,8 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises, teardown, assert_raises_cudnn_disabled
+from common import (setup_module, with_seed, assertRaises, teardown,
+                    assert_raises_cudnn_not_satisfied)
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -335,6 +336,41 @@ def test_symbol_block():
     net = Net(smodel)
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
+
+    # Test case to verify if initializing the SymbolBlock from a model with params
+    # other than fp32 param dtype.
+
+    # 1. Load a resnet model, cast it to fp64 and export
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'resnet34_fp64')
+    ctx = mx.cpu(0)
+
+    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    net_fp32.cast('float64')
+    net_fp32.hybridize()
+    data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
+    net_fp32.forward(data)
+    net_fp32.export(tmpfile, 0)
+
+    # 2. Load the saved model and verify if all the params are loaded correctly.
+    # and choose one of the param to verify the type if fp64.
+    sm = mx.sym.load(tmpfile + '-symbol.json')
+    inputs = mx.sym.var('data', dtype='float64')
+    net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
+    net_fp64.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
+    # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
+    # expected to be of dtype casted, fp64.
+    for param_name in net_fp64.params.keys():
+        if 'conv' in param_name and 'weight' in param_name:
+            break
+    assert np.dtype(net_fp64.params[param_name].dtype) == np.dtype(np.float64)
+
+    # Cast the symbol block to FP32 and try to forward a FP32 data.
+    # This will verify SymbolBlock.cast() functionality.
+    net_fp64.cast('float32')
+    fp32_data = mx.nd.zeros((1,3,224,224), dtype='float32', ctx=ctx)
+    prediction = net_fp64.forward(fp32_data)
+    assert np.dtype(prediction.dtype) == np.dtype(np.float32)
 
 @with_seed()
 @raises(AssertionError)
@@ -1283,7 +1319,7 @@ def test_apply():
 
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
     net.initialize()

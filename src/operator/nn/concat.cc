@@ -86,14 +86,17 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
   TShape dshape;
   index_t size = 0;
-  int num_zero = 0;
+  std::vector<int> zero_indices;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
     TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      num_zero += tmp[axis] == 0;
-      size += tmp[axis];
+      if (tmp[axis] == 0) {
+        zero_indices.emplace_back(i);
+      } else {
+        size += tmp[axis];
+      }
       tmp[axis] = 0;
       shape_assign(&dshape, tmp);
     }
@@ -113,18 +116,18 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
         << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
 
-  if (!num_zero) dshape[axis] = size;
+  if (zero_indices.empty()) dshape[axis] = size;
   CHECK(shape_assign(&(*out_shape)[0], dshape))
       << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
-  if ((*out_shape)[0][axis] != 0 && num_zero) {
+  if ((*out_shape)[0][axis] != 0 && !zero_indices.empty()) {
     int residual = (*out_shape)[0][axis] - size;
     CHECK_GE(residual, 0)
         << "Input size already exceeds output size. Residual: " << residual;
-    CHECK(num_zero <= 2 && num_zero >= 0)
-        << "Expecting 1 or 2 inputs that need shape inference. Got: " << num_zero;
+    CHECK(zero_indices.size() <= 2 && zero_indices.size() >= 0)
+        << "Expecting 1 or 2 inputs that need shape inference. Got: " << zero_indices.size();
     bool need_infer = !(*out_shape)[0].Size();
-    for (int i = 0; i < num_zero; i++) {
-      (*in_shape)[i*2][axis] = residual / num_zero;
+    for (int i : zero_indices) {
+      (*in_shape)[i][axis] = residual / zero_indices.size();
       need_infer = need_infer || !(*in_shape)[i].Size();
     }
     return !need_infer;
