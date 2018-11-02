@@ -20,15 +20,16 @@ import numpy as np
 
 import unittest
 
+num_gpus = min(8, mx.context.num_gpus())
+
 
 class TestNCCL(unittest.TestCase):
-    num_gpus = min(8, mx.context.num_gpus())
     shapes = [1, 10, 100, 1000, 10000, 100000, (2, 2), (2, 3, 4, 5, 6, 7, 8)]
     tensors = {}
+    kv_nccl = None
 
     @classmethod
     def setUpClass(cls):
-        num_gpus = mx.context.num_gpus()
         if num_gpus == 0:
             raise unittest.SkipTest("No GPUs available")
         if num_gpus < 2:
@@ -39,7 +40,6 @@ class TestNCCL(unittest.TestCase):
 
     def setUp(self):
         self.kv_nccl = mx.kv.create('nccl')
-
         for gpu_index in range(self.num_gpus):
             shapes = np.random.shuffle(self.shapes)
             self.tensors[gpu_index] = [np.random.random_sample(shape) for shape in shapes]
