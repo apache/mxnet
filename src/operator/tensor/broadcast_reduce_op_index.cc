@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file broadcast_reduce_op_index.cc
- * \brief CPU Implementation of broadcast and reduce functions.
+ * \brief CPU Implementation of broadcast and reduce functions based on index.
  */
 #include "./broadcast_reduce_op.h"
 
