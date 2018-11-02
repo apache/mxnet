@@ -6,23 +6,38 @@ A Clojure Package Built on the MXNet Deep Learning Library
 
 MXNet is a flexible and efficient deep learning library. While its core is built in C++ for maximum performance, support for multiple programming languages in intermediate and high-level APIs is a first-class feature. MXNet is currently an incubating Apache project.
 
-The motivation for creating a Clojure package was to give Clojurians access to a world-class deep learning platform, thereby building bridges for future development and innovation in the community. The Clojure package provides all the essential tools, including low-level and high-level APIs, dynamic graphs, and things like GANs and natural language processing.
+The motivation for creating a Clojure package was to give Clojurians access to a world-class deep learning platform, thereby building bridges for future development and innovation in the community. The Clojure package provides all the essential tools, including low-level and high-level APIs, dynamic graphs, etc., and enables building advanced architectures like GANs or LSTM to tackle challenging applications such as image recognition or natural language processing.
 
-To maximize leverage, the Clojure package has been built on the existing Scala package using interop. This approach has allowed rapid initial development and close parity with the Scala package functionality. It also leaves the door open to directly developing code against the JNI bindings with Clojure in the future in an incremental fashion, using the test suites as a refactoring guide.
+To maximize leverage, the Clojure package has been built on the existing Scala package using [Java Interop](https://clojure.org/reference/java_interop). This approach has allowed rapid initial development and close parity with the Scala package functionality. It also leaves the door open to incrementally developing Clojure code that directly interfaces MXNet core using [JNI](https://en.wikipedia.org/wiki/Java_Native_Interface).
 
-For a **video introduction**, see [Clojure MXNet with Carin Meier - Clojure Virtual Meetup](https://www.crowdcast.io/e/clojure-mxnet-with-carin) (setup instructions from 20:49)
+For a **video introduction**, see [Clojure MXNet with Carin Meier - Clojure Virtual Meetup](https://www.crowdcast.io/e/clojure-mxnet-with-carin) (setup instructions from 20:49).
 
 ## Current State and Plans
 
-Help is needed testing and generally making the package better. A list of the pacakge status and contribution needs can be found under [Clojure Package Contribution Needs](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Package+Contribution+Needs). Please get involved :)
+The Clojure MXNet package is currently treated as *user-contributed code* within MXNet, as can be seen from its placement under `contrib` in the source tree. This means that it should first undergo a stabilization period and receive feedback from users before it can graduate to a fully integrated and supported part of MXNet.
+
+That said, because it closely tracks the Scala package, Clojure MXNet can be expected to have a similar level of maturity and stability regarding the low-level functionality. It is mostly in the hand-written Java interop part of the Clojure wrapper where bugs are more likely to be encountered. Such bugs tend to be fixed rather quickly once they are known and their origin is clear (see also [Getting Involved](#getting-involved)).
+
+For an overview of the development status and open problems, please refer to [Clojure Package Contribution Needs](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Package+Contribution+Needs).
+
+## Getting Involved
+
+By far the best way to get involved with this project is to install the Clojure MXNet package, run the examples, play around, build new things with it, and get back to the development team with feedback! Your input can not only help to identify current issues, but also guide the future development of the Clojure package by pointing out must-have features that are currently missing, or by identifying usability or performace problems of high impact.
+
+There are two main ways of reaching out to other users and the package maintainers:
+
+- If you have a question or general feedback, or you encountered a problem but are not sure if it's a bug or a misunderstanding, then the *Apache Slack* (channels `#mxnet` and `#mxnet-scala`) is the best place to turn check out. To join, [ask for an invitation](https://mxnet.apache.org/community/contribute.html#slack) at `dev@mxnet.apache.org`.
+- If you found a bug, miss an important feature or want to give feedback directly relevant for development, please head over to the MXNet [GitHub issue page](https://github.com/apache/incubator-mxnet/issues) and create a new issue. If the issue is specific to the Clojure package, consider using a title starting with `[Clojure]` to make it easily discoverable among the many other, mostly generic issues.
+
+Of course, contributions to code or documentation are also more than welcome! Please check out the [Clojure Package Contribution Needs](https://cwiki.apache.org/confluence/display/MXNET/Clojure+Package+Contribution+Needs) to get an idea about where and how to contribute code.
+
+For a more comprehensive overview of different ways to contribute, see [Contributing to MXNet](https://mxnet.apache.org/community/contribute.html).
 
 ## Getting Started
 
 The Clojure MXNet framework consists of a core C library, a Scala API that talks to the core through [JNI (Java Native Interface)](https://en.wikipedia.org/wiki/Java_Native_Interface) bindings, and finally a Clojure wrapper around the Scala API.
 
-Since there is native code involved in the framework, what OS you are running matters.
-
-The following combinations of operating system and compute device are supported:
+Since the core contains native (compiled) code and is bundled with the language bindings, your hardware and OS matter to the choices to be made during installation. The following combinations of operating system and compute device are supported:
 
 - Linux CPU
 - Linux GPU
@@ -114,7 +129,7 @@ With this option, you will install a Git revision of the Clojure package source 
 
 - Edit `project.clj` to include the desired Scala jar from Maven:
 
-    [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.0”]
+      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.0”]
 
 - Run `lein test`. All the tests should run without error.
 - At this point you can run `lein install` to build and install the Clojure jar locally.
