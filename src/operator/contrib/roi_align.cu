@@ -153,7 +153,7 @@ __global__ void RoIAlignForwardKernel(
       channels_unpooled = channels * pooled_height * pooled_width;
     }
     const T* offset_bottom_data =
-        bottom_data + (roi_batch_ind * channels_unpooled + c_unpooled) 
+        bottom_data + (roi_batch_ind * channels_unpooled + c_unpooled)
         * height * width;
 
     // We use roi_bin_grid to sample the grid and mimic integral
@@ -292,7 +292,7 @@ __global__ void RoIAlignBackwardKernel(
       channels_unpooled = channels * pooled_height * pooled_width;
     }
     T* offset_bottom_diff =
-        bottom_diff + (roi_batch_ind * channels_unpooled + c_unpooled) 
+        bottom_diff + (roi_batch_ind * channels_unpooled + c_unpooled)
         * height * width;
 
     int top_offset = (n * channels + c) * pooled_height * pooled_width;
@@ -373,7 +373,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
 
   const int count = out_data[roialign::kOut].Size();
   const int num_rois = in_data[roialign::kBox].size(0);
-  const int channels = out_data[roialign::kOut].size(1); // channels of pooled output
+  const int channels = out_data[roialign::kOut].size(1);  // channels of pooled output
   const int height = in_data[roialign::kData].size(2);
   const int width = in_data[roialign::kData].size(3);
   const int pooled_height = out_data[roialign::kOut].size(2);
@@ -431,7 +431,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
 
   const int count = out_grad[0].Size();
   const int num_rois = in_data[0].size(0);
-  const int channels = out_grad[0].size(1); // channels of pooled output
+  const int channels = out_grad[0].size(1);  // channels of pooled output
   const int height = outputs[0].size(2);
   const int width = outputs[0].size(3);
   const int pooled_height = out_grad[0].size(2);

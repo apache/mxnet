@@ -227,7 +227,7 @@ num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
             channels_unpooled = channels * pooled_height * pooled_width;
           }
           const T* offset_bottom_data =
-              bottom_data + (roi_batch_ind * channels_unpooled + c_unpooled) 
+              bottom_data + (roi_batch_ind * channels_unpooled + c_unpooled)
               * height * width;
           T output_val = 0.;
           for (int iy = 0; iy < roi_bin_grid_h; iy++) {
@@ -363,7 +363,7 @@ void ROIAlignBackward(
       channels_unpooled = channels * pooled_height * pooled_width;
     }
     T* offset_bottom_diff =
-        bottom_diff + (roi_batch_ind * channels_unpooled + c_unpooled) 
+        bottom_diff + (roi_batch_ind * channels_unpooled + c_unpooled)
         * height * width;
 
     int top_offset = (n * channels + c) * pooled_height * pooled_width;
@@ -442,7 +442,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
 
   const int count = out_data[roialign::kOut].Size();
   // const int num_rois = in_data[roialign::kBox].size(0);
-  const int channels = out_data[roialign::kOut].size(1); // channels of pooled output
+  const int channels = out_data[roialign::kOut].size(1);  // channels of pooled output
   const int height = in_data[roialign::kData].size(2);
   const int width = in_data[roialign::kData].size(3);
   const int pooled_height = out_data[roialign::kOut].size(2);
@@ -455,8 +455,8 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
     const DType *bottom_rois = in_data[roialign::kBox].dptr<DType>();
     DType *top_data = out_data[roialign::kOut].dptr<DType>();
 
-    ROIAlignForward<DType>(count, bottom_data, param.spatial_scale, param.position_sensitive, 
-                           channels, height, width, pooled_height, pooled_width, 
+    ROIAlignForward<DType>(count, bottom_data, param.spatial_scale, param.position_sensitive,
+                           channels, height, width, pooled_height, pooled_width,
                            param.sample_ratio, bottom_rois, rois_cols, top_data);
   })
 }
@@ -505,8 +505,8 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
         Fill<false>(s, outputs[0], kWriteTo, static_cast<DType>(0));
       }
       ROIAlignBackward<DType>(count, top_diff, num_rois, param.spatial_scale,
-                     param.position_sensitive, channels, height, width, 
-                     pooled_height, pooled_width, param.sample_ratio, grad_in, 
+                     param.position_sensitive, channels, height, width,
+                     pooled_height, pooled_width, param.sample_ratio, grad_in,
                      bottom_rois, rois_cols);
     }
     if (kWriteTo == req[roialign::kBox]) {
@@ -564,7 +564,7 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
   out_shape->clear();
   if (param.position_sensitive) {
     out_shape->push_back(
-         Shape4(bshape[0], dshape[1]/param.pooled_size[0]/param.pooled_size[1], 
+         Shape4(bshape[0], dshape[1]/param.pooled_size[0]/param.pooled_size[1],
                 param.pooled_size[0], param.pooled_size[1]));
   } else {
     out_shape->push_back(
