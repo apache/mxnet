@@ -50,7 +50,7 @@ def import_model(model_file):
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
     # loads model file and returns ONNX protobuf object
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     sym, arg_params, aux_params = graph.from_onnx(model_proto.graph)
     return sym, arg_params, aux_params
 
@@ -81,6 +81,6 @@ def get_model_metadata(model_file):
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     metadata = graph.get_graph_metadata(model_proto.graph)
     return metadata

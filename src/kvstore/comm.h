@@ -723,8 +723,11 @@ class CommDevice : public Comm {
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
     std::vector<int> p2p(n*n);
+
+    // Restores active device to what it was before EnableP2P
+    mxnet::common::cuda::DeviceStore device_store;
     for (int i = 0; i < n; ++i) {
-      cudaSetDevice(gpus[i]);
+     device_store.SetDevice(gpus[i]);
       for (int j = 0; j < n; j++) {
         int access;
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);

@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
- * \brief
+ * \brief Function definition of indexing operator
  * \author Bing Xu, Siyi Li, Chi Zhang, Haibin Lin
 */
 #ifndef MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
@@ -753,6 +753,71 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return (*in_attrs)[0] != -1;
+}
+
+// storage type inference function for take
+inline bool TakeOpForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int>* in_attrs,
+                                     std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int& idx_stype = in_attrs->at(take_::kIdx);
+  const int& arr_stype = in_attrs->at(take_::kArr);
+  int& out_stype = out_attrs->at(take_::kOut);
+  bool dispatched = false;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  if (!dispatched && idx_stype == kDefaultStorage && arr_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && idx_stype == kDefaultStorage && arr_stype == kCSRStorage &&
+      param.axis == 0 && (param.mode == take_::kWrap || param.mode == take_::kClip)) {
+    // take(dns, csr, axis=0) -> csr
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
+}
+
+
+template<typename xpu>
+void TakeOpForwardCsrImpl(const TakeParam& params,
+                          const OpContext& ctx,
+                          const TBlob& idx,
+                          const NDArray& arr,
+                          OpReqType req,
+                          const NDArray& output);
+
+
+template<typename xpu>
+void TakeOpForwardEx(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs) {
+  CHECK_EQ(req[take_::kOut], kWriteTo);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  const NDArray& idx = inputs[take_::kIdx];
+  const NDArray& arr = inputs[take_::kArr];
+  const NDArray& out = outputs[take_::kOut];
+  const auto idx_stype = idx.storage_type();
+  const auto arr_stype = arr.storage_type();
+  const auto out_stype = out.storage_type();
+  const auto params = nnvm::get<TakeParam>(attrs.parsed);
+  if (idx_stype == kDefaultStorage && arr_stype == kCSRStorage &&
+      out_stype == kCSRStorage) {
+    // dns, csr -> csr
+    TakeOpForwardCsrImpl<xpu>(params, ctx, idx.data(), arr, req[0], out);
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
 }
 
 template<typename xpu>

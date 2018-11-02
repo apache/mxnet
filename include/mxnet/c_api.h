@@ -441,12 +441,22 @@ MXNET_DLL int MXGetGPUCount(int* out);
 
 /*!
  * \brief get the free and total available memory on a GPU
+ *  Note: Deprecated, use MXGetGPUMemoryInformation64 instead.
  * \param dev the GPU number to query
  * \param free_mem pointer to the integer holding free GPU memory
  * \param total_mem pointer to the integer holding total GPU memory
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem);
+
+/*!
+ * \brief get the free and total available memory on a GPU
+ * \param dev the GPU number to query
+ * \param free_mem pointer to the uint64_t holding free GPU memory
+ * \param total_mem pointer to the uint64_t holding total GPU memory
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t *total_mem);
 
 /*!
  * \brief get the MXNet library version as an integer
@@ -1542,18 +1552,17 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result
  * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
- * \param excluded_symbols array of symbols to be excluded from being quantized
+ * \param excluded_symbols op names to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data.
+ * \param calib_quantize whether calibrate quantize op with offline calibration data.
  */
-MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
-                               SymbolHandle *ret_sym_handle,
+MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
-                               const SymbolHandle *excluded_symbols,
-                               const mx_uint num_offline,
-                               const char **offline_params,
-                               const char *quantized_dtype);
+                               const char **excluded_symbols,
+                               const mx_uint num_offline, const char **offline_params,
+                               const char *quantized_dtype, const bool calib_quantize);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
@@ -1570,6 +1579,15 @@ MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                                const float* low_quantiles,
                                                const float* high_quantiles,
                                                SymbolHandle* ret_sym_handle);
+
+/*!
+ * \brief Run subgraph pass based on the backend provided
+ * \param sym_handle symbol to be converted
+ * \param backend backend names for subgraph pass
+ * \param ret_sym_handle returned symbol
+ */
+MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
+                                   SymbolHandle *ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

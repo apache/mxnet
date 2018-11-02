@@ -66,8 +66,8 @@ $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
 endif
 
 ifeq ($(USE_MKLDNN), 1)
-	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/install
-	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/install
+	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
+	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
 	export USE_MKLML = 1
 endif
 
@@ -145,9 +145,7 @@ else
 endif
 
 ifeq ($(USE_OPENMP), 1)
-	ifneq ($(UNAME_S), Darwin)
-		CFLAGS += -fopenmp
-	endif
+	CFLAGS += -fopenmp
 endif
 
 ifeq ($(USE_NNPACK), 1)
@@ -231,32 +229,21 @@ endif
 
 # gperftools malloc library (tcmalloc)
 ifeq ($(USE_GPERFTOOLS), 1)
-FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.a)
+FIND_LIBFILEEXT=so
+ifeq ($(USE_GPERFTOOLS_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard $(USE_GPERFTOOLS_PATH)/libtcmalloc.so)
+FIND_LIBFILE=$(wildcard /lib/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libtcmalloc.a)
+FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libtcmalloc.so)
+FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libtcmalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libtcmalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.so)
+FIND_LIBFILE=$(wildcard /usr/lib64/libtcmalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
 	USE_GPERFTOOLS=0
-endif
-endif
-endif
-endif
-endif
 endif
 endif
 endif
@@ -270,37 +257,23 @@ endif
 # jemalloc malloc library (if not using gperftools)
 else
 ifeq ($(USE_JEMALLOC), 1)
-FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.a)
+FIND_LIBFILEEXT=so
+ifeq ($(USE_JEMALLOC_STATIC), 1)
+FIND_LIBFILEEXT=a
+endif
+FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard $(USE_JEMALLOC_PATH)/libjemalloc.so)
+FIND_LIBFILE=$(wildcard /lib/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libjemalloc.a)
+FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /lib/libjemalloc.so)
+FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.a)
+FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/libjemalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/local/lib/libjemalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib/x86_64-linux-gnu/libjemalloc.so)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.a)
-ifeq (,$(FIND_LIBFILE))
-FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.so)
+FIND_LIBFILE=$(wildcard /usr/lib64/libjemalloc.$(FIND_LIBFILEEXT))
 ifeq (,$(FIND_LIBFILE))
 	USE_JEMALLOC=0
-endif
-endif
-endif
-endif
-endif
-endif
 endif
 endif
 endif
@@ -611,14 +584,15 @@ rpkg:
 	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
-	echo "import(Rcpp)" > R-package/NAMESPACE
-	echo "import(methods)" >> R-package/NAMESPACE
+	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
+	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package')"
-	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2')!= '5.0.1'){\
-	devtools::install_version('roxygen2',version='5.0.1',\
-	repo='https://cloud.r-project.org/',quiet=TRUE)}"
-	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package')"
+	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2') < '5.0.1'){\
+	    devtools::install_version('roxygen2',version='5.0.1',\
+	    repos='https://cloud.r-project.org/',quiet=TRUE)}"
+	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
+	rm R-package/NAMESPACE
+	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package'); warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
@@ -684,10 +658,13 @@ scaladeploy:
 jnilint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
-ifneq ($(EXTRA_OPERATORS),)
-clean: cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
+rclean:
+	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+
+ifneq ($(EXTRA_OPERATORS),)
+clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
@@ -695,9 +672,8 @@ clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/image_recordio.h R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

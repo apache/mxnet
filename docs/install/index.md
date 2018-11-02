@@ -1,5 +1,23 @@
 # Installing MXNet
 
+```eval_rst
+.. toctree::
+   :hidden:
+
+   amazonlinux_setup.md
+   build_from_source.md
+   c_plus_plus.md
+   centos_setup.md
+   download.md
+   osx_setup.md
+   raspbian_setup.md
+   scala_setup.md
+   tx2_setup.md
+   ubuntu_setup.md
+   validate_mxnet.md
+   windows_setup.md
+```
+
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
@@ -141,10 +159,16 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+
+**NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- End of pip -->
 
@@ -177,6 +201,16 @@ $ docker images # Use sudo if you skip Step 2
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
+```
+
+Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is recommended for the fastest inference speeds with MXNet.
+
+```
+$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        1.3.0_cpu_mkl       deaf9bf61d29        4 days ago          678 MB
 ```
 
 **Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
@@ -252,12 +286,16 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 CUDA should be installed first. Instructions can be found in the <a href="ubuntu_setup.html#cuda-dependencies">CUDA dependencies section of the MXNet Ubuntu installation guide</a>.
 
@@ -302,6 +340,16 @@ $ docker images # Use sudo if you skip Step 2
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
 mxnet/python        gpu                 493b2683c269        3 weeks ago         4.77 GB
+```
+
+Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is recommended for the fastest inference speeds with MXNet.
+
+```
+$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        1.3.0_gpu_cu92_mkl  adcb3ab19f50        4 days ago          4.23 GB
 ```
 
 **Step 5** <a href="validate_mxnet.html">Validate the installation</a>.
@@ -478,11 +526,16 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
+**NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- END of pip -->
 
@@ -509,6 +562,16 @@ $ docker images
 
 REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
 mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
+```
+
+Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is recommended for the fastest inference speeds with MXNet.
+
+```
+$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        1.3.0_cpu_mkl       deaf9bf61d29        4 days ago          678 MB
 ```
 
 **Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
@@ -552,6 +615,19 @@ MXNet developers should refer to the MXNet wiki's <a href="https://cwiki.apache.
 <div class="r">
 <div class="cpu">
 </br>
+
+To run MXNet you also should have OpenCV and OpenBLAS installed. You may install them with `brew` as follows:
+
+```bash
+brew install opencv
+brew install openblas@0.3.1
+```
+
+Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+
+```bash
+ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+```
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
 You can [build MXNet-R from source](osx_setup.html#install-the-mxnet-package-for-r), or you can use a pre-built binary:
@@ -686,22 +762,70 @@ $ pip install mxnet --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
+**NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 </div> <!-- End of pip -->
 
 
-<div class="docker build-from-source">
+<div class="docker">
 <br/>
 
-Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
+Docker images with *MXNet* are available at [Docker Hub](https://hub.docker.com/r/mxnet/).
+
+**Step 1**  Install Docker on your machine by following the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
+
+*Note* - You can install Community Edition (CE) to get started with *MXNet*.
+
+**Step 2** [Optional] Post installation steps to manage Docker as a non-root user.
+
+Follow the four steps in this [docker documentation](https://docs.docker.com/engine/installation/linux/linux-postinstall/#manage-docker-as-a-non-root-user) to allow managing docker containers without *sudo*.
+
+If you skip this step, you need to use *sudo* each time you invoke Docker.
+
+**Step 3** Pull the MXNet docker image.
+
+```
+$ docker pull mxnet/python # Use sudo if you skip Step 2
+```
+
+You can list docker images to see if mxnet/python docker image pull was successful.
+
+```
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        latest              00d026968b3c        3 weeks ago         1.41 GB
+```
+
+Using the latest MXNet with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) is recommended for the fastest inference speeds with MXNet.
+
+```
+$ docker pull mxnet/python:1.3.0_cpu_mkl # Use sudo if you skip Step 2
+$ docker images # Use sudo if you skip Step 2
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mxnet/python        1.3.0_cpu_mkl       deaf9bf61d29        4 days ago          678 MB
+```
+
+**Step 4** <a href="validate_mxnet.html">Validate the installation</a>.
 
 
-</div> <!-- End of docker build-from-source -->
+</div> <!-- End of docker -->
+
+<div class="build-from-source">
+<br/>
+Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>
+
+</div> <!-- End of Build from source -->
 </div> <!-- End of CPU -->
 
 
@@ -762,12 +886,16 @@ $ pip install mxnet-cu92 --pre
 
 </div> <!-- End of master-->
 <hr> <!-- pip footer -->
-Most MXNet versions offer an experimental MKL pip package that will be much faster when running on Intel hardware.
+MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
 
 **NOTES:**
+
+*mxnet-cu92mkl* means the package is built with CUDA/cuDNN and MKL-DNN enabled and the CUDA version is 9.2.
+
+All MKL pip packages are experimental prior to version 1.3.0.
 
 [Anaconda](https://www.anaconda.com/download/) is recommended.
 
@@ -783,7 +911,7 @@ Refer to [#8671](https://github.com/apache/incubator-mxnet/issues/8671) for stat
 
 You can either upgrade your CUDA install or install the MXNet package that supports your CUDA version.
 
-</div>
+</div> <!-- End of pip -->
 
 <div class="build-from-source">
 <br/>
@@ -791,7 +919,7 @@ You can either upgrade your CUDA install or install the MXNet package that suppo
 To build from source, refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>.
 
 
-</div> <!-- End of pip -->
+</div> <!-- End of build from source -->
 </div> <!-- End of GPU -->
 </div> <!-- End of Python -->
 
@@ -811,6 +939,8 @@ cran["dmlc"] <- "https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/CR
 options(repos = cran)
 install.packages("mxnet")
 ```
+
+To run MXNet you also should have OpenCV and OpenBLAS installed.
 
 </div> <!-- END - Windows R CPU -->
 

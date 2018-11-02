@@ -118,6 +118,14 @@ def test_ndarray_setitem():
     x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
+    # numpy assignment for empty axis
+    for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
+        x = mx.nd.zeros(trivial_shape)
+        x[:] = np.ones(trivial_shape)
+        x_np = np.ones(trivial_shape, dtype=x.dtype)
+        assert x.shape == trivial_shape
+        assert same(x.asnumpy(), x_np)
+
 
 @with_seed()
 def test_ndarray_elementwise():
@@ -215,6 +223,13 @@ def test_ndarray_onehot():
         npy[np.arange(shape[0]), indices] = 1.0
         mx.nd.onehot_encode(mx.nd.array(indices), out=arr)
         assert same(npy, arr.asnumpy())
+
+
+def test_init_from_scalar():
+    npy = np.ones([])
+    arr = mx.nd.array(npy)
+    assert arr.shape == ()
+    assert same(npy, arr.asnumpy())
 
 
 @with_seed()
@@ -639,7 +654,6 @@ def test_arange():
     assert_almost_equal(pred, gt)
 
 @with_seed()
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12310")
 def test_order():
     ctx = default_context()
     dat_size = 5
@@ -703,29 +717,33 @@ def test_order():
         return data
 
     large_matrix_npy = get_large_matrix()
-    large_matrix_nd = mx.nd.array(large_matrix_npy, ctx=ctx)
+    large_matrix_nd = mx.nd.array(large_matrix_npy, ctx=ctx, dtype=large_matrix_npy.dtype)
 
     nd_ret_topk = mx.nd.topk(large_matrix_nd, axis=1, ret_typ="indices", k=5, is_ascend=False).asnumpy()
     gt = gt_topk(large_matrix_npy, axis=1, ret_typ="indices", k=5, is_ascend=False)
     assert_almost_equal(nd_ret_topk, gt)
 
-    for dtype in [np.int16, np.int32, np.int64, np.float32, np.float64]:
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
         a_npy = get_values(ensure_unique=True, dtype=dtype)
-        a_nd = mx.nd.array(a_npy, ctx=ctx)
+        a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
         # test for ret_typ=indices
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="indices", k=3, is_ascend=True).asnumpy()
+        assert nd_ret_topk.dtype == np.float32  # Test the default dtype
         gt = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
-        nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="indices", k=2, is_ascend=False).asnumpy()
+        nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="indices", k=2, is_ascend=False, dtype=np.float64).asnumpy()
+        assert nd_ret_topk.dtype == np.float64
         gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=2, is_ascend=False)
         assert_almost_equal(nd_ret_topk, gt)
-        nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="indices", k=21, is_ascend=False).asnumpy()
+        nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="indices", k=21, is_ascend=False, dtype=np.int32).asnumpy()
+        assert nd_ret_topk.dtype == np.int32
         gt = gt_topk(a_npy, axis=None, ret_typ="indices", k=21, is_ascend=False)
         assert_almost_equal(nd_ret_topk, gt)
 
         # test for ret_typ=value
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="value", k=3, is_ascend=True).asnumpy()
+        assert nd_ret_topk.dtype == dtype
         gt = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
         nd_ret_topk = mx.nd.topk(a_nd, axis=3, ret_typ="value", k=2, is_ascend=False).asnumpy()
@@ -737,6 +755,7 @@ def test_order():
 
         # test for ret_typ=mask
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="mask", k=3, is_ascend=True).asnumpy()
+        assert nd_ret_topk.dtype == dtype
         gt = gt_topk(a_npy, axis=1, ret_typ="mask", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk, gt)
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="mask", k=2, is_ascend=False).asnumpy()
@@ -750,12 +769,15 @@ def test_order():
         nd_ret_topk_val, nd_ret_topk_ind = mx.nd.topk(a_nd, axis=1, ret_typ="both", k=3, is_ascend=True)
         nd_ret_topk_val = nd_ret_topk_val.asnumpy()
         nd_ret_topk_ind = nd_ret_topk_ind.asnumpy()
+        assert nd_ret_topk_val.dtype == dtype
+        assert nd_ret_topk_ind.dtype == np.float32
         gt_val = gt_topk(a_npy, axis=1, ret_typ="value", k=3, is_ascend=True)
         gt_ind = gt_topk(a_npy, axis=1, ret_typ="indices", k=3, is_ascend=True)
         assert_almost_equal(nd_ret_topk_val, gt_val)
         assert_almost_equal(nd_ret_topk_ind, gt_ind)
         # test for kNullOp
-        _, nd_ret_topk_ind = mx.nd.topk(a_nd, axis=1, ret_typ="both", k=3, is_ascend=True)
+        _, nd_ret_topk_ind = mx.nd.topk(a_nd, axis=1, ret_typ="both", k=3, is_ascend=True, dtype=np.float64)
+        assert nd_ret_topk_ind.dtype == np.float64
         nd_ret_topk_ind = nd_ret_topk_ind.asnumpy()
         assert_almost_equal(nd_ret_topk_ind, gt_ind)
         # test for kNullOp
@@ -775,9 +797,11 @@ def test_order():
         # test for argsort
         for idtype in [np.int32, np.float16, np.float32, np.float64]:
             nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True, dtype=idtype).asnumpy()
+            assert nd_ret_argsort.dtype == idtype
             gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
             assert_almost_equal(nd_ret_argsort, gt)
             nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False, dtype=idtype).asnumpy()
+            assert nd_ret_argsort.dtype == idtype
             gt = gt_topk(a_npy, axis=None, ret_typ="indices",
                          k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
             assert_almost_equal(nd_ret_argsort, gt)
@@ -786,7 +810,7 @@ def test_order():
         # duplicated input data values (over many repeated runs with different random seeds,
         # this will be tested).
         a_npy = get_values(ensure_unique=False, dtype=dtype)
-        a_nd = mx.nd.array(a_npy, ctx=ctx)
+        a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
         # test for ret_typ=value
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="value", k=3, is_ascend=True).asnumpy()
@@ -837,9 +861,9 @@ def test_order():
     # Repeat those tests that don't involve indices.  These should pass even with
     # duplicated input data values (over many repeated runs with different random seeds,
     # this will be tested).
-    for dtype in [np.int16, np.int32, np.int64, np.float32, np.float64]:
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
         a_npy = get_values(ensure_unique=False, dtype=dtype)
-        a_nd = mx.nd.array(a_npy, ctx=ctx)
+        a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
         # test for ret_typ=value
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="value", k=3, is_ascend=True).asnumpy()
@@ -1331,6 +1355,17 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+def test_assign_large_int_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/11639"""
+    a = mx.nd.zeros((4, 1), dtype=np.int32)
+    a[1,0] = int(16800001)
+    a[2,0] = int(16800002)
+    b = a.asnumpy()
+    assert same(b[1,0], 16800001)
+    a = a-1
+    b = a.asnumpy()
+    assert same(b[1,0], 16800000)
+
 @with_seed()
 def test_assign_a_row_to_ndarray():
     """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
@@ -1470,6 +1505,48 @@ def test_dlpack():
             mx.test_utils.assert_almost_equal(a_np, c_np)
             mx.test_utils.assert_almost_equal(a_np, d_np)
             mx.test_utils.assert_almost_equal(a_np, e_np)
+
+@with_seed()
+def test_ndarray_is_inf():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isinf(data)
+    expected_output = np.isinf(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_finite():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isfinite(data)
+    expected_output = np.isfinite(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_nan():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isnan(data)
+    expected_output = np.isnan(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
 
 if __name__ == '__main__':
     import nose

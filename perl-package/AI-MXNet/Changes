@@ -1,5 +1,17 @@
 Revision history for Perl extension AI::MXNet
 
+1.33    Thu Oct  4 13:25:56 PDT 2018
+        - Added randn function.
+        - Internal SELU function on C++ layer.
+        - Predict now accepts ndarray as well.
+        - Gluon: Only warn when the blocks are unregistered.
+        - Gluon: Better sparse support.
+        - Gluon: Improved block summary.
+        - Added validation docs for MXNet installation for Perl.
+        - Flexible perl env for examples.
+        - Gluon: Custom dtypes for the symbol block
+        - Separate eval metric for the epoch level.
+
 1.32    Sun Aug  5 14:25:31 PDT 2018
         - Several new metric classes
         - Expanded documentation
