@@ -379,6 +379,54 @@ def test_rnn_cells():
     net.add(gluon.rnn.GRUCell(100, input_size=100))
     check_rnn_forward(net, mx.nd.ones((8, 3, 200)))
 
+
+def test_rnn_cells_export_import():
+    class RNNLayer(gluon.HybridBlock):
+        def __init__(self):
+            super(RNNLayer, self).__init__()
+            with self.name_scope():
+                self.cell = gluon.rnn.RNNCell(hidden_size=1)
+
+        def hybrid_forward(self, F, seq):
+            outputs, state = self.cell.unroll(inputs=seq, length=2, merge_outputs=True)
+            return outputs
+
+    class LSTMLayer(gluon.HybridBlock):
+        def __init__(self):
+            super(LSTMLayer, self).__init__()
+            with self.name_scope():
+                self.cell = gluon.rnn.LSTMCell(hidden_size=1)
+
+        def hybrid_forward(self, F, seq):
+            outputs, state = self.cell.unroll(inputs=seq, length=2, merge_outputs=True)
+            return outputs
+
+    class GRULayer(gluon.HybridBlock):
+        def __init__(self):
+            super(GRULayer, self).__init__()
+            with self.name_scope():
+                self.cell = gluon.rnn.GRUCell(hidden_size=1)
+
+        def hybrid_forward(self, F, seq):
+            outputs, state = self.cell.unroll(inputs=seq, length=2, merge_outputs=True)
+            return outputs
+
+    for hybrid in [RNNLayer(), LSTMLayer(), GRULayer()]:
+        hybrid.initialize()
+        hybrid.hybridize()
+        input = mx.nd.ones(shape=(1, 2, 1))
+        output1 = hybrid(input)
+        hybrid.export(path="./model", epoch=0)
+        symbol = mx.gluon.SymbolBlock.imports(
+            symbol_file="./model-symbol.json",
+            input_names=["data"],
+            param_file="./model-0000.params",
+            ctx=mx.Context.default_ctx
+        )
+        output2 = symbol(input)
+        assert_almost_equal(output1.asnumpy(), output2.asnumpy())
+
+
 def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
     layer.collect_params().initialize()
     inputs.attach_grad()
