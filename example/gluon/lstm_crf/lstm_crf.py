@@ -208,11 +208,12 @@ print(model(precheck_sent))
 
 # Make sure prepare_sequence from earlier in the LSTM section is loaded
 for epoch in range(300):  # again, normally you would NOT do 300 epochs, it is toy data
+
+    neg_log_likelihood_acc = 0.
     for i, (sentence, tags) in enumerate(training_data):
         # Step 1. Get our inputs ready for the network, that is,
         # turn them into Variables of word indices.
         # Remember to use autograd to record the calculation.
-        neg_log_likelihood_acc = 0.
         with ag.record():
             sentence_in = prepare_sequence(sentence, word2idx)
             targets = nd.array([tag2idx[t] for t in tags])
