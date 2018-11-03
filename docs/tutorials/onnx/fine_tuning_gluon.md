@@ -122,7 +122,7 @@ We need to transform the images to a format accepted by the network
 EDGE = 224
 SIZE = (EDGE, EDGE)
 BATCH_SIZE = 32
-NUM_WORKERS = multiprocessing.cpu_count()
+NUM_WORKERS = max(multiprocessing.cpu_count()-6, 0)
 ```
 
 We transform the dataset images using the following operations:
