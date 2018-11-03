@@ -706,30 +706,6 @@ unittest_ubuntu_python2_gpu() {
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
-tutorialtest_ubuntu_python3_gpu() {
-    set -ex
-    cd /work/mxnet/docs
-    export MXNET_DOCS_BUILD_MXNET=0
-    make html
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export PYTHONPATH=/work/mxnet/python/
-    export MXNET_TUTORIAL_TEST_KERNEL=python3
-    cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
-}
-
-tutorialtest_ubuntu_python2_gpu() {
-    set -ex
-    cd /work/mxnet/docs
-    export MXNET_DOCS_BUILD_MXNET=0
-    make html
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export PYTHONPATH=/work/mxnet/python/
-    export MXNET_TUTORIAL_TEST_KERNEL=python2
-    cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
-}
-
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -1123,6 +1099,31 @@ nightly_straight_dope_python3_multi_gpu_tests() {
     nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
       test_notebooks_multi_gpu.py --nologcapture
 }
+
+nightly_tutorial_test_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial 
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+}
+
+nightly_tutorial_test_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial 
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+}
+
 
 # Deploy
 

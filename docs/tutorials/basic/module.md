@@ -64,7 +64,7 @@ net = mx.sym.FullyConnected(net, name='fc1', num_hidden=64)
 net = mx.sym.Activation(net, name='relu1', act_type="relu")
 net = mx.sym.FullyConnected(net, name='fc2', num_hidden=26)
 net = mx.sym.SoftmaxOutput(net, name='softmax')
-mx.viz.plot_network(net)
+mx.viz.plot_network(net, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 
