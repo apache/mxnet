@@ -18,6 +18,12 @@
 
 set -ex
 
-# Test
-cd scala-package/packageTest
-make scalaintegrationtestlocal CI=1
+# Setup Environment Variables
+# MAVEN_PUBLISH_OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
+# export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
+
+bash scala-package/dev/compile-mxnet-backend.sh $MAVEN_PUBLISH_OS_TYPE ./
+
+# Compile tests for discovery later
+cd scala-package
+mvn -B deploy

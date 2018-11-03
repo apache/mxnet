@@ -18,17 +18,11 @@
 
 set -ex
 
-# Setup Environment Variables
-# MAVEN_PUBLISH_OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
-# export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
+if [ -z "$JAVA_HOME" ]; then
+    source /etc/profile
+fi
 
-bash scala-package/dev/compile-mxnet-backend.sh $MAVEN_PUBLISH_OS_TYPE ./
-
-# Scala steps to deploy
-make scalapkg CI=1
-
-# Compile tests for discovery later
-export GPG_TTY=$(tty)
-make scalatestcompile CI=1
-# make scalainstall CI=1
-make scaladeploylocal CI=1
+# Test
+cd scala-package/packageTest
+# make testlocal CI=1
+make testsnapshot UNIT=1 CI=1

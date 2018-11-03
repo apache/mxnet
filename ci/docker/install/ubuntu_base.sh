@@ -23,28 +23,14 @@
 set -ex
 apt-get update || true
 apt-get install -y \
-    apt-transport-https \
     build-essential \
     ca-certificates \
+    cmake \
     curl \
     git \
-    libatlas-base-dev \
-    libcurl4-openssl-dev \
-    libjemalloc-dev \
-    liblapack-dev \
-    libopenblas-dev \
-    libopencv-dev \
-    libzmq3-dev \
     ninja-build \
+    libgfortran3 \
     software-properties-common \
     sudo \
     unzip \
     wget
-
-
-# Ubuntu 14.04
-if [[ $(lsb_release -r | grep 14.04) ]]; then
-    apt-get install -y cmake3
-else
-    apt-get install -y cmake
-fi
