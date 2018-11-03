@@ -161,24 +161,24 @@ For other libraries, visit the [Math Library Selection](build_from_source.html#m
 If building on CPU and using OpenBLAS:
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
-    cd ~/mxnet
+    git clone --recursive https://github.com/apache/incubator-mxnet.git
+    cd incubator-mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
 If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
-    cd ~/mxnet
+    git clone --recursive https://github.com/apache/incubator-mxnet.git
+    cd incubator-mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=mkl USE_MKLDNN=1
 ```
 
 If building on GPU and you want OpenCV and OpenBLAS (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
-    cd ~/mxnet
+    git clone --recursive https://github.com/apache/incubator-mxnet.git
+    cd incubator-mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
@@ -189,7 +189,7 @@ Building from source creates a library called ```libmxnet.so``` in the `lib` fol
 You may also want to add the MXNet shared library to your `LD_LIBRARY_PATH`:
 
 ```bash
-export LD_LIBRARY_PATH=~/mxnet/lib
+export LD_LIBRARY_PATH=$PWD/lib
 ```
 
 After building the MXNet library, you may install language bindings.
