@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 from __future__ import print_function
+from __future__ import division
 import numpy as np
 import mxnet as mx
 import copy
@@ -6907,7 +6908,7 @@ def test_op_roi_align():
         assert len(rois.shape) == 2
         assert rois.shape[1] == 5
 
-        C_out = C / PH / PW if position_sensitive else C
+        C_out = C // PH // PW if position_sensitive else C
         out = np.zeros((R, C_out, PH, PW))
         dx = np.zeros_like(data)
         drois = np.zeros_like(rois)
@@ -6970,7 +6971,7 @@ def test_op_roi_align():
             output = mx.nd.contrib.ROIAlign(data, rois, pooled_size=pooled_size,
                     spatial_scale=spatial_scale, sample_ratio=sampling_ratio,
                     position_sensitive=position_sensitive)
-        C_out = C / pooled_size[0] / pooled_size[1] if position_sensitive else C
+        C_out = C // pooled_size[0] // pooled_size[1] if position_sensitive else C
         dy = mx.nd.random.uniform(-1, 1, (R, C_out) + pooled_size, ctx=ctx, dtype = dtype)
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
