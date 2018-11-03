@@ -635,8 +635,8 @@ class CuDNNConvolutionOp {
     std::vector<cudnnConvolutionFwdAlgoPerf_t> fwd_results(MaxForwardAlgos(s->dnn_handle_));
     int actual_fwd_algos = 0;
     auto fwd_algo_discoverer =
-      param_.cudnn_tune.value() == conv::kOff ? cudnnGetConvolutionForwardAlgorithm_v7
-                                              : cudnnFindConvolutionForwardAlgorithm;
+      (param_.cudnn_tune.value() == conv::kOff || dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", 0)) ?
+        cudnnGetConvolutionForwardAlgorithm_v7 : cudnnFindConvolutionForwardAlgorithm;
     CUDNN_CALL((*fwd_algo_discoverer)(s->dnn_handle_,
                                       in_desc_,
                                       filter_desc_,
@@ -657,8 +657,8 @@ class CuDNNConvolutionOp {
     // In cudnn v7.1.4, find() returned wgrad algos that could fail for large c if we
     // were summing into the output (i.e. beta != 0).  Get() returned OK algos though.
     auto bwd_filter_algo_discoverer =
-      param_.cudnn_tune.value() == conv::kOff ? cudnnGetConvolutionBackwardFilterAlgorithm_v7
-                                              : cudnnFindConvolutionBackwardFilterAlgorithm;
+      (param_.cudnn_tune.value() == conv::kOff || dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", 0)) ?
+        cudnnGetConvolutionBackwardFilterAlgorithm_v7 : cudnnFindConvolutionBackwardFilterAlgorithm;
     CUDNN_CALL((*bwd_filter_algo_discoverer)(s->dnn_handle_,
                                              in_desc_,
                                              out_desc_,
