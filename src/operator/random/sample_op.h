@@ -79,8 +79,8 @@ struct GenNegBinomialParam {
 };
 
 struct RandIntParam {
-  int low;
-  int high;
+  int64_t low;
+  int64_t high;
 };
 
 struct SampleUniformParam : public dmlc::Parameter<SampleUniformParam>,
@@ -505,14 +505,14 @@ static inline void gen_neg_binomial_op(const nnvm::NodeAttrs& attrs,
 
 template<typename xpu, typename ParamType>
 static inline void rand_int_op(const nnvm::NodeAttrs& attrs,
-                                       const OpContext& ctx,
-                                       const OpReqType& req,
-                                       TBlob* outputs) {
+                               const OpContext& ctx,
+                               const OpReqType& req,
+                               TBlob* outputs) {
   Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleRandIntParam& param = nnvm::get<SampleRandIntParam>(attrs.parsed);
     CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
-    Tensor<xpu, 1, int> low, high;
-    GetSamplingTempData<xpu, int>(param.low, param.high, ctx,
+    Tensor<xpu, 1, int64_t> low, high;
+    GetSamplingTempData<xpu, int64_t>(param.low, param.high, ctx,
                                     &low, &high);
     RandIntSampler<xpu> sampler;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
@@ -750,12 +750,44 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
     }
   }
   bool dtype_ok = (dtype == kFloat16) || (dtype == kFloat32) ||
-  (dtype == kFloat64) || (dtype == kUint8) || (dtype == kInt32) ||
-  (dtype == kInt8) || (dtype == kInt64);
-  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, float64, uint8, "
-                              "int32, int8, or int64: dtype is "
+  (dtype == kFloat64);
+  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, float64: dtype is "
   << dtype_out << " vs " << kFloat16 << " or " << kFloat32 << " or "
-  << kFloat64 << " or " << kUint8 << " or " << kInt32 << " or " << kInt8 << " or " << kInt64;
+  << kFloat64;
+  TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
+  return true;
+}
+
+template<typename ParamType>
+inline bool RandIntOpType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int> *in_type,
+                         std::vector<int> *out_type) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_type->size(), 0);
+  CHECK_EQ(out_type->size(), 1);
+  int dtype = -1;
+  int dtype_out = (*out_type)[0];
+  if (dtype_out != -1) {
+    // Output type can be inferred, use it and make sure it matches
+    dtype = dtype_out;
+    if (param.dtype != -1) {
+      // dtype given in args, check that it matches the output type
+      CHECK_EQ(dtype_out, param.dtype) << "Output type does not match requested type: "
+      << dtype_out << " vs " << param.dtype;
+    }
+  } else {
+    // Output type can't be inferred
+    if (param.dtype != -1) {
+      // Use dtype given in args
+      dtype = param.dtype;
+    } else {
+      // Use default
+      dtype = kFloat32;
+    }
+  }
+  bool dtype_ok = (dtype == kInt32) || (dtype == kInt64);
+  CHECK_EQ(dtype_ok, true) << "Output type must be int32, int64: dtype is "
+  << dtype_out << " vs " << kInt32 << " or " << kInt64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;
 }

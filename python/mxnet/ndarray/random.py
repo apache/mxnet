@@ -70,7 +70,7 @@ def uniform(low=0, high=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
         `high` are scalars, output shape will be `(m, n)`. If `low` and `high`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[low, high)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -120,7 +120,7 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
         `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -170,7 +170,7 @@ def randn(*shape, **kwargs):
         `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
-    dtype : {'float16','float32', 'float64'}
+    dtype : {'float16', 'float32', 'float64'}
         Data type of output samples. Default is 'float32'
     ctx : Context
         Device context of output. Default is current context. Overridden by
@@ -219,7 +219,7 @@ def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
         a scalar, output shape will be `(m, n)`. If `lam`
         is an NDArray with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each entry in `lam`.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -266,7 +266,7 @@ def exponential(scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
         a scalar, output shape will be `(m, n)`. If `scale`
         is an NDArray with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each entry in `scale`.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -312,7 +312,7 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
         `beta` are scalars, output shape will be `(m, n)`. If `alpha` and `beta`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[alpha, beta)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -361,7 +361,7 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, ctx=None,
         `p` are scalars, output shape will be `(m, n)`. If `k` and `p`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[k, p)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -412,7 +412,7 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
         `alpha` are scalars, output shape will be `(m, n)`. If `mu` and `alpha`
         are NDArrays with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[mu, alpha)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by
@@ -528,18 +528,16 @@ def randint(low=0, high=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
 
     Parameters
     ----------
-    low : float or NDArray, optional
+    low : int, optional
         Lower boundary of the output interval. All values generated will be
         greater than or equal to low. The default value is 0.
-    high : float or NDArray, optional
+    high : int, optional
         Upper boundary of the output interval. All values generated will be
         less than high. The default value is 1.
     shape : int or tuple of ints, optional
         The number of samples to draw. If shape is, e.g., `(m, n)` and `low` and
-        `high` are scalars, output shape will be `(m, n)`. If `low` and `high`
-        are NDArrays with shape, e.g., `(x, y)`, then output will have shape
-        `(x, y, m, n)`, where `m*n` samples are drawn for each `[low, high)` pair.
-    dtype : {'uint8','int32','int8', 'int64'}, optional
+        `high` are scalars, output shape will be `(m, n)`.
+    dtype : {'int32', 'int64'}, optional
         Data type of output samples. Default is 'int32'
     ctx : Context, optional
         Device context of output. Default is current context. Overridden by

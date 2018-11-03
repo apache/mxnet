@@ -64,7 +64,7 @@ def uniform(low=0, high=1, shape=_Null, dtype=_Null, **kwargs):
         `high` are scalars, output shape will be `(m, n)`. If `low` and `high`
         are Symbols with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[low, high)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_uniform, _internal._sample_uniform,
@@ -89,7 +89,7 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, **kwargs):
         `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
         are Symbols with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_normal, _internal._sample_normal,
@@ -111,7 +111,7 @@ def poisson(lam=1, shape=_Null, dtype=_Null, **kwargs):
         a scalar, output shape will be `(m, n)`. If `lam`
         is an Symbol with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each entry in `lam`.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_poisson, _internal._sample_poisson,
@@ -137,7 +137,7 @@ def exponential(scale=1, shape=_Null, dtype=_Null, **kwargs):
         a scalar, output shape will be `(m, n)`. If `scale`
         is an Symbol with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each entry in `scale`.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_exponential, _internal._sample_exponential,
@@ -162,7 +162,7 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, **kwargs):
         `beta` are scalars, output shape will be `(m, n)`. If `alpha` and `beta`
         are Symbols with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[alpha, beta)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_gamma, _internal._sample_gamma,
@@ -188,7 +188,7 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, **kwargs):
         `p` are scalars, output shape will be `(m, n)`. If `k` and `p`
         are Symbols with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[k, p)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_negative_binomial,
@@ -216,7 +216,7 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, **kwa
         `alpha` are scalars, output shape will be `(m, n)`. If `mu` and `alpha`
         are Symbols with shape, e.g., `(x, y)`, then output will have shape
         `(x, y, m, n)`, where `m*n` samples are drawn for each `[mu, alpha)` pair.
-    dtype : {'float16','float32', 'float64'}, optional
+    dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'
     """
     return _random_helper(_internal._random_generalized_negative_binomial,
@@ -291,18 +291,16 @@ def randint(low=0, high=1, shape=_Null, dtype=_Null, **kwargs):
 
     Parameters
     ----------
-    low : float or NDArray, optional
+    low : int, optional
         Lower boundary of the output interval. All values generated will be
         greater than or equal to low. The default value is 0.
-    high : float or NDArray, optional
+    high : int, optional
         Upper boundary of the output interval. All values generated will be
         less than high. The default value is 1.
     shape : int or tuple of ints, optional
         The number of samples to draw. If shape is, e.g., `(m, n)` and `low` and
-        `high` are scalars, output shape will be `(m, n)`. If `low` and `high`
-        are NDArrays with shape, e.g., `(x, y)`, then output will have shape
-        `(x, y, m, n)`, where `m*n` samples are drawn for each `[low, high)` pair.
-    dtype : {'uint8','int32','int8', 'int64'}, optional
+        `high` are scalars, output shape will be `(m, n)`.
+    dtype : {'int32', 'int64'}, optional
         Data type of output samples. Default is 'int32'
     """
     return _random_helper(_internal._random_randint, _internal._sample_uniform,

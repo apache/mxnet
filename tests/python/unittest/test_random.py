@@ -872,7 +872,7 @@ def test_randint_generator():
     ctx = mx.context.cpu()
     low = 50000000
     high = 50010000
-    for dtype in ['int64']:
+    for dtype in ['int32', 'int64']:
         print("ctx=%s, dtype=%s, Low=%g, High=%g:" % (ctx, dtype, low, high))
         scale = high - low
         buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
