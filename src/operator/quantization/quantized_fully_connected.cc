@@ -31,7 +31,7 @@ namespace mxnet {
 namespace op {
 
 namespace quantized_fc {
-enum QuantilizedfcOpResource {kTempSpace};
+enum QuantizedfcOpResource {kTempSpace};
 }
 
 bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
@@ -121,20 +121,21 @@ struct QuantizedSumInitKernelWithBias {
     using mshadow::red::limits::MinValue;
     using mshadow::red::limits::MaxValue;
     float float_for_one_out_quant  =
-      MaxAbs(*min_out, *max_out) / static_cast<double>(MaxValue<T1>());
+        MaxAbs(*min_out, *max_out) / static_cast<double>(MaxValue<T1>());
     float float_for_one_bias_quant =
-      MaxAbs(*min_bias, *max_bias) / static_cast<double>(MaxValue<T2>());
+        MaxAbs(*min_bias, *max_bias) / static_cast<double>(MaxValue<T2>());
     if (float_for_one_out_quant != 0) {
       out[i] = bias[i] * float_for_one_bias_quant /
-               float_for_one_out_quant;
+          float_for_one_out_quant;
     } else {
       LOG(INFO) << "WARNING: QuantizedBiasAddKernel float_for_one_out_quant is 0 !";
       out[i] = 0;
     }
   }
 };
+
 template<typename SrcType>
-void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
+void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
                                           const OpContext &ctx,
                                           const std::vector<NDArray> &in_data,
                                           const std::vector<OpReqType> &req,
@@ -260,7 +261,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .set_attr<FInferStorageType>("FInferStorageType", QuantizedFullyConnectedStorageType)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .set_attr<FComputeEx>("FComputeEx<cpu>",
-    MKLDNNQuantizedFullyConnectedForward<int8_t>)
+    QuantizedFullyConnectedForward<int8_t>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
