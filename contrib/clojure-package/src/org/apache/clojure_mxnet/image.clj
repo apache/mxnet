@@ -50,8 +50,8 @@
 (defn resize-image
   "Resizes the image array to (width, height)"
   ([input w h {:keys [interpolation output]
-             :or {interpolation nil output nil}
-             :as opts}]
+               :or {interpolation nil output nil}
+               :as opts}]
    (Image/imResize input w h ($/option interpolation) ($/option output)))
   ([input w h]
    (resize-image input w h {})))
@@ -79,5 +79,3 @@
   "Convert a NDArray image to a real image"
   [input]
   (Image/toImage input))
-
-  
