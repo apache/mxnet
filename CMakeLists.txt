@@ -228,9 +228,11 @@ if(USE_MKLDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
+  else()
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
   endif()
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
+
   set(WITH_TEST OFF)
   set(WITH_EXAMPLE OFF)
   add_subdirectory(3rdparty/mkldnn)
