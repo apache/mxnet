@@ -1104,6 +1104,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     set -ex
     cd /work/mxnet/docs
     export BUILD_VER=tutorial 
+    export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export PYTHONPATH=/work/mxnet/python/
@@ -1115,7 +1116,8 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
 nightly_tutorial_test_ubuntu_python2_gpu() {
     set -ex
     cd /work/mxnet/docs
-    export BUILD_VER=tutorial 
+    export BUILD_VER=tutorial
+    export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export PYTHONPATH=/work/mxnet/python/
