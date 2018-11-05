@@ -160,4 +160,5 @@ abstract class GeneratorBase {
       }
     )
   }
+
 }
