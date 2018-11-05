@@ -179,7 +179,7 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
 
     val impl =
       s"""
-         |def ${function.name}${randomGenericTypeSpec(true)}
+         |def ${function.name}${randomGenericTypeSpec(true, true)}
          |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  import scala.reflect.runtime.universe.typeOf

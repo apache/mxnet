@@ -206,7 +206,7 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
 
     val impl =
       s"""
-         |def ${function.name}${randomGenericTypeSpec(false)}
+         |def ${function.name}${randomGenericTypeSpec(false, true)}
          |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  import scala.reflect.runtime.universe.typeOf

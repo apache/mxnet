@@ -58,8 +58,9 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
     writeFile(
       FILE_PATH,
-      if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
       "package org.apache.mxnet",
+      if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
+      "import org.apache.mxnet.annotation.Experimental",
       generated)
   }
 
@@ -67,15 +68,17 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
     val generated = typeSafeRandomFunctionsToGenerate(isSymbol)
       .map { func =>
         val scalaDoc = generateAPIDocFromBackend(func)
-        val typeParameter = randomGenericTypeSpec(isSymbol)
+        val typeParameter = randomGenericTypeSpec(isSymbol, false)
         val decl = generateAPISignature(func, isSymbol, typeParameter)
         s"$scalaDoc\n$decl"
       }
 
     writeFile(
       FILE_PATH,
-      if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
       "package org.apache.mxnet",
+      if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
+      """import org.apache.mxnet.annotation.Experimental
+        |import scala.reflect.runtime.universe.TypeTag""".stripMargin,
       generated)
   }
 
@@ -102,14 +105,15 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
     writeFile(
       FILE_PATH,
-      if (isSymbol) "SymbolBase" else "NDArrayBase",
       "package org.apache.mxnet",
+      if (isSymbol) "SymbolBase" else "NDArrayBase",
+      "import org.apache.mxnet.annotation.Experimental",
       absFuncs)
   }
 
   def generateAPIDocFromBackend(func: Func, withParam: Boolean = true): String = {
     val desc = func.desc.split("\n")
-      .mkString("  * <pre>\n", "\n  * ", "  * </pre>\n")
+      .mkString("  * <pre>", "\n  * ", "\n  * </pre>")
 
     val params = func.listOfArgs.map { absClassArg =>
       s"  * @param ${absClassArg.safeArgName}\t\t${absClassArg.argDesc}"
@@ -149,8 +153,8 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
        |def ${func.name}$typeParameter (${argDef.mkString(", ")}): $returnType""".stripMargin
   }
 
-  def writeFile(FILE_PATH: String, className: String, packageDef: String,
-                absFuncs: Seq[String]): String = {
+  def writeFile(FILE_PATH: String, packageDef: String, className: String,
+                imports: String, absFuncs: Seq[String]): String = {
 
     val finalStr =
       s"""/*
@@ -172,7 +176,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
          |
          |$packageDef
          |
-         |import org.apache.mxnet.annotation.Experimental
+         |$imports
          |
          |// scalastyle:off
          |abstract class $className {
