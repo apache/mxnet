@@ -57,7 +57,7 @@ class ObjectDetectionBenchmark extends InferBase {
         List<NDArray> nd = new ArrayList<>();
         NDArray[] temp = new NDArray[batchSize];
         for (int i = 0; i < batchSize; i++) temp[i] = img.copy();
-        NDArray batched = NDArray.concat(temp, batchSize).setdim(0).invoke().get();
+        NDArray batched = NDArray.concat(temp, batchSize, 0, null)[0];
         nd.add(batched);
         objDet.objectDetectWithNDArray(nd, 3);
     }
