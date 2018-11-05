@@ -45,7 +45,7 @@ Now, we have downloaded ResNet-18 symbol, params and synset file on the disk.
 
 Let us describe the MXNet's `export_model` API. 
 
-```
+```python
 help(onnx_mxnet.export_model)
 ```
 

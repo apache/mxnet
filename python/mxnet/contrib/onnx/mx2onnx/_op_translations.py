@@ -681,7 +681,7 @@ def convert_softmax_output(node, **kwargs):
     """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
     and return the created node.
     """
-    name, _, _ = get_inputs(node, kwargs)
+    name = node["name"]
 
     input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     input1 = kwargs["proc_nodes"][input1_idx]
