@@ -23,7 +23,7 @@
   (:import (javax.imageio ImageIO)))
 
 (def tmp-dir (System/getProperty "java.io.tmpdir"))
-(def image-path (str tmp-dir "/Pug-Cookie.jpg"))
+(def image-path (.getAbsolutePath (io/file tmp-dir "Pug-Cookie.jpg")))
 
 (defn download-image []
   (with-open [in (io/input-stream "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
@@ -45,13 +45,17 @@
                  (io/input-stream image-path))
         img-arr-2 (image/decode-image 
                    (io/input-stream image-path)
-                   image/GRAYSCALE)]
+                   {:color-flag image/GRAYSCALE})]
     (is [576 1024 3] (ndarray/shape-vec img-arr))
     (is [576 1024 3] (ndarray/shape-vec img-arr-2))))
 
 (deftest test-read-image
-  (let [img-arr (image/read-image image-path)]
-    (is [576 1024 3] (ndarray/shape-vec img-arr))))
+  (let [img-arr (image/read-image image-path)
+        img-arr-2 (image/read-image
+                   image-path
+                   {:color-flag image/GRAYSCALE})]
+    (is [576 1024 3] (ndarray/shape-vec img-arr))
+    (is [576 1024 1] (ndarray/shape-vec img-arr))))
 
 (deftest test-resize-image
   (let [img-arr (image/read-image image-path)
