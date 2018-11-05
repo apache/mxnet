@@ -27,7 +27,7 @@ from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled, assertRaises
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
 import unittest
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
@@ -72,7 +72,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
 
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
@@ -86,7 +86,7 @@ def test_lstm_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_bidirectional():
     T, N, I, H = 5, 20, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
@@ -107,7 +107,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_gru_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
@@ -121,7 +121,7 @@ def test_gru_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -144,7 +144,7 @@ def test_gru_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnntanh_sym():
     T, N, I, H = 5, 32, 800, 800
 
@@ -159,7 +159,7 @@ def test_rnntanh_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnntanh_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -181,7 +181,7 @@ def test_rnntanh_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnnrelu_sym():
     T, N, I, H = 5, 32, 200, 200
 
@@ -196,7 +196,7 @@ def test_rnnrelu_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnnrelu_bidirectional():
     T, N, I, H = 5, 20, 200, 200
 
@@ -768,6 +768,7 @@ def test_leaky_relu():
 # NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
 # the analytical checks are still performed on each and every data type to verify the correctness.
 @with_seed()
+@unittest.skip("Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/12885")
 def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
@@ -4774,7 +4775,7 @@ def test_index_copy():
 
     with mx.autograd.record():
         out = mx.nd.contrib.index_copy(x, index, t)
-    out.backward() 
+    out.backward()
 
     tensor = mx.nd.array([[1,2,3],[0,0,0],[7,8,9],[0,0,0],[4,5,6]])
     x_grad = mx.nd.array([[0,0,0],[1,1,1],[0,0,0],[1,1,1],[0,0,0]])
@@ -5792,6 +5793,7 @@ def test_stack():
 
 
 @with_seed()
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12314")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0

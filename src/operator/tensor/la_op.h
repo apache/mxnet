@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file la_op.h
- * \brief Operators for advanced linear algebra.
+ * \brief Function definition of Operators for advanced linear algebra.
  */
 #ifndef MXNET_OPERATOR_TENSOR_LA_OP_H_
 #define MXNET_OPERATOR_TENSOR_LA_OP_H_

@@ -149,21 +149,6 @@ def test_equal():
     output = bkd_rep.run([input1, input2])
     npt.assert_almost_equal(output[0], numpy_op)
 
-def test_super_resolution_example():
-    """Test the super resolution example in the example/onnx folder"""
-    sys.path.insert(0, os.path.join(CURR_PATH, '../../../../example/onnx/'))
-    import super_resolution
-
-    sym, arg_params, aux_params = super_resolution.import_onnx()
-
-    logging.info("Asserted the result of the onnx model conversion")
-    output_img_dim = 672
-    input_image, img_cb, img_cr = super_resolution.get_test_image()
-    result_img = super_resolution.perform_inference(sym, arg_params, aux_params,
-                                                    input_image, img_cb, img_cr)
-
-    assert hashlib.md5(result_img.tobytes()).hexdigest() == '0d98393a49b1d9942106a2ed89d1e854'
-    assert result_img.size == (output_img_dim, output_img_dim)
 
 def get_test_files(name):
     """Extract tar file and returns model path and input, output data"""

@@ -17,6 +17,10 @@
  * under the License.
  */
 
+/*!
+ * \file histogram.cc
+ * \brief CPU implementation of histogram operator
+*/
 #include "./histogram-inl.h"
 
 namespace mxnet {
