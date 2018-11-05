@@ -98,10 +98,10 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
 
-    val apiReturnType = "org.apache.mxnet.NDArrayFuncReturn"
+    val returnType = "org.apache.mxnet.NDArrayFuncReturn"
 
     // Construct API arguments declaration
-    val argDecl = super.buildArgDecl(function) :+ "out : Option[NDArray] = None"
+    val argDecl = super.typedFunctionCommonArgDef(function) :+ "out : Option[NDArray] = None"
 
     // Map API input args to backend args
     val backendArgsMapping =
@@ -123,7 +123,7 @@ private[mxnet] object TypedNDArrayAPIMacro extends GeneratorBase {
     val impl =
       s"""
          |def ${function.name}
-         |  (${argDecl.mkString(",")}): $apiReturnType = {
+         |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  val map = scala.collection.mutable.Map[String, Any]()
          |  val args = scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]
@@ -161,10 +161,10 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
 
-    val apiReturnType = "org.apache.mxnet.NDArrayFuncReturn"
+    val returnType = "org.apache.mxnet.NDArrayFuncReturn"
 
     // Construct API arguments declaration
-    val argDecl = super.buildArgDecl(function) :+ "out : Option[NDArray] = None"
+    val argDecl = super.typedFunctionCommonArgDef(function) :+ "out : Option[NDArray] = None"
 
     // Map API input args to backend args
     val backendArgsMapping =
@@ -207,7 +207,7 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
     val impl =
       s"""
          |def ${function.name}${randomGenericTypeSpec(false)}
-         |  (${argDecl.mkString(",")}): $apiReturnType = {
+         |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  import scala.reflect.runtime.universe.typeOf
          |  val map = scala.collection.mutable.Map[String, Any]()

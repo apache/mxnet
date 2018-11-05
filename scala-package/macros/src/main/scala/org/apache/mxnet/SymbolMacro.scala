@@ -92,10 +92,10 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
 
-    val apiReturnType = "org.apache.mxnet.Symbol"
+    val returnType = "org.apache.mxnet.Symbol"
 
     // Construct API arguments declaration
-    val argDecl = super.buildArgDecl(function) :+
+    val argDecl = super.typedFunctionCommonArgDef(function) :+
       "name : String = null" :+
       "attr : Map[String, String] = null"
 
@@ -117,7 +117,7 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
     val impl =
       s"""
          |def ${function.name}
-         |  (${argDecl.mkString(",")}): $apiReturnType = {
+         |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  val map = scala.collection.mutable.Map[String, Any]()
          |  var args = scala.collection.Seq[org.apache.mxnet.Symbol]()
@@ -151,10 +151,10 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
                                   (function: Func): c.universe.DefDef = {
     import c.universe._
 
-    val apiReturnType = "org.apache.mxnet.Symbol"
+    val returnType = "org.apache.mxnet.Symbol"
 
     // Construct API arguments declaration
-    val argDecl = super.buildArgDecl(function) :+
+    val argDecl = super.typedFunctionCommonArgDef(function) :+
       "name : String = null" :+
       "attr : Map[String, String] = null"
 
@@ -180,7 +180,7 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
     val impl =
       s"""
          |def ${function.name}${randomGenericTypeSpec(true)}
-         |  (${argDecl.mkString(",")}): $apiReturnType = {
+         |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  import scala.reflect.runtime.universe.typeOf
          |  val map = scala.collection.mutable.Map[String, Any]()

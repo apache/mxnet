@@ -141,7 +141,7 @@ private[mxnet] abstract class GeneratorBase {
   }
 
   // build function argument definition, with optionality, and safe names
-  protected def buildArgDecl(func: Func): List[String] = {
+  protected def typedFunctionCommonArgDef(func: Func): List[String] = {
     func.listOfArgs.map(arg =>
       if (arg.isOptional) {
         // let's avoid a stupid Option[Array[...]]

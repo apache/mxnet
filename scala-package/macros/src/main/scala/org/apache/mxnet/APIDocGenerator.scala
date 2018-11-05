@@ -132,21 +132,21 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
   }
 
   def generateAPISignature(func: Func, isSymbol: Boolean, typeParameter: String = ""): String = {
-    val argDecl = ListBuffer[String]()
+    val argDef = ListBuffer[String]()
 
-    argDecl ++= buildArgDecl(func)
+    argDef ++= typedFunctionCommonArgDef(func)
 
     if (isSymbol) {
-      argDecl += "name : String = null"
-      argDecl += "attr : Map[String, String] = null"
+      argDef += "name : String = null"
+      argDef += "attr : Map[String, String] = null"
     } else {
-      argDecl += "out : Option[NDArray] = None"
+      argDef += "out : Option[NDArray] = None"
     }
 
     val returnType = func.returnType
 
     s"""@Experimental
-       |def ${func.name}$typeParameter (${argDecl.mkString(", ")}): $returnType""".stripMargin
+       |def ${func.name}$typeParameter (${argDef.mkString(", ")}): $returnType""".stripMargin
   }
 
   def writeFile(FILE_PATH: String, className: String, packageDef: String,
