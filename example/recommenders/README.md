@@ -25,4 +25,3 @@ Thanks to [xlvector](https://github.com/xlvector/) for the first Matrix Factoriz
 that provided the basis for these examples.
 
 [MovieLens](http://grouplens.org/datasets/movielens/) data from [GroupLens](http://grouplens.org/).
-
