@@ -26,6 +26,8 @@ public abstract class InferBase {
     public int numRun = 1;
     @Option(name = "--model-name", usage = "Name of the model")
     public String modelName = "";
+    @Option(name = "--batchsize", usage = "Size of the batch")
+    public int batchSize = 1;
 
     public abstract void preProcessModel(List<Context> context);
     public abstract void runSingleInference();

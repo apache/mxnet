@@ -29,8 +29,6 @@ public class ObjectDetectionBenchmark extends InferBase {
     public String modelPathPrefix = "/model/ssd_resnet50_512";
     @Option(name = "--input-image", usage = "the input image")
     public String inputImagePath = "/images/dog.jpg";
-    @Option(name = "--batchsize", usage = "Size of the batch")
-    public int batchSize = 1;
 
     private ObjectDetector objDet;
     private NDArray img;

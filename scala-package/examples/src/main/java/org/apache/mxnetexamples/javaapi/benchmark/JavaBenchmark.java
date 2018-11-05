@@ -64,6 +64,17 @@ public class JavaBenchmark {
 
     }
 
+    private static List<Context> getContext()  {
+        List<Context> context = new ArrayList<Context>();
+        if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
+                Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
+            context.add(Context.gpu());
+        } else {
+            context.add(Context.cpu());
+        }
+        return context;
+    }
+
     public static void main(String[] args) {
         if (args.length < 2) {
             System.out.println("Please specify model name");
@@ -71,16 +82,17 @@ public class JavaBenchmark {
         }
         String modelName = args[1];
         InferBase model;
-        if (modelName.equals("ObjectDetection")) {
-            runBatch = true;
-            ObjectDetectionBenchmark inst = new ObjectDetectionBenchmark();
-            parse(inst, args);
-            model = inst;
-        } else {
-            System.out.println("Model name not found! " + modelName);
-            return;
+        switch(modelName) {
+            case "ObjectDetection":
+                runBatch = true;
+                ObjectDetectionBenchmark inst = new ObjectDetectionBenchmark();
+                parse(inst, args);
+                model = inst;
+            default:
+                System.err.println("Model name not found! " + modelName);
+                System.exit(1);
         }
-        List<Context> context = new ArrayList<Context>();
+        List<Context> context = getContext();
         if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
                 Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
             context.add(Context.gpu());
@@ -99,7 +111,7 @@ public class JavaBenchmark {
             printStatistics(result, modelName +"Batch");
         }
 
-        ((ObjectDetectionBenchmark) model).batchSize = 1;
+        model.batchSize = 1;
         model.preProcessModel(context);
         result = new long[model.numRun];
         for (int i = 0; i < model.numRun; i++) {
@@ -108,7 +120,5 @@ public class JavaBenchmark {
             result[i] = System.nanoTime() - currTime;
         }
         printStatistics(result, modelName);
-
-
     }
 }
