@@ -19,9 +19,6 @@
 from __future__ import print_function
 import sys
 import os
-# code to automatically download dataset
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path = [os.path.join(curr_path, "../autoencoder")] + sys.path
 import mxnet as mx
 import numpy as np
 import data
