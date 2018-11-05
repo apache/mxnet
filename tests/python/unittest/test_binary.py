@@ -220,62 +220,6 @@ def test_grad_cancel(threshold):
 """
 
 
-def quantize_k(x, k): # x in [0,1]
-    vmax = 2 ** k - 1
-    return np.round(x * vmax) / vmax
-
-
-def dorefa_weight_activation(w):
-    return 0.5 * np.tanh(w) / np.max(np.abs(np.tanh(w))) + 0.5
-
-
-@pytest.mark.parametrize("bits_a", [2, 3, 8, 16])
-@pytest.mark.parametrize("use_dorefa_weight_activation", [True, False])
-@pytest.mark.parametrize("input_shape", [(1, 2, 4, 4)])
-def test_qactivation_forward(bits_a, input_shape, use_dorefa_weight_activation):
-    d = np.random.uniform(-1, 1, input_shape)
-    in_data = mx.nd.array(d)
-    in_data.attach_grad()
-
-    qact = nn.QActivation(bits=bits_a, use_dorefa_weight_activation=use_dorefa_weight_activation)
-    gradients, result = forward(in_data, qact)
-
-    expected_result = quantize_k(np.clip(d, 0, 1), bits_a)
-    if use_dorefa_weight_activation:
-        expected_result = 2 * quantize_k(dorefa_weight_activation(d), bits_a) - 1
-
-    np.testing.assert_almost_equal(expected_result, result)
-
-
-@pytest.mark.parametrize("activation", [16, 24])
-@pytest.mark.parametrize("use_dorefa_weight_activation", [False, True])
-@pytest.mark.parametrize("input_shape", [(1, 2, 4, 4)])
-def test_qactivation_grad(activation, input_shape, use_dorefa_weight_activation):
-    d = np.random.uniform(-1, 1, input_shape)
-    in_data = mx.nd.array(d)
-    in_data.attach_grad()
-
-    qact = nn.QActivation(bits=activation, use_dorefa_weight_activation=use_dorefa_weight_activation)
-    gradients, result = forward(in_data, qact)
-
-    '''
-        if use_dorefa_weight_activation:
-            act_x = 0.5 * F.tanh(x) / F.max(F.abs(F.tanh(x))) + 0.5
-            return 2 * quantize_k(act_x) - 1
-        else:
-            return quantize_k(x.clip(0, 1))
-    '''
-    with autograd.record():
-        y = in_data.clip(0, 1)
-        if use_dorefa_weight_activation:
-            y = in_data.tanh() / in_data.tanh().abs().max()
-        loss = 5 * y.mean()
-    loss.backward()
-    exp_gradient = in_data.grad.asnumpy()
-
-    np.testing.assert_almost_equal(exp_gradient, gradients)
-
-
 @pytest.mark.parametrize("bits", [1])
 @pytest.mark.parametrize("input_shape", [(1, 2, 4, 4)])
 def test_qconvolution_scaling(input_shape, bits, channel=16, kernel=(3, 3)):

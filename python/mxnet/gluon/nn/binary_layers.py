@@ -7,20 +7,6 @@ from ...base import numeric_types
 from ...symbol import Symbol
 
 
-class BinaryActFunction():
-    def __init__(self):
-        self.function = "det_sign"
-
-    def __call__(self, F, x):
-        return getattr(F, self.function)(x)
-
-    def set_function(self, value):
-        self.function = value
-
-
-binary_act_function = BinaryActFunction()
-
-
 def check_params(use_bias, activation):
     if use_bias:
         raise ValueError("Bias is not supported for a binary layer.")
@@ -28,34 +14,84 @@ def check_params(use_bias, activation):
         raise ValueError("Activation '{}' is not supported for a binary layer.")
 
 
-def quantize(F, x, bits, use_dorefa_weight_activation=False):
-    def quantize_k(x):
+def _quantize_valid_params(bits, method):
+    if bits == 32:
+        return method in ['approx_sign', 'relu', 'clip', 'leakyclip']
+    elif bits == 1:
+        return method in ['det_sign', 'sign_approx_sign']
+    else:
+        return method in ['round', 'dorefa']
+
+
+def _quantize_method_input_transform(F, method, x):
+    if method == 'round':
+        return F.clip(x, 0, 1)
+    elif method == 'dorefa':
+        return 0.5 * F.broadcast_div(F.tanh(x), F.max(F.abs(F.tanh(x)))) + 0.5
+    return x
+
+
+def _quantize_method(F, method, x, bits=None, leaky_slope=0.1):
+    if method == 'clip':
+        return F.clip(x, -1, 1)
+    elif method == 'relu':
+        return F.relu(x)
+    elif method == 'leaky_clip':
+        return F.where(x < -1, leaky_slope * x, F.where(x <= 1, x, leaky_slope * x))
+    elif method == 'approx_sign':
+        return F.where(x <= -1, -1 * F.ones_like(x),
+                       F.where(x < 0, 2 * x + x ** 2,
+                               F.where(x < 1, 2 * x - x ** 2,
+                                       F.ones_like(x))))
+    elif method == 'sign_approx_sign':
+        return F.approx_sign(x)
+    elif method == 'det_sign':
+        return F.det_sign(x)
+    elif method in ['round', 'dorefa']:
         vmax = 2 ** bits - 1
         return F.round_ste(x * vmax) / vmax
+    return x
 
+
+def _quantize_method_output_transform(F, method, x):
+    if method == 'dorefa':
+        return 2 * x - 1
+    return x
+
+
+def default_method(bits):
     if bits == 1:
-        return binary_act_function(F, x)
-    elif bits < 32:
-        if use_dorefa_weight_activation:
-            act_x = 0.5 * F.broadcast_div(F.tanh(x), F.max(F.abs(F.tanh(x)))) + 0.5
-            return 2 * quantize_k(act_x) - 1
-        else:
-            return quantize_k(x.clip(0, 1))
-    else:
-        return x
+        return 'det_sign'
+    elif bits == 32:
+        return 'relu'
+    return 'dorefa'
+
+
+def quantize(F, x, bits=1, method='det_sign'):
+    """
+    :param F: API (NDArray / Symbol)
+    :param x: Data to be quantized (including grad_cancel)
+    :param bits: bit resolution; 1 - binary, 2-31 quantized, 32 FP
+    :param method: method of activation
+           options: approx_sign, relu, clip, leaky_clip, det_sign, sign_approx_sign, round
+    :return: activated (or quantized) data
+    """
+    assert _quantize_valid_params(bits, method)
+    pre = _quantize_method_input_transform(F, method, x)
+    out = _quantize_method(F, method, pre)
+    return _quantize_method_output_transform(F, method, out)
 
 
 class QActivation(HybridBlock):
-    def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0,
-                 use_dorefa_weight_activation=False, **kwargs):
+    def __init__(self, *args, bits=1, gradient_cancel_threshold=1.0, method=None, **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
         self.bits = bits
         self.threshold = gradient_cancel_threshold
-        self.use_dorefa = use_dorefa_weight_activation
+        self.method = method or default_method(self.bits)
 
     def hybrid_forward(self, F, x):
         x = F.contrib.gradcancel(x, threshold=self.threshold)
-        x = quantize(F, x, self.bits, use_dorefa_weight_activation=self.use_dorefa)
+        x = quantize(F, x, self.bits, self.method)
         return x
 
 
@@ -70,7 +106,7 @@ class QDense(Dense):
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = reduce(mul, weight.shape[1:], 1)
-        quantized_weight = quantize(F, weight, self.bits)
+        quantized_weight = quantize(F, weight, self.bits, default_method(self.bits))
         h = F.FullyConnected(x, quantized_weight, bias, no_bias=True,
                              num_hidden=self._units, flatten=self._flatten, name='fwd')
         return (h + self._offset) / 2
@@ -110,7 +146,7 @@ class _QConv(_Conv):
     def hybrid_forward(self, F, x, weight, bias=None):
         if not isinstance(weight, Symbol) and self._offset == 0:
             self._offset = reduce(mul, weight.shape[1:], 1)
-        quantized_weight = quantize(F, weight, self.bits, use_dorefa_weight_activation=True)
+        quantized_weight = quantize(F, weight, self.bits, default_method(self.bits))
         padded = self._apply_pre_padding(F, x)
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
         if self.scaling:
@@ -119,9 +155,6 @@ class _QConv(_Conv):
             h = F.broadcast_mul(h, scale)
         if self.bits == 1 and not self.no_offset and not self.scaling:
             h = (h + self._offset) / 2
-        if self.bits == 32:
-            # non linearity for FP
-            h = F.relu(h)
         return h
 
 
@@ -170,9 +203,9 @@ class ScaledBinaryConv(HybridBlock):
     """
 
     def __init__(self, bits, bits_a, channels, kernel_size=3, stride=1, padding=0, in_channels=0, clip_threshold=1.0,
-                 prefix=None, **kwargs):
+                 prefix=None, activation_method=None, **kwargs):
         super(ScaledBinaryConv, self).__init__(**kwargs)
-        self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold)
+        self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold, method=activation_method)
         self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
                              in_channels=in_channels, prefix=prefix, no_offset=True, apply_scaling=True)
         self.kernel_size = kernel_size
