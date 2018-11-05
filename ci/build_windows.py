@@ -86,7 +86,7 @@ CMAKE_FLAGS = {
                   '-DCUDA_ARCH_NAME=Manual '
                   '-DCUDA_ARCH_BIN=52 '
                   '-DCUDA_ARCH_PTX=52 '
-                  '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2 /EHsc" '
+                  '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
                   '-DUSE_MKL_IF_AVAILABLE=0 '
                   '-DCMAKE_BUILD_TYPE=Release')
 
@@ -103,7 +103,7 @@ CMAKE_FLAGS = {
                          '-DCUDA_ARCH_BIN=52 '
                          '-DCUDA_ARCH_PTX=52 '
                          '-DUSE_MKLDNN=1 '
-                         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2 /EHsc" '
+                         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
                          '-DCMAKE_BUILD_TYPE=Release')
 
 }
