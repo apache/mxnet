@@ -19,11 +19,9 @@ package org.apache.mxnet.infer.javaapi
 
 // scalastyle:off
 import java.awt.image.BufferedImage
-
-import org.apache.mxnet.javaapi.Shape
 // scalastyle:on
 
-import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
+import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray, Shape}
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
