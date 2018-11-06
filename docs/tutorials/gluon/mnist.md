@@ -1,21 +1,18 @@
 # Handwritten Digit Recognition
 
-In this tutorial, we'll give you a step by step walk-through of how to build a hand-written digit classifier using the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset.
+In this tutorial, we'll give you a step-by-step walkthrough of how to build a hand-written digit classifier using the [MNIST](https://en.wikipedia.org/wiki/MNIST_database) dataset.
 
-MNIST is a widely used dataset for the hand-written digit classification task. It consists of 70,000 labeled 28x28 pixel grayscale images of hand-written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model using the 60,000 training images and subsequently test its classification accuracy on the 10,000 test images.
+MNIST is a widely used dataset for the hand-written digit classification task. It consists of 70,000 labeled 28x28 pixel grayscale images of hand-written digits. The dataset is split into 60,000 training images and 10,000 test images. There are 10 classes (one for each of the 10 digits). The task at hand is to train a model that can correctly classify the images into the digits they represent. The 60,000 training images are used to fit the model, and its performance in terms of classification accuracy is subsequently validated on the 10,000 test images.
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/mnist.png)
 
 **Figure 1:** Sample images from the MNIST dataset.
 
-This tutorial uses MXNet's new high-level interface, gluon package to implement MLP using
-imperative fashion.
-
-This is based on the Mnist tutorial with symbolic approach. You can find it [here](http://mxnet.io/tutorials/python/mnist.html).
+This tutorial uses MXNet's high-level *Gluon* interface to implement neural networks in an imperative fashion. It is based on [the corresponding tutorial written with the symbolic approach](http://mxnet.io/tutorials/python/mnist.html).
 
 ## Prerequisites
 
-To complete this tutorial, we need:
+To complete this tutorial, you need:
 
 - MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html).
 - [Python Requests](http://docs.python-requests.org/en/master/) and [Jupyter Notebook](http://jupyter.org/index.html).
@@ -28,28 +25,39 @@ $ pip install requests jupyter
 
 Before we define the model, let's first fetch the [MNIST](http://yann.lecun.com/exdb/mnist/) dataset.
 
-The following source code downloads and loads the images and the corresponding labels into memory.
+The following source code downloads the images and creates dataset objects `train_data` and `val_data` (for training and validation, respectively) that can be used to get one or several images at a time, together with their labels. We also add a `transform` function that rescales the images from `[0, 255]` to `[0, 1]`.
 
 ```python
 import mxnet as mx
 
-# Fixing the random seed
+# Select a fixed random seed for reproducibility
 mx.random.seed(42)
 
-mnist = mx.test_utils.get_mnist()
+train_data = mx.gluon.data.vision.MNIST(
+    train=True,
+    transform=lambda data, label: (data.astype("float32") / 255, label),
+)
+val_data = mx.gluon.data.vision.MNIST(
+    train=False,
+    transform=lambda data, label: (data.astype("float32") / 255, label),
+)
 ```
 
-After running the above source code, the entire MNIST dataset should be fully loaded into memory. Note that for large datasets it is not feasible to pre-load the entire dataset first like we did here. What is needed is a mechanism by which we can quickly and efficiently stream data directly from the source. MXNet Data iterators come to the rescue here by providing exactly that. Data iterator is the mechanism by which we feed input data into an MXNet training algorithm and they are very simple to initialize and use and are optimized for speed. During training, we typically process training samples in small batches and over the entire training lifetime will end up processing each training example multiple times. In this tutorial, we'll configure the data iterator to feed examples in batches of 100. Keep in mind that each example is a 28x28 grayscale image and the corresponding label.
+Since the MNIST dataset is relatively small, this class loads it into memory at once, but for larger datasets like ImageNet, this would no longer be possible. The Gluon `Dataset` class from which `MNIST` derives supports both cases.
+In general, `Dataset` and `DataLoader` (which we'll see in a second) are the machinery in MXNet which provides a stream of input data that is consumed by a training algorithm, typically in batches of multiple data entities at once for better efficiency.
+In this tutorial, we'll configure the data loader to feed examples in batches of 100.
 
-Image batches are commonly represented by a 4-D array with shape `(batch_size, num_channels, width, height)`. For the MNIST dataset, since the images are grayscale, there is only one color channel. Also, the images are 28x28 pixels, and so each image has width and height equal to 28. Therefore, the shape of input is `(batch_size, 1, 28, 28)`. Another important consideration is the order of input samples. When feeding training examples, it is critical that we don't feed samples with the same label in succession. Doing so can slow down training.
+Image batches are commonly represented by a 4-D array with shape `(batch_size, num_channels, height, width)`. This convention is denoted by "BCHW", and it is the default in MXNet. For the MNIST dataset, each image has a size of 28x28 pixels and one color channel (grayscale), hence the shape of an input batch will be `(batch_size, 1, 28, 28)`.
+
+Another important consideration is the order of input samples. When feeding training examples, it is critical that we don't feed samples with the same label in succession. Doing so can slow down training.
 Data iterators take care of this by randomly shuffling the inputs. Note that we only need to shuffle the training data. The order does not matter for test data.
 
-The following source code initializes the data iterators for the MNIST dataset. Note that we initialize two iterators: one for train data and one for test data.
+The following code initializes the data iterators for the MNIST dataset.
 
 ```python
 batch_size = 100
-train_data = mx.io.NDArrayIter(mnist['train_data'], mnist['train_label'], batch_size, shuffle=True)
-val_data = mx.io.NDArrayIter(mnist['test_data'], mnist['test_label'], batch_size)
+train_loader = mx.gluon.data.DataLoader(train_data, shuffle=True, batch_size=batch_size)
+val_loader = mx.gluon.data.DataLoader(val_data, shuffle=False, batch_size=batch_size)
 ```
 
 ## Approaches
@@ -61,26 +69,22 @@ Now, let's import required nn modules
 ```python
 from __future__ import print_function
 import mxnet as mx
-from mxnet import gluon
+from mxnet import gluon, autograd
 from mxnet.gluon import nn
-from mxnet import autograd as ag
 ```
 
 ### Define a network: Multilayer Perceptron
 
 The first approach makes use of a [Multilayer Perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron) to solve this problem. We'll define the MLP using MXNet's imperative approach.
 
-MLPs consist of several fully connected layers. A fully connected layer or FC layer for short, is one where each neuron in the layer is connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an [affine transform](https://en.wikipedia.org/wiki/Affine_transformation) to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = W X + b*. The FC layer has two learnable parameters, the *m x k* weight matrix *W* and the *m x 1* bias vector *b*.
+MLPs consist of several fully connected layers. A fully connected layer or FC layer for short, is one where each neuron in the layer is connected to every neuron in its preceding layer. From a linear algebra perspective, an FC layer applies an [affine transform](https://en.wikipedia.org/wiki/Affine_transformation) to the *n x m* input matrix *X* and outputs a matrix *Y* of size *n x k*, where *k* is the number of neurons in the FC layer. *k* is also referred to as the hidden size. The output *Y* is computed according to the equation *Y = X W + b*. The FC layer has two learnable parameters, the *m x k* weight matrix *W* and the *1 x k* bias vector *b*.
 
-In an MLP, the outputs of most FC layers are fed into an activation function, which applies an element-wise non-linearity. This step is critical and it gives neural networks the ability to classify inputs that are not linearly separable. Common choices for activation functions are sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) (ReLU). In this example, we'll use the ReLU activation function which has several desirable properties and is typically considered a default choice.
+In an MLP, the outputs of FC layers are typically fed into an activation function that applies an elementwise nonlinearity. This step is critical since it gives neural networks the ability to classify inputs that are not linearly separable. Common choices for activation functions are sigmoid, tanh, and [rectified linear unit](https://en.wikipedia.org/wiki/Rectifier_%28neural_networks%29) (ReLU). In this example, we'll use the ReLU activation function since it has several nice properties that make it a good default choice.
 
-The following code declares three fully connected layers with 128, 64 and 10 neurons each.
-The last fully connected layer often has its hidden size equal to the number of output classes in the dataset. Furthermore, these FC layers uses ReLU activation for performing an element-wise ReLU transformation on the FC layer output.
-
-To do this, we will use [Sequential layer](http://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential) type. This is simply a linear stack of neural network layers. `nn.Dense` layers are nothing but the fully connected layers we discussed above.
+The following code declares three fully connected (or *dense*) layers with 128, 64 and 10 neurons each, where the last number of neurons matches the number of output classes in our dataset.
+To build the neural network, We use a [`Sequential` layer](http://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential), which is a convenience class to build a simple linear stack of layers (often called a *feed-forward neural net*).
 
 ```python
-# define network
 net = nn.Sequential()
 with net.name_scope():
     net.add(nn.Dense(128, activation='relu'))
