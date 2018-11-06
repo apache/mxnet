@@ -843,7 +843,9 @@ def scalar_op_helper(node, op_name, **kwargs):
     """Helper function for scalar arithmetic operations"""
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    scalar_value = [float(attrs.get("scalar", 1))]
+    input_type = kwargs["in_type"]
+    scalar_value = np.array([attrs.get("scalar", 1)],
+                            dtype=onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type])
 
     initializer = kwargs["initializer"]
     flag = True
@@ -864,17 +866,15 @@ def scalar_op_helper(node, op_name, **kwargs):
 
     # else create a new tensor of the scalar value, add it in initializer
     if flag is True:
-        np_arr = np.array(scalar_value)
-        data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np_arr.dtype]
-        dims = np.shape(np_arr)
+        dims = np.shape(scalar_value)
 
         scalar_op_name = "scalar_op" + str(kwargs["idx"])
-        tensor_node = onnx.helper.make_tensor_value_info(scalar_op_name, data_type, dims)
+        tensor_node = onnx.helper.make_tensor_value_info(scalar_op_name, input_type, dims)
 
         initializer.append(
             onnx.helper.make_tensor(
                 name=scalar_op_name,
-                data_type=data_type,
+                data_type=input_type,
                 dims=dims,
                 vals=scalar_value,
                 raw=False,
@@ -1249,7 +1249,7 @@ def convert_reshape(node, **kwargs):
     output_shape_list = convert_string_to_list(attrs["shape"])
 
     initializer = kwargs["initializer"]
-    output_shape_np = np.array(output_shape_list)
+    output_shape_np = np.array(output_shape_list, dtype='int64')
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
     dims = np.shape(output_shape_np)
 

@@ -437,8 +437,8 @@ def cond(pred, then_func, else_func):
     --------
     >>> a, b = mx.nd.array([1]), mx.nd.array([2])
     >>> pred = a * b < 5
-    >>> then_func = lambda a, b: (a + 5) * (b + 5)
-    >>> else_func = lambda a, b: (a - 5) * (b - 5)
+    >>> then_func = lambda: (a + 5) * (b + 5)
+    >>> else_func = lambda: (a - 5) * (b - 5)
     >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
     >>> outputs[0]
     [42.]

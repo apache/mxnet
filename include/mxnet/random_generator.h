@@ -54,7 +54,8 @@ class RandGenerator<cpu, DType> {
    public:
     typedef typename std::conditional<std::is_floating_point<DType>::value,
                                       DType, double>::type FType;
-
+    typedef typename std::conditional<std::is_integral<DType>::value,
+                                      DType, int>::type IType;
     explicit Impl(RandGenerator<cpu, DType> *gen, int state_idx)
         : engine_(gen->states_ + state_idx) {}
 
@@ -71,8 +72,8 @@ class RandGenerator<cpu, DType> {
       return dist_uniform(*engine_);
     }
 
-    MSHADOW_XINLINE DType discrete_uniform(const int64_t lower, const int64_t upper) {
-      std::uniform_int_distribution<DType> dist_discrete_uniform(lower, upper);
+    MSHADOW_XINLINE IType discrete_uniform(const int64_t lower, const int64_t upper) {
+      std::uniform_int_distribution<IType> dist_discrete_uniform(lower, upper);
       return dist_discrete_uniform(*engine_);
     }
 

@@ -510,10 +510,6 @@ static inline void rand_int_op(const nnvm::NodeAttrs& attrs,
                                TBlob* outputs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleRandIntParam& param = nnvm::get<SampleRandIntParam>(attrs.parsed);
-    if(param.high==None){
-      param.high = param.low;
-      param.low = 0;
-    }
     CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
     Tensor<xpu, 1, int64_t> low, high;
     GetSamplingTempData<xpu, int64_t>(param.low, param.high, ctx,

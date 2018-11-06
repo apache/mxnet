@@ -520,22 +520,20 @@ def shuffle(data, **kwargs):
     return _internal._shuffle(data, **kwargs)
 
 
-def randint(low, high=None, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
+def randint(low, high, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     """Draw random samples from a discrete uniform distribution.
 
     Samples are uniformly distributed over the half-open interval *[low, high)*
-    (includes *low*, but excludes *high*). If high is None (the default), then results
-    are from *[0, low)*.
+    (includes *low*, but excludes *high*).
 
     Parameters
     ----------
     low : int, required
         Lower boundary of the output interval. All values generated will be
-        greater than or equal to low. Unless high=None, in which case this parameter
-        becomes high and low is set to 0
-    high : int, optional
+        greater than or equal to low.
+    high : int, required
         Upper boundary of the output interval. All values generated will be
-        less than high. The default value is 1.
+        less than high.
     shape : int or tuple of ints, optional
         The number of samples to draw. If shape is, e.g., `(m, n)` and `low` and
         `high` are scalars, output shape will be `(m, n)`.
@@ -550,8 +548,8 @@ def randint(low, high=None, shape=_Null, dtype=_Null, ctx=None, out=None, **kwar
 
     Examples
     --------
-    >>> mx.nd.random.randint()
-    [ 190]
+    >>> mx.nd.random.randint(5, 100)
+    [ 90]
     <NDArray 1 @cpu(0)
     >>> mx.nd.random.randint(-10, 2, ctx=mx.gpu(0))
     [ -8]
@@ -567,5 +565,5 @@ def randint(low, high=None, shape=_Null, dtype=_Null, ctx=None, out=None, **kwar
      [ 3  3]]
     <NDArray 3x2 @cpu(0)>
     """
-    return _random_helper(_internal._random_randint, _internal._sample_uniform,
+    return _random_helper(_internal._random_randint, None,
                           [low, high], shape, dtype, ctx, out, kwargs)
