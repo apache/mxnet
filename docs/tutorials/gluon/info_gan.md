@@ -353,7 +353,6 @@ Nearest neighbor function, which takes a matrix of features and an input feature
 ```python
 def get_knn(features, input_vector, k=3):
     dist = (nd.square(features - input_vector).sum(axis=1))/features.shape[0]
-    print (np.sort(dist.asnumpy())[:10])
     indices = dist.asnumpy().argsort()[:k]
     return [(index, dist[index].asscalar()) for index in indices]
 ```
