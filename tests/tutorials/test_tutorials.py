@@ -117,7 +117,10 @@ def test_gluon_learning_rate_schedules():
 
 def test_gluon_learning_rate_schedules_advanced():
     assert _test_tutorial_nb('gluon/learning_rate_schedules_advanced')
-  
+
+def test_gluon_info_gan():
+    assert _test_tutorial_nb('gluon/info_gan')
+
 def test_nlp_cnn():
     assert _test_tutorial_nb('nlp/cnn')
 

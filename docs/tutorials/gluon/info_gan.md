@@ -174,7 +174,7 @@ class Discriminator(gluon.HybridBlock):
 ```
 
 The InfoGAN has the following layout.
-<img src="images/InfoGAN.png" style="width:800px;height:250px;">
+<img src="https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/InfoGAN.png" style="width:800px;height:250px;">
 Discriminator and Generator are the same as in the DCGAN example. On top of the Disciminator is the Q model, which is estimating the code `c` for given fake images. The Generator's input is random noise and the latent code `c`.  
 
 ## Training Loop
@@ -405,7 +405,7 @@ for image in test_images[:100]:
 
 ## How the Generator learns
 We trained the Generator for a couple of epochs and stored a couple of fake images per epoch. Check the video.
-                    ![alt text](https://raw.githubusercontent.com/NRauschmayr/InfoGAN_Gluon/master/images/infogan.gif)                           
+                    ![alt text](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/infogan.gif)
                                                         
 
 The following function computes the TSNE on the feature matrix and stores the result in a json-file. This file can be loaded with [TSNEViewer](https://ml4a.github.io/guides/ImageTSNEViewer/) 
@@ -432,4 +432,4 @@ with open("imagetsne.json", 'w') as outfile:
 
 Load the file with TSNEViewer. You can now inspect whether similiar looking images are grouped nearby or not. 
 
-<img src="images/tsne.png" style="width:800px;height:600px;">
+<img src="https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/tsne.png" style="width:800px;height:600px;">
