@@ -320,4 +320,6 @@ the console to run model quantization for a specific configuration.
 - `launch_inference.sh` This is a shell script that calculate the accuracies of all the quantized models generated
 by invoking `launch_quantize.sh`.
 
-**NOTE**: This example has only been tested on Linux systems.
+**NOTE**: 
+- This example has only been tested on Linux systems.
+- Performance is expected to decrease with GPU as the params. The purpose of the quantization implementation is to minimize accuracy loss when converting FP32 models to INT8. MXNet community is working on improving the performance. 
