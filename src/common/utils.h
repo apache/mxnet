@@ -718,12 +718,15 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape
  * \brief parallelize copy by OpenMP.
  */
 template<typename DType>
-void OMPCopy(const TBlob &from, TBlob *to, const index_t size) {
-  DType* dst_dptr = to->dptr<DType>();
-  const DType* src_dptr = from.dptr<DType>();
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index_t i = 0; i < size; ++i) {
-    dst_dptr[i] = src_dptr[i];
+inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
+  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_COPY_SIZE", 200000);
+  if (size >= copy_block_size) {
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] = src[i];
+    }
+  } else {
+    std::memcpy(dst, src, sizeof(DType) * size);
   }
 }
 
