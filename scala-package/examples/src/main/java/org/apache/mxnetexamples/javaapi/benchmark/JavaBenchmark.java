@@ -79,7 +79,7 @@ public class JavaBenchmark {
             return;
         }
         String modelName = args[1];
-        InferBase model;
+        InferBase model = null;
         switch(modelName) {
             case "ObjectDetection":
                 runBatch = true;
