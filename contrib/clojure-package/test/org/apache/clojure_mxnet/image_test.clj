@@ -46,34 +46,34 @@
         img-arr-2 (image/decode-image 
                    (io/input-stream image-path)
                    {:color-flag image/GRAYSCALE})]
-    (is [576 1024 3] (ndarray/shape-vec img-arr))
-    (is [576 1024 3] (ndarray/shape-vec img-arr-2))))
+    (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
+    (is (= [576 1024 1] (ndarray/shape-vec img-arr-2)))))
 
 (deftest test-read-image
   (let [img-arr (image/read-image image-path)
         img-arr-2 (image/read-image
                    image-path
                    {:color-flag image/GRAYSCALE})]
-    (is [576 1024 3] (ndarray/shape-vec img-arr))
-    (is [576 1024 1] (ndarray/shape-vec img-arr))))
+    (is (= [576 1024 3] (ndarray/shape-vec img-arr)))
+    (is (= [576 1024 1] (ndarray/shape-vec img-arr-2)))))
 
 (deftest test-resize-image
   (let [img-arr (image/read-image image-path)
         resized-arr (image/resize-image img-arr 224 224)]
-    (is [224 224 3] (ndarray/shape-vec img-arr))))
+    (is (= [224 224 3] (ndarray/shape-vec resized-arr)))))
 
 (deftest test-crop-image
   (let [img-arr (image/read-image image-path)
         cropped-arr (image/fixed-crop img-arr 0 0 224 224)]
-    (is [224 224 3] (ndarray/shape-vec img-arr))))
+    (is (= [224 224 3] (ndarray/shape-vec cropped-arr)))))
 
 (deftest test-apply-border
   (let [img-arr (image/read-image image-path)
-        cropped-arr (image/apply-border img-arr 1 1 1 1)]
-    (is [578 1026 3] (ndarray/shape-vec img-arr))))
+        padded-arr (image/apply-border img-arr 1 1 1 1)]
+    (is (= [578 1026 3] (ndarray/shape-vec padded-arr)))))
 
 (deftest test-to-image
   (let [img-arr (image/read-image image-path)
         resized-arr (image/resize-image img-arr 224 224)
         new-img (image/to-image resized-arr)]
-    (is true (ImageIO/write new-img "png" (io/file tmp-dir "out.png")))))
+    (is (= true (ImageIO/write new-img "png" (io/file tmp-dir "out.png"))))))
