@@ -394,7 +394,7 @@ As a result, we have created two neural nets: a Generator, which is able to crea
 Along the way, we have learned how to do the image manipulation and visualization that is associated with the training of deep neural nets. We have also learned how to use MXNet's Module APIs to perform advanced model training functionality to fit the model.
 
 ## Acknowledgements
-This tutorial is based on [MXNet DCGAN codebase](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py),
+This tutorial is based on [MXNet DCGAN codebase](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dc_gan/dcgan.py),
 [The original paper on GANs](https://arxiv.org/abs/1406.2661), as well as [this paper on deep convolutional GANs](https://arxiv.org/abs/1511.06434).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
