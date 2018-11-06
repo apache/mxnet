@@ -402,6 +402,7 @@ for image in test_images[:100]:
     plt.show()
     plt.clf()
 ```
+![png](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/output.png)<!--notebook-skip-line--> 
 
 ## How the Generator learns
 We trained the Generator for a couple of epochs and stored a couple of fake images per epoch. Check the video.
