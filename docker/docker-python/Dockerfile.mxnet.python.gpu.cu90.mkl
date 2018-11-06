@@ -22,7 +22,7 @@ FROM nvidia/cuda:9.0-cudnn7-devel
 ARG version
 
 RUN apt-get update && \
-    apt-get install -y wget python gcc && \
+    apt-get install -y wget python-dev gcc && \
     wget https://bootstrap.pypa.io/get-pip.py && \
     python get-pip.py
 

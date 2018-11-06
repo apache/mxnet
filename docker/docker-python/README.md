@@ -2,24 +2,31 @@
 
 The `docker-python` directory can be used to release mxnet python docker images to dockerhub after any mxnet release.  
 It uses the appropriate pip binaries to build different docker images. Both python2 (default) and python3 images are available as -
-* cpu
-* cpu_mkl
-* latest (same as cpu)
-* gpu_cu90 
-* gpu_cu90_mkl
-* gpu (same as gpu_cu90)
-* gpu_cu80 
-* gpu_cu80_mkl
-* gpu_cu92 
-* gpu_cu92_mkl
-* cpu_py3
-* cpu_mkl_py3
-* gpu_cu90_py3
-* gpu_cu90_mkl_py3
-* gpu_cu80_py3
-* gpu_cu80_mkl_py3
-* gpu_cu92_py3
-* gpu_cu92_mkl_py3
+* {version}_cpu
+* {version}_cpu_mkl
+* {version}_gpu_cu90 
+* {version}_gpu_cu90_mkl
+* {version}_gpu (same as gpu_cu90)
+* {version}_gpu_cu80 
+* {version}_gpu_cu80_mkl
+* {version}_gpu_cu92 
+* {version}_gpu_cu92_mkl
+* {version}_cpu_py3
+* {version}_cpu_mkl_py3
+* {version}_gpu_cu90_py3
+* {version}_gpu_cu90_mkl_py3
+* {version}_gpu_cu80_py3
+* {version}_gpu_cu80_mkl_py3
+* {version}_gpu_cu92_py3
+* {version}_gpu_cu92_mkl_py3
+
+And the following tags will be available without the version string in the image name (for Benchmarking and other use cases):
+* latest (same as {version}_cpu)
+* gpu (same as {version}_gpu_cu90)
+* latest_cpu_mkl_py2 (same as {version}_cpu_mkl)
+* latest_cpu_mkl_py3 (same as {version}_cpu_mkl_py3)
+* latest_gpu_mkl_py2 (same as {version}_gpu_cu90_mkl)
+* latest_gpu_mkl_py3 (same as {version}_gpu_cu90_mkl_py3)
 
 Refer: https://pypi.org/project/mxnet/
 
