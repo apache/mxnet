@@ -27,7 +27,7 @@ def load_obj(name):
     with open(name + '.pkl', 'rb') as f:
         return pickle.load(f)
 
-tag_dict = load_obj("../preprocessed_data/tag_to_index")
+tag_dict = load_obj("../data/tag_to_index")
 not_entity_index = tag_dict["O"]
 
 def classifer_metrics(label, pred):

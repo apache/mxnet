@@ -98,5 +98,21 @@ To run the unit tests under qemu:
 ./build.py -p armv7 && ./build.py -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu
 ```
 
-To get a shell on the container and debug issues with the emulator itself:
-Run the output of `./build.py -p test.arm_qemu --print-docker-run`
+To get a shell on the container and debug issues with the emulator itself, we build the container
+and then execute it interactively. We can afterwards use port 2222 on the host to connect with SSH.
+
+
+```
+ci/build.py -p test.arm_qemu -b && docker run -p2222:2222 -ti mxnetci/build.test.arm_qemu
+```
+
+Then from another terminal:
+
+```
+ssh -o StrictHostKeyChecking=no -p 2222 qemu@localhost
+```
+
+There are two pre-configured users: `root` and `qemu` both without passwords.
+
+
+

@@ -1,7 +1,7 @@
 <img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> Deep Learning for Scala/Java
 =====
 
-[![Build Status](https://travis-ci.org/dmlc/mxnet.svg?branch=master)](https://travis-ci.org/dmlc/mxnet)
+[![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 Here you find the MXNet Scala Package!
@@ -15,11 +15,13 @@ It brings flexible and efficient GPU/CPU computing and state-of-art deep learnin
 Install
 ------------
  
-Technically, all you need is the `mxnet-full_2.10-{arch}-{xpu}-0.1.1.jar` in your classpath.
+Technically, all you need is the `mxnet-full_2.11-{arch}-{xpu}-{version}.jar` in your classpath.
 It will automatically extract the native library to a tempfile and load it.
+You can find the pre-built jar file in [here](https://search.maven.org/search?q=g:org.apache.mxnet)
+ and also our nightly build package [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~)
 
 Currently we provide `linux-x86_64-gpu`, `linux-x86_64-cpu` and `osx-x86_64-cpu`. Support for Windows will come soon.
-Use the following dependency in maven, change the artifactId according to your own architecture, e.g., `mxnet-full_2.10-osx-x86_64-cpu` for OSX (and cpu-only).
+Use the following dependency in maven, change the artifactId according to your own architecture, e.g., `mxnet-full_2.11-osx-x86_64-cpu` for OSX (and cpu-only).
 
 ```HTML
 <dependency>
