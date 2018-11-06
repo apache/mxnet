@@ -415,27 +415,24 @@ fixed-size items.
 
         Examples
         --------
-        >>> x = mx.nd.zeros((2,3))
+        >>> x = mx.nd.zeros((2, 3))
         >>> x[:] = 1
         >>> x.asnumpy()
         array([[ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
-        >>> x.asnumpy()
-        array([[ 1.,  1.,  1.],
-               [ 1.,  1.,  1.]], dtype=float32)
-        >>> x[:,1:2] = 2
+        >>> x[:, 1:2] = 2
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 1.,  2.,  1.]], dtype=float32)
-        >>> x[1:2,1:] = 3
+        >>> x[1:2, 1:] = 3
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 1.,  3.,  3.]], dtype=float32)
-        >>> x[1:,0:2] = mx.nd.zeros((1,2))
+        >>> x[1:, 0:2] = mx.nd.zeros((1, 2))
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 0.,  0.,  3.]], dtype=float32)
-        >>> x[1,2] = 4
+        >>> x[1, 2] = 4
         >>> x.asnumpy()
         array([[ 1.,  2.,  1.],
                [ 0.,  0.,  4.]], dtype=float32)
@@ -448,6 +445,7 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
+        self, key = _expand_none_and_ellipsis(self, key, drop_none=True)
         indexing_dispatch_code = _get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             self._set_nd_basic_indexing(key, value)
@@ -471,7 +469,6 @@ fixed-size items.
 
         - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
           while not for key=[[1, 2]].
-        - Ellipsis (...) and np.newaxis are not supported.
         - Boolean array indexing is not supported.
 
         Parameters
@@ -481,7 +478,7 @@ fixed-size items.
 
         Examples
         --------
-        >>> x = mx.nd.arange(0,6).reshape((2,3))
+        >>> x = mx.nd.arange(0, 6).reshape((2, 3))
         >>> x.asnumpy()
         array([[ 0.,  1.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
@@ -510,6 +507,7 @@ fixed-size items.
         [[[4 5]
           [6 7]]]
         """
+        self, key = _expand_none_and_ellipsis(self, key, drop_none=True)
         indexing_dispatch_code = _get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             return self._get_nd_basic_indexing(key)
@@ -2381,6 +2379,73 @@ fixed-size items.
         <NDArray 2x3 @cpu(0)>
         """
         return to_dlpack_for_write(self)
+
+
+def _expand_none_and_ellipsis(arr, idcs, drop_none=False):
+    orig_idcs = idcs
+    if not isinstance(idcs, tuple):
+        # NOTE: `arr[idcs]` should be equivalent to `arr[(idcs,)]`, but in
+        # some cases this is not true currently, e.g., with `slice` objects.
+        idcs = (idcs,)
+
+    ## Step 1: Expand ellipsis to an appropriate number of `slice(None)`.
+
+    # We need to loop explicitly since tuple functions like `index()` or
+    # `count()` use `==` internally, which doesn't play well with fancy
+    # indexing.
+    ell_idx = None
+    num_none = 0
+    nonell_idcs = []
+    for i, idx in enumerate(idcs):
+        if idx is Ellipsis:
+            if ell_idx is not None:
+                raise IndexError(
+                    "Cannot use more than one ellipsis (`...`) "
+                    "for indexing")
+            else:
+                ell_idx = i
+        else:
+            if idx is None:
+                num_none += 1
+            nonell_idcs.append(idx)
+
+    nonell_idcs = tuple(nonell_idcs)
+
+    # If neither `None` nor `Ellipsis` are present, we have nothing to do and
+    # just return the input.
+    if ell_idx is None and num_none == 0:
+        return arr, orig_idcs
+
+    if ell_idx is None:
+        # This handles the case of "too few" indices, e.g., `nd.zeros((2, 3))[0]`.
+        ell_idx = len(arr.shape)
+
+    ell_ndim = len(arr.shape) + num_none - len(nonell_idcs)
+    new_idcs = nonell_idcs[:ell_idx] + (slice(None),) * ell_ndim + nonell_idcs[ell_idx:]
+
+    # If we decide to drop `None`, we return here and do not reshape.
+    if drop_none:
+        slc_idcs = tuple(idx for idx in new_idcs if idx is not None)
+        return arr, slc_idcs
+
+    ## Step 2: Make new axes where `None` is in the index tuple.
+
+    # We use `reshape()` with entries equal to 1 at new axes.
+    tmp_shape = []
+    ax = 0
+    for idx in new_idcs:
+        if idx is None:
+            tmp_shape.append(1)
+        else:
+            tmp_shape.append(arr.shape[ax])
+            ax += 1
+
+    reshp_arr = arr.reshape(tmp_shape)
+
+    slc_idcs = tuple(slice(None) if idx is None else idx
+                     for idx in nonell_idcs)
+    return reshp_arr, slc_idcs
+
 
 def _get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
