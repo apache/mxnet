@@ -53,6 +53,9 @@ NNVM_REGISTER_OP(CTCLoss)
 .add_alias("_contrib_CTCLoss")
 .add_alias("_contrib_ctc_loss")
 .describe(R"code(Connectionist Temporal Classification Loss.
+
+.. note:: The existing alias ``contrib_CTCLoss`` is deprecated.
+
 The shapes of the inputs and outputs:
 
 - **data**: `(sequence_length, batch_size, alphabet_size)`

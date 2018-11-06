@@ -182,7 +182,7 @@ class ThreadedVar final
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
   // TODO(hotpxl) consider rename head
-  /*! \brief inetrnal mutex of the ThreadedVar */
+  /*! \brief internal mutex of the ThreadedVar */
   std::mutex mutex_;
   /*!
    * \brief number of pending reads operation in the variable.

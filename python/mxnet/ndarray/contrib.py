@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import, unused-wildcard-import,redefined-outer-name
 """Contrib NDArray API of MXNet."""
 import math
+import numpy as np
 from ..context import current_context
 from ..random import uniform
 from ..base import _as_list
@@ -28,7 +29,7 @@ try:
 except ImportError:
     pass
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite", "isnan"]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -436,8 +437,8 @@ def cond(pred, then_func, else_func):
     --------
     >>> a, b = mx.nd.array([1]), mx.nd.array([2])
     >>> pred = a * b < 5
-    >>> then_func = lambda a, b: (a + 5) * (b + 5)
-    >>> else_func = lambda a, b: (a - 5) * (b - 5)
+    >>> then_func = lambda: (a + 5) * (b + 5)
+    >>> else_func = lambda: (a - 5) * (b - 5)
     >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
     >>> outputs[0]
     [42.]
@@ -460,3 +461,84 @@ def cond(pred, then_func, else_func):
         return then_func()
     else:
         return else_func()
+
+def isinf(data):
+    """Performs an element-wise check to determine if the NDArray contains an infinite element
+    or not.
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray, with same shape as input, where 1 indicates the array element is
+        equal to positive or negative infinity and 0 otherwise.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    >>> output = mx.nd.contrib.isinf(data)
+    >>> output
+    [1. 1. 1. 0.]
+    <NDArray 4 @cpu(0)>
+    """
+    return data.abs() == np.inf
+
+def isfinite(data):
+    """Performs an element-wise check to determine if the NDArray contains an infinite element
+    or not.
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray, with same shape as input, where 1 indicates the array element is
+        finite i.e. not equal to positive or negative infinity and 0 in places where it is
+        positive or negative infinity.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([np.inf, -np.inf, np.NINF, -1])
+    >>> output = mx.nd.contrib.isfinite(data)
+    >>> output
+    [0. 0. 0. 1.]
+    <NDArray 4 @cpu(0)>
+    """
+    is_data_not_nan = data == data
+    is_data_not_infinite = data.abs() != np.inf
+    return ndarray.logical_and(is_data_not_infinite, is_data_not_nan)
+
+def isnan(data):
+    """Performs an element-wise check to determine if the NDArray contains a NaN element
+    or not.
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray, with same shape as input, where 1 indicates the array element is
+        NaN i.e. Not a Number and 0 otherwise.
+
+    Examples
+    --------
+    >>> data = mx.nd.array([np.nan, -1])
+    >>> output = mx.nd.contrib.isnan(data)
+    >>> output
+    [1. 0.]
+    <NDArray 2 @cpu(0)>
+    """
+    return data != data
