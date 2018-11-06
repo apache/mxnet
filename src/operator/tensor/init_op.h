@@ -453,7 +453,7 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
 
 struct range_fwd {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int repeat, DType start, DType step,
+  MSHADOW_XINLINE static void Map(index_t i, int repeat, DType start, DType step,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[i], req, start + (i/repeat) * step);
   }
