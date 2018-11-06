@@ -7,24 +7,22 @@ The codes are made meaningful by maximizing the mutual information between code 
 
 ```python
 from __future__ import print_function
+from datetime import datetime
 import sys
 import os
-import matplotlib as mpl
+import logging
+import time
 import tarfile
-import matplotlib.image as mpimg
-from matplotlib import pyplot as plt
-from mxboard import SummaryWriter
 
+from matplotlib import pyplot as plt
 import mxnet as mx
 from mxnet import gluon
 from mxnet import ndarray as nd
 from mxnet.gluon import nn, utils
 from mxnet import autograd
+from mxboard import SummaryWriter
 import numpy as np
 
-from datetime import datetime
-import time
-import logging
 ```
 
 The latent code vector c can contain several variables, which can be categorical and/or continuous. We set `n_continuous` to 2 and `n_categories` to 10.
@@ -49,7 +47,6 @@ if not os.path.exists(data_path):
     data_file = utils.download(lfw_url)
     with tarfile.open(data_file) as tar:
         tar.extractall(path=data_path)
-
 
 ```
 
@@ -132,7 +129,7 @@ class Generator(gluon.HybridBlock):
 ```
 
 ## Discriminator
-Define the Discriminator and Q model. The Q model shares many layers with the Discriminator. Its task is to estimate the code $c$ for a given fake image.  It is used to maximize the lower bound to the mutual information.
+Define the Discriminator and Q model. The Q model shares many layers with the Discriminator. Its task is to estimate the code `c` for a given fake image.  It is used to maximize the lower bound to the mutual information.
 
 
 ```python
@@ -155,7 +152,7 @@ class Discriminator(gluon.HybridBlock):
 
             self.D.add(nn.Dense(1024, use_bias=False), nn.BatchNorm(), nn.Activation(activation='relu'))
        
-            self.prob = nn.Dense(1)#, activation='sigmoid')
+            self.prob = nn.Dense(1)
             self.feat = nn.HybridSequential()
             self.feat.add(nn.Dense(128, use_bias=False), nn.BatchNorm(), nn.Activation(activation='relu'))
             self.category_prob = nn.Dense(n_categories)
@@ -217,12 +214,13 @@ if os.path.isfile("infogan_d_latest.params") and os.path.isfile("infogan_g_lates
 
 The latent code $c$ is part of the Generator input and it contains mutliple variables (continuous, categorical) that can represent different distributions. In order to make sure that the Generator uses the latent code, mutual information is introduced into the GAN loss term. Mutual information measures how much X is known given Y or vice versa. It is defined as:
 
-$$I(X;Y) = entropy(X) - entropy(X|Y) = entropy(Y) - entropy(Y|X) $$
+![gif](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/entropy.gif) 
 
 The InfoGAN loss is:
-$$\min_{G} \max_{D} \, V(D, G) - \lambda I(c, G(z, c))$$
 
-where $V(D,G)$ is the GAN loss and the mutual information $I(c, G(z, c))$ goes in as regularization. The goal is to reach high mutual information, in order to learn meaningful codes $c$ for the data. 
+![gif](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/loss.gif)
+
+where `V(D,G)` is the GAN loss and the mutual information `I(c, G(z, c))` goes in as regularization. The goal is to reach high mutual information, in order to learn meaningful codes `c` for the data. 
 
 
 Define the loss functions. `SoftmaxCrossEntropyLoss` for the categorical code `c`,  `L2Loss` for the continious code `c` and `SigmoidBinaryCrossEntropyLoss` for the normal GAN loss.
@@ -253,7 +251,7 @@ def create_generator_input():
 Define the training loop. 
 1. The discriminator receives `real_data` and `loss1` measures how many real images have been identified as real
 2. The discriminator receives `fake_image` from the Generator and `loss1` measures how many fake images have been identified as fake
-3. Update Discriminator
+3. Update Discriminator. Currently, it is updated every second iteration in order to avoid that the Discriminator becomes too strong. You may want to change that.
 4. The updated discriminator receives `fake_image` and `loss1` measures how many fake images have been been identified as real, `loss2` measures the difference between the sampled continuous latent code `c` and the output of the Q model and `loss3` measures the difference between the sampled categorical latent code `c` and the output of the Q model.
 4. Update Generator and Q
 
@@ -292,6 +290,8 @@ with SummaryWriter(logdir='./logs/') as sw:
                 d_error         = d_error_real + d_error_fake
 
             d_error_epoch += d_error.mean()
+            
+            #Update D every second iteration
             if i % 2 == 0:
                 d_error.backward()
                 d_trainer.step(data.shape[0])
@@ -327,8 +327,8 @@ with SummaryWriter(logdir='./logs/') as sw:
                 
             time1 = time.time()
     
-        #discriminator.save_parameters("infogan_d.params")
-        #generator.save_parameters("infogan_g.params")
+        discriminator.save_parameters("infogan_d_latest.params")
+        generator.save_parameters("infogan_g_latest.params")
 ```
 
 ## Image similarity
@@ -413,12 +413,13 @@ The following function computes the TSNE on the feature matrix and stores the re
 
 
 ```python
-from sklearn.manifold import TSNE
-from scipy.spatial import distance
-import os
 import json
 
+from sklearn.manifold import TSNE
+from scipy.spatial import distance
+
 tsne = TSNE(n_components=2, learning_rate=150, perplexity=30, verbose=2).fit_transform(features.asnumpy())
+
 # save data to json
 data = []
 counter = 0
