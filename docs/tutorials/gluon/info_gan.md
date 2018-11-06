@@ -33,7 +33,7 @@ batch_size   = 64
 z_dim        = 100
 n_continuous = 2
 n_categories = 10
-ctx      = mx.cpu()
+ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 ```
 
 Some functions to load and normalize images.
