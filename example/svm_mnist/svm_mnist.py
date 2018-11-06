@@ -33,6 +33,10 @@ from sklearn.decomposition import PCA
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
+np.random.seed(1234) # set seed for deterministic ordering
+mx.random.seed(1234)
+random.seed(1234)
+
 # Network declaration as symbols. The following pattern was based
 # on the article, but feel free to play with the number of nodes
 # and with the activation function
@@ -50,25 +54,25 @@ mlp_svm_l2 = mx.symbol.SVMOutput(data=fc3, name='svm_l2')
 mlp_svm_l1 = mx.symbol.SVMOutput(data=fc3, name='svm_l1', use_linear=True)
 
 # Compare with softmax cross entropy loss
-mlp_softmax = mx.symbol.SoftmaxOutput(data=act2, name='softmax')
+mlp_softmax = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
 
 print("Preparing data...")
+mnist_data = mx.test_utils.get_mnist()
+X = np.concatenate([mnist_data['train_data'], mnist_data['test_data']])
+Y = np.concatenate([mnist_data['train_label'], mnist_data['test_label']])
+X = X.reshape((X.shape[0], -1)).astype(np.float32) * 255
+
 # Now we fetch MNIST dataset, add some noise, as the article suggests,
 # permutate and assign the examples to be used on our network
-mnist = fetch_mldata('MNIST original')
-mnist_pca = PCA(n_components=70).fit_transform(mnist.data)
+mnist_pca = PCA(n_components=70).fit_transform(X)
 noise = np.random.normal(size=mnist_pca.shape)
 mnist_pca += noise
-np.random.seed(1234) # set seed for deterministic ordering
-mx.random.seed(1234)
-random.seed(1234)
 p = np.random.permutation(mnist_pca.shape[0])
-X = mnist_pca[p]
-Y = mnist.target[p]
-X_show = mnist.data[p]
+X = mnist_pca[p] / 255.
+Y = Y[p]
+X_show = X[p]
 
 # This is just to normalize the input and separate train set and test set
-X = X.astype(np.float32)/255
 X_train = X[:60000]
 X_test = X[60000:]
 X_show = X_show[60000:]
@@ -92,7 +96,7 @@ for output in [mlp_svm_l2, mlp_svm_l1, mlp_softmax]:
 
     # Here we instatiate and fit the model for our data
     # The article actually suggests using 400 epochs,
-    # But I reduced to 10, for convinience
+    # But I reduced to 10, for convenience
 
     mod = mx.mod.Module(
         context = ctx, 
@@ -115,6 +119,6 @@ for output in [mlp_svm_l2, mlp_svm_l1, mlp_softmax]:
 for key, value in results.items():
     print(key, value, "%s")
 
-# svm_l2 97.97 %s
-# svm_l1 98.26 %s
-# softmax 97.97 %s
+#svm_l2 97.85 %s
+#svm_l1 98.15 %s
+#softmax 97.69 %s
