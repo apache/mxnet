@@ -283,17 +283,19 @@ def shuffle(data, **kwargs):
     return _internal._shuffle(data, **kwargs)
 
 
-def randint(low=0, high=1, shape=_Null, dtype=_Null, **kwargs):
+def randint(low, high=None, shape=_Null, dtype=_Null, **kwargs):
     """Draw random samples from a discrete uniform distribution.
 
     Samples are uniformly distributed over the half-open interval *[low, high)*
-    (includes *low*, but excludes *high*).
+    (includes *low*, but excludes *high*). If high is None (the default), then results
+    are from *[0, low)*.
 
     Parameters
     ----------
-    low : int, optional
+    low : int, required
         Lower boundary of the output interval. All values generated will be
-        greater than or equal to low. The default value is 0.
+        greater than or equal to low. Unless high=None, in which case this parameter
+        becomes high and low is set to 0
     high : int, optional
         Upper boundary of the output interval. All values generated will be
         less than high. The default value is 1.

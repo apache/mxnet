@@ -257,9 +257,9 @@ struct SampleGenNegBinomialParam : public dmlc::Parameter<SampleGenNegBinomialPa
 struct SampleRandIntParam : public dmlc::Parameter<SampleRandIntParam>,
   RandIntParam, SampleOpParam {
   DMLC_DECLARE_PARAMETER(SampleRandIntParam) {
-    DMLC_DECLARE_FIELD(low).set_default(0)
+    DMLC_DECLARE_FIELD(low)
     .describe("Lower bound of the distribution.");
-    DMLC_DECLARE_FIELD(high).set_default(1)
+    DMLC_DECLARE_FIELD(high)
     .describe("Upper bound of the distribution.");
     DMLC_DECLARE_FIELD(shape)
     .set_default(TShape())
@@ -508,8 +508,12 @@ static inline void rand_int_op(const nnvm::NodeAttrs& attrs,
                                const OpContext& ctx,
                                const OpReqType& req,
                                TBlob* outputs) {
-  Stream<xpu> *s = ctx.get_stream<xpu>();
+    Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleRandIntParam& param = nnvm::get<SampleRandIntParam>(attrs.parsed);
+    if(param.high==None){
+      param.high = param.low;
+      param.low = 0;
+    }
     CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
     Tensor<xpu, 1, int64_t> low, high;
     GetSamplingTempData<xpu, int64_t>(param.low, param.high, ctx,
@@ -758,11 +762,11 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename ParamType>
-inline bool RandIntOpType(const nnvm::NodeAttrs& attrs,
+template<>
+inline bool SampleOpType<SampleRandIntParam>(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_type,
                          std::vector<int> *out_type) {
-  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  const SampleRandIntParam& param = nnvm::get<SampleRandIntParam>(attrs.parsed);
   CHECK_EQ(in_type->size(), 0);
   CHECK_EQ(out_type->size(), 1);
   int dtype = -1;

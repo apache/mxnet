@@ -52,6 +52,7 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
   .set_num_outputs(1)                                                                        \
   .set_attr_parser(ParamParser<ParamType>)                                                   \
   .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)                          \
+  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleUniformParam>)                \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                            \
   .add_arguments(ParamType::__FIELDS__())                                                    \
   .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<ParamType, true, false>) \
@@ -92,8 +93,7 @@ Example::
    uniform(low=0, high=1, shape=(2,2)) = [[ 0.60276335,  0.85794562],
                                           [ 0.54488319,  0.84725171]]
 
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleUniformParam>);
+)code" ADD_FILELINE);
 
 // Add "normal" alias for backward compatibility
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_normal, SampleNormalParam)
@@ -110,8 +110,7 @@ Example::
 
    normal(loc=0, scale=1, shape=(2,2)) = [[ 1.89171135, -1.16881478],
                                           [-1.23474145,  1.55807114]]
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleNormalParam>);
+)code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_gamma, SampleGammaParam)
 .add_alias("random_gamma")
@@ -123,8 +122,7 @@ Example::
 
    gamma(alpha=9, beta=0.5, shape=(2,2)) = [[ 7.10486984,  3.37695289],
                                             [ 3.91697288,  3.65933681]]
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleGammaParam>);
+)code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_exponential, SampleExponentialParam)
 .add_alias("random_exponential")
@@ -136,8 +134,7 @@ Example::
 
    exponential(lam=4, shape=(2,2)) = [[ 0.0097189 ,  0.08999364],
                                       [ 0.04146638,  0.31715935]]
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleExponentialParam>);
+)code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_poisson, SamplePoissonParam)
 .add_alias("random_poisson")
@@ -150,8 +147,7 @@ Example::
 
    poisson(lam=4, shape=(2,2)) = [[ 5.,  2.],
                                   [ 4.,  6.]]
-)code" ADD_FILELINE
-).set_attr<nnvm::FInferType>("FInferType", SampleOpType<SamplePoissonParam>);
+)code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_negative_binomial, SampleNegBinomialParam)
 .add_alias("random_negative_binomial")
@@ -165,8 +161,7 @@ Example::
 
    negative_binomial(k=3, p=0.4, shape=(2,2)) = [[ 4.,  7.],
                                                  [ 2.,  5.]]
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleNegBinomialParam>);
+)code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_generalized_negative_binomial, SampleGenNegBinomialParam)
 .add_alias("random_generalized_negative_binomial")
@@ -181,8 +176,7 @@ Example::
 
    generalized_negative_binomial(mu=2.0, alpha=0.3, shape=(2,2)) = [[ 2.,  1.],
                                                                     [ 6.,  4.]]
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleGenNegBinomialParam>);
+)code" ADD_FILELINE);
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_randint, SampleRandIntParam)
 .add_alias("random_randint")
@@ -196,8 +190,7 @@ Example::
    randint(low=0, high=5, shape=(2,2)) = [[ 0,  2],
                                           [ 3,  1]]
 
-)code" ADD_FILELINE)
-.set_attr<nnvm::FInferType>("FInferType", RandIntOpType<SampleRandIntParam>);
+)code" ADD_FILELINE);
 
 // *_like operators
 

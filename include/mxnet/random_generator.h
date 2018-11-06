@@ -71,12 +71,8 @@ class RandGenerator<cpu, DType> {
       return dist_uniform(*engine_);
     }
 
-    MSHADOW_XINLINE int64_t discrete_uniform(const int64_t lower, const int64_t upper) {
-      // typedef typename std::conditional<std::is_integral<DType>::value,
-      // std::uniform_int_distribution<DType>,
-      // std::uniform_real_distribution<FType>>::type GType;
-      // GType dist_discrete_uniform(lower, upper);
-      std::uniform_int_distribution<int64_t> dist_discrete_uniform(lower, upper);
+    MSHADOW_XINLINE DType discrete_uniform(const int64_t lower, const int64_t upper) {
+      std::uniform_int_distribution<DType> dist_discrete_uniform(lower, upper);
       return dist_discrete_uniform(*engine_);
     }
 
