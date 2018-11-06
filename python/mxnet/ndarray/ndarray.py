@@ -403,7 +403,6 @@ fixed-size items.
 
         - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
           while not for key=[[1, 2]].
-        - Ellipsis (...) and np.newaxis are not supported.
         - Boolean array indexing is not supported.
 
         Parameters
