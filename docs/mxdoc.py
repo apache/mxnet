@@ -59,7 +59,8 @@ _CODE_MARK = re.compile('^([ ]*)```([\w]*)')
 # language names and the according file extensions and comment symbol
 _LANGS = {'python' : ('py', '#'),
           'r' : ('R','#'),
-          'scala' : ('scala', '#'),
+          'scala' : ('scala', '//'),
+          'java' : ('java', '//'),
           'julia' : ('jl', '#'),
           'perl' : ('pl', '#'),
           'cpp' : ('cc', '//'),
@@ -102,7 +103,7 @@ def build_r_docs(app):
     _run_cmd('mkdir -p ' + dest_path + '; mv ' + pdf_path + ' ' + dest_path)
 
 def build_scala(app):
-    """build scala for scala docs and clojure docs to use"""
+    """build scala for scala docs, java docs, and clojure docs to use"""
     _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
     _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
 
@@ -114,9 +115,10 @@ def build_scala_docs(app):
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
-    scaladocs = ['index.html', 'org', 'lib', 'index.js']
+    # 'index' and 'package.html' do not exist in later versions of scala; delete these after upgrading scala>2.12.x
+    scaladocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
     for doc_file in scaladocs:
-        _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+        _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path + '; exit 0')
 
 def build_java_docs(app):
     """build java docs and then move the outdir"""
@@ -126,9 +128,9 @@ def build_java_docs(app):
     dest_path = app.builder.outdir + '/api/java/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
-    javadocs = ['index.html', 'org', 'lib', 'index.js']
+    javadocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
     for doc_file in javadocs:
-        _run_cmd('cd ' + java_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+        _run_cmd('cd ' + java_path + ' && mv -f ' + doc_file + ' ' + dest_path + '; exit 0')
 
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
@@ -138,7 +140,7 @@ def build_clojure_docs(app):
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
     clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/target/doc'
-    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path)
+    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path; exit 0)
 
 def _convert_md_table_to_rst(table):
     """Convert a markdown table to rst format"""
