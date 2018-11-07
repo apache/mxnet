@@ -162,7 +162,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
   index_t j = ravel(coord, bshape);
   DType val, residual;
   Reducer::SetInitValue(val, residual);
-  for (index_t k = 0; k < M; ++k) {
+  for (size_t k = 0; k < M; ++k) {
     coord = unravel(k, rshape);
     Reducer::Reduce(val, OP::Map(big[j + dot(coord, rstride)]), residual);
   }
@@ -179,7 +179,7 @@ template<int ndim, typename DType, typename OP>
 void binary_broadcast_compute(const size_t N, const bool addto, const DType *lhs,
                               const DType *rhs, DType *out, const Shape<ndim> lshape,
                               const Shape<ndim> rshape, const Shape<ndim> oshape) {
-  for (index_t idx = 0; idx < N; ++idx) {
+  for (size_t idx = 0; idx < N; ++idx) {
     binary_broadcast_assign<ndim, DType, OP>(idx, addto, lhs, rhs, out, lshape, rshape, oshape);
   }
 }
@@ -215,12 +215,12 @@ void seq_reduce_compute_extra_mem(const size_t N, const size_t M, const bool add
                                   const Shape<ndim> rstride,
                                   const index_t* ws_dptr) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index_t idx = 0; idx < N; ++idx) {
+  for (size_t idx = 0; idx < N; ++idx) {
     Shape<ndim> coord = unravel(idx, sshape);
     index_t j = ravel(coord, bshape);
     DType val, residual;
     Reducer::SetInitValue(val, residual);
-    for (index_t k = 0; k < M; ++k) {
+    for (size_t k = 0; k < M; ++k) {
       Reducer::Reduce(val, OP::Map(big[j + ws_dptr[k]]), residual);
     }
     assign(&small[idx], addto, val);
@@ -249,7 +249,7 @@ void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
   index_t* ws_dptr = reinterpret_cast<index_t*>(workspace.dptr_);
   size_t N = small.shape_.Size(), M = rshape.Size();
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index_t k = 0; k < M; k++) {
+  for (size_t k = 0; k < M; k++) {
     Shape<ndim> coord = unravel(k, rshape);
     ws_dptr[k] = dot(coord, rstride);
   }
@@ -287,7 +287,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
   const index_t idx_rhs0 = ravel(coord, rhs_shape0);
   DType val, residual;
   Reducer::SetInitValue(val, residual);
-  for (index_t k = 0; k < M; ++k) {
+  for (size_t k = 0; k < M; ++k) {
     Shape<ndim> coord_big = unravel(k, rshape);
     index_t idx_big = idx_big0 + dot(coord_big, rstride);
 
@@ -312,7 +312,7 @@ void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const Shape<ndim> rhs_shape, const Shape<ndim> rhs_stride,
                         const Shape<ndim>& lhs_shape0, const Shape<ndim>& rhs_shape0) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (index_t idx = 0; idx < N; ++idx) {
+  for (size_t idx = 0; idx < N; ++idx) {
     seq_reduce_assign<Reducer, ndim, DType, OP1, OP2>(idx, M, addto, big, lhs, rhs, small,
       big_shape, lhs_shape0, rhs_shape0, small_shape, rshape, lhs_shape, rhs_shape, rstride,
       lhs_stride, rhs_stride);
