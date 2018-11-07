@@ -246,3 +246,26 @@ def test_qconvolution_scaling(input_shape, bits, channel=16, kernel=(3, 3)):
     assert mse(result, result_scaled) < mse(result, result_std)
     assert sign_match(result_std, result_scaled) > 0.95
     # assert sign_match(grad_std, grad_scaled) > 0.9
+
+
+"""
+    Test binary layer config
+"""
+
+@pytest.mark.parametrize("grad_cancel", [1.0, 0.2])
+@pytest.mark.parametrize("bits,bits_a,method", [(1, 1, 'det_sign'), (2, 2, 'dorefa')])
+def test_binary_layer_config_qact(grad_cancel, bits, bits_a, method, input_shape=(1, 2, 4, 4)):
+    d = np.random.uniform(-1, 1, input_shape)
+    in_data = mx.nd.array(d)
+    in_data.attach_grad()
+
+    qact = nn.QActivation(bits=bits_a, gradient_cancel_threshold=grad_cancel, method=method)
+    with nn.set_binary_layer_config(grad_cancel=grad_cancel, bits=bits, bits_a=bits_a,
+                                    method=method):
+        qact_config = nn.QActivation()
+
+    grad, y = forward(in_data, qact)
+    grad_, y_ = forward(in_data, qact_config)
+
+    np.testing.assert_almost_equal(y, y_)
+    np.testing.assert_almost_equal(grad, grad_)
