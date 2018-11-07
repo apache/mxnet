@@ -140,7 +140,7 @@ def build_clojure_docs(app):
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
     clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/target/doc'
-    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path; exit 0)
+    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path + '; exit 0')
 
 def _convert_md_table_to_rst(table):
     """Convert a markdown table to rst format"""
