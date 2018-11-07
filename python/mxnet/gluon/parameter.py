@@ -727,6 +727,8 @@ class ParameterDict(object):
                         if matched:
                             param._shape = tuple(inferred_shape)
                             continue
+                    elif k == 'dtype' and np.dtype(v) == np.dtype(existing):
+                        continue
 
                     assert v is None or v == existing, \
                         "Cannot retrieve Parameter '%s' because desired attribute " \
