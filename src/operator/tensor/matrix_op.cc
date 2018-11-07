@@ -105,24 +105,24 @@ DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
 
 #if MXNET_USE_MKLDNN == 1
 void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
-  auto this_mem = in_data.GetMKLDNNData();
-  auto out_mem = out_data.GetMKLDNNData();
-  mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
-  mkldnn::memory::desc this_desc = this_pd.desc();
-  mkldnn::memory::dims dims(this_desc.data.dims,
-                            this_desc.data.dims + this_desc.data.ndims);
-  auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
-  auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
-  mkldnn::memory::desc data_md(dims, this_dtype, this_format);
-  mkldnn::memory::primitive_desc pd(data_md, this_pd.get_engine());
-  auto temp_mem = mkldnn::memory(pd, out_mem->get_data_handle());
-  // mkldnn_mem_ptr temp_mem(new mkldnn::memory(pd, out_mem->get_data_handle()));
-  MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, temp_mem));
-  MKLDNNStream::Get()->Submit();
+  MSHADOW_TYPE_SWITCH(in_data.dtype(), DType, {
+    auto this_mem = in_data.GetMKLDNNData();
+    auto out_dptr = out_data.data().dptr<DType>();
+    mkldnn::memory::primitive_desc this_pd = this_mem->get_primitive_desc();
+    mkldnn::memory::desc this_desc = this_pd.desc();
+    mkldnn::memory::dims dims(this_desc.data.dims,
+                              this_desc.data.dims + this_desc.data.ndims);
+    auto this_dtype = static_cast<mkldnn::memory::data_type>(this_desc.data.data_type);
+    auto this_format = static_cast<mkldnn::memory::format>(GetDefaultFormat(this_desc));
+    mkldnn::memory::desc data_md(dims, this_dtype, this_format);
+    mkldnn::memory::primitive_desc pd(data_md, this_pd.get_engine());
+    auto temp_mem = mkldnn::memory(pd, out_dptr);
+    MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, temp_mem));
+    MKLDNNStream::Get()->Submit();
 
-  const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
+    const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
+  });
 }
-#endif
 
 static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
@@ -131,7 +131,6 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& outputs) {
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-#if MXNET_USE_MKLDNN == 1
   // If inputs are supposed to be in MKLDNN format and
   // MKLDNNsupport the data type or the shape. Then convert
   // it to the output format and shape
@@ -141,10 +140,8 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
   }
   FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req,
                     outputs);
-#endif
 }
 
-#if MXNET_USE_MKLDNN == 1
 inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
                                       DispatchMode* dispatch_mode,
@@ -231,9 +228,9 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_copy"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", ReshapeComputeExCPU)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
