@@ -215,7 +215,7 @@ OpAttrs GetLRNBackwardsOp() {
 
 void AssertEqual(const std::vector<NDArray *> &in_arrs,
                  const std::vector<NDArray *> &out_arrs,
-                 float rtol=1e-5, float atol=1e-8) {
+                 float rtol = 1e-5, float atol = 1e-8) {
   NDArray tmp1 = in_arrs[0]->Reorder2Default();
   NDArray tmp2 = out_arrs[0]->Reorder2Default();
   EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
