@@ -1,31 +1,32 @@
 
 # Image similarity search with InfoGAN
 
-This notebook shows how to implement an InfoGAN based on Gluon. InfoGAN is an extension of GANs, where the generator input is split in 2 parts: random noise and a latent code c (see [InfoGAN Paper](https://arxiv.org/pdf/1606.03657.pdf)). 
+This notebook shows how to implement an InfoGAN based on Gluon. InfoGAN is an extension of GANs, where the generator input is split in 2 parts: random noise and a latent code (see [InfoGAN Paper](https://arxiv.org/pdf/1606.03657.pdf)). 
 The codes are made meaningful by maximizing the mutual information between code and generator output. InfoGAN learns a disentangled representation in a completely unsupervised manner. It can be used for many applications such as image similarity search. This notebook uses the DCGAN example from the [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html) and extends it to create an InfoGAN. 
 
 
 ```python
 from __future__ import print_function
 from datetime import datetime
-import sys
-import os
 import logging
-import time
+import multiprocessing
+import os
+import sys
 import tarfile
+import time
 
+import numpy as np
 from matplotlib import pyplot as plt
+from mxboard import SummaryWriter
 import mxnet as mx
 from mxnet import gluon
 from mxnet import ndarray as nd
 from mxnet.gluon import nn, utils
 from mxnet import autograd
-from mxboard import SummaryWriter
-import numpy as np
 
 ```
 
-The latent code vector c can contain several variables, which can be categorical and/or continuous. We set `n_continuous` to 2 and `n_categories` to 10.
+The latent code vector can contain several variables, which can be categorical and/or continuous. We set `n_continuous` to 2 and `n_categories` to 10.
 
 
 ```python
@@ -82,20 +83,20 @@ Load the dataset `lfw_dataset` which contains images of celebrities.
 
 
 ```python
-data_dir          =  'lfw_dataset'
+data_dir = 'lfw_dataset'
 images, filenames = get_files(data_dir)
-split             = int(len(images)*0.8)
-test_images       = images[split:]
-test_filenames    = filenames[split:]
-train_images      = images[:split]
-train_filenames   = filenames[:split]
+split = int(len(images)*0.8)
+test_images = images[split:]
+test_filenames = filenames[split:]
+train_images = images[:split]
+train_filenames = filenames[:split]
 
-train_data        = gluon.data.ArrayDataset(nd.concatenate(train_images))
-train_dataloader  = gluon.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, last_batch='rollover', num_workers=4)
+train_data = gluon.data.ArrayDataset(nd.concatenate(train_images))
+train_dataloader = gluon.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, last_batch='rollover', num_workers=multiprocessing.cpu_count())
 ```
 
 ## Generator
-Define the Generator model. Architecture is taken from the DCGAN implementation in [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html). The Generator consist of  4 layers where each layer involves a strided convolution, batch normalization, and rectified nonlinearity. It takes as input random noise and the latent code `c` and produces an `(64,64,3)` output image.
+Define the Generator model. Architecture is taken from the DCGAN implementation in [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html). The Generator consist of  4 layers where each layer involves a strided convolution, batch normalization, and rectified nonlinearity. It takes as input random noise and the latent code and produces an `(64,64,3)` output image.
 
 
 ```python
@@ -203,16 +204,16 @@ real_label = nd.ones((batch_size,), ctx=ctx)
 fake_label = nd.zeros((batch_size,),ctx=ctx)
 ```
 
-Load a pertrained model.
+Load a pretrained model.
 
 
 ```python
-if os.path.isfile("infogan_d_latest.params") and os.path.isfile("infogan_g_latest.params"):
+if os.path.isfile('infogan_d_latest.params') and os.path.isfile('infogan_g_latest.params'):
     discriminator.load_parameters('infogan_d_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
     generator.load_parameters('infogan_g_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
 ```
 
-The latent code `c` is part of the Generator input and it contains mutliple variables (continuous, categorical) that can represent different distributions. In order to make sure that the Generator uses the latent code, mutual information is introduced into the GAN loss term. Mutual information measures how much X is known given Y or vice versa. It is defined as:
+The latent code is part of the Generator input and it contains mutliple variables (continuous, categorical) that can represent different distributions. In order to make sure that the Generator uses the latent code, mutual information is introduced into the GAN loss term. Mutual information measures how much X is known given Y or vice versa. It is defined as:
 
 ![gif](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/entropy.gif) 
 
@@ -220,10 +221,10 @@ The InfoGAN loss is:
 
 ![gif](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/loss.gif)
 
-where `V(D,G)` is the GAN loss and the mutual information `I(c, G(z, c))` goes in as regularization. The goal is to reach high mutual information, in order to learn meaningful codes `c` for the data. 
+where `V(D,G)` is the GAN loss and the mutual information `I(c, G(z, c))` goes in as regularization. The goal is to reach high mutual information, in order to learn meaningful codes for the data. 
 
 
-Define the loss functions. `SoftmaxCrossEntropyLoss` for the categorical code `c`,  `L2Loss` for the continious code `c` and `SigmoidBinaryCrossEntropyLoss` for the normal GAN loss.
+Define the loss functions. `SoftmaxCrossEntropyLoss` for the categorical code,  `L2Loss` for the continious code and `SigmoidBinaryCrossEntropyLoss` for the normal GAN loss.
 
 
 ```python
@@ -260,7 +261,7 @@ Define the training loop.
 with SummaryWriter(logdir='./logs/') as sw:
     
     epochs = 1
-    i = 0
+    counter = 0
     for epoch in range(epochs):
         print("Epoch", epoch)
         starttime = time.time()
@@ -269,8 +270,7 @@ with SummaryWriter(logdir='./logs/') as sw:
         g_error_epoch = nd.zeros((1,), ctx=ctx)
         
         for idx, data in enumerate(train_dataloader):
-            i = i + 1
-            
+                
             #get real data and generator input
             real_data = data.as_in_context(ctx)     
             g_input   = create_generator_input()
@@ -292,9 +292,9 @@ with SummaryWriter(logdir='./logs/') as sw:
             d_error_epoch += d_error.mean()
             
             #Update D every second iteration
-            if i % 2 == 0:
+            if (counter+1) % 2 == 0:
                 d_error.backward()
-                d_trainer.step(data.shape[0])
+                d_trainer.step(batch_size)
 
             #Update generator: Input random noise and latent code vector
             with autograd.record():
@@ -305,8 +305,8 @@ with SummaryWriter(logdir='./logs/') as sw:
             g_error.backward()
             g_error_epoch += g_error.mean()
             
-            g_trainer.step(data.shape[0])
-            q_trainer.step(data.shape[0])
+            g_trainer.step(batch_size)
+            q_trainer.step(batch_size)
 
             # logging
             if idx % 10 == 0:
@@ -322,11 +322,9 @@ with SummaryWriter(logdir='./logs/') as sw:
 
                 sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/idx}, global_step=i)
                 sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/idx}, global_step=i)
-                sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(np.uint8)  , global_step=i)
+                sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(np.uint8)  , global_step=counter)
                 sw.flush()
-                
-            time1 = time.time()
-    
+        
         discriminator.save_parameters("infogan_d_latest.params")
         generator.save_parameters("infogan_g_latest.params")
 ```
