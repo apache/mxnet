@@ -298,7 +298,7 @@ with SummaryWriter(logdir='./logs/') as sw:
 
             #Update generator: Input random noise and latent code vector
             with autograd.record():
-                fake_image,_,_ = generator(g_input)
+                fake_image = generator(g_input)
                 output_fake, category_prob, continuous_mean = discriminator(fake_image)
                 g_error = loss1(output_fake, real_label) + loss3(category_prob, label) + loss2(c2, continuous_mean)
 
@@ -315,13 +315,13 @@ with SummaryWriter(logdir='./logs/') as sw:
                 logging.info('discriminator loss = %f, generator loss = %f at iter %d epoch %d'
                          %(d_error_epoch.asscalar()/idx,g_error_epoch.asscalar()/idx, idx, epoch))
 
-                g_input    = create_generator_input()
+                g_input,_,_ = create_generator_input()
                 
                 # create some fake image for logging in MXBoard
                 fake_image = generator(g_input)
 
-                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/idx}, global_step=i)
-                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/idx}, global_step=i)
+                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/idx}, global_step=counter)
+                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/idx}, global_step=counter)
                 sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(np.uint8)  , global_step=counter)
                 sw.flush()
         
@@ -381,7 +381,7 @@ for idx, image in enumerate(test_images):
 
 for image in test_images[:100]:
 
-    feature = discriminator(mx.nd.array(image))
+    feature = discriminator(mx.nd.array(image, ctx=ctx))
     feature = feature.reshape((feature_size,))
     image   = image.reshape((3,64,64))
 
