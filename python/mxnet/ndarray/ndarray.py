@@ -489,6 +489,12 @@ fixed-size items.
         array([[ 2.,  2.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
         >>> x = mx.nd.arange(0, 8, dtype='int32').reshape((2, 2, 2))
+        >>> x[1, :]
+        [[4 5]
+         [6 7]]
+        >>> x[1, ...]  # equivalent
+        [[4 5]
+         [6 7]]
         >>> x[[0, 1]]
         [[[0 1]
           [2 3]]
@@ -505,8 +511,16 @@ fixed-size items.
         >>> x[1:, y]
         [[[4 5]
           [6 7]]]
+        >>> x[None, None].shape
+        (1, 1, 2, 2, 2)
+        >>> x[None, None, :].shape  # equivalent
+        (1, 1, 2, 2, 2)
+        >>> x[None, None, ...].shape  # equivalent
+        (1, 1, 2, 2, 2)
+        >>> x[None, ..., None].shape
+        (1, 2, 2, 2, 1)
         """
-        self, key = _expand_none_and_ellipsis(self, key, drop_none=True)
+        self, key = _expand_none_and_ellipsis(self, key, drop_none=False)
         indexing_dispatch_code = _get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
             return self._get_nd_basic_indexing(key)
