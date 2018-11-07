@@ -1110,7 +1110,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python3
     cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 nightly_tutorial_test_ubuntu_python2_gpu() {
@@ -1123,7 +1123,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TUTORIAL_TEST_KERNEL=python2
     cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 
