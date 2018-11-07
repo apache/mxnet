@@ -203,26 +203,40 @@ private[mxnet] object APIDocGenerator{
   }
 
   def generateJavaAPISignature(func : absClassFunction) : String = {
+    val useParamObject = func.listOfArgs.count(arg => arg.isOptional) >= 2
     var argDef = ListBuffer[String]()
     var classDef = ListBuffer[String]()
     func.listOfArgs.foreach(absClassArg => {
       val currArgName = safetyNameCheck(absClassArg.argName)
       // scalastyle:off
-      if (absClassArg.isOptional) {
-        classDef += s"def set${absClassArg.argName}(${absClassArg.argName} : ${absClassArg.argType}) : ${func.name}BuilderBase"
+      if (absClassArg.isOptional && useParamObject) {
+        classDef += s"def set${absClassArg.argName.capitalize}(${absClassArg.argName}: ${absClassArg.argType}): ${func.name}ParamBase"
       }
       else {
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
       // scalastyle:on
     })
-    classDef += s"def setout(out : NDArray) : ${func.name}BuilderBase"
-    classDef += s"def invoke() : org.apache.mxnet.javaapi.NDArrayFuncReturn"
     val experimentalTag = "@Experimental"
-    // scalastyle:off
-    var finalStr = s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : ${func.name}BuilderBase\n"
-    // scalastyle:on
-    finalStr += s"abstract class ${func.name}BuilderBase {\n  ${classDef.mkString("\n  ")}\n}"
+    val returnType = "org.apache.mxnet.javaapi.NDArrayFuncReturn"
+    var finalStr = ""
+    if(useParamObject) {
+      classDef += s"def setOut(out : NDArray) : ${func.name}ParamBase"
+      classDef += s"def invoke() : $returnType"
+      finalStr = s"""$experimentalTag
+          | def ${func.name}(po: ${func.name}ParamBase) : $returnType
+          | """.stripMargin
+      finalStr +=
+        s"""abstract class ${func.name}ParamBase(${argDef.mkString(",")}) {
+           |  ${classDef.mkString("\n  ")}
+           |}""".stripMargin
+    } else {
+      argDef += "out : NDArray"
+      finalStr =
+        s"""$experimentalTag
+           | def ${func.name}(${argDef.mkString(", ")}) : $returnType
+           | """.stripMargin
+    }
     finalStr
   }
 

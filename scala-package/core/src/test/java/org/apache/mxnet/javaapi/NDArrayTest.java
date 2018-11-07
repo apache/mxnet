@@ -19,9 +19,9 @@ package org.apache.mxnet.javaapi;
 
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.mxnet.javaapi.NDArray.*;
 
 import static org.junit.Assert.assertTrue;
 
@@ -71,7 +71,7 @@ public class NDArrayTest {
         NDArray$ NDArray = NDArray$.MODULE$;
         float[] arr = new float[]{1.0f, 2.0f, 3.0f};
         NDArray nd = new NDArray(arr, new Shape(new int[]{3}), new Context("cpu", 0));
-        float result = NDArray.norm(nd).invoke().get().toArray()[0];
+        float result = NDArray.norm(new normParam(nd)).get().toArray()[0];
         float cal = 0.0f;
         for (float ele : arr) {
             cal += ele * ele;
@@ -79,7 +79,7 @@ public class NDArrayTest {
         cal = (float) Math.sqrt(cal);
         assertTrue(Math.abs(result - cal) < 1e-5);
         NDArray dotResult = new NDArray(new float[]{0}, new Shape(new int[]{1}), new Context("cpu", 0));
-        NDArray.dot(nd, nd).setout(dotResult).invoke().get();
+        NDArray.dot(new dotParam(nd, nd).setOut(dotResult)).get();
         assertTrue(Arrays.equals(dotResult.toArray(), new float[]{14.0f}));
     }
 }

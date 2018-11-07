@@ -68,6 +68,8 @@ private[mxnet] object JavaNDArrayMacro {
 
     newNDArrayFunctions.foreach { ndarrayfunction =>
 
+      val useParamObject = ndarrayfunction.listOfArgs.count(arg => arg.isOptional) >= 2
+      val header = if (useParamObject) "this." else ""
       // Construct argument field with all required args
       var argDef = ListBuffer[String]()
       // Construct Optional Arg
@@ -75,9 +77,8 @@ private[mxnet] object JavaNDArrayMacro {
       // Construct function Implementation field (e.g norm)
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
-      // scalastyle:off
-      impl += "val args= scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]"
-      // scalastyle:on
+      impl +=
+        "val args= scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]"
       // Construct Class Implementation (e.g normBuilder)
       var classImpl = ListBuffer[String]()
       ndarrayfunction.listOfArgs.foreach({ ndarrayArg =>
@@ -88,9 +89,9 @@ private[mxnet] object JavaNDArrayMacro {
           case "type" => "typeOf"
           case _ => ndarrayArg.argName
         }
-        if (ndarrayArg.isOptional) {
+        if (ndarrayArg.isOptional && useParamObject) {
           OptionArgDef += s"private var $currArgName : ${ndarrayArg.argType} = null"
-          val tempDef = s"def set$currArgName($currArgName : ${ndarrayArg.argType})"
+          val tempDef = s"def set${currArgName.capitalize}($currArgName : ${ndarrayArg.argType})"
           val tempImpl = s"this.$currArgName = $currArgName\nthis"
           classImpl += s"$tempDef = {$tempImpl}"
         } else {
@@ -100,35 +101,54 @@ private[mxnet] object JavaNDArrayMacro {
         val returnType = "org.apache.mxnet.javaapi.NDArray"
         val base =
           if (ndarrayArg.argType.equals(returnType)) {
-            s"args += this.$currArgName"
+            s"args += $header$currArgName"
           } else if (ndarrayArg.argType.equals(s"Array[$returnType]")){
-            s"this.$currArgName.foreach(args+=_)"
+            s"$header$currArgName.foreach(args+=_)"
           } else {
-            "map(\"" + ndarrayArg.argName + "\") = this." + currArgName
+            "map(\"" + ndarrayArg.argName + "\") = " + header + currArgName
           }
         impl.append(
-          if (ndarrayArg.isOptional) s"if (this.$currArgName != null) $base"
+          if (ndarrayArg.isOptional) s"if ($header$currArgName != null) $base"
           else base
         )
       })
       // add default out parameter
-      classImpl +=
-        "def setout(out : org.apache.mxnet.javaapi.NDArray) = {this.out = out\nthis}"
-      impl += "if (this.out != null) map(\"out\") = this.out"
-      OptionArgDef += "private var out : org.apache.mxnet.NDArray = null"
+      if (useParamObject) {
+        classImpl +=
+          "def setOut(out : org.apache.mxnet.javaapi.NDArray) = {this.out = out\nthis}"
+      } else {
+        argDef += s"out: org.apache.mxnet.javaapi.NDArray"
+      }
+      impl += "if (" + header + "out != null) map(\"out\") = " + header + "out"
+      OptionArgDef += "var out : org.apache.mxnet.NDArray = null"
       val returnType = "org.apache.mxnet.javaapi.NDArrayFuncReturn"
       // scalastyle:off
       // Combine and build the function string
-      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" + ndarrayfunction.name + "\", args.toSeq, map.toMap)"
-      val classDef = s"class ${ndarrayfunction.name}Builder(${argDef.mkString(",")}) extends ${ndarrayfunction.name}BuilderBase"
-      val classBody = s"${OptionArgDef.mkString("\n")}\n${classImpl.mkString("\n")}\ndef invoke() : $returnType = {${impl.mkString("\n")}}"
-      val classFinal = s"$classDef {$classBody}"
-      val functionDef = s"def ${ndarrayfunction.name} (${argDef.mkString(",")})"
-      val functionBody = s"new ${ndarrayfunction.name}Builder(${argDef.map(_.split(":")(0)).mkString(",")})"
-      val functionFinal = s"$functionDef : ${ndarrayfunction.name}BuilderBase = $functionBody"
-      // scalastyle:on
-      functionDefs += c.parse(functionFinal).asInstanceOf[DefDef]
-      classDefs += c.parse(classFinal).asInstanceOf[ClassDef]
+      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" +
+        ndarrayfunction.name + "\", args.toSeq, map.toMap)"
+      if (useParamObject) {
+        val classDef =
+          s"""class ${ndarrayfunction.name}Param(${argDef.mkString(",")})
+             | extends ${ndarrayfunction.name}ParamBase(${argDef.mkString(",")}) {
+             |   ${OptionArgDef.mkString("\n")}
+             |   ${classImpl.mkString("\n")}
+             |   def invoke() : $returnType = {
+             |     ${impl.mkString("\n")}
+             |   }
+             | }""".stripMargin
+        classDefs += c.parse(classDef).asInstanceOf[ClassDef]
+        val funcDef =
+          s"""def ${ndarrayfunction.name}(po: ${ndarrayfunction.name}ParamBase): $returnType = {
+             |  po.invoke()
+             | }""".stripMargin
+        functionDefs += c.parse(funcDef).asInstanceOf[DefDef]
+      } else {
+        val funcDef =
+          s"""def ${ndarrayfunction.name}(${argDef.mkString(",")}): $returnType = {
+             |  ${impl.mkString("\n")}
+             | }""".stripMargin
+        functionDefs += c.parse(funcDef).asInstanceOf[DefDef]
+      }
     }
 
     structGeneration(c)(functionDefs.toList, classDefs.toList, annottees : _*)
