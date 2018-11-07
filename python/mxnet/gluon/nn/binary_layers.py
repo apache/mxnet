@@ -18,10 +18,10 @@ class BinaryLayerConfig():
         self.scaled = scaled
 
     def get_values(self):
-        return vars(self)
+        return dict(vars(self))
 
     def set_values(self, assure_consistency=True, **kwargs):
-        for attr, value in kwargs.items:
+        for attr, value in kwargs.items():
             assert hasattr(self, attr), 'Attribute {} not in {}'.format(attr, self)
             value = value if value is not None else getattr(self, attr)
             setattr(self, attr, value)
@@ -181,7 +181,8 @@ class QDense(Dense):
 
 class _QConv(_Conv):
     def __init__(self, channels, kernel_size, bits, strides, padding, dilation, groups, layout, in_channels, activation,
-                 use_bias, weight_initializer, bias_initializer, no_offset=False, apply_scaling=False, **kwargs):
+                 use_bias, weight_initializer, bias_initializer, quantization=None, no_offset=False,
+                 apply_scaling=False, **kwargs):
         check_params(use_bias, activation)
         # set activation to None and padding to zero
         super(_QConv, self).__init__(
@@ -196,7 +197,7 @@ class _QConv(_Conv):
         self.scaling = apply_scaling
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
-        self.quantize = binary_layer_config.get_quantization_function(bits=self.bits, input_type='weight')
+        self.quantize = binary_layer_config.get_quantization_function(bits=self.bits, method=quantization, input_type='weight')
 
     def _alias(self):
         return 'qconv'
@@ -270,20 +271,6 @@ class QConv3D(_QConv):
 """
 
 
-class ActivatedConvolutionFactory:
-    def __init__(self):
-        self.ConvBlock = BinaryConvolution
-
-    def __call__(self, *args, **kwargs):
-        if binary_layer_config.scaled:
-            return ScaledBinaryConv(*args, **kwargs)
-        else:
-            return BinaryConvolution(*args, **kwargs)
-
-
-activated_conv = ActivatedConvolutionFactory()
-
-
 class BinaryConvolution(HybridBlock):
     r"""
         Typical binary (XNOR) convolution block with binarized activations and weights
@@ -324,3 +311,17 @@ class ScaledBinaryConv(HybridBlock):
                           pad=(self.padding, self.padding), layout='NCHW')
         K = F.stop_gradient(K)
         return F.broadcast_mul(K, y)
+
+
+class ActivatedConvolutionFactory:
+    def __init__(self):
+        self.ConvBlock = BinaryConvolution
+
+    def __call__(self, *args, **kwargs):
+        if binary_layer_config.scaled:
+            return ScaledBinaryConv(*args, **kwargs)
+        else:
+            return BinaryConvolution(*args, **kwargs)
+
+
+activated_conv = ActivatedConvolutionFactory()
