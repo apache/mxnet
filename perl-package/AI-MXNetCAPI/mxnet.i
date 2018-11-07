@@ -342,6 +342,15 @@ int MXEngineSetBulkSize(int bulk_size, int* out);
  */
 int MXGetGPUCount(int* out);
 
+/*!
+ * \brief get the free and total available memory on a GPU
+ * \param dev the GPU number to query
+ * \param free_mem pointer to the uint64_t holding free GPU memory
+ * \param total_mem pointer to the uint64_t holding total GPU memory
+ * \return 0 when success, -1 when failure happens
+ */
+int MXGetGPUMemoryInformation64(int dev, uint64_t *out, uint64_t *out);
+
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion

@@ -18,6 +18,7 @@
 from __future__ import print_function
 import sys
 import os
+import tempfile
 import time
 import multiprocessing as mp
 import unittest
@@ -25,12 +26,14 @@ import random
 import mxnet as mx
 import numpy as np
 import unittest
+import math
 from nose.tools import assert_raises
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
 from mxnet.base import MXNetError
 from mxnet import autograd
 from numpy.testing import assert_allclose
 from mxnet.test_utils import rand_ndarray
+
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -58,7 +61,7 @@ def check_rnn_layer(layer):
     for g, c in zip(gs, cs):
         assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
 
-
+@with_seed()
 def check_rnn_layer_w_rand_inputs(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     x = mx.nd.uniform(shape=(10, 16, 30))
@@ -315,7 +318,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
     assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
 
-
+@with_seed()
 def test_sync_batchnorm():
     def get_num_devices():
         for i in range(100):
@@ -331,6 +334,73 @@ def test_sync_batchnorm():
     for i in range(10):
         _check_batchnorm_result(mx.nd.random.uniform(shape=(4, 1, 4, 4)),
                                 num_devices=ndev, cuda=True)
+
+@with_seed()
+def test_large_models():
+    ctx = default_context()
+    # Create model
+    net = gluon.nn.HybridSequential()
+
+    largest_num_features = 256
+    with net.name_scope():
+        net.add(nn.Conv2D(largest_num_features, 3))
+
+    net.hybridize()
+    net.initialize(mx.init.Normal(sigma=0.01), ctx=ctx)
+
+    # Compute the height (=width) of the square tensor of the given size in bytes
+    def tensor_size(big_tensor_bytes):
+        bytes_per_float = 4
+        sz = int(math.sqrt(big_tensor_bytes / largest_num_features / bytes_per_float))
+        return (sz // 100) * 100
+
+    # The idea is to create models with large tensors of (say) 20% of the total memory.
+    # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
+    # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
+    (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(ctx.device_id)
+    start_size = tensor_size(0.20 * total_mem_bytes)
+    num_trials = 10
+    sys.stderr.write(' testing global memory of size {} ... '.format(total_mem_bytes))
+    sys.stderr.flush()
+    for i in range(num_trials):
+        sz = start_size - 10 * i
+        (height, width) = (sz,sz)
+        sys.stderr.write(" {}x{} ".format(height,width))
+        sys.stderr.flush()
+        data_in = nd.random_uniform(low=0, high=255, shape=(1, 3, height, width),
+                                    ctx=ctx, dtype="float32")
+        # Evaluate model
+        net(data_in).asnumpy()
+
+@with_seed()
+def test_symbol_block_fp16():
+    # Test case to verify if initializing the SymbolBlock from a model with params
+    # other than fp32 param dtype.
+
+    # 1. Load a resnet model, cast it to fp16 and export
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'resnet34_fp16')
+    ctx = mx.gpu(0)
+
+    net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    net_fp32.cast('float16')
+    net_fp32.hybridize()
+    data = mx.nd.zeros((1,3,224,224), dtype='float16', ctx=ctx)
+    net_fp32.forward(data)
+    net_fp32.export(tmpfile, 0)
+
+    # 2. Load the saved model and verify if all the params are loaded correctly.
+    # and choose one of the param to verify the type if fp16.
+    sm = mx.sym.load(tmpfile + '-symbol.json')
+    inputs = mx.sym.var('data', dtype='float16')
+    net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
+    net_fp16.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
+    # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
+    # expected to be of dtype casted, fp16.
+    for param_name in net_fp16.params.keys():
+        if 'conv' in param_name and 'weight' in param_name:
+            break
+    assert np.dtype(net_fp16.params[param_name].dtype) == np.dtype(np.float16)
 
 if __name__ == '__main__':
     import nose
