@@ -7,49 +7,89 @@ from ...base import numeric_types
 from ...symbol import Symbol
 
 
-
 class BinaryLayerConfig():
-    def __init__(self, grad_cancel=1.0, bits=1, bits_a=1, method='det_sign'):
+    def __init__(self, grad_cancel=1.0, bits=1, bits_a=1, activation='det_sign',
+                 weight_quantization='det_sign', scaled=False):
         self.grad_cancel = grad_cancel
         self.bits = bits
         self.bits_a = bits_a
-        self.method = method
+        self.activation = activation
+        self.weight_quantization = weight_quantization
+        self.scaled = scaled
 
     def get_values(self):
         return vars(self)
 
-    def set_values(self, kwargs, assure_consistency=True):
-        print('set values', kwargs)
-        self.grad_cancel = self.grad_cancel if 'grad_cancel' not in kwargs else kwargs['grad_cancel']
-        self.bits = self.bits if 'bits' not in kwargs else kwargs['bits']
-        self.bits_a = self.bits_a if 'bits_a' not in kwargs else kwargs['bits_a']
-        self.method = self.method if 'method' not in kwargs else kwargs['method']
-        if assure_consistency and not BinaryLayerConfig._quantize_valid_params(self.bits, self.method):
-            print('inconsistent, change method', self.method)
-            self.method = BinaryLayerConfig._default_method(self.bits)
+    def set_values(self, assure_consistency=True, **kwargs):
+        for attr, value in kwargs.items:
+            assert hasattr(self, attr), 'Attribute {} not in {}'.format(attr, self)
+            value = value if value is not None else getattr(self, attr)
+            setattr(self, attr, value)
+        if assure_consistency:
+            if not BinaryLayerConfig._valid_activation(self.bits_a, self.activation):
+                self.activation = BinaryLayerConfig._default_activation(self.bits_a)
+            if not BinaryLayerConfig._valid_weight_quantization(self.bits, self.weight_quantization):
+                self.weight_quantization = BinaryLayerConfig._default_weight_quantization(self.bits)
 
     @staticmethod
-    def _quantize_valid_params(bits, method):
+    def _valid_activation(bits, activation):
         if bits == 32:
-            return method in ['approx_sign', 'relu', 'clip', 'leaky_clip']
+            return activation in ['identity', 'approx_sign', 'relu', 'clip', 'leaky_clip']
         elif bits == 1:
-            return method in ['det_sign', 'sign_approx_sign']
+            return activation in ['det_sign', 'sign_approx_sign']
         else:
-            return method in ['round', 'dorefa']
+            return activation in ['round', 'dorefa']  # DoReFa paper only applies round activation
 
     @staticmethod
-    def _default_method(bits):
+    def _default_activation(bits):
         if bits == 1:
             return 'det_sign'
         elif bits == 32:
             return 'relu'
+        return 'round'
+
+    @staticmethod
+    def _valid_weight_quantization(bits, weight_quantization):
+        if bits == 32:
+            return weight_quantization in ['identity']
+        elif bits == 1:
+            return weight_quantization in ['det_sign', 'sign_approx_sign']
+        else:
+            return weight_quantization in ['dorefa']
+
+    @staticmethod
+    def _default_weight_quantization(bits):
+        if bits == 1:
+            return 'det_sign'
+        elif bits == 32:
+            return 'identity'
         return 'dorefa'
 
-    def get_quantization_function(self, bits=None, method=None):
-        bits = bits or self.bits
-        method = method or self.method
-        assert BinaryLayerConfig._quantize_valid_params(bits, method), \
-            'Combination of method {} using {} bit(s) is not supported!'.format(method, bits)
+    def get_quantization_function(self, bits=None, method=None, input_type='act'):
+        """
+        Returns quantization function
+        :param bits:
+        :param method: quantzation method to be used
+        :param input_type: 'act' or 'weight'
+        :return:
+        """
+        if input_type == 'act':
+            bits = bits or self.bits_a
+            method = method or self.activation
+            assert BinaryLayerConfig._valid_activation(bits, method), \
+                'Combination of method {} using {} bit(s) for input type {} is not supported!'.format(method, bits,
+                                                                                                      input_type)
+        elif input_type == 'weight':
+            bits = bits or self.bits
+            method = method or self.weight_quantization
+            assert BinaryLayerConfig._valid_weight_quantization(bits, method), \
+                'Combination of method {} using {} bit(s) for input type {} is not supported!'.format(method, bits,
+                                                                                                      input_type)
+        else:
+            assert False, 'Input type {} unknown!'.format(input_type)
+
+        def identity(F, x):
+            return x
 
         def round(F, x):
             vmax = 2 ** bits - 1
@@ -83,7 +123,6 @@ class BinaryLayerConfig():
         def det_sign(F, x):
             return F.det_sign(x)
 
-        print('request quantization function:', locals()[method])
         return locals()[method]
 
 
@@ -96,11 +135,11 @@ class set_binary_layer_config():
 
     def __enter__(self):
         self.last_values = binary_layer_config.get_values()
-        binary_layer_config.set_values(self.kwargs)
+        binary_layer_config.set_values(**self.kwargs)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        binary_layer_config.set_values(self.last_values)
+        binary_layer_config.set_values(**self.last_values)
 
 
 def check_params(use_bias, activation):
@@ -113,7 +152,7 @@ def check_params(use_bias, activation):
 class QActivation(HybridBlock):
     def __init__(self, *args, bits=None, gradient_cancel_threshold=None, method=None, **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
-        self.quantize = binary_layer_config.get_quantization_function(bits, method)
+        self.quantize = binary_layer_config.get_quantization_function(bits, method, input_type='act')
         self.threshold = gradient_cancel_threshold or binary_layer_config.grad_cancel
 
     def hybrid_forward(self, F, x):
@@ -127,8 +166,8 @@ class QDense(Dense):
         check_params(use_bias, activation)
         super(QDense, self).__init__(*args, activation=None, use_bias=False, **kwargs)
         self._offset = 0
-        self.quantize = binary_layer_config.get_quantization_function(bits=bits)
-        self.method = binary_layer_config.method
+        self.quantize = binary_layer_config.get_quantization_function(bits=bits, input_type='weight')
+        self.method = binary_layer_config.activation
         self.weight.wd_mult = 0.0
 
     def hybrid_forward(self, F, x, weight, bias=None):
@@ -157,7 +196,7 @@ class _QConv(_Conv):
         self.scaling = apply_scaling
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
-        self.quantize = binary_layer_config.get_quantization_function(bits=self.bits)
+        self.quantize = binary_layer_config.get_quantization_function(bits=self.bits, input_type='weight')
 
     def _alias(self):
         return 'qconv'
@@ -224,6 +263,25 @@ class QConv3D(_QConv):
         super(QConv3D, self).__init__(
             channels, kernel_size, bits, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+
+
+"""
+    Activated Convolution Blocks
+"""
+
+
+class ActivatedConvolutionFactory:
+    def __init__(self):
+        self.ConvBlock = BinaryConvolution
+
+    def __call__(self, *args, **kwargs):
+        if binary_layer_config.scaled:
+            return ScaledBinaryConv(*args, **kwargs)
+        else:
+            return BinaryConvolution(*args, **kwargs)
+
+
+activated_conv = ActivatedConvolutionFactory()
 
 
 class BinaryConvolution(HybridBlock):
