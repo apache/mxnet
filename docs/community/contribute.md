@@ -81,9 +81,9 @@ MXNet uses Apache's JIRA to track issues and larger projects. Anyone can review 
 
 ## Confluence Wiki
 
-The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
+The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
 
-* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) <i class="fas fa-external-link-alt"></i>
+* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home) <i class="fas fa-external-link-alt"></i>
 
 
 ## Setup MXNet for Development
