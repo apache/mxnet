@@ -25,7 +25,7 @@ cd tvm
 # This is a stable tag that support MXNet TVM bridge.
 # We use this since support for mxnet bridge just checked
 # into master and there is yet a version tag
-git checkout 30eaf463e34d7c301357c31a010945d11df16537
+git checkout 1c97eaf622095700d045ffef2320fb21911b485e
 
 cp make/config.mk
 echo USE_CUDA=1 >> config.mk
