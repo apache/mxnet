@@ -420,7 +420,7 @@ class CSRNDArray(BaseSparseNDArray):
         if isinstance(key, py_slice):
             if key.step is not None or key.start is not None or key.stop is not None:
                 raise ValueError('Assignment with slice for CSRNDArray is not ' \
-                                 'implmented yet.')
+                                 'implemented yet.')
             if isinstance(value, NDArray):
                 # avoid copying to itself
                 if value.handle is not self.handle:
