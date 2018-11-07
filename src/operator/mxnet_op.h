@@ -289,8 +289,8 @@ inline int get_num_threads<cpu>(const int N) {
 
 /* \brief Compute flattened index given coordinates and shape. */
 template<int ndim>
-MSHADOW_XINLINE int ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
-  int ret = 0;
+MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
+  index_t ret = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
     ret = ret * shape[i] + (shape[i] > coord[i]) * coord[i];
@@ -301,11 +301,11 @@ MSHADOW_XINLINE int ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
 
 /* Compute coordinates from flattened index given shape */
 template<int ndim>
-MSHADOW_XINLINE Shape<ndim> unravel(const int idx, const Shape<ndim>& shape) {
+MSHADOW_XINLINE Shape<ndim> unravel(const index_t idx, const Shape<ndim>& shape) {
   Shape<ndim> ret;
   #pragma unroll
-  for (int i = ndim-1, j = idx; i >=0; --i) {
-    int tmp = j / shape[i];
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
     ret[i] = j - tmp*shape[i];
     j = tmp;
   }
@@ -315,8 +315,8 @@ MSHADOW_XINLINE Shape<ndim> unravel(const int idx, const Shape<ndim>& shape) {
 
 /* Compute dot product of two vector */
 template<int ndim>
-MSHADOW_XINLINE int dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
-  int ret = 0;
+MSHADOW_XINLINE index_t dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
+  index_t ret = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
     ret += coord[i] * stride[i];
@@ -327,12 +327,12 @@ MSHADOW_XINLINE int dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
 
 /* Combining unravel and dot */
 template<int ndim>
-MSHADOW_XINLINE int unravel_dot(const int idx, const Shape<ndim>& shape,
+MSHADOW_XINLINE index_t unravel_dot(const index_t idx, const Shape<ndim>& shape,
   const Shape<ndim>& stride) {
-  int ret = 0;
+  index_t ret = 0;
   #pragma unroll
-  for (int i = ndim-1, j = idx; i >=0; --i) {
-    int tmp = j / shape[i];
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
     ret += (j - tmp*shape[i])*stride[i];
     j = tmp;
   }
