@@ -124,8 +124,6 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
 
     std::vector<mkldnn::memory::format> ret(1);
     ret[0] = static_cast<mkldnn::memory::format>(pd.dst_primitive_desc().desc().data.format);
-    // ret[1] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
-    // printf("format: %d, %d\n", ret[0], ret[1]);
     printf("format: %d \n", ret[0]);
     return ret;
   } else if (num_dims == 5) {
@@ -201,7 +199,6 @@ inline static TestArrayShapes GetTestArrayShapes() {
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
     pds.push_back(GetMemPD(s1, dtype, formats[0]));
-    // pds.push_back(GetMemPD(s2, dtype, formats[1]));
   }
   {
     // 5D
