@@ -17,9 +17,10 @@
 
 package org.apache.mxnet
 
+import org.apache.mxnet.Base.CPtrAddress
 import org.apache.mxnet.io.NDArrayIter
 import org.apache.mxnet.optimizer.SGD
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.ListBuffer
 
@@ -55,7 +56,7 @@ class FeedForward private(
     argParams: Map[String, NDArray],
     auxParams: Map[String, NDArray],
     private val allowExtraParams: Boolean,
-    val beginEpoch: Int) {
+    val beginEpoch: Int) extends NativeResource {
 
   val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   private var argumentChecked = false
@@ -126,6 +127,8 @@ class FeedForward private(
   }
 
   // Initialize weight parameters and auxiliary states
+  // The NDArrays associated with the _argParms and _auxParams are not disposed instead
+  // they are passed a outer scope if available.
   private def initParams(inputShapes: Map[String, Shape], overwrite: Boolean = false)
   : (IndexedSeq[String], IndexedSeq[String], IndexedSeq[String]) = {
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
@@ -137,16 +140,26 @@ class FeedForward private(
     val paramNameShapes = (argNames zip argShapes).filter { case (name, _) =>
       paramNames.contains(name)
     }
-    val argParams = paramNameShapes.map { case (name, shape) =>
-      (name, NDArray.zeros(shape))
+    val argParams = paramNameShapes.map { case (name, shape) => {
+        val param = NDArray.zeros(shape)
+        val curScope = ResourceScope.getCurrentScope()
+        if (curScope.isDefined) curScope.get.moveToOuterScope(param)
+        (name, param)
+      }
     }.toMap
-    val auxParams = (auxNames zip auxShapes).map { case (name, shape) =>
-      (name, NDArray.zeros(shape))
+
+    val auxParams = (auxNames zip auxShapes).map { case (name, shape) => {
+        val param = NDArray.zeros(shape)
+        val curScope = ResourceScope.getCurrentScope()
+        if (curScope.isDefined) curScope.get.moveToOuterScope(param)
+        (name, param)
+      }
     }.toMap
 
     for ((k, v) <- argParams) {
       if (_argParams != null && _argParams.contains(k) && (!overwrite)) {
         argParams(k).set(_argParams(k))
+
       } else {
         initializer(k, v)
       }
@@ -277,13 +290,15 @@ class FeedForward private(
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric, kvStoreType: String,
           epochEndCallback: EpochEndCallback, batchEndCallback: BatchEndCallback,
           logger: Logger, workLoadList: Seq[Float]): Unit = {
-    // init params first to allow kv store use _argParams to decide its type
-    initSymbolParams(trainData)
-    // create kvstore
-    val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
-    fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
-      epochEndCallback, batchEndCallback, logger, workLoadList)
-    kvStore.foreach(_.dispose())
+    ResourceScope.using() {
+      // init params first to allow kv store use _argParams to decide its type
+      initSymbolParams(trainData)
+      // create kvstore
+      val (kvStore, updateOnKVStore) = Model.createKVStore(kvStoreType, ctx.length, _argParams)
+      fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
+        epochEndCallback, batchEndCallback, logger, workLoadList)
+//      kvStore.foreach(_.dispose())
+    }
   }
 
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
@@ -313,11 +328,13 @@ class FeedForward private(
           batchEndCallback: BatchEndCallback, logger: Logger,
           workLoadList: Seq[Float]): Unit = {
     // init params first to allow kv store use _argParams to decide its type
-    initSymbolParams(trainData)
-    // create kvstore
-    val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
-    fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
-      epochEndCallback, batchEndCallback, logger, workLoadList)
+    ResourceScope.using() {
+      initSymbolParams(trainData)
+      // create kvstore
+      val (kvStore, updateOnKVStore) = Model.createKVStore(kv)
+      fit(trainData, evalData, evalMetric, kvStore, updateOnKVStore,
+        epochEndCallback, batchEndCallback, logger, workLoadList)
+    }
   }
 
   def fit(trainData: DataIter, evalData: DataIter, evalMetric: EvalMetric,
@@ -352,44 +369,49 @@ class FeedForward private(
                   batchEndCallback: BatchEndCallback = null, logger: Logger = FeedForward.logger,
                   workLoadList: Seq[Float] = null): Unit = {
     require(evalMetric != null, "evalMetric cannot be null")
-    val (argNames, paramNames, auxNames) = initSymbolParams(trainData)
+    // TODO: https://issues.apache.org/jira/browse/MXNET-1171
+    // this leaks memory, initSymbolParams->initParams is already called which allocates
+    // NDArray in argParams, auxParams and here we are overwriting it by calling again.
+    // PhantomRef should take care of releasing this when GC is called, however we have to
+    // wait for the GC call to happen.
+      val (argNames, paramNames, auxNames) = initSymbolParams(trainData)
 
-    // init optimizer
-    val batchSizeMultiplier = kvStore.map { kv =>
-      if (kv.`type` == "dist_sync") {
-        kv.numWorkers
-      } else {
-        1
+      // init optimizer
+      val batchSizeMultiplier = kvStore.map { kv =>
+        if (kv.`type` == "dist_sync") {
+          kv.numWorkers
+        } else {
+          1
+        }
       }
-    }
-    val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
-    this.optimizer.setArgNames(argNames)
-    this.optimizer.setRescaleGrad(1f / batchSize)
-    this.optimizer.setSymbol(this.symbol)
-    val paramIdx2Name =
-      if (updateOnKVStore) {
-        paramNames.zipWithIndex.map { case (name, idx) => idx -> name }.toMap
-      } else {
-        paramNames.zipWithIndex.flatMap { case (name, idx) =>
-          (0 until ctx.length).map(k => (idx * ctx.length + k) -> name).toMap
-        }.toMap
-      }
-    this.optimizer.setIdx2Name(paramIdx2Name)
+      val batchSize = trainData.batchSize * batchSizeMultiplier.getOrElse(1)
+      this.optimizer.setArgNames(argNames)
+      this.optimizer.setRescaleGrad(1f / batchSize)
+      this.optimizer.setSymbol(this.symbol)
+      val paramIdx2Name =
+        if (updateOnKVStore) {
+          paramNames.zipWithIndex.map { case (name, idx) => idx -> name }.toMap
+        } else {
+          paramNames.zipWithIndex.flatMap { case (name, idx) =>
+            (0 until ctx.length).map(k => (idx * ctx.length + k) -> name).toMap
+          }.toMap
+        }
+      this.optimizer.setIdx2Name(paramIdx2Name)
 
-    logger.debug("Start training on multi-device")
-    Model.trainMultiDevice(
-      symbol, ctx, argNames, paramNames, auxNames,
-      _argParams, _auxParams,
-      this.beginEpoch, this.numEpoch,
-      this.epochSize, this.optimizer,
-      kvStore, updateOnKVStore,
-      trainData = trainData, evalData = Option(evalData),
-      evalMetric = evalMetric,
-      epochEndCallback = Option(epochEndCallback),
-      batchEndCallback = Option(batchEndCallback),
-      workLoadList = workLoadList,
-      monitor = monitor,
-      symGen = symGen)
+      logger.debug("Start training on multi-device")
+      Model.trainMultiDevice(
+        symbol, ctx, argNames, paramNames, auxNames,
+        _argParams, _auxParams,
+        this.beginEpoch, this.numEpoch,
+        this.epochSize, this.optimizer,
+        kvStore, updateOnKVStore,
+        trainData = trainData, evalData = Option(evalData),
+        evalMetric = evalMetric,
+        epochEndCallback = Option(epochEndCallback),
+        batchEndCallback = Option(batchEndCallback),
+        workLoadList = workLoadList,
+        monitor = monitor,
+        symGen = symGen)
   }
 
   /**
@@ -416,9 +438,29 @@ class FeedForward private(
   def serialize(): Array[Byte] = {
     Model.serialize(this.symbol, getArgParams, getAuxParams)
   }
+
+  // hack to make the FeedForward.scala work with ResourceScope and
+  // automatically release _argParms and _auxParms
+  override def nativeAddress: CPtrAddress = hashCode()
+
+  override def nativeDeAllocator: CPtrAddress => Int = FeedForward.doNothingDeAllocator
+
+  override val ref: NativeResourceRef = super.register()
+
+  override val bytesAllocated: Long = 0L
+
+  override def dispose(): Unit = {
+    if (!super.isDisposed) {
+      _argParams.foreach { case (_, param) => param.dispose() }
+      _auxParams.foreach { case (_, param) => param.dispose() }
+    }
+  }
 }
 
 object FeedForward {
+
+  private def doNothingDeAllocator(dummy: CPtrAddress): Int = 0
+
   private val logger: Logger = LoggerFactory.getLogger(classOf[FeedForward])
   // Check if name is a data argument.
   private def isDataArg(name: String): Boolean = {
