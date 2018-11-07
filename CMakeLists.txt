@@ -224,7 +224,7 @@ if(ENABLE_TESTCOVERAGE)
 endif()
 
 if(USE_MKLDNN)
-  include(cmake/MklDnn.cmake)
+  include(cmake/DownloadMKLML.cmake)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
