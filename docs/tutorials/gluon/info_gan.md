@@ -171,7 +171,7 @@ class Discriminator(gluon.HybridBlock):
 ```
 
 The InfoGAN has the following layout.
-<img src="https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/InfoGAN.png" style="width:800px;height:250px;">
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/InfoGAN.png" style="width:800px;height:250px;">
 Discriminator and Generator are the same as in the DCGAN example. On top of the Disciminator is the Q model, which is estimating the code `c` for given fake images. The Generator's input is random noise and the latent code `c`.  
 
 ## Training Loop
@@ -214,11 +214,11 @@ if os.path.isfile("infogan_d_latest.params") and os.path.isfile("infogan_g_lates
 
 The latent code $c$ is part of the Generator input and it contains mutliple variables (continuous, categorical) that can represent different distributions. In order to make sure that the Generator uses the latent code, mutual information is introduced into the GAN loss term. Mutual information measures how much X is known given Y or vice versa. It is defined as:
 
-![gif](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/entropy.gif) 
+![gif](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/entropy.gif) 
 
 The InfoGAN loss is:
 
-![gif](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/loss.gif)
+![gif](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/loss.gif)
 
 where `V(D,G)` is the GAN loss and the mutual information `I(c, G(z, c))` goes in as regularization. The goal is to reach high mutual information, in order to learn meaningful codes `c` for the data. 
 
@@ -401,11 +401,11 @@ for image in test_images[:100]:
     plt.show()
     plt.clf()
 ```
-![png](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/output.png)<!--notebook-skip-line--> 
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/output.png)<!--notebook-skip-line--> 
 
 ## How the Generator learns
 We trained the Generator for a couple of epochs and stored a couple of fake images per epoch. Check the video.
-                    ![alt text](https://raw.githubusercontent.com/NRauschmayr/web-data/master/mxnet/doc/tutorials/info_gan/infogan.gif)
+                    ![alt text](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/infogan.gif)
                                                         
 
 The following function computes the TSNE on the feature matrix and stores the result in a json-file. This file can be loaded with [TSNEViewer](https://ml4a.github.io/guides/ImageTSNEViewer/) 
