@@ -322,4 +322,4 @@ by invoking `launch_quantize.sh`.
 
 **NOTE**: 
 - This example has only been tested on Linux systems.
-- Performance is expected to decrease with GPU as the params. The purpose of the quantization implementation is to minimize accuracy loss when converting FP32 models to INT8. MXNet community is working on improving the performance. 
+- Performance is expected to decrease with GPU, however the memory footprint of a quantized model is smaller. The purpose of the quantization implementation is to minimize accuracy loss when converting FP32 models to INT8. MXNet community is working on improving the performance. 
