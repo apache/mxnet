@@ -106,7 +106,7 @@ public class JavaBenchmark {
                 model.runBatchInference();
                 result[i] = System.nanoTime() - currTime;
             }
-            printStatistics(result, modelName +"Batch");
+            printStatistics(result, modelName +"batch_inference");
         }
 
         model.batchSize = 1;
@@ -117,6 +117,6 @@ public class JavaBenchmark {
             model.runSingleInference();
             result[i] = System.nanoTime() - currTime;
         }
-        printStatistics(result, modelName);
+        printStatistics(result, modelName + "single_inference");
     }
 }
