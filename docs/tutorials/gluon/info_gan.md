@@ -246,7 +246,7 @@ def create_generator_input():
     c2     = nd.random.uniform(-1, 1, shape=(batch_size, n_continuous)).as_in_context(ctx)
 
     # concatenate random noise with c which will be the input of the generator
-    return nd.concat(z, c1, c2, dim=1)
+    return nd.concat(z, c1, c2, dim=1), label, c2
 ```
 
 Define the training loop. 
@@ -273,7 +273,7 @@ with SummaryWriter(logdir='./logs/') as sw:
                 
             #get real data and generator input
             real_data = data.as_in_context(ctx)     
-            g_input   = create_generator_input()
+            g_input, label, c2 = create_generator_input()
 
             
             #Update discriminator: Input real data and fake data
@@ -298,7 +298,7 @@ with SummaryWriter(logdir='./logs/') as sw:
 
             #Update generator: Input random noise and latent code vector
             with autograd.record():
-                fake_image = generator(g_input)
+                fake_image,_,_ = generator(g_input)
                 output_fake, category_prob, continuous_mean = discriminator(fake_image)
                 g_error = loss1(output_fake, real_label) + loss3(category_prob, label) + loss2(c2, continuous_mean)
 
@@ -374,7 +374,7 @@ features = nd.zeros((len(test_images), feature_size), ctx=ctx)
 
 for idx, image in enumerate(test_images):
   
-    feature = discriminator(nd.array(image))
+    feature = discriminator(nd.array(image, ctx=ctx))
     feature = feature.reshape(feature_size,)
     features[idx,:] = feature.copyto(ctx)
 
