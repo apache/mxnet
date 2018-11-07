@@ -90,7 +90,7 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
         }
       }
-    }
+    },
     'Tutorial: Python2': {
       node(NODE_LINUX_GPU) {
         ws('workspace/tutorial-test-python2') {
