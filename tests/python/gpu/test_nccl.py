@@ -40,20 +40,20 @@ class TestNCCL(unittest.TestCase):
 
     def setUp(self):
         self.kv_nccl = mx.kv.create('nccl')
-        for gpu_index in range(self.num_gpus):
+        for gpu_index in range(num_gpus):
             shapes = np.random.shuffle(self.shapes)
             self.tensors[gpu_index] = [np.random.random_sample(shape) for shape in shapes]
 
     def push_shapes(self):
-        for gpu_index in range(self.num_gpus):
+        for gpu_index in range(num_gpus):
             tensors = [mx.nd.array(array, mx.gpu(gpu_index)) for array in self.tensors[gpu_index]]
             self.kv_nccl.push(gpu_index, tensors)
 
     def test_push_pull(self):
         self.push_shapes()
 
-        for gpu_index in range(self.num_gpus):
-            for gpu_index2 in range(self.num_gpus):
+        for gpu_index in range(num_gpus):
+            for gpu_index2 in range(num_gpus):
                 if gpu_index == gpu_index2:
                     continue
                 pulled_tensors = [mx.nd.zeros(array.shape, mx.gpu(gpu_index)) for array in self.tensors[gpu_index2]]
