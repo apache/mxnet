@@ -20,9 +20,8 @@ import numpy as np
 from distutils.version import LooseVersion
 import os
 import pickle as pkl
-import unittest
 from nose.tools import raises
-from common import setup_module, with_seed, assertRaises, TemporaryDirectory, teardown
+from common import with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
@@ -99,6 +98,26 @@ def test_ndarray_setitem():
     assert same(x.asnumpy(), x_np)
     x[-1] = 1
     x_np[-1] = 1
+    assert same(x.asnumpy(), x_np)
+
+    # Ellipsis
+    x = mx.nd.zeros(shape)
+    x[2, ...] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[2, ...] = 1
+    assert same(x.asnumpy(), x_np)
+
+    x = mx.nd.zeros(shape)
+    x[..., 1] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[..., 1] = 1
+    assert same(x.asnumpy(), x_np)
+
+    # `None` should be ignored
+    x = mx.nd.zeros(shape)
+    x[None, 0, None, None, 0, 0, None] = 1
+    x_np = np.zeros(shape, dtype=x.dtype)
+    x_np[None, 0, None, None, 0, 0, None] = 1
     assert same(x.asnumpy(), x_np)
 
     # short all-dim indexing
