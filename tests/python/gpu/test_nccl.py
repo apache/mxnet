@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 import copy
+import logging
 
 import unittest
 
@@ -36,8 +37,8 @@ class TestNCCL(unittest.TestCase):
         if num_gpus < 2:
             raise unittest.SkipTest("It makes sense to test NCCL functionality on more than 1 GPU only")
         if num_gpus > 8:
-            print("The machine has {} GPUs. We will run the test on not more than 8 GPUs.".format(cls.num_gpus))
-            print("There is a limit of 8 maximum P2P peers for all PCI-E hardware created.")
+            logging.info("The machine has {} GPUs. We will run the test on not more than 8 GPUs.".format(cls.num_gpus))
+            logging.info("There is a limit of 8 maximum P2P peers for all PCI-E hardware created.")
 
     def setUp(self):
         self.kv_nccl = mx.kv.create('nccl')
@@ -45,6 +46,8 @@ class TestNCCL(unittest.TestCase):
             shapes = copy.deepcopy(self.shapes)
             np.random.shuffle(shapes)
             self.tensors[gpu_index] = [np.random.random_sample(shape) for shape in shapes]
+            log = "GPU {}: {}".format(gpu_index, ' '.join(str(tensor.shape) for tensor in self.tensors[gpu_index]))
+            logging.info(log)
 
     def push_shapes(self):
         for gpu_index in range(num_gpus):
