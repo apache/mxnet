@@ -314,9 +314,6 @@ class ScaledBinaryConv(HybridBlock):
 
 
 class ActivatedConvolutionFactory:
-    def __init__(self):
-        self.ConvBlock = BinaryConvolution
-
     def __call__(self, *args, **kwargs):
         if binary_layer_config.scaled:
             return ScaledBinaryConv(*args, **kwargs)
