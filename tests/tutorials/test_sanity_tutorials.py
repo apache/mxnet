@@ -55,7 +55,8 @@ whitelist = ['basic/index.md',
              'unsupervised_learning/index.md',
              'vision/index.md',
              'tensorrt/index.md',
-             'tensorrt/inference_with_trt.md']
+             'tensorrt/inference_with_trt.md',
+             'java/mxnet_java_on_intellij.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():
