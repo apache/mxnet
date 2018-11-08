@@ -37,8 +37,7 @@ class BinaryLayerConfig():
             return activation in ['identity', 'approx_sign', 'relu', 'clip', 'leaky_clip']
         elif bits == 1:
             return activation in ['det_sign', 'sign_approx_sign']
-        else:
-            return activation in ['round', 'dorefa']  # DoReFa paper only applies round activation
+        return activation in ['round', 'dorefa']  # DoReFa paper only applies round activation
 
     @staticmethod
     def _default_activation(bits):
@@ -54,8 +53,7 @@ class BinaryLayerConfig():
             return weight_quantization in ['identity']
         elif bits == 1:
             return weight_quantization in ['det_sign', 'sign_approx_sign']
-        else:
-            return weight_quantization in ['dorefa']
+        return weight_quantization in ['dorefa']
 
     @staticmethod
     def _default_weight_quantization(bits):
@@ -65,29 +63,17 @@ class BinaryLayerConfig():
             return 'identity'
         return 'dorefa'
 
-    def get_quantization_function(self, bits=None, method=None, input_type='act'):
+    def get_quantization_function(self, bits=None, method=None):
         """
         Returns quantization function
-        :param bits:
-        :param method: quantzation method to be used
-        :param input_type: 'act' or 'weight'
-        :return:
+        Node:
+            For specific use as activation or weight quantization, consider
+            using `get_activation_function` or
+            `get_weight_quantization_function` respectively
+        :param bits: Bit resolution
+        :param method: Quantzation method to be used
+        :return: Function to be called in hybrid forward
         """
-        if input_type == 'act':
-            bits = bits or self.bits_a
-            method = method or self.activation
-            assert BinaryLayerConfig._valid_activation(bits, method), \
-                'Combination of method {} using {} bit(s) for input type {} is not supported!'.format(method, bits,
-                                                                                                      input_type)
-        elif input_type == 'weight':
-            bits = bits or self.bits
-            method = method or self.weight_quantization
-            assert BinaryLayerConfig._valid_weight_quantization(bits, method), \
-                'Combination of method {} using {} bit(s) for input type {} is not supported!'.format(method, bits,
-                                                                                                      input_type)
-        else:
-            assert False, 'Input type {} unknown!'.format(input_type)
-
         def identity(F, x):
             return x
 
@@ -124,6 +110,20 @@ class BinaryLayerConfig():
             return F.det_sign(x)
 
         return locals()[method]
+    
+    def get_activation_function(self, bits=None, method=None):
+        bits = bits or self.bits_a
+        method = method or self.activation
+        assert BinaryLayerConfig._valid_activation(bits, method), \
+            'Combination of method {} using {} bit(s) for activation is not supported!'.format(method, bits)
+        return self.get_quantization_function(bits=bits, method=method)
+
+    def get_weight_quantization_function(self, bits=None, method=None):
+        bits = bits or self.bits
+        method = method or self.weight_quantization
+        assert BinaryLayerConfig._valid_weight_quantization(bits, method), \
+            'Combination of method {} using {} bit(s) for weight quantization is not supported!'.format(method, bits)
+        return self.get_quantization_function(bits=bits, method=method)
 
 
 binary_layer_config = BinaryLayerConfig()
@@ -152,7 +152,7 @@ def check_params(use_bias, activation):
 class QActivation(HybridBlock):
     def __init__(self, *args, bits=None, gradient_cancel_threshold=None, method=None, **kwargs):
         super(QActivation, self).__init__(*args, **kwargs)
-        self.quantize = binary_layer_config.get_quantization_function(bits, method, input_type='act')
+        self.quantize = binary_layer_config.get_activation_function(bits=bits, method=method)
         self.threshold = gradient_cancel_threshold or binary_layer_config.grad_cancel
 
     def hybrid_forward(self, F, x):
@@ -166,7 +166,7 @@ class QDense(Dense):
         check_params(use_bias, activation)
         super(QDense, self).__init__(*args, activation=None, use_bias=False, **kwargs)
         self._offset = 0
-        self.quantize = binary_layer_config.get_quantization_function(bits=bits, input_type='weight')
+        self.quantize = binary_layer_config.get_weight_quantization_function(bits=bits)
         self.method = binary_layer_config.activation
         self.weight.wd_mult = 0.0
 
@@ -197,7 +197,7 @@ class _QConv(_Conv):
         self.scaling = apply_scaling
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
-        self.quantize = binary_layer_config.get_quantization_function(bits=self.bits, method=quantization, input_type='weight')
+        self.quantize = binary_layer_config.get_weight_quantization_function(bits=self.bits, method=quantization)
 
     def _alias(self):
         return 'qconv'
@@ -320,8 +320,7 @@ class ActivatedConvolutionFactory:
     def __call__(self, *args, **kwargs):
         if binary_layer_config.scaled:
             return ScaledBinaryConv(*args, **kwargs)
-        else:
-            return BinaryConvolution(*args, **kwargs)
+        return BinaryConvolution(*args, **kwargs)
 
 
 activated_conv = ActivatedConvolutionFactory()
