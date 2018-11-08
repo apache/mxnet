@@ -213,7 +213,7 @@ class MKLDNNDeconvForward {
   void SetDataHandle(const DeconvolutionParam& param,
                      const OpContext &ctx,
                      const NDArray &in_data,
-                     NDArray &weight,
+                     const NDArray &weight,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
 
@@ -245,7 +245,7 @@ MKLDNNDeconvForward::MKLDNNDeconvForward(const DeconvolutionParam& param,
 void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
                                         const OpContext &ctx,
                                         const NDArray &in_data,
-                                        NDArray &weight,
+                                        const NDArray &weight,
                                         const std::vector<OpReqType> &req,
                                         const std::vector<NDArray> &out_data) {
   auto data_mem = in_data.GetMKLDNNDataReorder(
@@ -256,7 +256,7 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
     // to the default format for now.
     if (weight.IsMKLDNNData())
       // This asks the engine to reorder data after the weight array is used.
-      weight.Reorder2DefaultAsync();
+      const_cast<NDArray&>(weight).Reorder2DefaultAsync();
     weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
   } else {
     // For inference, we want to reorder the weight array so we don't need to
@@ -265,7 +265,7 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
       weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
-      weight.MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+      const_cast<NDArray&>(weight).MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
