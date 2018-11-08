@@ -31,6 +31,7 @@
 
 #if MXNET_USE_CUDA
 #include <curand_kernel.h>
+#include <math.h>
 #endif  // MXNET_USE_CUDA
 
 namespace mxnet {
@@ -153,10 +154,13 @@ class RandGenerator<gpu, DType> {
 
     MSHADOW_FORCE_INLINE __device__ float normal() {
       return curand_normal(&state_);
-
-    MSHADOW_FORCE_INLINE __device__ int discrete_uniform() {
-      return curand(&state_);
     }
+
+    MSHADOW_FORCE_INLINE __device__ int discrete_uniform(const int64_t lower, const int64_t upper) {
+      float randu_f = curand_uniform(&state_);
+      randu_f *= (upper-lower+0.999999);
+      randu_f += lower;
+      return static_cast<int>(trunc(randu_f));
     }
 
    private:
@@ -209,6 +213,13 @@ class RandGenerator<gpu, double> {
 
     MSHADOW_FORCE_INLINE __device__ double normal() {
       return curand_normal_double(&state_);
+    }
+
+    MSHADOW_FORCE_INLINE __device__ int discrete_uniform(const int64_t lower, const int64_t upper) {
+      float randu_f = curand_uniform(&state_);
+      randu_f *= (upper-lower+0.999999);
+      randu_f += lower;
+      return static_cast<int>(trunc(randu_f));
     }
 
    private:

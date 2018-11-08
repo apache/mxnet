@@ -174,7 +174,7 @@ class MultiSentenceIter(mx.io.DataIter):
         self._iter = self._dataset.iterate_once(batch_size, bptt)
 
     def iter_next(self):
-        data = self._iter.next()
+        data = next(self._iter)
         if data is None:
             return False
         self._next_data = mx.nd.array(data[0], dtype=np.int32)

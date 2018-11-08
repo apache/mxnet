@@ -19,20 +19,21 @@
 from __future__ import print_function
 
 import os
+
+import mxnet as mx
 import numpy as np
-from sklearn.datasets import fetch_mldata
 
 
 def get_mnist():
     """ Gets MNIST dataset """
 
     np.random.seed(1234) # set seed for deterministic ordering
-    data_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    data_path = os.path.join(data_path, '../../data')
-    mnist = fetch_mldata('MNIST original', data_home=data_path)
-    p = np.random.permutation(mnist.data.shape[0])
-    X = mnist.data[p].astype(np.float32)*0.02
-    Y = mnist.target[p]
+    mnist_data = mx.test_utils.get_mnist()
+    X = np.concatenate([mnist_data['train_data'], mnist_data['test_data']])
+    Y = np.concatenate([mnist_data['train_label'], mnist_data['test_label']])
+    p = np.random.permutation(X.shape[0])
+    X = X[p].reshape((X.shape[0], -1)).astype(np.float32)*5
+    Y = Y[p]
     return X, Y
 
 
