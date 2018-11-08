@@ -371,6 +371,12 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
     int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
     int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
     int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+
+    if (param.pooling_convention == pool_enum::kFull) {
+      pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
+      pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
+    }
+
     if (param.global_pool) {
       pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
       stride_h_ = stride_w_ = 1;
