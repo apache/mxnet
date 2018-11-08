@@ -767,30 +767,14 @@ unittest_ubuntu_python2_gpu() {
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
-tutorialtest_ubuntu_python3_gpu() {
+unittest_ubuntu_python3_gpu() {
     set -ex
-    cd /work/mxnet/docs
-    export MXNET_DOCS_BUILD_MXNET=0
-    make html
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=7.0.3
     export MXNET_ENABLE_CYTHON=0
-    export PYTHONPATH=/work/mxnet/python/
-    export MXNET_TUTORIAL_TEST_KERNEL=python3
-    cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
-}
-
-tutorialtest_ubuntu_python2_gpu() {
-    set -ex
-    cd /work/mxnet/docs
-    export MXNET_DOCS_BUILD_MXNET=0
-    make html
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_ENABLE_CYTHON=0
-    export PYTHONPATH=/work/mxnet/python/
-    export MXNET_TUTORIAL_TEST_KERNEL=python2
-    cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu_cython() {
@@ -802,16 +786,6 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     check_cython 3
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
-}
-
-unittest_ubuntu_python3_gpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export CUDNN_VERSION=7.0.3
-    export MXNET_ENABLE_CYTHON=0
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1201,6 +1175,33 @@ nightly_straight_dope_python3_multi_gpu_tests() {
     nosetests-3.4 --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
       test_notebooks_multi_gpu.py --nologcapture
 }
+
+nightly_tutorial_test_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial 
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+}
+
+nightly_tutorial_test_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+}
+
 
 # Deploy
 

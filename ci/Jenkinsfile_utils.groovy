@@ -26,8 +26,11 @@ def init_git() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        sh 'git submodule update --init --recursive'
         sh 'git clean -xdff'
+        sh 'git reset --hard'
+        sh 'git submodule update --init --recursive'
+        sh 'git submodule foreach --recursive git clean -ffxd'
+        sh 'git submodule foreach --recursive git reset --hard'
       }
     } catch (exc) {
       deleteDir()
@@ -45,8 +48,11 @@ def init_git_win() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        bat 'git submodule update --init --recursive'
         bat 'git clean -xdff'
+        bat 'git reset --hard'
+        bat 'git submodule update --init --recursive'
+        bat 'git submodule foreach --recursive git clean -ffxd'
+        bat 'git submodule foreach --recursive git reset --hard'
       }
     } catch (exc) {
       deleteDir()
