@@ -28,6 +28,8 @@ from label_util import LabelUtil
 from stt_bi_graphemes_util import generate_bi_graphemes_label
 from multiprocessing import cpu_count, Process, Manager
 
+logUtil = LogUtil.getInstance()
+
 class DataGenerator(object):
     def __init__(self, save_dir, model_name, step=10, window=20, max_freq=8000, desc_file=None):
         """
@@ -86,7 +88,7 @@ class DataGenerator(object):
             max_duration (float): In seconds, the maximum duration of
                 utterances to train or test on
         """
-        logger = LogUtil().getlogger()
+        logger = logUtil.getlogger()
         logger.info('Reading description file: {} for partition: {}'
                     .format(desc_file, partition))
         audio_paths, durations, texts = [], [], []
@@ -245,7 +247,7 @@ class DataGenerator(object):
         Params:
             k_samples (int): Use this number of samples for estimation
         """
-        log = LogUtil().getlogger()
+        log = logUtil.getlogger()
         log.info("Calculating mean and std from samples")
         # if k_samples is negative then it goes through total dataset
         if k_samples < 0:

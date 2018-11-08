@@ -78,9 +78,6 @@ import sys
 import mxnet as mx
 import logging
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import get_data
-
 import sd_module
 
 def residual_module(death_rate, n_channel, name_scope, context, stride=1, bn_momentum=0.9):
@@ -199,13 +196,31 @@ lr_scheduler = mx.lr_scheduler.FactorScheduler(step=max(int(epoch_size * lr_fact
 batch_end_callbacks = [mx.callback.Speedometer(batch_size, 50)]
 epoch_end_callbacks = [mx.callback.do_checkpoint('sd-%d' % (n_residual_blocks * 6 + 2))]
 
-
-args = type('', (), {})()
-args.batch_size = batch_size
-args.data_dir = os.path.join(os.path.dirname(__file__), "data")
+data_dir = os.path.join(os.path.dirname(__file__), "data", "cifar")
 kv = mx.kvstore.create(kv_store)
 
-train, val = get_data.get_cifar10_iterator(args, kv)
+mx.test_utils.get_cifar10()
+
+data_shape = (3, 28, 28)
+train = mx.io.ImageRecordIter(
+    path_imgrec = os.path.join(data_dir, "train.rec"),
+    mean_img    = os.path.join(data_dir, "mean.bin"),
+    data_shape  = data_shape,
+    batch_size  = batch_size,
+    rand_crop   = True,
+    rand_mirror = True,
+    num_parts   = kv.num_workers,
+    part_index  = kv.rank)
+
+val = mx.io.ImageRecordIter(
+    path_imgrec = os.path.join(data_dir, "test.rec"),
+    mean_img    = os.path.join(data_dir, "mean.bin"),
+    rand_crop   = False,
+    rand_mirror = False,
+    data_shape  = data_shape,
+    batch_size  = batch_size,
+    num_parts   = kv.num_workers,
+    part_index  = kv.rank)
 
 logging.basicConfig(level=logging.DEBUG)
 mod_seq.fit(train, val,
