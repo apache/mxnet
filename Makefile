@@ -74,8 +74,7 @@ endif
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
-# -Wall -Wsign-compare
-WARNFLAGS =
+WARNFLAGS = -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
