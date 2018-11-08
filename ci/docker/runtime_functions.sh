@@ -305,6 +305,7 @@ build_centos7_gpu() {
         USE_CUDNN=1                               \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_NCCL=1                                \
         -j$(nproc)
 }
 
