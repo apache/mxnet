@@ -723,7 +723,7 @@ unittest_ubuntu_python2_cpu_cython() {
     check_cython 2
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
-    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/pytho
+    nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python2_cpu() {
