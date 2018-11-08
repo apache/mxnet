@@ -902,7 +902,7 @@ fixed-size items.
         start, stop, _ = _get_index_range(start, stop, self.shape[0])
 
         check_call(_LIB.MXNDArraySlice(
-            self.handle, mx_uint(start), mx_uint(stop), ctypes.byref(handle)))
+            self.handle, mx_long(start), mx_long(stop), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def _at(self, idx):
@@ -936,7 +936,7 @@ fixed-size items.
                 raise IndexError('index %d is out of bounds for axis 0 with size %d'
                                  % (idx-length, length))
         check_call(_LIB.MXNDArrayAt(
-            self.handle, mx_uint(idx), ctypes.byref(handle)))
+            self.handle, mx_long(idx), ctypes.byref(handle)))
         return NDArray(handle=handle, writable=self.writable)
 
     def reshape(self, *shape, **kwargs):

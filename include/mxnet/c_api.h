@@ -705,7 +705,7 @@ MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayAt(NDArrayHandle handle,
-                          mx_uint idx,
+                          dim_t idx,
                           NDArrayHandle *out);
 
 /*!

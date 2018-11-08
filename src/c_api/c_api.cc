@@ -406,7 +406,7 @@ int MXNDArraySlice(NDArrayHandle handle,
 }
 
 int MXNDArrayAt(NDArrayHandle handle,
-                mx_uint idx,
+                dim_t idx,
                 NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
