@@ -630,6 +630,9 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
+
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_amalgamation() {
