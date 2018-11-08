@@ -167,6 +167,10 @@ class HashTableChecker {
   }
 };
 
+/*
+ * This scans two sorted vertex Id lists and search for elements in both lists.
+ * TODO(zhengda) it seems there is a bug in the code.
+ */
 class ScanChecker {
   const dgl_id_t *vid_data;
   size_t len;
@@ -202,7 +206,6 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
   const size_t len = varr.shape()[0];
   const dgl_id_t *vid_data = data.dptr<dgl_id_t>();
   HashTableChecker def_check(vid_data, len);
-  ScanChecker scan_check(vid_data, len);
 
   // Collect the non-zero entries in from the original graph.
   std::vector<dgl_id_t> row_idx(len + 1);
@@ -219,14 +222,8 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
         << num_vertices << " vertices";
     size_t row_start = indptr[oldvid];
     size_t row_len = indptr[oldvid + 1] - indptr[oldvid];
-    // If there aren't so many elements in a row
-    if (row_len < len / 2) {
-      def_check.CollectOnRow(indices + row_start, eids + row_start, row_len,
-                             &col_idx, old_eids == nullptr ? nullptr : &orig_eids);
-    } else {
-      scan_check.CollectOnRow(indices + row_start, eids + row_start, row_len,
-                              &col_idx, old_eids == nullptr ? nullptr : &orig_eids);
-    }
+    def_check.CollectOnRow(indices + row_start, eids + row_start, row_len,
+                           &col_idx, old_eids == nullptr ? nullptr : &orig_eids);
 
     row_idx[i + 1] = col_idx.size();
   }
