@@ -24,11 +24,11 @@ Usuage:
 - add the default license header to source files that do not contain a valid
   license:
 
-  python license_header.py add
+  license_header.py add
 
 - check if every files has a license header
 
-  python license_header.py check
+  license_header.py check
 """
 
 import re
@@ -76,13 +76,16 @@ _WHITE_LIST = ['R-package/',
                'example/rcnn/rcnn/cython/nms_kernel.cu',
                'prepare_mkl.sh',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
-               'src/operator/contrib/ctc_include/']
+               'src/operator/contrib/ctc_include/',
+               'julia/REQUIRE'
+               ]
 
 # language extensions and the according commment mark
 _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
-          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#', '.t':'#', '.ps1': '#'}
+          '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
+          '.t':'#', '.ps1':'#', '.jl':'#'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
@@ -123,24 +126,27 @@ def _valid_file(fname, verbose=False):
 def process_file(fname, action, verbose=True):
     if not _valid_file(fname, verbose):
         return True
-    with open(fname, 'r', encoding="utf-8") as f:
-        lines = f.readlines()
-    if not lines:
+    try:
+        with open(fname, 'r', encoding="utf-8") as f:
+            lines = f.readlines()
+        if not lines:
+            return True
+        if _has_license(lines):
+            return True
+        elif action == 'check':
+            return False
+        _, ext = os.path.splitext(fname)
+        with open(fname, 'w', encoding="utf-8") as f:
+            # shebang line
+            if lines[0].startswith('#!'):
+                f.write(lines[0].rstrip()+'\n\n')
+                del lines[0]
+            f.write(_get_license(_LANGS[ext]))
+            for l in lines:
+                f.write(l.rstrip()+'\n')
+        logging.info('added license header to ' + fname)
+    except UnicodeError:
         return True
-    if _has_license(lines):
-        return True
-    elif action == 'check':
-        return False
-    _, ext = os.path.splitext(fname)
-    with open(fname, 'w', encoding="utf-8") as f:
-        # shebang line
-        if lines[0].startswith('#!'):
-            f.write(lines[0].rstrip()+'\n\n')
-            del lines[0]
-        f.write(_get_license(_LANGS[ext]))
-        for l in lines:
-            f.write(l.rstrip()+'\n')
-    logging.info('added license header to ' + fname)
     return True
 
 def process_folder(root, action):
@@ -152,7 +158,7 @@ def process_folder(root, action):
                 excepts.append(fname)
     if action == 'check' and excepts:
         logging.warning('The following files do not contain a valid license, '+
-                        'you can use `python tools/license_header.py add [file]` to add'+
+                        'you can use `tools/license_header.py add [file]` to add'+
                         'them automatically: ')
         for x in excepts:
             logging.warning(x)

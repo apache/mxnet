@@ -132,6 +132,11 @@ static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
+static inline bool SupportMKLDNNQuantize(int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kUint8;
+}
+
 static inline bool SupportMKLDNN(const NDArray &input) {
   return SupportMKLDNN(input.dtype(), input.shape())
       && SupportStorageMKLDNN(input.storage_type());
@@ -184,6 +189,35 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
       LOG(FATAL) << "unknown type for MKLDNN";
       return mkldnn::memory::data_type::data_undef;
   }
+}
+
+static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
+  auto mkldnn_dtype = static_cast<mkldnn::memory::data_type>(dtype);
+  switch (mkldnn_dtype) {
+    case mkldnn::memory::data_type::f32:
+      return mshadow::kFloat32;
+    case mkldnn::memory::data_type::s32:
+      return mshadow::kInt32;
+    case mkldnn::memory::data_type::s8:
+      return mshadow::kInt8;
+    case mkldnn::memory::data_type::u8:
+      return mshadow::kUint8;
+    default:
+      LOG(FATAL) << "unknown MKLDNN type";
+      return mshadow::kFloat32;
+  }
+}
+
+static inline size_t GetMemDescSize(const mkldnn::memory::desc &md) {
+  if (md.data.ndims == 0) return 0;
+
+  size_t ret = 1;
+  for (int i = 0; i < md.data.ndims; i++) {
+    ret *= md.data.dims[i];
+  }
+
+  ret *= mshadow::mshadow_sizeof(get_mxnet_type(md.data.data_type));
+  return ret;
 }
 
 inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
@@ -326,6 +360,24 @@ enum OutDataOp {
 
 typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
+
+/*
+ * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
+ * the given one. operator== can't guarantee that. == can return true even if
+ * the formats are different. I need to double check its format.
+ */
+static inline mkldnn::memory *GetMKLDNNExact(
+    const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
+  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
+  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
+    return const_cast<mkldnn::memory *>(mem);
+  } else {
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
+            desc, mem->get_data_handle()));
+    MKLDNNStream::Get()->RegisterMem(ret);
+    return ret.get();
+  }
+}
 
 /*
  * These two functions try to create MKLDNN memory in an NDArray based on `req'.

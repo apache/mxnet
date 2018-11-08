@@ -23,7 +23,8 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises, teardown, assert_raises_cudnn_disabled
+from common import (setup_module, with_seed, assertRaises, teardown,
+                    assert_raises_cudnn_not_satisfied)
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -339,7 +340,7 @@ def test_symbol_block():
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
-    # Test case to verify if initializing the SymbolBlock from a model with params 
+    # Test case to verify if initializing the SymbolBlock from a model with params
     # other than fp32 param dtype.
 
     # 1. Load a resnet model, cast it to fp64 and export
@@ -420,7 +421,6 @@ def check_layer_forward(layer, dshape):
     mx.test_utils.assert_almost_equal(np_out, out.asnumpy(), rtol=1e-5, atol=1e-6)
     mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11506")
 @with_seed()
 def test_conv():
     layers1d = [
@@ -1321,7 +1321,7 @@ def test_apply():
 
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
     net.initialize()
@@ -1932,7 +1932,6 @@ def test_reshape_batchnorm():
 
 
 @with_seed()
-@unittest.skip('Test failing, tracked by https://github.com/apache/incubator-mxnet/issues/12715')
 def test_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):

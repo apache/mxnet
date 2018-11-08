@@ -112,26 +112,16 @@ else(MSVC)
   endif()
   # For cross complication, turn off flag if target device does not support it
   if(USE_F16C)
-    check_cxx_compiler_flag("-mf16c"     COMPILER_SUPPORT_MF16C)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-      execute_process(COMMAND cat /proc/cpuinfo
-              COMMAND grep flags
-              COMMAND grep f16c
-              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-      execute_process(COMMAND sysctl -a
-              COMMAND grep machdep.cpu.features
-              COMMAND grep F16C
-              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
-    endif()
-    if(NOT CPU_SUPPORT_F16C)
-      message("CPU does not support F16C instructions")
-    endif()
-    if(CPU_SUPPORT_F16C AND COMPILER_SUPPORT_MF16C)
-      set(SUPPORT_F16C TRUE)
-    endif()
+    # Determine if hardware supports F16C instruction set
+    message(STATUS "Determining F16C support")
+    include(cmake/AutoDetectF16C.cmake)
   else()
     set(SUPPORT_F16C FALSE)
+  endif()
+  if(SUPPORT_F16C)
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -mf16c")
+  else()
+    add_definitions(-DMSHADOW_USE_F16C=0)
   endif()
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -Wno-sign-compare")
@@ -239,8 +229,10 @@ if(USE_MKLDNN)
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
   endif()
-  set(WITH_TEST OFF)
-  set(WITH_EXAMPLE OFF)
+  set(WITH_TEST OFF CACHE INTERNAL "" FORCE)
+  set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
+  set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
@@ -302,7 +294,7 @@ else()
 endif()
 
 if(USE_ASAN)
-  set(CMAKE_CFLAGS "${CMAKE_CFLAGS} -fno-omit-frame-pointer -fsanitize=address")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer -fsanitize=address")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
   set(GTEST_LIBRARIES "${GTEST_LIBRARIES} -fsanitize=address")

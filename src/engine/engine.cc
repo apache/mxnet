@@ -81,7 +81,7 @@ inline Engine* CreateEngine() {
   if (e & FE_DIVBYZERO) {
     LOG(FATAL) << "divide by zero" << type;
   }
-  if (ret ==nullptr) {
+  if (ret == nullptr) {
     LOG(FATAL) << "Cannot find Engine " << type;
   }
   if (!default_engine) {

@@ -57,3 +57,4 @@ apache-rat-tasks/*
 moderngpu/*
 deformable_im2col.cuh
 deformable_im2col.h
+REQUIRE

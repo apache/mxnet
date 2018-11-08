@@ -72,6 +72,7 @@ by keep zero centered for the quantized value:
 .set_attr<nnvm::FInferType>("FInferType", DequantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", DequantizeStorageType)
 #if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNDequantizeCompute)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", DequantizeCompute<cpu>)

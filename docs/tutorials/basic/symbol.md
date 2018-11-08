@@ -89,7 +89,7 @@ f = mx.sym.reshape(d+e, shape=(1,4))
 # broadcast
 g = mx.sym.broadcast_to(f, shape=(2,4))
 # plot
-mx.viz.plot_network(symbol=g)
+mx.viz.plot_network(symbol=g, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 The computations declared in the above examples can be bound to the input data
@@ -108,7 +108,7 @@ net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
 net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
 net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
 net = mx.sym.SoftmaxOutput(data=net, name='out')
-mx.viz.plot_network(net, shape={'data':(100,200)})
+mx.viz.plot_network(net, shape={'data':(100,200)}, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 Each symbol takes a (unique) string name. NDArray and Symbol both represent
@@ -211,7 +211,7 @@ def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0),name=None, su
 prev = mx.sym.Variable(name="Previous Output")
 conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
 shape = {"Previous Output" : (128, 3, 28, 28)}
-mx.viz.plot_network(symbol=conv_comp, shape=shape)
+mx.viz.plot_network(symbol=conv_comp, shape=shape, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 Then we can define a function that constructs an inception module based on
@@ -237,7 +237,7 @@ def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3,
     return concat
 prev = mx.sym.Variable(name="Previous Output")
 in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
-mx.viz.plot_network(symbol=in3a, shape=shape)
+mx.viz.plot_network(symbol=in3a, shape=shape, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 Finally, we can obtain the whole network by chaining multiple inception

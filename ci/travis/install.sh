@@ -17,14 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# Disable brew auto-update to avoid long running updates while running tests in CI.
+export HOMEBREW_NO_AUTO_UPDATE=1
+
 if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-    brew update
     brew install opencv
-    brew install python3
-    brew install fftw
-    brew install libpng
-    brew install ImageMagick
-    brew install swig
-    python -m pip install --user nose numpy cython scipy requests mock
-    python3 -m pip install --user nose numpy cython scipy requests mock
+    python -m pip install --user nose numpy cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
 fi

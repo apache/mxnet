@@ -19,6 +19,9 @@ import io
 import os
 import tempfile
 import warnings
+import glob
+import shutil
+import multiprocessing as mp
 
 try:
     from unittest import mock
@@ -46,15 +49,45 @@ def test_download_retries():
 
 @mock.patch(
     'requests.get',
-    mock.Mock(side_effect=
-              lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
-def test_download_successful():
-    tmp = tempfile.mkdtemp()
-    tmpfile = os.path.join(tmp, 'README.md')
+    mock.Mock(side_effect=lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT' * 100)))
+def _download_successful(tmp):
+    """ internal use for testing download successfully """
     mx.gluon.utils.download(
         "https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
-        path=tmpfile)
-    assert os.path.getsize(tmpfile) > 100
+        path=tmp)
+
+
+def test_download_successful():
+    """ test download with one process """
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'README.md')
+    _download_successful(tmpfile)
+    assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
+    pattern = os.path.join(tmp, 'README.md*')
+    # check only one file we want left
+    assert len(glob.glob(pattern)) == 1, glob.glob(pattern)
+    # delete temp dir
+    shutil.rmtree(tmp)
+
+
+def test_multiprocessing_download_successful():
+    """ test download with multiprocessing """
+    tmp = tempfile.mkdtemp()
+    tmpfile = os.path.join(tmp, 'README.md')
+    process_list = []
+    # test it with 10 processes
+    for i in range(10):
+        process_list.append(mp.Process(
+            target=_download_successful, args=(tmpfile,)))
+        process_list[i].start()
+    for i in range(10):
+        process_list[i].join()
+    assert os.path.getsize(tmpfile) > 100, os.path.getsize(tmpfile)
+    # check only one file we want left
+    pattern = os.path.join(tmp, 'README.md*')
+    assert len(glob.glob(pattern)) == 1, glob.glob(pattern)
+    # delete temp dir
+    shutil.rmtree(tmp)
 
 
 @mock.patch(
@@ -62,6 +95,7 @@ def test_download_successful():
     mock.Mock(
         side_effect=lambda *args, **kwargs: MockResponse(200, 'MOCK CONTENT')))
 def test_download_ssl_verify():
+    """ test download verify_ssl parameter """
     with warnings.catch_warnings(record=True) as warnings_:
         mx.gluon.utils.download(
             "https://mxnet.incubator.apache.org/index.html", verify_ssl=False)

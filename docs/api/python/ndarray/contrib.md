@@ -55,6 +55,11 @@ In the rest of this document, we list routines provided by the `ndarray.contrib`
     foreach
     while_loop
     cond
+    isinf
+    isfinite
+    isnan
+    index_copy
+    getnnz
 ```
 
 ## API Reference

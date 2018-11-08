@@ -281,7 +281,6 @@ def container_run(platform: str,
             # noinspection PyShadowingNames
             # runc is default (docker info | grep -i runtime)
             runtime = 'nvidia'
-
         container = docker_client.containers.run(
             tag,
             runtime=runtime,
@@ -299,52 +298,55 @@ def container_run(platform: str,
                     {'bind': '/work/ccache', 'mode': 'rw'},
             },
             environment=environment)
-        logging.info("Started container: %s", trim_container_id(container.id))
-        # Race condition:
-        # If the previous call is interrupted then it's possible that the container is not cleaned up
-        # We avoid by masking the signals temporarily
-        cleanup.add_container(container)
-        signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
-        #
-        #############################
-
-        stream = container.logs(stream=True, stdout=True, stderr=True)
-        sys.stdout.flush()
-        for chunk in stream:
-            sys.stdout.buffer.write(chunk)
-            sys.stdout.buffer.flush()
-        sys.stdout.flush()
-        stream.close()
         try:
-            logging.info("Waiting for status of container %s for %d s.",
-                         trim_container_id(container.id),
-                         container_wait_s)
-            wait_result = container.wait(timeout=container_wait_s)
-            logging.info("Container exit status: %s", wait_result)
-            ret = wait_result.get('StatusCode', 200)
-        except Exception as e:
-            logging.exception(e)
-            ret = 150
+            logging.info("Started container: %s", trim_container_id(container.id))
+            # Race condition:
+            # If the previous call is interrupted then it's possible that the container is not cleaned up
+            # We avoid by masking the signals temporarily
+            cleanup.add_container(container)
+            signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
+            #
+            #############################
 
-        # Stop
-        try:
-            logging.info("Stopping container: %s", trim_container_id(container.id))
-            container.stop()
-        except Exception as e:
-            logging.exception(e)
-            ret = 151
+            stream = container.logs(stream=True, stdout=True, stderr=True)
+            sys.stdout.flush()
+            for chunk in stream:
+                sys.stdout.buffer.write(chunk)
+                sys.stdout.buffer.flush()
+            sys.stdout.flush()
+            stream.close()
+            try:
+                logging.info("Waiting for status of container %s for %d s.",
+                            trim_container_id(container.id),
+                            container_wait_s)
+                wait_result = container.wait(timeout=container_wait_s)
+                logging.info("Container exit status: %s", wait_result)
+                ret = wait_result.get('StatusCode', 200)
+            except Exception as e:
+                logging.exception(e)
+                ret = 150
 
-        # Remove
-        try:
-            logging.info("Removing container: %s", trim_container_id(container.id))
-            container.remove()
-        except Exception as e:
-            logging.exception(e)
-            ret = 152
-        cleanup.remove_container(container)
-        containers = docker_client.containers.list()
-        if containers:
-            logging.info("Other running containers: %s", [trim_container_id(x.id) for x in containers])
+            # Stop
+            try:
+                logging.info("Stopping container: %s", trim_container_id(container.id))
+                container.stop()
+            except Exception as e:
+                logging.exception(e)
+                ret = 151
+
+            # Remove
+            try:
+                logging.info("Removing container: %s", trim_container_id(container.id))
+                container.remove()
+            except Exception as e:
+                logging.exception(e)
+                ret = 152
+            cleanup.remove_container(container)
+            containers = docker_client.containers.list()
+            if containers:
+                logging.info("Other running containers: %s", [trim_container_id(x.id) for x in containers])
+        except docker.errors.NotFound as e:
+            logging.info("Container was stopped before cleanup started: %s", e)
     return ret
 
 
@@ -394,7 +396,7 @@ def main() -> int:
                         help="platform",
                         type=str)
 
-    parser.add_argument("--build-only",
+    parser.add_argument("-b", "--build-only",
                         help="Only build the container, don't build the project",
                         action='store_true')
 

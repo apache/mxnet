@@ -18,12 +18,15 @@ Performance is mainly affected by the following 4 factors:
 ## Intel CPU
 
 For using Intel Xeon CPUs for training and inference, we suggest enabling
-`USE_MKLDNN = 1` in`config.mk`. 
+`USE_MKLDNN = 1` in `config.mk`. 
 
-We also find that setting the following two environment variables can help:
-- `export KMP_AFFINITY=granularity=fine,compact,1,0` if there are two physical CPUs
-- `export OMP_NUM_THREADS=vCPUs / 2` in which `vCPUs` is the number of virtual CPUs.
-  Whe using Linux, we can access this information by running `cat /proc/cpuinfo  | grep processor | wc -l`
+We also find that setting the following environment variables can help:
+
+| Variable  | Description |
+| :-------- | :---------- |
+| `OMP_NUM_THREADS`            | Suggested value: `vCPUs / 2` in which `vCPUs` is the number of virtual CPUs. For more information, please see the guide for [setting the number of threads using an OpenMP environment variable](https://software.intel.com/en-us/mkl-windows-developer-guide-setting-the-number-of-threads-using-an-openmp-environment-variable) |
+| `KMP_AFFINITY`               | Suggested value: `granularity=fine,compact,1,0`.  For more information, please see the guide for [Thread Affinity Interface (Linux* and Windows*)](https://software.intel.com/en-us/node/522691). |
+| `MXNET_SUBGRAPH_BACKEND` | Set to MKLDNN to enable the [subgraph feature](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN) for better performance. For more information please see [Build/Install MXNet with MKL-DNN](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)|
 
 Note that _MXNet_ treats all CPUs on a single machine as a single device.
 So whether you specify `cpu(0)` or `cpu()`, _MXNet_ will use all CPU cores on the machine.

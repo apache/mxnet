@@ -67,6 +67,10 @@ Example::
   })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCrossEntropyForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_softmax_cross_entropy"})
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "label"};
+})
 .add_argument("data", "NDArray-or-Symbol", "Input data")
 .add_argument("label", "NDArray-or-Symbol", "Input label");
 

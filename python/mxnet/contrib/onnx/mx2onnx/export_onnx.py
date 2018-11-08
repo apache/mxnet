@@ -77,7 +77,11 @@ class MXNetGraph(object):
         """Register operators"""
         def wrapper(func):
             """Helper function to map functions"""
-            MXNetGraph.registry_[op_name] = func
+            try:
+                import onnx as _
+                MXNetGraph.registry_[op_name] = func
+            except ImportError:
+                pass
             return func
 
         return wrapper
