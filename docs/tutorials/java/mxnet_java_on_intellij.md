@@ -41,14 +41,14 @@ brew install opencv
 You can also run this tutorial on an Ubuntu machine after installing the following prerequisites.
 ### Ubuntu Prerequisites
 
-**Step 1.**: Download the MXNet source.
+**Step 1.** Download the MXNet source.
 
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet
 ```
 
-**Step 2.**: Run the dependency installation scripts.
+**Step 2.** Run the dependency installation scripts.
 
 ```bash
 sudo ./ci/docker/install/ubuntu_core.sh
