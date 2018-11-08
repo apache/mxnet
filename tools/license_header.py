@@ -126,24 +126,27 @@ def _valid_file(fname, verbose=False):
 def process_file(fname, action, verbose=True):
     if not _valid_file(fname, verbose):
         return True
-    with open(fname, 'r', encoding="utf-8") as f:
-        lines = f.readlines()
-    if not lines:
+    try:
+        with open(fname, 'r', encoding="utf-8") as f:
+            lines = f.readlines()
+        if not lines:
+            return True
+        if _has_license(lines):
+            return True
+        elif action == 'check':
+            return False
+        _, ext = os.path.splitext(fname)
+        with open(fname, 'w', encoding="utf-8") as f:
+            # shebang line
+            if lines[0].startswith('#!'):
+                f.write(lines[0].rstrip()+'\n\n')
+                del lines[0]
+            f.write(_get_license(_LANGS[ext]))
+            for l in lines:
+                f.write(l.rstrip()+'\n')
+        logging.info('added license header to ' + fname)
+    except UnicodeError:
         return True
-    if _has_license(lines):
-        return True
-    elif action == 'check':
-        return False
-    _, ext = os.path.splitext(fname)
-    with open(fname, 'w', encoding="utf-8") as f:
-        # shebang line
-        if lines[0].startswith('#!'):
-            f.write(lines[0].rstrip()+'\n\n')
-            del lines[0]
-        f.write(_get_license(_LANGS[ext]))
-        for l in lines:
-            f.write(l.rstrip()+'\n')
-    logging.info('added license header to ' + fname)
     return True
 
 def process_folder(root, action):
