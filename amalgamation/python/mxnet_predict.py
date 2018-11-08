@@ -26,6 +26,7 @@ from __future__ import absolute_import
 import os
 import sys
 import ctypes
+import logging
 import numpy as np
 
 __all__ = ["Predictor", "load_ndarray_file"]
@@ -51,15 +52,25 @@ def c_array(ctype, values):
 def _find_lib_path():
     """Find mxnet library."""
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    api_path = os.path.join(curr_path, '../../lib/')
-    dll_path = [curr_path, api_path]
-    dll_path = [os.path.join(p, 'libmxnet.so') for p in dll_path] + \
-        [os.path.join(p, 'libmxnet_predict.so') for p in dll_path]
-    lib_path = [p for p in dll_path if os.path.exists(p) and os.path.isfile(p)]
-    if len(lib_path) == 0:
-        raise RuntimeError('Cannot find the files.\n' +
-                           'List of candidates:\n' + str('\n'.join(dll_path)))
-    return lib_path
+    amalgamation_lib_path = os.path.join(curr_path, '../../lib/libmxnet_predict.so')
+    if os.path.exists(amalgamation_lib_path) and os.path.isfile(amalgamation_lib_path):
+        lib_path = [amalgamation_lib_path]
+        return lib_path
+    else:
+        logging.info('Cannot find libmxnet_predict.so. Will search for MXNet library using libinfo.py then.')
+        try:
+            from mxnet.libinfo import find_lib_path
+            lib_path = find_lib_path()
+            return lib_path
+        except ImportError:
+            libinfo_path = os.path.join(curr_path, '../../python/mxnet/libinfo.py')
+            if os.path.exists(libinfo_path) and os.path.isfile(libinfo_path):
+                libinfo = {'__file__': libinfo_path}
+                exec(compile(open(libinfo_path, "rb").read(), libinfo_path, 'exec'), libinfo, libinfo)
+                lib_path = libinfo['find_lib_path']()
+                return lib_path
+            else:
+                raise RuntimeError('Cannot find libinfo.py at %s.' % libinfo_path)
 
 
 def _load_lib():
@@ -152,12 +163,45 @@ class Predictor(object):
         for k, v in kwargs.items():
             if not isinstance(v, np.ndarray):
                 raise ValueError("Expect numpy ndarray as input")
-            v = np.ascontiguousarray(v, dtype=np.float32)
+            v = np.asarray(v, dtype=np.float32, order='C')
             _check_call(_LIB.MXPredSetInput(
                 self.handle, c_str(k),
                 v.ctypes.data_as(mx_float_p),
                 mx_uint(v.size)))
         _check_call(_LIB.MXPredForward(self.handle))
+
+    def reshape(self, input_shapes):
+        """Change the input shape of the predictor.
+
+        Parameters
+        ----------
+        input_shapes : dict of str to tuple
+            The new shape of input data.
+
+        Examples
+        --------
+        >>> predictor.reshape({'data':data_shape_tuple})
+        """
+        indptr = [0]
+        sdata = []
+        keys = []
+        for k, v  in input_shapes.items():
+            if not isinstance(v, tuple):
+                raise ValueError("Expect input_shapes to be dict str->tuple")
+            keys.append(c_str(k))
+            sdata.extend(v)
+            indptr.append(len(sdata))
+
+        new_handle = PredictorHandle()
+        _check_call(_LIB.MXPredReshape(
+            mx_uint(len(indptr) - 1),
+            c_array(ctypes.c_char_p, keys),
+            c_array(mx_uint, indptr),
+            c_array(mx_uint, sdata),
+            self.handle,
+            ctypes.byref(new_handle)))
+        _check_call(_LIB.MXPredFree(self.handle))
+        self.handle = new_handle
 
     def get_output(self, index):
         """Get the index-th output.

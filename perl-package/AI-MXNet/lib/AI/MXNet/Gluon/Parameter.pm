@@ -421,7 +421,7 @@ method _reduce()
     {
         my $all_row_ids = AI::MXNet::NDArray->arange(stop => $self->shape->[0], dtype=>'int64', ctx=>$ctx);
         $data = AI::MXNet::NDArray->zeros($self->shape, stype=>'row_sparse', ctx=>$ctx);
-        $self->_trainer->_row_sparse_pull($self, $data, $all_row_ids);
+        $self->_trainer->_row_sparse_pull($self, $data, $all_row_ids, 1);
     }
     return $data;
 }
@@ -934,7 +934,6 @@ use overload
         my $content = join("\n", map { AI::MXNet::Base::_indent("   $_", 2) } $self->values);
         return "$name(\n$content\n)";
     },
-    '%{}'  => sub { my %tmp = shift->_params->as_list; \%tmp },
     '@{}'  => sub { my @tmp = shift->_params->as_list; \@tmp },
     fallback => 1;
 
@@ -1047,6 +1046,10 @@ method get(Str $name, %kwargs)
                             $param->_shape(\@inferred_shape);
                             next;
                         }
+                    }
+                    elsif($k eq 'dtype' and ($v//'') eq ($existing//''))
+                    {
+                        next;
                     }
                     assert(
                         (not defined $v or Dumper($v) eq Dumper($param->$k)),
@@ -1316,7 +1319,7 @@ method load(
             );
             next;
         }
-        $self->{ $name }->_load_init($arg_dict{$name}, $ctx);
+        $self->_params->get($name)->_load_init($arg_dict{$name}, $ctx);
     }
 }
 

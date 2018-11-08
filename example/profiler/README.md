@@ -5,8 +5,12 @@ Please refer to [this link](http://mxnet.incubator.apache.org/faq/perf.html?high
 for visualizing profiling results and make sure that you have installed a version of MXNet compiled
 with `USE_PROFILER=1`.
 
-- profiler_executor.py. To run this example, simply type `python profiler_executor.py` in terminal.
-It will generate a json file named `profile_executor_5iter.json`.
+- profiler_executor.py. To run this example,
+    - clone mxnet-memonger (git clone https://github.com/dmlc/mxnet-memonger.git).
+    - Add mxnet-memonger folder to PYTHONPATH.
+    export PYTHONPATH=$PYTHONPATH:/path/to/mxnet-memonger
+    - type python profiler_executor.py in terminal.
+    It will generate a json file named `profile_executor_5iter.json`.
 
 - profiler_imageiter.py. You first need to create a file named `test.rec`,
 which is an image dataset file before running this example.

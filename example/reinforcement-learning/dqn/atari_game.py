@@ -22,7 +22,7 @@ import numpy
 import cv2
 import logging
 import os
-from utils import *
+from utils import get_numpy_rng
 from replay_memory import ReplayMemory
 from game import Game
 from game import DEFAULT_MAX_EPISODE_STEP

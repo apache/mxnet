@@ -64,7 +64,8 @@ def get_net(num_hidden, flatten=True):
     fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
     return fc3
 
-@with_seed(1234)
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11692
+@with_seed()
 def test_ce_loss():
     nclass = 10
     N = 20
@@ -78,11 +79,12 @@ def test_ce_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
+            eval_metric=mx.metric.Loss(), optimizer='adam',
+            initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-
-@with_seed(1234)
+# tracked at: https://github.com/apache/incubator-mxnet/issues/11691
+@with_seed()
 def test_bce_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20))
@@ -105,7 +107,7 @@ def test_bce_loss():
     prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
     label_npy = label.asnumpy()
     npy_bce_loss = - label_npy * np.log(prob_npy) - (1 - label_npy) * np.log(1 - prob_npy)
-    assert_almost_equal(mx_bce_loss, npy_bce_loss)
+    assert_almost_equal(mx_bce_loss, npy_bce_loss, rtol=1e-4, atol=1e-5)
 
 @with_seed()
 def test_bce_equal_ce2():
@@ -127,7 +129,7 @@ def test_logistic_loss_equal_bce():
     assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
     assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
 
-@with_seed(1234)
+@with_seed()
 def test_kl_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -144,7 +146,7 @@ def test_kl_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_l2_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -162,7 +164,7 @@ def test_l2_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_l1_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -180,7 +182,7 @@ def test_l1_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
 
 
-@with_seed(1234)
+@with_seed()
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
@@ -207,7 +209,7 @@ def test_ctc_loss():
     mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
 
 
-@with_seed(1234)
+@with_seed()
 def test_ctc_loss_train():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 20, 10))
@@ -225,7 +227,7 @@ def test_ctc_loss_train():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
 
 
-@with_seed(1234)
+@with_seed()
 def test_sample_weight_loss():
     nclass = 10
     N = 20
@@ -272,7 +274,7 @@ def test_saveload():
             eval_metric=mx.metric.Loss())
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
-@with_seed(1234)
+@with_seed()
 def test_huber_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -290,7 +292,7 @@ def test_huber_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_hinge_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -305,10 +307,10 @@ def test_hinge_loss():
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.06
 
 
-@with_seed(1234)
+@with_seed()
 def test_squared_hinge_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -326,7 +328,7 @@ def test_squared_hinge_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 
-@with_seed(1234)
+@with_seed()
 def test_triplet_loss():
     N = 20
     data = mx.random.uniform(-1, 1, shape=(N, 10))
@@ -343,6 +345,79 @@ def test_triplet_loss():
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos','neg'))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            optimizer='adam')
+    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+
+@with_seed()
+def test_cosine_loss():
+    #Generating samples
+    input1 = mx.nd.random.randn(3, 2)
+    input2 = mx.nd.random.randn(3, 2)
+    label = mx.nd.sign(mx.nd.random.randn(input1.shape[0]))
+    #Calculating loss from cosine embedding loss function in Gluon
+    Loss = gluon.loss.CosineEmbeddingLoss()
+    loss = Loss(input1, input2, label)
+
+    # Calculating the loss Numpy way
+    numerator = mx.nd.sum(input1 * input2, keepdims=True, axis=1)
+    denominator = mx.nd.sqrt(mx.nd.sum(input1**2, axis=1, keepdims=True)) \
+    * mx.nd.sqrt(mx.nd.sum(input2**2, axis=1, keepdims=True))
+    numpy_loss = mx.nd.where(label == 1, 1-numerator/denominator, \
+    mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1))
+    assert_almost_equal(loss.asnumpy(), numpy_loss.asnumpy(), rtol=1e-3, atol=1e-5)
+
+def test_poisson_nllloss():
+    pred = mx.nd.random.normal(shape=(3, 4))
+    min_pred = mx.nd.min(pred)
+    #This is necessary to ensure only positive random values are generated for prediction,
+    # to avoid ivalid log calculation
+    pred[:] = pred + mx.nd.abs(min_pred)
+    target = mx.nd.random.normal(shape=(3, 4))
+    min_target = mx.nd.min(target)
+    #This is necessary to ensure only positive random values are generated for prediction,
+    # to avoid ivalid log calculation
+    target[:] += mx.nd.abs(min_target)
+
+    Loss = gluon.loss.PoissonNLLLoss(from_logits=True)
+    Loss_no_logits = gluon.loss.PoissonNLLLoss(from_logits=False)
+    #Calculating by brute formula for default value of from_logits = True
+
+    # 1) Testing for flag logits = True
+    brute_loss = np.mean(np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy())
+    loss_withlogits = Loss(pred, target)
+    assert_almost_equal(brute_loss, loss_withlogits.asscalar())
+
+    #2) Testing for flag logits = False
+    loss_no_logits = Loss_no_logits(pred, target)
+    np_loss_no_logits = np.mean(pred.asnumpy() - target.asnumpy() * np.log(pred.asnumpy() + 1e-08))
+    if np.isnan(loss_no_logits.asscalar()):
+        assert_almost_equal(np.isnan(np_loss_no_logits), np.isnan(loss_no_logits.asscalar()))
+    else:
+        assert_almost_equal(np_loss_no_logits, loss_no_logits.asscalar())
+
+    #3) Testing for Sterling approximation
+    np_pred = np.random.uniform(1, 5, (2, 3))
+    np_target = np.random.uniform(1, 5, (2, 3))
+    np_compute_full = np.mean((np_pred - np_target * np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
+     np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)))
+    Loss_compute_full = gluon.loss.PoissonNLLLoss(from_logits=False, compute_full=True)
+    loss_compute_full = Loss_compute_full(mx.nd.array(np_pred), mx.nd.array(np_target))
+    assert_almost_equal(np_compute_full, loss_compute_full.asscalar())
+
+@with_seed()
+def test_poisson_nllloss_mod():
+    N = 1000
+    data = mx.random.poisson(shape=(N, 2))
+    label = mx.random.poisson(lam=4, shape=(N, 1))
+    data_iter = mx.io.NDArrayIter(data, label, batch_size=20, label_name='label', shuffle=True)
+    output = mx.sym.exp(get_net(1))
+    l = mx.symbol.Variable('label')
+    Loss = gluon.loss.PoissonNLLLoss(from_logits=False)
+    loss = Loss(output, l)
+    loss = mx.sym.make_loss(loss)
+    mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
+    mod.fit(data_iter, num_epoch=20, optimizer_params={'learning_rate': 0.01},
+            initializer=mx.init.Normal(sigma=0.1), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 

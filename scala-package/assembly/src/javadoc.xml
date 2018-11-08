@@ -1,0 +1,24 @@
+<assembly>
+    <id>bundle</id>
+    <formats>
+        <format>jar</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+
+    <moduleSets>
+        <moduleSet>
+            <!-- Collect javadoc -->
+            <includes>
+                <!--Please put your module defs here-->
+                <include>org.apache.mxnet:mxnet-core_${scala.binary.version}</include>
+            </includes>
+            <useAllReactorProjects>true</useAllReactorProjects>
+            <binaries>
+                <includeDependencies>false</includeDependencies>
+                <attachmentClassifier>javadoc</attachmentClassifier>
+                <outputDirectory>/</outputDirectory>
+                <unpack>true</unpack>
+            </binaries>
+        </moduleSet>
+    </moduleSets>
+</assembly>

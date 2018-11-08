@@ -17,9 +17,11 @@
 
 package org.apache.mxnet.io
 
-import org.apache.mxnet.{DataBatch, DataIter, NDArray, Shape}
+import org.apache.mxnet._
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Semaphore
+
+import org.apache.mxnet.DType.DType
 
 import scala.collection.immutable.ListMap
 
@@ -65,6 +67,42 @@ class PrefetchingIter(
              .foldLeft(ListMap[String, Shape]()) { (acc, elem) =>
         acc ++ elem
       }
+    }
+  }
+
+  private val _provideDataDesc: IndexedSeq[DataDesc] = {
+    if (dataNames == null) {
+      iters.map(_.provideDataDesc).foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
+        acc ++ elem
+      }
+    } else {
+      iters.zipWithIndex.map(tu => (tu._1.provideDataDesc, tu._2))
+        .map(m =>
+          m._1.map(t =>
+            new DataDesc(dataNames(m._2)(t.name), t.shape, t.dtype, t.layout)
+          )
+        )
+        .foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
+          acc ++ elem
+        }
+    }
+  }
+
+  private val _provideLabelDesc: IndexedSeq[DataDesc] = {
+    if (labelNames == null) {
+      iters.map(_.provideLabelDesc).foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
+        acc ++ elem
+      }
+    } else {
+      iters.zipWithIndex.map(tu => (tu._1.provideLabelDesc, tu._2))
+        .map(m =>
+          m._1.map(t =>
+            new DataDesc(labelNames(m._2)(t.name), t.shape, t.dtype, t.layout)
+          )
+        )
+        .foldLeft(IndexedSeq[DataDesc]()) { (acc, elem) =>
+          acc ++ elem
+        }
     }
   }
 
@@ -132,18 +170,26 @@ class PrefetchingIter(
    */
   override def getIndex(): IndexedSeq[Long] = currentBatch.index
 
-  // The name and shape of label provided by this iterator
-  override def provideLabel: ListMap[String, Shape] = this._provideLabel
-
   /**
-   * get the number of padding examples
-   * in current batch
-   * @return number of padding examples in current batch
-   */
+    * get the number of padding examples
+    * in current batch
+    * @return number of padding examples in current batch
+    */
   override def getPad(): Int = this.currentBatch.pad
 
+  // The name and shape of label provided by this iterator
+  @deprecated
+  override def provideLabel: ListMap[String, Shape] = this._provideLabel
+
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = this._provideData
+
+  // Provide type:DataDesc of the data
+  override def provideDataDesc: IndexedSeq[DataDesc] = _provideDataDesc
+
+  // Provide type:DataDesc of the label
+  override def provideLabelDesc: IndexedSeq[DataDesc] = _provideLabelDesc
 
   override def hasNext: Boolean = {
     for (e <- dataReady) e.acquire()
@@ -161,9 +207,10 @@ class PrefetchingIter(
       val datas = for (batch <- nextBatch) yield batch.data
       val labels = for (batch <- nextBatch) yield batch.label
       currentBatch = new DataBatch(datas.toIndexedSeq.flatten,
-                                      labels.toIndexedSeq.flatten,
-                                      nextBatch(0).index,
-                                      nextBatch(0).pad)
+        labels.toIndexedSeq.flatten,
+        nextBatch(0).index,
+        nextBatch(0).pad,
+        null, null, null)
       for (e <- dataTaken) e.release()
       true
     }

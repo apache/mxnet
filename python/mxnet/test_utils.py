@@ -336,7 +336,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         assert(False), "unknown storage type"
         return False
 
-def rand_ndarray(shape, stype, density=None, dtype=None,
+def rand_ndarray(shape, stype='default', density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
     if stype == 'default':
         arr = mx.nd.array(random_arrays(shape), dtype=dtype)
@@ -479,10 +479,8 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-
     if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
         return
-
     index, rel = find_max_violation(a, b, rtol, atol)
     np.set_printoptions(threshold=4, suppress=True)
     msg = npt.build_err_msg([a, b],
@@ -641,7 +639,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -700,7 +698,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -747,7 +745,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     def as_stype(var, stype, dtype):
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     approx_grads = {k: np.zeros(v.shape, dtype=dtype)
                     for k, v in location.items()}
     for k, v in location.items():
@@ -755,7 +753,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         if stype == 'default':
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
     for k in location:
-        location[k] = np.ascontiguousarray(location[k])
+        location[k] = np.asarray(location[k], order='C')
     for k, v in location.items():
         if v.dtype.kind != 'f':
             continue
@@ -829,7 +827,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     ---------
     ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
+    # cannot use finite differences with small eps without high precision
+    if dtype in (np.float32, np.float16):
+        assert numeric_eps >= 1e-5
     if ctx is None:
         ctx = default_context()
 
@@ -972,7 +973,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1057,7 +1058,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> grad_expected = ograd.copy().asnumpy()
     >>> check_symbolic_backward(sym_add, [mat1, mat2], [ograd], [grad_expected, grad_expected])
     """
-    assert dtype == np.float16 or dtype == np.float32 or dtype == np.float64
+    assert dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -1203,10 +1204,10 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     else:
         raise ValueError('typ can only be "whole" or "forward".')
 
-
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
-                      raise_on_err=True, ground_truth=None, equal_nan=False, use_uniform=False):
+                      raise_on_err=True, ground_truth=None, equal_nan=False,
+                      use_uniform=False, rand_type=np.float64):
     """Check symbol gives the same output for different running context
 
     Parameters
@@ -1223,6 +1224,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Optional, When flag set to true,
         random input data generated follows uniform distribution,
         not normal distribution
+    rand_type: np.dtype
+        casts the randomly generated data to this type
+        Optional, when input data is passed via arg_params,
+        defaults to np.float64 (numpy float default)
+
     Examples
     --------
     >>> # create the symbol
@@ -1283,9 +1289,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for n, arr in exe_list[0].arg_dict.items():
         if n not in arg_params:
             if use_uniform:
-                arg_params[n] = np.random.uniform(low=-0.92, high=0.92, size=arr.shape)
+                arg_params[n] = np.random.uniform(low=-0.92, high=0.92,
+                                                  size=arr.shape).astype(rand_type)
             else:
-                arg_params[n] = np.random.normal(size=arr.shape, scale=scale)
+                arg_params[n] = np.random.normal(size=arr.shape,
+                                                 scale=scale).astype(rand_type)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
@@ -1371,7 +1379,7 @@ def list_gpus():
     for cmd in nvidia_smi:
         try:
             re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
-        except OSError:
+        except (subprocess.CalledProcessError, OSError):
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
@@ -1949,3 +1957,44 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
                              % (str(cs_ret_l), str(obs_freq_l), str(expected_freq_l),
                                 str(buckets), str(probs)))
     return cs_ret_l
+
+def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
+    """Compare ndarray tuple."""
+    if t1 is not None and t2 is not None:
+        if isinstance(t1, tuple):
+            for s1, s2 in zip(t1, t2):
+                compare_ndarray_tuple(s1, s2, rtol, atol)
+        else:
+            assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
+
+
+def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
+                      rtol=1e-4, atol=1e-5, compare_states=True):
+    """Compare opt1 and opt2."""
+    if w_stype == 'default':
+        w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+        w1 = w2.copyto(default_context())
+    elif w_stype == 'row_sparse' or w_stype == 'csr':
+        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+        w1 = w2.copyto(default_context()).tostype('default')
+    else:
+        raise Exception("type not supported yet")
+    if g_stype == 'default':
+        g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+        g1 = g2.copyto(default_context())
+    elif g_stype == 'row_sparse' or g_stype == 'csr':
+        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+        g1 = g2.copyto(default_context()).tostype('default')
+    else:
+        raise Exception("type not supported yet")
+
+    state1 = opt1.create_state_multi_precision(0, w1)
+    state2 = opt2.create_state_multi_precision(0, w2)
+    if compare_states:
+        compare_ndarray_tuple(state1, state2)
+
+    opt1.update_multi_precision(0, w1, g1, state1)
+    opt2.update_multi_precision(0, w2, g2, state2)
+    if compare_states:
+        compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
+    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)

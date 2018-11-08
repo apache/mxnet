@@ -16,14 +16,15 @@
 # under the License.
 
 # coding: utf-8
-"""import function"""
+"""Functions for importing ONNX models to MXNet and for checking metadata"""
 # pylint: disable=no-member
 
 from .import_onnx import GraphProto
 
 def import_model(model_file):
     """Imports the ONNX model file, passed as a parameter, into MXNet symbol and parameters.
-    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    Operator support and coverage -
+    https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
 
     Parameters
     ----------
@@ -49,7 +50,7 @@ def import_model(model_file):
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
     # loads model file and returns ONNX protobuf object
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     sym, arg_params, aux_params = graph.from_onnx(model_proto.graph)
     return sym, arg_params, aux_params
 
@@ -72,6 +73,7 @@ def get_model_metadata(model_file):
             'output_tensor_data' : <list of tuples representing the shape of the output
                                     of the model>
         }
+
     """
     graph = GraphProto()
     try:
@@ -79,6 +81,6 @@ def get_model_metadata(model_file):
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. "
                           + "Instructions to install - https://github.com/onnx/onnx")
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     metadata = graph.get_graph_metadata(model_proto.graph)
     return metadata

@@ -40,20 +40,34 @@ optimizer <- mx.opt.create("adadelta", rho = 0.92, epsilon = 1e-06, wd = 2e-04, 
 bucket_list <- unique(c(train.data$bucket.names, eval.data$bucket.names))
 
 symbol_buckets <- sapply(bucket_list, function(seq) {
-  rnn.graph(config = "seq-to-one", cell_type = "lstm", 
-            num_rnn_layer = 1, num_embed = 2, num_hidden = 6, 
-            num_decode = 2, input_size = vocab, dropout = 0.5, 
-            ignore_label = -1, loss_output = "softmax",
-            output_last_state = F, masking = T)
+  rnn.graph(config = "seq-to-one",
+            cell_type = "lstm",
+            num_rnn_layer = 1,
+            num_embed = 2,
+            num_hidden = 6,
+            num_decode = 2,
+            input_size = vocab,
+            dropout = 0.2,
+            ignore_label = -1,
+            loss_output = "softmax",
+            output_last_state = F,
+            masking = T)
 })
 
+# Accuracy on Training Data = 0.84066
 model_sentiment_lstm <- mx.model.buckets(symbol = symbol_buckets,
-                          train.data = train.data, eval.data = eval.data,
-                          num.round = num.round, ctx = devices, verbose = FALSE,
-                          metric = mx.metric.accuracy, optimizer = optimizer,  
-                          initializer = initializer,
-                          batch.end.callback = NULL, 
-                          epoch.end.callback = epoch.end.callback)
+                                         train.data = train.data,
+                                         eval.data = eval.data,
+                                         num.round = num.round,
+                                         ctx = devices,
+                                         verbose = FALSE,
+                                         metric = mx.metric.accuracy,
+                                         optimizer = optimizer,
+                                         initializer = mx.init.Xavier(rnd_type = "gaussian",
+                                                                      factor_type = "in",
+                                                                      magnitude = 2),
+                                         batch.end.callback = mx.callback.log.train.metric(period = 50),
+                                         epoch.end.callback = NULL)
 
 mx.model.save(model_sentiment_lstm, prefix = "model_sentiment_lstm", iteration = num.round)
 model <- mx.model.load("model_sentiment_lstm", iteration = num.round)
@@ -72,6 +86,7 @@ while (eval.data$iter.next()) {
 
 ylabel <- as.array(packer$get())
 
+# Accuracy on Test Data = 0.81194
 acc <- sum(ylabel == ypred)/length(ylabel)
 
 message(paste("Acc:", acc))

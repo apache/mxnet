@@ -19,7 +19,7 @@ package org.apache.mxnet.infer
 
 import org.apache.mxnet.io.NDArrayIter
 import org.apache.mxnet.module.{BaseModule, Module}
-import org.apache.mxnet.{DataDesc, NDArray, Shape}
+import org.apache.mxnet.{DataDesc, Layout, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -40,15 +40,17 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("PredictorSuite-testPredictorConstruction") {
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2)))
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2),
+      layout = Layout.NCHW))
 
     val mockPredictor = new MyPredictor("xyz", inputDescriptor)
 
     assert(mockPredictor.getBatchSize == 1)
     assert(mockPredictor.getBatchIndex == inputDescriptor(0).layout.indexOf('N'))
 
-    val inputDescriptor2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2)),
-      new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputDescriptor2 = IndexedSeq[DataDesc](new DataDesc("data", Shape(1, 3, 2, 2),
+      layout = Layout.NCHW),
+      new DataDesc("data", Shape(2, 3, 2, 2), layout = Layout.NCHW))
 
     assertThrows[IllegalArgumentException] {
       val mockPredictor = new MyPredictor("xyz", inputDescriptor2)
@@ -63,7 +65,8 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
 
   test("PredictorSuite-testWithFlatArrays") {
 
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2),
+      layout = Layout.NCHW))
     val inputData = Array.fill[Float](12)(1)
 
     // this will disposed at the end of the predict call on Predictor.
@@ -89,7 +92,8 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test("PredictorSuite-testWithNDArray") {
-    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2),
+      layout = Layout.NCHW))
     val inputData = NDArray.ones(Shape(1, 3, 2, 2))
 
     // this will disposed at the end of the predict call on Predictor.

@@ -21,7 +21,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 import numpy
 import copy
-from utils import *
+from utils import get_numpy_rng
 
 
 class ReplayMemory(object):

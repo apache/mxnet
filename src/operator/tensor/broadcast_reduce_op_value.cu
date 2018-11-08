@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file broadcast_reduce_op.cu
- * \brief GPU Implementation of broadcast and reduce functions.
+ * \file broadcast_reduce_op_value.cu
+ * \brief GPU Implementation of broadcast and reduce functions based on value.
  */
 #include "./broadcast_reduce_op.h"
 
@@ -95,6 +95,9 @@ NNVM_REGISTER_OP(broadcast_axis)
 .set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(broadcast_to)
+.set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
+
+NNVM_REGISTER_OP(broadcast_like)
 .set_attr<FCompute>("FCompute<gpu>", BroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(_broadcast_backward)

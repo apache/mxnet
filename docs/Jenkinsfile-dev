@@ -1,0 +1,54 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// timeout in minutes
+max_time = 120
+
+node('mxnetlinux-cpu') {
+  // Loading the utilities requires a node context unfortunately
+  checkout scm
+  utils = load('ci/Jenkinsfile_utils.groovy')
+}
+utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
+
+utils.main_wrapper(
+core_logic: {
+  stage('Build Docs') {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/docs') {
+        utils.init_git()
+        timeout(time: max_time, unit: 'MINUTES') {
+            sh "ci/build.py -p ubuntu_cpu --docker-registry ${env.DOCKER_CACHE_REGISTRY} --docker-build-retries 3 /work/runtime_functions.sh build_docs ${params.tags_to_build} ${params.tag_list} ${params.fork} ${params.tag_default} ${params.domain}"
+            archiveArtifacts 'docs/build_version_doc/artifacts.tgz'
+            build 'test-website-publish'
+        }
+      }
+    }
+  }
+}
+,
+failure_handler: {
+  if (currentBuild.result == "FAILURE") {
+    // Do nothing.
+  }
+}
+)

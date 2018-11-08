@@ -42,11 +42,11 @@ SPARK_OPTS+=" --jars ${SCALA_JAR}"
 
 # Download training and test set
 if [ ! -f ./train.txt ]; then
-  wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/train.txt
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/Spark/train.txt
 fi
 
 if [ ! -f ./val.txt ]; then
-  wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/Spark/val.txt
 fi
 
 # running opts

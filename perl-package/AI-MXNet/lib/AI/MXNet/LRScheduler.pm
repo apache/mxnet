@@ -58,7 +58,7 @@ has 'base_lr' => (is => 'rw', isa => 'Num', default => 0.01);
 
     Parameters
     ----------
-    num_update: int
+    $num_update: Int
         the maximal number of updates applied to a weight.
 =cut
 
@@ -76,9 +76,9 @@ package AI::MXNet::FactorScheduler;
 
     Parameters
     ----------
-    step: int
+    step: Int
         schedule the learning rate update after n updates
-    factor: float
+    factor: Num
         the factor by which to reduce the learning rate.
 =cut
 use Mouse;
@@ -138,9 +138,9 @@ package AI::MXNet::MultiFactorScheduler;
 
     Parameters
     ----------
-    step: array ref of int
+    step: ArrayRef[Int]
         schedule learning rate after n updates
-    factor: float
+    factor: Num
         the factor for reducing the learning rate
 =cut
 

@@ -36,7 +36,7 @@ def test_bucket_module():
     num_embed = 25
     num_layers = 2
     len_vocab = 50
-    buckets = [10, 20, 30, 40]
+    buckets = [5, 10, 20, 30, 40]
 
     invalid_label = -1
     num_sentence = 1000
@@ -45,7 +45,7 @@ def test_bucket_module():
     val_sent = []
 
     for _ in range(num_sentence):
-        len_sentence = randint(1, max(buckets)-1) # leave out the two last buckets empty
+        len_sentence = randint(6, max(buckets)-1) # leave out the two last buckets empty
         train_sentence = []
         val_sentence = []
         for _ in range(len_sentence):

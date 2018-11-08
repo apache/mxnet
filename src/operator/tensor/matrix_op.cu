@@ -211,5 +211,11 @@ NNVM_REGISTER_OP(squeeze)
 NNVM_REGISTER_OP(_backward_squeeze)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
+NNVM_REGISTER_OP(depth_to_space)
+.set_attr<FCompute>("FCompute<gpu>", DepthToSpaceOpForward<gpu>);
+
+NNVM_REGISTER_OP(space_to_depth)
+.set_attr<FCompute>("FCompute<gpu>", SpaceToDepthOpForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

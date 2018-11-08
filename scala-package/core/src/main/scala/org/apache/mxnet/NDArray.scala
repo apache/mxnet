@@ -89,7 +89,11 @@ object NDArray extends NDArrayBase {
         output match {
           case nd: NDArray => (Array(nd), Array(nd.handle))
           case ndFuncRet: NDArrayFuncReturn => (ndFuncRet.arr, ndFuncRet.arr.map(_.handle))
-          case ndArr: Seq[NDArray] => (ndArr.toArray, ndArr.toArray.map(_.handle))
+         // Seq[NDArray] erasure problem explained here https://stackoverflow.com/questions/1094173/
+          case ndArr: Seq[NDArray @unchecked] =>
+            if (ndArr.head.isInstanceOf[NDArray]) (ndArr.toArray, ndArr.toArray.map(_.handle))
+            else throw new IllegalArgumentException(
+              "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
           case _ => throw new IllegalArgumentException(
             "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
         }
@@ -399,15 +403,17 @@ object NDArray extends NDArrayBase {
    * @param stop End of interval.
    * @param step Spacing between values. The default step size is 1.
    * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param infer_range
+   *          When set to True, infer the stop position from the start, step,
+   *          repeat, and output tensor size.
    * @param ctx Device context. Default context is the current default context.
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
    */
-  def arange(start: Float, stop: Option[Float] = None, step: Float = 1.0f,
-    repeat: Int = 1, ctx: Context = Context.defaultCtx,
-    dType: DType = Base.MX_REAL_TYPE): NDArray = {
-    val params = Map("start" -> start, "step" -> step,
-      "repeat" -> repeat, "ctx" -> ctx.toString, "dtype" -> dType.toString())
+  def arange(start: Float, stop: Option[Float], step: Float,
+             repeat: Int, ctx: Context, dType: DType): NDArray = {
+    val params = Map("start" -> start, "step" -> step, "repeat" -> repeat,
+      "infer_range" -> false, "ctx" -> ctx.toString, "dtype" -> dType.toString())
     val fParams = if (stop == None) params else params ++ Map("stop" -> stop.get)
     NDArray.genericNDArrayFunctionInvoke("_arange", Seq(), fParams)(0)
   }
@@ -424,7 +430,7 @@ object NDArray extends NDArrayBase {
    * @return An `NDArray` that lives on the same context as `arrays[0].context`.
    */
   def concatenate(arrays: Seq[NDArray], axis: Int = 0, alwaysCopy: Boolean = true): NDArray = {
-    require(arrays.size > 0)
+    require(arrays.size > 0, "Provide at least one array")
 
     val array0 = arrays(0)
     if (!alwaysCopy && arrays.size == 1) {
@@ -436,9 +442,12 @@ object NDArray extends NDArrayBase {
 
       val shapeAxis =
         arrays.map(arr => {
-          require(shapeRest1 == arr.shape.slice(0, axis))
-          require(shapeRest2 == arr.shape.slice(axis + 1, arr.shape.length))
-          require(dtype == arr.dtype)
+          require(shapeRest1 == arr.shape.slice(0, axis),
+            s"Mismatch between shape $shapeRest1 and ${arr.shape}")
+          require(shapeRest2 == arr.shape.slice(axis + 1, arr.shape.length),
+            s"Mismatch between shape $shapeRest2 and ${arr.shape}")
+          require(dtype == arr.dtype,
+            s"All arrays must have the same type (got ${dtype} and ${arr.dtype})")
           arr.shape(axis)
         }).sum
       val retShape = shapeRest1 ++ Shape(shapeAxis) ++ shapeRest2
@@ -481,7 +490,7 @@ object NDArray extends NDArrayBase {
    *     - `s3://my-bucket/path/my-s3-ndarray`
    *     - `hdfs://my-bucket/path/my-hdfs-ndarray`
    *     - `/path-to/my-local-ndarray`
-   * @return dict of str->NDArray to be saved
+    * @return dict of str->NDArray
    */
   def load(fname: String): (Array[String], Array[NDArray]) = {
     val outSize = new MXUintRef
@@ -489,7 +498,8 @@ object NDArray extends NDArrayBase {
     val handles = ArrayBuffer.empty[NDArrayHandle]
     val names = ArrayBuffer.empty[String]
     checkCall(_LIB.mxNDArrayLoad(fname, outSize, handles, outNameSize, names))
-    require(outNameSize.value == 0 || outNameSize.value == outSize.value)
+    require(outNameSize.value == 0 || outNameSize.value == outSize.value,
+      s"Mismatch between names and arrays in file $fname")
     (names.toArray, handles.map(new NDArray(_)).toArray)
   }
 
@@ -554,12 +564,21 @@ object NDArray extends NDArrayBase {
  * </b>
  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
-                             val writable: Boolean = true) extends WarnIfNotDisposed {
+                             val writable: Boolean = true,
+                             addToCollector: Boolean = true) extends NativeResource {
+  if (addToCollector) {
+    NDArrayCollector.collect(this)
+  }
+
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxNDArrayFree
+  override val bytesAllocated: Long = DType.numOfBytes(this.dtype) * this.shape.product
+
+  override val ref: NativeResourceRef = super.register()
+
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
-  private var disposed = false
-  def isDisposed: Boolean = disposed
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -572,11 +591,10 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * The NDArrays it depends on will NOT be disposed. <br />
    * The object shall never be used after it is disposed.
    */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxNDArrayFree(handle)
+  override def dispose(): Unit = {
+    if (!super.isDisposed) {
+      super.dispose()
       dependencies.clear()
-      disposed = true
     }
   }
 
@@ -995,7 +1013,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     val ndim = new MXUintRef
     val data = ArrayBuffer[Int]()
     checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
-    require(ndim.value == data.length, s"ndim=$ndim, while len(pdata)=${data.length}")
+    require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
     Shape(data)
   }
 
@@ -1022,6 +1040,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     // TODO: naive implementation
     shape.hashCode + toArray.hashCode
   }
+
 }
 
 private[mxnet] object NDArrayConversions {

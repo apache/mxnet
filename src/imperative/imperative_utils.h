@@ -963,13 +963,13 @@ inline void CreateEngineOpSeg(
     seg_execs.push_back(exec);
 
     auto& seg = (*opr_segs)[nid];
-    if (is_async) {
-      seg = EngineOprSeg{false, nid + 1};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+    if (!valid) {
+      seg = EngineOprSeg{false, nid + 1, nullptr};
       seg_execs.clear();
       seg_start = nid + 1;
-    } else if (!valid) {
-      seg = EngineOprSeg{false, nid + 1, nullptr};
+    } else if (is_async) {
+      seg = EngineOprSeg{false, nid + 1};
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
       seg_execs.clear();
       seg_start = nid + 1;
     }
@@ -994,7 +994,8 @@ void RunGraph(const bool retain_graph,
               std::vector<OpReqType>&& array_reqs,
               std::vector<uint32_t>&& ref_count,
               std::vector<OpStatePtr> *p_states,
-              const DispatchModeVector &dispatch_modes);
+              const DispatchModeVector &dispatch_modes,
+              bool recording);
 
 }  // namespace imperative
 }  // namespace mxnet

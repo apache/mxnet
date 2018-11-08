@@ -17,18 +17,46 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.slf4j.LoggerFactory
+import org.apache.mxnet.{Context, NDArrayCollector, Shape}
 import org.kohsuke.args4j.{CmdLineParser, Option}
-import scala.collection.JavaConverters._
-import org.apache.mxnet.Shape
-import org.apache.mxnet.Context
+import org.slf4j.LoggerFactory
 
-/**
- * @author Depeng Liang
- */
+import scala.collection.JavaConverters._
+
 object BoostInference {
 
   private val logger = LoggerFactory.getLogger(classOf[BoostInference])
+
+  def runInference(modelPath: String, outputPath: String, guassianRadius : Int,
+                   inputImage : String, ctx : Context): Unit = {
+    NDArrayCollector.auto().withScope {
+      val dShape = Shape(1, 3, 480, 640)
+      val clipNorm = 1.0f * dShape.product
+      // generator
+      val gens = Array(
+        GenV4.getModule("g0", dShape, ctx, isTrain = false),
+        GenV3.getModule("g1", dShape, ctx, isTrain = false),
+        GenV3.getModule("g2", dShape, ctx, isTrain = false),
+        GenV4.getModule("g3", dShape, ctx, isTrain = false)
+      )
+      gens.zipWithIndex.foreach { case (gen, i) =>
+        gen.loadParams(s"$modelPath/$i/v3_0002-0026000.params")
+      }
+
+      val contentNp =
+        DataProcessing.preprocessContentImage(s"$inputImage", dShape, ctx)
+      var data = Array(contentNp)
+      for (i <- 0 until gens.length) {
+        NDArrayCollector.auto().withScope {
+          gens(i).forward(data.takeRight(1))
+          val newImg = gens(i).getOutputs()(0)
+          data :+= newImg
+          DataProcessing.saveImage(newImg, s"$outputPath/out_$i.jpg", guassianRadius)
+          logger.info(s"Converted image: $outputPath/out_$i.jpg")
+        }
+      }
+    }
+  }
 
   def main(args: Array[String]): Unit = {
     val stce = new BoostInference
@@ -39,30 +67,10 @@ object BoostInference {
           && stce.inputImage != null
           && stce.outputPath != null)
 
-      val dShape = Shape(1, 3, 480, 640)
-      val clipNorm = 1.0f * dShape.product
       val ctx = if (stce.gpu == -1) Context.cpu() else Context.gpu(stce.gpu)
 
-      // generator
-      val gens = Array(
-          GenV4.getModule("g0", dShape, ctx, isTrain = false),
-          GenV3.getModule("g1", dShape, ctx, isTrain = false),
-          GenV3.getModule("g2", dShape, ctx, isTrain = false),
-          GenV4.getModule("g3", dShape, ctx, isTrain = false)
-      )
-      gens.zipWithIndex.foreach { case (gen, i) =>
-        gen.loadParams(s"${stce.modelPath}/$i/v3_0002-0026000.params")
-      }
+      runInference(stce.modelPath, stce.outputPath, stce.guassianRadius, stce.inputImage, ctx)
 
-      val contentNp =
-        DataProcessing.preprocessContentImage(s"${stce.inputImage}", dShape, ctx)
-      var data = Array(contentNp)
-      for (i <- 0 until gens.length) {
-        gens(i).forward(data.takeRight(1))
-        val newImg = gens(i).getOutputs()(0)
-        data :+= newImg
-        DataProcessing.saveImage(newImg, s"${stce.outputPath}/out_${i}.jpg", stce.guassianRadius)
-      }
     } catch {
       case ex: Exception => {
         logger.error(ex.getMessage, ex)
@@ -74,7 +82,7 @@ object BoostInference {
 }
 
 class BoostInference {
-  @Option(name = "--model-path", usage = "the save model path")
+  @Option(name = "--model-path", usage = "the saved model path")
   private val modelPath: String = null
   @Option(name = "--input-image", usage = "the style image")
   private val inputImage: String = null

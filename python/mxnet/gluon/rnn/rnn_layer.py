@@ -21,24 +21,28 @@
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
 from __future__ import print_function
+import re
+
 __all__ = ['RNN', 'LSTM', 'GRU']
 
-from ... import ndarray
-from .. import Block
+from ... import ndarray, symbol
+from .. import HybridBlock, tensor_types
 from . import rnn_cell
 
-
-class _RNNLayer(Block):
+class _RNNLayer(HybridBlock):
     """Implementation of recurrent layers."""
     def __init__(self, hidden_size, num_layers, layout,
                  dropout, bidirectional, input_size,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 mode, **kwargs):
+                 mode, projection_size, h2r_weight_initializer,
+                 lstm_state_clip_min, lstm_state_clip_max, lstm_state_clip_nan,
+                 **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
-        assert layout == 'TNC' or layout == 'NTC', \
+        assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
         self._hidden_size = hidden_size
+        self._projection_size = projection_size if projection_size else None
         self._num_layers = num_layers
         self._mode = mode
         self._layout = layout
@@ -49,40 +53,56 @@ class _RNNLayer(Block):
         self._h2h_weight_initializer = h2h_weight_initializer
         self._i2h_bias_initializer = i2h_bias_initializer
         self._h2h_bias_initializer = h2h_bias_initializer
+        self._h2r_weight_initializer = h2r_weight_initializer
+        self._lstm_state_clip_min = lstm_state_clip_min
+        self._lstm_state_clip_max = lstm_state_clip_max
+        self._lstm_state_clip_nan = lstm_state_clip_nan
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
-        self.i2h_weight = []
-        self.h2h_weight = []
-        self.i2h_bias = []
-        self.h2h_bias = []
-
         ng, ni, nh = self._gates, input_size, hidden_size
-        for i in range(num_layers):
-            for j in (['l', 'r'] if self._dir == 2 else ['l']):
-                self.i2h_weight.append(
-                    self.params.get('%s%d_i2h_weight'%(j, i), shape=(ng*nh, ni),
-                                    init=i2h_weight_initializer,
-                                    allow_deferred_init=True))
-                self.h2h_weight.append(
-                    self.params.get('%s%d_h2h_weight'%(j, i), shape=(ng*nh, nh),
-                                    init=h2h_weight_initializer,
-                                    allow_deferred_init=True))
-                self.i2h_bias.append(
-                    self.params.get('%s%d_i2h_bias'%(j, i), shape=(ng*nh,),
-                                    init=i2h_bias_initializer,
-                                    allow_deferred_init=True))
-                self.h2h_bias.append(
-                    self.params.get('%s%d_h2h_bias'%(j, i), shape=(ng*nh,),
-                                    init=h2h_bias_initializer,
-                                    allow_deferred_init=True))
-            ni = nh * self._dir
+        if not projection_size:
+            for i in range(num_layers):
+                for j in ['l', 'r'][:self._dir]:
+                    self._register_param('{}{}_i2h_weight'.format(j, i),
+                                         shape=(ng*nh, ni),
+                                         init=i2h_weight_initializer)
+                    self._register_param('{}{}_h2h_weight'.format(j, i),
+                                         shape=(ng*nh, nh),
+                                         init=h2h_weight_initializer)
+                    self._register_param('{}{}_i2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=i2h_bias_initializer)
+                    self._register_param('{}{}_h2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=h2h_bias_initializer)
+                ni = nh * self._dir
+        else:
+            np = self._projection_size
+            for i in range(num_layers):
+                for j in ['l', 'r'][:self._dir]:
+                    self._register_param('{}{}_i2h_weight'.format(j, i),
+                                         shape=(ng*nh, ni),
+                                         init=i2h_weight_initializer)
+                    self._register_param('{}{}_h2h_weight'.format(j, i),
+                                         shape=(ng*nh, np),
+                                         init=h2h_weight_initializer)
+                    self._register_param('{}{}_i2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=i2h_bias_initializer)
+                    self._register_param('{}{}_h2h_bias'.format(j, i),
+                                         shape=(ng*nh,),
+                                         init=h2h_bias_initializer)
+                    self._register_param('{}{}_h2r_weight'.format(j, i),
+                                         shape=(np, nh),
+                                         init=h2r_weight_initializer)
+                ni = np * self._dir
 
-        for param_list in [self.i2h_weight, self.h2h_weight, self.i2h_bias, self.h2h_bias]:
-            for p in param_list:
-                self._reg_params[p.name] = p
-
-        self._unfused = self._unfuse()
+    def _register_param(self, name, shape, init):
+        p = self.params.get(name, shape=shape, init=init,
+                            allow_deferred_init=True)
+        setattr(self, name, p)
+        return p
 
     def __repr__(self):
         s = '{name}({mapping}, {_layout}'
@@ -93,17 +113,38 @@ class _RNNLayer(Block):
         if self._dir == 2:
             s += ', bidirectional'
         s += ')'
-        shape = self.i2h_weight[0].shape
+        shape = self.l0_i2h_weight.shape
         mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // self._gates)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
+
+    def _collect_params_with_prefix(self, prefix=''):
+        if prefix:
+            prefix += '.'
+        pattern = re.compile(r'(l|r)(\d)_(i2h|h2h)_(weight|bias)\Z')
+        def convert_key(m, bidirectional): # for compatibility with old parameter format
+            d, l, g, t = [m.group(i) for i in range(1, 5)]
+            if bidirectional:
+                return '_unfused.{}.{}_cell.{}_{}'.format(l, d, g, t)
+            else:
+                return '_unfused.{}.{}_{}'.format(l, g, t)
+        bidirectional = any(pattern.match(k).group(1) == 'r' for k in self._reg_params)
+
+        ret = {prefix + convert_key(pattern.match(key), bidirectional) : val
+               for key, val in self._reg_params.items()}
+        for name, child in self._children.items():
+            ret.update(child._collect_params_with_prefix(prefix + name))
+        return ret
 
     def state_info(self, batch_size=0):
         raise NotImplementedError
 
     def _unfuse(self):
         """Unfuses the fused RNN in to a stack of rnn cells."""
+        assert not self._projection_size, "_unfuse does not support projection layer yet!"
+        assert not self._lstm_state_clip_min and not self._lstm_state_clip_max, \
+                "_unfuse does not support state clipping yet!"
         get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
                                                                   activation='relu',
                                                                   **kwargs),
@@ -115,7 +156,7 @@ class _RNNLayer(Block):
                     'gru': lambda **kwargs: rnn_cell.GRUCell(self._hidden_size,
                                                              **kwargs)}[self._mode]
 
-        stack = rnn_cell.SequentialRNNCell(prefix=self.prefix, params=self.params)
+        stack = rnn_cell.HybridSequentialRNNCell(prefix=self.prefix, params=self.params)
         with stack.name_scope():
             ni = self._input_size
             for i in range(self._num_layers):
@@ -173,59 +214,55 @@ class _RNNLayer(Block):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
-    def forward(self, inputs, states=None):
-        batch_size = inputs.shape[self._layout.find('N')]
+    def hybrid_forward(self, F, inputs, states=None, **kwargs):
+        if F is ndarray:
+            batch_size = inputs.shape[self._layout.find('N')]
         skip_states = states is None
         if skip_states:
-            states = self.begin_state(batch_size, ctx=inputs.context)
-        if isinstance(states, ndarray.NDArray):
+            if F is ndarray:
+                states = self.begin_state(batch_size, ctx=inputs.context, dtype=inputs.dtype)
+            else:
+                states = self.begin_state(0, func=symbol.zeros)
+        if isinstance(states, tensor_types):
             states = [states]
-        for state, info in zip(states, self.state_info(batch_size)):
-            if state.shape != info['shape']:
-                raise ValueError(
-                    "Invalid recurrent state shape. Expecting %s, got %s."%(
-                        str(info['shape']), str(state.shape)))
-        if self._input_size == 0:
-            for i in range(self._dir):
-                self.i2h_weight[i].shape = (self._gates*self._hidden_size, inputs.shape[2])
-                self.i2h_weight[i]._finish_deferred_init()
-        if inputs.context.device_type == 'gpu' or \
-           self._mode in ['lstm', 'gru'] and not self._dropout:
-            out = self._forward_kernel(inputs, states)
-        else:
-            out = self._forward(inputs, states)
+        if F is ndarray:
+            for state, info in zip(states, self.state_info(batch_size)):
+                if state.shape != info['shape']:
+                    raise ValueError(
+                        "Invalid recurrent state shape. Expecting %s, got %s."%(
+                            str(info['shape']), str(state.shape)))
+        out = self._forward_kernel(F, inputs, states, **kwargs)
 
         # out is (output, state)
         return out[0] if skip_states else out
 
-    def _forward(self, inputs, states):
-        """forward using gluon cell"""
-        ns = len(states)
-        axis = self._layout.find('T')
-        states = sum(zip(*((j for j in i) for i in states)), ())
-        outputs, states = self._unfused.unroll(
-            inputs.shape[axis], inputs, states,
-            layout=self._layout, merge_outputs=True)
-        new_states = []
-        for i in range(ns):
-            state = ndarray.concat(*(j.reshape((1,)+j.shape) for j in states[i::ns]), dim=0)
-            new_states.append(state)
-
-        return outputs, new_states
-
-    def _forward_kernel(self, inputs, states):
+    def _forward_kernel(self, F, inputs, states, **kwargs):
         """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
-            inputs = ndarray.swapaxes(inputs, dim1=0, dim2=1)
-        ctx = inputs.context
-        params = sum(zip(self.i2h_weight, self.h2h_weight), ())
-        params += sum(zip(self.i2h_bias, self.h2h_bias), ())
-        params = (i.data(ctx).reshape((-1,)) for i in params)
-        params = ndarray.concat(*params, dim=0)
+            inputs = F.swapaxes(inputs, dim1=0, dim2=1)
+        if self._projection_size is None:
+            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+                      for t in ['weight', 'bias']
+                      for l in range(self._num_layers)
+                      for d in ['l', 'r'][:self._dir]
+                      for g in ['i2h', 'h2h'])
+        else:
+            params = (kwargs['{}{}_{}_{}'.format(d, l, g, t)].reshape(-1)
+                      for t in ['weight', 'bias']
+                      for l in range(self._num_layers)
+                      for d in ['l', 'r'][:self._dir]
+                      for g in ['i2h', 'h2h', 'h2r']
+                      if g != 'h2r' or t != 'bias')
 
-        rnn = ndarray.RNN(inputs, params, *states, state_size=self._hidden_size,
-                          num_layers=self._num_layers, bidirectional=self._dir == 2,
-                          p=self._dropout, state_outputs=True, mode=self._mode)
+        params = F._internal._rnn_param_concat(*params, dim=0)
+
+        rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
+                    projection_size=self._projection_size,
+                    num_layers=self._num_layers, bidirectional=self._dir == 2,
+                    p=self._dropout, state_outputs=True, mode=self._mode,
+                    lstm_state_clip_min=self._lstm_state_clip_min,
+                    lstm_state_clip_max=self._lstm_state_clip_max,
+                    lstm_state_clip_nan=self._lstm_state_clip_nan)
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]
@@ -233,7 +270,7 @@ class _RNNLayer(Block):
             outputs, states = rnn[0], [rnn[1]]
 
         if self._layout == 'NTC':
-            outputs = ndarray.swapaxes(outputs, dim1=0, dim2=1)
+            outputs = F.swapaxes(outputs, dim1=0, dim2=1)
 
         return outputs, states
 
@@ -325,7 +362,8 @@ class RNN(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'rnn_'+activation, **kwargs)
+                                  'rnn_'+activation, None, None, None, None, False,
+                                  **kwargs)
 
     def state_info(self, batch_size=0):
         return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
@@ -380,6 +418,20 @@ class LSTM(_RNNLayer):
         to zero.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
+    projection_size: int, default None
+        The number of features after projection.
+    h2r_weight_initializer : str or Initializer, default None
+        Initializer for the projected recurrent weights matrix, used for the linear
+        transformation of the recurrent state to the projected space.
+    state_clip_min : float or None, default None
+        Minimum clip value of LSTM states. This option must be used together with
+        state_clip_max. If None, clipping is not applied.
+    state_clip_max : float or None, default None
+        Maximum clip value of LSTM states. This option must be used together with
+        state_clip_min. If None, clipping is not applied.
+    state_clip_nan : boolean, default False
+        Whether to stop NaN from propagating in state by clipping it to min/max.
+        If the clipping range is not specified, this option is ignored.
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
@@ -423,22 +475,35 @@ class LSTM(_RNNLayer):
                  dropout=0, bidirectional=False, input_size=0,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
+                 projection_size=None, h2r_weight_initializer=None,
+                 state_clip_min=None, state_clip_max=None, state_clip_nan=False,
                  **kwargs):
         super(LSTM, self).__init__(hidden_size, num_layers, layout,
                                    dropout, bidirectional, input_size,
                                    i2h_weight_initializer, h2h_weight_initializer,
                                    i2h_bias_initializer, h2h_bias_initializer,
-                                   'lstm', **kwargs)
+                                   'lstm', projection_size, h2r_weight_initializer,
+                                   state_clip_min, state_clip_max, state_clip_nan,
+                                   **kwargs)
 
     def state_info(self, batch_size=0):
-        return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
-                 '__layout__': 'LNC'},
-                {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
-                 '__layout__': 'LNC'}]
+        if self._projection_size is None:
+            return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                     '__layout__': 'LNC'},
+                    {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                     '__layout__': 'LNC'}]
+        else:
+            return [{'shape': (self._num_layers * self._dir, batch_size, self._projection_size),
+                     '__layout__': 'LNC'},
+                    {'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),
+                     '__layout__': 'LNC'}]
 
 
 class GRU(_RNNLayer):
     r"""Applies a multi-layer gated recurrent unit (GRU) RNN to an input sequence.
+    Note: this is an implementation of the cuDNN version of GRUs
+    (slight modification compared to Cho et al. 2014; the reset gate :math:`r_t`
+    is applied after matrix multiplication).
 
     For each element in the input sequence, each layer computes the following
     function:
@@ -446,8 +511,8 @@ class GRU(_RNNLayer):
     .. math::
         \begin{array}{ll}
         r_t = sigmoid(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
-        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_hi h_{(t-1)} + b_{hi}) \\
-        n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+        i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{hi} h_{(t-1)} + b_{hi}) \\
+        n_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)} + b_{hn})) \\
         h_t = (1 - i_t) * n_t + i_t * h_{(t-1)} \\
         \end{array}
 
@@ -526,7 +591,8 @@ class GRU(_RNNLayer):
                                   dropout, bidirectional, input_size,
                                   i2h_weight_initializer, h2h_weight_initializer,
                                   i2h_bias_initializer, h2h_bias_initializer,
-                                  'gru', **kwargs)
+                                  'gru', None, None, None, None, False,
+                                  **kwargs)
 
     def state_info(self, batch_size=0):
         return [{'shape': (self._num_layers * self._dir, batch_size, self._hidden_size),

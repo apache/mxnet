@@ -21,6 +21,7 @@ import os
 import time
 import numpy as np
 from mxnet import profiler
+import memonger
 
 
 def parse_args():
@@ -86,7 +87,8 @@ def get_symbol():
 
 def get_module(ctx, sym, provide_data, provide_label, batch_size=None, is_train=True, use_memonger=False):
     if use_memonger:
-        sym = search_plan(sym, data=data_shapes)
+        name, data_shapes = provide_data[0]
+        sym = memonger.search_plan(sym, data=data_shapes)
     mod = mx.mod.Module(symbol=sym,
                         data_names=[name for name, _ in provide_data],
                         label_names=[name for name, _ in provide_label],

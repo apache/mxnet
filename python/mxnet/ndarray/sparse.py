@@ -46,9 +46,9 @@ from ..context import Context, current_context
 from . import _internal
 from . import op
 try:
-    from .gen_sparse import * # pylint: disable=redefined-builtin
+    from .gen_sparse import retain as gs_retain # pylint: disable=redefined-builtin
 except ImportError:
-    pass
+    gs_retain = None
 from ._internal import _set_ndarray_class
 from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
@@ -527,7 +527,7 @@ class CSRNDArray(BaseSparseNDArray):
             return super(CSRNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
-            if stype == 'default' or stype == 'csr':
+            if stype in ('default', 'csr'):
                 return super(CSRNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
@@ -774,7 +774,7 @@ class RowSparseNDArray(BaseSparseNDArray):
             return super(RowSparseNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
-            if stype == 'default' or stype == 'row_sparse':
+            if stype in ('default', 'row_sparse'):
                 return super(RowSparseNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
@@ -787,7 +787,9 @@ class RowSparseNDArray(BaseSparseNDArray):
         The arguments are the same as for :py:func:`retain`, with
         this array as data.
         """
-        return retain(self, *args, **kwargs)
+        if not gs_retain:
+            raise ImportError("gen_sparse could not be imported")
+        return gs_retain(*args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.
@@ -1531,7 +1533,7 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     if ctx is None:
         ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
-    if stype == 'row_sparse' or stype == 'csr':
+    if stype in ('row_sparse', 'csr'):
         aux_types = _STORAGE_AUX_TYPES[stype]
     else:
         raise ValueError("unknown storage type" + stype)
@@ -1566,7 +1568,7 @@ def empty(stype, shape, ctx=None, dtype=None):
     if dtype is None:
         dtype = mx_real_t
     assert(stype is not None)
-    if stype == 'csr' or stype == 'row_sparse':
+    if stype in ('csr', 'row_sparse'):
         return zeros(stype, shape, ctx=ctx, dtype=dtype)
     else:
         raise Exception("unknown stype : " + str(stype))

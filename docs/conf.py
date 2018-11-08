@@ -33,13 +33,13 @@ for mod_name in MOCK_MODULES:
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.2'
+needs_sphinx = '1.5.6'
 
 # General information about the project.
 project = u'mxnet'
 author = u'%s developers' % project
-copyright = u'2015-2017, %s' % author
-github_doc_root = 'https://github.com/dmlc/mxnet/tree/master/docs/'
+copyright = u'2015-2018, %s' % author
+github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
 doc_root = 'http://mxnet.io/'
 
 # add markdown parser
@@ -107,7 +107,7 @@ master_doc = 'index'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['virtualenv']
+exclude_patterns = ['3rdparty', 'build_version_doc', 'virtualenv', 'api/python/model.md', 'README.md']
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 #default_role = None

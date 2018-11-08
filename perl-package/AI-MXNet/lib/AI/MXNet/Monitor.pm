@@ -30,13 +30,13 @@ use AI::MXNet::Base;
 
     Parameters
     ----------
-    interval : int
+    interval : Int
         Number of batches between printing.
-    stat_func : function
+    stat_func : CodeRef
         a function that computes statistics of tensors.
         Takes a NDArray and returns a NDArray. defaults to mean
         absolute value |x|/size(x).
-    pattern : str
+    pattern : Str
         A regular expression specifying which tensors to monitor.
         Only tensors with names that match name_pattern will be included.
         For example, '.*weight|.*output' will print all weights and outputs;
@@ -94,7 +94,7 @@ has 'stat_helper'          => (
 
     Parameters
     ----------
-    exe : AI::MXNet::Executor
+    $exe : AI::MXNet::Executor
         the Executor (returned by $symbol->bind) to install to.
 =cut
 

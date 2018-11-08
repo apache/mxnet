@@ -17,19 +17,14 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import com.sksamuel.scrimage.Image
-import com.sksamuel.scrimage.Pixel
+import java.io.File
+
+import com.sksamuel.scrimage.{Image, Pixel}
 import com.sksamuel.scrimage.filter.GaussianBlurFilter
 import com.sksamuel.scrimage.nio.JpegWriter
-import org.apache.mxnet.Context
-import org.apache.mxnet.NDArray
-import java.io.File
-import org.apache.mxnet.Shape
-import scala.util.Random
+import org.apache.mxnet.{Context, NDArray, Shape}
 
-/**
- * @author Depeng Liang
- */
+
 object DataProcessing {
 
   def preprocessContentImage(path: String,

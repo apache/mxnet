@@ -37,7 +37,6 @@ use AI::MXNet::Function::Parameters;
 
 has 'handle' => (is => 'ro', isa => 'KVStoreHandle', required => 1);
 has '_updater' => (is => 'rw',  isa => 'AI::MXNet::Updater');
-has '_updater_func' => (is => 'rw', isa => 'CodeRef');
 
 sub DEMOLISH
 {
@@ -53,9 +52,9 @@ sub DEMOLISH
 
     Parameters
     ----------
-    key : str or an array ref of str
+    $key : Str|ArrayRef[Str]
         The keys.
-    value : NDArray or an array ref of NDArray objects
+    $value : AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
         The values.
 
     Examples
@@ -100,9 +99,9 @@ method init(
 
     Parameters
     ----------
-    key : str or array ref of str
-    value : NDArray or array ref of NDArray or array ref of array refs of NDArray
-    priority : int, optional
+    $key : Str|ArrayRef[Str]
+    $value : AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
+    :$priority=0 : Int, optional
         The priority of the push operation.
         The higher the priority, the faster this action is likely
         to be executed before other push actions.
@@ -171,12 +170,12 @@ method push(
 
     Parameters
     ----------
-    key : str or array ref of str
+    $key : Str|ArrayRef[Str]
         Keys
-    out: NDArray or array ref of NDArray or array ref of array refs of NDArray
+    :$out: AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
         According values
 
-    priority : int, optional
+    :$priority=0 : Int, optional
         The priority of the push operation.
         The higher the priority, the faster this action is likely
         to be executed before other push actions.
@@ -216,13 +215,14 @@ method push(
 method pull(
     Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$out,
-    Int :$priority=0
+    Int :$priority=0,
+    Bool :$ignore_sparse=1
 )
 {
     my ($keys, $vals) = _key_value($key, $out);
     check_call(
-        AI::MXNetCAPI::KVStorePullEx(
-            $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
+        AI::MXNetCAPI::KVStorePullWithSparseEx(
+            $self->handle, scalar(@{ $keys }), $keys, $vals, $priority, $ignore_sparse
         )
     );
 }
@@ -241,18 +241,18 @@ method pull(
 
         Parameters
         ----------
-        key : str, int, or sequence of str or int
+        $key : Str|ArrayRef[Str] $key
             Keys.
 
-        out: AI::MXNet::NDArray::RowSparse or array ref of AI::MXNet::NDArray::RowSparse or array ref of array ref of AI::MXNet::NDArray::RowSparse
+        :$out: AI::MXNet::NDArray::RowSparse|ArrayRef[AI::MXNet::NDArray::RowSparse]|ArrayRef[ArrayRef[AI::MXNet::NDArray::RowSparse]]
             Values corresponding to the keys. The stype is expected to be row_sparse
 
-        priority : int, optional
+        :$priority=0 : Int, optional
             The priority of the pull operation.
             Higher priority pull operations are likely to be executed before
             other pull actions.
 
-        row_ids : AI::MXNet::NDArray or array ref of AI::MXNet::NDArray
+        :$row_ids : AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
             The row_ids for which to pull for each value. Each row_id is an 1D NDArray
             whose values don't have to be unique nor sorted.
 
@@ -364,7 +364,7 @@ method row_sparse_pull(
 
         Parameters
         ----------
-        compression_params : HashRef
+        $compression_params : HashRef[Str]
             A dictionary specifying the type and parameters for gradient compression.
             The key `type` in this dictionary is a
             required string argument and specifies the type of gradient compression.
@@ -401,7 +401,7 @@ method set_gradient_compression(HashRef[Str] $compression_params)
 
     Parameters
     ----------
-    optimizer : Optimizer
+    $optimizer : AI::MXNet::Optimizer
         the optimizer
 =cut
 
@@ -426,7 +426,7 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
 
     Returns
     -------
-    type : str
+    $type : Str
         the string type
 =cut
 
@@ -441,7 +441,7 @@ method type()
 
     Returns
     -------
-    rank : int
+    $rank : Int
         The rank of this node, which is in [0, get_num_workers())
 =cut
 
@@ -456,7 +456,7 @@ method rank()
 
     Returns
     -------
-    size :int
+    $size : Int
         The number of worker nodes
 =cut
 
@@ -471,9 +471,9 @@ method num_workers()
 
     Parameters
     ----------
-    fname : str
+    $fname : Str
         Path to output states file.
-    dump_optimizer : bool, default False
+    :$dump_optimizer=0 : Bool, default False
             Whether to also save the optimizer itself. This would also save optimizer
             information such as learning rate and weight decay schedules.
 =cut
@@ -493,7 +493,7 @@ method save_optimizer_states(Str $fname, Bool :$dump_optimizer=0)
 
     Parameters
     ----------
-    fname : str
+    $fname : Str
         Path to input states file.
 =cut
 
@@ -517,7 +517,7 @@ method load_optimizer_states(Str $fname)
 
     Parameters
     ----------
-    updater : function
+    $updater : Undater
         the updater function
 
     Examples
@@ -540,20 +540,17 @@ method load_optimizer_states(Str $fname)
 
 method _set_updater(Updater $updater_func)
 {
-    $self->_updater_func(
-        sub {
-            my ($index, $input_handle, $storage_handle) = @_;
-            $updater_func->(
-                $index,
-                AI::MXNet::NDArray->_ndarray_cls($input_handle),
-                AI::MXNet::NDArray->_ndarray_cls($storage_handle)
-            );
-        }
-    );
     check_call(
         AI::MXNetCAPI::KVStoreSetUpdater(
             $self->handle,
-            $self->_updater_func
+            sub {
+                my ($index, $input_handle, $storage_handle) = @_;
+                $updater_func->(
+                    $index,
+                    AI::MXNet::NDArray->_ndarray_cls($input_handle),
+                    AI::MXNet::NDArray->_ndarray_cls($storage_handle)
+                );
+            }
         )
     );
 }
@@ -583,9 +580,9 @@ method _barrier()
 
     Parameters
     ----------
-    head : int
+    $head : Int
         the head of the command
-    body : str
+    $body : Str
         the body of the command
 =cut
 
@@ -606,7 +603,7 @@ method _send_command_to_servers(Int $head, Str $body)
 
     Parameters
     ----------
-    name : {'local'}
+    $name='local' : Str
     The type of KVStore
         - local works for multiple devices on a single machine (single process)
         - dist works for multi-machines (multiple processes)

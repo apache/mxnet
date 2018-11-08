@@ -28,9 +28,6 @@ import java.io.ByteArrayInputStream
 
 /**
  * Scala interface for read/write RecordIO data format
- *
- * @author Depeng Liang
- *
  * @param uri, path to recordIO file.
  * @param flag, RecordIO.IORead for reading or RecordIO.Write for writing.
  */
@@ -98,7 +95,7 @@ object MXRecordIO {
 
   /**
    * pack an string into MXImageRecord.
-   * @param
+   * @param header
    *  header of the image record.
    *  header.label an array.
    * @param s string to pack
@@ -144,7 +141,7 @@ object MXRecordIO {
  *
  * @author Depeng Liang
  *
- * @param idx_path, path to index file
+ * @param idxPath, path to index file
  * @param uri, path to recordIO file.
  * @param flag, RecordIO.IORead for reading or RecordIO.Write for writing.
  * @param keyType, data type for keys.

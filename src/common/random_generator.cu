@@ -23,8 +23,8 @@
  * \brief gpu implements for parallel random number generator.
  */
 
+#include <mxnet/random_generator.h>
 #include <algorithm>
-#include "./random_generator.h"
 #include "../operator/mxnet_op.h"
 
 namespace mxnet {
@@ -57,6 +57,17 @@ void RandGenerator<gpu, float>::Seed(mshadow::Stream<gpu> *s, uint32_t seed) {
           seed);
   MSHADOW_CUDA_POST_KERNEL_CHECK(rand_generator_seed_kernel);
   s->Wait();
+}
+
+template<>
+void RandGenerator<gpu, float>::AllocState(RandGenerator<gpu> *inst) {
+  CUDA_CALL(cudaMalloc(&inst->states_,
+                       kNumRandomStates * sizeof(curandStatePhilox4_32_10_t)));
+}
+
+template<>
+void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu> *inst) {
+  CUDA_CALL(cudaFree(inst->states_));
 }
 
 }  // namespace random

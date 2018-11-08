@@ -72,9 +72,9 @@ abstract class CustomOp {
       val tensors = (0 until 5).toArray.map( x => ArrayBuffer[NDArray]() )
       for (i <- 0 until numNdarray) {
         if (tags(i) == 1 || tags(i) == 4) {
-          tensors(tags(i)) += new NDArray(ndarraies(i), writable = true)
+          tensors(tags(i)) += new NDArray(ndarraies(i), writable = true, addToCollector = false)
         } else {
-          tensors(tags(i)) += new NDArray(ndarraies(i), writable = false)
+          tensors(tags(i)) += new NDArray(ndarraies(i), writable = false, addToCollector = false)
         }
       }
       val reqEnum = Array("null", "write", "inplace", "add")
@@ -134,7 +134,8 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
   protected var kwargs: Map[String, String] = Map[String, String]()
 
   private[mxnet] def init(keys: Array[String], vals: Array[String]): Unit = {
-    require(keys.length == vals.length)
+    require(keys.length == vals.length,
+      s"Number of keys (${keys.length}) does not match arrays (${vals.length})")
     kwargs = keys.zip(vals).toMap
   }
 
@@ -166,11 +167,13 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
       val tmp = this.listAuxiliaryStates()
       if (tmp == null) 0 else tmp.length
     }
-    require(numTensor == (nIn + nOut + nAux))
+    require(numTensor == (nIn + nOut + nAux),
+      s"Shape inference failed. $numTensor tensors expected, but got " +
+        s"$nIn args, $nOut ouputs and $nAux aux states")
     val (inShapes, outShapes, auxShapes) =
       inferShape(intputShapes.map(Shape(_)))
-    require(inShapes != null && inShapes.length != 0)
-    require(outShapes != null && outShapes.length != 0)
+    require(inShapes != null && inShapes.length != 0, "InputShape is undefined or empty")
+    require(outShapes != null && outShapes.length != 0, "OutputShape is undefined or empty")
     if (auxShapes != null && auxShapes.length != 0) {
       inShapes.map(_.toArray) ++ outShapes.map(_.toArray) ++ auxShapes.map(_.toArray)
     } else inShapes.map(_.toArray) ++ outShapes.map(_.toArray)
@@ -206,11 +209,13 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
       val tmp = this.listAuxiliaryStates()
       if (tmp == null) 0 else tmp.length
     }
-    require(numTensor == (nIn + nOut + nAux))
+    require(numTensor == (nIn + nOut + nAux),
+      s"Type inference failed. $numTensor tensors expected, but got " +
+        s"$nIn args, $nOut ouputs and $nAux aux states")
     val (inTypes, outTypes, auxTypes) =
       inferType(intputTypes.map(DType(_)))
-    require(inTypes != null && inTypes.length != 0)
-    require(outTypes != null && outTypes.length != 0)
+    require(inTypes != null && inTypes.length != 0, "InputType is undefined or empty")
+    require(outTypes != null && outTypes.length != 0, "OutputType is undefined or empty")
     if (auxTypes != null && auxTypes.length != 0) {
       inTypes.map(_.id) ++ outTypes.map(_.id) ++ auxTypes.map(_.id)
     } else inTypes.map(_.id) ++ outTypes.map(_.id)

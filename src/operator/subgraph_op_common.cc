@@ -161,17 +161,38 @@ bool InferSubgraphShape(const nnvm::Symbol &subgraph,
   return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
 }
 
+template <typename T>
+T _asscalar(const NDArray &a) {
+  CHECK_EQ(a.shape().Size(), 1U);
+  T data;
+  a.SyncCopyToCPU(&data, 1U);
+  return data;
+}
+
+bool as_bool_scalar(const NDArray &a) {
+  MSHADOW_TYPE_SWITCH(a.dtype(), DType, {
+    return static_cast<bool>(_asscalar<DType>(a));
+  });
+  LOG(FATAL) << "Unknown dtype";
+  return false;
+}
+
+bool is_shape_udf(const TShape &x) {
+  return x.ndim() == 0 || x.Size() == 0;
+}
+
+bool is_stype_udf(const int &x) {
+  return x == exec::kBadStorageID;
+}
+
+bool is_type_udf(const int &x) {
+  return x == -1;
+}
+
 LoopState::LoopState(const Symbol &g) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
-
-  std::vector<std::pair<std::string, std::string> > kwargs;
-  kwargs.push_back(std::pair<std::string, std::string>("inline_limit", "0"));
-  // We turn on static_alloc for two reasons.
-  // It avoids the overhead of unnecessary memory allocation.
-  // only static_alloc supports nested call of CachedOp.
-  kwargs.push_back(std::pair<std::string, std::string>("static_alloc", "1"));
-  iter_op = std::make_shared<CachedOp>(subgraph_sym, kwargs);
+  this->iter_op = LoopState::MakeSharedOp(g);
 }
 
 void LoopState::Forward(int iter_no,

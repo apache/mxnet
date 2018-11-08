@@ -17,7 +17,8 @@
 
 package org.apache.mxnet.spark.io
 
-import org.apache.mxnet.{NDArray, DataBatch, DataIter, Shape}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 import org.apache.spark.mllib.linalg.Vector
 
 import scala.collection.immutable.ListMap
@@ -25,7 +26,6 @@ import scala.collection.mutable.ArrayBuffer
 
 /**
  * A temporary helper implementation for predicting Vectors
- * @author Yizhi Liu
  */
 class PointIter private[mxnet](
   private val points: Iterator[Vector],
@@ -114,13 +114,25 @@ class PointIter private[mxnet](
   }
 
   // The name and shape of label provided by this iterator
+  @deprecated
   override def provideLabel: ListMap[String, Shape] = {
     ListMap(labelName -> Shape(_batchSize))
   }
 
   // The name and shape of data provided by this iterator
+  @deprecated
   override def provideData: ListMap[String, Shape] = {
     ListMap(dataName -> dataShape)
+  }
+
+  override def provideDataDesc: IndexedSeq[DataDesc] = {
+    // TODO: Make DType, Layout configurable
+    IndexedSeq(new DataDesc(dataName, dataShape, DType.Float32, Layout.UNDEFINED))
+  }
+
+  override def provideLabelDesc: IndexedSeq[DataDesc] = {
+    IndexedSeq(new DataDesc(labelName, Shape(_batchSize),
+      DType.Float32, Layout.UNDEFINED))
   }
 
   /**

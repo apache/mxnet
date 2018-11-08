@@ -17,20 +17,9 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, Initializer, NDArray, Optimizer, Shape, Symbol, Uniform}
 import org.slf4j.LoggerFactory
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Optimizer
-import org.apache.mxnet.Executor
-import org.apache.mxnet.Shape
-import org.apache.mxnet.Uniform
-import org.apache.mxnet.Initializer
-import org.apache.mxnet.DataBatch
 
-/**
- * @author Depeng Liang
- */
 class Module(symbol: Symbol,
              context: Context,
              dataShapes: Map[String, Shape],

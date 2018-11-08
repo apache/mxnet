@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file indexing_op.cu
- * \brief
+ * \brief GPU implementation of indexing operator
  * \author Siyi Li, Chi Zhang
 */
 
@@ -36,7 +36,7 @@ namespace op {
 
 struct is_valid_check {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int32_t* out, const DType* data,
+  MSHADOW_XINLINE static void Map(int i, char* out, const DType* data,
                                   const DType min, const DType max) {
     if (data[i] < min || data[i] > max) *out = 1;
   }
@@ -116,6 +116,76 @@ struct AddTakeGradRspDeterministicKernel {
   }
 };
 
+/*! \brief name the struct Take instead of take
+ * to avoid conflict with the take function in mshadow
+ */
+template<bool clip = true>
+struct TakeGPU {
+  // assume that idx have been flattened to a 1-D tensor (N,)
+  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
+  // M is the number of columns of in_data and out_data
+  // K is the number of rows of in_data
+  // i is the index of out_data
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+                                  const IType* idx, const int64_t M, const int64_t K) {
+    int64_t j = static_cast<int64_t>(idx[i/M]);
+    if (clip) {
+      if (j <= 0) j = 0;
+      else if (j >= K) j = K - 1;
+    } else {
+      j = j % K;
+      j += (j < 0) ? K : 0;
+    }
+    out_data[i] = in_data[j * M + i % M];
+  }
+};
+
+/*
+ * \brief returns true if all indices are between [min, max]
+ * \param s the stream
+ * \param data_ptr the indices on the stream
+ * \param data_size the number of indices to examine
+ * \param min the expected min value for indices
+ * \param max the expected max value for indices
+ * \param is_valid_ptr the temparary workspace
+ */
+template<typename DType>
+bool CheckIndexOutOfBound(mshadow::Stream<gpu> *s, const DType* data_ptr, size_t data_size,
+                          const DType min, const DType max, char* is_valid_ptr) {
+  using namespace mxnet_op;
+  int32_t is_valid = 0;
+  Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
+  Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
+  CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(char),
+            cudaMemcpyDeviceToHost));
+  return is_valid == 0;
+}
+
+// Embedding forward implementation with dense weight
+template<>
+void EmbeddingOpForwardDnsImpl<gpu>(mshadow::Stream<gpu>* s,
+                                    const TBlob& data,
+                                    const TBlob& weight,
+                                    const OpReqType req,
+                                    const TBlob& output) {
+  using namespace mxnet_op;
+  const TShape& ishape = data.shape_;
+  const TShape& oshape = output.shape_;
+
+  MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
+      Tensor<gpu, 1, IType> idx = data.get_with_shape<gpu, 1, IType>(
+        Shape1(ishape.ProdShape(0, ishape.ndim())), s);
+      Tensor<gpu, 2, DType> wmat = weight.get<gpu, 2, DType>(s);
+      Tensor<gpu, 2, DType> out = output.get_with_shape<gpu, 2, DType>(
+        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
+      Kernel<TakeGPU<true>, gpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
+                                         idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+    });
+  });
+}
+
 template<>
 void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
                                           const TBlob& data,
@@ -136,21 +206,17 @@ void SparseEmbeddingOpForwardRspImpl<gpu>(const OpContext& ctx,
     return;
   }
   // check out-of-bound indices
-  int32_t is_valid = 0;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     DType min = 0;
     DType max = static_cast<DType>(weight.shape()[0] - 1);
     DType* data_ptr = data.dptr<DType>();
     size_t data_size = data.shape_.Size();
     Tensor<gpu, 1, char> workspace = ctx.requested[0]
-        .get_space_typed<gpu, 1, char>(Shape1(sizeof(int32_t)), s);
-    int32_t* is_valid_ptr = reinterpret_cast<int32_t*>(workspace.dptr_);
-    Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
-    Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
-    CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(int32_t),
-              cudaMemcpyDeviceToHost));
+        .get_space_typed<gpu, 1, char>(Shape1(1), s);
+    char* is_valid_ptr = reinterpret_cast<char*>(workspace.dptr_);
+    bool is_valid = CheckIndexOutOfBound(s, data_ptr, data_size, min, max, is_valid_ptr);
+    CHECK(is_valid) << "SparseEmbedding input contains data out of bound";
   })
-  CHECK_EQ(is_valid, 0) << "SparseEmbedding input contains data out of bound";
   // the weight is actually dense
   if (weight.aux_shape(kIdx)[0] == weight.shape()[0]) {
     EmbeddingOpForwardDnsImpl<gpu>(s, data, weight.data(), req, output);
@@ -207,6 +273,17 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
                                           sorted_data_storage_bytes);
   temp_storage = workspace.dptr_ + total_storage_bytes - temp_workspace_bytes;
 
+  // check out-of-bound indices
+  {
+    IType min = 0;
+    IType max = static_cast<IType>(output.shape()[0] - 1);
+    IType* data_ptr = data.dptr<IType>();
+    size_t data_size = data.shape_.Size();
+    bool is_valid = CheckIndexOutOfBound(s, data_ptr, data_size, min, max,
+                                         reinterpret_cast<char*>(temp_storage));
+    CHECK(is_valid) << "Embedding input contains data out of bound";
+  }
+
   // make a copy of the data, to be sorted
   TBlob sorted_data_blob(sorted_data, Shape1(data_size), gpu::kDevMask);
   auto sorted_data_tensor = sorted_data_blob.FlatTo1D<gpu, dim_t>(s);
@@ -217,7 +294,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   Kernel<range_fwd, gpu>::Launch(s, data_size, 1, static_cast<dim_t>(0),
                                  static_cast<dim_t>(1), kWriteTo, original_idx);
   // sort data with its original idx
-  int num_bits = ilog2(num_rows - 1);
+  int num_bits = common::ilog2ui(num_rows - 1);
   char* temp_storage_ptr = reinterpret_cast<char*>(temp_storage);
   Tensor<gpu, 1, char> temp_storage_tensor(temp_storage_ptr,
                                            Shape1(sort_workspace_size), s);
@@ -384,6 +461,72 @@ inline void GatherNDBackwardImpl(int N, int M, int K,
                                  const IType* indices,
                                  mshadow::Stream<gpu> *s) {
   mxnet_op::Kernel<backward_gather_nd_gpu, gpu>::Launch(s, N, N, M, K, strides, out, data, indices);
+}
+
+template<>
+void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  if (req[take_::kOut] == kNullOp) return;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const TShape& idxshape = inputs[take_::kIdx].shape_;
+  const TShape& arrshape = inputs[take_::kArr].shape_;
+  const TShape& oshape = outputs[take_::kOut].shape_;
+
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+  const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+      if (actual_axis == 0) {
+        if (param.mode == take_::kClip) {
+          Kernel<TakeGPU<true>, gpu>::Launch(s, oshape.Size(),
+                                             outputs[take_::kOut].dptr<DType>(),
+                                             inputs[take_::kArr].dptr<DType>(),
+                                             inputs[take_::kIdx].dptr<IType>(),
+                                             oshape.Size()/idxshape.Size(), arrshape[0]);
+        } else {
+          Kernel<TakeGPU<false>, gpu>::Launch(s, oshape.Size(),
+                                              outputs[take_::kOut].dptr<DType>(),
+                                              inputs[take_::kArr].dptr<DType>(),
+                                              inputs[take_::kIdx].dptr<IType>(),
+                                              oshape.Size()/idxshape.Size(), arrshape[0]);
+        }
+      } else {
+        mshadow::Shape<10> in_strides;
+        int stride = 1;
+        for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
+          in_strides[i] = stride;
+        }
+        mshadow::Shape<10> out_strides;
+        stride = 1;
+        for (int i = oshape.ndim() - 1; i >= 0; stride *= oshape[i], --i) {
+          out_strides[i] = stride;
+        }
+        if (param.mode == take_::kClip) {
+          Kernel<Take<true>, gpu>::Launch(s, oshape.Size(),
+                                          outputs[take_::kOut].dptr<DType>(),
+                                          inputs[take_::kArr].dptr<DType>(),
+                                          inputs[take_::kIdx].dptr<IType>(),
+                                          in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                          idxshape.ndim(), arrshape[actual_axis], actual_axis);
+        } else if (param.mode == take_::kWrap) {
+          Kernel<Take<false>, gpu>::Launch(s, oshape.Size(),
+                                           outputs[take_::kOut].dptr<DType>(),
+                                           inputs[take_::kArr].dptr<DType>(),
+                                           inputs[take_::kIdx].dptr<IType>(),
+                                           in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
+                                           idxshape.ndim(), arrshape[actual_axis], actual_axis);
+        }
+      }
+    });
+  });
 }
 
 NNVM_REGISTER_OP(Embedding)

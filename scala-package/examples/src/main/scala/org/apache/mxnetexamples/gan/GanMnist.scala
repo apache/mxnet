@@ -17,7 +17,7 @@
 
 package org.apache.mxnetexamples.gan
 
-import org.apache.mxnet.{Context, CustomMetric, DataBatch, IO, NDArray, Shape, Symbol, Xavier}
+import org.apache.mxnet.{Context, CustomMetric, DataBatch, IO, NDArray, NDArrayCollector, Shape, Symbol, Xavier}
 import org.apache.mxnet.optimizer.Adam
 import org.kohsuke.args4j.{CmdLineParser, Option}
 import org.slf4j.LoggerFactory
@@ -104,75 +104,80 @@ object GanMnist {
 
   def runTraining(dataPath : String, context : Context,
                   outputPath : String, numEpoch : Int): Float = {
-    val lr = 0.0005f
-    val beta1 = 0.5f
-    val batchSize = 100
-    val randShape = Shape(batchSize, 100)
-    val dataShape = Shape(batchSize, 1, 28, 28)
+    val output = NDArrayCollector.auto().withScope {
+      val lr = 0.0005f
+      val beta1 = 0.5f
+      val batchSize = 100
+      val randShape = Shape(batchSize, 100)
+      val dataShape = Shape(batchSize, 1, 28, 28)
 
-    val (symGen, symDec) =
-      makeDcganSym(oShape = dataShape, ngf = 32, finalAct = "sigmoid")
+      val (symGen, symDec) =
+        makeDcganSym(oShape = dataShape, ngf = 32, finalAct = "sigmoid")
 
-    val gMod = new GANModule(
-      symGen,
-      symDec,
-      context = context,
-      dataShape = dataShape,
-      codeShape = randShape)
+      val gMod = new GANModule(
+        symGen,
+        symDec,
+        context = context,
+        dataShape = dataShape,
+        codeShape = randShape)
 
-    gMod.initGParams(new Xavier(factorType = "in", magnitude = 2.34f))
-    gMod.initDParams(new Xavier(factorType = "in", magnitude = 2.34f))
+      gMod.initGParams(new Xavier(factorType = "in", magnitude = 2.34f))
+      gMod.initDParams(new Xavier(factorType = "in", magnitude = 2.34f))
 
-    gMod.initOptimizer(new Adam(learningRate = lr, wd = 0f, beta1 = beta1))
+      gMod.initOptimizer(new Adam(learningRate = lr, wd = 0f, beta1 = beta1))
 
-    val params = Map(
-      "image" -> s"$dataPath/train-images-idx3-ubyte",
-      "label" -> s"$dataPath/train-labels-idx1-ubyte",
-      "input_shape" -> s"(1, 28, 28)",
-      "batch_size" -> s"$batchSize",
-      "shuffle" -> "True"
-    )
+      val params = Map(
+        "image" -> s"$dataPath/train-images-idx3-ubyte",
+        "label" -> s"$dataPath/train-labels-idx1-ubyte",
+        "input_shape" -> s"(1, 28, 28)",
+        "batch_size" -> s"$batchSize",
+        "shuffle" -> "True"
+      )
 
-    val mnistIter = IO.MNISTIter(params)
+      val mnistIter = IO.MNISTIter(params)
 
-    val metricAcc = new CustomMetric(ferr, "ferr")
+      val metricAcc = new CustomMetric(ferr, "ferr")
 
-    var t = 0
-    var dataBatch: DataBatch = null
-    var acc = 0.0f
-    for (epoch <- 0 until numEpoch) {
-      mnistIter.reset()
-      metricAcc.reset()
-      t = 0
-      while (mnistIter.hasNext) {
-        dataBatch = mnistIter.next()
-        gMod.update(dataBatch)
-        gMod.dLabel.set(0f)
-        metricAcc.update(Array(gMod.dLabel), gMod.outputsFake)
-        gMod.dLabel.set(1f)
-        metricAcc.update(Array(gMod.dLabel), gMod.outputsReal)
+      var t = 0
+      var dataBatch: DataBatch = null
+      var acc = 0.0f
+      for (epoch <- 0 until numEpoch) {
+        mnistIter.reset()
+        metricAcc.reset()
+        t = 0
+        while (mnistIter.hasNext) {
+          dataBatch = mnistIter.next()
+          NDArrayCollector.auto().withScope {
+            gMod.update(dataBatch)
+            gMod.dLabel.set(0f)
+            metricAcc.update(Array(gMod.dLabel), gMod.outputsFake)
+            gMod.dLabel.set(1f)
+            metricAcc.update(Array(gMod.dLabel), gMod.outputsReal)
 
-        if (t % 50 == 0) {
-          val (name, value) = metricAcc.get
-          acc = value(0)
-          logger.info(s"epoch: $epoch, iter $t, metric=${value.mkString(" ")}")
-          Viz.imSave("gout", outputPath, gMod.tempOutG(0), flip = true)
-          val diff = gMod.tempDiffD
-          val arr = diff.toArray
-          val mean = arr.sum / arr.length
-          val std = {
-            val tmpA = arr.map(a => (a - mean) * (a - mean))
-            Math.sqrt(tmpA.sum / tmpA.length).toFloat
+            if (t % 50 == 0) {
+              val (name, value) = metricAcc.get
+              acc = value(0)
+              logger.info(s"epoch: $epoch, iter $t, metric=${value.mkString(" ")}")
+              Viz.imSave("gout", outputPath, gMod.tempOutG(0), flip = true)
+              val diff = gMod.tempDiffD
+              val arr = diff.toArray
+              val mean = arr.sum / arr.length
+              val std = {
+                val tmpA = arr.map(a => (a - mean) * (a - mean))
+                Math.sqrt(tmpA.sum / tmpA.length).toFloat
+              }
+              diff.set((diff - mean) / std + 0.5f)
+              Viz.imSave("diff", outputPath, diff, flip = true)
+              Viz.imSave("data", outputPath, dataBatch.data(0), flip = true)
+            }
           }
-          diff.set((diff - mean) / std + 0.5f)
-          Viz.imSave("diff", outputPath, diff, flip = true)
-          Viz.imSave("data", outputPath, dataBatch.data(0), flip = true)
+          dataBatch.dispose()
+          t += 1
         }
-
-        t += 1
       }
+      acc
     }
-    acc
+    output
   }
 
   def main(args: Array[String]): Unit = {
@@ -181,7 +186,7 @@ object GanMnist {
     try {
       parser.parseArgument(args.toList.asJava)
 
-      val dataPath = if (anst.mnistDataPath == null) System.getenv("MXNET_DATA_DIR")
+      val dataPath = if (anst.mnistDataPath == null) System.getenv("MXNET_HOME")
       else anst.mnistDataPath
 
       assert(dataPath != null)

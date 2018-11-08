@@ -17,13 +17,8 @@
 
 package org.apache.mxnetexamples.customop
 
-import org.apache.mxnet.Shape
-import org.apache.mxnet.IO
-import org.apache.mxnet.DataIter
+import org.apache.mxnet.{DataIter, IO, Shape}
 
-/**
- * @author Depeng Liang
- */
 object Data {
   // return train and val iterators for mnist
   def mnistIterator(dataPath: String, batchSize: Int, inputShape: Shape): (DataIter, DataIter) = {

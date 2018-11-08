@@ -17,78 +17,43 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.Shape
-import org.apache.mxnet.Context
-import org.apache.mxnet.Xavier
+import org.apache.mxnet.{Context, Shape, Symbol, Xavier}
 
-/**
- * @author Depeng Liang
- */
+
 object GenV4 {
 
-  def Conv(data: Symbol, numFilter: Int, kernel: (Int, Int) = (5, 5),
-      pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2)): Symbol = {
-    var sym = Symbol.Convolution()()(Map("data" -> data, "num_filter" -> numFilter,
-        "kernel" -> s"$kernel", "stride" -> s"$stride", "pad" -> s"$pad", "no_bias" -> false))
-    sym = Symbol.BatchNorm()()(Map("data" -> sym, "fix_gamma" -> false))
-    sym = Symbol.LeakyReLU()()(Map("data" -> sym, "act_type" -> "leaky"))
-    sym
-  }
-
-  def Deconv(data: Symbol, numFilter: Int, imHw: (Int, Int), kernel: (Int, Int) = (6, 6),
-      pad: (Int, Int) = (2, 2), stride: (Int, Int) = (2, 2), out: Boolean = false): Symbol = {
-    var sym = Symbol.Deconvolution()()(Map("data" -> data, "num_filter" -> numFilter,
-        "kernel" -> s"$kernel", "stride" -> s"$stride", "pad" -> s"$pad", "no_bias" -> true))
-    sym = Symbol.BatchNorm()()(Map("data" -> sym, "fix_gamma" -> false))
-    if (out == false) Symbol.LeakyReLU()()(Map("data" -> sym, "act_type" -> "leaky"))
-    else Symbol.Activation()()(Map("data" -> sym, "act_type" -> "tanh"))
+  def Conv(data: Symbol, numFilter: Int, workspace : Long, kernel: (Int, Int) = (5, 5),
+           pad: (Int, Int) = (2, 2)): Symbol = {
+    val sym1 = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
+      kernel = Shape(kernel._1, kernel._2), workspace = Some(workspace),
+      pad = Some(Shape(pad._1, pad._2)), no_bias = Some(false))
+    val sym2 = Symbol.api.BatchNorm(data = Some(sym1), fix_gamma = Some(false))
+    val sym3 = Symbol.api.LeakyReLU(data = Some(sym2), act_type = Some("leaky"))
+    sym2.dispose()
+    sym1.dispose()
+    sym3
   }
 
   def getGenerator(prefix: String, imHw: (Int, Int)): Symbol = {
     val data = Symbol.Variable(s"${prefix}_data")
 
-    var conv1_1 = Symbol.Convolution()()(Map("data" -> data, "num_filter" -> 48,
-        "kernel" -> "(5, 5)", "pad" -> "(2, 2)", "no_bias" -> false, "workspace" -> 4096))
-    conv1_1 = Symbol.BatchNorm()()(Map("data" -> conv1_1, "fix_gamma" -> false))
-    conv1_1 = Symbol.LeakyReLU()()(Map("data" -> conv1_1, "act_type" -> "leaky"))
-
-    var conv2_1 = Symbol.Convolution()()(Map("data" -> conv1_1, "num_filter" -> 32,
-        "kernel" -> "(5, 5)", "pad" -> "(2, 2)", "no_bias" -> false, "workspace" -> 4096))
-    conv2_1 = Symbol.BatchNorm()()(Map("data" -> conv2_1, "fix_gamma" -> false))
-    conv2_1 = Symbol.LeakyReLU()()(Map("data" -> conv2_1, "act_type" -> "leaky"))
-
-    var conv3_1 = Symbol.Convolution()()(Map("data" -> conv2_1, "num_filter" -> 64,
-        "kernel" -> "(3, 3)", "pad" -> "(1, 1)", "no_bias" -> false, "workspace" -> 4096))
-    conv3_1 = Symbol.BatchNorm()()(Map("data" -> conv3_1, "fix_gamma" -> false))
-    conv3_1 = Symbol.LeakyReLU()()(Map("data" -> conv3_1, "act_type" -> "leaky"))
-
-    var conv4_1 = Symbol.Convolution()()(Map("data" -> conv3_1, "num_filter" -> 32,
-        "kernel" -> "(5, 5)", "pad" -> "(2, 2)", "no_bias" -> false, "workspace" -> 4096))
-    conv4_1 = Symbol.BatchNorm()()(Map("data" -> conv4_1, "fix_gamma" -> false))
-    conv4_1 = Symbol.LeakyReLU()()(Map("data" -> conv4_1, "act_type" -> "leaky"))
-
-    var conv5_1 = Symbol.Convolution()()(Map("data" -> conv4_1, "num_filter" -> 48,
-        "kernel" -> "(5, 5)", "pad" -> "(2, 2)", "no_bias" -> false, "workspace" -> 4096))
-    conv5_1 = Symbol.BatchNorm()()(Map("data" -> conv5_1, "fix_gamma" -> false))
-    conv5_1 = Symbol.LeakyReLU()()(Map("data" -> conv5_1, "act_type" -> "leaky"))
-
-    var conv6_1 = Symbol.Convolution()()(Map("data" -> conv5_1, "num_filter" -> 32,
-        "kernel" -> "(5, 5)", "pad" -> "(2, 2)", "no_bias" -> true, "workspace" -> 4096))
-    conv6_1 = Symbol.BatchNorm()()(Map("data" -> conv6_1, "fix_gamma" -> false))
-    conv6_1 = Symbol.LeakyReLU()()(Map("data" -> conv6_1, "act_type" -> "leaky"))
-
-    var out = Symbol.Convolution()()(Map("data" -> conv6_1, "num_filter" -> 3, "kernel" -> "(3, 3)",
-        "pad" -> "(1, 1)", "no_bias" -> true, "workspace" -> 4096))
-    out = Symbol.BatchNorm()()(Map("data" -> out, "fix_gamma" -> false))
-    out = Symbol.Activation()()(Map("data" -> out, "act_type" -> "tanh"))
+    var conv1_1 = Conv(data, 48, 4096)
+    val conv2_1 = Conv(conv1_1, 32, 4096)
+    var conv3_1 = Conv(conv2_1, 64, 4096, (3, 3), (1, 1))
+    var conv4_1 = Conv(conv3_1, 32, 4096)
+    var conv5_1 = Conv(conv4_1, 48, 4096)
+    var conv6_1 = Conv(conv5_1, 32, 4096)
+    var out = Symbol.api.Convolution(data = Some(conv6_1), num_filter = 3, kernel = Shape(3, 3),
+      pad = Some(Shape(1, 1)), no_bias = Some(true), workspace = Some(4096))
+    out = Symbol.api.BatchNorm(data = Some(out), fix_gamma = Some(false))
+    out = Symbol.api.Activation(data = Some(out), act_type = "tanh")
     val rawOut = (out * 128) + 128
-    val norm = Symbol.SliceChannel()(rawOut)(Map("num_outputs" -> 3))
+    val norm = Symbol.api.SliceChannel(data = Some(rawOut), num_outputs = 3)
     val rCh = norm.get(0) - 123.68f
     val gCh = norm.get(1) - 116.779f
     val bCh = norm.get(2) - 103.939f
-    val normOut = Symbol.Concat()(rCh, gCh, bCh)() * 0.4f + data * 0.6f
-    normOut
+    val normOut = Symbol.api.Concat(data = Array(rCh, gCh, bCh), num_args = 3)
+    normOut * 0.4f + data * 0.6f
   }
 
   def getModule(prefix: String, dShape: Shape, ctx: Context, isTrain: Boolean = true): Module = {
@@ -99,9 +64,9 @@ object GenV4 {
       else (dataShape, false, false)
     }
     val mod = new Module(symbol = sym, context = ctx,
-                         dataShapes = dataShapes,
-                         initializer = new Xavier(magnitude = 2f),
-                         forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
+      dataShapes = dataShapes,
+      initializer = new Xavier(magnitude = 2f),
+      forTraining = forTraining, inputsNeedGrad = inputsNeedGrad)
     mod
   }
 }

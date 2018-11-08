@@ -1164,7 +1164,7 @@ sub test_zero_grad
         $net->($data)->backward;
     });
     $net->collect_params->zero_grad;
-    my $grad = $net->collect_params->{test_zero_grad_weight}->grad;
+    my $grad = $net->collect_params->params->get('test_zero_grad_weight')->grad;
     ok(almost_equal($grad->aspdl, $grad->aspdl * 0));
 }
 

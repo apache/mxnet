@@ -21,6 +21,8 @@ import copy
 import json
 import ast
 
+from six.moves import xrange
+
 
 def load_model(args):
   devs = mx.cpu() if args.gpus == None else [mx.gpu(int(i)) for i in args.gpus.split(',')]

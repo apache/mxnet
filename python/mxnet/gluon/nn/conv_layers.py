@@ -153,6 +153,8 @@ class _Conv(HybridBlock):
             s += ', groups={num_group}'
         if self.bias is None:
             s += ', bias=False'
+        if self.act:
+            s += ', {}'.format(self.act)
         s += ')'
         shape = self.weight.shape
         return s.format(name=self.__class__.__name__,
@@ -309,8 +311,7 @@ class Conv2D(_Conv):
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC', \
-            "Only supports 'NCHW' and 'NHWC' layout for now"
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
@@ -391,8 +392,7 @@ class Conv3D(_Conv):
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer='zeros',
                  in_channels=0, **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC', \
-            "Only supports 'NCDHW' and 'NDHWC' layout for now"
+        assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         assert len(kernel_size) == 3, "kernel_size must be a number or a list of 3 ints"
@@ -564,8 +564,7 @@ class Conv2DTranspose(_Conv):
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC', \
-            "Only supports 'NCHW' and 'NHWC' layout for now"
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         if isinstance(output_padding, numeric_types):
@@ -657,8 +656,7 @@ class Conv3DTranspose(_Conv):
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0, **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC', \
-            "Only supports 'NCDHW' and 'NDHWC' layout for now"
+        assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
         if isinstance(output_padding, numeric_types):
@@ -993,7 +991,25 @@ class AvgPool3D(_Pooling):
 
 
 class GlobalMaxPool1D(_Pooling):
-    """Global max pooling operation for temporal data."""
+    """Gloabl max pooling operation for one dimensional (temporal) data.
+
+
+    Parameters
+    ----------
+    layout : str, default 'NCW'
+        Dimension ordering of data and weight. Only supports 'NCW' layout for now.
+        'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
+        respectively. Pooling is applied on the W dimension.
+
+
+    Inputs:
+        - **data**: 3D input tensor with shape `(batch_size, in_channels, width)`
+          when `layout` is `NCW`. For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 3D output tensor with shape `(batch_size, channels, 1)`
+          when `layout` is `NCW`.
+    """
     def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         super(GlobalMaxPool1D, self).__init__(
@@ -1001,7 +1017,26 @@ class GlobalMaxPool1D(_Pooling):
 
 
 class GlobalMaxPool2D(_Pooling):
-    """Global max pooling operation for spatial data."""
+    """Global max pooling operation for two dimensional (spatial) data.
+
+
+    Parameters
+    ----------
+    layout : str, default 'NCHW'
+        Dimension ordering of data and weight. Only supports 'NCHW' layout for now.
+        'N', 'C', 'H', 'W' stands for batch, channel, height, and width
+        dimensions respectively. padding is applied on 'H' and 'W' dimension.
+
+
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
+          For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, 1, 1)` when `layout` is `NCHW`.
+    """
     def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         super(GlobalMaxPool2D, self).__init__(
@@ -1009,7 +1044,27 @@ class GlobalMaxPool2D(_Pooling):
 
 
 class GlobalMaxPool3D(_Pooling):
-    """Global max pooling operation for 3D data."""
+    """Global max pooling operation for 3D data (spatial or spatio-temporal).
+
+
+    Parameters
+    ----------
+    layout : str, default 'NCDHW'
+        Dimension ordering of data and weight. Only supports 'NCDHW' layout for now.
+        'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
+        depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
+        dimension.
+
+
+    Inputs:
+        - **data**: 5D input tensor with shape
+          `(batch_size, in_channels, depth, height, width)` when `layout` is `NCW`.
+          For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 5D output tensor with shape
+          `(batch_size, channels, 1, 1, 1)` when `layout` is `NCDHW`.
+    """
     def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         super(GlobalMaxPool3D, self).__init__(
@@ -1017,7 +1072,23 @@ class GlobalMaxPool3D(_Pooling):
 
 
 class GlobalAvgPool1D(_Pooling):
-    """Global average pooling operation for temporal data."""
+    """Global average pooling operation for temporal data.
+
+    Parameters
+    ----------
+    layout : str, default 'NCW'
+        Dimension ordering of data and weight. Only supports 'NCW' layout for now.
+        'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
+        respectively. padding is applied on 'W' dimension.
+
+
+    Inputs:
+        - **data**: 3D input tensor with shape `(batch_size, in_channels, width)`
+          when `layout` is `NCW`. For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 3D output tensor with shape `(batch_size, channels, 1)`.
+    """
     def __init__(self, layout='NCW', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         super(GlobalAvgPool1D, self).__init__(
@@ -1025,7 +1096,25 @@ class GlobalAvgPool1D(_Pooling):
 
 
 class GlobalAvgPool2D(_Pooling):
-    """Global average pooling operation for spatial data."""
+    """Global average pooling operation for spatial data.
+
+    Parameters
+    ----------
+    layout : str, default 'NCHW'
+        Dimension ordering of data and weight. Only supports 'NCHW' layout for now.
+        'N', 'C', 'H', 'W' stands for batch, channel, height, and width
+        dimensions respectively.
+
+
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
+          For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, 1, 1)` when `layout` is `NCHW`.
+    """
     def __init__(self, layout='NCHW', **kwargs):
         assert layout == 'NCHW', "Only supports 'NCHW' layout for now"
         super(GlobalAvgPool2D, self).__init__(
@@ -1033,7 +1122,26 @@ class GlobalAvgPool2D(_Pooling):
 
 
 class GlobalAvgPool3D(_Pooling):
-    """Global max pooling operation for 3D data."""
+    """Global average pooling operation for 3D data (spatial or spatio-temporal).
+
+    Parameters
+    ----------
+    layout : str, default 'NCDHW'
+        Dimension ordering of data and weight. Can be 'NCDHW', 'NDHWC', etc.
+        'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
+        depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
+        dimension.
+
+
+    Inputs:
+        - **data**: 5D input tensor with shape
+          `(batch_size, in_channels, depth, height, width)` when `layout` is `NCDHW`.
+          For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 5D output tensor with shape
+          `(batch_size, channels, 1, 1, 1)` when `layout` is `NCDHW`.
+    """
     def __init__(self, layout='NCDHW', **kwargs):
         assert layout == 'NCDHW', "Only supports 'NCDHW' layout for now"
         super(GlobalAvgPool3D, self).__init__(

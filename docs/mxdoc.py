@@ -23,9 +23,31 @@ import json
 import sys
 from recommonmark import transform
 import pypandoc
-# import StringIO from io for python3 compatibility
-from io import StringIO
 import contextlib
+# Use six for Python 2 / 3 compatibility
+from six import StringIO
+from six.moves import configparser
+
+_BUILD_VER = os.getenv('BUILD_VER', 'default')
+print("Building version {}".format(_BUILD_VER))
+_DOC_SET = 'document_sets_' + _BUILD_VER
+
+parser = configparser.SafeConfigParser()
+parser.read('settings.ini')
+
+if _DOC_SET not in parser.sections():
+    _DOC_SET = 'document_sets_default'
+
+for section in [ _DOC_SET ]:
+    print("Document sets to generate:")
+    for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
+        print('%-12s  : %s' % (candidate, parser.get(section, candidate)))
+
+_MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
+_SCALA_DOCS = parser.getboolean(_DOC_SET, 'scala_docs')
+_CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
+_DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
+_R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
 _EVAL_WHILTELIST = []
@@ -72,17 +94,21 @@ def build_mxnet(app):
 def build_r_docs(app):
     """build r pdf"""
     r_root = app.builder.srcdir + '/../R-package'
-    pdf_path = root_path + '/docs/api/r/mxnet-r-reference-manual.pdf'
+    pdf_path = app.builder.srcdir + '/api/r/mxnet-r-reference-manual.pdf'
     _run_cmd('cd ' + r_root +
              '; R -e "roxygen2::roxygenize()"; R CMD Rd2pdf . --no-preview -o ' + pdf_path)
     dest_path = app.builder.outdir + '/api/r/'
     _run_cmd('mkdir -p ' + dest_path + '; mv ' + pdf_path + ' ' + dest_path)
 
+def build_scala(app):
+    """build scala for scala docs and clojure docs to use"""
+    _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
+    _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
+
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ..; make scalapkg')
     _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
@@ -93,8 +119,6 @@ def build_scala_docs(app):
 
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
-    _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
-    _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
     clojure_path = app.builder.srcdir + '/../contrib/clojure-package'
     _run_cmd('cd ' + clojure_path + '; lein codox')
     dest_path = app.builder.outdir + '/api/clojure/docs'
@@ -383,13 +407,24 @@ def setup(app):
 
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
-    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1':
+    if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1' or _MXNET_DOCS_BUILD_MXNET:
+        print("Building MXNet!")
         app.connect("builder-inited", build_mxnet)
-    app.connect("builder-inited", generate_doxygen)
-    app.connect("builder-inited", build_scala_docs)
-    app.connect("builder-inited", build_clojure_docs)
-    # skipped to build r, it requires to install latex, which is kinds of too heavy
-    # app.connect("builder-inited", build_r_docs)
+    if _DOXYGEN_DOCS:
+        print("Building Doxygen!")
+        app.connect("builder-inited", generate_doxygen)
+    if _SCALA_DOCS or _CLOJURE_DOCS:
+        print("Building Scala!")
+        app.connect("builder-inited", build_scala)
+    if _SCALA_DOCS:
+        print("Building Scala Docs!")
+        app.connect("builder-inited", build_scala_docs)
+    if _CLOJURE_DOCS:
+        print("Building Clojure Docs!")
+        app.connect("builder-inited", build_clojure_docs)
+    if _R_DOCS:
+        print("Building R Docs!")
+        app.connect("builder-inited", build_r_docs)
     app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)
     app.add_config_value('recommonmark_config', {

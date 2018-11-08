@@ -32,7 +32,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 DESCRIPTION
 
-    A convenience class that loads all C++m symbol related functions at runtime.
+    A convenience class that loads all C++ symbol related functions at runtime.
 =cut
 
 my %function_meta;

@@ -51,7 +51,7 @@ class Monitor(
     override def invoke(name: String, arr: NDArrayHandle): Unit = {
       // wrapper for executor callback
       if (activated) {
-        val array = new NDArray(arr, writable = false)
+        val array = new NDArray(arr, writable = false, addToCollector = false)
         val elem = (step, name, statFunc(array))
         queue += elem
       }

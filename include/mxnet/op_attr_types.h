@@ -87,18 +87,19 @@ struct OpContext {
 
 /*! \brief the execution type of the operator */
 enum class ExecType {
-  /*! \brief Forward/Backward are synchronize calls */
+  /*! \brief Forward/Backward are synchronous calls */
   kSync,
   /*!
-   * \brief Forward/Backward are asynchronize,
+   * \brief Forward/Backward are asynchronous,
    *  will call OpContext.async_on_complete when operation finishes.
    */
   kAsync,
   /*!
-   * \brief Cross device copy operation, this is a special operator
-   *  That indicates copy across devices, the input and output can sit on different device.
-   *  In current implementation, copy operator is specially handled by executor.
-   *  This flag is used for special case treatment and future extension of different copy ops.
+   * \brief Cross device copy operation, this is a special operator that indicates it will copy
+   * across devices. For example the input and output for this type of operator can potentially
+   * reside on different devices.  In the current implementation, a copy operator is specially
+   * handled by an executor. This flag is used for special case treatment and future extension of
+   * different copy ops.
    */
   kCrossDeviceCopy,
   /*!
@@ -298,6 +299,14 @@ using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
  * \note Register under "FNeedRequantize" for non-quantized operators
  */
 using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
+
+/*!
+ * \brief Register a function to determine if the input of a quantized operator
+ * needs to be quantized. This is usually used for the quantized operators
+ * which can handle fp32 inputs directly.
+ */
+using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
+                                                size_t index)>;
 
 }  // namespace mxnet
 

@@ -1,4 +1,4 @@
-# Contributing MXNet
+# Contributing to MXNet
 
 Apache MXNet (incubating) is a community led, open source deep learning project. We welcome new members and look forward to your contributions. Here you will find how to get started and links to detailed information on MXNet best practices and processes.
 
@@ -39,10 +39,18 @@ The following actions are recommended steps for you to get started with contribu
 If you need help with using MXNet, have questions about applying it to a particular kind of problem, or have a discussion topic, please use the discussion forum:
 * [discuss.mxnet.io](https://discuss.mxnet.io) <i class="fas fa-external-link-alt"></i>
 
-### Dev Mailing List
+### Mailing Lists
 
-Please join the contributor mailing list by sending a subscribe email to dev-subscribe@mxnet.apache.org.
-* <a href="mailto:dev-subscribe@mxnet.apache.org">subscribe</a> <i class="far fa-envelope"></i>
+Please join either or both of the MXNet mailing lists:
+
+**For MXNet Users, join the USER mailing list**:
+
+- [MXNet Apache USER mailing list](https://lists.apache.org/list.html?user@mxnet.apache.org) (user@mxnet.apache.org): To subscribe, send an email to <a href="mailto:user-subscribe@mxnet.apache.org">user-subscribe@mxnet.apache.org</a> <i class="far fa-envelope"></i>
+
+**For Contributors to MXNet, join the DEV mailing list**:
+- [MXNet Apache DEV mailing list](https://lists.apache.org/list.html?dev@mxnet.apache.org) (dev@mxnet.apache.org): To subscribe, send an email to <a href="mailto:dev-subscribe@mxnet.apache.org">dev-subscribe@mxnet.apache.org</a> <i class="far fa-envelope"></i>
+
+
 * [archive](https://lists.apache.org/list.html?dev@mxnet.apache.org) <i class="fas fa-external-link-alt"></i>
 
 ### Slack
@@ -73,9 +81,9 @@ MXNet uses Apache's JIRA to track issues and larger projects. Anyone can review 
 
 ## Confluence Wiki
 
-The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
+The [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home) has detailed development environment setup info, design proposals, release process info, and more. This is generally where contributor information is maintained.
 
-* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Home) <i class="fas fa-external-link-alt"></i>
+* [MXNet Confluence Wiki](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+Home) <i class="fas fa-external-link-alt"></i>
 
 
 ## Setup MXNet for Development

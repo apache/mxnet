@@ -28,11 +28,12 @@ import unittest
 def test_box_nms_op():
     def test_box_nms_forward(data, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1, cid=0,
                          force=False, in_format='corner', out_format='corner'):
-        data = mx.nd.array(data)
-        out = mx.contrib.nd.box_nms(data, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
-                                coord_start=coord, score_index=score, id_index=cid,
-                                force_suppress=force, in_format=in_format, out_format=out_format)
-        assert_almost_equal(out.asnumpy(), expected)
+        for dtype in ['float16', 'float32', 'float64']:
+            data = mx.nd.array(data, dtype=dtype)
+            out = mx.contrib.nd.box_nms(data, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
+                                    coord_start=coord, score_index=score, id_index=cid,
+                                    force_suppress=force, in_format=in_format, out_format=out_format)
+            assert_almost_equal(out.asnumpy(), expected.astype(dtype), rtol=1e-3, atol=1e-3)
 
     def test_box_nms_backward(data, grad, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1,
                           cid=0, force=False, in_format='corner', out_format='corner'):
@@ -233,15 +234,32 @@ def test_box_iou_op():
 
 def test_bipartite_matching_op():
     def assert_match(inputs, x, y, threshold, is_ascend=False):
-        inputs = mx.nd.array(inputs)
-        x = np.array(x)
-        y = np.array(y)
-        a, b = mx.nd.contrib.bipartite_matching(inputs, threshold=threshold, is_ascend=is_ascend)
-        print(a, b)
-        assert_array_equal(a.asnumpy().astype('int64'), x.astype('int64'))
-        assert_array_equal(b.asnumpy().astype('int64'), y.astype('int64'))
+        for dtype in ['float16', 'float32', 'float64']:
+            inputs = mx.nd.array(inputs, dtype=dtype)
+            x = np.array(x, dtype=dtype)
+            y = np.array(y, dtype=dtype)
+            a, b = mx.nd.contrib.bipartite_matching(inputs, threshold=threshold, is_ascend=is_ascend)
+            assert_array_equal(a.asnumpy().astype('int64'), x.astype('int64'))
+            assert_array_equal(b.asnumpy().astype('int64'), y.astype('int64'))
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [1, -1, 0], [2, 0], 1e-12, False)
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
+
+def test_multibox_target_op():
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], ctx=default_context()).reshape((1, -1, 4))
+    cls_pred = mx.nd.array(list(range(10)), ctx=default_context()).reshape((1, -1, 2))
+    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6], ctx=default_context()).reshape((1, -1, 5))
+
+    loc_target, loc_mask, cls_target = \
+        mx.nd.contrib.MultiBoxTarget(anchors, label, cls_pred,
+                                     overlap_threshold=0.5,
+                                     negative_mining_ratio=3,
+                                     negative_mining_thresh=0.4)
+    expected_loc_target = np.array([[5.0, 2.5000005, 3.4657357, 4.581454, 0., 0., 0., 0.]])
+    expected_loc_mask = np.array([[1, 1, 1, 1, 0, 0, 0, 0]])
+    expected_cls_target = np.array([[2, 0]])
+    assert_allclose(loc_target.asnumpy(), expected_loc_target, rtol=1e-5, atol=1e-5)
+    assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
+    assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
 if __name__ == '__main__':
     import nose

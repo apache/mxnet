@@ -32,6 +32,15 @@
 namespace mxnet {
 namespace op {
 
+bool SupportMKLDNNSoftmax(const SoftmaxParam &param) {
+  // MKLDNN does not support temperature argument in their softmax function
+  // now. Need update this once they start to support it.
+  if (param.temperature.has_value()) {
+    return false;
+  }
+  return true;
+}
+
 void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const NDArray &in_data, const OpReqType &req,
                           const NDArray &out_data) {

@@ -17,16 +17,11 @@
 
 package org.apache.mxnetexamples.neuralstyle.end2end
 
-import org.apache.mxnet.Shape
-import org.apache.mxnet.Context
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.Initializer
+import org.apache.mxnet.{Context, Initializer, NDArray, Shape, Symbol}
+import org.apache.mxnetexamples.neuralstyle.ModelVgg19
 import org.slf4j.LoggerFactory
 
-/**
- * @author Depeng Liang
- */
+
 object Basic {
 
   class PretrainedInit(prefix: String, params: Map[String, NDArray],
@@ -61,7 +56,7 @@ object Basic {
   def getStyleModule(prefix: String, dShape: Shape,
       ctx: Context, params: Map[String, NDArray]): Module = {
     val inputShape = Map(s"${prefix}_data" -> dShape)
-    val (style, content) = ModelVgg19.getVggSymbol(prefix)
+    val (style, content) = ModelVgg19.getVggSymbol(prefix + "_")
     val (gram, gScale) = styleGramSymbol(inputShape, style)
     val init = new PretrainedInit(prefix, params, true)
     new Module(symbol = gram, context = ctx,
@@ -75,11 +70,10 @@ object Basic {
     var gradScale = List[Int]()
     for (i <- 0 until style.listOutputs().length) {
       val shape = outputShape(i)
-      val x = Symbol.Reshape()()(Map("data" -> style.get(i),
-          "shape" -> Shape(shape(1), shape(2) * shape(3))))
-      // use fully connected to quickly do dot(x, x^T)
-      val gram = Symbol.FullyConnected()()(Map("data" -> x, "weight" -> x,
-          "no_bias" -> true, "num_hidden" -> shape(1)))
+      val x = Symbol.api.Reshape(data = Some(style.get(i)),
+        shape = Some(Shape(shape(1), shape(2) * shape(3))))
+      val gram = Symbol.api.FullyConnected(data = Some(x), weight = Some(x),
+        no_bias = Some(true), num_hidden = shape(1))
       gramList = gramList :+ gram
       gradScale = gradScale :+ (shape(1) * shape(2) * shape(3) * shape(1))
     }
@@ -90,16 +84,18 @@ object Basic {
     var gramLoss = List[Symbol]()
     for (i <- 0 until gram.listOutputs().length) {
       val gvar = Symbol.Variable(s"target_gram_$i")
-      gramLoss = gramLoss :+ Symbol.sum()(Symbol.square()(gvar - gram.get(i))())()
+      gramLoss = gramLoss :+ Symbol.api.sum(Some(
+        Symbol.api.square(Some(gvar - gram.get(i)))
+      ))
     }
     val cvar = Symbol.Variable("target_content")
-    val contentLoss = Symbol.sum()(Symbol.square()(cvar - content)())()
+    val contentLoss = Symbol.api.sum(Some(Symbol.api.square(Some(cvar - content))))
     (Symbol.Group(gramLoss: _*), contentLoss)
   }
 
   def getContentModule(prefix: String, dShape: Shape,
       ctx: Context, params: Map[String, NDArray]): Module = {
-    val (_, sym) = ModelVgg19.getVggSymbol(prefix, true)
+    val (_, sym) = ModelVgg19.getVggSymbol(prefix + "_", true)
     val init = new PretrainedInit(prefix, params)
     new Module(symbol = sym, context = ctx,
                     dataShapes = Map(s"${prefix}_data" -> dShape),
@@ -109,7 +105,7 @@ object Basic {
   def getLossModule(prefix: String, dShape: Shape,
       ctx: Context, params: Map[String, NDArray]): (Module, List[Int]) = {
     val inputShape = Map(s"${prefix}_data" -> dShape)
-    val (style, content) = ModelVgg19.getVggSymbol(prefix)
+    val (style, content) = ModelVgg19.getVggSymbol(prefix + "_")
     val (gram, gScale) = styleGramSymbol(inputShape, style)
     val (styleLoss, contentLoss) = getLoss(gram, content)
     val sym = Symbol.Group(styleLoss, contentLoss)

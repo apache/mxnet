@@ -47,7 +47,7 @@ object ProfilerNDArray {
         val randomRet = (0 until shape.product)
           .map(r => scala.util.Random.nextFloat() - 0.5f).toArray
         dat.set(randomRet)
-        val ndArrayRet = NDArray.broadcast_to(Map("shape" -> targetShape))(dat).get
+        val ndArrayRet = NDArray.api.broadcast_to(dat, Some(targetShape))
         require(ndArrayRet.shape == targetShape)
         val err = {
           // implementation of broadcast
@@ -122,8 +122,8 @@ object ProfilerNDArray {
   }
 
   def reldiff(a: NDArray, b: NDArray): Float = {
-    val diff = NDArray.sum(NDArray.abs(a - b)).toScalar
-    val norm = NDArray.sum(NDArray.abs(a)).toScalar
+    val diff = NDArray.api.sum(NDArray.api.abs(a - b)).toScalar
+    val norm = NDArray.api.sum(NDArray.api.abs(a)).toScalar
     diff / norm
   }
 
@@ -171,7 +171,7 @@ object ProfilerNDArray {
   def testClip(): Unit = {
     val shape = Shape(10)
     val A = Random.uniform(-10f, 10f, shape)
-    val B = NDArray.clip(A, -2f, 2f)
+    val B = NDArray.api.clip(A, -2f, 2f)
     val B1 = B.toArray
     require(B1.forall { x => x >= -2f && x <= 2f })
   }
@@ -179,7 +179,7 @@ object ProfilerNDArray {
   def testDot(): Unit = {
     val a = Random.uniform(-3f, 3f, Shape(3, 4))
     val b = Random.uniform(-3f, 3f, Shape(4, 5))
-    val c = NDArray.dot(a, b)
+    val c = NDArray.api.dot(a, b)
     val A = a.toArray.grouped(4).toArray
     val B = b.toArray.grouped(5).toArray
     val C = (Array[Array[Float]]() /: A)((acc, row) => acc :+ row.zip(B).map(z =>

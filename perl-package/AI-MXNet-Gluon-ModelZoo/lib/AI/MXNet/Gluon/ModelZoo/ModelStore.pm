@@ -60,10 +60,10 @@ my %_model_sha1 = map { $_->[1] => $_->[0] } (
     ['ee79a8098a91fbe05b7a973fed2017a6117723a8', 'vgg11_bn'],
     ['6bc5de58a05a5e2e7f493e2d75a580d83efde38c', 'vgg13'],
     ['7d97a06c3c7a1aecc88b6e7385c2b373a249e95e', 'vgg13_bn'],
-    ['649467530119c0f78c4859999e264e7bf14471a9', 'vgg16'],
-    ['6b9dbe6194e5bfed30fd7a7c9a71f7e5a276cb14', 'vgg16_bn'],
-    ['f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'],
-    ['9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn']
+    ['e660d4569ccb679ec68f1fd3cce07a387252a90a', 'vgg16'],
+    ['7f01cf050d357127a73826045c245041b0df7363', 'vgg16_bn'],
+    ['ad2f660d101905472b83590b59708b71ea22b2e5', 'vgg19'],
+    ['f360b758e856f1074a85abd5fd873ed1d98297c3', 'vgg19_bn']
 );
 
 my $apache_repo_url = 'http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/';

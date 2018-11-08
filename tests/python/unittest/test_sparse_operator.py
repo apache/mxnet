@@ -1307,7 +1307,7 @@ def test_sparse_dot():
                     rhs = rhs_nd.tostype(rhs_stype)
                     out = mx.nd.dot(lhs, rhs, forward_stype=forward_stype,
                                     transpose_a=trans_a, transpose_b=trans_b)
-                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(out.tostype('default').asnumpy(), out_np, rtol=1e-3, atol=1e-4)
                     lhs_var = mx.symbol.Variable('lhs', stype=lhs_stype)
                     rhs_var = mx.symbol.Variable('rhs', stype=rhs_stype)
                     out = mx.symbol.sparse.dot(lhs_var, rhs_var,
@@ -1424,7 +1424,7 @@ def test_sparse_dot():
 
 @with_seed()
 def test_sparse_dot_determinism():
-    def test_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
+    def check_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
         lhs_row = rnd.randint(50, 100)
         lhs_col = rnd.randint(50, 100)
         if transpose_a:
@@ -1444,10 +1444,11 @@ def test_sparse_dot_determinism():
         res2 = mx.nd.sparse.dot(lhs, rhs, transpose_a=transpose_a, transpose_b=transpose_b, forward_stype=forward_stype)
         assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.0, atol=0.0)
 
-    test_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'row_sparse')
+    check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'row_sparse')
     forward_stype = 'csr' if default_context() == mx.cpu() else 'default'
-    test_dot_determinism('default', 'csr', 1.0, 0.1, False, False, forward_stype)
-    test_dot_determinism('default', 'csr', 1.0, 0.1, False, True, forward_stype)
+    check_dot_determinism('default', 'csr', 1.0, 0.1, False, False, forward_stype)
+    check_dot_determinism('default', 'csr', 1.0, 0.1, False, True, forward_stype)
+    check_dot_determinism('csr', 'default', 0.1, 1.0, True, False, 'default')
 
 
 @with_seed()

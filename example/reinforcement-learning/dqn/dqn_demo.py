@@ -23,9 +23,11 @@ import numpy
 from base import Base
 from operators import *
 from atari_game import AtariGame
-from utils import *
+from utils import get_numpy_rng, parse_ctx
 import logging
 import argparse
+import sys
+import time
 
 root = logging.getLogger()
 root.setLevel(logging.DEBUG)

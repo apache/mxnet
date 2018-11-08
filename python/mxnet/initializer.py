@@ -152,6 +152,12 @@ class Initializer(object):
             elif desc.endswith('beta'):
                 self._init_beta(desc, arr)
                 self._verbose_print(desc, 'beta', arr)
+            elif desc.endswith('min'):
+                self._init_zero(desc, arr)
+                self._verbose_print(desc, 'min', arr)
+            elif desc.endswith('max'):
+                self._init_one(desc, arr)
+                self._verbose_print(desc, 'max', arr)
             else:
                 self._init_default(desc, arr)
 
@@ -196,6 +202,10 @@ class Initializer(object):
             self._init_zero(name, arr)
         elif name.endswith("moving_avg"):
             self._init_zero(name, arr)
+        elif name.endswith('min'):
+            self._init_zero(name, arr)
+        elif name.endswith('max'):
+            self._init_one(name, arr)
         else:
             self._init_default(name, arr)
 
@@ -697,7 +707,7 @@ class FusedRNN(Initializer):
     def __init__(self, init, num_hidden, num_layers, mode, bidirectional=False, forget_bias=1.0):
         if isinstance(init, string_types):
             klass, kwargs = json.loads(init)
-            init = _INITIALIZER_REGISTRY[klass.lower()](**kwargs)
+            init = registry._REGISTRY[klass.lower()](**kwargs)
         super(FusedRNN, self).__init__(init=init.dumps() if init is not None else None,
                                        num_hidden=num_hidden, num_layers=num_layers, mode=mode,
                                        bidirectional=bidirectional, forget_bias=forget_bias)

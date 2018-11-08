@@ -255,22 +255,7 @@ class COCO:
                             color.append(c)
                     else:
                         # mask
-                        t = self.imgs[ann['image_id']]
-                        if type(ann['segmentation']['counts']) == list:
-                            # rle = maskUtils.frPyObjects([ann['segmentation']], t['height'], t['width'])
-                            raise NotImplementedError("maskUtils disabled!")
-                        else:
-                            rle = [ann['segmentation']]
-                        # m = maskUtils.decode(rle)
                         raise NotImplementedError("maskUtils disabled!")
-                        img = np.ones( (m.shape[0], m.shape[1], 3) )
-                        if ann['iscrowd'] == 1:
-                            color_mask = np.array([2.0,166.0,101.0])/255
-                        if ann['iscrowd'] == 0:
-                            color_mask = np.random.random((1, 3)).tolist()[0]
-                        for i in range(3):
-                            img[:,:,i] = color_mask[i]
-                        ax.imshow(np.dstack( (img, m*0.5) ))
                 if 'keypoints' in ann and type(ann['keypoints']) == list:
                     # turn skeleton into zero-based index
                     sks = np.array(self.loadCats(ann['category_id'])[0]['skeleton'])-1
@@ -430,6 +415,4 @@ class COCO:
         :return: binary mask (numpy 2D array)
         """
         rle = self.annToRLE(ann)
-        # m = maskUtils.decode(rle)
         raise NotImplementedError("maskUtils disabled!")
-        return m

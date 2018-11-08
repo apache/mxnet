@@ -30,7 +30,7 @@ import numpy as np
 
 from .. import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
-from .... import nd, image, recordio
+from .... import nd, image, recordio, base
 
 
 class MNIST(dataset._DownloadedDataset):
@@ -40,7 +40,7 @@ class MNIST(dataset._DownloadedDataset):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/mnist'
+    root : str, default $MXNET_HOME/datasets/mnist
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
@@ -51,7 +51,7 @@ class MNIST(dataset._DownloadedDataset):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'mnist'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'mnist'),
                  train=True, transform=None):
         self._train = train
         self._train_data = ('train-images-idx3-ubyte.gz',
@@ -101,7 +101,7 @@ class FashionMNIST(MNIST):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/fashion-mnist'
+    root : str, default $MXNET_HOME/datasets/fashion-mnist'
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
@@ -112,7 +112,7 @@ class FashionMNIST(MNIST):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'fashion-mnist'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'fashion-mnist'),
                  train=True, transform=None):
         self._train = train
         self._train_data = ('train-images-idx3-ubyte.gz',
@@ -134,7 +134,7 @@ class CIFAR10(dataset._DownloadedDataset):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar10'
+    root : str, default $MXNET_HOME/datasets/cifar10
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
@@ -145,7 +145,7 @@ class CIFAR10(dataset._DownloadedDataset):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar10'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'cifar10'),
                  train=True, transform=None):
         self._train = train
         self._archive_file = ('cifar-10-binary.tar.gz', 'fab780a1e191a7eda0f345501ccd62d20f7ed891')
@@ -197,7 +197,7 @@ class CIFAR100(CIFAR10):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar100'
+    root : str, default $MXNET_HOME/datasets/cifar100
         Path to temp folder for storing data.
     fine_label : bool, default False
         Whether to load the fine-grained (100 classes) or coarse-grained (20 super-classes) labels.
@@ -210,7 +210,7 @@ class CIFAR100(CIFAR10):
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar100'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'cifar100'),
                  fine_label=False, train=True, transform=None):
         self._train = train
         self._archive_file = ('cifar-100-binary.tar.gz', 'a0bb982c76b83111308126cc779a992fa506b90b')

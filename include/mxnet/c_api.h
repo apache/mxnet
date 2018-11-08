@@ -93,6 +93,8 @@ typedef void *CudaModuleHandle;
 typedef void *CudaKernelHandle;
 /*! \brief handle to a Profile object (domain, duration, counter, etc.) */
 typedef void *ProfileHandle;
+/*! \brief handle to DLManagedTensor*/
+typedef void *DLManagedTensorHandle;
 
 typedef void (*ExecutorMonitorCallback)(const char*,
                                         NDArrayHandle,
@@ -230,7 +232,19 @@ MXNET_DLL int MXRandomSeedContext(int seed, int dev_type, int dev_id);
 MXNET_DLL int MXNotifyShutdown();
 
 /*!
- * \brief Set up configuration of profiler
+ * \brief Set up configuration of profiler for the process passed as profile_process in keys
+ * \param num_params Number of parameters
+ * \param keys array of parameter keys
+ * \param vals array of parameter values
+ * \param kvstoreHandle handle to kvstore
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProcessProfilerConfig(int num_params, const char* const* keys,
+                                         const char* const* vals,
+                                         KVStoreHandle kvstoreHandle);
+
+/*!
+ * \brief Set up configuration of profiler for worker/current process
  * \param num_params Number of parameters
  * \param keys array of parameter keys
  * \param vals array of parameter values
@@ -239,7 +253,21 @@ MXNET_DLL int MXNotifyShutdown();
 MXNET_DLL int MXSetProfilerConfig(int num_params, const char* const* keys, const char* const* vals);
 
 /*!
- * \brief Set up state of profiler
+ * \brief Set up state of profiler for either worker or server process
+ * \param state indicate the working state of profiler,
+ *  profiler not running when state == 0,
+ *  profiler running when state == 1
+ * \param profile_process an int,
+ * when 0 command is for worker/current process,
+ * when 1 command is for server process
+ * \param kvstoreHandle handle to kvstore, needed for server process profiling
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProcessProfilerState(int state, int profile_process,
+                                        KVStoreHandle kvStoreHandle);
+
+/*!
+ * \brief Set up state of profiler for current process
  * \param state indicate the working state of profiler,
  *  profiler not running when state == 0,
  *  profiler running when state == 1
@@ -250,10 +278,21 @@ MXNET_DLL int MXSetProfilerState(int state);
 /*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
+ * \param profile_process an int,
+ * when 0 command is for worker/current process,
+ * when 1 command is for server process
+ * \param kvstoreHandle handle to kvstore
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXDumpProcessProfile(int finished, int profile_process, KVStoreHandle kvStoreHandle);
+
+
+/*!
+ * \brief Save profile and stop profiler for worker/current process
+ * \param finished true if stat output should stop after this point
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXDumpProfile(int finished);
-
 
 /*!
  * \brief Print aggregate stats to the a string
@@ -266,6 +305,16 @@ MXNET_DLL int MXAggregateProfileStatsPrint(const char **out_str, int reset);
 
 /*!
  * \brief Pause profiler tuning collection
+ * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
+ * \param profile_process integer which denotes whether to process worker or server process
+ * \param kvstoreHandle handle to kvstore
+ * \return 0 when success, -1 when failure happens.
+ * \note pausing and resuming is global and not recursive
+ */
+MXNET_DLL int MXProcessProfilePause(int paused, int profile_process, KVStoreHandle kvStoreHandle);
+
+/*!
+ * \brief Pause profiler tuning collection for worker/current process
  * \param paused If nonzero, profiling pauses. Otherwise, profiling resumes/continues
  * \return 0 when success, -1 when failure happens.
  * \note pausing and resuming is global and not recursive
@@ -389,6 +438,25 @@ MXNET_DLL int MXEngineSetBulkSize(int bulk_size, int* prev_bulk_size);
  * \return 0 when success, -1 when failure happens.
  */
 MXNET_DLL int MXGetGPUCount(int* out);
+
+/*!
+ * \brief get the free and total available memory on a GPU
+ *  Note: Deprecated, use MXGetGPUMemoryInformation64 instead.
+ * \param dev the GPU number to query
+ * \param free_mem pointer to the integer holding free GPU memory
+ * \param total_mem pointer to the integer holding total GPU memory
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetGPUMemoryInformation(int dev, int *free_mem, int *total_mem);
+
+/*!
+ * \brief get the free and total available memory on a GPU
+ * \param dev the GPU number to query
+ * \param free_mem pointer to the uint64_t holding free GPU memory
+ * \param total_mem pointer to the uint64_t holding total GPU memory
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t *total_mem);
 
 /*!
  * \brief get the MXNet library version as an integer
@@ -690,6 +758,40 @@ MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArrayGetData(NDArrayHandle handle,
                                void **out_pdata);
+/*!
+* \brief Create a reference view of NDArray that
+*  represents as DLManagedTensor
+*  Notice: MXNet uses asynchronous execution. Please call MXNDArrayWaitToRead or
+*          MXNDArrayWaitToWrite before calling MXNDArrayToDLPack.
+* \param handle the handle to the ndarray
+* \param out_dlpack pointer holder to get pointer of DLManagedTensor
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayToDLPack(NDArrayHandle handle,
+                                       DLManagedTensorHandle *out_dlpack);
+
+/*!
+* \brief Create a NDArray backed by a dlpack tensor.
+*
+* This allows us to create a NDArray using the memory
+* allocated by an external deep learning framework
+* that is DLPack compatible.
+*
+* The memory is retained until the NDArray went out of scope.
+*
+* \param dlpack the pointer of the input DLManagedTensor
+* \param out_handle pointer holder to get pointer of NDArray
+* \return 0 when success, -1 when failure happens
+*/
+MXNET_DLL int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                                  NDArrayHandle *out_handle);
+/*!
+ * \brief Delete a dlpack tensor
+ * \param dlpack the pointer of the input DLManagedTensor
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayCallDLPackDeleter(DLManagedTensorHandle dlpack);
+
 /*!
  * \brief get the type of the data in NDArray
  * \param handle the handle to the narray
@@ -1450,18 +1552,17 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result
  * \param num_excluded_symbols number of layers excluded from being quantized in the input symbol
- * \param excluded_symbols array of symbols to be excluded from being quantized
+ * \param excluded_symbols op names to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data.
+ * \param calib_quantize whether calibrate quantize op with offline calibration data.
  */
-MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
-                               SymbolHandle *ret_sym_handle,
+MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
-                               const SymbolHandle *excluded_symbols,
-                               const mx_uint num_offline,
-                               const char **offline_params,
-                               const char *quantized_dtype);
+                               const char **excluded_symbols,
+                               const mx_uint num_offline, const char **offline_params,
+                               const char *quantized_dtype, const bool calib_quantize);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
@@ -1478,6 +1579,15 @@ MXNET_DLL int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
                                                const float* low_quantiles,
                                                const float* high_quantiles,
                                                SymbolHandle* ret_sym_handle);
+
+/*!
+ * \brief Run subgraph pass based on the backend provided
+ * \param sym_handle symbol to be converted
+ * \param backend backend names for subgraph pass
+ * \param ret_sym_handle returned symbol
+ */
+MXNET_DLL int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
+                                   SymbolHandle *ret_sym_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface
@@ -1714,6 +1824,13 @@ MXNET_DLL int MXExecutorReshape(int partial_shaping,
                                 NDArrayHandle** aux_states,
                                 ExecutorHandle shared_exec,
                                 ExecutorHandle *out);
+
+/*!
+ * \brief get optimized graph from graph executor
+ */
+MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
+                                           SymbolHandle *out);
+
 /*!
  * \brief set a call back to notify the completion of operation
  */
@@ -2145,8 +2262,7 @@ typedef void (MXKVStoreServerController)(int head,
                                          void *controller_handle);
 
 /**
- * \return Run as server (or scheduler)
- *
+ * \brief Run as server (or scheduler)
  * \param handle handle to the KVStore
  * \param controller the user-defined server controller
  * \param controller_handle helper handle for implementing controller
@@ -2157,8 +2273,7 @@ MXNET_DLL int MXKVStoreRunServer(KVStoreHandle handle,
                                  void *controller_handle);
 
 /**
- * \return Send a command to all server nodes
- *
+ * \brief Send a command to all server nodes
  * \param handle handle to the KVStore
  * \param cmd_id the head of the command
  * \param cmd_body the body of the command

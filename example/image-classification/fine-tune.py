@@ -54,8 +54,8 @@ if __name__ == "__main__":
     parser.add_argument('--layer-before-fullc', type=str, default='flatten0',
                         help='the name of the layer before the last fullc layer')\
 
-    # use less augmentations for fine-tune
-    data.set_data_aug_level(parser, 1)
+    # use less augmentations for fine-tune. by default here it uses no augmentations
+
     # use a small learning rate and less regularizations
     parser.set_defaults(image_shape='3,224,224',
                         num_epochs=30,

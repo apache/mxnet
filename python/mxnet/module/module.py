@@ -398,7 +398,6 @@ class Module(BaseModule):
 
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
-        self.binded = True
         self._grad_req = grad_req
 
         if not for_training:
@@ -453,6 +452,8 @@ class Module(BaseModule):
 
         if shared_module is not None and shared_module.optimizer_initialized:
             self.borrow_optimizer(shared_module)
+
+        self.binded = True
 
     def reshape(self, data_shapes, label_shapes=None):
         """Reshapes the module for new input shapes.

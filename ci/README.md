@@ -59,6 +59,20 @@ To work inside a container with a shell you can do:
 When building, the artifacts are located in the build/ directory in the project root. In case
 `build.py -a` is invoked, the artifacts are located in build.<platform>/
 
+# Docker container cleanup (Zombie containers)
+Docker has a client-server architecture, so when the program that is executing the docker client
+dies or receieves a signal, the container keeps running as it's started by the docker daemon.
+We implement signal handlers that catch sigterm and sigint and cleanup containers before exit. In
+Jenkins there's not enough time between sigterm and sigkill so we guarantee that containers are not
+left running by propagating environment variables used by the Jenkins process tree killer to
+identify which process to kill when the job is stopped. This has the effect of stopping the
+container given that the process inside the container is terminated.
+
+How to test this is working propperly: On the console you can hit ^C while a container is running
+(not just building) and see that the container is stopped by running `docker ps` on another
+terminal. In Jenkins this has been tested by stopping the job which has containers running and
+verifying that the container stops shortly afterwards by running docker ps.
+
 ## Add a platform
 
 To add a platform, you should add the appropriate dockerfile in
@@ -76,3 +90,29 @@ For all builds a directory from the host system is mapped where ccache will stor
 compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds 
 significantly. You can set this directory explicitly by setting CCACHE_DIR environment 
 variable. All ccache instances are currently set to be 10 Gigabytes max in size.
+
+
+## Testing with QEMU
+To run the unit tests under qemu:
+```
+./build.py -p armv7 && ./build.py -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu
+```
+
+To get a shell on the container and debug issues with the emulator itself, we build the container
+and then execute it interactively. We can afterwards use port 2222 on the host to connect with SSH.
+
+
+```
+ci/build.py -p test.arm_qemu -b && docker run -p2222:2222 -ti mxnetci/build.test.arm_qemu
+```
+
+Then from another terminal:
+
+```
+ssh -o StrictHostKeyChecking=no -p 2222 qemu@localhost
+```
+
+There are two pre-configured users: `root` and `qemu` both without passwords.
+
+
+

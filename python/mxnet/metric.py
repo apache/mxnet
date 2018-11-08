@@ -720,7 +720,7 @@ class MCC(EvalMetric):
 
     Examples
     --------
-    In this example the network almost always predicts positive
+    >>> # In this example the network almost always predicts positive
     >>> false_positives = 1000
     >>> false_negatives = 1
     >>> true_positives = 10000

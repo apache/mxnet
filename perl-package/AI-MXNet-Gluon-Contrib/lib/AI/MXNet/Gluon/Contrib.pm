@@ -15,10 +15,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
+package AI::MXNet::Gluon::Contrib;
 use strict;
 use warnings;
 use AI::MXNet;
 use AI::MXNet::Gluon::Contrib::NN::BasicLayers;
-our $VERSION = '1.3';
+our $VERSION = '1.33';
+=head1 NAME 
+
+    AI::MXNet::Gluon::Contrib - A collection of supplemental Gluon blocks.
+=cut
 
 1;
+
+=head1 AUTHOR
+
+    Sergey Kolychev, <sergeykolychev.github@gmail.com>
+
+=head1 COPYRIGHT & LICENSE
+
+    This library is licensed under Apache 2.0 license L<https://www.apache.org/licenses/LICENSE-2.0>
+
+=cut

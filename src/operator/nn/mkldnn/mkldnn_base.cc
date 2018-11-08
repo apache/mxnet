@@ -311,9 +311,12 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_oihw:
       case mkldnn_ihwo:
       case mkldnn_hwio:
+      case mkldnn_oIhw8i:
+      case mkldnn_oIhw16i:
       case mkldnn_OIhw8i8o:
       case mkldnn_OIhw16i16o:
       case mkldnn_OIhw4i16o4i:
+      case mkldnn_OIhw4i16o4i_s8s8:
       case mkldnn_OIhw8i16o2i:
       case mkldnn_OIhw8o16i2o:
       case mkldnn_OIhw8o8i:
@@ -332,6 +335,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
   } else if (desc.data.ndims == 5) {
     switch (desc.data.format) {
       case mkldnn_goihw:
+      case mkldnn_hwigo:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
       case mkldnn_gOIhw4i16o4i:
@@ -473,9 +477,11 @@ void OpCheck::Init(const std::vector<mxnet::NDArray> &inputs_,
   auto ctx = inputs_[0].ctx();
   CHECK(!MKLDNNStream::Get()->HasOps());
   for (size_t i = 0; i < inputs_.size(); i++) {
-    inputs.emplace_back(inputs_[i].shape(), ctx,
-                        false, inputs_[i].dtype());
-    auto mem = inputs_[i].GetMKLDNNData();
+    NDArray data = inputs_[i];
+    inputs.emplace_back(data.shape(), ctx, false, data.dtype());
+    if (data.IsMKLDNNData() && data.IsView())
+        data = data.Reorder2Default();
+    auto mem = data.GetMKLDNNData();
     inputs[i].CopyFrom(*mem);
   }
   for (size_t i = 0; i < outputs_.size(); i++) {
@@ -494,6 +500,11 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
                   const std::vector<mxnet::NDArray> &inputs_,
                   const std::vector<mxnet::OpReqType> &req,
                   const std::vector<mxnet::NDArray> &outputs_) {
+  static auto& is_excluded = Op::GetAttr<bool>("TExcludeMKLDNNDebug");
+  if (is_excluded.get(attrs.op, false)) {
+    LOG(WARNING) << attrs.op->name << " not checked. TExcludeMKLDNNDebug flag present";
+    return;
+  }
   std::vector<mxnet::TBlob> in_blobs(inputs.size());
   for (size_t i = 0; i < in_blobs.size(); i++) in_blobs[i] = inputs[i].data();
   std::vector<mxnet::TBlob> out_blobs(outputs.size());
@@ -509,13 +520,24 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
     if (req[i] == kNullOp)
       continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
-      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-3, 1e-3);
+      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-2, 1e-2);
       if (!similar) {
         LOG(ERROR) << attrs.op->name << " fails";
       }
       CHECK(similar);
     });
   }
+}
+
+void OpCheck::CopyResult(const std::vector<mxnet::NDArray> &outputs_,
+                         const std::vector<size_t> &indice) {
+  CHECK(!MKLDNNStream::Get()->HasOps());
+  auto non_const_outputs_ = const_cast<std::vector<mxnet::NDArray> &>(outputs_);
+  for (auto i = indice.begin(); i != indice.end(); ++i) {
+    auto mem = outputs[*i].GetMKLDNNData();
+    non_const_outputs_[*i].CopyFrom(*mem);
+  }
+  MKLDNNStream::Get()->Submit();
 }
 
 bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
@@ -529,7 +551,9 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
 
   DispatchMode wanted_mode;
 #if MXNET_USE_MKLDNN == 1
-  if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)
+  if (dev_mask == mshadow::cpu::kDevMask && !MKLDNNEnvSet())
+    wanted_mode = DispatchMode::kFComputeFallback;
+  else if (dev_mask == mshadow::cpu::kDevMask && support_mkldnn)
     wanted_mode = DispatchMode::kFComputeEx;
   else
 #endif

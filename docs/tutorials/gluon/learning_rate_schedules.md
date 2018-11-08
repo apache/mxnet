@@ -12,7 +12,6 @@ In this tutorial, we visualize the schedules defined in `mx.lr_scheduler`, show 
 
 
 ```python
-%matplotlib inline
 from __future__ import print_function
 import math
 import matplotlib.pyplot as plt
@@ -20,6 +19,7 @@ import mxnet as mx
 from mxnet.gluon import nn
 from mxnet.gluon.data.vision import transforms
 import numpy as np
+%matplotlib inline
 ```
 
 ```python
@@ -134,7 +134,7 @@ batch_size = 64
 
 # Load the training data
 train_dataset = mx.gluon.data.vision.MNIST(train=True).transform_first(transforms.ToTensor())
-train_dataloader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True)
+train_dataloader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=5)
 
 # Build a simple convolutional network
 def build_cnn():

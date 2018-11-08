@@ -26,8 +26,8 @@
 // #include "elemwise_op_common.h"
 #include "../elemwise_op_common.h"
 
-#define START_IND(a, b, c) static_cast<int>(floor(static_cast<float>(a * c) / b))
-#define END_IND(a, b, c) static_cast<int>(ceil(static_cast<float>((a + 1) * c) / b))
+#define START_IND(a, b, c) static_cast<int>(std::floor(static_cast<float>(a * c) / b))
+#define END_IND(a, b, c) static_cast<int>(std::ceil(static_cast<float>((a + 1) * c) / b))
 
 namespace mxnet {
 namespace op {
@@ -216,8 +216,6 @@ The pooling kernel and stride sizes are automatically chosen for desired output 
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FInferShape>("FInferShape", AdaptiveAvgPoolOpInferShape)
-.set_attr<nnvm::FInferType>("FInferType", AdaptiveAvgPoolOpInferType)
-.set_attr<FInferStorageType>("FInferStorageType", AdaptiveAvgPoolOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   ElemwiseGradUseNone{"_backward_contrib_AdaptiveAvgPooling2D"})
@@ -229,7 +227,6 @@ NNVM_REGISTER_OP(_backward_contrib_AdaptiveAvgPooling2D)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FInferStorageType>("FInferStorageType", AdaptiveAvgPoolOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", AdaptiveAvgPoolOpBackward<cpu>);
 
 

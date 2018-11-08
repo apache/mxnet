@@ -39,7 +39,8 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
                                                      int backward_compute_type,
                                                      const std::vector<TShape>& in_shape,
                                                      const std::vector<TShape>& out_shape,
-                                                     const RunContext& rctx) {
+                                                     const RunContext& rctx,
+                                                     bool add_to_weight) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<DeconvSignature,
                                          std::shared_ptr<CuDNNDeconvolutionOp<DType> >,
@@ -55,14 +56,18 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
     ndim += s.ndim();
   for (auto &s : out_shape)
     ndim += s.ndim();
-  key.Reserve(1 /* for forward_compute_type */ + 1 /* for backward_compute_type */
-              + ndim + 1 /* for dev_id */);
+  key.Reserve(1 /* for forward_compute_type */ +
+              1 /* for backward_compute_type */ +
+              ndim /* for in and out shapes */ +
+              1 /* for dev_id */ +
+              1 /* for add_to_weight */);
 
   key.AddSign(forward_compute_type);
   key.AddSign(backward_compute_type);
   key.AddSign(in_shape);
   key.AddSign(out_shape);
   key.AddSign(rctx.ctx.dev_id);
+  key.AddSign(add_to_weight ? 1 : 0);
 
   auto it = ops.find(key);
   if (it == ops.end()) {
@@ -72,7 +77,7 @@ static CuDNNDeconvolutionOp<DType> &GetCuDNNDeconvOp(const DeconvolutionParam& p
     CHECK(ins_ret.second);
     it = ins_ret.first;
     it->second->Init(param, forward_compute_type, backward_compute_type, in_shape,
-                     out_shape, rctx);
+                     out_shape, rctx, add_to_weight);
   }
   return *it->second;
 }
@@ -109,8 +114,10 @@ void DeconvolutionCompute<gpu>(const nnvm::NodeAttrs& attrs,
       for (size_t i = 0; i < in_shape.size(); i++) {
         in_shape[i] = inputs[i].shape_;
       }
+      // req[deconv::kWeight] is only set for backward, so assume the typical 'write' for now.
+      auto add_to_weight = false;
       GetCuDNNDeconvOp<DType>(param, compute_type, compute_type,
-          in_shape, out_shape, ctx.run_ctx).Forward(ctx, inputs, req, outputs);
+          in_shape, out_shape, ctx.run_ctx, add_to_weight).Forward(ctx, inputs, req, outputs);
     }
   })
 #else
@@ -156,8 +163,9 @@ void DeconvolutionGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
       for (size_t i = 0; i < in_shape.size(); i++) {
         in_shape[i] = in_data[i].shape_;
       }
+      auto add_to_weight = req[deconv::kWeight] == kAddTo;
       GetCuDNNDeconvOp<DType>(param, compute_type, compute_type,
-          in_shape, out_shape, ctx.run_ctx).Backward(ctx,
+          in_shape, out_shape, ctx.run_ctx, add_to_weight).Backward(ctx,
             std::vector<TBlob>{out_grad}, in_data, req, in_grad);
     }
   })

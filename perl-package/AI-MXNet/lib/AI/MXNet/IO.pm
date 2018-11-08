@@ -24,7 +24,15 @@ use Scalar::Util qw/blessed/;
 
 =head1 NAME
 
-    AI::MXNet::IO - NDArray interface of mxnet.
+    AI::MXNet::IO - Data loading interface of MXNet
+=cut
+
+=head1 DESCRIPTION
+
+    This document summarizes supported data formats and iterator APIs to read the data including
+    mx->io              Data iterators for common data formats.
+    mx->recordio        Data iterators for the RecordIO data format.
+    mx->image           Image Iterators and image augmentation functions.
 =cut
 
 # Convert data into canonical form.
@@ -624,6 +632,21 @@ extends 'AI::MXNet::DataIter';
 =head1 NAME
 
     AI::MXNet::MXDataIter - A data iterator pre-built in C++ layer of MXNet.
+=cut
+
+=head1 DESCRIPTION
+
+    Here are the list of currently available predefined iterators, for more custom iterators
+    please check out the examples directory.
+    Also please refer to the L<Python docs|http://mxnet.incubator.apache.org/api/python/io/io.html>
+    mx->io->CSVIter                     Returns the CSV file iterator.
+    mx->io->LibSVMIter                  Returns the LibSVM iterator which returns data with csr storage type.
+    mx->io->ImageRecordIter             Iterates on image RecordIO files
+    mx->io->ImageRecordUInt8Iter        Iterating on image RecordIO files
+    mx->io->MNISTIter                   Iterating on the MNIST dataset.
+    mx->recordio->MXRecordIO            Reads/writes RecordIO data format, supporting sequential read and write.
+    mx->recordio->MXIndexedRecordIO     Reads/writes RecordIO data format, supporting random access.
+    mx->image->ImageIter                Image data iterator with a large number of augmentation choices.
 =cut
 
 has 'handle'           => (is => 'ro', isa => 'DataIterHandle', required => 1);

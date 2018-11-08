@@ -465,7 +465,7 @@ class Function(object):
                         "autograd.Function.backward must return NDArrays, not %s"%type(ret)
                     if req == 0:  # null
                         return True
-                    elif req == 1 or req == 2:  # write or inplace
+                    elif req in (1, 2):  # write or inplace
                         igrad[:] = ret
                     elif req == 'add':
                         igrad[:] += ret

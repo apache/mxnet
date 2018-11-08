@@ -30,6 +30,7 @@ import os
 from ... import nn
 from ....context import cpu
 from ...block import HybridBlock
+from .... import base
 
 
 # Helpers
@@ -188,7 +189,7 @@ class MobileNetV2(nn.HybridBlock):
 
 # Constructor
 def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
-                  root=os.path.join('~', '.mxnet', 'models'), **kwargs):
+                  root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""MobileNet model from the
     `"MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications"
     <https://arxiv.org/abs/1704.04861>`_ paper.
@@ -203,7 +204,7 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = MobileNet(multiplier, **kwargs)
@@ -219,7 +220,7 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
 
 
 def get_mobilenet_v2(multiplier, pretrained=False, ctx=cpu(),
-                     root=os.path.join('~', '.mxnet', 'models'), **kwargs):
+                     root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""MobileNetV2 model from the
     `"Inverted Residuals and Linear Bottlenecks:
       Mobile Networks for Classification, Detection and Segmentation"
@@ -235,7 +236,7 @@ def get_mobilenet_v2(multiplier, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = MobileNetV2(multiplier, **kwargs)

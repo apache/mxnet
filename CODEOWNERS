@@ -12,10 +12,11 @@
 *			@apache/mxnet-committers
 
 # Language bindings
-/R-package/       @thirdwing
-/scala-package/   @yzhliu @nswamy
-/perl-package/    @sergeykolychev
-/python/          @szha
+/R-package/                @thirdwing
+/scala-package/            @yzhliu @nswamy
+/perl-package/             @sergeykolychev
+/python/                   @szha
+/contrib/clojure-package/  @gigasquid
 
 # C++ base
 /src/kvstore/     @rahul003 @anirudh2290

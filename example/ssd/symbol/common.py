@@ -206,6 +206,9 @@ def multibox_layer(from_layers, num_classes, sizes=[.2, .95],
          assert sizes[0] > 0 and sizes[0] < 1
          assert sizes[1] > 0 and sizes[1] < 1 and sizes[1] > sizes[0]
          tmp = np.linspace(sizes[0], sizes[1], num=(len(from_layers)-1))
+         # Ref for start_offset value:
+         # https://arxiv.org/abs/1512.02325
+         start_offset = 0.1
          min_sizes = [start_offset] + tmp.tolist()
          max_sizes = tmp.tolist() + [tmp[-1]+start_offset]
          sizes = zip(min_sizes, max_sizes)

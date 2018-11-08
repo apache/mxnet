@@ -21,8 +21,10 @@ from __future__ import print_function
 __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
+import logging
 
 from ..utils import download, check_sha1
+from ... import base, util
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
@@ -55,10 +57,10 @@ _model_sha1 = {name: checksum for checksum, name in [
     ('ee79a8098a91fbe05b7a973fed2017a6117723a8', 'vgg11_bn'),
     ('6bc5de58a05a5e2e7f493e2d75a580d83efde38c', 'vgg13'),
     ('7d97a06c3c7a1aecc88b6e7385c2b373a249e95e', 'vgg13_bn'),
-    ('649467530119c0f78c4859999e264e7bf14471a9', 'vgg16'),
-    ('6b9dbe6194e5bfed30fd7a7c9a71f7e5a276cb14', 'vgg16_bn'),
-    ('f713436691eee9a20d70a145ce0d53ed24bf7399', 'vgg19'),
-    ('9730961c9cea43fd7eeefb00d792e386c45847d6', 'vgg19_bn')]}
+    ('e660d4569ccb679ec68f1fd3cce07a387252a90a', 'vgg16'),
+    ('7f01cf050d357127a73826045c245041b0df7363', 'vgg16_bn'),
+    ('ad2f660d101905472b83590b59708b71ea22b2e5', 'vgg19'),
+    ('f360b758e856f1074a85abd5fd873ed1d98297c3', 'vgg19_bn')]}
 
 apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 _url_format = '{repo_url}gluon/models/{file_name}.zip'
@@ -68,7 +70,7 @@ def short_hash(name):
         raise ValueError('Pretrained model for {name} is not available.'.format(name=name))
     return _model_sha1[name][:8]
 
-def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
+def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     r"""Return location for the pretrained on local file system.
 
     This function will download from online model zoo when model cannot be found or has mismatch.
@@ -78,7 +80,7 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     ----------
     name : str
         Name of the model.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
 
     Returns
@@ -95,12 +97,11 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
         if check_sha1(file_path, sha1_hash):
             return file_path
         else:
-            print('Mismatch in the content of model file detected. Downloading again.')
+            logging.warning('Mismatch in the content of model file detected. Downloading again.')
     else:
-        print('Model file is not found. Downloading.')
+        logging.info('Model file not found. Downloading to %s.', file_path)
 
-    if not os.path.exists(root):
-        os.makedirs(root)
+    util.makedirs(root)
 
     zip_file_path = os.path.join(root, file_name+'.zip')
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
@@ -118,12 +119,12 @@ def get_model_file(name, root=os.path.join('~', '.mxnet', 'models')):
     else:
         raise ValueError('Downloaded file has different hash. Please try again.')
 
-def purge(root=os.path.join('~', '.mxnet', 'models')):
+def purge(root=os.path.join(base.data_dir(), 'models')):
     r"""Purge all pretrained model files in local file store.
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     root = os.path.expanduser(root)

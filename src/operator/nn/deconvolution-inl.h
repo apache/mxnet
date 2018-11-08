@@ -113,7 +113,8 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
       .add_enum("NDHWC", mshadow::kNDHWC)
       .set_default(dmlc::optional<int>())
       .describe("Set layout for input, output and weight. Empty for "
-                "default layout, NCW for 1d, NCHW for 2d and NCDHW for 3d.");
+                "default layout, NCW for 1d, NCHW for 2d and NCDHW for 3d."
+                "NHWC and NDHWC are only supported on GPU.");
   }
 
   template<size_t ndim>
@@ -130,7 +131,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
     if (bCal) {
       size_t input_ndim = input.ndim();
 
-      for (index_t i = 0; i < ndim; i++) {
+      for (size_t i = 0; i < ndim; i++) {
         // input.ndim() can be larger than ndim, in case that the complete input
         // shape was passed and not only the ndim last ones
         o_pad[i] = stride[i] * (input[(input_ndim - ndim) + i] - 1) + DilatedKernelSize(i);
@@ -140,7 +141,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
         o_pad[i] = (o_pad[i] + 1) / 2;
       }
     } else {
-      for (index_t i = 0; i < ndim; i++) {
+      for (size_t i = 0; i < ndim; i++) {
         o_pad[i] = pad[i];
         o_adj[i] = adj[i];
       }
@@ -458,12 +459,10 @@ class DeconvolutionOp {
                                      oshape[1] / param_.num_group,
                                      oshape[2] * oshape[3]);
     // See convolution for workspace calculations. nstep_ will be the effective batch size
-    nstep_ = std::max(
-        std::min(
-            static_cast<index_t>(
-                param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
-            ishape[0]),
-        1U);
+    nstep_ = std::max<index_t>(
+        std::min(static_cast<index_t>(param_.workspace) /
+          (shape_colunit_.Size() + shape_dstunit_.Size()), ishape[0]),
+      1);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);

@@ -24,7 +24,11 @@ use JSON::PP;
 
 =head1 NAME
 
-    AI::MXNet::Metric - Online evaluation metric module.
+    AI::MXNet::Metric - Evaluation Metric API.
+=head1 DESCRIPTION
+
+    This module hosts all the evaluation metrics available to evaluate the performance of a learned model.
+    L<Python Docs|http://mxnet.incubator.apache.org/api/python/metric/metric.html>
 =cut
 
 # Check to see if the two arrays are the same size.
@@ -60,11 +64,6 @@ func check_label_shapes(
         ."match shape of predictions $pred_shape"
     ) unless $pred_shape == $label_shape;
 }
-
-=head1 DESCRIPTION
-
-    Base class of all evaluation metrics.
-=cut
 
 package AI::MXNet::EvalMetric;
 use Mouse;
@@ -232,11 +231,41 @@ method get()
 # CLASSIFICATION METRICS
 ########################
 
+=head1 NAME
+
+    AI::MXNet::Accuracy - Computes accuracy classification score.
+=cut
+
+=head1 DESCRIPTION
+
+    The accuracy score is defined as
+
+    accuracy(y, y^) = (1/n) * sum(i=0..n-1) { y^(i)==y(i) }
+
+    Parameters:
+    axis (Int, default=1) – The axis that represents classes.
+    name (Str, default='accuracy') – Name of this metric instance for display.
+
+    pdl> use AI::MXNet qw(mx)
+    pdl> $predicts = [mx->nd->array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    pdl> $labels   = [mx->nd->array([[0, 1, 1]])]
+    pdl> $acc = mx->metric->Accuracy()
+    pdl> $acc->update($labels, $predicts)
+    pdl> use Data::Dumper
+    pdl> print Dumper([$acc->get])
+    $VAR1 = [
+          'accuracy',
+          '0.666666666666667'
+    ];
+
+=cut
+
 package AI::MXNet::Accuracy;
 use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'accuracy');
+has 'axis'    => (is => 'ro', isa => 'Int', default => 1);
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
@@ -245,14 +274,66 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         my ($label, $pred_label) = @$_;
         if(join(',', @{$pred_label->shape}) ne join(',', @{$label->shape}))
         {
-            $pred_label = AI::MXNet::NDArray->argmax_channel($pred_label);
+            $pred_label = AI::MXNet::NDArray->argmax_channel($pred_label, { axis => $self->axis });
         }
-        AI::MXNet::Metric::check_label_shapes($label, $pred_label);
         my $sum = ($pred_label->aspdl->flat == $label->aspdl->flat)->sum;
         $self->sum_metric($self->sum_metric + $sum);
         $self->num_inst($self->num_inst + $pred_label->size);
     }
 }
+
+=head1 NAME
+
+    AI::MXNet::TopKAccuracy - Computes top k predictions accuracy.
+=cut
+
+=head1 DESCRIPTION
+
+    TopKAccuracy differs from Accuracy in that it considers the prediction
+    to be True as long as the ground truth label is in the top K predicated labels.
+
+    If top_k = 1, then TopKAccuracy is identical to Accuracy.
+
+    Parameters:	
+    top_k(Int, default 1) – Whether targets are in top k predictions.
+    name (Str, default 'top_k_accuracy') – Name of this metric instance for display.
+
+    use AI::MXNet qw(mx);
+    $top_k = 3;
+    $predicts = [mx->nd->array(
+      [[0.80342804, 0.5275223 , 0.11911147, 0.63968144, 0.09092526,
+        0.33222568, 0.42738095, 0.55438581, 0.62812652, 0.69739294],
+       [0.78994969, 0.13189035, 0.34277045, 0.20155961, 0.70732423,
+        0.03339926, 0.90925004, 0.40516066, 0.76043547, 0.47375838],
+       [0.28671892, 0.75129249, 0.09708994, 0.41235779, 0.28163896,
+        0.39027778, 0.87110921, 0.08124512, 0.55793117, 0.54753428],
+       [0.33220307, 0.97326881, 0.2862761 , 0.5082575 , 0.14795074,
+        0.19643398, 0.84082001, 0.0037532 , 0.78262101, 0.83347772],
+       [0.93790734, 0.97260166, 0.83282304, 0.06581761, 0.40379256,
+        0.37479349, 0.50750135, 0.97787696, 0.81899021, 0.18754124],
+       [0.69804812, 0.68261077, 0.99909815, 0.48263116, 0.73059268,
+        0.79518236, 0.26139168, 0.16107376, 0.69850315, 0.89950917],
+       [0.91515562, 0.31244902, 0.95412616, 0.7242641 , 0.02091039,
+        0.72554552, 0.58165923, 0.9545687 , 0.74233195, 0.19750339],
+       [0.94900651, 0.85836332, 0.44904621, 0.82365038, 0.99726878,
+        0.56413064, 0.5890016 , 0.42402702, 0.89548786, 0.44437266],
+       [0.57723744, 0.66019353, 0.30244304, 0.02295771, 0.83766937,
+        0.31953292, 0.37552193, 0.18172362, 0.83135182, 0.18487429],
+       [0.96968683, 0.69644561, 0.60566253, 0.49600661, 0.70888438,
+        0.26044186, 0.65267488, 0.62297362, 0.83609334, 0.3572364 ]]
+    )];
+    $labels = [mx->nd->array([2, 6, 9, 2, 3, 4, 7, 8, 9, 6])];
+    $acc = mx->metric->TopKAccuracy(top_k=>$top_k);
+    $acc->update($labels, $predicts);
+    use Data::Dumper;
+    print Dumper([$acc->get]);
+    $VAR1 = [
+          'top_k_accuracy_3',
+          '0.3'
+    ];
+
+
+=cut
 
 package AI::MXNet::TopKAccuracy;
 use Mouse;
@@ -260,7 +341,7 @@ use List::Util qw/min/;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'top_k_accuracy');
-has 'top_k' => (is => 'rw', isa => 'int', default => 1);
+has 'top_k' => (is => 'rw', isa => 'Int', default => 1);
 method python_constructor_arguments() { ['top_k'] }
 
 sub BUILD
@@ -302,70 +383,249 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }
 }
 
-# Calculate the F1 score of a binary classification problem.
+package _BinaryClassificationMetrics {
+    use Mouse;
+    #Private container class for classification metric statistics. True/false positive and
+    # true/false negative counts are sufficient statistics for various classification metrics.
+    #This class provides the machinery to track those statistics across mini-batches of
+    #(label, prediction) pairs.
+    has [qw/true_positives
+            false_negatives
+            false_positives
+            true_negatives/] => (is => 'rw', isa => 'Int', default => 0);
+
+    method update_binary_stats(AI::MXNet::NDArray $label, AI::MXNet::NDArray $pred)
+    {
+        $pred = AI::MXNet::NDArray->argmax($pred, { axis => 1 })->aspdl;
+        $label = $label->astype('int32')->aspdl;
+
+        AI::MXNet::Metric::check_label_shapes($label, $pred);
+        if($label->uniq->len > 2)
+        {
+            confess("Currently only support binary classification.");
+        }
+
+        my $pred_true = ($pred == 1);
+        my $pred_false = 1 - $pred_true;
+        my $label_true = ($label == 1);
+        my $label_false = 1 - $label_true;
+
+        $self->true_positives($self->true_positives + ($pred_true * $label_true)->sum);
+        $self->false_positives($self->false_positives + ($pred_true * $label_false)->sum);
+        $self->false_negatives($self->false_negatives + ($pred_false * $label_true)->sum);
+        $self->true_negatives($self->true_negatives + ($pred_false * $label_false)->sum);
+    }
+
+    method precision()
+    {
+        if($self->true_positives + $self->false_positives > 0)
+        {
+            return $self->true_positives / ($self->true_positives + $self->false_positives);
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    method recall()
+    {
+        if($self->true_positives + $self->false_negatives > 0)
+        {
+            return $self->true_positives / ($self->true_positives + $self->false_negatives);
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    method fscore()
+    {
+        if($self->precision + $self->recall > 0)
+        {
+            return 2 * $self->precision * $self->recall / ($self->precision + $self->recall);
+        }
+        else
+        {
+            return 0;
+        }
+    }
+
+    method matthewscc()
+    {
+        if(not $self->total_examples)
+        {
+            return 0;
+        }
+        my @terms = (
+            $self->true_positives + $self->false_positives,
+            $self->true_positives + $self->false_negatives,
+            $self->true_negatives + $self->false_positives,
+            $self->true_negatives + $self->false_negatives
+        );
+        my $denom = 1;
+        for my $t (grep { $_ } @terms)
+        {
+            $denom *= $t;
+        }
+        return (($self->true_positives * $self->true_negatives) - ($self->false_positives * $self->false_negatives)) / sqrt($denom);
+    }
+
+    method total_examples()
+    {
+        return $self->false_negatives + $self->false_positives +
+               $self->true_negatives + $self->true_positives;
+    }
+
+    method reset_stats()
+    {
+        $self->false_positives(0);
+        $self->false_negatives(0);
+        $self->true_positives(0);
+        $self->true_negatives(0);
+    }
+};
+
+=head1 NAME
+
+    AI::MXNet::F1 - Calculate the F1 score of a binary classification problem.
+=cut
+
+=head1 DESCRIPTION
+
+    The F1 score is equivalent to harmonic mean of the precision and recall,
+    where the best value is 1.0 and the worst value is 0.0. The formula for F1 score is:
+
+    F1 = 2 * (precision * recall) / (precision + recall)
+    The formula for precision and recall is:
+
+    precision = true_positives / (true_positives + false_positives)
+    recall    = true_positives / (true_positives + false_negatives)
+    Note:
+
+    This F1 score only supports binary classification.
+
+    Parameters:
+    name (Str, default 'f1') – Name of this metric instance for display.
+    average (Str, default 'macro') –
+    Strategy to be used for aggregating across mini-batches.
+    “macro”: average the F1 scores for each batch. “micro”: compute a single F1 score across all batches.
+
+
+    $predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])];
+    $labels   = [mx.nd.array([0., 1., 1.])];
+    $f1 = mx->metric->F1();
+    $f1->update($labels, $predicts);
+    print $f1->get;
+    f1 0.8
+
+=cut
+
 package AI::MXNet::F1;
 use Mouse;
 use AI::MXNet::Base;
 extends 'AI::MXNet::EvalMetric';
 has '+name'   => (default => 'f1');
+has 'average' => (is => 'ro', isa => 'Str', default => 'macro');
+has 'metrics' => (is => 'rw', init_arg => undef, default => sub { _BinaryClassificationMetrics->new });
+has 'method'  => (is => 'ro', init_arg => undef, default => 'fscore');
+method python_constructor_arguments() { [qw/name average/] }
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
 {
+    my $method = $self->method;
     AI::MXNet::Metric::check_label_shapes($labels, $preds);
     for(zip($labels, $preds)) {
-        my ($label, $pred_label) = @$_;
-        AI::MXNet::Metric::check_label_shapes($label, $pred_label);
-        $pred_label = $pred_label->aspdl->maximum_ind;
-        $label = $label->astype('int32')->aspdl;
-        confess("F1 currently only supports binary classification.")
-            if $label->uniq->shape->at(0) > 2;
-        my ($true_positives, $false_positives, $false_negatives) = (0,0,0);
-        for(zip($pred_label->unpdl, $label->unpdl)) {
-            my ($y_pred, $y_true) = @$_;
-            if($y_pred == 1 and $y_true == 1)
-            {
-                $true_positives += 1;
-            }
-            elsif($y_pred == 1 and $y_true == 0)
-            {
-                $false_positives += 1;
-            }
-            elsif($y_pred == 0 and $y_true == 1)
-            {
-                $false_negatives += 1;
-            }
-        }
-        my $precision;
-        my $recall;
-        if($true_positives + $false_positives > 0)
+        my ($label, $pred) = @$_;
+        $self->metrics->update_binary_stats($label, $pred);
+        if($self->average eq "macro")
         {
-            $precision = $true_positives / ($true_positives + $false_positives);
+            $self->sum_metric($self->sum_metric + $self->metrics->$method);
+            $self->num_inst($self->num_inst + 1);
+            $self->metrics->reset_stats();
         }
         else
         {
-            $precision = 0;
+            $self->sum_metric($self->metrics->fscore * $self->metrics->total_examples);
+            $self->num_inst($self->metrics->total_examples);
         }
-        if($true_positives + $false_negatives > 0)
-        {
-            $recall = $true_positives / ($true_positives +  $false_negatives);
-        }
-        else
-        {
-            $recall = 0;
-        }
-        my $f1_score;
-        if($precision + $recall > 0)
-        {
-            $f1_score = 2 * $precision * $recall / ($precision + $recall);
-        }
-        else
-        {
-            $f1_score = 0;
-        }
-        $self->sum_metric($self->sum_metric + $f1_score);
-        $self->num_inst($self->num_inst + 1);
     }
 }
+
+method reset()
+{
+    $self->sum_metric(0);
+    $self->num_inst(0);
+    $self->metrics->reset_stats();
+}
+
+=head1 NAME
+
+    AI::MXNet::MCC - Computes the Matthews Correlation Coefficient of a binary classification problem.
+=cut
+
+=head1 DESCRIPTION
+
+    While slower to compute than F1 the MCC can give insight that F1 or Accuracy cannot.
+    For instance, if the network always predicts the same result
+    then the MCC will immeadiately show this. The MCC is also symetric with respect
+    to positive and negative categorization, however, there needs to be both
+    positive and negative examples in the labels or it will always return 0.
+    MCC of 0 is uncorrelated, 1 is completely correlated, and -1 is negatively correlated.
+
+        MCC = (TP * TN - FP * FN)/sqrt( (TP + FP)*( TP + FN )*( TN + FP )*( TN + FN ) )
+
+    where 0 terms in the denominator are replaced by 1.
+
+    This version of MCC only supports binary classification.
+
+    Parameters
+    ----------
+    name : str, 'mcc'
+        Name of this metric instance for display.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the MCC for each batch.
+            "micro": compute a single MCC across all batches.
+
+    Examples
+    --------
+    In this example the network almost always predicts positive
+    >>> $false_positives = 1000
+    >>> $false_negatives = 1
+    >>> $true_positives = 10000
+    >>> $true_negatives = 1
+    >>> $predicts = [mx->nd->array(
+        [
+            ([.3, .7])x$false_positives,
+            ([.7, .3])x$true_negatives,
+            ([.7, .3])x$false_negatives,
+            ([.3, .7])xtrue_positives
+        ]
+    )];
+    >>> $labels  = [mx->nd->array(
+        [
+            (0)x($false_positives + $true_negatives),
+            (1)x($false_negatives + $true_positives)
+        ]
+    )];
+    >>> $f1 = mx->metric->F1();
+    >>> $f1->update($labels, $predicts);
+    >>> $mcc = mx->metric->MCC()
+    >>> $mcc->update($labels, $predicts)
+    >>> print $f1->get();
+    f1 0.95233560306652054
+    >>> print $mcc->get();
+    mcc 0.01917751877733392
+
+=cut
+
+package AI::MXNet::MCC;
+use Mouse;
+extends 'AI::MXNet::F1';
+has '+name'   => (default => 'mcc');
+has '+method' => (default => 'matthewscc');
 
 package AI::MXNet::Perplexity;
 use Mouse;
@@ -385,12 +645,13 @@ around BUILDARGS => sub {
 
 =head1 NAME
 
-    AI::MXNet::Perplexity
+    AI::MXNet::Perplexity - Calculate perplexity.
 =cut
 
 =head1 DESCRIPTION
 
-    Calculate perplexity.
+    Perplexity is a measurement of how well a probability distribution or model predicts a sample.
+    A low perplexity indicates the model is good at predicting the sample.
 
     Parameters
     ----------
@@ -402,6 +663,14 @@ around BUILDARGS => sub {
         The axis from prediction that was used to
         compute softmax. By default uses the last
         axis.
+
+    $predicts = [mx->nd->array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])];
+    $labels   = [mx->nd->array([0, 1, 1])];
+    $perp = mx->metric->Perplexity(ignore_label=>undef);
+    $perp->update($labels, $predicts);
+    print $perp->get()
+    Perplexity 1.77109762851559
+
 =cut
 
 method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray] $preds)
@@ -440,7 +709,21 @@ method get()
 # REGRESSION METRICS
 ####################
 
-# Calculate Mean Absolute Error loss
+=head1 NAME
+
+    AI::MXNet::MAE - Calculate Mean Absolute Error loss
+=head1 DESCRIPTION
+
+    >>> $predicts = [mx->nd->array([3, -0.5, 2, 7])->reshape([4,1])]
+    >>> $labels = [mx->nd->array([2.5, 0.0, 2, 8])->reshape([4,1])]
+    >>> $mean_absolute_error = mx->metric->MAE()
+    >>> $mean_absolute_error->update($labels, $predicts)
+    >>> print $mean_absolute_error->get()
+    ('mae', 0.5)
+
+=cut
+
+
 package AI::MXNet::MAE;
 use Mouse;
 use AI::MXNet::Base;
@@ -463,7 +746,20 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }
 }
 
-# Calculate Mean Squared Error loss
+=head1 NAME
+
+    AI::MXNet::MSE - Calculate Mean Squared Error loss
+=head1 DESCRIPTION
+
+    >>> $predicts = [mx->nd->array([3, -0.5, 2, 7])->reshape([4,1])]
+    >>> $labels = [mx->nd->array([2.5, 0.0, 2, 8])->reshape([4,1])]
+    >>> $mean_squared_error = mx->metric->MSE()
+    >>> $mean_squared_error->update($labels, $predicts)
+    >>> print $mean_squared_error->get()
+    ('mse', 0.375)
+
+=cut
+
 package AI::MXNet::MSE;
 use Mouse;
 use AI::MXNet::Base;
@@ -486,7 +782,20 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }
 }
 
-# Calculate Root Mean Squred Error loss
+=head1 NAME
+
+    AI::MXNet::RMSE - Calculate Root Mean Squred Error loss
+=head1 DESCRIPTION
+
+    >>> $predicts = [mx->nd->array([3, -0.5, 2, 7])->reshape([4,1])]
+    >>> $labels = [mx->nd->array([2.5, 0.0, 2, 8])->reshape([4,1])]
+    >>> $root_mean_squared_error = mx->metric->RMSE()
+    >>> $root_mean_squared_error->update($labels, $predicts)
+    >>> print $root_mean_squared_error->get()
+    'rmse', 0.612372457981
+
+=cut
+
 package AI::MXNet::RMSE;
 use Mouse;
 use AI::MXNet::Base;
@@ -508,6 +817,21 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
         $self->num_inst($self->num_inst + 1);
     }
 }
+
+
+=head1 NAME
+
+    AI::MXNet::CrossEntropy - Calculate Cross Entropy loss
+=head1 DESCRIPTION
+
+    >>> $predicts = [mx->nd->array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> $labels   = [mx->nd->array([0, 1, 1])]
+    >>> $ce = mx->metric->CrossEntropy()
+    >>> $ce->update($labels, $predicts)
+    >>> print $ce->get()
+    ('cross-entropy', 0.57159948348999023)
+
+=cut
 
 # Calculate Cross Entropy loss
 package AI::MXNet::CrossEntropy;
@@ -537,6 +861,26 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
     }
 }
 
+=head1 NAME
+
+    AI::MXNet::NegativeLogLikelihood - Computes the negative log-likelihood loss.
+=head1 DESCRIPTION
+
+    >>> $predicts = [mx->nd->array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> $labels   = [mx->nd->array([0, 1, 1])]
+    >>> $nll_loss = mx->metric->NegativeLogLikelihood
+    >>> $nll_loss->update($labels, $predicts)
+    >>> print $nll_loss->get()
+    ('cross-entropy', 0.57159948348999023)
+
+=cut
+
+package AI::MXNet::NegativeLogLikelihood;
+use Mouse;
+use AI::MXNet::Base;
+extends 'AI::MXNet::CrossEntropy';
+has '+name'   => (default => 'nll_loss');
+
 package AI::MXNet::PearsonCorrelation;
 use Mouse;
 use AI::MXNet::Base;
@@ -545,7 +889,7 @@ has '+name'   => (default => 'pearson-correlation');
 
 =head1 NAME
 
-    AI::MXNet::PearsonCorrelation
+    AI::MXNet::PearsonCorrelation - Computes Pearson correlation.
 =cut
 
 =head1 DESCRIPTION
@@ -594,7 +938,7 @@ has '+name'   => (default => 'loss');
 
 =head1 NAME
 
-    AI::MXNet::Loss
+    AI::MXNet::Loss - Dummy metric for directly printing loss.
 =cut
 
 =head1 DESCRIPTION
@@ -621,7 +965,7 @@ use Mouse;
 
 =head1 NAME
 
-    AI::MXNet::Confidence
+    AI::MXNet::Confidence - Accuracy by confidence buckets.
 =cut
 
 =head1 DESCRIPTION
@@ -717,7 +1061,7 @@ sub get
 
 =head1 NAME
 
-    AI::MXNet::CustomMetric
+    AI::MXNet::CustomMetric - Custom evaluation metric that takes a sub ref.
 =cut
 
 =head1 DESCRIPTION
@@ -779,7 +1123,9 @@ my %metrics = qw/
     accuracy            AI::MXNet::Accuracy
     ce                  AI::MXNet::CrossEntropy
     crossentropy        AI::MXNet::CrossEntropy
+    nll_loss            AI::MXNet::NegativeLogLikelihood
     f1                  AI::MXNet::F1
+    mcc                 AI::MXNet::MCC
     mae                 AI::MXNet::MAE
     mse                 AI::MXNet::MSE
     rmse                AI::MXNet::RMSE

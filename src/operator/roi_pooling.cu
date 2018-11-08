@@ -264,7 +264,7 @@ namespace op {
 
 template<>
 Operator* CreateOp<gpu>(ROIPoolingParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ROIPoolingOp<gpu, DType>(param);
   });

@@ -27,7 +27,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-    AI::MXNet::KVStoreServer - The key-value store server
+    AI::MXNet::KVStoreServer - The key-value store server.
 =cut
 
 =head2 new
@@ -36,7 +36,7 @@ use AI::MXNet::Function::Parameters;
 
     Parameters
     ----------
-    kvstore : KVStore
+    kvstore : AI::MXNet::KVStore
 =cut
 
 has 'kvstore' => (is => 'ro', isa => 'AI::MXNet::KVStore', required => 1);

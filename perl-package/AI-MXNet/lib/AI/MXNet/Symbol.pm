@@ -528,7 +528,7 @@ method list_inputs()
 =cut
 
 
-method infer_type(Str|Undef @args)
+method infer_type(Maybe[Str] @args)
 {
     my ($positional_arguments, $kwargs, $kwargs_order) = _parse_arguments("Dtype", @args);
     my $sdata = [];
@@ -1370,6 +1370,7 @@ method load(Str $fname)
 }
 
 =head2 load_json
+
     Load symbol from json string.
 
     Parameters
@@ -1469,12 +1470,12 @@ sub _parse_arguments
             }
             else
             {
-                confess("Argument need to be of type $type");
+                confess("Argument needs to be of type $type");
             }
         }
         else
         {
-            confess("Argument need to be one type $type");
+            confess("Argument needs to be one type $type");
         }
     }
     return (\@positional_arguments, \%kwargs, \@kwargs_order);

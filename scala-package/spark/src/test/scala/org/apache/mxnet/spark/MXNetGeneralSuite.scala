@@ -42,8 +42,8 @@ class MXNetGeneralSuite extends SharedSparkContext {
   }
 
   private def downloadTestData(): Unit = {
-    Process("wget http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon" +
-      "/dataset/mxnet-spark-test/train.txt" + " -P " + testDataDir + " -q") !
+    Process("wget https://s3.us-east-2.amazonaws.com/mxnet-scala" +
+      "/scala-example-ci/Spark/train_full.txt" + " -P " + testDataDir + " -q") !
   }
 
 //  override def beforeAll(): Unit = {
@@ -58,13 +58,13 @@ class MXNetGeneralSuite extends SharedSparkContext {
 
   }
 //  test("run spark with MLP") {
-//    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
+//    val trainData = parseRawData(sc, s"$testDataDir/train_full.txt.txt")
 //    val model = buildMlp().fit(trainData)
 //    assert(model != null)
 //  }
 //
 //  test("run spark with LeNet") {
-//    val trainData = parseRawData(sc, s"$testDataDir/train.txt")
+//    val trainData = parseRawData(sc, s"$testDataDir/train_full.txt.txt")
 //    val model = buildLeNet().fit(trainData)
 //    assert(model != null)
 //  }

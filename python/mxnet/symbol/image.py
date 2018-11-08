@@ -19,7 +19,7 @@
 # pylint: disable=wildcard-import, unused-wildcard-import
 """Image Symbol API of MXNet."""
 try:
-    from .gen_iamge import *
+    from .gen_image import *
 except ImportError:
     pass
 

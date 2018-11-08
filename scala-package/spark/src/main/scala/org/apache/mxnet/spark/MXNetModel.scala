@@ -23,7 +23,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vector
 
 /**
- * Wrapper for [[org.apache.mxnet.Model]] which used in Spark application
+ * Wrapper for <pre>[[org.apache.mxnet.Model]]</pre> which used in Spark application
  * @author Yizhi Liu
  */
 class MXNetModel private[mxnet](
@@ -32,13 +32,13 @@ class MXNetModel private[mxnet](
     private val batchSize: Int,
     private val dataName: String = "data",
     private val labelName: String = "label") extends Serializable {
-  require(model != null, "try to serialize an empty FeedForward model")
-  require(dimension != null, "unknown dimension")
-  require(batchSize > 0, s"invalid batchSize: $batchSize")
+  require(model != null, "Undefined model")
+  require(dimension != null, "Undefined dimension")
+  require(batchSize > 0, s"Invalid batchSize: $batchSize")
   val serializedModel = model.serialize()
 
   /**
-   * Get inner model [[FeedForward]]
+   * Get inner model <pre>[[FeedForward]]</pre>
    * @return the underlying model used to train & predict
    */
   def innerModel: FeedForward = {

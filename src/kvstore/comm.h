@@ -459,6 +459,7 @@ class CommDevice : public Comm {
   void Init(int key, const NDArrayStorageType stype, const TShape& shape,
             int dtype = mshadow::kFloat32) override {
     sorted_key_attrs_.emplace_back(key, shape, dtype);
+    inited_ = false;
   }
 
   void InitBuffersAndComm(const std::vector<NDArray>& src) {
@@ -472,6 +473,31 @@ class CommDevice : public Comm {
         EnableP2P(devs);
       }
     }
+  }
+
+  const NDArray& ReduceRowSparse(int key, const std::vector<NDArray>& src,
+                                 int priority) {
+    auto& buf = merge_buf_[key];
+    std::vector<NDArray> reduce(src.size());
+
+    const NDArrayStorageType stype = src[0].storage_type();
+    NDArray& buf_merged = buf.merged_buf(stype);
+    if (buf.copy_buf.empty()) {
+      // initialize buffer for copying during reduce
+      buf.copy_buf.resize(src.size());
+      for (size_t j = 0; j < src.size(); ++j) {
+        buf.copy_buf[j] = NDArray(stype, src[0].shape(), buf_merged.ctx(), true, src[0].dtype());
+      }
+    }
+    CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
+         << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
+         << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
+    for (size_t i = 0; i < src.size(); ++i) {
+      CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
+      reduce[i] = buf.copy_buf[i];
+    }
+    ElementwiseSum(reduce, &buf_merged, priority);
+    return buf_merged;
   }
 
   const NDArray& Reduce(int key, const std::vector<NDArray>& src,
@@ -490,13 +516,14 @@ class CommDevice : public Comm {
 
     InitBuffersAndComm(src);
     auto& buf = merge_buf_[key];
-    std::vector<NDArray> reduce(src.size());
 
     const NDArrayStorageType stype = src[0].storage_type();
     NDArray& buf_merged = buf.merged_buf(stype);
     // normal dense reduce
     if (stype == kDefaultStorage) {
       CopyFromTo(src[0], &buf_merged, priority);
+
+      std::vector<NDArray> reduce(src.size());
       reduce[0] = buf_merged;
 
       if (buf.copy_buf.empty()) {
@@ -514,24 +541,11 @@ class CommDevice : public Comm {
         CopyFromTo(src[i+1], &(buf.copy_buf[i]), priority);
         reduce[i+1] = buf.copy_buf[i];
       }
+      ElementwiseSum(reduce, &buf_merged, priority);
     } else {
       // sparse reduce
-      if (buf.copy_buf.empty()) {
-        // initialize buffer for copying during reduce
-        buf.copy_buf.resize(src.size());
-        for (size_t j = 0; j < src.size(); ++j) {
-          buf.copy_buf[j] = NDArray(stype, src[0].shape(), buf_merged.ctx(), true, src[0].dtype());
-        }
-      }
-      CHECK(src[0].storage_type() == buf.copy_buf[0].storage_type())
-           << "Storage type mismatch detected. " << src[0].storage_type() << "(src) vs. "
-           << buf.copy_buf[0].storage_type() << "(buf.copy_buf)";
-      for (size_t i = 0; i < src.size(); ++i) {
-        CopyFromTo(src[i], &(buf.copy_buf[i]), priority);
-        reduce[i] = buf.copy_buf[i];
-      }
+      buf_merged = ReduceRowSparse(key, src, priority);
     }
-    ElementwiseSum(reduce, &buf_merged, priority);
     return buf_merged;
   }
 
@@ -659,49 +673,6 @@ class CommDevice : public Comm {
     }
   }
 
- private:
-  void EnableP2P(const std::vector<Context>& devs) {
-#if MXNET_USE_CUDA
-    std::vector<int> gpus;
-    for (const auto& d : devs) {
-      if (d.dev_mask() == gpu::kDevMask) {
-        gpus.push_back(d.dev_id);
-      }
-    }
-    int n = static_cast<int>(gpus.size());
-    int enabled = 0;
-    std::vector<int> p2p(n*n);
-    for (int i = 0; i < n; ++i) {
-      cudaSetDevice(gpus[i]);
-      for (int j = 0; j < n; j++) {
-        int access;
-        cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
-        if (access) {
-          cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
-          if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
-            ++enabled;
-            p2p[i*n+j] = 1;
-          }
-        }
-      }
-    }
-    if (enabled != n*(n-1)) {
-      // print warning info if not fully enabled
-      LOG(WARNING) << "only " << enabled <<  " out of "
-                   << n*(n-1) << " GPU pairs are enabled direct access. "
-                   << "It may affect the performance. "
-                   << "You can set MXNET_ENABLE_GPU_P2P=0 to turn it off";
-      std::string access(n, '.');
-      for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j) {
-          access[j] = p2p[i*n+j] ? 'v' : '.';
-        }
-        LOG(WARNING) << access;
-      }
-    }
-#endif
-  }
-
   using KeyAttrs = std::tuple<int, TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
@@ -731,14 +702,61 @@ class CommDevice : public Comm {
       }
       // Delayed allocation - as the dense merged buffer might not be used at all if push()
       // only sees sparse arrays
-      bool delay_alloc = true;
-      buf.merged = NDArray(shape, ctx, delay_alloc, type);
+      if (buf.merged.is_none()) {
+        bool delay_alloc = true;
+        buf.merged = NDArray(shape, ctx, delay_alloc, type);
+      }
       ctx_info[ctx.dev_id].second += shape.Size();
     }
     inited_ = true;
   }
 
-  std::vector<KeyAttrs> sorted_key_attrs_;
+ private:
+  void EnableP2P(const std::vector<Context>& devs) {
+#if MXNET_USE_CUDA
+    std::vector<int> gpus;
+    for (const auto& d : devs) {
+      if (d.dev_mask() == gpu::kDevMask) {
+        gpus.push_back(d.dev_id);
+      }
+    }
+    int n = static_cast<int>(gpus.size());
+    int enabled = 0;
+    std::vector<int> p2p(n*n);
+
+    // Restores active device to what it was before EnableP2P
+    mxnet::common::cuda::DeviceStore device_store;
+    for (int i = 0; i < n; ++i) {
+     device_store.SetDevice(gpus[i]);
+      for (int j = 0; j < n; j++) {
+        int access;
+        cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
+        if (access) {
+          cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
+          if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
+            ++enabled;
+            p2p[i*n+j] = 1;
+          }
+        }
+      }
+    }
+    if (enabled != n*(n-1)) {
+      // print warning info if not fully enabled
+      LOG(WARNING) << "only " << enabled <<  " out of "
+                   << n*(n-1) << " GPU pairs are enabled direct access. "
+                   << "It may affect the performance. "
+                   << "You can set MXNET_ENABLE_GPU_P2P=0 to turn it off";
+      std::string access(n, '.');
+      for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+          access[j] = p2p[i*n+j] ? 'v' : '.';
+        }
+        LOG(WARNING) << access;
+      }
+    }
+#endif
+  }
+
   /// \brief temporal space for pushing and pulling
   struct BufferEntry {
     /// \brief the dense merged value for reduce and broadcast operations
@@ -773,7 +791,10 @@ class CommDevice : public Comm {
     NDArray sparse_merged;
   };
   std::unordered_map<int, BufferEntry> merge_buf_;
+
+ public:
   bool inited_;
+  std::vector<KeyAttrs> sorted_key_attrs_;
 };
 
 }  // namespace kvstore

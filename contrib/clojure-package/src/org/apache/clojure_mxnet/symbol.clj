@@ -135,9 +135,19 @@
   ([start stop  {:keys [step repeat dtype]
                  :or {step (float 1) repeat (int 1) dtype base/MX_REAL_TYPE}
                  :as opts}]
-   (Symbol/arange (float start) ($/option (float stop)) step repeat nil dtype))
+   (Symbol/arange (float start) ($/option (float stop)) step repeat false nil dtype))
   ([start stop]
    (arange start stop {})))
+
+(defn arange-with-inference
+  "Behaves like arange operator, but infers the stop value from the output shape, 
+   which must be known from the rest of the net."
+  ([start {:keys [step repeat dtype]
+           :or {step (float 1) repeat (int 1) dtype base/MX_REAL_TYPE}
+           :as opts}]
+   (Symbol/arange (float start) ($/option nil) step repeat true nil dtype))
+  ([start]
+   (arange-with-inference start {})))
 
 ;;; manually defined because of a conflicting arity of 2 with the auto-gen
 (defn min

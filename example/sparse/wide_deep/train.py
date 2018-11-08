@@ -17,8 +17,8 @@
 
 import mxnet as mx
 from mxnet.test_utils import *
-from data import *
-from model import *
+from data import get_uci_adult
+from model import wide_deep_model
 import argparse
 import os
 

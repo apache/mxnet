@@ -21,7 +21,11 @@ use warnings;
 use Mouse;
 use AI::MXNet::Function::Parameters;
 
-=head1
+=head1 NAME
+
+    AI::MXNet::Symbol::NameManager - Automated symbol naming.
+
+=head1 DESCRIPTION
 
     NameManager that does an automatic naming.
 

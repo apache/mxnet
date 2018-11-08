@@ -17,92 +17,73 @@
 
 package org.apache.mxnetexamples.neuralstyle
 
-import org.apache.mxnet.Context
-import org.apache.mxnet.Executor
-import org.apache.mxnet.NDArray
-import org.apache.mxnet.Symbol
-import org.apache.mxnet.Shape
+import org.apache.mxnet.{Context, Executor, NDArray, Shape, Symbol}
 
 /**
- * Definition for the neuralstyle network and initialize it with pretrained weight
- * @author Depeng Liang
- */
+  * Definition for the neuralstyle network and initialize it with pretrained weight
+  */
 object ModelVgg19 {
   case class ConvExecutor(executor: Executor, data: NDArray, dataGrad: NDArray,
-                      style: Array[NDArray], content: NDArray, argDict: Map[String, NDArray])
+                          style: Array[NDArray], content: NDArray, argDict: Map[String, NDArray])
+
+  def ConvRelu(data : Symbol, convName : String, reluName : String,
+               numFilter : Int, kernel : (Int, Int) = (3, 3),
+               stride : (Int, Int) = (1, 1)) : Symbol = {
+    val conv = Symbol.api.Convolution(data = Some(data), num_filter = numFilter,
+      pad = Some(Shape(1, 1)), kernel = Shape(kernel._1, kernel._2),
+      stride = Some(Shape(stride._1, stride._2)), no_bias = Some(false),
+      workspace = Some(1024), name = convName)
+    val relu = Symbol.api.relu(data = Some(conv), name = reluName)
+    conv.dispose()
+    relu
+  }
 
   def getSymbol: (Symbol, Symbol) = {
+    getVggSymbol()
+  }
+
+  def getVggSymbol(prefix: String = "", contentOnly: Boolean = false): (Symbol, Symbol) = {
     // declare symbol
-    val data = Symbol.Variable("data")
-    val conv1_1 = Symbol.Convolution("conv1_1")()(Map("data" -> data , "num_filter" -> 64,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu1_1 = Symbol.Activation("relu1_1")()(Map("data" -> conv1_1 , "act_type" -> "relu"))
-    val conv1_2 = Symbol.Convolution("conv1_2")()(Map("data" -> relu1_1 , "num_filter" -> 64,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu1_2 = Symbol.Activation("relu1_2")()(Map("data" -> conv1_2 , "act_type" -> "relu"))
-    val pool1 = Symbol.Pooling("pool1")()(Map("data" -> relu1_2 , "pad" -> "(0,0)",
-                                    "kernel" -> "(2,2)", "stride" -> "(2,2)", "pool_type" -> "avg"))
-    val conv2_1 = Symbol.Convolution("conv2_1")()(Map("data" -> pool1 , "num_filter" -> 128,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu2_1 = Symbol.Activation("relu2_1")()(Map("data" -> conv2_1 , "act_type" -> "relu"))
-    val conv2_2 = Symbol.Convolution("conv2_2")()(Map("data" -> relu2_1 , "num_filter" -> 128,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu2_2 = Symbol.Activation("relu2_2")()(Map("data" -> conv2_2 , "act_type" -> "relu"))
-    val pool2 = Symbol.Pooling("pool2")()(Map("data" -> relu2_2 , "pad" -> "(0,0)",
-                                    "kernel" -> "(2,2)", "stride" -> "(2,2)", "pool_type" -> "avg"))
-    val conv3_1 = Symbol.Convolution("conv3_1")()(Map("data" -> pool2 , "num_filter" -> 256,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu3_1 = Symbol.Activation("relu3_1")()(Map("data" -> conv3_1 , "act_type" -> "relu"))
-    val conv3_2 = Symbol.Convolution("conv3_2")()(Map("data" -> relu3_1 , "num_filter" -> 256,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu3_2 = Symbol.Activation("'relu3_2")()(Map("data" -> conv3_2 , "act_type" -> "relu"))
-    val conv3_3 = Symbol.Convolution("conv3_3")()(Map("data" -> relu3_2 , "num_filter" -> 256,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu3_3 = Symbol.Activation("relu3_3")()(Map("data" -> conv3_3 , "act_type" -> "relu"))
-    val conv3_4 = Symbol.Convolution("conv3_4")()(Map("data" -> relu3_3 , "num_filter" -> 256,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu3_4 = Symbol.Activation("relu3_4")()(Map("data" -> conv3_4 , "act_type" -> "relu"))
-    val pool3 = Symbol.Pooling("pool3")()(Map("data" -> relu3_4 , "pad" -> "(0,0)",
-                                    "kernel" -> "(2,2)", "stride" -> "(2,2)", "pool_type" -> "avg"))
-    val conv4_1 = Symbol.Convolution("conv4_1")()(Map("data" -> pool3 , "num_filter" -> 512,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu4_1 = Symbol.Activation("relu4_1")()(Map("data" -> conv4_1 , "act_type" -> "relu"))
-    val conv4_2 = Symbol.Convolution("conv4_2")()(Map("data" -> relu4_1 , "num_filter" -> 512,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu4_2 = Symbol.Activation("relu4_2")()(Map("data" -> conv4_2 , "act_type" -> "relu"))
-    val conv4_3 = Symbol.Convolution("conv4_3")()(Map("data" -> relu4_2 , "num_filter" -> 512,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu4_3 = Symbol.Activation("relu4_3")()(Map("data" -> conv4_3 , "act_type" -> "relu"))
-    val conv4_4 = Symbol.Convolution("conv4_4")()(Map("data" -> relu4_3 , "num_filter" -> 512,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu4_4 = Symbol.Activation("relu4_4")()(Map("data" -> conv4_4 , "act_type" -> "relu"))
-    val pool4 = Symbol.Pooling("pool4")()(Map("data" -> relu4_4 , "pad" -> "(0,0)",
-                                    "kernel" -> "(2,2)", "stride" -> "(2,2)", "pool_type" -> "avg"))
-    val conv5_1 = Symbol.Convolution("conv5_1")()(Map("data" -> pool4 , "num_filter" -> 512,
-                                        "pad" -> "(1,1)", "kernel" -> "(3,3)", "stride" -> "(1,1)",
-                                        "no_bias" -> false, "workspace" -> 1024))
-    val relu5_1 = Symbol.Activation("relu5_1")()(Map("data" -> conv5_1 , "act_type" -> "relu"))
+    val data = Symbol.Variable(s"${prefix}data")
+
+    val relu1_1 = ConvRelu(data, s"${prefix}conv1_1", s"${prefix}relu1_1", 64)
+    val relu1_2 = ConvRelu(relu1_1, s"${prefix}conv1_2", s"${prefix}relu1_2", 64)
+    val pool1 = Symbol.api.Pooling(data = Some(relu1_2), pad = Some(Shape(0, 0)),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+      name = s"${prefix}pool1")
+
+    val relu2_1 = ConvRelu(pool1, s"${prefix}conv2_1", s"${prefix}relu2_1", 128)
+    val relu2_2 = ConvRelu(relu2_1, s"${prefix}conv2_2", s"${prefix}relu2_2", 128)
+    val pool2 = Symbol.api.Pooling(data = Some(relu2_2), pad = Some(Shape(0, 0)),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+      name = s"${prefix}pool2")
+
+    val relu3_1 = ConvRelu(pool2, s"${prefix}conv3_1", s"${prefix}relu3_1", 256)
+    val relu3_2 = ConvRelu(relu3_1, s"${prefix}conv3_2", s"${prefix}relu3_2", 256)
+    val relu3_3 = ConvRelu(relu3_2, s"${prefix}conv3_3", s"${prefix}relu3_3", 256)
+    val relu3_4 = ConvRelu(relu3_3, s"${prefix}conv3_4", s"${prefix}relu3_4", 256)
+    val pool3 = Symbol.api.Pooling(data = Some(relu3_4), pad = Some(Shape(0, 0)),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+      name = s"${prefix}pool3")
+
+    val relu4_1 = ConvRelu(pool3, s"${prefix}conv4_1", s"${prefix}relu4_1", 512)
+    val relu4_2 = ConvRelu(relu4_1, s"${prefix}conv4_2", s"${prefix}relu4_2", 512)
+    val relu4_3 = ConvRelu(relu4_2, s"${prefix}conv4_3", s"${prefix}relu4_3", 512)
+    val relu4_4 = ConvRelu(relu4_3, s"${prefix}conv4_4", s"${prefix}relu4_4", 512)
+    val pool4 = Symbol.api.Pooling(data = Some(relu4_4), pad = Some(Shape(0, 0)),
+      kernel = Some(Shape(2, 2)), stride = Some(Shape(2, 2)), pool_type = Some("avg"),
+      name = s"${prefix}pool4")
+
+    val relu5_1 = ConvRelu(pool4, s"${prefix}conv5_1", s"${prefix}relu5_1", 512)
 
     // style and content layers
-    val style = Symbol.Group(relu1_1, relu2_1, relu3_1, relu4_1, relu5_1)
+    val style = if (contentOnly) null else Symbol.Group(relu1_1, relu2_1, relu3_1, relu4_1, relu5_1)
     val content = Symbol.Group(relu4_2)
     (style, content)
   }
 
   def getExecutor(style: Symbol, content: Symbol, modelPath: String,
-      inputSize: (Int, Int), ctx: Context): ConvExecutor = {
+                  inputSize: (Int, Int), ctx: Context): ConvExecutor = {
     val out = Symbol.Group(style, content)
     // make executor
     val (argShapes, outputShapes, auxShapes) = out.inferShape(
@@ -116,15 +97,17 @@ object ModelVgg19 {
       val key = s"arg:$name"
       if (pretrained.contains(key)) argDict(name).set(pretrained(key))
     }
+    pretrained.foreach(ele => ele._2.dispose())
     val executor = out.bind(ctx, argDict, gradDict)
+    out.dispose()
     val outArray = executor.outputs
     ConvExecutor(executor = executor,
-                              data = argDict("data"),
-                              dataGrad = gradDict("data"),
-                              style = outArray.take(outArray.length - 1),
-                              content = outArray(outArray.length - 1),
-                              argDict = argDict)
-    }
+      data = argDict("data"),
+      dataGrad = gradDict("data"),
+      style = outArray.take(outArray.length - 1),
+      content = outArray(outArray.length - 1),
+      argDict = argDict)
+  }
 
   def getModel(modelPath: String, inputSize: (Int, Int), ctx: Context): ConvExecutor = {
     val (style, content) = getSymbol

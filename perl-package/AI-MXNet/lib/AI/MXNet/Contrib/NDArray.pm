@@ -21,4 +21,14 @@ use warnings;
 use parent 'AI::MXNet::AutoLoad';
 sub config { ('contrib', 'AI::MXNet::NDArray') }
 
+=head1 NAME
+
+    AI::MXNet::Contrib::NDArray - An interface to experimental NDArray operators defined in C++ space.
+=cut
+
+=head1 SYNOPSIS
+
+    mx->contrib->ndarray->fft(nd->random->normal(0, 1, [3, 4], ctx => mx->gpu));
+=cut
+
 1;

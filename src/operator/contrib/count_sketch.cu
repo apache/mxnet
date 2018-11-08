@@ -129,8 +129,8 @@ inline void CountSketchForward(const Tensor<gpu, 2, DType> &out,
                                     nthreads, out_ptr+bstart*out_dim, h_ptr,
                                     s_ptr, in_ptr+bstart*in_dim, batchlen,
                                     in_dim, out_dim);
-    MSHADOW_CUDA_POST_KERNEL_CHECK(sketch_forward_kernel);
-    // cudaThreadSynchronize();
+    cudaError_t err = cudaDeviceSynchronize();
+    CHECK_EQ(err, cudaSuccess) << "Error occured! CUDA: " << cudaGetErrorString(err);
     bstart = (i+1)*batchlen;
   }
 }
@@ -153,7 +153,7 @@ inline void CountSketchBackward(const Tensor<gpu, 2, DType> &in_grad,
     upper_bound = upper_bound-1;
   }
   // guarantee there are at least one iteration
-  upper_bound = upper_bound > 0? upper_bound:0;
+  upper_bound = upper_bound > 0 ? upper_bound : 0;
   int bstart = 0;
   for ( int i = 0; i <= upper_bound; i++ ) {
     const int batchlen = min(processing_batch_size, n_samples - bstart);
@@ -165,7 +165,8 @@ inline void CountSketchBackward(const Tensor<gpu, 2, DType> &in_grad,
                             nthreads, in_grad_ptr+bstart*in_dim, h_ptr,
                             s_ptr, out_grad_ptr+bstart*out_dim, batchlen,
                             in_dim, out_dim);
-    MSHADOW_CUDA_POST_KERNEL_CHECK(sketch_backward_kernel);
+    cudaError_t err = cudaDeviceSynchronize();
+    CHECK_EQ(err, cudaSuccess) << "Error occured! CUDA: " << cudaGetErrorString(err);
     bstart = (i+1)*batchlen;
   }
 }

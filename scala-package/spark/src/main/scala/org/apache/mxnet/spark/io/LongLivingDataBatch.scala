@@ -17,7 +17,8 @@
 
 package org.apache.mxnet.spark.io
 
-import org.apache.mxnet.{NDArray, DataBatch}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet.{DataBatch, NDArray}
 
 /**
  * Dispose only when 'disposeForce' called
@@ -27,7 +28,8 @@ class LongLivingDataBatch(
   override val data: IndexedSeq[NDArray],
   override val label: IndexedSeq[NDArray],
   override val index: IndexedSeq[Long],
-  override val pad: Int) extends DataBatch(data, label, index, pad) {
+  override val pad: Int) extends DataBatch(data, label, index, pad,
+  null, null, null) {
   override def dispose(): Unit = {}
   def disposeForce(): Unit = super.dispose()
 }

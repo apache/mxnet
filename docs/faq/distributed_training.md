@@ -73,6 +73,23 @@ These can be passed as arguments to the iterator.
 You can look at [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py)
 to see an example usage.
 
+### Updating weights
+KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally. 
+
+When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) object like this:
+
+```
+trainer = gluon.Trainer(net.collect_params(), optimizer='sgd',
+                        optimizer_params={'learning_rate': opt.lr,
+                                          'wd': opt.wd,
+                                          'momentum': opt.momentum,
+                                          'multi_precision': True},
+                        kvstore=kv,
+                        update_on_kvstore=True)
+```
+
+When using the symbolic interface, it performs the weight updates on the server without the user having to do anything special.
+
 ### Different Modes of Distributed Training
 Distributed training itself is enabled when kvstore creation string contains the word `dist`.
 
@@ -86,9 +103,9 @@ In this mode, if a worker crashes, then it halts the progress of all workers.
 - `dist_async`: In asynchronous distributed training, the server receives gradients from one worker and immediately updates its store, which it uses to respond to any future pulls.
 This means that a worker who finishes processing a batch can pull the current parameters from server and start the next batch,
 even if other workers haven't finished processing the earlier batch.
-This is faster than `dist_sync` but can take more epochs to converge.
-In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode.
+This is faster than `dist_sync` because there is no cost of synchronization, but can take more epochs to converge.
 The update of weights is atomic, meaning no two updates happen on the same weight at the same time. However, the order  of updates is not guaranteed.
+In `async` mode, it is required to pass an optimizer because in the absence of an optimizer kvstore would replace the stored weights with received weights and this doesn't make sense for training in asynchronous mode. Hence, when using Gluon with `async` mode we need to set `update_on_kvstore` to `True`. 
 
 - `dist_sync_device`: Same as `dist_sync` except that when there are multiple GPUs being used on each node,
 this mode aggregates gradients and updates weights on GPU while dist_sync does so on CPU memory.
@@ -130,7 +147,7 @@ ssh -A user@MASTER_IP_ADDRESS
 If your machines use passwords for authentication, see [here](https://help.ubuntu.com/community/SSH/OpenSSH/Keys) for instructions on setting up password-less authentication between machines.
 
 
-It is easier if all these machines have a shared file system so that they can access the training script. One way is to use Amazon Elastic File System to create your network file system.
+It is easier if all these machines have a shared file system so that they can access the training script. One way is to use [Amazon Elastic File System](https://aws.amazon.com/efs) to create your network file system.
 The options in the following command are the recommended options when mounting an AWS Elastic File System.
 
 ```
@@ -154,19 +171,19 @@ cd example/gluon/
 ```
 On a single machine, we can run this script as follows:
 ```
-python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1
+python image_classification.py --dataset cifar10 --model vgg11 --epochs 1
 ```
 
 For distributed training of this example, we would do the following:
 
 If the mxnet directory which contains the script `image_classification.py` is accessible to all machines in the cluster (for example if they are on a network file system), we can run:
 ```
-../../tools/launch.py -n 3 -H hosts --launcher ssh python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
+../../tools/launch.py -n 3 -H hosts --launcher ssh python image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync
 ```
 
 If the directory with the script is not accessible from the other machines in the cluster, then we can synchronize the current directory to all machines.
 ```
-../../tools/launch.py -n 3 -H hosts --launcher ssh --sync-dst-dir /tmp/mxnet_job/ python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync
+../../tools/launch.py -n 3 -H hosts --launcher ssh --sync-dst-dir /tmp/mxnet_job/ python image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync
 ```
 
 > Tip: If you don't have a cluster ready and still want to try this out, pass the option `--launcher local` instead of `ssh`
@@ -202,7 +219,7 @@ If you have not installed MXNet system-wide
 then you have to copy the folder `python/mxnet` and the file `lib/libmxnet.so` into the current directory before running `launch.py`.
 For example if you are in `example/gluon`, you can do this with `cp -r ../../python/mxnet ../../lib/libmxnet.so .`. This would work if your `lib` folder contains `libmxnet.so`, as would be the case when you use make. If you use CMake, this file would be in your `build` directory.
 
-- `python image_classification.py --dataset cifar10 --model vgg11 --num-epochs 1 --kvstore dist_sync`
+- `python image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync`
 is the command for the training job on each machine. Note the use of `dist_sync` for the kvstore used in the script.
 
 #### Terminating Jobs
@@ -226,14 +243,16 @@ When `DMLC_ROLE` is set to `server` or `scheduler`, these processes start when m
 
 Below is an example to start all jobs locally on Linux or Mac. Note that starting all jobs on the same machine is not a good idea.
 This is only to make the usage clear.
+
+```bash
+export COMMAND='python example/gluon/image_classification.py --dataset cifar10 --model vgg11 --epochs 1 --kvstore dist_sync'
+DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=scheduler DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND &
+DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 $COMMAND
 ```
-export COMMAND=python example/gluon/mnist.py --dataset cifar10 --model vgg11 --num-epochs 1 --kv-store dist_async
-DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=server DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=scheduler DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND &
-DMLC_ROLE=worker DMLC_PS_ROOT_URI=127.0.0.1 DMLC_PS_ROOT_PORT=9092 DMLC_NUM_SERVER=2 DMLC_NUM_WORKER=2 COMMAND
-```
+
 For an in-depth discussion of how the scheduler sets up the cluster, you can go [here](https://blog.kovalevskyi.com/mxnet-distributed-training-explained-in-depth-part-1-b90c84bda725).
 
 ## Environment Variables

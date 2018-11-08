@@ -1,14 +1,14 @@
-# Symbol - Neural network graphs and auto-differentiation
+# Symbol - Neural network graphs
 
 In a [previous tutorial](http://mxnet.io/tutorials/basic/ndarray.html), we introduced `NDArray`,
 the basic data structure for manipulating data in MXNet.
 And just using NDArray by itself, we can execute a wide range of mathematical operations.
 In fact, we could define and update a full neural network just by using `NDArray`.
 `NDArray` allows you to write programs for scientific computation
-in an imperative fashion, making full use of the native control of any front-end language.
+in an imperative fashion, making full use of the native control of any front-end language. Gluon uses this approach under the hood (before hybridization) to allow for flexible and debugable networks.
 So you might wonder, why don't we just use `NDArray` for all computation?
 
-MXNet provides the Symbol API, an interface for symbolic programming.
+MXNet also provides the Symbol API, an interface for symbolic programming.
 With symbolic programming, rather than executing operations step by step,
 we first define a *computation graph*.
 This graph contains placeholders for inputs and designated outputs.
@@ -16,7 +16,7 @@ We can then compile the graph, yielding a function
 that can be bound to `NDArray`s and run.
 MXNet's Symbol API is similar to the network configurations
 used by [Caffe](http://caffe.berkeleyvision.org/)
-and the symbolic programming in [Theano](http://deeplearning.net/software/theano/).
+and the symbolic programming in [Theano](http://deeplearning.net/software/theano/). And Gluon takes advantage of this approach under the hood after the network has been hybridized.
 
 Another advantage conferred by symbolic approach is that
 we can optimize our functions before using them.
@@ -89,12 +89,12 @@ f = mx.sym.reshape(d+e, shape=(1,4))
 # broadcast
 g = mx.sym.broadcast_to(f, shape=(2,4))
 # plot
-mx.viz.plot_network(symbol=g)
+mx.viz.plot_network(symbol=g, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 The computations declared in the above examples can be bound to the input data
 for evaluation by using `bind` method. We discuss this further in the
-[symbol manipulation](#Symbol Manipulation) section.
+[Symbol Manipulation](#symbol-manipulation) section.
 
 ### Basic Neural Networks
 
@@ -108,7 +108,7 @@ net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
 net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
 net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
 net = mx.sym.SoftmaxOutput(data=net, name='out')
-mx.viz.plot_network(net, shape={'data':(100,200)})
+mx.viz.plot_network(net, shape={'data':(100,200)}, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 Each symbol takes a (unique) string name. NDArray and Symbol both represent
@@ -211,7 +211,7 @@ def ConvFactory(data, num_filter, kernel, stride=(1,1), pad=(0, 0),name=None, su
 prev = mx.sym.Variable(name="Previous Output")
 conv_comp = ConvFactory(data=prev, num_filter=64, kernel=(7,7), stride=(2, 2))
 shape = {"Previous Output" : (128, 3, 28, 28)}
-mx.viz.plot_network(symbol=conv_comp, shape=shape)
+mx.viz.plot_network(symbol=conv_comp, shape=shape, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 Then we can define a function that constructs an inception module based on
@@ -237,7 +237,7 @@ def InceptionFactoryA(data, num_1x1, num_3x3red, num_3x3, num_d3x3red, num_d3x3,
     return concat
 prev = mx.sym.Variable(name="Previous Output")
 in3a = InceptionFactoryA(prev, 64, 64, 64, 64, 96, "avg", 32, name="in3a")
-mx.viz.plot_network(symbol=in3a, shape=shape)
+mx.viz.plot_network(symbol=in3a, shape=shape, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 Finally, we can obtain the whole network by chaining multiple inception
@@ -291,7 +291,7 @@ One important difference of `Symbol` compared to `NDArray` is that we first
 declare the computation and then bind the computation with data to run.
 
 In this section, we introduce the functions to manipulate a symbol directly. But
-note that, most of them are wrapped by the `module` package.
+note that, most of them are wrapped by the high-level packages: `Module` and `Gluon`.
 
 ### Shape and Type Inference
 

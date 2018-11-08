@@ -61,9 +61,9 @@ struct LRNParam : public dmlc::Parameter<LRNParam> {
 
   bool operator==(const LRNParam& other) const {
     return (this->nsize == other.nsize &&
-            fabs(this->alpha - other.alpha) < 1e-6 &&
-            fabs(this->beta  - other.beta)  < 1e-6 &&
-            fabs(this->knorm - other.knorm) < 1e-6);
+            std::fabs(this->alpha - other.alpha) < 1e-6 &&
+            std::fabs(this->beta  - other.beta)  < 1e-6 &&
+            std::fabs(this->knorm - other.knorm) < 1e-6);
   }
 };  // struct LRNParam
 
@@ -114,6 +114,7 @@ void LRNBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                  const TBlob &out_grad, const TBlob &in_data,
                  const TBlob &out_norm, const OpReqType &req,
                  const TBlob &in_grad) {
+  // LRNBackwards does not support kAddTo or kWriteInPlace
   using namespace mshadow;
   using namespace mshadow::expr;
   const LRNParam& param_ = nnvm::get<LRNParam>(attrs.parsed);

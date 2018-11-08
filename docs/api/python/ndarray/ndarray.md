@@ -131,6 +131,7 @@ The `ndarray` package provides several classes:
     NDArray.flatten
     NDArray.expand_dims
     NDArray.split
+    NDArray.diag
 ```
 
 ### Array expand elements
@@ -141,6 +142,7 @@ The `ndarray` package provides several classes:
 
     NDArray.broadcast_to
     NDArray.broadcast_axes
+    NDArray.broadcast_like
     NDArray.tile
     NDArray.pad
 ```
@@ -154,6 +156,8 @@ The `ndarray` package provides several classes:
     NDArray.transpose
     NDArray.swapaxes
     NDArray.flip
+    NDArray.depth_to_space
+    NDArray.space_to_depth
 ```
 
 ### Array reduction
@@ -364,6 +368,7 @@ The `ndarray` package provides several classes:
     ones_like
     full
     arange
+    diag
     load
     save
 ```
@@ -393,6 +398,7 @@ The `ndarray` package provides several classes:
 
     broadcast_to
     broadcast_axes
+    broadcast_like
     repeat
     tile
     pad
@@ -407,6 +413,8 @@ The `ndarray` package provides several classes:
     transpose
     swapaxes
     flip
+    depth_to_space
+    space_to_depth
 ```
 
 ### Joining and splitting arrays

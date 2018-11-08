@@ -24,8 +24,7 @@ LSTMS are powerful sequence models, that have proven especially useful
 for [natural language translation](https://arxiv.org/pdf/1409.0473.pdf), [speech recognition](https://arxiv.org/abs/1512.02595),
 and working with [time series data](https://arxiv.org/abs/1511.03677).
 For a general high-level introduction to LSTMs,
-see the excellent [tutorial](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) by Christopher Olah. For a working example of LSTM training with model parallelism,
-see [example/model-parallelism-lstm/](https://github.com/dmlc/mxnet/blob/master/example/model-parallel/lstm/lstm.py).
+see the excellent [tutorial](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) by Christopher Olah.
 
 
 ## Model Parallelism: Using Multiple GPUs As a Pipeline
@@ -44,7 +43,6 @@ This differs significantly from data parallelism.
 Here, there is no contention to update the shared model at the end of each iteration,
 and most of the communication happens when passing intermediate results between GPUs.
 
-In the current implementation, the layers are defined in [lstm_unroll()](https://github.com/dmlc/mxnet/blob/master/example/model-parallel/lstm/lstm.py).
 
 ## Workload Partitioning
 
@@ -65,14 +63,12 @@ Although the LSTM layers consume less memory than the decoder/encoder layers, th
 Thus, the partition on the left will be faster than the one on the right
 because the workload is more evenly distributed.
 
-Currently, the layer partition is implemented in [lstm.py](https://github.com/apache/incubator-mxnet/blob/master/example/model-parallel/lstm/lstm.py#L171) and configured in [lstm_ptb.py](https://github.com/apache/incubator-mxnet/blob/master/example/model-parallel/lstm/lstm_ptb.py#L97-L102) using the `group2ctx` option.
 
 ## Apply Bucketing to Model Parallelism
 
 To achieve model parallelism while using bucketing,
 you need to unroll an LSTM model for each bucket
 to obtain an executor for each.
-For details about how the model is bound, see [lstm.py](https://github.com/apache/incubator-mxnet/blob/master/example/model-parallel/lstm/lstm.py#L225-L235).
 
 On the other hand, because model parallelism partitions the model/layers,
 the input data has to be transformed/transposed to the agreed shape.

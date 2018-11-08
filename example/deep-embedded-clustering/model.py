@@ -22,7 +22,7 @@ import mxnet as mx
 import numpy as np
 try:
     import cPickle as pickle
-except ModuleNotFoundError:
+except ImportError:
     import pickle
 
 

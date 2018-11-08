@@ -19,16 +19,16 @@ With rich functionalities and convenience explained above, you can build your ow
 ## **Environments**
 - MXNet version: 0.9.5+
 - GPU memory size: 2.4GB+
-- Install tensorboard for logging
+- Install mxboard for logging
 <pre>
-<code>pip install tensorboard</code>
+<code>pip install mxboard</code>
 </pre>  
 
 - [SoundFile](https://pypi.python.org/pypi/SoundFile/0.8.1) for audio preprocessing (If encounter errors about libsndfile, follow [this tutorial](http://www.linuxfromscratch.org/blfs/view/svn/multimedia/libsndfile.html).)
 <pre>
 <code>pip install soundfile</code>
 </pre>
-- Warp CTC: Follow [this instruction](https://github.com/dmlc/mxnet/tree/master/example/warpctc) to install Baidu's Warp CTC.
+- Warp CTC: Follow [this instruction](https://github.com/baidu-research/warp-ctc) to compile Baidu's Warp CTC.
 - **We strongly recommend that you first test a model of small networks.**
 
 

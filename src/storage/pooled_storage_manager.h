@@ -38,6 +38,7 @@
 #include <new>
 #include "./storage_manager.h"
 #include "../common/cuda_utils.h"
+#include "../common/utils.h"
 
 
 namespace mxnet {
@@ -56,6 +57,11 @@ class GPUPooledStorageManager final : public StorageManager {
   GPUPooledStorageManager() {
     reserve_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_RESERVE", 5);
     page_size_ = dmlc::GetEnv("MXNET_GPU_MEM_POOL_PAGE_SIZE", 4096);
+    large_alloc_round_size_ = dmlc::GetEnv("MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE", 2 * 1024 * 1024);
+    if (large_alloc_round_size_ <= 0) {
+      LOG(FATAL) << "MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE cannot be set to a value <= 0, found: "
+                 << large_alloc_round_size_;
+    }
     if (page_size_ < NDEV) {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than " << NDEV \
                  << ". Got " << page_size_ << ".";
@@ -79,12 +85,29 @@ class GPUPooledStorageManager final : public StorageManager {
  private:
   void DirectFreeNoLock(Storage::Handle handle) {
     cudaError_t err = cudaFree(handle.dptr);
-    size_t size = std::max(handle.size, page_size_);
+    size_t size = RoundAllocSize(handle.size);
     // ignore unloading error, as memory has already been recycled
     if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
       LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
     }
     used_memory_ -= size;
+  }
+
+  // Round a value 'x' up to the next multiple of 'multiple'
+  size_t RoundToMultiple(size_t x, size_t multiple) {
+    size_t retVal = ((x + multiple - 1) / multiple) * multiple;
+    return retVal;
+  }
+
+  size_t RoundAllocSize(size_t size) {
+    // Round up small allocs to the page_size_ to consolidate the pool lookups
+    size = std::max(size, page_size_);
+    // To ensure proper freeing under some driver variants, make sure
+    // large allocs entirely occupy their slabs, which cannot then be
+    // locked by smaller permanent allocations sharing the slab.
+    if (size > large_alloc_round_size_)
+      size = RoundToMultiple(size, large_alloc_round_size_);
+    return size;
   }
 
  private:
@@ -93,6 +116,8 @@ class GPUPooledStorageManager final : public StorageManager {
   size_t used_memory_ = 0;
   // page size
   size_t page_size_;
+  // size that large allocations should be rounded to, for proper freeing.
+  size_t large_alloc_round_size_;
   // percentage of reserved memory
   int reserve_;
   // number of devices
@@ -104,7 +129,7 @@ class GPUPooledStorageManager final : public StorageManager {
 
 void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
-  size_t size = std::max(handle->size, page_size_);
+  size_t size = RoundAllocSize(handle->size);
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
     size_t free, total;
@@ -129,7 +154,7 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 
 void GPUPooledStorageManager::Free(Storage::Handle handle) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
-  size_t size = std::max(handle.size, page_size_);
+  size_t size = RoundAllocSize(handle.size);
   auto&& reuse_pool = memory_pool_[size];
   reuse_pool.push_back(handle.dptr);
 }
@@ -173,10 +198,10 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE cannot be set to a value smaller than 32. " \
                  << "Got: " << page_size_ << ".";
     }
-    if (page_size_ != 1ul << log2_round_up(page_size_)) {
+    if (page_size_ != 1ul << common::ilog2ul(page_size_ - 1)) {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_PAGE_SIZE must be a power of 2. Got: " << page_size_ << ".";
     }
-    page_size_ = log2_round_up(page_size_);
+    page_size_ = common::ilog2ul(page_size_ - 1);
     if (cut_off_ < 20 || cut_off_ > LOG2_MAX_MEM) {
       LOG(FATAL) << "MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF cannot be set to a value " \
                  << "smaller than 20 or greater than " << LOG2_MAX_MEM << ". Got: " \
@@ -205,9 +230,6 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   }
 
  private:
-  inline int log2_round_up(size_t s) {
-    return static_cast<int>(std::ceil(std::log2(s)));
-  }
   inline int div_pow2_round_up(size_t s, int divisor_log2) {
     // (1025, 10) -> 2
     // (2048, 10) -> 2
@@ -216,7 +238,7 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
     return static_cast<int>(result + (s > (result << divisor_log2) ? 1 : 0));
   }
   inline int get_bucket(size_t s) {
-    int log_size = log2_round_up(s);
+    int log_size = common::ilog2ul(s - 1);
     if (log_size > static_cast<int>(cut_off_))
       return div_pow2_round_up(s, cut_off_) - 1 + cut_off_;
     else

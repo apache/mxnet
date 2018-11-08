@@ -427,7 +427,7 @@ class Flatten(HybridBlock):
         super(Flatten, self).__init__(**kwargs)
 
     def hybrid_forward(self, F, x):
-        return x.reshape((0, -1))
+        return F.Flatten(x)
 
     def __repr__(self):
         return self.__class__.__name__
