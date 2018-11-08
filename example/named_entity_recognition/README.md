@@ -22,4 +22,5 @@ To inference using trained model:
 1. Re-create the bucketing module using `sym_gen` defined in `ner.py`
 2. Loading saved parameters using `module.set_params()`
 
-Refer to [Bucketing Module example](https://github.com/apache/incubator-mxnet/blob/e9a590fa6554231fba404dad08acee5cd3e786a8/example/rnn/bucketing/cudnn_rnn_bucketing.py#L167) and this [issue](https://github.com/apache/incubator-mxnet/issues/5008) on Bucketing Module Prediction
+Refer to [Bucketing Module example](https://github.com/apache/incubator-mxnet/blob/master/example/rnn/bucketing/cudnn_rnn_bucketing.py#L167)
+and this [issue](https://github.com/apache/incubator-mxnet/issues/5008) on Bucketing Module Prediction
