@@ -693,8 +693,8 @@ MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArraySlice(NDArrayHandle handle,
-                             mx_uint slice_begin,
-                             mx_uint slice_end,
+                             dim_t slice_begin,
+                             dim_t slice_end,
                              NDArrayHandle *out);
 
 /*!

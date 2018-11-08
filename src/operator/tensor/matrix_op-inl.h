@@ -646,8 +646,8 @@ inline void GetIndexRange(const TShape& dshape,
   }
 
   for (index_t i = 0; i < param_begin.ndim(); ++i) {
-    int b = 0, e = dshape[i], s = 1;
-    const int len = dshape[i];
+    index_t b = 0, e = dshape[i], s = 1;
+    const index_t len = dshape[i];
     if (param_step.ndim() != 0U) {
       const auto& opt_step_val = param_step[i];
       if (opt_step_val.has_value()) {
@@ -1107,7 +1107,7 @@ struct SliceAxisParam : public dmlc::Parameter<SliceAxisParam> {
 };
 
 inline void GetSliceAxisParams(const SliceAxisParam& param, const TShape& ishape,
-                           int* axis, int* begin, int* end) {
+                           int* axis, index_t* begin, index_t* end) {
   *axis = param.axis;
   if (*axis < 0) {
     *axis += static_cast<int>(ishape.ndim());
@@ -1115,7 +1115,7 @@ inline void GetSliceAxisParams(const SliceAxisParam& param, const TShape& ishape
   CHECK(*axis < static_cast<int>(ishape.ndim()) && *axis >= 0) <<
     "Transformed axis must be smaller than the source ndim and larger than zero! Recieved axis=" <<
     param.axis << ", src_ndim=" << ishape.ndim() << ", transformed axis=" << *axis;
-  int axis_size = static_cast<int>(ishape[*axis]);
+  index_t axis_size = static_cast<index_t>(ishape[*axis]);
   *begin = param.begin;
   *end = -1;
   if (*begin < 0) {
@@ -1149,7 +1149,8 @@ inline bool SliceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   TShape& ishape = (*in_attrs)[0];
-  int axis, begin, end;
+  int axis;
+  index_t begin, end;
   GetSliceAxisParams(param, ishape, &axis, &begin, &end);
   TShape shape(ishape.ndim());
   for (index_t i = 0; i < ishape.ndim(); ++i) {
@@ -1173,7 +1174,8 @@ void SliceAxis(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   const SliceAxisParam& param = nnvm::get<SliceAxisParam>(attrs.parsed);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  int axis, begin, end;
+  int axis;
+  index_t begin, end;
   GetSliceAxisParams(param, inputs[0].shape_, &axis, &begin, &end);
   int ndim = static_cast<int>(outputs[0].ndim());
 
@@ -1207,7 +1209,8 @@ void SliceAxisGrad_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::op;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  int axis, begin, end;
+  int axis;
+  index_t begin, end;
   GetSliceAxisParams(param, outputs[0].shape_, &axis, &begin, &end);
   int ndim = static_cast<int>(outputs[0].shape_.ndim());
 

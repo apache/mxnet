@@ -394,8 +394,8 @@ int MXNDArrayFree(NDArrayHandle handle) {
 }
 
 int MXNDArraySlice(NDArrayHandle handle,
-                   mx_uint slice_begin,
-                   mx_uint slice_end,
+                   dim_t slice_begin,
+                   dim_t slice_end,
                    NDArrayHandle *out) {
   NDArray *ptr = new NDArray();
   API_BEGIN();
