@@ -36,7 +36,7 @@ except ImportError:
 class MXRecordIO(object):
     """Reads/writes `RecordIO` data format, supporting sequential read and write.
 
-    Examples:
+    Examples
     ---------
     >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
     <mxnet.recordio.MXRecordIO object at 0x10ef40ed0>
@@ -124,7 +124,7 @@ class MXRecordIO(object):
 
         If the record is opened with 'w', this function will truncate the file to empty.
 
-        Examples:
+        Examples
         ---------
         >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
         >>> for i in range(2):
@@ -143,7 +143,7 @@ class MXRecordIO(object):
     def write(self, buf):
         """Inserts a string buffer as a record.
 
-        Examples:
+        Examples
         ---------
         >>> record = mx.recordio.MXRecordIO('tmp.rec', 'w')
         >>> for i in range(5):
@@ -163,7 +163,7 @@ class MXRecordIO(object):
     def read(self):
         """Returns record as a string.
 
-        Examples:
+        Examples
         ---------
         >>> record = mx.recordio.MXRecordIO('tmp.rec', 'r')
         >>> for i in range(5):
@@ -196,7 +196,7 @@ class MXRecordIO(object):
 class MXIndexedRecordIO(MXRecordIO):
     """Reads/writes `RecordIO` data format, supporting random access.
 
-    Examples:
+    Examples
     ---------
     >>> for i in range(5):
     ...     record.write_idx(i, 'record_%d'%i)
@@ -261,7 +261,7 @@ class MXIndexedRecordIO(MXRecordIO):
     def tell(self):
         """Returns the current position of write head.
 
-        Examples:
+        Examples
         ---------
         >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
         >>> print(record.tell())
@@ -283,7 +283,7 @@ class MXIndexedRecordIO(MXRecordIO):
     def read_idx(self, idx):
         """Returns the record at given index.
 
-        Examples:
+        Examples
         ---------
         >>> record = mx.recordio.MXIndexedRecordIO('tmp.idx', 'tmp.rec', 'w')
         >>> for i in range(5):
@@ -299,7 +299,7 @@ class MXIndexedRecordIO(MXRecordIO):
     def write_idx(self, idx, buf):
         """Inserts input record at given index.
 
-        Examples:
+        Examples
         ---------
         >>> for i in range(5):
         ...     record.write_idx(i, 'record_%d'%i)
