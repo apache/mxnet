@@ -219,25 +219,20 @@ private[mxnet] object APIDocGenerator{
     })
     val experimentalTag = "@Experimental"
     val returnType = "org.apache.mxnet.javaapi.NDArrayFuncReturn"
-    var finalStr = ""
     if(useParamObject) {
       classDef += s"def setOut(out : NDArray) : ${func.name}ParamBase"
       classDef += s"def invoke() : $returnType"
-      finalStr = s"""$experimentalTag
+      s"""$experimentalTag
           | def ${func.name}(po: ${func.name}ParamBase) : $returnType
-          | """.stripMargin
-      finalStr +=
-        s"""abstract class ${func.name}ParamBase(${argDef.mkString(",")}) {
-           |  ${classDef.mkString("\n  ")}
-           |}""".stripMargin
+          | abstract class ${func.name}ParamBase(${argDef.mkString(",")}) {
+          |  ${classDef.mkString("\n  ")}
+          | }""".stripMargin
     } else {
       argDef += "out : NDArray"
-      finalStr =
-        s"""$experimentalTag
-           | def ${func.name}(${argDef.mkString(", ")}) : $returnType
-           | """.stripMargin
+      s"""$experimentalTag
+         | def ${func.name}(${argDef.mkString(", ")}) : $returnType
+         | """.stripMargin
     }
-    finalStr
   }
 
 
