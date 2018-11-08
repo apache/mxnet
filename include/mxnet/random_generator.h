@@ -153,6 +153,10 @@ class RandGenerator<gpu, DType> {
 
     MSHADOW_FORCE_INLINE __device__ float normal() {
       return curand_normal(&state_);
+
+    MSHADOW_FORCE_INLINE __device__ int discrete_uniform() {
+      return curand(&state_);
+    }
     }
 
    private:
