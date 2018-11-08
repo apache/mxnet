@@ -24,11 +24,11 @@ Usuage:
 - add the default license header to source files that do not contain a valid
   license:
 
-  python license_header.py add
+  license_header.py add
 
 - check if every files has a license header
 
-  python license_header.py check
+  license_header.py check
 """
 
 import re
@@ -155,7 +155,7 @@ def process_folder(root, action):
                 excepts.append(fname)
     if action == 'check' and excepts:
         logging.warning('The following files do not contain a valid license, '+
-                        'you can use `python tools/license_header.py add [file]` to add'+
+                        'you can use `tools/license_header.py add [file]` to add'+
                         'them automatically: ')
         for x in excepts:
             logging.warning(x)
