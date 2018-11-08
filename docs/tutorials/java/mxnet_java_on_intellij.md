@@ -8,7 +8,7 @@ To use this tutorial you need the following pre-requisites:
 - [Java 8 JDK](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 - [Maven](https://maven.apache.org/install.html)
 - [OpenCV](https://opencv.org/)
-- [IntelliJ IDE](https://www.jetbrains.com/idea/)
+- [IntelliJ IDEA](https://www.jetbrains.com/idea/) (One can download the community edition from [here](https://www.jetbrains.com/idea/download))
 
 ### MacOS Prerequisites
 
