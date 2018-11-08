@@ -821,7 +821,7 @@ fixed-size items.
         for i, slice_i in enumerate(key):
             if isinstance(slice_i, integer_types):
                 begin.append(slice_i)
-                end.append(slice_i+1 if slice_i != -1 else self.shape[i])
+                end.append(slice_i + 1 if slice_i != -1 else self.shape[i])
                 step.append(1)
             elif isinstance(slice_i, py_slice):
                 if slice_i.step == 0:
@@ -834,7 +834,7 @@ fixed-size items.
             else:
                 raise ValueError('basic_indexing does not support slicing with '
                                  'index=%s of type=%s.' % (str(slice_i), str(type(slice_i))))
-        kept_axes.extend(range(i+1, len(shape)))
+        kept_axes.extend(range(i + 1, len(shape)))
         sliced_nd = op.slice(self, begin, end, step)
         if len(kept_axes) == len(shape):
             return sliced_nd
@@ -2434,7 +2434,9 @@ def _expand_none_and_ellipsis(arr, idcs, drop_none=False):
         ell_idx = len(arr.shape)
 
     ell_ndim = len(arr.shape) + num_none - len(nonell_idcs)
-    new_idcs = nonell_idcs[:ell_idx] + (slice(None),) * ell_ndim + nonell_idcs[ell_idx:]
+    new_idcs = (nonell_idcs[:ell_idx] +
+                (slice(None),) * ell_ndim +
+                nonell_idcs[ell_idx:])
 
     # If we decide to drop `None`, we return here and do not reshape.
     if drop_none:
@@ -2455,8 +2457,10 @@ def _expand_none_and_ellipsis(arr, idcs, drop_none=False):
 
     reshp_arr = arr.reshape(tmp_shape)
 
+    # Now that the `None` axes have size 1, we're done with them and
+    # replace `None` by `slice(None)` for the final indexing.
     slc_idcs = tuple(slice(None) if idx is None else idx
-                     for idx in nonell_idcs)
+                     for idx in new_idcs)
     return reshp_arr, slc_idcs
 
 
