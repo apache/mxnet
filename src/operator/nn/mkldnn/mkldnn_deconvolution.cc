@@ -167,7 +167,7 @@ class MKLDNNDeconvForward {
   void SetDataHandle(const DeconvolutionParam& param,
                      const OpContext &ctx,
                      const NDArray &in_data,
-                     const NDArray &weight,
+                     NDArray &weight,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
 
@@ -199,12 +199,11 @@ MKLDNNDeconvForward::MKLDNNDeconvForward(const DeconvolutionParam& param,
 void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
                                         const OpContext &ctx,
                                         const NDArray &in_data,
-                                        const NDArray &weight,
+                                        NDArray &weight,
                                         const std::vector<OpReqType> &req,
                                         const std::vector<NDArray> &out_data) {
   auto data_mem = in_data.GetMKLDNNDataReorder(
       fwd_pd.diff_dst_primitive_desc());
-  NDArray weight = in_data[deconv::kWeight];
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
