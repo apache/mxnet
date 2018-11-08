@@ -23,16 +23,16 @@
  * \brief Implementation of engine.
  */
 #include <mxnet/engine.h>
+#include <fenv.h>
+#include <signal.h>
 #include <memory>
 #include <cstdlib>
 #include "./engine_impl.h"
-#include <fenv.h>
-#include <signal.h>
 
-static void 
-float_num_err_handler (int sig, siginfo_t *siginfo, void *context) {
+#ifdef _TEST_FLOAT_EXCEPTION
+static void float_num_err_handler(int sig, siginfo_t *siginfo, void *context) {
   fprintf(stderr, ">>> Floating point error occur\n");
-  switch(siginfo->si_code) {
+  switch (siginfo->si_code) {
   case FPE_INTDIV:
     fprintf(stderr, ">>> Integer division by zero\n");
     break;
@@ -45,6 +45,7 @@ float_num_err_handler (int sig, siginfo_t *siginfo, void *context) {
   }
   assert(0);
 }
+#endif
 
 namespace mxnet {
 namespace engine {
@@ -54,6 +55,7 @@ inline Engine* CreateEngine() {
   if (type == nullptr) type = "ThreadedEnginePerDevice";
   std::string stype = type;
 
+#ifdef _TEST_FLOAT_EXCEPTION
   struct sigaction act;
   memset(&act, '\0', sizeof(act));
   act.sa_sigaction = &float_num_err_handler;
@@ -63,6 +65,7 @@ inline Engine* CreateEngine() {
     exit(-1);
   }
   feenableexcept(FE_ALL_EXCEPT);
+#endif
 
   Engine *ret = nullptr;
   #if MXNET_PREDICT_ONLY == 0
@@ -77,10 +80,13 @@ inline Engine* CreateEngine() {
   ret = CreateNaiveEngine();
   #endif
 
+#ifdef _TEST_FLOAT_EXCEPTION
   int e = std::fetestexcept(FE_ALL_EXCEPT);
   if (e & FE_DIVBYZERO) {
     LOG(FATAL) << "divide by zero" << type;
   }
+#endif
+
   if (ret == nullptr) {
     LOG(FATAL) << "Cannot find Engine " << type;
   }
