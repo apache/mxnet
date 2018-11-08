@@ -91,7 +91,8 @@ Symbol InceptionFactoryB(Symbol data, int num_3x3red, int num_3x3,
                         Shape(1, 1), name + "_double_3x3_1");
   Symbol pooling = Pooling("max_pool_" + name + "_pool", data,
                            Shape(3, 3), PoolingPoolType::kMax,
-                           false, false, PoolingPoolingConvention::kValid, Shape(2, 2), Shape(1, 1));
+                           false, false, PoolingPoolingConvention::kValid,
+                           Shape(2, 2), Shape(1, 1));
   std::vector<Symbol> lst;
   lst.push_back(c3x3);
   lst.push_back(cd3x3);
