@@ -56,7 +56,7 @@ Iterators support loading image from binary `Record IO` and raw image files.
 
 We use helper function to initialize augmenters
 ```eval_rst
-    .. currentmodule:: mxnet
+.. currentmodule:: mxnet
 .. autosummary::
     :nosignatures:
 

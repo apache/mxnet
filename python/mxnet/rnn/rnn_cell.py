@@ -716,7 +716,7 @@ class FusedRNNCell(BaseRNNCell):
 
         Returns
         -------
-        cell : SequentialRNNCell
+        cell : mxnet.rnn.SequentialRNNCell
             unfused cell that can be used for stepping, and can run on CPU.
         """
         stack = SequentialRNNCell()
