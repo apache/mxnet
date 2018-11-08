@@ -35,7 +35,7 @@ from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
+from ..base import mx_uint, mx_long, NDArrayHandle, check_call, DLPackHandle
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -131,7 +131,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_uint, native_array('I', shape)),
+        c_array_buf(mx_long, native_array('I', shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
@@ -1834,7 +1834,7 @@ fixed-size items.
         (2L, 3L, 4L)
         """
         ndim = mx_uint()
-        pdata = ctypes.POINTER(mx_uint)()
+        pdata = ctypes.POINTER(mx_long)()
         check_call(_LIB.MXNDArrayGetShape(
             self.handle, ctypes.byref(ndim), ctypes.byref(pdata)))
         return tuple(pdata[:ndim.value]) # pylint: disable=invalid-slice-index

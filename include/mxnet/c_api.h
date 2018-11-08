@@ -487,7 +487,7 @@ MXNET_DLL int MXNDArrayCreateNone(NDArrayHandle *out);
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
+MXNET_DLL int MXNDArrayCreate(const dim_t *shape,
                               mx_uint ndim,
                               int dev_type,
                               int dev_id,
@@ -506,7 +506,7 @@ MXNET_DLL int MXNDArrayCreate(const mx_uint *shape,
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
+MXNET_DLL int MXNDArrayCreateEx(const dim_t *shape,
                               mx_uint ndim,
                               int dev_type,
                               int dev_id,
@@ -533,7 +533,7 @@ MXNET_DLL int MXNDArrayCreateEx(const mx_uint *shape,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayCreateSparseEx(int storage_type,
-                                      const mx_uint *shape,
+                                      const dim_t *shape,
                                       mx_uint ndim,
                                       int dev_type,
                                       int dev_id,
@@ -748,8 +748,8 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
-                                mx_uint *out_dim,
-                                const mx_uint **out_pdata);
+                                dim_t *out_dim,
+                                const dim_t **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
@@ -1466,16 +1466,16 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
                                  mx_uint num_args,
                                  const char** keys,
                                  const mx_uint *arg_ind_ptr,
-                                 const mx_uint *arg_shape_data,
+                                 const dim_t *arg_shape_data,
                                  mx_uint *in_shape_size,
                                  const mx_uint **in_shape_ndim,
-                                 const mx_uint ***in_shape_data,
+                                 const dim_t ***in_shape_data,
                                  mx_uint *out_shape_size,
                                  const mx_uint **out_shape_ndim,
-                                 const mx_uint ***out_shape_data,
+                                 const dim_t ***out_shape_data,
                                  mx_uint *aux_shape_size,
                                  const mx_uint **aux_shape_ndim,
-                                 const mx_uint ***aux_shape_data,
+                                 const dim_t ***aux_shape_data,
                                  int *complete);
 /*!
  * \brief partially infer shape of unknown input shapes given the known one.
@@ -1505,16 +1505,16 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
                                         mx_uint num_args,
                                         const char** keys,
                                         const mx_uint *arg_ind_ptr,
-                                        const mx_uint *arg_shape_data,
+                                        const dim_t *arg_shape_data,
                                         mx_uint *in_shape_size,
                                         const mx_uint **in_shape_ndim,
-                                        const mx_uint ***in_shape_data,
+                                        const dim_t ***in_shape_data,
                                         mx_uint *out_shape_size,
                                         const mx_uint **out_shape_ndim,
-                                        const mx_uint ***out_shape_data,
+                                        const dim_t ***out_shape_data,
                                         mx_uint *aux_shape_size,
                                         const mx_uint **aux_shape_ndim,
-                                        const mx_uint ***aux_shape_data,
+                                        const dim_t ***aux_shape_data,
                                         int *complete);
 
 /*!

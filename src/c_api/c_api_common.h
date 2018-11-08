@@ -84,23 +84,23 @@ struct MXAPIThreadLocalEntry {
   /*! \brief result holder for returning shape dimensions */
   std::vector<mx_uint> arg_shape_ndim, out_shape_ndim, aux_shape_ndim;
   /*! \brief result holder for returning shape pointer */
-  std::vector<const mx_uint*> arg_shape_data, out_shape_data, aux_shape_data;
+  std::vector<const dim_t*> arg_shape_data, out_shape_data, aux_shape_data;
   /*! \brief uint32_t buffer for returning shape pointer */
-  std::vector<uint32_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
+  std::vector<dim_t> arg_shape_buffer, out_shape_buffer, aux_shape_buffer;
   /*! \brief bool buffer */
   std::vector<bool> save_inputs, save_outputs;
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
       const std::vector<TShape> &shapes,
       std::vector<mx_uint> *ndim,
-      std::vector<const mx_uint*> *data,
-      std::vector<uint32_t> *buffer) {
+      std::vector<const dim_t*> *data,
+      std::vector<dim_t> *buffer) {
     ndim->resize(shapes.size());
     data->resize(shapes.size());
     size_t size = 0;
     for (const auto& s : shapes) size += s.ndim();
     buffer->resize(size);
-    uint32_t *ptr = buffer->data();
+    dim_t *ptr = buffer->data();
     for (size_t i = 0; i < shapes.size(); ++i) {
       ndim->at(i) = shapes[i].ndim();
       data->at(i) = ptr;

@@ -1849,7 +1849,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
 /*!
  * \brief Copy src.data()/aux_data(i) to dst->data()/aux_data(j).
  */
-void NDArray::SyncCopyFromNDArray(const NDArray& src, int i, int j) {
+void NDArray::SyncCopyFromNDArray(const NDArray& src, index_t i, index_t j) {
   if (i >= 0) {
     CHECK_NE(src.storage_type(), kDefaultStorage);
   } else {

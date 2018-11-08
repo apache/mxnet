@@ -151,7 +151,7 @@ int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_END();
 }
 
-int MXNDArrayCreate(const mx_uint *shape,
+int MXNDArrayCreate(const dim_t *shape,
                     mx_uint ndim,
                     int dev_type,
                     int dev_id,
@@ -165,7 +165,7 @@ int MXNDArrayCreate(const mx_uint *shape,
   API_END();
 }
 
-int MXNDArrayCreateEx(const mx_uint *shape,
+int MXNDArrayCreateEx(const dim_t *shape,
                     mx_uint ndim,
                     int dev_type,
                     int dev_id,
@@ -182,7 +182,7 @@ int MXNDArrayCreateEx(const mx_uint *shape,
 }
 
 int MXNDArrayCreateSparseEx(int storage_type,
-                    const mx_uint *shape,
+                    const dim_t *shape,
                     mx_uint ndim,
                     int dev_type,
                     int dev_id,
@@ -266,7 +266,7 @@ int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
  */
 int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                  const NDArrayHandle handle_src,
-                                 const int i) {
+                                 const dim_t i) {
   API_BEGIN();
   NDArray* dst = static_cast<NDArray*>(handle_dst);
   NDArray* src = static_cast<NDArray*>(handle_src);
@@ -481,15 +481,15 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
 }
 
 int MXNDArrayGetShape(NDArrayHandle handle,
-                      mx_uint *out_dim,
-                      const mx_uint **out_pdata) {
+                      dim_t *out_dim,
+                      const dim_t **out_pdata) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   NDArray *arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
     const TShape &s = arr->shape();
     *out_dim = s.ndim();
-    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
+    std::vector<dim_t>& buffer = ret->arg_shape_buffer;
     buffer.resize(s.ndim());
     nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
     *out_pdata = buffer.data();

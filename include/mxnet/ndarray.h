@@ -464,7 +464,7 @@ class NDArray {
   /*!
    * \brief Copy from src.data()/aux_data(i) to this->data()/aux_data(j)
    */
-  void SyncCopyFromNDArray(const NDArray &src, int i = -1, int j = -1);
+  void SyncCopyFromNDArray(const NDArray &src, index_t i = -1, index_t j = -1);
 
   /*!
    * \brief Do a synchronize copy to a continugous CPU memory region.
