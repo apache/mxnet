@@ -67,20 +67,15 @@ The `ubuntu_scala.sh` installs the common dependencies required for both MXNet S
 
 From the IntelliJ welcome screen, select "Create New Project".
 
-![maven project type](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type.png)
-
-Choose the Maven project type.
-
-![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-check.png)
+Choose the Maven project type. 
 
 Select the checkbox for `Create from archetype`, then choose `org.apache.maven.archetypes:maven-archetype-quickstart` from the list below. More on this can be found on a Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html). 
 
-TODO
-![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-type-archetype-add-confirm.png)
+![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/project-archetype.png)
 
 click `Next`.
 
-![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-metadata.png)
+![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-metadata.png)
 
 Set the project's metadata. For this tutorial, use the following:
 
@@ -98,20 +93,22 @@ ArtifactId: javaMXNet
 ```
 
 TODO
-![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-properties.png)
+![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-properties.png)
 
 Review the project's properties. The settings can be left as their default.
 
-![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-location.png)
+TODO
+![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-location.png)
 
 Set the project's location. The rest of the settings can be left as their default.
 
-![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-1.png)
+TODO
+![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-pom.png)
 
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-**Step 3.** Add the following Maven dependency to your `pom.xml` file : 
+**Step 3.** Add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
  
 ```html
 <dependency>
@@ -128,8 +125,7 @@ To view the latest MXNet Maven packages, you can check [MXNet Maven package repo
 
   - Note the prompt in the lower right corner that states "Maven projects need to be imported". If this is not visible, click on the little greed balloon that appears in the lower right corner.
 
-TODO 
-![import_dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-import-changes.gif)
+![import_dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/project-import-changes.png)
 
 Click "Import Changes" in this prompt.
 
@@ -153,19 +149,10 @@ public class App
     }
 }
 ``` 
+ 
+**Step 7.** Now run the App.java by clicking the green arrow as highlighted in the image below.
 
-
-TODO
-![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-app.png)
-
-TODO
-![run hello world](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-run.png)
-
-Now run the App.java by clicking the green arrow. 
-
-**Step 7.** Now run the App.java by clicking the green arrow.
-TODO
-![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet.png)
+![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-run-projects.png)
 
 
 The result should be this output:
