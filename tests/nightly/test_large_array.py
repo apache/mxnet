@@ -29,6 +29,25 @@ class TestLargeArray(unittest.TestCase):
         x.shape
         test = x.asnumpy()
         assert (x.shape == test.shape)
+    
+    def test_ndarray_ones(self):
+        arr = nd.ones(shape=(100000000, 50))
+        assert arr[-1][0] == 1
+        assert nd.sum(arr).asnumpy() == 5000000000
+
+    def test_ndarray_zeros(self):
+        arr = nd.zeros(shape=(5000000000))
+        assert arr.shape == (5000000000,)
+        assert arr.size == 5000000000
+
+    def test_ndarray_arrange(self):
+        arr = mx.nd.arange(0, 5000000000, dtype='int64')
+        assert arr[-1] == 4999999999
+        assert mx.nd.slice(arr, begin=-2, end=-1) == 4999999998
+
+    def test_ndarray_random_uniform(self):
+        arr = mx.nd.random.uniform(shape=(100000000, 50))
+        assert arr[-1][0] != 0
 
 if __name__ == '__main__':
     unittest.main()
