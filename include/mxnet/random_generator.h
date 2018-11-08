@@ -73,7 +73,11 @@ class RandGenerator<cpu, DType> {
     }
 
     MSHADOW_XINLINE IType discrete_uniform(const int64_t lower, const int64_t upper) {
-      std::uniform_int_distribution<IType> dist_discrete_uniform(lower, upper);
+      typedef typename std::conditional<sizeof(IType) != sizeof(int32_t) ||
+      sizeof(IType) != sizeof(int64_t),
+      std::uniform_int_distribution<int>,
+      std::uniform_int_distribution<IType>>::type GType;
+      GType dist_discrete_uniform(lower, upper);
       return dist_discrete_uniform(*engine_);
     }
 
