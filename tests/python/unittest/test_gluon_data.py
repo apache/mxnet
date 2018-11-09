@@ -256,7 +256,7 @@ def test_cached_iterator_in_dataloader():
     data = _DummyData()
     length = len(data)
     expect = np.arange(length)
-    for num_worker in range(2, 4):
+    for num_worker in range(0, 4):
         loader = DataLoader(data, batch_size=2, shuffle=False, num_workers=num_worker)
         it = iter(loader)
         it.reset()

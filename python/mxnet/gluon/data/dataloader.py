@@ -281,11 +281,11 @@ class _MultiWorkerIter(object):
     def reset(self):
         """Reset iterator with multiprocessing workers alive."""
         # clear key queue
-        removed_idx = []
+        removed_idx = set()
         while True:
             try:
                 idx, _ = self._key_queue.get(False)
-                removed_idx.append(idx)
+                removed_idx.add(idx)
             except QueueEmpty:
                 break
 
