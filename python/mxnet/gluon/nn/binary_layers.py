@@ -298,7 +298,7 @@ class ScaledWeightsBinaryConv(HybridBlock):
     """
     def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, bits=None, bits_a=None,
                  clip_threshold=None, activation_method=None, prefix=None, **kwargs):
-        super(BinaryConvolution, self).__init__(**kwargs)
+        super(ScaledWeightsBinaryConv, self).__init__(**kwargs)
         self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold, method=activation_method)
         self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
                              in_channels=in_channels, prefix=prefix, apply_scaling=True)
