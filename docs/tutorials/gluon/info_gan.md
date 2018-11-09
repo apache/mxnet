@@ -212,7 +212,7 @@ if os.path.isfile('infogan_d_latest.params') and os.path.isfile('infogan_g_lates
     discriminator.load_parameters('infogan_d_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
     generator.load_parameters('infogan_g_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
 ```
-
+There are 2 differences between InfoGAN and DCGAN: the extra latent code and the Q network to estimate the code.
 The latent code is part of the Generator input and it contains mutliple variables (continuous, categorical) that can represent different distributions. In order to make sure that the Generator uses the latent code, mutual information is introduced into the GAN loss term. Mutual information measures how much X is known given Y or vice versa. It is defined as:
 
 ![gif](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/entropy.gif) 
