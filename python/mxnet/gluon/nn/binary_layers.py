@@ -254,7 +254,7 @@ class QConv2D(_QConv):
         super(QConv2D, self).__init__(
             channels, kernel_size, bits, strides, padding, dilation, groups, layout,
             in_channels, activation, use_bias, weight_initializer, bias_initializer,
-            apply_scaling=apply_scaling, stop_grad=stop_grad, **kwargs)
+            apply_scaling=apply_scaling, **kwargs)
 
 
 class QConv3D(_QConv):
