@@ -16,7 +16,7 @@ class BinaryLayerConfig():
         self.activation = activation
         self.weight_quantization = weight_quantization
         self.scaled = scaled
-		self.stop_weight_scale_grad = stop_weight_scale_grad  # has an effect only if scaled=True
+        self.stop_weight_scale_grad = stop_weight_scale_grad  # has an effect only if scaled=True
 
     def get_values(self):
         return dict(vars(self))
@@ -196,7 +196,7 @@ class _QConv(_Conv):
         self._pre_padding = padding
         self.weight.wd_mult = 0.0
         self.scaling = apply_scaling
-	self.stop_weight_scale_grad = binary_layer_config.stop_weight_scale_grad
+    self.stop_weight_scale_grad = binary_layer_config.stop_weight_scale_grad
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
         self.quantize = binary_layer_config.get_weight_quantization_function(bits=self.bits, method=quantization)
@@ -222,8 +222,8 @@ class _QConv(_Conv):
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
         if self.scaling:
             scale = weight.abs().mean(axis=0, exclude=True, keepdims=True).transpose(self._scaling_transpose)
-	    if self.stop_weight_scale_grad:
-            	scale = F.stop_gradient(scale)
+        if self.stop_weight_scale_grad:
+                scale = F.stop_gradient(scale)
             h = F.broadcast_mul(h, scale)
         if self.bits == 1 and not self.no_offset and not self.scaling:
             h = (h + self._offset) / 2
@@ -293,8 +293,8 @@ class BinaryConvolution(HybridBlock):
 class ScaledWeightsBinaryConv(HybridBlock):
     r"""
         This implements the magnitude aware gradients from Bi-Real Net paper. It is similiar to ScaledBinaryConv, 
-	but it only scales the weights (not the feature maps) and the gradient of the scaling is not blocked.
-	The later leads to the so-called "magnitude aware gradients" effect mentioned in the Bi-Real Net paper.
+    but it only scales the weights (not the feature maps) and the gradient of the scaling is not blocked.
+    The later leads to the so-called "magnitude aware gradients" effect mentioned in the Bi-Real Net paper.
     """
     def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, bits=None, bits_a=None,
                  clip_threshold=None, activation_method=None, prefix=None, **kwargs):
@@ -337,7 +337,7 @@ class ScaledBinaryConv(HybridBlock):
 class ActivatedConvolutionFactory:
     def __call__(self, *args, **kwargs):
         if binary_layer_config.scaled and not binary_layer_config.stop_weight_scale_grad:
-	    	return ScaledWeightsBinaryConv(*args, **kwargs)
+            return ScaledWeightsBinaryConv(*args, **kwargs)
         if binary_layer_config.scaled:
             return ScaledBinaryConv(*args, **kwargs)
         return BinaryConvolution(*args, **kwargs)
