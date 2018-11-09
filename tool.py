@@ -6,7 +6,7 @@ import os
 import sys
 from subprocess import check_call
 import shlex
-from ci.util import retry
+from ci.util import retry, remember_cwd
 from typing import List
 from collections import OrderedDict
 import logging
@@ -28,20 +28,48 @@ class Confirm(object):
                 resp = input("Please answer yes or no: ")
 
 class CMake(object):
-    def __init__(self, cmake_config_yaml):
-        self.cmake_config_yaml = cmake_config_yaml
-        self.cmake_command = None
-        self.cmake_config = None
+    def __init__(self, cmake_options_yaml='cmake/cmake_options.yaml'):
+        self.cmake_options_yaml = cmake_options_yaml
+        self.cmake_options = None
+        self.read_config()
 
-    def read_config():
-        assert os.path.isfile(self.cmake_config_yaml)
-        with open(self.cmake_config_yaml, 'r') as f:
-            self.cmake_config = yaml.loads(f)
+    def read_config(self):
+        assert os.path.isfile(self.cmake_options_yaml)
+        with open(self.cmake_options_yaml, 'r') as f:
+            self.cmake_options = yaml.load(f)
 
-    def _cmake_command():
+    def _cmdlineflags(self):
+        res = []
+        def _bool_ON_OFF(x):
+            if x:
+                return 'ON'
+            else:
+                return 'OFF'
+        for opt,v in self.cmake_options.items():
+            res.append('-D{}={}'.format(opt,_bool_ON_OFF(v)))
+        return res
 
+    def cmake_command(self) -> str:
+        """
+        :return: Cmake command to run given the options
+        """
+        cmd_lst = ['cmake']
+        cmd_lst.extend(self._cmdlineflags())
+        return cmd_lst
 
-    def __call__(self):
+    def __call__(self, build_dir='build', generator='Ninja', build_cmd='ninja'):
+        logging.info("CMake / {} build in directory {}".format(
+            generator, os.path.abspath(build_dir)))
+        cmd_lst = self.cmake_command()
+        os.makedirs(build_dir, exist_ok=True)
+        with remember_cwd():
+            os.chdir(build_dir)
+            cmd_lst.extend(['-G{}'.format(generator), '..'])
+            logging.info('Executing: {}'.format('\t\n'.join(cmd_lst)))
+            check_call(cmd_lst)
+            logging.info('Now building')
+            check_call(shlex.split(build_cmd))
+
 
 
 COMMANDS = OrderedDict([
