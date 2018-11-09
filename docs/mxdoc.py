@@ -108,13 +108,12 @@ def build_scala(app):
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
-    # scaldoc fails on some apis, so exit 0 to pass the check
     scala_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"Suite\"'
     scala_doc_classpath = ':'.join([
-        '`find native -name "*.jar" | grep "target/lib/" | tr "\n" ":" `',
-        '`find macros -name "*-SNAPSHOT.jar" | tr "\n" ":" `'
+        '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
+        '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
     ])
-    _run_cmd('cd {}; scaladoc `{}` -classpath {}; exit 0'
+    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation'
              .format(scala_path, scala_doc_sources, scala_doc_classpath))
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
