@@ -573,7 +573,7 @@ struct Kernel<OP, cpu> {
     } else {
       const auto length = (N + omp_threads - 1) / omp_threads;
       #pragma omp parallel for num_threads(omp_threads)
-      for (auto i = 0; i < N; i += length) {
+      for (index_t i = 0; i < static_cast<index_t>(N); i += length) {
         OP::Map(i, i + length > N ? N - i : length, args...);
       }
     }

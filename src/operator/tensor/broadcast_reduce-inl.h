@@ -200,7 +200,7 @@ void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const Shape<ndim> sshape, const Shape<ndim> rshape,
                         const Shape<ndim> rstride) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t idx = 0; idx < N; ++idx) {
+  for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
     seq_reduce_assign<Reducer, ndim, DType, OP>(idx, M, addto, big, small, bshape, sshape, rshape,
       rstride);
   }
@@ -312,7 +312,7 @@ void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const Shape<ndim> rhs_shape, const Shape<ndim> rhs_stride,
                         const Shape<ndim>& lhs_shape0, const Shape<ndim>& rhs_shape0) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t idx = 0; idx < N; ++idx) {
+  for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
     seq_reduce_assign<Reducer, ndim, DType, OP1, OP2>(idx, M, addto, big, lhs, rhs, small,
       big_shape, lhs_shape0, rhs_shape0, small_shape, rshape, lhs_shape, rhs_shape, rstride,
       lhs_stride, rhs_stride);
