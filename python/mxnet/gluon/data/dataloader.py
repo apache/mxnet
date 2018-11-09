@@ -30,6 +30,11 @@ import threading
 import numpy as np
 
 try:
+    from Queue import Empty as QueueEmpty
+except ImportError:
+    from queue import Empty as QueueEmpty
+
+try:
     import multiprocessing.resource_sharer
 except ImportError:
     pass
@@ -260,7 +265,7 @@ class _MultiWorkerIter(object):
             try:
                 idx, _ = self._key_queue.get(False)
                 removed_idx.append(idx)
-            except Queue.Empty:
+            except QueueEmpty:
                 break
 
         # clear data queue
@@ -326,6 +331,38 @@ class _MultiWorkerIter(object):
                     w.terminate()
             self._shutdown = True
 
+
+class _SameProcessIter(object):
+    def __init__(self, dataset, batchify_fn, batch_sampler, pin_memory=False):
+        self._dataset = dataset
+        self._batchify_fn = batchify_fn
+        self._batch_sampler = batch_sampler
+        self._pin_memory = pin_memory
+        self._idx = 0
+
+    def __len__(self):
+        return len(self._batch_sampler)
+
+    def reset(self):
+        """Reset iterator"""
+        self._idx = 0
+
+    def __next__(self):
+        if self._idx == self.__len__():
+            raise StopIteration
+
+        batch = self._batch_sampler[self._idx]
+        ret = self._batchify_fn([self._dataset[idx] for idx in batch])
+        if self._pin_memory:
+            ret = _as_in_context(ret, context.cpu_pinned())
+        self._idx += 1
+        return ret
+
+    def next(self):
+        return self.__next__()
+
+    def __iter__(self):
+        return self
 
 class DataLoader(object):
     """Loads data from a dataset and returns mini-batches of data.
