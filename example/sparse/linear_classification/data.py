@@ -24,10 +24,9 @@ def get_avazu_data(data_dir, data_name, url):
         os.mkdir(data_dir)
     os.chdir(data_dir)
     if (not os.path.exists(data_name)):
-        print("Dataset " + data_name + " not present. Downloading now ...")
-        import urllib
+        print("Dataset " + data_name + " not present. Downloading now ...") 
         zippath = os.path.join(data_dir, data_name + ".bz2")
-        urllib.urlretrieve(url + data_name + ".bz2", zippath)
+        mx.test_utils.download(url + data_name + ".bz2", zippath)
         os.system("bzip2 -d %r" % data_name + ".bz2")
         print("Dataset " + data_name + " is now present.")
     os.chdir("..")

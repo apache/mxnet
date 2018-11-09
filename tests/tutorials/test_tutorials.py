@@ -100,7 +100,7 @@ def test_gluon_autograd():
 def test_gluon_gluon():
     assert _test_tutorial_nb('gluon/gluon')
 
-def test_gluon_save_load_model():
+def test_gluon_save_load_params():
     assert _test_tutorial_nb('gluon/save_load_params')
 
 def test_gluon_hybrid():
@@ -192,6 +192,4 @@ def test_vision_cnn_visualization():
 
 def test_control_flow():
     assert _test_tutorial_nb('control_flow/ControlFlowTutorial')
-
-def test_subgraphapi():
-    assert _test_tutorial_nb('c++/subgraphAPI')
+    

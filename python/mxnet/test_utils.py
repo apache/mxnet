@@ -336,7 +336,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         assert(False), "unknown storage type"
         return False
 
-def rand_ndarray(shape, stype, density=None, dtype=None,
+def rand_ndarray(shape, stype='default', density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
     if stype == 'default':
         arr = mx.nd.array(random_arrays(shape), dtype=dtype)
@@ -1379,7 +1379,7 @@ def list_gpus():
     for cmd in nvidia_smi:
         try:
             re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
-        except OSError:
+        except (subprocess.CalledProcessError, OSError):
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
