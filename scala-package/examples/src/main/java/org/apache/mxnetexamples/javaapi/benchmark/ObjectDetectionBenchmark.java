@@ -24,7 +24,7 @@ import org.kohsuke.args4j.Option;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ObjectDetectionBenchmark extends InferBase {
+class ObjectDetectionBenchmark extends InferBase {
     @Option(name = "--model-path-prefix", usage = "input model directory and prefix of the model")
     public String modelPathPrefix = "/model/ssd_resnet50_512";
     @Option(name = "--input-image", usage = "the input image")

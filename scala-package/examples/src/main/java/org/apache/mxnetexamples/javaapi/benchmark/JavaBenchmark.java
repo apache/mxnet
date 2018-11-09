@@ -45,8 +45,13 @@ public class JavaBenchmark {
         return seq[k];
     }
 
-    private static void printStatistics(long[] inferenceTimes, String metricsPrefix)  {
-
+    private static void printStatistics(long[] inferenceTimesRaw, String metricsPrefix)  {
+        long[] inferenceTimes = inferenceTimesRaw;
+        // remove head and tail
+        if (inferenceTimes.length > 2) {
+            inferenceTimes = Arrays.copyOfRange(inferenceTimesRaw,
+                    1, inferenceTimesRaw.length - 1);
+        }
         double p50 = percentile(50, inferenceTimes) / 1.0e6;
         double p99 = percentile(99, inferenceTimes) / 1.0e6;
         double p90 = percentile(90, inferenceTimes) / 1.0e6;
@@ -75,7 +80,12 @@ public class JavaBenchmark {
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.out.println("Please specify model name");
+            StringBuilder sb = new StringBuilder();
+            sb.append("Please follow the format:");
+            sb.append("\n  --model-name <model-name>");
+            sb.append("\n  --num-runs <number of runs>");
+            sb.append("\n  --batchsize <batch size>");
+            System.out.println(sb.toString());
             return;
         }
         String modelName = args[1];
@@ -106,6 +116,8 @@ public class JavaBenchmark {
                 model.runBatchInference();
                 result[i] = System.nanoTime() - currTime;
             }
+            System.out.println("Batchsize: " + model.batchSize);
+            System.out.println("Num of runs: " + model.numRun);
             printStatistics(result, modelName +"batch_inference");
         }
 
@@ -117,6 +129,7 @@ public class JavaBenchmark {
             model.runSingleInference();
             result[i] = System.nanoTime() - currTime;
         }
+        System.out.println("Num of runs: " + model.numRun);
         printStatistics(result, modelName + "single_inference");
     }
 }

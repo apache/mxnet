@@ -21,7 +21,7 @@ import org.kohsuke.args4j.Option;
 
 import java.util.List;
 
-public abstract class InferBase {
+abstract class InferBase {
     @Option(name = "--num-runs", usage = "Number of runs")
     public int numRun = 1;
     @Option(name = "--model-name", usage = "Name of the model")
