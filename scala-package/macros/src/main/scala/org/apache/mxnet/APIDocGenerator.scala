@@ -90,11 +90,20 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
   }
 
   def generateAPIDocFromBackend(func: Func, withParam: Boolean = true): String = {
-    val desc = func.desc.split("\n")
-      .mkString("  * <pre>\n", "\n  * ", "  * </pre>\n")
+    def fixDesc(desc: String): String = {
+      var curDesc = desc
+      var prevDesc = ""
+      while ( curDesc != prevDesc ) {
+        prevDesc = curDesc
+        curDesc = curDesc.replace("[[", "`[ [").replace("]]", "] ]")
+      }
+      curDesc
+    }
+    val desc = fixDesc(func.desc).split("\n")
+      .mkString("  *\n  * {{{\n  *\n  * ", "\n  * ", "\n  * }}}\n  * ")
 
     val params = func.listOfArgs.map { absClassArg =>
-      s"  * @param ${absClassArg.safeArgName}\t\t${absClassArg.argDesc}"
+      s"  * @param ${absClassArg.safeArgName}\t\t${fixDesc(absClassArg.argDesc)}"
     }
 
     val returnType = s"  * @return ${func.returnType}"
