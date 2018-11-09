@@ -52,6 +52,10 @@ function(try_mkldnn)
   set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
   set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
 
+  if(NOT MKL_FOUND)
+    set(MKLDNN_USE_MKL "NONE")
+  endif()
+
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
@@ -83,6 +87,7 @@ function(try_mkl)
     set(MKL_FOUND ${MKL_FOUND} PARENT_SCOPE)
     set(MKL_INCLUDE_DIR ${MKL_INCLUDE_DIR} PARENT_SCOPE)
     set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
+    set(MKLDNN_USE_MKL "FULL" PARENT_SCOPE)
     set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
     set(__BLAS mkl PARENT_SCOPE)
@@ -124,6 +129,7 @@ function(try_mklml)
   set(MKL_INCLUDE_DIR ${MKL_INCLUDE_DIR} PARENT_SCOPE)
   set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
   set(MKL_USE_INTEL_OMP ${MKL_USE_INTEL_OMP} PARENT_SCOPE)
+  set(MKLDNN_USE_MKL "ML" PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
   set(__BLAS mkl PARENT_SCOPE)

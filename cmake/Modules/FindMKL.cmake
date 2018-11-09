@@ -74,6 +74,8 @@ set(MKL_LIB_SEARCH_PATHS
     "${MKLROOT}"
 
     "${INTEL_RTL_ROOT}"
+    "${INTEL_ROOT}"
+    "${INTEL_ROOT}/mkl"
     "${INTEL_ROOT}/compiler"
     "${MKLROOT}/.."
     "${MKLROOT}/../compiler"
@@ -137,8 +139,10 @@ foreach(__lib ${__mkl_libs})
     set(__mkl_lib "lib${__mkl_lib}.a")
   endif()
 
+  message(WARNING "Finding ${__mkl_lib_upper}_LIBRARY in ${MKL_LIB_SEARCH_PATHS}")
+
   find_library(${__mkl_lib_upper}_LIBRARY
-               NAMES ${__mkl_lib}
+               NAMES ${__mkl_lib} mkl_${__mkl_lib}
                PATHS ${MKL_LIB_SEARCH_PATHS}
                PATH_SUFFIXES ${__path_suffixes}
                DOC "The path to Intel(R) MKL ${__mkl_lib} library")
