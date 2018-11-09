@@ -191,6 +191,7 @@ List of Contributors
 * [Dick Carter](https://github.com/DickJC123)
 * [Rahul Padmanabhan](https://github.com/rahul3)
 * [Yuxi Hu](https://github.com/yuxihu)
+* [Harsh Patel](https://github.com/harshp8l)
 
 Label Bot
 ---------
