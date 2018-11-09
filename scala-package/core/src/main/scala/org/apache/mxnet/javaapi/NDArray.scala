@@ -385,17 +385,3 @@ class NDArray(val nd : org.apache.mxnet.NDArray ) {
   override def equals(obj: Any): Boolean = nd.equals(obj)
   override def hashCode(): Int = nd.hashCode
 }
-
-object NDArrayFuncReturn {
-  implicit def toNDFuncReturn(javaFunReturn : NDArrayFuncReturn)
-  : org.apache.mxnet.NDArrayFuncReturn = javaFunReturn.ndFuncReturn
-  implicit def toJavaNDFuncReturn(ndFuncReturn : org.apache.mxnet.NDArrayFuncReturn)
-  : NDArrayFuncReturn = new NDArrayFuncReturn(ndFuncReturn)
-}
-
-private[mxnet] class NDArrayFuncReturn(val ndFuncReturn : org.apache.mxnet.NDArrayFuncReturn) {
-  def head : NDArray = ndFuncReturn.head
-  def get : NDArray = ndFuncReturn.get
-  def apply(i : Int) : NDArray = ndFuncReturn.apply(i)
-  // TODO: Add JavaNDArray operational stuff
-}

@@ -69,18 +69,13 @@ private[mxnet] object JavaNDArrayMacro {
     newNDArrayFunctions.foreach { ndarrayfunction =>
 
       val useParamObject = ndarrayfunction.listOfArgs.count(arg => arg.isOptional) >= 2
-      val header = if (useParamObject) "this." else ""
       // Construct argument field with all required args
       var argDef = ListBuffer[String]()
-      // Construct Optional Arg
-      var OptionArgDef = ListBuffer[String]()
       // Construct function Implementation field (e.g norm)
       var impl = ListBuffer[String]()
       impl += "val map = scala.collection.mutable.Map[String, Any]()"
       impl +=
         "val args= scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]"
-      // Construct Class Implementation (e.g normBuilder)
-      var classImpl = ListBuffer[String]()
       ndarrayfunction.listOfArgs.foreach({ ndarrayArg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
@@ -89,57 +84,40 @@ private[mxnet] object JavaNDArrayMacro {
           case "type" => "typeOf"
           case _ => ndarrayArg.argName
         }
-        if (ndarrayArg.isOptional && useParamObject) {
-          OptionArgDef += s"private var $currArgName : ${ndarrayArg.argType} = null"
-          val tempDef = s"def set${currArgName.capitalize}($currArgName : ${ndarrayArg.argType})"
-          val tempImpl = s"this.$currArgName = $currArgName\nthis"
-          classImpl += s"$tempDef = {$tempImpl}"
-        } else {
-          argDef += s"$currArgName : ${ndarrayArg.argType}"
-        }
+        if (useParamObject) currArgName = s"po.get${currArgName.capitalize}()"
+        argDef += s"$currArgName : ${ndarrayArg.argType}"
         // NDArray arg implementation
         val returnType = "org.apache.mxnet.javaapi.NDArray"
         val base =
           if (ndarrayArg.argType.equals(returnType)) {
-            s"args += $header$currArgName"
+            s"args += $currArgName"
           } else if (ndarrayArg.argType.equals(s"Array[$returnType]")){
-            s"$header$currArgName.foreach(args+=_)"
+            s"$currArgName.foreach(args+=_)"
           } else {
-            "map(\"" + ndarrayArg.argName + "\") = " + header + currArgName
+            "map(\"" + ndarrayArg.argName + "\") = " + currArgName
           }
         impl.append(
-          if (ndarrayArg.isOptional) s"if ($header$currArgName != null) $base"
+          if (ndarrayArg.isOptional) s"if ($currArgName != null) $base"
           else base
         )
       })
       // add default out parameter
+      argDef += s"out: org.apache.mxnet.javaapi.NDArray"
       if (useParamObject) {
-        classImpl +=
-          "def setOut(out : org.apache.mxnet.javaapi.NDArray) = {this.out = out\nthis}"
+        impl += "if (po.getOut() != null) map(\"out\") = po.getOut()"
       } else {
-        argDef += s"out: org.apache.mxnet.javaapi.NDArray"
+        impl += "if (out != null) map(\"out\") = out"
       }
-      impl += "if (" + header + "out != null) map(\"out\") = " + header + "out"
-      OptionArgDef += "var out : org.apache.mxnet.NDArray = null"
-      val returnType = "org.apache.mxnet.javaapi.NDArrayFuncReturn"
+      val returnType = "Array[org.apache.mxnet.javaapi.NDArray]"
       // scalastyle:off
       // Combine and build the function string
-      impl += "org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" +
-        ndarrayfunction.name + "\", args.toSeq, map.toMap)"
+      impl += "val finalArr = org.apache.mxnet.NDArray.genericNDArrayFunctionInvoke(\"" +
+        ndarrayfunction.name + "\", args.toSeq, map.toMap).arr"
+      impl += "finalArr.map(ele => new NDArray(ele))"
       if (useParamObject) {
-        val classDef =
-          s"""class ${ndarrayfunction.name}Param(${argDef.mkString(",")})
-             | extends ${ndarrayfunction.name}ParamBase(${argDef.mkString(",")}) {
-             |   ${OptionArgDef.mkString("\n")}
-             |   ${classImpl.mkString("\n")}
-             |   def invoke() : $returnType = {
-             |     ${impl.mkString("\n")}
-             |   }
-             | }""".stripMargin
-        classDefs += c.parse(classDef).asInstanceOf[ClassDef]
         val funcDef =
-          s"""def ${ndarrayfunction.name}(po: ${ndarrayfunction.name}ParamBase): $returnType = {
-             |  po.invoke()
+          s"""def ${ndarrayfunction.name}(po: ${ndarrayfunction.name}Param): $returnType = {
+             |  ${impl.mkString("\n")}
              | }""".stripMargin
         functionDefs += c.parse(funcDef).asInstanceOf[DefDef]
       } else {
@@ -151,12 +129,11 @@ private[mxnet] object JavaNDArrayMacro {
       }
     }
 
-    structGeneration(c)(functionDefs.toList, classDefs.toList, annottees : _*)
+    structGeneration(c)(functionDefs.toList, annottees : _*)
   }
 
   private def structGeneration(c: blackbox.Context)
                               (funcDef : List[c.universe.DefDef],
-                               classDef : List[c.universe.ClassDef],
                                annottees: c.Expr[Any]*)
   : c.Expr[Any] = {
     import c.universe._
@@ -166,7 +143,7 @@ private[mxnet] object JavaNDArrayMacro {
       case ClassDef(mods, name, something, template) =>
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ funcDef ++ classDef)
+            Template(superMaybe, emptyValDef, defs ++ funcDef)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
@@ -174,7 +151,7 @@ private[mxnet] object JavaNDArrayMacro {
       case ModuleDef(mods, name, template) =>
         val q = template match {
           case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ funcDef ++ classDef)
+            Template(superMaybe, emptyValDef, defs ++ funcDef)
           case ex =>
             throw new IllegalArgumentException(s"Invalid template: $ex")
         }
