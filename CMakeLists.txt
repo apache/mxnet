@@ -164,7 +164,7 @@ mxnet_option(USE_APPLE_ACCELERATE_IF_AVAILABLE "Use Apple Accelerate framework i
 # libraries don't include it, thus the cmake script will check the presence of an
 # indicating function "cheev_" within the available choosen libraries and switch the
 # functionality off if not found.
-mxnet_option(USE_LAPACK "Build with lapack support" ON)
+mxnet_option(USE_LAPACK "Build with LAPACK support" ON)
 
 include(cmake/ChooseBLAS.cmake)
 

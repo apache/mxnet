@@ -48,8 +48,10 @@ function(try_mkldnn)
     file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/mkldnn/config_template.vcxproj.user DESTINATION ${CMAKE_SOURCE_DIR})
   endif()
 
-  set(WITH_TEST OFF)
-  set(WITH_EXAMPLE OFF)
+  set(WITH_TEST OFF CACHE INTERNAL "" FORCE)
+  set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
+  set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
@@ -83,7 +85,7 @@ function(try_mkl)
     set(MKL_LIBRARIES ${MKL_LIBRARIES} PARENT_SCOPE)
     set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
-    set(BLAS mkl PARENT_SCOPE)
+    set(__BLAS mkl PARENT_SCOPE)
   else()
     message(STATUS "MKL framework not found")
   endif()
@@ -124,7 +126,7 @@ function(try_mklml)
   set(MKL_USE_INTEL_OMP ${MKL_USE_INTEL_OMP} PARENT_SCOPE)
   set(MKLROOT ${MKLROOT} PARENT_SCOPE)
 
-  set(BLAS mkl PARENT_SCOPE)
+  set(__BLAS mkl PARENT_SCOPE)
 
   message(STATUS "MKLML framework found")
 
@@ -134,10 +136,6 @@ function(try_accelerate)
   if(NOT APPLE)
     return()
   endif()
-
-  set(__BLAS)
-  string(TOLOWER "${BLAS}" __BLAS)
-  mark_as_advanced(__BLAS)
 
   if(__BLAS MATCHES "mkl")
     return()
@@ -165,9 +163,9 @@ if(USE_MKL_IF_AVAILABLE)
   try_mkl()
   try_mklml()
   try_mkldnn()
+else()
+  try_accelerate()
 endif()
-
-try_accelerate()
 
 if(__BLAS MATCHES "atlas")
   message(STATUS "Using Atlas for BLAS")
@@ -188,6 +186,7 @@ if(__BLAS MATCHES "atlas")
   endif()
 
   return()
+
 endif()
 
 if(__BLAS MATCHES "open")
@@ -216,7 +215,7 @@ if(__BLAS MATCHES "mkl")
   message(STATUS "Using MKL for BLAS")
 
   if(NOT MKL_FOUND)
-    message(FATAL_ERROR "Blas set to MKL but it could not be found")
+    message(FATAL_ERROR "Blas set to MKL, but it could not be found")
   endif()
 
   include_directories(SYSTEM ${MKL_INCLUDE_DIR})
@@ -226,7 +225,6 @@ if(__BLAS MATCHES "mkl")
   add_definitions(-DMSHADOW_USE_MKL=1)
 
   if(USE_LAPACK)
-
     include(CheckFunctionExists)
     set(CMAKE_REQUIRED_LIBRARIES ${MKL_LIBRARIES})
     check_function_exists("cheev_" LAPACK_FOUND)
@@ -236,12 +234,13 @@ if(__BLAS MATCHES "mkl")
     else()
       switch_lapack(False)
     endif()
-
-    return()
   endif()
+
+  return()
+
 endif()
 
-if(BLAS MATCHES "(apple|accelerate)")
+if(__BLAS MATCHES "(apple|accelerate)")
   if(NOT APPLE)
     message(FATAL_ERROR "Apple Accelerate framework's BLAS feature is available only on macOS")
     return()
@@ -269,4 +268,4 @@ if(BLAS MATCHES "(apple|accelerate)")
   return()
 endif()
 
-message(FATAL_ERROR "BLAS ${BLAS} not recognized")
+message(FATAL_ERROR "BLAS ${__BLAS} not recognized")
