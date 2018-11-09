@@ -167,7 +167,7 @@ class Xavier : public Initializer {
     Shape shape(arr->GetShape());
     float hw_scale = 1.0f;
     if (shape.ndim() > 2) {
-      for (size_t i = 2; i < shape.ndim(); ++i) {
+      for (index_t i = 2; i < shape.ndim(); ++i) {
         hw_scale *= shape[i];
       }
     }
