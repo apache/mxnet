@@ -34,7 +34,7 @@
 namespace mxnet {
 namespace cpp {
 
-typedef unsigned index_t;
+typedef int64_t index_t;
 
 enum OpReqType {
   /*! \brief no operation, do not write anything */

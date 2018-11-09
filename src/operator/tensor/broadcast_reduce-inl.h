@@ -249,7 +249,7 @@ void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
   index_t* ws_dptr = reinterpret_cast<index_t*>(workspace.dptr_);
   size_t N = small.shape_.Size(), M = rshape.Size();
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t k = 0; k < M; k++) {
+  for (index_t k = 0; k < static_cast<index_t>(M); k++) {
     Shape<ndim> coord = unravel(k, rshape);
     ws_dptr[k] = dot(coord, rstride);
   }
