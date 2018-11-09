@@ -215,7 +215,7 @@ void seq_reduce_compute_extra_mem(const size_t N, const size_t M, const bool add
                                   const Shape<ndim> rstride,
                                   const index_t* ws_dptr) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t idx = 0; idx < N; ++idx) {
+  for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
     Shape<ndim> coord = unravel(idx, sshape);
     index_t j = ravel(coord, bshape);
     DType val, residual;
