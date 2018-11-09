@@ -196,7 +196,7 @@ class _QConv(_Conv):
         self._pre_padding = padding
         self.weight.wd_mult = 0.0
         self.scaling = apply_scaling
-    self.stop_weight_scale_grad = binary_layer_config.stop_weight_scale_grad
+        self.stop_weight_scale_grad = binary_layer_config.stop_weight_scale_grad
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
         self.quantize = binary_layer_config.get_weight_quantization_function(bits=self.bits, method=quantization)
