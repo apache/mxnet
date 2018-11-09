@@ -252,6 +252,35 @@ class _MultiWorkerIter(object):
     def __del__(self):
         self.shutdown()
 
+    def reset(self):
+        """Reset iterator"""
+        # clear key queue
+        removed_idx = []
+        while True:
+            try:
+                idx, _ = self._key_queue.get(False)
+                removed_idx.append(idx)
+            except Queue.Empty:
+                break
+
+        # clear data queue
+        while self._rcvd_idx < self._sent_idx:
+            if self._rcvd_idx in removed_idx:
+                self._rcvd_idx += 1
+            elif self._rcvd_idx in self._data_buffer:
+                _ = self._data_buffer.pop(self._rcvd_idx)
+                self._rcvd_idx += 1
+        assert not self._data_buffer, "data buffer should be empty"
+
+        # reset indices and samples
+        self._rcvd_idx = 0
+        self._sent_idx = 0
+        self._iter = iter(self._batch_sampler)
+
+        # pre-fetch
+        for _ in range(2 * self._num_workers):
+            self._push_next()
+
     def _push_next(self):
         """Assign next batch workload to workers."""
         r = next(self._iter, None)
@@ -264,7 +293,6 @@ class _MultiWorkerIter(object):
         assert not self._shutdown, "call __next__ after shutdown is forbidden"
         if self._rcvd_idx == self._sent_idx:
             assert not self._data_buffer, "Data buffer should be empty at this moment"
-            self.shutdown()
             raise StopIteration
 
         while True:
