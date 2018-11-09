@@ -116,9 +116,7 @@ private[mxnet] object APIDocGenerator{
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
       .filterNot(ele => notGenerated.contains(ele.name))
       .map(absClassFunction => {
-        val scalaDoc = generateAPIDocFromBackend(absClassFunction)
-        val defBody = generateJavaAPISignature(absClassFunction)
-        s"$scalaDoc\n$defBody"
+        generateJavaAPISignature(absClassFunction)
       })
     val packageName = "NDArrayBase"
     val packageDef = "package org.apache.mxnet.javaapi"
@@ -225,6 +223,8 @@ private[mxnet] object APIDocGenerator{
     })
     val experimentalTag = "@Experimental"
     val returnType = "Array[NDArray]"
+    val scalaDoc = generateAPIDocFromBackend(func)
+    val scalaDocNoParam = generateAPIDocFromBackend(func, false)
     if(useParamObject) {
       classDef +=
         s"""private var out : org.apache.mxnet.NDArray = null
@@ -234,14 +234,17 @@ private[mxnet] object APIDocGenerator{
            | }
            | def getOut() = this.out
            | """.stripMargin
-      s"""$experimentalTag
+      s"""$scalaDocNoParam
+          | $experimentalTag
           | def ${func.name}(po: ${func.name}Param) : $returnType
+          | $scalaDoc
           | class ${func.name}Param(${argDef.mkString(",")}) {
           |  ${classDef.mkString("\n  ")}
           | }""".stripMargin
     } else {
       argDef += "out : NDArray"
-      s"""$experimentalTag
+      s"""$scalaDoc
+         |$experimentalTag
          | def ${func.name}(${argDef.mkString(", ")}) : $returnType
          | """.stripMargin
     }
