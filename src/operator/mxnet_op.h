@@ -512,7 +512,7 @@ struct Kernel<OP, cpu> {
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t i = 0; i < N; ++i) {
+      for (index_t i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     }
@@ -546,7 +546,7 @@ struct Kernel<OP, cpu> {
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (size_t i = 0; i < N; ++i) {
+      for (index_t i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     }
