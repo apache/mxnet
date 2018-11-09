@@ -127,7 +127,7 @@ def handle_commands(cmds) -> None:
 def main():
     logging.getLogger().setLevel(logging.INFO)
     command_list = list(COMMANDS.keys())
-    choice = show_menu(command_list, 'Available commands')
+    choice = show_menu(command_list, 'Available actions')
     handle_commands(COMMANDS[command_list[choice]])
     return 0
 
