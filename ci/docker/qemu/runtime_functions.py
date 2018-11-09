@@ -33,6 +33,8 @@ import time
 import sys
 import types
 import glob
+import vmcontrol
+from vmcontrol import qemu_ssh, qemu_provision, qemu_rsync_to_host, VM
 
 def activate_this(base):
     import site
@@ -53,21 +55,24 @@ def activate_this(base):
             sys.path.remove(item)
     sys.path[:0] = new_sys_path
 
+
+
+
 def run_ut_py3_qemu():
+    """Run unit tests in the emulator and copy the results back to the host through the mounted
+    volume in /mxnet"""
     from vmcontrol import VM
     with VM() as vm:
-        logging.info("VM provisioning with ansible")
-        check_call(["ansible-playbook", "-v", "-u", "qemu", "-i", "localhost:{},".format(vm.ssh_port), "playbook.yml"])
-        logging.info("VM provisioned successfully.")
-        logging.info("sync tests")
-        check_call(['rsync', '-e', 'ssh -p{}'.format(vm.ssh_port), '-a', 'mxnet/tests', 'qemu@localhost:mxnet'])
+        qemu_provision(vm.ssh_port)
         logging.info("execute tests")
-        check_call(["ssh", "-o", "ServerAliveInterval=5", "-p{}".format(vm.ssh_port), "qemu@localhost", "./runtime_functions.py", "run_ut_python3_qemu_internal"])
+        qemu_ssh(vm.ssh_port, "./runtime_functions.py", "run_ut_python3_qemu_internal")
+        qemu_rsync_to_host(vm.ssh_port, "*.xml", "mxnet")
+        logging.info("copied to host")
         logging.info("tests finished, vm shutdown.")
         vm.shutdown()
 
 def run_ut_python3_qemu_internal():
-    """this runs inside the vm, it's run by the playbook above by ansible"""
+    """this runs inside the vm"""
     pkg = glob.glob('mxnet_dist/*.whl')[0]
     logging.info("=== NOW Running inside QEMU ===")
     logging.info("PIP Installing %s", pkg)
@@ -75,8 +80,20 @@ def run_ut_python3_qemu_internal():
     logging.info("PIP Installing mxnet/tests/requirements.txt")
     check_call(['sudo', 'pip3', 'install', '-r', 'mxnet/tests/requirements.txt'])
     logging.info("Running tests in mxnet/tests/python/unittest/")
-    check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/test_ndarray.py:test_ndarray_fluent'])
+    check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/'])
+    # Example to run a single unit test:
+    # check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/test_ndarray.py:test_ndarray_fluent'])
 
+
+
+def run_qemu_interactive():
+    vm = VM(interactive=True)
+    vm.detach()
+    vm.start()
+    vm.wait()
+    logging.info("QEMU finished")
+
+################################
 
 def parsed_args():
     parser = argparse.ArgumentParser(description="""python runtime functions""", epilog="")
@@ -95,7 +112,7 @@ def chdir_to_script_directory():
     os.chdir(base)
 
 def main():
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.INFO)
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
     chdir_to_script_directory()
 
