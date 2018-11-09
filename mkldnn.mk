@@ -26,7 +26,7 @@ ifeq ($(UNAME_S), Darwin)
 else
 	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.so
 	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.0
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.a.0
 endif
 endif
 
