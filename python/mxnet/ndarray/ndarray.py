@@ -998,7 +998,7 @@ fixed-size items.
 
               Example::
 
-              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be \
                 (40,5).
               - with reverse=1, output shape will be (50,4).
 

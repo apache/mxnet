@@ -692,18 +692,18 @@ class LBSGD(Optimizer):
     Parameters
     ----------
     momentum : float, optional
-       The momentum value.
-    multi_precision: bool, optional
-       Flag to control the internal precision of the optimizer.
-       ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients
-                in 32-bit precision even if actual weights used in the model have lower precision.`<
-                Turning this on can improve convergence and accuracy when training with float16.
-    warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
-    warmup_epochs: unsigned, default: 5
-    batch_scale:   unsigned, default: 1 (same as batch size*numworkers)
-    updates_per_epoch: updates_per_epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
-    begin_epoch: unsigned, default 0, starting epoch.
+        The momentum value.
+    multi_precision : bool, optional
+        Flag to control the internal precision of the optimizer.
+        "False" results in using the same precision as the weights (default).
+        "True" makes internal 32-bit copy of the weights and applies gradients \
+            in 32-bit precision even if actual weights used in the model have lower precision. \
+            Turning this on can improve convergence and accuracy when training with float16.
+    warmup_strategy : string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
+    warmup_epochs : unsigned, default: 5
+    batch_scale : unsigned, default: 1 (same as batch size*numworkers)
+    updates_per_epoch : updates per epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
+    begin_epoch : unsigned, default 0, starting epoch.
     """
 
     def __init__(self, momentum=0.0, multi_precision=False, warmup_strategy='linear',
