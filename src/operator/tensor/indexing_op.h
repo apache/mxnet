@@ -314,7 +314,8 @@ struct Take {
    * \param axis        axis id
    */
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data, const IType* idx,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const IType* idx,
                                   const mshadow::Shape<10> in_stride,
                                   const mshadow::Shape<10> out_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
