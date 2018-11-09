@@ -46,7 +46,7 @@ class Confirm(object):
                 resp = input("Please answer yes or no: ")
 
 class CMake(object):
-    def __init__(self, cmake_options_yaml='cmake/cmake_options.yaml'):
+    def __init__(self, cmake_options_yaml='cmake/cmake_options.yml'):
         self.cmake_options_yaml = cmake_options_yaml
         self.cmake_options = None
         self.read_config()
@@ -104,7 +104,7 @@ COMMANDS = OrderedDict([
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
     ('Local CMake build (using cmake/cmake_options.yaml)',
-        CMake("cmake/cmake_options.yaml")),
+        CMake()),
     ('Clean (RESET HARD) repository (Warning! erases local changes / DATA LOSS)',
        Confirm("ci/docker/runtime_functions.sh clean_repo"))
 ])
