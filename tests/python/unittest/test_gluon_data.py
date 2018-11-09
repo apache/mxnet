@@ -244,6 +244,28 @@ def test_multi_worker_forked_data_loader():
         for i, data in enumerate(loader):
             pass
 
+@with_seed()
+def test_cached_iterator_in_dataloader():
+    class _DummyData(object):
+        def __len__(self):
+            return 100
+
+        def __getitem__(self, idx):
+            return idx
+
+    data = _DummyData()
+    length = len(data)
+    expect = np.arange(length)
+    for num_worker in range(2, 4):
+        loader = DataLoader(data, batch_size=2, shuffle=False, num_workers=num_worker)
+        it = iter(loader)
+        it.reset()
+        out = []
+        for i, batch in enumerate(it):
+            print(i, batch)
+            out.append(batch.asnumpy().flatten())
+        np.testing.assert_allclose(np.concatenate(out), expect)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

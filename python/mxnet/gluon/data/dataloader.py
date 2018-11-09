@@ -212,7 +212,28 @@ def fetcher_loop(data_queue, data_buffer, pin_memory=False, data_buffer_lock=Non
 
 
 class _MultiWorkerIter(object):
-    """Interal multi-worker iterator for DataLoader."""
+    """Interal multi-worker iterator for DataLoader.
+    It allow reset() to reuse iterator with all workers alive.
+
+    Parameters
+    ----------
+    num_workers : int, default 0
+        The number of multiprocessing workers to use for data preprocessing.
+    dataset : Dataset
+        Source dataset. Note that numpy and mxnet arrays can be directly used
+        as a Dataset.
+    batchify_fn : callable
+        Callback function to allow users to specify how to merge samples
+        into a batch.
+    batch_sampler : Sampler
+        A sampler that returns mini-batches. Do not specify batch_size,
+        shuffle, sampler, and last_batch if batch_sampler is specified.
+    pin_memory : boolean, default False
+        If ``True``, the dataloader will copy NDArrays into pinned memory
+        before returning them. Copying from CPU pinned memory to GPU is faster
+        than from normal CPU memory.
+
+    """
     def __init__(self, num_workers, dataset, batchify_fn, batch_sampler, pin_memory=False,
                  worker_fn=worker_loop):
         assert num_workers > 0, "_MultiWorkerIter is not for {} workers".format(num_workers)
@@ -258,7 +279,7 @@ class _MultiWorkerIter(object):
         self.shutdown()
 
     def reset(self):
-        """Reset iterator"""
+        """Reset iterator with multiprocessing workers alive."""
         # clear key queue
         removed_idx = []
         while True:
@@ -333,36 +354,56 @@ class _MultiWorkerIter(object):
 
 
 class _SameProcessIter(object):
+    """Same Process Iterator, which allow reset().
+
+    Parameters
+    ----------
+    dataset : Dataset
+        Source dataset. Note that numpy and mxnet arrays can be directly used
+        as a Dataset.
+    batchify_fn : callable
+        Callback function to allow users to specify how to merge samples
+        into a batch.
+    batch_sampler : Sampler
+        A sampler that returns mini-batches. Do not specify batch_size,
+        shuffle, sampler, and last_batch if batch_sampler is specified.
+    pin_memory : boolean, default False
+        If ``True``, the dataloader will copy NDArrays into pinned memory
+        before returning them. Copying from CPU pinned memory to GPU is faster
+        than from normal CPU memory.
+
+    """
     def __init__(self, dataset, batchify_fn, batch_sampler, pin_memory=False):
         self._dataset = dataset
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
+        self._iter = iter(self._batch_sampler)
         self._pin_memory = pin_memory
-        self._idx = 0
 
     def __len__(self):
         return len(self._batch_sampler)
 
     def reset(self):
-        """Reset iterator"""
-        self._idx = 0
+        """Reset iterator."""
+        self._iter = iter(self._batch_sampler)
 
     def __next__(self):
-        if self._idx == self.__len__():
+        try:
+            batch = next(self._iter)
+        except StopIteration:
             raise StopIteration
-
-        batch = self._batch_sampler[self._idx]
-        ret = self._batchify_fn([self._dataset[idx] for idx in batch])
-        if self._pin_memory:
-            ret = _as_in_context(ret, context.cpu_pinned())
-        self._idx += 1
-        return ret
+        else:
+            ret = self._batchify_fn([self._dataset[idx] for idx in batch])
+            if self._pin_memory:
+                ret = _as_in_context(ret, context.cpu_pinned())
+            return ret
 
     def next(self):
         return self.__next__()
 
     def __iter__(self):
         return self
+
 
 class DataLoader(object):
     """Loads data from a dataset and returns mini-batches of data.
@@ -446,13 +487,8 @@ class DataLoader(object):
 
     def __iter__(self):
         if self._num_workers == 0:
-            def same_process_iter():
-                for batch in self._batch_sampler:
-                    ret = self._batchify_fn([self._dataset[idx] for idx in batch])
-                    if self._pin_memory:
-                        ret = _as_in_context(ret, context.cpu_pinned())
-                    yield ret
-            return same_process_iter()
+            return _SameProcessIter(self._dataset, self._batchify_fn,
+                                    self._batch_sampler, self._pin_memory)
 
         # multi-worker
         return _MultiWorkerIter(self._num_workers, self._dataset,
