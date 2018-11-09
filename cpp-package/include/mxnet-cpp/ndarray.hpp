@@ -46,7 +46,7 @@ inline NDArray::NDArray() {
 inline NDArray::NDArray(const NDArrayHandle &handle) {
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
-inline NDArray::NDArray(const std::vector<mx_uint> &shape, const Context &context,
+inline NDArray::NDArray(const std::vector<index_t> &shape, const Context &context,
                         bool delay_alloc) {
   NDArrayHandle handle;
   CHECK_EQ(MXNDArrayCreate(shape.data(), shape.size(), context.GetDeviceType(),
@@ -76,7 +76,7 @@ inline NDArray::NDArray(const mx_float *data, const Shape &shape,
   MXNDArraySyncCopyFromCPU(handle, data, shape.Size());
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
-inline NDArray::NDArray(const std::vector<index_t> &data, const Shape &shape,
+inline NDArray::NDArray(const std::vector<mx_float> &data, const Shape &shape,
                         const Context &context) {
   NDArrayHandle handle;
   CHECK_EQ(MXNDArrayCreate(shape.data(), shape.ndim(), context.GetDeviceType(),
@@ -396,12 +396,12 @@ inline size_t NDArray::Size() const {
   return ret;
 }
 
-inline std::vector<mx_uint> NDArray::GetShape() const {
+inline std::vector<index_t> NDArray::GetShape() const {
   const index_t *out_pdata;
-  mx_uint out_dim;
+  index_t out_dim;
   MXNDArrayGetShape(blob_ptr_->handle_, &out_dim, &out_pdata);
-  std::vector<mx_uint> ret;
-  for (mx_uint i = 0; i < out_dim; ++i) {
+  std::vector<index_t> ret;
+  for (index_t i = 0; i < out_dim; ++i) {
     ret.push_back(out_pdata[i]);
   }
   return ret;

@@ -161,10 +161,10 @@ class Symbol {
   * \param aux_shapes use to store the infered shapes of auxiliary states
   */
   void InferShape(
-      const std::map<std::string, std::vector<mx_uint> > &arg_shapes,
-      std::vector<std::vector<mx_uint> > *in_shape,
-      std::vector<std::vector<mx_uint> > *aux_shape,
-      std::vector<std::vector<mx_uint> > *out_shape) const;
+      const std::map<std::string, std::vector<index_t> > &arg_shapes,
+      std::vector<std::vector<index_t> > *in_shape,
+      std::vector<std::vector<index_t> > *aux_shape,
+      std::vector<std::vector<index_t> > *out_shape) const;
   /*!
   * \brief List the arguments names.
   *

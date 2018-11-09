@@ -181,14 +181,14 @@ inline std::string Symbol::GetName() const {
 }
 
 inline void Symbol::InferShape(
-    const std::map<std::string, std::vector<mx_uint> > &arg_shapes,
-    std::vector<std::vector<mx_uint> > *in_shape,
-    std::vector<std::vector<mx_uint> > *aux_shape,
-    std::vector<std::vector<mx_uint> > *out_shape) const {
+    const std::map<std::string, std::vector<index_t> > &arg_shapes,
+    std::vector<std::vector<index_t> > *in_shape,
+    std::vector<std::vector<index_t> > *aux_shape,
+    std::vector<std::vector<index_t> > *out_shape) const {
 
   std::vector<const char *> keys;
   std::vector<mx_uint> arg_ind_ptr;
-  std::vector<mx_uint> arg_shape_data;
+  std::vector<index_t> arg_shape_data;
 
   for (const auto &arg : arg_shapes) {
     keys.push_back(arg.first.c_str());
@@ -201,13 +201,13 @@ inline void Symbol::InferShape(
 
   mx_uint in_shape_size;
   const mx_uint *in_shape_ndim;
-  const mx_uint **in_shape_data;
+  const index_t **in_shape_data;
   mx_uint out_shape_size;
   const mx_uint *out_shape_ndim;
-  const mx_uint **out_shape_data;
+  const index_t **out_shape_data;
   mx_uint aux_shape_size;
   const mx_uint *aux_shape_ndim;
-  const mx_uint **aux_shape_data;
+  const index_t **aux_shape_data;
   int complete;
 
   CHECK_EQ(MXSymbolInferShape(GetHandle(), keys.size(), keys.data(),
@@ -220,19 +220,19 @@ inline void Symbol::InferShape(
 
   if (complete) {
     for (mx_uint i = 0; i < in_shape_size; ++i) {
-      in_shape->push_back(std::vector<mx_uint>());
+      in_shape->push_back(std::vector<index_t>());
       for (mx_uint j = 0; j < in_shape_ndim[i]; ++j) {
         (*in_shape)[i].push_back(in_shape_data[i][j]);
       }
     }
     for (mx_uint i = 0; i < aux_shape_size; ++i) {
-      aux_shape->push_back(std::vector<mx_uint>());
+      aux_shape->push_back(std::vector<index_t>());
       for (mx_uint j = 0; j < aux_shape_ndim[i]; ++j) {
         (*aux_shape)[i].push_back(aux_shape_data[i][j]);
       }
     }
     for (mx_uint i = 0; i < out_shape_size; ++i) {
-      out_shape->push_back(std::vector<mx_uint>());
+      out_shape->push_back(std::vector<index_t>());
       for (mx_uint j = 0; j < out_shape_ndim[i]; ++j) {
         (*out_shape)[i].push_back(out_shape_data[i][j]);
       }
@@ -250,8 +250,8 @@ inline void Symbol::InferExecutorArrays(
     const std::map<std::string, NDArray> &aux_map) const {
 
   const auto arg_name_list = ListArguments();
-  std::vector<std::vector<mx_uint> > in_shapes, aux_shapes, out_shapes;
-  std::map<std::string, std::vector<mx_uint> > arg_shapes;
+  std::vector<std::vector<index_t> > in_shapes, aux_shapes, out_shapes;
+  std::map<std::string, std::vector<index_t> > arg_shapes;
 
   for (const auto &arg_name : arg_name_list) {
     auto iter = args_map.find(arg_name);
@@ -307,8 +307,8 @@ inline void Symbol::InferArgsMap(
     const std::map<std::string, NDArray> &known_args) const {
 
   const auto arg_name_list = ListArguments();
-  std::vector<std::vector<mx_uint> > in_shapes, aux_shapes, out_shapes;
-  std::map<std::string, std::vector<mx_uint> > arg_shapes;
+  std::vector<std::vector<index_t> > in_shapes, aux_shapes, out_shapes;
+  std::map<std::string, std::vector<index_t> > arg_shapes;
 
   for (const auto &arg_name : arg_name_list) {
     auto iter = known_args.find(arg_name);

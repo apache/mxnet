@@ -134,7 +134,7 @@ class NDArray {
   * \param constext context of NDArray
   * \param delay_alloc whether delay the allocation
   */
-  NDArray(const std::vector<mx_uint> &shape, const Context &context,
+  NDArray(const std::vector<index_t> &shape, const Context &context,
           bool delay_alloc = true);
   /*!
   * \brief construct a new dynamic NDArray
@@ -444,7 +444,7 @@ class NDArray {
   /*!
   * \return the shape of current NDArray, in the form of mx_uint vector
   */
-  std::vector<mx_uint> GetShape() const;
+  std::vector<index_t> GetShape() const;
   /*!
   * \return the data type of current NDArray
   */
