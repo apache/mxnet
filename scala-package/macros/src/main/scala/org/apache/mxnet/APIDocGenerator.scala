@@ -210,21 +210,29 @@ private[mxnet] object APIDocGenerator{
       val currArgName = safetyNameCheck(absClassArg.argName)
       // scalastyle:off
       if (absClassArg.isOptional && useParamObject) {
-        classDef += s"def set${absClassArg.argName.capitalize}(${absClassArg.argName}: ${absClassArg.argType}): ${func.name}ParamBase"
+        classDef +=
+          s"""private var $currArgName = null
+             |def set${currArgName.capitalize}($currArgName : ${absClassArg.argType}): ${func.name}Param = {
+             |  this.$currArgName = $currArgName
+             | }""".stripMargin
       }
       else {
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
+      classDef += s"def get${currArgName.capitalize}() = this.$currArgName"
       // scalastyle:on
     })
     val experimentalTag = "@Experimental"
     val returnType = "org.apache.mxnet.javaapi.NDArrayFuncReturn"
     if(useParamObject) {
-      classDef += s"def setOut(out : NDArray) : ${func.name}ParamBase"
-      classDef += s"def invoke() : $returnType"
+      classDef +=
+        s"""private var out = null
+           |def setOut(out : NDArray) : ${func.name}Param = {
+           |  this.out = out
+           | }""".stripMargin
       s"""$experimentalTag
-          | def ${func.name}(po: ${func.name}ParamBase) : $returnType
-          | abstract class ${func.name}ParamBase(${argDef.mkString(",")}) {
+          | def ${func.name}(po: ${func.name}Param) : $returnType
+          | class ${func.name}Param(${argDef.mkString(",")}) {
           |  ${classDef.mkString("\n  ")}
           | }""".stripMargin
     } else {
