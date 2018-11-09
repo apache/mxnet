@@ -9,13 +9,14 @@ from ...symbol import Symbol
 
 class BinaryLayerConfig():
     def __init__(self, grad_cancel=1.0, bits=1, bits_a=1, activation='det_sign',
-                 weight_quantization='det_sign', scaled=False):
+                 weight_quantization='det_sign', scaled=False, stop_grad=True):
         self.grad_cancel = grad_cancel
         self.bits = bits
         self.bits_a = bits_a
         self.activation = activation
         self.weight_quantization = weight_quantization
         self.scaled = scaled
+	self.stop_grad = stop_grad  # has an effect only if scaled=True
 
     def get_values(self):
         return dict(vars(self))
@@ -182,7 +183,7 @@ class QDense(Dense):
 class _QConv(_Conv):
     def __init__(self, channels, kernel_size, bits, strides, padding, dilation, groups, layout, in_channels, activation,
                  use_bias, weight_initializer, bias_initializer, quantization=None, no_offset=False,
-                 apply_scaling=False, **kwargs):
+                 apply_scaling=False, stop_grad=True, **kwargs):
         check_params(use_bias, activation)
         # set activation to None and padding to zero
         super(_QConv, self).__init__(
@@ -195,6 +196,7 @@ class _QConv(_Conv):
         self._pre_padding = padding
         self.weight.wd_mult = 0.0
         self.scaling = apply_scaling
+	self.stop_grad = stop_grad
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
         self.quantize = binary_layer_config.get_weight_quantization_function(bits=self.bits, method=quantization)
@@ -220,7 +222,8 @@ class _QConv(_Conv):
         h = F.Convolution(padded, quantized_weight, name='fwd', **self._kwargs)
         if self.scaling:
             scale = weight.abs().mean(axis=0, exclude=True, keepdims=True).transpose(self._scaling_transpose)
-            scale = F.stop_gradient(scale)
+	    if self.stop_grad:
+            	scale = F.stop_gradient(scale)
             h = F.broadcast_mul(h, scale)
         if self.bits == 1 and not self.no_offset and not self.scaling:
             h = (h + self._offset) / 2
@@ -244,13 +247,14 @@ class QConv2D(_QConv):
     def __init__(self, channels, kernel_size, bits=None, strides=(1, 1), padding=(0, 0),
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=False, weight_initializer=None,
-                 bias_initializer='zeros', in_channels=0, **kwargs):
+                 bias_initializer='zeros', in_channels=0, apply_scaling=False, stop_grad=True, **kwargs):
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
         assert len(kernel_size) == 2, "kernel_size must be a number or a list of 2 ints"
         super(QConv2D, self).__init__(
             channels, kernel_size, bits, strides, padding, dilation, groups, layout,
-            in_channels, activation, use_bias, weight_initializer, bias_initializer, **kwargs)
+            in_channels, activation, use_bias, weight_initializer, bias_initializer,
+            apply_scaling=apply_scaling, stop_grad=stop_grad, **kwargs)
 
 
 class QConv3D(_QConv):
@@ -286,6 +290,22 @@ class BinaryConvolution(HybridBlock):
         return self.qconv(self.qact(x))
 
 
+class ScaledWeightsBinaryConv(HybridBlock):
+    r"""
+        This implements the magnitude aware gradients from Bi-Real Net paper. It is similiar to ScaledBinaryConv, 
+	but it only scaled the weights (not the feature maps) and the gradient of the scaling is not blocked
+    """
+    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, bits=None, bits_a=None,
+                 clip_threshold=None, activation_method=None, prefix=None, **kwargs):
+        super(BinaryConvolution, self).__init__(**kwargs)
+        self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold, method=activation_method)
+        self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
+                             in_channels=in_channels, prefix=prefix, apply_scaling=True, stop_grad=False)
+
+    def hybrid_forward(self, F, x):
+        return self.qconv(self.qact(x))
+
+
 class ScaledBinaryConv(HybridBlock):
     r"""
         ScaledBinaryConv implements scaled binarized 2D convolution,
@@ -315,6 +335,8 @@ class ScaledBinaryConv(HybridBlock):
 
 class ActivatedConvolutionFactory:
     def __call__(self, *args, **kwargs):
+        if binary_layer_config.scaled and not binary_layer_config.stop_grad:
+	    return ScaledWeightsBinaryConv(*args, **kwargs)
         if binary_layer_config.scaled:
             return ScaledBinaryConv(*args, **kwargs)
         return BinaryConvolution(*args, **kwargs)
