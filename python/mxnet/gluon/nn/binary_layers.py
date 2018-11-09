@@ -223,7 +223,7 @@ class _QConv(_Conv):
         if self.scaling:
             scale = weight.abs().mean(axis=0, exclude=True, keepdims=True).transpose(self._scaling_transpose)
         if self.stop_weight_scale_grad:
-                scale = F.stop_gradient(scale)
+            scale = F.stop_gradient(scale)
             h = F.broadcast_mul(h, scale)
         if self.bits == 1 and not self.no_offset and not self.scaling:
             h = (h + self._offset) / 2
