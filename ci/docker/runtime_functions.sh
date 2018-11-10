@@ -368,6 +368,8 @@ build_ubuntu_cpu_clang60() {
 build_ubuntu_cpu_clang39_mkldnn() {
     set -ex
 
+    export CCACHE_RECACHE=1
+
     export CXX=clang++-3.9
     export CC=clang-3.9
 
