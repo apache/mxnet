@@ -33,7 +33,13 @@ yum -y install opencv-devel
 yum -y install openssl-devel
 yum -y install gcc-c++-4.8.*
 yum -y install make
-yum -y install cmake
+yum -y install cmake3
 yum -y install wget
 yum -y install unzip
 yum -y install ninja-build
+
+alternatives --install /usr/local/bin/cmake cmake /usr/bin/cmake3 20 \
+    --slave /usr/local/bin/ctest ctest /usr/bin/ctest3 \
+    --slave /usr/local/bin/cpack cpack /usr/bin/cpack3 \
+    --slave /usr/local/bin/ccmake ccmake /usr/bin/ccmake3 \
+    --family cmake
