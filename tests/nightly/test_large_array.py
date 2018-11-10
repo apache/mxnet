@@ -17,37 +17,53 @@
 
 import unittest
 import mxnet as mx
+import numpy as np
 from mxnet import gluon, nd
 
+# dimension constants
+MEDIUM_X = 10000
+LARGE_X = MEDIUM_X * MEDIUM_X
+SMALL_Y = 50
+LARGE_SIZE = LARGE_X * SMALL_Y
 
 class TestLargeArray(unittest.TestCase):
-    def test_ndarray2numpy(self):
-        m = gluon.nn.Embedding(14000, 128)
+    def test_gluon_embedding(self):
+        m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
         m.initialize()
-        ind = nd.zeros((700000, 128))
-        x = m(ind)
-        x.shape
-        test = x.asnumpy()
-        assert (x.shape == test.shape)
-    
-    def test_ndarray_ones(self):
-        arr = nd.ones(shape=(100000000, 50))
-        assert arr[-1][0] == 1
-        assert nd.sum(arr).asnumpy() == 5000000000
+        a = nd.zeros((MEDIUM_X, SMALL_Y))
+        b = m(a)
+        assert b.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
+        assert b.asnumpy().size == LARGE_SIZE
 
     def test_ndarray_zeros(self):
-        arr = nd.zeros(shape=(5000000000))
-        assert arr.shape == (5000000000,)
-        assert arr.size == 5000000000
+        a = nd.zeros(shape=(LARGE_X, SMALL_Y))
+        assert a[-1][0] == 0
+        assert a.shape == (LARGE_X, SMALL_Y)
+        assert a.size == LARGE_SIZE
 
-    def test_ndarray_arrange(self):
-        arr = mx.nd.arange(0, 5000000000, dtype='int64')
-        assert arr[-1] == 4999999999
-        assert mx.nd.slice(arr, begin=-2, end=-1) == 4999999998
+    def test_ndarray_ones(self):
+        a = nd.ones(shape=(LARGE_X, SMALL_Y))
+        assert a[-1][0] == 1
+        assert nd.sum(a).asnumpy() == LARGE_SIZE
+
+    def test_ndarray_zeros2(self):
+        a = nd.zeros(shape=(LARGE_SIZE))
+        assert a[LARGE_SIZE-1] == 0
+        assert a.shape == (LARGE_SIZE,)
+
+    def test_ndarray_arange(self):
+        a = nd.arange(0, LARGE_SIZE, dtype='int64')
+        assert a[-1] == LARGE_SIZE - 1
+        assert nd.slice(a, begin=-2, end=-1) == (LARGE_SIZE - 2)
 
     def test_ndarray_random_uniform(self):
-        arr = mx.nd.random.uniform(shape=(100000000, 50))
-        assert arr[-1][0] != 0
+        a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
+        assert a[-1][0] != 0
+
+    def test_ndarray_empty(self):
+        a = np.empty((LARGE_SIZE,))
+        b = nd.array(a)
+        assert b.shape == (LARGE_SIZE,)
 
 if __name__ == '__main__':
     unittest.main()
