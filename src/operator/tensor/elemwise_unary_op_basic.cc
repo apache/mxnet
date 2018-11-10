@@ -29,17 +29,19 @@
 namespace mxnet {
 namespace op {
 
+namespace {
+
 // infer storage function for _identity_with_attr_like_rhs op
-static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
-                                           const int dev_mask,
-                                           DispatchMode* dispatch_mode,
-                                           std::vector<int> *in_attrs,
-                                           std::vector<int> *out_attrs) {
+bool IdentLikeRhsStorageType(const nnvm::NodeAttrs &attrs,
+                             const int /*dev_mask*/,
+                             DispatchMode *dispatch_mode,
+                             std::vector<int> *in_attrs,
+                             std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  const auto& rhs_stype = in_attrs->at(1);
-  auto& lhs_stype = in_attrs->at(0);
-  auto& out_stype = out_attrs->at(0);
+  const auto &rhs_stype = in_attrs->at(1);
+  auto &lhs_stype = in_attrs->at(0);
+  auto &out_stype = out_attrs->at(0);
   bool dispatched = false;
 
   CHECK_NE(rhs_stype, kUndefinedStorage);
@@ -68,6 +70,8 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
   }
   return dispatched;
 }
+
+}  // namespace
 
 // relu
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(relu, cpu, mshadow_op::relu)
@@ -337,7 +341,7 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeFirstItemEx<cpu>)
 .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", IdentLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
