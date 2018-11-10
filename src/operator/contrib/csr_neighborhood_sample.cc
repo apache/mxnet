@@ -27,7 +27,6 @@ namespace mxnet {
 namespace op {
 
 /*
-
 Usage:
 
 import mxnet as mx
@@ -40,16 +39,40 @@ indptr_np = np.array([0, 4,8,12,16,20], dtype=np.int64)
 a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
 a.asnumpy()
 
-seed = mx.nd.array([0], dtype=np.int64)
-out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=1, num_neighbor=1, max_num_vertices=5)
-out.asnumpy()
-
+seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
 out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=1, num_neighbor=2, max_num_vertices=5)
-out.asnumpy()
+out[0]
+out[1].asnumpy()
+
+seed = mx.nd.array([0], dtype=np.int64)
+out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=1, num_neighbor=1, max_num_vertices=4)
+out[0]
+out[1].asnumpy()
+
+seed = mx.nd.array([0], dtype=np.int64)
+out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=2, num_neighbor=1, max_num_vertices=4)
+out[0]
+out[1].asnumpy()
+
+seed = mx.nd.array([0,2,4], dtype=np.int64)
+out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=1, num_neighbor=2, max_num_vertices=5)
+out[0]
+out[1].asnumpy()
 
 seed = mx.nd.array([0,4], dtype=np.int64)
 out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=1, num_neighbor=2, max_num_vertices=5)
-out.asnumpy()
+out[0]
+out[1].asnumpy()
+
+seed = mx.nd.array([0,4], dtype=np.int64)
+out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=2, num_neighbor=2, max_num_vertices=5)
+out[0]
+out[1].asnumpy()
+
+seed = mx.nd.array([0,4], dtype=np.int64)
+out = mx.nd.contrib.neighbor_sample(a, seed, num_hops=1, num_neighbor=2, max_num_vertices=5)
+out[0]
+out[1].asnumpy()
 
 */
 
@@ -59,7 +82,7 @@ NNVM_REGISTER_OP(_contrib_neighbor_sample)
 .MXNET_DESCRIBE("")
 .set_attr_parser(ParamParser<NeighborSampleParam>)
 .set_num_inputs(2)
-.set_num_outputs(1)
+.set_num_outputs(2)
 .set_attr<FInferStorageType>("FInferStorageType", CSRNeighborSampleStorageType)
 .set_attr<nnvm::FInferShape>("FInferShape", CSRNeighborSampleShape)
 .set_attr<nnvm::FInferType>("FInferType", CSRNeighborSampleType)
