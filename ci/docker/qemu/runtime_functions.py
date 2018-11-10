@@ -80,7 +80,7 @@ def run_ut_python3_qemu_internal():
     logging.info("PIP Installing mxnet/tests/requirements.txt")
     check_call(['sudo', 'pip3', 'install', '-r', 'mxnet/tests/requirements.txt'])
     logging.info("Running tests in mxnet/tests/python/unittest/")
-    check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/test_ndarray.py'])
+    check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/test_engine.py'])
     # Example to run a single unit test:
     # check_call(['nosetests', '--with-timer', '--with-xunit', '--xunit-file', 'nosetests_unittest.xml', '--verbose', 'mxnet/tests/python/unittest/test_ndarray.py:test_ndarray_fluent'])
 
