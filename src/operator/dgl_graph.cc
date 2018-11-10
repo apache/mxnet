@@ -481,9 +481,7 @@ NNVM_REGISTER_OP(_contrib_dgl_graph_compact)
 .set_attr<nnvm::FInferType>("FInferType", SubgraphCompactType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SubgraphCompactComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("graph", "NDArray-or-Symbol[]", "Input graphs.")
-.add_argument("data", "NDArray-or-Symbol[]",
-              "The input arrays that indicate vertex Ids in the graphs.")
+.add_argument("graph_data", "NDArray-or-Symbol[]", "Input graphs and input vertex Ids.")
 .add_arguments(SubgraphCompactParam::__FIELDS__());
 
 }  // namespace op
