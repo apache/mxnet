@@ -131,7 +131,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_long, native_array('I', shape)),
+        c_array_buf(mx_long, native_array('q', shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
