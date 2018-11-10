@@ -1999,7 +1999,8 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
 
-class EnvManager:
+class EnvManager(object):
+    """Environment variable setter and unsetter via with idiom"""
     def __init__(self, key, val):
         self._key = key
         self._next_val = val
@@ -2014,4 +2015,3 @@ class EnvManager:
             os.environ[self._key] = self._prev_val
         else:
             del os.environ[self._key]
-
