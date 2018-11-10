@@ -204,18 +204,23 @@ private[mxnet] object APIDocGenerator{
     val useParamObject = func.listOfArgs.count(arg => arg.isOptional) >= 2
     var argDef = ListBuffer[String]()
     var classDef = ListBuffer[String]()
+    var requiredParam = ListBuffer[String]()
     func.listOfArgs.foreach(absClassArg => {
       val currArgName = safetyNameCheck(absClassArg.argName)
       // scalastyle:off
       if (absClassArg.isOptional && useParamObject) {
         classDef +=
           s"""private var $currArgName: ${absClassArg.argType} = null
+             |/**
+             | * @param $currArgName\t\t${absClassArg.argDesc}
+             | */
              |def set${currArgName.capitalize}($currArgName : ${absClassArg.argType}): ${func.name}Param = {
              |  this.$currArgName = $currArgName
              |  this
              | }""".stripMargin
       }
       else {
+        requiredParam += s"  * @param $currArgName\t\t${absClassArg.argDesc}"
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
       classDef += s"def get${currArgName.capitalize}() = this.$currArgName"
@@ -225,10 +230,6 @@ private[mxnet] object APIDocGenerator{
     val returnType = "Array[NDArray]"
     val scalaDoc = generateAPIDocFromBackend(func)
     val scalaDocNoParam = generateAPIDocFromBackend(func, false)
-    val params = func.listOfArgs.map({ absClassArg =>
-      val currArgName = safetyNameCheck(absClassArg.argName)
-      s"  * @param $currArgName\t\t${absClassArg.argDesc}"
-    })
     if(useParamObject) {
       classDef +=
         s"""private var out : org.apache.mxnet.NDArray = null
@@ -242,7 +243,7 @@ private[mxnet] object APIDocGenerator{
           | $experimentalTag
           | def ${func.name}(po: ${func.name}Param) : $returnType
           | /**
-          | ${params.mkString("\n")}
+          | ${requiredParam.mkString("\n")}
           | */
           | class ${func.name}Param(${argDef.mkString(",")}) {
           |  ${classDef.mkString("\n  ")}
