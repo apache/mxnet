@@ -225,6 +225,10 @@ private[mxnet] object APIDocGenerator{
     val returnType = "Array[NDArray]"
     val scalaDoc = generateAPIDocFromBackend(func)
     val scalaDocNoParam = generateAPIDocFromBackend(func, false)
+    val params = func.listOfArgs.map({ absClassArg =>
+      val currArgName = safetyNameCheck(absClassArg.argName)
+      s"  * @param $currArgName\t\t${absClassArg.argDesc}"
+    })
     if(useParamObject) {
       classDef +=
         s"""private var out : org.apache.mxnet.NDArray = null
@@ -237,7 +241,9 @@ private[mxnet] object APIDocGenerator{
       s"""$scalaDocNoParam
           | $experimentalTag
           | def ${func.name}(po: ${func.name}Param) : $returnType
-          | $scalaDoc
+          | /**
+          | ${params.mkString("\n")}
+          | */
           | class ${func.name}Param(${argDef.mkString(",")}) {
           |  ${classDef.mkString("\n  ")}
           | }""".stripMargin
