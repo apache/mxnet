@@ -687,12 +687,9 @@ Elementwise multiplication for `NDArray`.
 *(x::NDArray, y::Real)  = _mul_scalar(x, scalar = y)
 *(y::Real, x::NDArray)  = _mul_scalar(x, scalar = y)
 
-broadcast_(::typeof(*), x::NDArray, y::Real) = x * y
-broadcast_(::typeof(*), y::Real, x::NDArray) = x * y
-
-broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(*), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _mul(x, y)
-broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(*), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_mul(x, y)
 
 """
