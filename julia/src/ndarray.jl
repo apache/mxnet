@@ -1009,8 +1009,8 @@ end
 # pointers from CPU) leads to undefined behavior.
 import Base.pointer
 function pointer(arr :: NDArray)
-  pdata = Ref{Ptr{Void}}(0)
-  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{Void}}), arr, pdata)
+  pdata = Ref{Ptr{Cvoid}}(0)
+  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{Cvoid}}), arr, pdata)
   return convert(Ptr{eltype(arr)}, pdata[])
 end
 
