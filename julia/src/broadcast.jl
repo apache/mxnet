@@ -24,7 +24,8 @@ Base.BroadcastStyle(::Type{<:NDArray{T,N}}) where {T,N} = NDArrayStyle{N}()
 
 Base.broadcastable(x::NDArray) = x
 
-# make it non-lazy
-Base.Broadcast.broadcasted(f, x::NDArray, args...) = f(x, args...)
-Base.Broadcast.broadcasted(f, y, x::NDArray, args...) =
-  Base.Broadcast.broadcasted(f, x, y, args...)
+# Make it non-lazy
+broadcasted(f, x::NDArray, args...)    = f(x, args...)
+broadcasted(f, y, x::NDArray, args...) = broadcasted(f, x, y, args...)
+broadcasted(f, x::NDArray{T,N}, y::NDArray{T,N}, args...) where {T,N} =
+  f(x, y, args...)

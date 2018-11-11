@@ -121,7 +121,7 @@ NDArray(handle, writable = true) =
   NDArray{eltype(handle), ndims(handle)}(handle, writable)
 
 # type aliases
-const NDArrayOrReal = Union{NDArray, Real}
+const NDArrayOrReal = Union{NDArray,Real}
 const VecOfNDArray = AbstractVector{<:NDArray}
 
 function Base.show(io::IO, x::NDArray)
@@ -625,11 +625,7 @@ added together. Note at least the first or second argument needs to be an
 +(x::NDArray, y::Real)    = _plus_scalar(x, scalar = y)
 +(y::Real,    x::NDArray) = _plus_scalar(x, scalar = y)
 
-broadcast_(::typeof(+), x::NDArray, y::Real) = x + y
-broadcast_(::typeof(+), x::Real, y::NDArray) = x + y
-
-broadcast_(::typeof(+), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N}   = x + y
-broadcast_(::typeof(+), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(+), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_add(x, y)
 
 """
