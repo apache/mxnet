@@ -92,7 +92,7 @@ train_images = images[:split]
 train_filenames = filenames[:split]
 
 train_data = gluon.data.ArrayDataset(nd.concatenate(train_images))
-train_dataloader = gluon.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, last_batch='rollover', num_workers=multiprocessing.cpu_count())
+train_dataloader = gluon.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, last_batch='rollover', num_workers=multiprocessing.cpu_count()-1)
 ```
 
 ## Generator
@@ -173,6 +173,7 @@ class Discriminator(gluon.HybridBlock):
 
 The InfoGAN has the following layout.
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/info_gan/InfoGAN.png" style="width:800px;height:250px;">
+
 Discriminator and Generator are the same as in the DCGAN example. On top of the Disciminator is the Q model, which is estimating the code `c` for given fake images. The Generator's input is random noise and the latent code `c`.  
 
 ## Training Loop
