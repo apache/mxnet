@@ -785,14 +785,11 @@ import Base: %
 
 Elementwise modulo for `NDArray`.
 """
-%(x::NDArray, y::Real) = _mod_scalar(x, scalar = y)
+%(x::NDArray, y::Real) = _mod_scalar(x, y)
 
-broadcast_(::typeof(%), x::NDArray, y::Real)    = _mod_scalar(x, y)
-broadcast_(::typeof(%), y::Real, x::NDArray)    = _rmod_scalar(x, y)
-
-broadcast_(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _mod(x, y)
-broadcast_(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_mod(x, y)
 
 import Base: ^
