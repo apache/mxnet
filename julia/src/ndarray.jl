@@ -812,22 +812,22 @@ broadcasted(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
 # comparison
 ###############################################################################
 
-broadcast_(::typeof(==), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(==), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_equal(x, y)
 
-broadcast_(::typeof(!=), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(!=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_not_equal(x, y)
 
-broadcast_(::typeof(>), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(>), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_greater(x, y)
 
-broadcast_(::typeof(>=), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(>=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_greater_equal(x, y)
 
-broadcast_(::typeof(<), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(<), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_lesser(x, y)
 
-broadcast_(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_lesser_equal(x, y)
 
 
@@ -837,10 +837,10 @@ broadcast_(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
 
 import Base: min, max
 
-broadcast_(::typeof(max), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(max), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_maximum(x, y)
 
-broadcast_(::typeof(min), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(min), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_minimum(x, y)
 
 """
@@ -869,7 +869,7 @@ fill(x, dims::Integer...) = fill(x, dims)
 
 import Base: hypot
 
-broadcast_(::typeof(hypot), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(hypot), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_hypot(x, y)
 
 """
