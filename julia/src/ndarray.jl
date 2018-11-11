@@ -748,15 +748,12 @@ of the same shape.
 """
 /(x::NDArray, y::Real) = _div_scalar(x, scalar = y)
 
-broadcast_(::typeof(/), x::NDArray, y::Real)    = _div_scalar(x, scalar = y)
-broadcast_(::typeof(/), y::Real, x::NDArray)    = _rdiv_scalar(x, scalar = y)
-
-broadcast_(::typeof(/), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(/), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _div(x, y)
-broadcast_(::typeof(/), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(/), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_div(x, y)
 
-function broadcast_(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
+function broadcasted(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
   @assert(round(T, y) != zero(T), "Integer divided by zero")
   _div_scalar(x, scalar = y)
 end
