@@ -31,8 +31,8 @@ using Libdl
 using MacroTools
 using Markdown
 using Printf
-using TakingBroadcastSeriously: @unfuse
-import TakingBroadcastSeriously: broadcast_
+using Base.Broadcast: Broadcasted, DefaultArrayStyle
+import Base.Broadcast: broadcasted
 
 # Functions from base that we can safely extend and that are defined by libmxnet.
 import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm,

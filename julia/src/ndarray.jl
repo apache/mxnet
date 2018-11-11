@@ -124,8 +124,6 @@ NDArray(handle, writable = true) =
 const NDArrayOrReal = Union{NDArray, Real}
 const VecOfNDArray = AbstractVector{<:NDArray}
 
-@unfuse NDArray
-
 function Base.show(io::IO, x::NDArray)
   print(io, "NDArray(")
   Base.show(io, try_get_shared(x, sync = :read))
