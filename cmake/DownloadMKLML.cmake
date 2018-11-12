@@ -15,34 +15,57 @@
 # specific language governing permissions and limitations
 # under the License.
 
-#this file download mklml
+# This script will download MKLML
 
-message(STATUS "download mklml")
+message(STATUS "Downloading MKLML...")
 
-set(MKLURLROOT "https://github.com/intel/mkl-dnn/releases/download/v0.17-rc/")
-set(MKLVERSION "2019.0.1.20180928")
+set(MKLML_RELEASE v0.17-rc)
+set(MKLML_RELEASE_FILE_SUFFIX 2019.0.1.20180928)
 
 if(MSVC)
-  set(MKL_NAME "mklml_win_${MKLVERSION}")
-  file(DOWNLOAD "${MKLURLROOT}${MKL_NAME}.zip" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" EXPECTED_MD5 "443e661bdfd32dbbc99b460b43afceee" SHOW_PROGRESS)
-  file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe" "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
-  
+  set(MKL_NAME "mklml_win_${MKLML_RELEASE_FILE_SUFFIX}")
+
+  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.zip"
+       "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip"
+       EXPECTED_MD5 "443e661bdfd32dbbc99b460b43afceee" SHOW_PROGRESS)
+  file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe"
+       "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe"
+       EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
+
   execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" "-o${CMAKE_CURRENT_BINARY_DIR}/mklml/" "-y")
-  execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z.exe" "x" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" "-o${CMAKE_CURRENT_BINARY_DIR}/mklml/" "-y")
+  execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z.exe"
+                  "x" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" "-o${CMAKE_CURRENT_BINARY_DIR}/mklml/" "-y")
+
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
-  include_directories(${MKLROOT}/include)
-  file(COPY ${MKLROOT}/lib/libiomp5md.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-  file(COPY ${MKLROOT}/lib/mklml.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-  file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/mkldnn/config_template.vcxproj.user DESTINATION ${CMAKE_SOURCE_DIR})
+
+  message(STATUS "Setting MKLROOT path to ${MKLROOT}")
+
+elseif(APPLE)
+  set(MKL_NAME "mklml_mac_${MKLML_RELEASE_FILE_SUFFIX}")
+
+  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.tgz"
+       "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
+       EXPECTED_MD5 "95f887af332205b1d15b392260003952" SHOW_PROGRESS)
+  execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
+                  "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
+
+  set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
+
+  message(STATUS "Setting MKLROOT path to ${MKLROOT}")
+
 elseif(UNIX)
-  set(MKL_NAME "mklml_lnx_${MKLVERSION}")
-  file(DOWNLOAD "${MKLURLROOT}${MKL_NAME}.tgz" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz" EXPECTED_MD5 "a63abf155361322b9c03f8fc50f4f317" SHOW_PROGRESS)
-  execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz" "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
+  set(MKL_NAME "mklml_lnx_${MKLML_RELEASE_FILE_SUFFIX}")
+
+  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLML_RELEASE}/${MKL_NAME}.tgz"
+       "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
+       EXPECTED_MD5 "a63abf155361322b9c03f8fc50f4f317" SHOW_PROGRESS)
+  execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz"
+                  "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
+
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
-  include_directories(${MKLROOT}/include)
-  file(COPY ${MKLROOT}/lib/libiomp5.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-  file(COPY ${MKLROOT}/lib/libmklml_gnu.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-  file(COPY ${MKLROOT}/lib/libmklml_intel.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+  message(STATUS "Setting MKLROOT path to ${MKLROOT}")
+
 else()
-  message(FATAL_ERROR "not support now")
+  message(FATAL_ERROR "Wrong platform")
 endif()
