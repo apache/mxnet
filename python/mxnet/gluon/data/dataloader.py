@@ -268,9 +268,7 @@ class _MultiWorkerIter(object):
         self._fetcher.daemon = True
         self._fetcher.start()
 
-        # pre-fetch
-        for _ in range(2 * self._num_workers):
-            self._push_next()
+        self._reset()
 
     def __len__(self):
         return len(self._batch_sampler)
@@ -278,8 +276,9 @@ class _MultiWorkerIter(object):
     def __del__(self):
         self.shutdown()
 
-    def reset(self):
+    def _reset(self):
         """Reset iterator with multiprocessing workers alive."""
+        assert not self._shutdown, "call reset after shutdown is forbidden"
         # clear key queue
         removed_idx = set()
         while True:
@@ -333,6 +332,7 @@ class _MultiWorkerIter(object):
         return self.__next__()
 
     def __iter__(self):
+        self._reset()
         return self
 
     def shutdown(self):
