@@ -40,6 +40,8 @@ if(MSVC)
 
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
 
+  include_directories(${MKLROOT}/include)
+
 elseif(APPLE)
   set(MKL_NAME "mklml_mac_${MKLML_RELEASE_FILE_SUFFIX}")
 
