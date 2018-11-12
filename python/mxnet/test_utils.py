@@ -1998,3 +1998,20 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if compare_states:
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
+
+class EnvManager(object):
+    """Environment variable setter and unsetter via with idiom"""
+    def __init__(self, key, val):
+        self._key = key
+        self._next_val = val
+        self._prev_val = None
+
+    def __enter__(self):
+        self._prev_val = os.environ.get(self._key)
+        os.environ[self._key] = self._next_val
+
+    def __exit__(self, ptype, value, trace):
+        if self._prev_val:
+            os.environ[self._key] = self._prev_val
+        else:
+            del os.environ[self._key]
