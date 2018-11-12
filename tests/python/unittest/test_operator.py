@@ -5736,6 +5736,7 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12329")
 @with_seed()
 def test_dropout():
     def zero_count(array, ratio):
