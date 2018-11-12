@@ -244,9 +244,9 @@ def save(fname, data):
     >>> mx.nd.save('my_list', [x,y])
     >>> mx.nd.save('my_dict', {'x':x, 'y':y})
     >>> mx.nd.load('my_list')
-    [<NDArray 2x3 @cpu(0)>, <NDArray 1x4 @cpu(0)>]
+    ``[<NDArray 2x3 @cpu(0)>, <NDArray 1x4 @cpu(0)>]``
     >>> mx.nd.load('my_dict')
-    {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
+    ``{'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}``
     """
     if isinstance(data, NDArray):
         data = [data]
