@@ -22,6 +22,10 @@
 
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+
+// Python wheels
+mx_pip = 'build/*.whl'
+
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
@@ -414,6 +418,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv7', 'build_armv7', false)
+            utils.pack_lib('armv7', mx_pip)
           }
         }
       }
@@ -938,6 +943,16 @@ core_logic: {
             utils.unpack_and_init('gpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_scala', true)
             utils.publish_test_coverage()
+          }
+        }
+      }
+    },
+    'ARMv7 QEMU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-armv7-qemu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('armv7', mx_pip)
+            sh "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu"
           }
         }
       }
