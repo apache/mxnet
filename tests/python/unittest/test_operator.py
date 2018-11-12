@@ -3496,6 +3496,10 @@ def test_special_functions_using_scipy():
     mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
+    # erf
+    mathematical_core("erf", lambda x: mx.sym.erf(x), lambda x: scipy_special.erf(x),
+                     lambda x: 2.0 / math.sqrt(math.pi) * math.exp(-(x ** 2)), 0.5, 0.5)
+
 
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')

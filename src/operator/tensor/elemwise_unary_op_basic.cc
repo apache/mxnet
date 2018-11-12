@@ -884,6 +884,22 @@ The storage type of ``cbrt`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
                                                   unary_bwd<mshadow_op::cube_root_grad>);
 
+// erf
+MXNET_OPERATOR_REGISTER_UNARY(erf)
+.describe(R"code(Returns element-wise gauss error function of the input.
+
+Example::
+
+   erf([0, -1., 10.]) = [0., -0.8427, 1.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erf>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erf"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::erf_grad>>);
+
 // rcbrt
 MXNET_OPERATOR_REGISTER_UNARY(rcbrt)
 .describe(R"code(Returns element-wise inverse cube-root value of the input.
