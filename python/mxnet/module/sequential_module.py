@@ -50,34 +50,35 @@ class SequentialModule(BaseModule):
                                if x.startswith('META_')])
 
     def add(self, module, **kwargs):
-        """Adds a module to the chain.
+        """Add a module to the chain.
 
         Parameters
         ----------
         module : BaseModule
             The new module to add.
-        kwargs : **keywords
+        kwargs : ``**keywords``
             All the keyword arguments are saved as meta information
             for the added module. The currently known meta includes
 
             - `take_labels`: indicating whether the module expect to
-              take labels when doing computation. Note any module in
-              the chain can take labels (not necessarily only the top
-              most one), and they all take the same labels passed
-              from the original data batch for the `SequentialModule`.
+                take labels when doing computation. Note any module in
+                the chain can take labels (not necessarily only the top
+                most one), and they all take the same labels passed
+                from the original data batch for the `SequentialModule`.
+
 
         Returns
         -------
         self
             This function returns `self` to allow us to easily chain a
             series of `add` calls.
-
         Examples
         --------
         >>> # An example of addinging two modules to a chain.
         >>> seq_mod = mx.mod.SequentialModule()
         >>> seq_mod.add(mod1)
         >>> seq_mod.add(mod2)
+
         """
         self._modules.append(module)
 
