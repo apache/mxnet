@@ -200,7 +200,6 @@ inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = fals
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
     if (!spatial_data_format) {
       pds.push_back(GetMemPD(s1, dtype, formats[0]));
-      pds.push_back(GetMemPD(s2, dtype, formats[1]));
     }
   }
   {
