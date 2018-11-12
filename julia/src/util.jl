@@ -149,9 +149,8 @@ function _get_libmx_op_description(name::String, handle::MX_OpHandle)
   return desc, key_narg
 end
 
-function _format_typestring(typestr :: String)
-  replace(typestr, r"\bSymbol\b", "SymbolicNode")
-end
+_format_typestring(s::String) = replace(s, r"\bSymbol\b" => "SymbolicNode")
+
 function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{char_pp}, arg_descs::Ref{char_pp}, remove_dup::Bool=true)
   param_keys = Set{String}()
 
