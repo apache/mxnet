@@ -116,9 +116,7 @@ private[mxnet] object APIDocGenerator{
     val absFuncs = absClassFunctions.filterNot(_.name.startsWith("_"))
       .filterNot(ele => notGenerated.contains(ele.name))
       .map(absClassFunction => {
-        val scalaDoc = generateAPIDocFromBackend(absClassFunction)
-        val defBody = generateJavaAPISignature(absClassFunction)
-        s"$scalaDoc\n$defBody"
+        generateJavaAPISignature(absClassFunction)
       })
     val packageName = "NDArrayBase"
     val packageDef = "package org.apache.mxnet.javaapi"
@@ -203,27 +201,61 @@ private[mxnet] object APIDocGenerator{
   }
 
   def generateJavaAPISignature(func : absClassFunction) : String = {
+    val useParamObject = func.listOfArgs.count(arg => arg.isOptional) >= 2
     var argDef = ListBuffer[String]()
     var classDef = ListBuffer[String]()
+    var requiredParam = ListBuffer[String]()
     func.listOfArgs.foreach(absClassArg => {
       val currArgName = safetyNameCheck(absClassArg.argName)
       // scalastyle:off
-      if (absClassArg.isOptional) {
-        classDef += s"def set${absClassArg.argName}(${absClassArg.argName} : ${absClassArg.argType}) : ${func.name}BuilderBase"
+      if (absClassArg.isOptional && useParamObject) {
+        classDef +=
+          s"""private var $currArgName: ${absClassArg.argType} = null
+             |/**
+             | * @param $currArgName\t\t${absClassArg.argDesc}
+             | */
+             |def set${currArgName.capitalize}($currArgName : ${absClassArg.argType}): ${func.name}Param = {
+             |  this.$currArgName = $currArgName
+             |  this
+             | }""".stripMargin
       }
       else {
+        requiredParam += s"  * @param $currArgName\t\t${absClassArg.argDesc}"
         argDef += s"$currArgName : ${absClassArg.argType}"
       }
+      classDef += s"def get${currArgName.capitalize}() = this.$currArgName"
       // scalastyle:on
     })
-    classDef += s"def setout(out : NDArray) : ${func.name}BuilderBase"
-    classDef += s"def invoke() : org.apache.mxnet.javaapi.NDArrayFuncReturn"
     val experimentalTag = "@Experimental"
-    // scalastyle:off
-    var finalStr = s"$experimentalTag\ndef ${func.name} (${argDef.mkString(", ")}) : ${func.name}BuilderBase\n"
-    // scalastyle:on
-    finalStr += s"abstract class ${func.name}BuilderBase {\n  ${classDef.mkString("\n  ")}\n}"
-    finalStr
+    val returnType = "Array[NDArray]"
+    val scalaDoc = generateAPIDocFromBackend(func)
+    val scalaDocNoParam = generateAPIDocFromBackend(func, false)
+    if(useParamObject) {
+      classDef +=
+        s"""private var out : org.apache.mxnet.NDArray = null
+           |def setOut(out : NDArray) : ${func.name}Param = {
+           |  this.out = out
+           |  this
+           | }
+           | def getOut() = this.out
+           | """.stripMargin
+      s"""$scalaDocNoParam
+          | $experimentalTag
+          | def ${func.name}(po: ${func.name}Param) : $returnType
+          | /**
+          | * This Param Object is specifically used for ${func.name}
+          | ${requiredParam.mkString("\n")}
+          | */
+          | class ${func.name}Param(${argDef.mkString(",")}) {
+          |  ${classDef.mkString("\n  ")}
+          | }""".stripMargin
+    } else {
+      argDef += "out : NDArray"
+      s"""$scalaDoc
+         |$experimentalTag
+         | def ${func.name}(${argDef.mkString(", ")}) : $returnType
+         | """.stripMargin
+    }
   }
 
 
