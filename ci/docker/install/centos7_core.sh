@@ -37,9 +37,14 @@ yum -y install cmake3
 yum -y install wget
 yum -y install unzip
 yum -y install ninja-build
+yum -y install zeromq-devel
+yum -y install protobuf-devel
+yum -y install ninja-build
 
 alternatives --install /usr/local/bin/cmake cmake /usr/bin/cmake3 20 \
     --slave /usr/local/bin/ctest ctest /usr/bin/ctest3 \
     --slave /usr/local/bin/cpack cpack /usr/bin/cpack3 \
     --slave /usr/local/bin/ccmake ccmake /usr/bin/ccmake3 \
     --family cmake
+
+alternatives --install /usr/local/bin/ninja ninja /usr/bin/ninja-build 20

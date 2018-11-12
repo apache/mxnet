@@ -54,6 +54,7 @@ elseif(APPLE)
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
 
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
+  include_directories(${MKLROOT}/include)
 
 elseif(UNIX)
   set(MKL_NAME "mklml_lnx_${MKLML_RELEASE_FILE_SUFFIX}")
@@ -67,6 +68,7 @@ elseif(UNIX)
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
 
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
+  include_directories(${MKLROOT}/include)
 
 else()
   message(FATAL_ERROR "Wrong platform")
