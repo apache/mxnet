@@ -100,7 +100,7 @@ COMMANDS = OrderedDict([
     ]),
     ('Python3 GPU unittests',
     [
-        "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cuda91_cudnn7",
+        "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
     ('Local CMake build (using cmake/cmake_options.yaml)',
