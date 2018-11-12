@@ -19,7 +19,7 @@
 import argparse
 import mxnet as mx
 from common import create_lin_reg_network, create_logger
-from data_reader import read_year_prediction_data
+from data_reader import get_year_prediction_data
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', dest='epochs', help='number of epochs for training phase', type=int, default=100)
@@ -37,7 +37,7 @@ ctx = mx.cpu() if args.gpus is None or args.gpus == "" else [mx.gpu(int(i)) for 
 logger = create_logger()
 kv = mx.kvstore.create(args.kv_store)
 
-feature_dim, train_features, train_labels = read_year_prediction_data('YearPredictionMSD')
+feature_dim, train_features, train_labels = get_year_prediction_data()
 train_iter, mod = create_lin_reg_network(train_features, train_labels, feature_dim, args.batch_size, args.updateFreq,
                                          ctx, logger)
 

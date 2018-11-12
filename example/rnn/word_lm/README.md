@@ -16,7 +16,7 @@ The Sherlock Holmes data is a copyright free copy of Sherlock Holmes from[(Proje
 Example runs and the results:
 
 ```
-python train.py --tied --nhid 650 --emsize 650 --dropout 0.5        # Test ppl of 75.4
+python train.py --tied --nhid 650 --emsize 650 --dropout 0.5        # Test ppl of 44.26
 ```
 
 ```
