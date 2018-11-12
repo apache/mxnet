@@ -44,9 +44,6 @@ The following documents are recommended:
 - *Examples*: simple and short code snippet showing how to use this operator.
   It should show typical calling examples and behaviors (e.g. maps an input
   of what shape to an output of what shape).
-- *Regression Test*: longer test code for the operators. We normally do not
-  expect the users to read those, but they will be executed by `doctest` to
-  ensure the behavior of each operator does not change unintentionally.
 """
 from __future__ import absolute_import as _abs
 import re as _re
@@ -75,8 +72,6 @@ class ActivationDoc(SymbolDoc):
     >>> mlp
     <Symbol mlp>
 
-    Regression Test
-    ---------------
     ReLU activation
 
     >>> test_suites = [
@@ -107,8 +102,6 @@ class DropoutDoc(SymbolDoc):
     >>> data = Variable('data')
     >>> data_dp = Dropout(data=data, p=0.2)
 
-    Regression Test
-    ---------------
     >>> shape = (100, 100)  # take larger shapes to be more statistical stable
     >>> x = np.ones(shape)
     >>> op = Dropout(p=0.5, name='dp')
@@ -141,8 +134,6 @@ class EmbeddingDoc(SymbolDoc):
     >>> SymbolDoc.get_output_shape(op, letters=(seq_len, batch_size))
     {'embed_output': (10L, 64L, 16L)}
 
-    Regression Test
-    ---------------
     >>> vocab_size, embed_dim = (26, 16)
     >>> batch_size = 12
     >>> word_vecs = test_utils.random_arrays((vocab_size, embed_dim))
@@ -167,8 +158,6 @@ class FlattenDoc(SymbolDoc):
     >>> SymbolDoc.get_output_shape(flatten, data=(2, 3, 4, 5))
     {'flat_output': (2L, 60L)}
 
-    Regression Test
-    ---------------
     >>> test_dims = [(2, 3, 4, 5), (2, 3), (2,)]
     >>> op = Flatten(name='flat')
     >>> for dims in test_dims:
@@ -208,8 +197,6 @@ class FullyConnectedDoc(SymbolDoc):
     >>> net
     <Symbol pred>
 
-    Regression Test
-    ---------------
     >>> dim_in, dim_out = (3, 4)
     >>> x, w, b = test_utils.random_arrays((10, dim_in), (dim_out, dim_in), (dim_out,))
     >>> op = FullyConnected(num_hidden=dim_out, name='FC')

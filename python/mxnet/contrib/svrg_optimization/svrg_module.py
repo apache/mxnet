@@ -401,6 +401,7 @@ class SVRGModule(Module):
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
             validation_metric=None, monitor=None, sparse_row_id_fn=None):
         """Trains the module parameters.
+
         Parameters
         ----------
         train_data : DataIter
