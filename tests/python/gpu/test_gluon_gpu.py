@@ -456,8 +456,8 @@ def test_conv():
     layers1d = [
         nn.Conv1D(16, 3, in_channels=4),
         nn.Conv1D(16, 3, in_channels=4, cudnn='off'),
+        nn.Conv1D(16, 3, in_channels=4, cudnn='no_autotune'),
         nn.Conv1D(16, 3, in_channels=4, cudnn='default'),
-        nn.Conv1D(16, 3, in_channels=4, cudnn='global'),
         nn.Conv1D(16, 3, in_channels=4, cudnn='fastest'),
         nn.Conv1D(16, 3, in_channels=4, cudnn='limited_workspace')
         ]
@@ -467,8 +467,8 @@ def test_conv():
     layers2d = [
         nn.Conv2D(16, (5, 4), in_channels=4),
         nn.Conv2D(16, (3, 4), in_channels=4, cudnn='off'),
-        nn.Conv2D(16, (5, 4), in_channels=4, cudnn='default'),
-        nn.Conv2D(16, (3, 4), in_channels=4, cudnn='global'),
+        nn.Conv2D(16, (5, 4), in_channels=4, cudnn='no_autotune'),
+        nn.Conv2D(16, (3, 4), in_channels=4, cudnn='default'),
         nn.Conv2D(16, (5, 4), in_channels=4, cudnn='fastest'),
         nn.Conv2D(16, (3, 4), in_channels=4, cudnn='limited_workspace'),
         ]
@@ -478,8 +478,8 @@ def test_conv():
     layers3d = [
         nn.Conv3D(16, (5, 4, 3), in_channels=4),
         nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='off'),
+        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='no_autotune'),
         nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='default'),
-        nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='global'),
         nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='fastest'),
         nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='limited_workspace')
         ]

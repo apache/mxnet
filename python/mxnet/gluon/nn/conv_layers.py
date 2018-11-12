@@ -47,15 +47,15 @@ def _get_cuddn_controls(cudnn_flag):
     Parameters:
     -----------
     cudnn_flag : str
-        Supported flags - {'off', 'default', 'fastest', 'limited_workspace', 'global'}
+        Supported flags - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}
 
     Outputs:
         - cudnn_off, cudnn_tune
     """
-    assert cudnn_flag in ('off', 'default', 'fastest', 'limited_workspace', 'global', None), \
+    assert cudnn_flag in ('off', 'no_autotune', 'fastest', 'limited_workspace', 'default', None), \
         "Invalid cudnn flag - '{0}' provided. \
-        Supported options - 'off', 'default', \
-        'fastest','limited_workspace', 'global'".format(cudnn_flag)
+        Supported options - 'off', 'no_autotune', \
+        'fastest','limited_workspace', 'default'".format(cudnn_flag)
 
     # Default cudnn controls - Use cudnn and use limited_workspace tuning.
     cudnn_off = False
@@ -63,7 +63,7 @@ def _get_cuddn_controls(cudnn_flag):
 
     if cudnn_flag == 'off':
         cudnn_off = True
-    elif cudnn_flag == 'default':
+    elif cudnn_flag == 'no_autotune':
         cudnn_tune = 'off'
     elif cudnn_flag == 'fastest':
         cudnn_tune = 'fastest'
@@ -122,19 +122,19 @@ class _Conv(HybridBlock):
     bias_initializer: str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
     """
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
-                 weight_initializer=None, bias_initializer='zeros', cudnn='global',
+                 weight_initializer=None, bias_initializer='zeros', cudnn='default',
                  op_name='Convolution', adj=None, prefix=None, params=None):
         super(_Conv, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
@@ -263,14 +263,14 @@ class Conv1D(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -287,7 +287,7 @@ class Conv1D(_Conv):
     def __init__(self, channels, kernel_size, strides=1, padding=0, dilation=1,
                  groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, cudnn='global', **kwargs):
+                 in_channels=0, cudnn='default', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
@@ -351,14 +351,14 @@ class Conv2D(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -379,7 +379,7 @@ class Conv2D(_Conv):
                  dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0,
-                 cudnn='global', **kwargs):
+                 cudnn='default', **kwargs):
         assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
@@ -443,14 +443,14 @@ class Conv3D(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
     Inputs:
@@ -470,7 +470,7 @@ class Conv3D(_Conv):
     def __init__(self, channels, kernel_size, strides=(1, 1, 1), padding=(0, 0, 0),
                  dilation=(1, 1, 1), groups=1, layout='NCDHW', activation=None,
                  use_bias=True, weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, cudnn='global', **kwargs):
+                 in_channels=0, cudnn='default', **kwargs):
         assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
@@ -538,14 +538,14 @@ class Conv1DTranspose(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -562,7 +562,7 @@ class Conv1DTranspose(_Conv):
     def __init__(self, channels, kernel_size, strides=1, padding=0, output_padding=0,
                  dilation=1, groups=1, layout='NCW', activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 in_channels=0, cudnn='global', **kwargs):
+                 in_channels=0, cudnn='default', **kwargs):
         assert layout == 'NCW', "Only supports 'NCW' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)
@@ -637,14 +637,14 @@ class Conv2DTranspose(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
     Inputs:
@@ -664,7 +664,7 @@ class Conv2DTranspose(_Conv):
                  output_padding=(0, 0), dilation=(1, 1), groups=1, layout='NCHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0,
-                 cudnn='global', **kwargs):
+                 cudnn='default', **kwargs):
         assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*2
@@ -739,14 +739,14 @@ class Conv3DTranspose(_Conv):
     bias_initializer : str or `Initializer`
         Initializer for the bias vector.
     cudnn : str,
-        Supported values - {'off', 'default', 'fastest', 'limited_workspace', 'global'}.
-        Optional, If you do not specificy anything, defaults to 'global'.
+        Supported values - {'off', 'no_autotune', 'fastest', 'limited_workspace', 'default'}.
+        Optional, If you do not specificy anything, defaults to 'default'.
         off: Do not use cudnn for this layer.
-        default: Use cudnn. Do not auto tune to choose the algorithm.
+        no_autotune: Use cudnn. Do not auto tune to choose the algorithm.
         limited_workspace: Use cudnn. Run the test and pick the fastest algorithm
                            that doesn't exceed workspace limit.
         fastest: Use cudnn. Pick the fastest algorithm and ignore workspace limit.
-        global: Use Cuddn. Use global cudnn behavior determined by the environment variable
+        default: Use Cuddn. Use global cudnn behavior determined by the environment variable
                 MXNET_CUDNN_AUTOTUNE_DEFAULT. 0 for off, 1 for limited workspace (default), 2 for fastest.
 
 
@@ -768,7 +768,7 @@ class Conv3DTranspose(_Conv):
                  output_padding=(0, 0, 0), dilation=(1, 1, 1), groups=1, layout='NCDHW',
                  activation=None, use_bias=True, weight_initializer=None,
                  bias_initializer='zeros', in_channels=0,
-                 cudnn='global', **kwargs):
+                 cudnn='default', **kwargs):
         assert layout in ('NCDHW', 'NDHWC'), "Only supports 'NCDHW' and 'NDHWC' layout for now"
         if isinstance(kernel_size, numeric_types):
             kernel_size = (kernel_size,)*3
