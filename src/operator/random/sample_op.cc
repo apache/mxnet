@@ -52,7 +52,7 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
   .set_num_outputs(1)                                                                        \
   .set_attr_parser(ParamParser<ParamType>)                                                   \
   .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)                          \
-  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<SampleUniformParam>)                \
+  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)                \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                            \
   .add_arguments(ParamType::__FIELDS__())                                                    \
   .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<ParamType, true, false>) \
