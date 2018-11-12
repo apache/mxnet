@@ -18,9 +18,13 @@
 #this file download mklml
 
 message(STATUS "download mklml")
+
+set(MKLURLROOT "https://github.com/intel/mkl-dnn/releases/download/v0.17-rc/")
+set(MKLVERSION "2019.0.1.20180928")
+
 if(MSVC)
-  set(MKL_NAME "mklml_win_2019.0.1.20180928")
-  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.17-rc/${MKL_NAME}.zip" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" EXPECTED_MD5 "443e661bdfd32dbbc99b460b43afceee" SHOW_PROGRESS)
+  set(MKL_NAME "mklml_win_${MKLVERSION}")
+  file(DOWNLOAD "${MKLURLROOT}${MKL_NAME}.zip" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip" EXPECTED_MD5 "443e661bdfd32dbbc99b460b43afceee" SHOW_PROGRESS)
   file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe" "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
   
   execute_process(COMMAND "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe" "-o${CMAKE_CURRENT_BINARY_DIR}/mklml/" "-y")
@@ -31,8 +35,8 @@ if(MSVC)
   file(COPY ${MKLROOT}/lib/mklml.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/mkldnn/config_template.vcxproj.user DESTINATION ${CMAKE_SOURCE_DIR})
 elseif(UNIX)
-  set(MKL_NAME "mklml_lnx_2019.0.1.20180928")
-  file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/v0.17-rc/${MKL_NAME}.tgz" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz" EXPECTED_MD5 "a63abf155361322b9c03f8fc50f4f317" SHOW_PROGRESS)
+  set(MKL_NAME "mklml_lnx_${MKLVERSION}")
+  file(DOWNLOAD "${MKLURLROOT}${MKL_NAME}.tgz" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz" EXPECTED_MD5 "a63abf155361322b9c03f8fc50f4f317" SHOW_PROGRESS)
   execute_process(COMMAND "tar" "-xzf" "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.tgz" "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
   include_directories(${MKLROOT}/include)
