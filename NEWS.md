@@ -1,5 +1,102 @@
 MXNet Change Log
 ================
+
+## 1.3.1
+
+### Bug fixes
+
+* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)  
+Simple bugfix addressing an out-of-bounds memory read.
+
+
+* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)  
+This fixes an buffer overflow detected by ASAN.
+
+
+* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)  
+  This PR improves the MXNet's use of cudnnFind() to address a few issues:
+  1. With the gluon imperative style, cudnnFind() is called during forward(), and so might have its timings perturbed by other GPU activity (including potentially other cudnnFind() calls).
+  2. With some cuda drivers versions, care is needed to ensure that the large I/O and workspace cudaMallocs() performed by cudnnFind() are immediately released and available to MXNet.
+  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.  
+  
+  This PR addresses these issues, providing the following benefits:
+  1. Consistent algo choice for a given convolution type in a model, both for instances in the same GPU and in other GPUs in a multi-GPU training setting.
+  2. Consistent algo choice from run to run, based on eliminating sources of interference of the cudnnFind() timing process.
+  3. Consistent model global memory footprint, both because of the consistent algo choice (algo's can have markedly different workspace requirements) and changes to MXNet's use of cudaMalloc.
+  4. Increased training performance based on being able to consistently run with models that approach the GPU's full global memory footprint.
+  5. Adds a unittest for and solves issue #12662.
+
+* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)  
+  Fix a memleak reported locally by ASAN during a normal inference test.
+
+* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)  
+  Fixes multi_worker data loader when record file is used. The MXRecordIO instance needs to require a new file handler after fork to be safely manipulated simultaneously.
+
+  This fix also safely voids the previous temporary fixes #12093 #11370.
+
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)  
+  This fixes #12783, by assigning all nodes in hybrid_forward a unique name. Some operations were in fact performed without attaching the appropriate (time) prefix to the name, which makes serialized graphs non-deserializable.
+
+* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)  
+  Fixed `__setattr__` method
+
+* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)  
+  Fix #12470. With this change, outs shape can be inferred correctly.
+
+* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)  
+  Fix for the issue - #11849  
+  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,  
+  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.  
+  Added the tests
+
+### Documentation fixes
+
+* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)  
+  Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/incubator-mxnet/pull/12992)
+
+* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)  
+  This PR fixes broken links on the website.
+
+* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)  
+  Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/incubator-mxnet/issues/12854)
+
+  This PR manually specifies members of the IO module so that the docs will render as expected. This is workaround in the docs to deal with a bug introduced in the Python code/structure since v1.3.0. See the comments for more info.
+
+  This PR also fixes another issue that may or may not be related. Cross references to same-named entities like name, shape, or type are confusing Sphinx and it seems to just link to whatever it last dealt with that has the same name, and not the current module. To fix this you have to be very specific. Don't use type, use np.type if that's what you want. Otherwise you might end up with mxnet.kvstore.KVStore.type. This is a known Sphinx issue, so it might be something we have to deal with for the time being.
+
+  This is important for any future modules - that they recognize this issue and make efforts to map the params and other elements.
+
+* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)  
+  This PR adds or updates the docs for the infer_range feature.
+
+  Clarifies the param in the C op docs
+  Clarifies the param in the the Scala symbol docs
+  Adds the param for the the Scala ndarray docs
+  Adds the param for the Python symbol docs
+  Adds the param for the Python ndarray docs
+
+### Other Improvements
+
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)  
+  Some of the CUDNN convolution algorithms are non-deterministic (see issue #11341). This PR adds an env variable to enforce determinism in the convolution operators. If set to true, only deterministic CUDNN algorithms will be used. If no deterministic algorithm is available, MXNet will error out.
+
+
+### Submodule updates
+
+* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)  
+  Update mshadow for omp acceleration when nvcc is not present
+
+### Known issues
+
+The test test_operator.test_dropout has issues and has been disabled on the branch:
+
+* Disable flaky test test_operator.test_dropout (v1.3.x) / [#13200](https://github.com/apache/incubator-mxnet/pull/13200)
+
+
+
+For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/x/eZGzBQ)
+
+
 ## 1.3.0
 
 ### New Features - Gluon RNN layers are now HybridBlocks
