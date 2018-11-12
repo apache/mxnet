@@ -243,6 +243,7 @@ private[mxnet] object APIDocGenerator{
           | $experimentalTag
           | def ${func.name}(po: ${func.name}Param) : $returnType
           | /**
+          | * This Param Object is specifically used for ${func.name}
           | ${requiredParam.mkString("\n")}
           | */
           | class ${func.name}Param(${argDef.mkString(",")}) {
