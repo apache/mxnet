@@ -568,7 +568,7 @@ Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is tr
 then set ``gamma`` to 1 and its gradient to 0.
 
 .. Note::
-  When fix_gamma is set to True, no sparse support is provided. If fix_gamma is set to False,
+  When ``fix_gamma`` is set to True, no sparse support is provided. If ``fix_gamma is`` set to False,
   the sparse tensors will fallback.
 
 )code" ADD_FILELINE)
