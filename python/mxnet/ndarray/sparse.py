@@ -195,7 +195,8 @@ class BaseSparseNDArray(NDArray):
         return self.tostype('default').asnumpy()
 
     def astype(self, dtype, copy=True):
-        """Returns a copy of the array after casting to a specified type.
+        """Return a copy of the array after casting to a specified type.
+
         Parameters
         ----------
         dtype : numpy.dtype or str
@@ -205,6 +206,7 @@ class BaseSparseNDArray(NDArray):
             allocated ndarray on the same context. If this is set to
             `False`, and the dtype requested is the same as the ndarray's
             dtype, the ndarray is returned instead of a copy.
+
         Examples
         --------
         >>> x = mx.nd.sparse.zeros('row_sparse', (2,3), dtype='float32')
@@ -418,7 +420,7 @@ class CSRNDArray(BaseSparseNDArray):
         if isinstance(key, py_slice):
             if key.step is not None or key.start is not None or key.stop is not None:
                 raise ValueError('Assignment with slice for CSRNDArray is not ' \
-                                 'implmented yet.')
+                                 'implemented yet.')
             if isinstance(value, NDArray):
                 # avoid copying to itself
                 if value.handle is not self.handle:
@@ -1203,9 +1205,9 @@ def add(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.sparse.array
         First array to be added.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.sparse.array
          Second array to be added.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -1275,9 +1277,9 @@ def subtract(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.sparse.array
         First array to be subtracted.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.sparse.array
          Second array to be subtracted.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.__spec__
@@ -1346,9 +1348,9 @@ def multiply(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.sparse.array
         First array to be multiplied.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.sparse.array
          Second array to be multiplied.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -1430,9 +1432,9 @@ def divide(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.sparse.array
         First array in division.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.sparse.array
          Second array in division.
         The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.

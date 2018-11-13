@@ -740,9 +740,9 @@ class ParameterDict(object):
         return param
 
     def get_constant(self, name, value=None):
-        """Retrieves a :py:class:`Constant` with name ``self.prefix+name``. If not found,
+        """Retrieves a :py:class:`.Constant` with name ``self.prefix+name``. If not found,
         :py:func:`get` will first try to retrieve it from "shared" dict. If still not
-        found, :py:func:`get` will create a new :py:class:`Constant` with key-word
+        found, :py:func:`get` will create a new :py:class:`.Constant` with key-word
         arguments and insert it to self.
 
         Parameters
@@ -756,7 +756,7 @@ class ParameterDict(object):
         Returns
         -------
         Constant
-            The created or retrieved :py:class:`Constant`.
+            The created or retrieved :py:class:`.Constant`.
         """
         name = self.prefix + name
         param = self._get_impl(name)
