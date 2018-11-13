@@ -91,19 +91,19 @@ class CMake(object):
 
 
 COMMANDS = OrderedDict([
-    ('sanity_check',
+    ('[Docker] sanity_check',
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check"),
-    ('Python3 CPU unittests',
+    ('[Docker] Python3 CPU unittests',
     [
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_openblas",
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_python3_cpu",
     ]),
-    ('Python3 GPU unittests',
+    ('[Docker] Python3 GPU unittests',
     [
         "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
-    ('Local CMake build (using cmake/cmake_options.yaml)',
+    ('[Local] CMake build (using cmake/cmake_options.yaml)',
         CMake()),
     ('Clean (RESET HARD) repository (Warning! erases local changes / DATA LOSS)',
        Confirm("ci/docker/runtime_functions.sh clean_repo"))
