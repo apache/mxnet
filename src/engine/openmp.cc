@@ -83,6 +83,7 @@ int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
     return omp_thread_max_;
   }
   if (enabled_) {
+    int thread_count = omp_get_max_threads();
     if (exclude_reserved) {
       if (reserve_cores_ >= thread_count) {
         thread_count = 1;
