@@ -1,6 +1,6 @@
 
 ## Difference between reshape and transpose operators
-Modyfing the shape of tensors is a very common operation in Deep Learning. For instance, when using pretrained neural networks it is often required to adjust input data dimensions to correspond to what the network has been trained on, e.g. tensors of shape `[batch_size, channels, width, height]`.  This notebook discusses briefly the difference between the operators `Reshape` and `Transpose`. Both allow to change the shape, however they are not the same and are commonly mistaken.
+Modyfing the shape of tensors is a very common operation in Deep Learning. For instance, when using pretrained neural networks it is often required to adjust input data dimensions to correspond to what the network has been trained on, e.g. tensors of shape `[batch_size, channels, width, height]`.  This notebook discusses briefly the difference between the operators [Reshape](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.NDArray.reshape) and [Transpose](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.transpose). Both allow to change the shape, however they are not the same and are commonly mistaken.
 
 
 ```python
@@ -126,7 +126,4 @@ x = x.reshape(0, 0, -3, -3)
 
 This was just a toy example. But such transformations are for instance done in image superresolution where you increase width and height of the input image and ```x``` would be the output of a CNN that computes an upscale feature vector.
 
-#### Check out the MXNet documentation for more details
-http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.NDArray.reshape
-http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.transpose
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
