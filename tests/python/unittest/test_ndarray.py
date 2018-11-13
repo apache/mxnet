@@ -723,7 +723,7 @@ def test_order():
     gt = gt_topk(large_matrix_npy, axis=1, ret_typ="indices", k=5, is_ascend=False)
     assert_almost_equal(nd_ret_topk, gt)
 
-    for dtype in [ np.int32, np.int64, np.float32, np.float64]:
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
         a_npy = get_values(ensure_unique=True, dtype=dtype)
         a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
@@ -754,9 +754,6 @@ def test_order():
         assert_almost_equal(nd_ret_topk, gt)
 
         # test for ret_typ=mask
-        # test needs to be re-enabled once flaky topk gets fixed
-        # tracked in https://github.com/apache/incubator-mxnet/pull/12446
-        '''
         nd_ret_topk = mx.nd.topk(a_nd, axis=1, ret_typ="mask", k=3, is_ascend=True).asnumpy()
         assert nd_ret_topk.dtype == dtype
         gt = gt_topk(a_npy, axis=1, ret_typ="mask", k=3, is_ascend=True)
@@ -767,7 +764,7 @@ def test_order():
         nd_ret_topk = mx.nd.topk(a_nd, axis=None, ret_typ="mask", k=21, is_ascend=False).asnumpy()
         gt = gt_topk(a_npy, axis=None, ret_typ="mask", k=21, is_ascend=False)
         assert_almost_equal(nd_ret_topk, gt)
-        '''
+
         # test for ret_typ=both
         nd_ret_topk_val, nd_ret_topk_ind = mx.nd.topk(a_nd, axis=1, ret_typ="both", k=3, is_ascend=True)
         nd_ret_topk_val = nd_ret_topk_val.asnumpy()
@@ -800,6 +797,7 @@ def test_order():
         # test for argsort
         for idtype in [np.int32, np.float16, np.float32, np.float64]:
             nd_ret_argsort = mx.nd.argsort(a_nd, axis=3, is_ascend=True, dtype=idtype).asnumpy()
+            assert nd_ret_argsort.dtype == idtype
             gt = gt_topk(a_npy, axis=3, ret_typ="indices", k=dat_size, is_ascend=True)
             assert_almost_equal(nd_ret_argsort, gt)
             nd_ret_argsort = mx.nd.argsort(a_nd, axis=None, is_ascend=False, dtype=idtype).asnumpy()
@@ -863,7 +861,7 @@ def test_order():
     # Repeat those tests that don't involve indices.  These should pass even with
     # duplicated input data values (over many repeated runs with different random seeds,
     # this will be tested).
-    for dtype in [ np.int32, np.int64, np.float32, np.float64]:
+    for dtype in [np.int32, np.int64, np.float32, np.float64]:
         a_npy = get_values(ensure_unique=False, dtype=dtype)
         a_nd = mx.nd.array(a_npy, ctx=ctx, dtype=dtype)
 
@@ -1357,6 +1355,17 @@ def test_assign_float_value_to_ndarray():
     b[0] = a[0]
     assert same(a, b.asnumpy())
 
+def test_assign_large_int_to_ndarray():
+    """Test case from https://github.com/apache/incubator-mxnet/issues/11639"""
+    a = mx.nd.zeros((4, 1), dtype=np.int32)
+    a[1,0] = int(16800001)
+    a[2,0] = int(16800002)
+    b = a.asnumpy()
+    assert same(b[1,0], 16800001)
+    a = a-1
+    b = a.asnumpy()
+    assert same(b[1,0], 16800000)
+
 @with_seed()
 def test_assign_a_row_to_ndarray():
     """Test case from https://github.com/apache/incubator-mxnet/issues/9976"""
@@ -1496,6 +1505,48 @@ def test_dlpack():
             mx.test_utils.assert_almost_equal(a_np, c_np)
             mx.test_utils.assert_almost_equal(a_np, d_np)
             mx.test_utils.assert_almost_equal(a_np, e_np)
+
+@with_seed()
+def test_ndarray_is_inf():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isinf(data)
+    expected_output = np.isinf(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_finite():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isfinite(data)
+    expected_output = np.isfinite(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_is_nan():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data[0][0] = np.inf
+    data[0][1] = -np.inf
+    data[1][0] = np.nan
+    data[1][1] = 5
+    output = mx.nd.contrib.isnan(data)
+    expected_output = np.isnan(data.asnumpy())
+    np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
+    # astype since numpy functions default return type is boolean array instead of int
 
 if __name__ == '__main__':
     import nose

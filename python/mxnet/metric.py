@@ -98,7 +98,7 @@ class EvalMetric(object):
 
     def get_config(self):
         """Save configurations of metric. Can be recreated
-        from configs with metric.create(**config)
+        from configs with metric.create(``**config``)
         """
         config = self._kwargs.copy()
         config.update({

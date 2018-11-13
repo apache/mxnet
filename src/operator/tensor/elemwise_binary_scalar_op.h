@@ -274,6 +274,28 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   template<typename xpu, typename OP>
+  static void LogicComputeEx(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const std::vector<NDArray> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<NDArray> &outputs) {
+    DCHECK_EQ(inputs.size(), 1);
+    DCHECK_EQ(outputs.size(), 1);
+    const auto in_stype = inputs[0].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if (req[0] == kNullOp) {
+      return;
+    }
+    if ((in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) ||
+        (in_stype == kCSRStorage && out_stype == kCSRStorage)) {
+      // csr -> csr, or rsp -> rsp
+      UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
+    } else {
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+    }
+  }
+
+  template<typename xpu, typename OP>
   static void Backward(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,

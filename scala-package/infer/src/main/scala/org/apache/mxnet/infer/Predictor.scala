@@ -181,6 +181,7 @@ class Predictor(modelPathPrefix: String,
 
     // rebind with the new batchSize
     if (batchSize != inputBatchSize) {
+      logger.info(s"Latency increased due to batchSize mismatch $batchSize vs $inputBatchSize")
       val desc = iDescriptors.map((f : DataDesc) => new DataDesc(f.name,
         Shape(f.shape.toVector.patch(batchIndex, Vector(inputBatchSize), 1)), f.dtype, f.layout) )
       mxNetHandler.execute(mod.bind(desc, forceRebind = true,

@@ -147,6 +147,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
       argDef += "attr : Map[String, String] = null"
     } else {
       argDef += "out : Option[NDArray] = None"
+
     }
 
     val returnType = func.returnType
@@ -242,6 +243,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
          |abstract class $className {
          |${absFuncs.mkString("\n")}
          |}""".stripMargin
+
 
     val pw = new PrintWriter(new File(FILE_PATH + s"$className.scala"))
     pw.write(finalStr)

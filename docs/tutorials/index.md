@@ -3,6 +3,7 @@
 ```eval_rst
 .. toctree::
    :hidden:
+   
    basic/index.md
    c++/index.md
    control_flow/index.md
@@ -164,6 +165,9 @@ Select API:&nbsp;
 
 * Models
     * [MNIST Handwritten Digit Recognition with Fully Connected Network](/tutorials/c%2B%2B/basics.html)
+
+* Backends
+    * [Subgraph API](/tutorials/c%2B%2B/subgraphAPI.html)
 
 <hr>
 

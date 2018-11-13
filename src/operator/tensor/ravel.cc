@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2018 by Contributors
  * \file ravel.cc
- * \brief CPU-operators for ravel/unravel.
+ * \brief CPU implementation of operators for ravel/unravel.
  */
 #include "./ravel.h"
 
