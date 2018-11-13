@@ -233,7 +233,6 @@ The following table summarizes the available models.
 .. automodule:: mxnet.gluon.model_zoo.vision
     :members:
     :imported-members:
-    :noindex:
 
 ```
 
