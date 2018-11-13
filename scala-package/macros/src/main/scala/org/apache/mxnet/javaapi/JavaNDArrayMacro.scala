@@ -17,8 +17,7 @@
 
 package org.apache.mxnet.javaapi
 
-import org.apache.mxnet.init.Base._
-import org.apache.mxnet.utils.CToScalaUtils
+import org.apache.mxnet.GeneratorBase
 
 import scala.annotation.StaticAnnotation
 import scala.collection.mutable.ListBuffer
@@ -29,17 +28,13 @@ private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotatio
   private[mxnet] def macroTransform(annottees: Any*) = macro JavaNDArrayMacro.typeSafeAPIDefs
 }
 
-private[mxnet] object JavaNDArrayMacro {
-  case class NDArrayArg(argName: String, argType: String, isOptional : Boolean)
-  case class NDArrayFunction(name: String, listOfArgs: List[NDArrayArg])
+private[mxnet] object JavaNDArrayMacro extends GeneratorBase {
 
   // scalastyle:off havetype
   def typeSafeAPIDefs(c: blackbox.Context)(annottees: c.Expr[Any]*) = {
     typeSafeAPIImpl(c)(annottees: _*)
   }
   // scalastyle:off havetype
-
-  private val ndarrayFunctions: List[NDArrayFunction] = initNDArrayModule()
 
   private def typeSafeAPIImpl(c: blackbox.Context)(annottees: c.Expr[Any]*) : c.Expr[Any] = {
     import c.universe._
@@ -50,12 +45,13 @@ private[mxnet] object JavaNDArrayMacro {
     // Defines Operators that should not generated
     val notGenerated = Set("Custom")
 
-    val newNDArrayFunctions = {
-      if (isContrib) ndarrayFunctions.filter(
-        func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
-      else ndarrayFunctions.filterNot(_.name.startsWith("_"))
-    }.filterNot(ele => notGenerated.contains(ele.name)).groupBy(_.name.toLowerCase).map(ele => {
-      // Pattern matching for not generating depreciated method
+    val newNDArrayFunctions = functionsToGenerate(false, false, true)
+      .filterNot(ele => notGenerated.contains(ele.name)).groupBy(_.name.toLowerCase).map(ele => {
+      /* Pattern matching for not generating deprecated method
+       * Group all method name in lowercase
+       * Kill the capital lettered method such as Cast vs cast
+       * As it defined by default it deprecated
+       */
       if (ele._2.length == 1) ele._2.head
       else {
         if (ele._2.head.name.head.isLower) ele._2.head
@@ -79,11 +75,7 @@ private[mxnet] object JavaNDArrayMacro {
       ndarrayfunction.listOfArgs.foreach({ ndarrayArg =>
         // var is a special word used to define variable in Scala,
         // need to changed to something else in order to make it work
-        var currArgName = ndarrayArg.argName match {
-          case "var" => "vari"
-          case "type" => "typeOf"
-          case _ => ndarrayArg.argName
-        }
+        var currArgName = ndarrayArg.safeArgName
         if (useParamObject) currArgName = s"po.get${currArgName.capitalize}()"
         argDef += s"$currArgName : ${ndarrayArg.argType}"
         // NDArray arg implementation
@@ -128,73 +120,6 @@ private[mxnet] object JavaNDArrayMacro {
         functionDefs += c.parse(funcDef).asInstanceOf[DefDef]
       }
     }
-
     structGeneration(c)(functionDefs.toList, annottees : _*)
-  }
-
-  private def structGeneration(c: blackbox.Context)
-                              (funcDef : List[c.universe.DefDef],
-                               annottees: c.Expr[Any]*)
-  : c.Expr[Any] = {
-    import c.universe._
-    val inputs = annottees.map(_.tree).toList
-    // pattern match on the inputs
-    var modDefs = inputs map {
-      case ClassDef(mods, name, something, template) =>
-        val q = template match {
-          case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ funcDef)
-          case ex =>
-            throw new IllegalArgumentException(s"Invalid template: $ex")
-        }
-        ClassDef(mods, name, something, q)
-      case ModuleDef(mods, name, template) =>
-        val q = template match {
-          case Template(superMaybe, emptyValDef, defs) =>
-            Template(superMaybe, emptyValDef, defs ++ funcDef)
-          case ex =>
-            throw new IllegalArgumentException(s"Invalid template: $ex")
-        }
-        ModuleDef(mods, name, q)
-      case ex =>
-        throw new IllegalArgumentException(s"Invalid macro input: $ex")
-    }
-    //    modDefs ++= classDef
-    // wrap the result up in an Expr, and return it
-    val result = c.Expr(Block(modDefs, Literal(Constant())))
-    result
-  }
-
-  // List and add all the atomic symbol functions to current module.
-  private def initNDArrayModule(): List[NDArrayFunction] = {
-    val opNames = ListBuffer.empty[String]
-    _LIB.mxListAllOpNames(opNames)
-    opNames.map(opName => {
-      val opHandle = new RefLong
-      _LIB.nnGetOpHandle(opName, opHandle)
-      makeNDArrayFunction(opHandle.value, opName)
-    }).toList
-  }
-
-  // Create an atomic symbol function by handle and function name.
-  private def makeNDArrayFunction(handle: NDArrayHandle, aliasName: String)
-  : NDArrayFunction = {
-    val name = new RefString
-    val desc = new RefString
-    val keyVarNumArgs = new RefString
-    val numArgs = new RefInt
-    val argNames = ListBuffer.empty[String]
-    val argTypes = ListBuffer.empty[String]
-    val argDescs = ListBuffer.empty[String]
-
-    _LIB.mxSymbolGetAtomicSymbolInfo(
-      handle, name, desc, numArgs, argNames, argTypes, argDescs, keyVarNumArgs)
-    val argList = argNames zip argTypes map { case (argName, argType) =>
-      val typeAndOption =
-        CToScalaUtils.argumentCleaner(argName, argType,
-          "org.apache.mxnet.javaapi.NDArray")
-      new NDArrayArg(argName, typeAndOption._1, typeAndOption._2)
-    }
-    new NDArrayFunction(aliasName, argList.toList)
   }
 }
