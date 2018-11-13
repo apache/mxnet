@@ -500,6 +500,8 @@ std::vector<NDArray*> Imperative::Backward(
             is_recording());
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
+    set_is_recording(prev_recording);
+    set_is_training(prev_training);
     throw e;
   }
 
