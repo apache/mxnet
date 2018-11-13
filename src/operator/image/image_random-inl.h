@@ -154,7 +154,7 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
   int interpolation;
   DMLC_DECLARE_PARAMETER(ResizeParam) {
     DMLC_DECLARE_FIELD(size)
-    .describe("Size of new image");
+    .describe("Size of new image. Could be (height, width) or (size)");
     DMLC_DECLARE_FIELD(keep_ratio)
     .describe("Whether to resize the short edge or both edges to `size`, "
       "if size is give as an integer.");
@@ -167,28 +167,28 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
 inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
-  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
-  const auto& ishape = (*in_attrs)[0];
-  const auto& oshape = (*out_attrs)[0];
-  if (in_attrs->size() != 1 || ishape.ndim() != 3) return false;
-  int h = ishape[0];
-  int w = ishape[1];
-  int resized_h;
-  int resized_w;
-  if (param.keep_ratio) {
-    if (h > w) {
-      resized_w = param.size;
-      resized_h = static_cast<int>(h * resized_w / w);
-    } else {
-      resized_h = param.size;
-      resized_w = static_cast<int>(w * resized_h / h);
-    }
-  } else {
-    resized_h = param.size;
-    resized_w = param.size;
-  }
-  out_attrs->clear();
-  out_attrs->push_back(mshadow::Shape3(resized_h, resized_w, ishape[2]));
+  // const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+  // const auto& ishape = (*in_attrs)[0];
+  // const auto& oshape = (*out_attrs)[0];
+  // if (in_attrs->size() != 1 || ishape.ndim() != 3) return false;
+  // const int h = ishape[0];
+  // const int w = ishape[1];
+  // int resized_h;
+  // int resized_w;
+  // if (param.keep_ratio) {
+  //   if (h > w) {
+  //     resized_w = param.size;
+  //     resized_h = static_cast<int>(h * resized_w / w);
+  //   } else {
+  //     resized_h = param.size;
+  //     resized_w = static_cast<int>(w * resized_h / h);
+  //   }
+  // } else {
+  //   resized_h = param.size;
+  //   resized_w = param.size;
+  // }
+  // out_attrs->clear();
+  // out_attrs->push_back(mshadow::Shape3(resized_h, resized_w, ishape[2]));
 
   return true;
 }
@@ -206,43 +206,49 @@ void Resize(const nnvm::NodeAttrs &attrs,
                      const std::vector<TBlob> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &outputs) {
-  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
-  int c = inputs[0].shape_[2];
-  int h = inputs[0].shape_[0];
-  int w = inputs[0].shape_[1];
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    int resized_h;
-    int resized_w;
-    if (param.keep_ratio) {
-        if (h > w) {
-          resized_w = param.size;
-          resized_h = static_cast<int>(h * resized_w / w);
-        } else {
-          resized_h = param.size;
-          resized_w = static_cast<int>(w * resized_h / h);
-        }
-    } else {
-      resized_h = param.size;
-      resized_w = param.size;
-    }
-#if MXNET_USE_OPENCV
-    const int length = h * w * c;
-    const int resize_length = resized_h * resized_w * c;
-    CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "imresize doesn't support fp16";
-    const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
-    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], c);
-    DType* input = inputs[0].dptr<DType>();
-    DType* output = outputs[0].dptr<DType>();
-    cv::Mat input_mat(length, 1, cv_type, input);
-    cv::Mat output_mat(resize_length, 1, cv_type, output);
-    input_mat = input_mat.reshape(c, h);
-    output_mat = output_mat.reshape(c, resized_h);
-    cv::resize(input_mat, output_mat, cv::Size(resized_w, resized_h), 0, 0, param.interpolation);
-    CHECK_EQ(static_cast<void*>(output_mat.ptr()), outputs[0].dptr_);
-#else
-      LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
-#endif  // MXNET_USE_OPENCV
-  });
+//   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+//   int c = inputs[0].shape_[2];
+//   int h = inputs[0].shape_[0];
+//   int w = inputs[0].shape_[1];
+//   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+//     int resized_h;
+//     int resized_w;
+//     if (param.keep_ratio) {
+//         if (h > w) {
+//           resized_w = param.size;
+//           resized_h = static_cast<int>(h * resized_w / w);
+//         } else {
+//           resized_h = param.size;
+//           resized_w = static_cast<int>(w * resized_h / h);
+//         }
+//     } else {
+//       resized_h = param.size;
+//       resized_w = param.size;
+//     }
+// #if MXNET_USE_OPENCV
+//     const int length = h * w * c;
+//     const int resize_length = resized_h * resized_w * c;
+//     CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "imresize doesn't support fp16";
+//     const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
+//     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], c);
+//     DType* input = inputs[0].dptr<DType>();
+//     DType* output = outputs[0].dptr<DType>();
+//     cv::Mat input_mat(length, 1, cv_type, input);
+//     cv::Mat output_mat(resize_length, 1, cv_type, output);
+//     input_mat = input_mat.reshape(c, h);
+//     output_mat = output_mat.reshape(c, resized_h);
+//     cv::resize(input_mat, output_mat, cv::Size(resized_w, resized_h), 0, 0, param.interpolation);
+//     CHECK(!output_mat.empty());
+//     CHECK_EQ(static_cast<void*>(output_mat.ptr()), outputs[0].dptr_);
+// #else
+//       LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
+// #endif  // MXNET_USE_OPENCV
+//   });
+  CHECK_EQ(outputs.size(), 1U);
+
+  // float* ptr = outputs[0].dptr<float>();
+  
+  // *ptr = 42;
 }
 
 template<typename DType>
