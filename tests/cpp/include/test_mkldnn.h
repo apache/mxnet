@@ -116,10 +116,15 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
                                            data_md, weight_md, out_md, strides,
                                            padding, padding, mkldnn::padding_kind::zero);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
-    std::vector<mkldnn::memory::format> ret(2);
+    while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(pd.next_impl()) << "No implementation";
+    }
+
+    std::vector<mkldnn::memory::format> ret(1);
     ret[0] = static_cast<mkldnn::memory::format>(pd.dst_primitive_desc().desc().data.format);
-    ret[1] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
-    printf("format: %d, %d\n", ret[0], ret[1]);
+    printf("format: %d \n", ret[0]);
     return ret;
   } else if (num_dims == 5) {
     mkldnn::memory::dims data_dims{1, 32, 112, 112};
@@ -139,6 +144,12 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
                                            data_md, weight_md, out_md, strides,
                                            padding, padding, mkldnn::padding_kind::zero);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
+    while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(pd.next_impl()) << "No implementation";
+    }
+
     std::vector<mkldnn::memory::format> ret(1);
     ret[0] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
     printf("format: %d\n", ret[0]);
@@ -188,7 +199,6 @@ inline static TestArrayShapes GetTestArrayShapes() {
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
     pds.push_back(GetMemPD(s1, dtype, formats[0]));
-    pds.push_back(GetMemPD(s2, dtype, formats[1]));
   }
   {
     // 5D
