@@ -19,12 +19,13 @@
 # pylint: disable= arguments-differ
 "Audio transforms."
 
-import numpy as np
 import warnings
+import numpy as np
 try:
     import librosa
-except:
-    warnings.warn("gluon/contrib/data/audio/transforms.py : librosa dependency could not be resolved or imported, could not provide some/all transform.")
+except (ImportError, ModuleNotFoundError) as e:
+    warnings.warn("gluon/contrib/data/audio/transforms.py : librosa dependency could not be resolved or \
+    imported, could not provide some/all transform.")
 import mxnet as mx
 from mxnet import nd
 from mxnet.gluon.block import Block

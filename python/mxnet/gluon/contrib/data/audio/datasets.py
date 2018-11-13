@@ -24,8 +24,9 @@ import os
 import warnings
 try:
     import sklearn
-except:
-    warnings.warn("gluon/contrib/data/audio/datasets.py : sklearn dependency could not be resolved or imported, could not provide some/all functionalities.")
+except (ImportError, ModuleNotFoundError) as e:
+    warnings.warn("gluon/contrib/data/audio/datasets.py : sklearn dependency could not be resolved or imported, \
+    could not provide some/all functionalities.")
 from mxnet import gluon, nd
 
 
