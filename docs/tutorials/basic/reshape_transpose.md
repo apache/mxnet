@@ -18,7 +18,7 @@ plt.axis("off")
 print (img_array.shape)
 ```
 
-    (210, 200, 3)
+(210, 200, 3) <!--notebook-skip-line-->
 
 ![png](https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/cat.png) <!--notebook-skip-line-->
 
@@ -37,8 +37,7 @@ print (reshaped.shape)
 plt.imshow(reshaped)
 plt.axis("off")
 ```
-
-    (200, 210, 3)
+(200, 210, 3)<!--notebook-skip-line-->
 
 ![png](https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/reshaped_image.png) <!--notebook-skip-line-->
 
@@ -47,7 +46,7 @@ As we can see the first and second dimensions have changed. However the image ca
 
 <img src="https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/reshape.png" style="width:700px;height:300px;">
 
-While the number of rows and columns changed, the layout of the underlying data did not. The pixel values that have been in one row are still in one row. This means for instance that pixel 10 in the upper right corder ends up in the middle of the image instead of the upper left corner. Consequently contextual information gets lost, because the relative position of pixel values is not the same anymore. As one can imagine a neural network would not be able to classify such an image as cat. 
+While the number of rows and columns changed, the layout of the underlying data did not. The pixel values that have been in one row are still in one row. This means for instance that pixel 10 in the upper right corder ends up in the middle of the image instead of the lower left corner. Consequently contextual information gets lost, because the relative position of pixel values is not the same anymore. As one can imagine a neural network would not be able to classify such an image as cat. 
 
 `Transpose` instead changes the layout of the underlying data.
 
@@ -90,8 +89,6 @@ network.hybridize()
 network.initialize(mx.init.Xavier(), ctx=mx.cpu())
 a = mx.random.uniform(shape=(1,100,1000))
 network(a)
-
- 
 ```
 #### Advanced reshaping with MXNet ndarrays
 It is sometimes useful to automatically infer the shape of tensors. Especially when you deal with very deep neural networks, it may not always be clear what the shape of a tensor is after a specific layer. For instance you may want the tensor to be two-dimensional where one dimension is the known batch_size. With ```mx.nd.array(-1, batch_size)``` the first dimension will be automatically inferred. Here a simplified example:
@@ -99,8 +96,10 @@ It is sometimes useful to automatically infer the shape of tensors. Especially w
 batch_size = 100
 input_data = mx.random.uniform(shape=(20,100,batch_size))
 reshaped = input_data.reshape(-1,batch_size)
-print inpout_data.shape, reshaped.shape 
+print (input_data.shape, reshaped.shape) 
 ```
+(20L, 100L, 100L), (2000L, 100L) <!--notebook-skip-line-->
+
 The reshape function of [MXNet's NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=reshape#mxnet.ndarray.NDArray.reshape) allows even more advanced transformations: For instance: with -2 you copy all/remainder of the input dimensions to the output shape. With -3 reshape will use the product of two consecutive dimensions of the input shape as the output dim.    
 
 #### Check out the MXNet documentation for more details
