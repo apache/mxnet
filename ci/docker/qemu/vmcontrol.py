@@ -42,6 +42,8 @@ import shlex
 #
 # The VMs are provisioned after boot, tests are run and then they are stopped
 #
+QEMU_SSH_PORT=2222
+QEMU_RAM=4096
 
 QEMU_RUN="""
 qemu-system-arm -M virt -m {ram} \
@@ -55,17 +57,32 @@ qemu-system-arm -M virt -m {ram} \
   -display none -nographic
 """
 
+QEMU_RUN_INTERACTIVE="""
+qemu-system-arm -M virt -m {ram} \
+  -kernel vmlinuz \
+  -initrd initrd.img \
+  -append 'root=/dev/vda1' \
+  -drive if=none,file=vda.qcow2,format=qcow2,id=hd \
+  -device virtio-blk-device,drive=hd \
+  -netdev user,id=mynet,hostfwd=tcp::{ssh_port}-:22 \
+  -device virtio-net-device,netdev=mynet \
+  -nographic
+"""
+
+
 class VMError(RuntimeError):
     pass
 
 class VM:
     """Control of the virtual machine"""
-    def __init__(self, ssh_port=2222):
+    def __init__(self, ssh_port=QEMU_SSH_PORT, ram=QEMU_RAM, interactive=False):
         self.log = logging.getLogger(VM.__name__)
         self.ssh_port = ssh_port
         self.timeout_s = 300
         self.qemu_process = None
         self._detach = False
+        self._interactive = interactive
+        self.ram = ram
 
     def __enter__(self):
         self.start()
@@ -77,13 +94,22 @@ class VM:
             self.terminate()
 
     def start(self):
-        self.log.info("Starting VM, ssh port redirected to localhost:%s", self.ssh_port)
+        sys.stderr.flush()
+        call(['toilet', '-f', 'smbraille', 'Starting QEMU'])
+        sys.stdout.flush()
+        self.log.info("Starting VM, ssh port redirected to localhost:%s (inside docker, not exposed by default)", self.ssh_port)
         if self.is_running():
             raise VMError("VM is running, shutdown first")
-        self.qemu_process = run_qemu(self.ssh_port)
+        if self._interactive:
+            self.qemu_process = Popen(shlex.split(QEMU_RUN_INTERACTIVE.format(ssh_port=self.ssh_port, ram=self.ram)))
+            return
+        else:
+            self.log.info("Starting in non-interactive mode. Terminal output is disabled.")
+            self.qemu_process = Popen(shlex.split(QEMU_RUN.format(ssh_port=self.ssh_port, ram=self.ram)), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
         def keep_waiting():
             return self.is_running()
 
+        logging.info("waiting for ssh to be open in the VM (timeout {}s)".format(self.timeout_s))
         ssh_working = wait_ssh_open('127.0.0.1', self.ssh_port, keep_waiting, self.timeout_s)
 
         if not self.is_running():
@@ -140,11 +166,28 @@ class VM:
             logging.info("VM destructor hit")
             self.terminate()
 
-def run_qemu(ssh_port=2222):
-    cmd = QEMU_RUN.format(ssh_port=ssh_port, ram=4096)
-    logging.info("QEMU command: %s", cmd)
-    qemu_process = Popen(shlex.split(cmd), stdout=DEVNULL, stdin=DEVNULL, stderr=PIPE)
-    return qemu_process
+
+def qemu_ssh(ssh_port=QEMU_SSH_PORT, *args):
+    check_call(["ssh", "-o", "ServerAliveInterval=5", "-o", "StrictHostKeyChecking=no", "-p{}".format(ssh_port), "qemu@localhost", *args])
+
+
+def qemu_rsync(ssh_port, local_path, remote_path):
+    check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-a', local_path, 'qemu@localhost:{}'.format(remote_path)])
+
+def qemu_rsync_to_host(ssh_port, remote_path, local_path):
+    check_call(['rsync', '-e', 'ssh -o StrictHostKeyChecking=no -p{}'.format(ssh_port), '-va', 'qemu@localhost:{}'.format(remote_path), local_path])
+
+def qemu_provision(ssh_port=QEMU_SSH_PORT):
+    import glob
+    logging.info("Provisioning the VM with artifacts and sources")
+
+    artifact = glob.glob('/work/mxnet/build/*.whl')
+    for x in artifact:
+        qemu_rsync(ssh_port, x, 'mxnet_dist/')
+    qemu_rsync(ssh_port, '/work/runtime_functions.py','')
+    qemu_rsync(ssh_port, '/work/vmcontrol.py','')
+    qemu_rsync(ssh_port, 'mxnet/tests', 'mxnet')
+    logging.info("Provisioning completed successfully.")
 
 
 def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
@@ -159,7 +202,7 @@ def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
     import errno
     import time
     log = logging.getLogger('wait_ssh_open')
-    sleep_s = 0
+    sleep_s = 1
     if timeout:
         from time import time as now
         # time module is needed to calc timeout shared between two exceptions
@@ -183,7 +226,7 @@ def wait_ssh_open(server, port, keep_waiting=None, timeout=None):
                     log.debug("connect timeout %d s", next_timeout)
                     s.settimeout(next_timeout)
 
-            log.info("connect %s:%d", server, port)
+            log.debug("connect %s:%d", server, port)
             s.connect((server, port))
             ret = s.recv(1024).decode()
             if ret and ret.startswith('SSH'):
