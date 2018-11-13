@@ -190,6 +190,7 @@ List of Contributors
 * [Denisa Roberts](https://github.com/D-Roberts)
 * [Dick Carter](https://github.com/DickJC123)
 * [Rahul Padmanabhan](https://github.com/rahul3)
+* [Yuxi Hu](https://github.com/yuxihu)
 
 Label Bot
 ---------
