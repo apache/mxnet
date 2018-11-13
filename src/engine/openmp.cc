@@ -79,10 +79,24 @@ void OpenMP::set_reserve_cores(int cores) {
 
 int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
 #ifdef _OPENMP
-  if (omp_num_threads_set_in_environment_ || enabled_) {
+  if (omp_num_threads_set_in_environment_) {
     return omp_thread_max_;
   }
-  return 1;
+  if (enabled_) {
+    if (exclude_reserved) {
+      if (reserve_cores_ >= thread_count) {
+        thread_count = 1;
+      } else {
+        thread_count -= reserve_cores_;
+      }
+    }
+    // Check that OMP doesn't suggest more than our 'omp_thread_max_' value
+    if (!omp_thread_max_ || thread_count < omp_thread_max_) {
+      return thread_count;
+    }
+    return omp_thread_max_;
+  }
+
 #else
   return 1;
 #endif
