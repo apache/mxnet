@@ -101,7 +101,12 @@ struct SampleRandIntKernel {
                                   const IType *lower, const IType *upper, OType *out) {
     RNG_KERNEL_LOOP(xpu, OType, id, gen, N, step, {
       index_t nBatch(1 + (nSample - 1) / nParm);
-      out[i] = OType(genImpl.discrete_uniform(lower[i / nBatch], upper[i / nBatch]));
+      if (sizeof(IType) == sizeof(int64_t))
+        out[i] = OType(lower[i / nBatch] +
+                     (upper[i / nBatch] - lower[i / nBatch]) * genImpl.rand_int64());
+      else
+        out[i] = OType(lower[i / nBatch] +
+                      (upper[i / nBatch] - lower[i / nBatch]) * genImpl.rand());
     });
   }
 };

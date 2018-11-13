@@ -65,21 +65,16 @@ class RandGenerator<cpu, DType> {
 
     MSHADOW_XINLINE int rand() { return engine_->operator()(); }
 
+    MSHADOW_XINLINE int64_t rand_int64() {
+      return static_cast<int64_t>(engine_->operator()() << 31) + engine_->operator()();
+    }
+
     MSHADOW_XINLINE FType uniform() {
       typedef typename std::conditional<std::is_integral<DType>::value,
       std::uniform_int_distribution<DType>,
       std::uniform_real_distribution<FType>>::type GType;
       GType dist_uniform;
       return dist_uniform(*engine_);
-    }
-
-    MSHADOW_XINLINE IType discrete_uniform(const int64_t lower, const int64_t upper) {
-      typedef typename std::conditional<sizeof(IType) != sizeof(int32_t) ||
-      sizeof(IType) != sizeof(int64_t),
-      std::uniform_int_distribution<int>,
-      std::uniform_int_distribution<IType>>::type GType;
-      GType dist_discrete_uniform(lower, upper);
-      return dist_discrete_uniform(*engine_);
     }
 
     MSHADOW_XINLINE FType normal() {
@@ -148,19 +143,16 @@ class RandGenerator<gpu, DType> {
       return curand(&state_);
     }
 
+    MSHADOW_FORCE_INLINE __device__ int64_t rand_int64() {
+      return static_cast<int64_t>(curand(&state_) << 31) + curand(&state_);
+    }
+
     MSHADOW_FORCE_INLINE __device__ float uniform() {
       return static_cast<float>(1.0) - curand_uniform(&state_);
     }
 
     MSHADOW_FORCE_INLINE __device__ float normal() {
       return curand_normal(&state_);
-    }
-
-    MSHADOW_FORCE_INLINE __device__ int discrete_uniform(const int64_t lower, const int64_t upper) {
-      float randu_f = curand_uniform(&state_);
-      randu_f *= (upper-lower+0.999999);
-      randu_f += lower;
-      return static_cast<int>(trunc(randu_f));
     }
 
    private:
@@ -207,19 +199,16 @@ class RandGenerator<gpu, double> {
       return curand(&state_);
     }
 
+    MSHADOW_FORCE_INLINE __device__ int64_t rand_int64() {
+      return static_cast<int64_t>(curand(&state_) << 31) + curand(&state_);
+    }
+
     MSHADOW_FORCE_INLINE __device__ double uniform() {
       return static_cast<float>(1.0) - curand_uniform_double(&state_);
     }
 
     MSHADOW_FORCE_INLINE __device__ double normal() {
       return curand_normal_double(&state_);
-    }
-
-    MSHADOW_FORCE_INLINE __device__ int discrete_uniform(const int64_t lower, const int64_t upper) {
-      float randu_f = curand_uniform(&state_);
-      randu_f *= (upper-lower+0.999999);
-      randu_f += lower;
-      return static_cast<int>(trunc(randu_f));
     }
 
    private:
