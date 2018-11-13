@@ -22,11 +22,6 @@ __all__ = ['AudioFolderDataset']
 
 import os
 import warnings
-try:
-    import sklearn
-except ImportError as e:
-    warnings.warn("gluon/contrib/data/audio/datasets.py : sklearn dependency could not be resolved or imported, \
-    could not provide some/all functionalities.")
 from mxnet import gluon, nd
 
 
@@ -65,17 +60,17 @@ class AudioFolderDataset(gluon.data.dataset.Dataset):
     items : list of tuples
         List of all audio in (filename, label) pairs.
     """
-    def __init__(self, root, transform=None, has_csv=False, train_csv=None, file_format='.wav'):
+    def __init__(self, root, transform=None, has_csv=False, train_csv=None, file_format='.wav', skip_rows=0):
         self._root = os.path.expanduser(root)
         self._transform = transform
         self._exts = ['.wav']
         self._format = file_format
         self._has_csv = has_csv
         self._train_csv = train_csv
-        self._list_audio_files(self._root)
+        self._list_audio_files(self._root, skip_rows=skip_rows)
 
 
-    def _list_audio_files(self, root):
+    def _list_audio_files(self, root, skip_rows=0):
         """
             Populates synsets - a map of index to label for the data items.
             Populates the data in the dataset, making tuples of (data, label)
@@ -103,19 +98,19 @@ class AudioFolderDataset(gluon.data.dataset.Dataset):
             self.items = []
             data_tmp = []
             label_tmp = []
+            skipped_rows = 0
             with open(self._train_csv, "r") as traincsv:
                 for line in traincsv:
+                    skipped_rows = skipped_rows + 1
+                    if skipped_rows <= skip_rows:
+                        continue
                     filename = os.path.join(root, line.split(",")[0])
                     label = line.split(",")[1].strip()
+                    if label not in self.synsets:
+                        self.synsets.append(label)
                     data_tmp.append(os.path.join(self._root, line.split(",")[0]))
-                    label_tmp.append(line.split(",")[1].strip())
-            data_tmp = data_tmp[1:]
-            label_tmp = label_tmp[1:]
-            le = sklearn.preprocessing.LabelEncoder()
-            self.raw_data = []
-            self._label = nd.array(le.fit_transform(label_tmp))
-            for i, class_name in enumerate(le.classes_):
-                self.synsets.append(class_name)
+                    label_tmp.append(self.synsets.index(label))
+            self._label = nd.array(label_tmp)
             for i, _ in enumerate(data_tmp):
                 if self._format not in data_tmp[i]:
                     self.items.append((data_tmp[i]+self._format, self._label[i]))
