@@ -695,7 +695,6 @@ class LBSGD(Optimizer):
     ----------
     momentum : float, optional
         The momentum value.
-
     multi_precision: bool, optional
         Flag to control the internal precision of the optimizer.::
 
@@ -709,7 +708,6 @@ class LBSGD(Optimizer):
     batch_scale:   unsigned, default: 1 (same as batch size*numworkers)
     updates_per_epoch: updates_per_epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
     begin_epoch: unsigned, default 0, starting epoch.
-
     """
     def __init__(self, momentum=0.0, multi_precision=False, warmup_strategy='linear',
                  warmup_epochs=5, batch_scale=1, updates_per_epoch=32, begin_epoch=0, num_epochs=60,
