@@ -191,7 +191,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
                     mx_uint num_aux,
                     int *aux_type,
                     mx_uint *aux_ndims,
-                    const mx_uint *aux_shape,
+                    const dim_t *aux_shape,
                     NDArrayHandle *out) {
   API_BEGIN();
   std::vector<int> aux_types;
