@@ -46,7 +46,7 @@ public class PredictorExample {
         BufferedImage buf = null;
         try {
             buf = ImageIO.read(new File(inputImagePath));
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println(e);
         }
         return buf;
@@ -147,7 +147,7 @@ public class PredictorExample {
         try {
             System.out.println("Predict with Float input");
             System.out.println(printMaximumClass(result[0], inst.modelPathPrefix));
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println(e);
         }
         // predict with NDArray
@@ -161,7 +161,7 @@ public class PredictorExample {
         try {
             System.out.println("Predict with NDArray");
             System.out.println(printMaximumClass(ndResult.get(0).toArray(), inst.modelPathPrefix));
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println(e);
         }
     }
