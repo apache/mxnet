@@ -54,7 +54,9 @@ bash run_predictor_java_example.sh ../models/resnet-18/resnet-18 ../images/kitte
 
 The example should give expected output as shown below:
 ```
+Predict with Float input
 Probability : 0.30337515 Class : n02123159 tiger cat
+Predict with NDArray
 Probability : 0.30337515 Class : n02123159 tiger cat
 ```
 the outputs come from the the input image, with top1 predictions picked.
