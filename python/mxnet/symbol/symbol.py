@@ -34,7 +34,7 @@ import numpy as _numpy
 
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
-from ..base import mx_uint, py_str, string_types, integer_types
+from ..base import mx_uint, mx_long, py_str, string_types, integer_types
 from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
@@ -1096,13 +1096,13 @@ class Symbol(SymbolBase):
             keys = c_str_array(str_keys)
         arg_shape_size = mx_uint()
         arg_shape_ndim = ctypes.POINTER(mx_uint)()
-        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_long))()
         out_shape_size = mx_uint()
         out_shape_ndim = ctypes.POINTER(mx_uint)()
-        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_long))()
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_uint)()
-        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_uint))()
+        aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_long))()
         complete = ctypes.c_int()
         if partial:
             infer_func = _LIB.MXSymbolInferShapePartial
@@ -1113,7 +1113,7 @@ class Symbol(SymbolBase):
             mx_uint(len(indptr) - 1),
             keys,
             c_array_buf(mx_uint, array('I', indptr)),
-            c_array_buf(mx_uint, array('I', sdata)),
+            c_array_buf(mx_long, array('q', sdata)),
             ctypes.byref(arg_shape_size),
             ctypes.byref(arg_shape_ndim),
             ctypes.byref(arg_shape_data),
