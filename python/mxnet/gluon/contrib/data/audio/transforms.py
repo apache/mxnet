@@ -88,6 +88,8 @@ class Scale(Block):
             NDArray: Scaled by the scaling factor. (default between -1.0 and 1.0)
 
         """
+        if isinstance(x, np.ndarray):
+            return mx.nd.array(x/self.scale_factor)
         return x / self.scale_factor
 
 

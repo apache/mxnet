@@ -22,7 +22,7 @@ __all__ = ['AudioFolderDataset']
 
 import os
 import warnings
-from sklearn.preprocessing import LabelEncoder
+import sklearn
 from mxnet import gluon, nd
 
 
@@ -107,7 +107,7 @@ class AudioFolderDataset(gluon.data.dataset.Dataset):
                     label_tmp.append(line.split(",")[1].strip())
             data_tmp = data_tmp[1:]
             label_tmp = label_tmp[1:]
-            le = LabelEncoder()
+            le = sklearn.preprocessing.LabelEncoder()
             self.raw_data = []
             self._label = nd.array(le.fit_transform(label_tmp))
             for i, class_name in enumerate(le.classes_):
