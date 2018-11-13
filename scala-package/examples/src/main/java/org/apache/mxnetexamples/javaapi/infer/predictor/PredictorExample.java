@@ -18,10 +18,7 @@
 package org.apache.mxnetexamples.javaapi.infer.predictor;
 
 import org.apache.mxnet.infer.javaapi.Predictor;
-import org.apache.mxnet.javaapi.Context;
-import org.apache.mxnet.javaapi.DType;
-import org.apache.mxnet.javaapi.DataDesc;
-import org.apache.mxnet.javaapi.Shape;
+import org.apache.mxnet.javaapi.*;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
@@ -42,8 +39,6 @@ public class PredictorExample {
     private String modelPathPrefix = "/model/ssd_resnet50_512";
     @Option(name = "--input-image", usage = "the input image")
     private String inputImagePath = "/images/dog.jpg";
-    @Option(name = "--input-dir", usage = "the input batch of images directory")
-    private String inputImageDir = "/images/";
 
     final static Logger logger = LoggerFactory.getLogger(PredictorExample.class);
 
@@ -97,9 +92,12 @@ public class PredictorExample {
         return result;
     }
 
-    private static String printMaximumClass(float[] probabilities) throws IOException {
-        BufferedReader reader = new BufferedReader(new FileReader("/tmp/resnet18/synset.txt"));
-        ArrayList<String> list = new ArrayList<String>();
+    private static String printMaximumClass(float[] probabilities,
+                                            String modelPathPrefix) throws IOException {
+        String synsetFilePath = modelPathPrefix.substring(0,
+                1 + modelPathPrefix.lastIndexOf(File.separator)) + "/synset.txt";
+        BufferedReader reader = new BufferedReader(new FileReader(synsetFilePath));
+        ArrayList<String> list = new ArrayList<>();
         String line = reader.readLine();
 
         while (line != null){
@@ -147,7 +145,22 @@ public class PredictorExample {
         // predict
         float[][] result = predictor.predict(new float[][]{imagePreprocess(img)});
         try {
-            System.out.println(printMaximumClass(result[0]));
+            System.out.println("Predict with Float input");
+            System.out.println(printMaximumClass(result[0], inst.modelPathPrefix));
+        } catch (Exception e) {
+            System.err.println(e);
+        }
+        // predict with NDArray
+        NDArray nd = new NDArray(
+                imagePreprocess(img),
+                new Shape(new int[]{1, 3, 224, 224}),
+                Context.cpu());
+        List<NDArray> ndList = new ArrayList<>();
+        ndList.add(nd);
+        List<NDArray> ndResult = predictor.predictWithNDArray(ndList);
+        try {
+            System.out.println("Predict with NDArray");
+            System.out.println(printMaximumClass(ndResult.get(0).toArray(), inst.modelPathPrefix));
         } catch (Exception e) {
             System.err.println(e);
         }
