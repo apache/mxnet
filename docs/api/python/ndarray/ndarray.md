@@ -706,9 +706,14 @@ The `ndarray` package provides several classes:
     :members:
     :imported-members:
     :special-members:
-    :exclude-members: CachedOp, NDArray
+    :exclude-members: CachedOp, NDArray, save, load
+
+.. automodule:: mxnet.ndarray
+    :noindex:
+    :members: save, load
 
 .. automodule:: mxnet.random
+    :noindex:
     :members:
 
 ```
