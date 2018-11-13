@@ -97,10 +97,8 @@ int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
     }
     return omp_thread_max_;
   }
-
-#else
-  return 1;
 #endif
+  return 1;
 }
 
 OpenMP *__init_omp__ = OpenMP::Get();
