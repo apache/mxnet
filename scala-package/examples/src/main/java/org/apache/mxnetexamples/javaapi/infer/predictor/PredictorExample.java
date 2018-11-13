@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.mxnetexamples.infer.javaapi.predictor;
+package org.apache.mxnetexamples.javaapi.infer.predictor;
 
 import org.apache.mxnet.infer.javaapi.Predictor;
 import org.apache.mxnet.javaapi.Context;
