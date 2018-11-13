@@ -9,13 +9,13 @@ from ...symbol import Symbol
 
 class BinaryLayerConfig:
     def __init__(self, grad_cancel=1.0, bits=1, bits_a=1, activation='det_sign',
-                 weight_quantization='det_sign', scaling=None):
+                 weight_quantization='det_sign', scaling=""):
         self.grad_cancel = grad_cancel
         self.bits = bits
         self.bits_a = bits_a
         self.activation = activation
         self.weight_quantization = weight_quantization
-        assert scaling in [None, "binet", "xnor"]
+        assert scaling in ["", "binet", "xnor"]
         self.scaling = scaling
 
     def get_values(self):
