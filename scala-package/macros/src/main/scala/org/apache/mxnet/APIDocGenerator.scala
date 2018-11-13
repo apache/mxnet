@@ -95,7 +95,11 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     val absClassFunctions = functionsToGenerate(false, false, true)
     val absFuncs = absClassFunctions.filterNot(ele => notGenerated.contains(ele.name))
       .groupBy(_.name.toLowerCase).map(ele => {
-      // Pattern matching for not generating depreciated method
+      /* Pattern matching for not generating deprecated method
+       * Group all method name in lowercase
+       * Kill the capital lettered method such as Cast vs cast
+       * As it defined by default it deprecated
+       */
       if (ele._2.length == 1) ele._2.head
       else {
         if (ele._2.head.name.head.isLower) ele._2.head
