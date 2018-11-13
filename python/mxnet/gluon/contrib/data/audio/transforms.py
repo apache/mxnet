@@ -23,7 +23,7 @@ import warnings
 import numpy as np
 try:
     import librosa
-except (ImportError, ModuleNotFoundError) as e:
+except ImportError as e:
     warnings.warn("gluon/contrib/data/audio/transforms.py : librosa dependency could not be resolved or \
     imported, could not provide some/all transform.")
 import mxnet as mx
