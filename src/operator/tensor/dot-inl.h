@@ -521,14 +521,14 @@ struct DotCsrRspDnsByRowBlocks {
       const RType* row_idx_ptr = first;
       // end of binary search
       if (row_idx_ptr == row_idx_r+nnr_r || *row_idx_ptr > col_idx_l[indptr_l[j+1]-1]) continue;
-      const auto end = row_idx_r + nnr_r;
-      auto start = row_idx_ptr;
+      const RType* end = row_idx_r + nnr_r;
+      const RType* start = row_idx_ptr;
       for (IType k = indptr_l[j]; k < indptr_l[j+1] && start < end; ++k) {
-        const auto v = col_idx_l[k];
+        const CType v = col_idx_l[k];
         if (v < *start) {
           continue;
         }
-        const auto p = std::lower_bound(start, end, v);
+        const RType* p = std::lower_bound(start, end, v);
         start = p;
         if (p >= end || v < *p) {
           continue;
