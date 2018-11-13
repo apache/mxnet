@@ -17,7 +17,6 @@
 
 package org.apache.mxnetexamples.infer.javaapi.predictor;
 
-import org.apache.mxnet.infer.javaapi.ObjectDetector;
 import org.apache.mxnet.infer.javaapi.Predictor;
 import org.apache.mxnet.javaapi.Context;
 import org.apache.mxnet.javaapi.DType;
@@ -28,9 +27,13 @@ import org.kohsuke.args4j.Option;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.nio.Buffer;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +47,17 @@ public class PredictorExample {
 
     final static Logger logger = LoggerFactory.getLogger(PredictorExample.class);
 
-    public static BufferedImage reshapeImage(BufferedImage buf, int newWidth, int newHeight) {
+    private static BufferedImage loadIamgeFromFile(String inputImagePath) {
+        BufferedImage buf = null;
+        try {
+            buf = ImageIO.read(new File(inputImagePath));
+        } catch (Exception e) {
+            System.err.println(e);
+        }
+        return buf;
+    }
+
+    private static BufferedImage reshapeImage(BufferedImage buf, int newWidth, int newHeight) {
         BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = resizedImage.createGraphics();
         g.drawImage(buf, 0, 0, newWidth, newHeight, null);
@@ -52,7 +65,7 @@ public class PredictorExample {
         return resizedImage;
     }
 
-    public static float[] imagePreprocess(BufferedImage buf) {
+    private static float[] imagePreprocess(BufferedImage buf) {
         // Get height and width of the image
         int w = buf.getWidth();
         int h = buf.getHeight();
@@ -84,6 +97,27 @@ public class PredictorExample {
         return result;
     }
 
+    private static String printMaximumClass(float[] probabilities) throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader("/tmp/resnet18/synset.txt"));
+        ArrayList<String> list = new ArrayList<String>();
+        String line = reader.readLine();
+
+        while (line != null){
+            list.add(line);
+            line = reader.readLine();
+        }
+        reader.close();
+
+        int maxIdx = 0;
+        for (int i = 1;i<probabilities.length;i++) {
+            if (probabilities[i] > probabilities[maxIdx]) {
+                maxIdx = i;
+            }
+        }
+
+        return "Probability : " + probabilities[maxIdx] + " Class : " + list.get(maxIdx) ;
+    }
+
     public static void main(String[] args) {
         PredictorExample inst = new PredictorExample();
         CmdLineParser parser  = new CmdLineParser(inst);
@@ -107,10 +141,16 @@ public class PredictorExample {
         inputDesc.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
         Predictor predictor = new Predictor(inst.modelPathPrefix, inputDesc, context,0);
         // Prepare data
-        BufferedImage img = ObjectDetector.loadImageFromFile(inst.inputImagePath);
+        BufferedImage img = loadIamgeFromFile(inst.inputImagePath);
+
         img = reshapeImage(img, 224, 224);
         // predict
         float[][] result = predictor.predict(new float[][]{imagePreprocess(img)});
+        try {
+            System.out.println(printMaximumClass(result[0]));
+        } catch (Exception e) {
+            System.err.println(e);
+        }
     }
 
 }

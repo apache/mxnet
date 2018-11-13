@@ -49,7 +49,6 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     new org.apache.mxnet.infer.Predictor(modelPathPrefix, informationDesc, inContexts, Some(epoch))
   }
 
-
   /**
     * Takes input as Array of one dimensional arrays and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
@@ -62,6 +61,21 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
   Array[Array[Float]] = {
     predictor.predict(input).toArray
   }
+
+  /**
+    * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
+    * The array will be reshaped based on the input descriptors.
+    *
+    * @param input:            A List of a one-dimensional array.
+                              An extra List is needed for when the model has more than one input.
+    * @return                  Indexed sequence array of outputs
+    */
+  def predict(input: java.util.List[java.util.List[Float]]):
+  java.util.List[java.util.List[Float]] = {
+    val in = JavaConverters.asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq
+    (predictor.predict(in map {a => a.asScala.toArray}) map {b => b.toList.asJava}).asJava
+  }
+
 
 
   /**
