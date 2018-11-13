@@ -46,7 +46,7 @@ As we can see the first and second dimensions have changed. However the image ca
 
 <img src="https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/reshape.png" style="width:700px;height:300px;">
 
-While the number of rows and columns changed, the layout of the underlying data did not. The pixel values that have been in one row are still in one row. This means for instance that pixel 10 in the upper right corder ends up in the middle of the image instead of the lower left corner. Consequently contextual information gets lost, because the relative position of pixel values is not the same anymore. As one can imagine a neural network would not be able to classify such an image as cat. 
+While the number of rows and columns changed, the layout of the underlying data did not. The pixel values that have been in one row are still in one row. This means for instance that pixel 10 in the upper right corner ends up in the middle of the image instead of the lower left corner. Consequently contextual information gets lost, because the relative position of pixel values is not the same anymore. As one can imagine a neural network would not be able to classify such an image as cat. 
 
 `Transpose` instead changes the layout of the underlying data.
 
@@ -100,7 +100,31 @@ print (input_data.shape, reshaped.shape)
 ```
 (20L, 100L, 100L), (2000L, 100L) <!--notebook-skip-line-->
 
-The reshape function of [MXNet's NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=reshape#mxnet.ndarray.NDArray.reshape) allows even more advanced transformations: For instance: with -2 you copy all/remainder of the input dimensions to the output shape. With -3 reshape will use the product of two consecutive dimensions of the input shape as the output dim.    
+The reshape function of [MXNet's NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=reshape#mxnet.ndarray.NDArray.reshape) allows even more advanced transformations: For instance:0 copies the dimension from the input to the output shape,  -2 copies all/remainder of the input dimensions to the output shape. With -3 reshape uses the product of two consecutive dimensions of the input shape as the output dim.  With -4 reshape splits one dimension of the input into two dimensions passed subsequent to -4. Here an example:
+```
+x = mx.nd.random.uniform(shape=(1, 3, 4, 64, 64))
+
+```
+Assume ```x``` is a tensor, with the shape ```[batch_size, channel, upscale, width, height]```. Now we want to split the third dimension and multiply it with width and height. We can do 
+```
+x = x.reshape(1, 3, -4, 2, 2, 0, 0)
+print x.shape
+```
+
+(1L, 3L, 2L, 2L, 64L, 64L) <!--notebook-skip-line-->
+
+Which splits up the third dimension into ```[2,2]```.  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
+```
+x = x.transpose((0, 1, 4, 2, 5, 3))
+print x.shape
+x = x.reshape(0, 0, -3, -3)
+```
+
+(1L, 3L, 64L, 2L, 64L, 2L) <!--notebook-skip-line-->
+
+(1L, 3L, 128L, 128L) <!--notebook-skip-line-->
+
+This was just a toy example. But such transformations are for instance done in image superresolution where you increase width and height of the input image and ```x``` would be the output of a CNN that computes an upscale feature vector.
 
 #### Check out the MXNet documentation for more details
 http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.NDArray.reshape
