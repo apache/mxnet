@@ -21,7 +21,7 @@ package org.apache.mxnet.infer.javaapi
 import java.awt.image.BufferedImage
 // scalastyle:on
 
-import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray}
+import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray, Shape}
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
@@ -111,6 +111,14 @@ object ObjectDetector {
 
   def loadImageFromFile(inputImagePath: String): BufferedImage = {
     org.apache.mxnet.infer.ImageClassifier.loadImageFromFile(inputImagePath)
+  }
+
+  def reshapeImage(img : BufferedImage, newWidth: Int, newHeight: Int): BufferedImage = {
+    org.apache.mxnet.infer.ImageClassifier.reshapeImage(img, newWidth, newHeight)
+  }
+
+  def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
+    org.apache.mxnet.infer.ImageClassifier.bufferedImageToPixels(resizedImage, inputImageShape)
   }
 
   def loadInputBatch(inputImagePaths: java.util.List[String]): java.util.List[BufferedImage] = {
