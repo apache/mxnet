@@ -125,6 +125,10 @@ def load_docker_cache(registry, docker_tag) -> None:
     :return: None
     """
     # We don't have to retag the image since it's already in the right format
+    if not registry:
+        return
+    assert docker_tag
+
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
     subprocess.call(pull_cmd)  # Don't throw an error if the image does not exist

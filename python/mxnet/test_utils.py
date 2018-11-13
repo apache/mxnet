@@ -261,10 +261,14 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     Parameters
     ----------
     shape: list or tuple
-    stype: str, valid values: "csr" or "row_sparse"
-    density, optional: float, should be between 0 and 1
-    distribution, optional: str, valid values: "uniform" or "powerlaw"
-    dtype, optional: numpy.dtype, default value is None
+    stype: str
+        valid values: "csr" or "row_sparse"
+    density: float, optional
+        should be between 0 and 1
+    distribution: str, optional
+        valid values: "uniform" or "powerlaw"
+    dtype: numpy.dtype, optional
+        default value is None
 
     Returns
     -------

@@ -5,6 +5,8 @@ Docker containers
 
 You need docker and nvidia docker if you have a GPU.
 
+Also you need to run `pip3 install docker` as it uses the [docker python module](https://docker-py.readthedocs.io/en/stable/containers.html#)
+
 If you are in ubuntu an easy way to install Docker CE is executing the
 following script:
 
