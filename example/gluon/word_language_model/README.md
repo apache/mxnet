@@ -28,7 +28,9 @@ python train.py --cuda --tied --nhid 650 --emsize 650 --epochs 40  --dropout 0.5
 ```
 python train.py --cuda --tied --nhid 1500 --emsize 1500 --epochs 60  --dropout 0.65     # Test ppl of 88.42
 ```
-
+```
+python train.py --export-only # hybridize and export model graph (requires mxboard)
+```
 
 <br>
 
@@ -38,7 +40,8 @@ usage: train.py [-h] [--model MODEL] [--emsize EMSIZE] [--nhid NHID]
                 [--nlayers NLAYERS] [--lr LR] [--clip CLIP] [--epochs EPOCHS]
                 [--batch_size N] [--bptt BPTT] [--dropout DROPOUT] [--tied]
                 [--cuda] [--log-interval N] [--save SAVE] [--gctype GCTYPE]
-                [--gcthreshold GCTHRESHOLD]
+                [--gcthreshold GCTHRESHOLD] [--hybridize] [--static-alloc]
+                [--static-shape]
 
 MXNet Autograd RNN/LSTM Language Model on Wikitext-2.
 
@@ -62,4 +65,10 @@ optional arguments:
                         `none` for now.
   --gcthreshold GCTHRESHOLD
                         threshold for 2bit gradient compression
+  --hybridize           whether to hybridize in mxnet>=1.3
+  --static-alloc        whether to use static-alloc hybridize in mxnet>=1.3
+  --static-shape        whether to use static-shape hybridize in mxnet>=1.3
+  --export-only         export a symbol graph and exit
 ```
+
+![model graph](./model-graph.png?raw=true "rnn model graph")
