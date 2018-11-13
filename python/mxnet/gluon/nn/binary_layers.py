@@ -7,16 +7,16 @@ from ...base import numeric_types
 from ...symbol import Symbol
 
 
-class BinaryLayerConfig():
+class BinaryLayerConfig:
     def __init__(self, grad_cancel=1.0, bits=1, bits_a=1, activation='det_sign',
-                 weight_quantization='det_sign', scaled=False, stop_weight_scale_grad=False):
+                 weight_quantization='det_sign', scaling=None):
         self.grad_cancel = grad_cancel
         self.bits = bits
         self.bits_a = bits_a
         self.activation = activation
         self.weight_quantization = weight_quantization
-        self.scaled = scaled
-        self.stop_weight_scale_grad = stop_weight_scale_grad  # has an effect only if scaled=True
+        assert scaling in [None, "binet", "xnor"]
+        self.scaling = scaling
 
     def get_values(self):
         return dict(vars(self))
@@ -196,7 +196,7 @@ class _QConv(_Conv):
         self._pre_padding = padding
         self.weight.wd_mult = 0.0
         self.scaling = apply_scaling
-        self.stop_weight_scale_grad = binary_layer_config.stop_weight_scale_grad
+        self.stop_weight_scale_grad = binary_layer_config.scaling == "xnor"
         self._scaling_transpose = (1, 0, *range(2, len(kernel_size) + 2))
         self.bits = bits or binary_layer_config.bits
         self.quantize = binary_layer_config.get_weight_quantization_function(bits=self.bits, method=quantization)
@@ -336,9 +336,9 @@ class ScaledBinaryConv(HybridBlock):
 
 class ActivatedConvolutionFactory:
     def __call__(self, *args, **kwargs):
-        if binary_layer_config.scaled and not binary_layer_config.stop_weight_scale_grad:
+        if binary_layer_config.scaling == "binet":
             return ScaledWeightsBinaryConv(*args, **kwargs)
-        if binary_layer_config.scaled:
+        if binary_layer_config.scaling == "xnor":
             return ScaledBinaryConv(*args, **kwargs)
         return BinaryConvolution(*args, **kwargs)
 
