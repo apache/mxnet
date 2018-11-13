@@ -20,7 +20,11 @@
 "Audio transforms."
 
 import numpy as np
-import librosa
+import warnings
+try:
+    import librosa
+except:
+    warnings.warn("gluon/contrib/data/audio/transforms.py : librosa dependency could not be resolved or imported, could not provide some/all transform.")
 import mxnet as mx
 from mxnet import nd
 from mxnet.gluon.block import Block
