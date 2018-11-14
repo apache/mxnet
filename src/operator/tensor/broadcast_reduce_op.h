@@ -536,6 +536,9 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
   TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  LOG(INFO) << "small:" << small;
+  LOG(INFO) << "inputs:" << inputs[0].shape_ << "src_shape" << src_shape;
+  LOG(INFO) << "outputs:" << outputs[0].shape_ << "dst_shape" << dst_shape;
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     const TBlob in_data = inputs[0].reshape(src_shape);
     const TBlob out_data = outputs[0].reshape(dst_shape);
