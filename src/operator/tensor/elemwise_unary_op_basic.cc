@@ -492,7 +492,8 @@ void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * sizeof(int64_t));
+  size_t type_size = mshadow::mshadow_sizeof(out_data.type_flag_);
+  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * type_size);
 }
 
 NNVM_REGISTER_OP(shape_array)
@@ -542,8 +543,9 @@ void SizeComputeCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
+  size_t type_size = mshadow::mshadow_sizeof(out_data.type_flag_);
   const index_t size_var = in_data.Size();
-  memcpy(out_data.dptr_, &size_var, 1U * sizeof(int64_t));
+  memcpy(out_data.dptr_, &size_var, type_size);
 }
 
 NNVM_REGISTER_OP(size_array)
@@ -883,6 +885,22 @@ The storage type of ``cbrt`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
                                                   unary_bwd<mshadow_op::cube_root_grad>);
+
+// erf
+MXNET_OPERATOR_REGISTER_UNARY(erf)
+.describe(R"code(Returns element-wise gauss error function of the input.
+
+Example::
+
+   erf([0, -1., 10.]) = [0., -0.8427, 1.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erf>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erf"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::erf_grad>>);
 
 // rcbrt
 MXNET_OPERATOR_REGISTER_UNARY(rcbrt)

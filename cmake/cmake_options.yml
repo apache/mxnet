@@ -1,0 +1,49 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+--- # CMake configuration
+USE_CUDA: OFF # Build with CUDA support
+USE_OLDCMAKECUDA: OFF # Build with old cmake cuda
+USE_NCCL: OFF # Use NVidia NCCL with CUDA
+USE_OPENCV: ON # Build with OpenCV support
+USE_OPENMP: ON # Build with Openmp support
+USE_CUDNN: ON # Build with cudnn support) # one could set CUDNN_ROOT for search path
+USE_SSE: ON # Build with x86 SSE instruction support IF NOT ARM
+USE_F16C: ON # Build with x86 F16C instruction support) # autodetects support if ON
+USE_LAPACK: ON # Build with lapack support
+USE_MKL_IF_AVAILABLE: ON # Use MKL if found
+USE_MKLML_MKL: ON # Use MKLDNN variant of MKL (if MKL found) IF USE_MKL_IF_AVAILABLE AND (NOT APPLE)
+USE_MKLDNN: ON # Use MKLDNN variant of MKL (if MKL found) IF USE_MKL_IF_AVAILABLE AND (NOT APPLE)
+USE_OPERATOR_TUNING: ON # Enable auto-tuning of operators IF NOT MSVC
+USE_GPERFTOOLS: ON # Build with GPerfTools support (if found)
+USE_JEMALLOC: ON # Build with Jemalloc support
+USE_PROFILER: ON # Build with Profiler support
+USE_DIST_KVSTORE: OFF # Build with DIST_KVSTORE support
+USE_PLUGINS_WARPCTC: OFF # Use WARPCTC Plugins
+USE_PLUGIN_CAFFE: OFF # Use Caffe Plugin
+USE_CPP_PACKAGE: OFF # Build C++ Package
+USE_MXNET_LIB_NAMING: ON # Use MXNet library naming conventions.
+USE_GPROF: OFF # Compile with gprof (profiling) flag
+USE_CXX14_IF_AVAILABLE: OFF # Build with C++14 if the compiler supports it
+USE_VTUNE: OFF # Enable use of Intel Amplifier XE (VTune)) # one could set VTUNE_ROOT for search path
+ENABLE_CUDA_RTC: ON # Build with CUDA runtime compilation support
+BUILD_CPP_EXAMPLES: ON # Build cpp examples
+INSTALL_EXAMPLES: OFF # Install the example source files.
+USE_SIGNAL_HANDLER: OFF # Print stack traces on segfaults.
+USE_TENSORRT: OFF # Enable infeference optimization with TensorRT.
+USE_ASAN: OFF # Enable Clang/GCC ASAN sanitizers.
+ENABLE_TESTCOVERAGE: OFF # Enable compilation with test coverage metric output

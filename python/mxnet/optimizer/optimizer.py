@@ -70,11 +70,12 @@ class Optimizer(object):
         The initial number of updates.
 
     multi_precision : bool, optional
-       Flag to control the internal precision of the optimizer.
-       ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients
-       in 32-bit precision even if actual weights used in the model have lower precision.
-       Turning this on can improve convergence and accuracy when training with float16.
+       Flag to control the internal precision of the optimizer.::
+
+           False: results in using the same precision as the weights (default),
+           True: makes internal 32-bit copy of the weights and applies gradients
+           in 32-bit precision even if actual weights used in the model have lower precision.
+           Turning this on can improve convergence and accuracy when training with float16.
 
     Properties
     ----------
@@ -481,16 +482,17 @@ class SGD(Optimizer):
     Parameters
     ----------
     momentum : float, optional
-       The momentum value.
+        The momentum value.
     lazy_update : bool, optional
-       Default is True. If True, lazy updates are applied \
-       if the storage types of weight and grad are both ``row_sparse``.
+        Default is True. If True, lazy updates are applied \
+        if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
-       Flag to control the internal precision of the optimizer.
-       ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients \
-                in 32-bit precision even if actual weights used in the model have lower precision.\
-                Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.::
+
+            False: results in using the same precision as the weights (default),
+            True: makes internal 32-bit copy of the weights and applies gradients
+            in 32-bit precision even if actual weights used in the model have lower precision.
+            Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, lazy_update=True, **kwargs):
         super(SGD, self).__init__(**kwargs)
@@ -692,20 +694,21 @@ class LBSGD(Optimizer):
     Parameters
     ----------
     momentum : float, optional
-       The momentum value.
+        The momentum value.
     multi_precision: bool, optional
-       Flag to control the internal precision of the optimizer.
-       ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients
-                in 32-bit precision even if actual weights used in the model have lower precision.`<
-                Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.::
+
+            False: results in using the same precision as the weights (default),
+            True: makes internal 32-bit copy of the weights and applies gradients
+            in 32-bit precision even if actual weights used in the model have lower precision.
+            Turning this on can improve convergence and accuracy when training with float16.
+
     warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
     warmup_epochs: unsigned, default: 5
     batch_scale:   unsigned, default: 1 (same as batch size*numworkers)
     updates_per_epoch: updates_per_epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
     begin_epoch: unsigned, default 0, starting epoch.
     """
-
     def __init__(self, momentum=0.0, multi_precision=False, warmup_strategy='linear',
                  warmup_epochs=5, batch_scale=1, updates_per_epoch=32, begin_epoch=0, num_epochs=60,
                  **kwargs):
@@ -934,11 +937,12 @@ class NAG(Optimizer):
     momentum : float, optional
        The momentum value.
     multi_precision: bool, optional
-       Flag to control the internal precision of the optimizer.
-       ``False`` results in using the same precision as the weights (default),
-       ``True`` makes internal 32-bit copy of the weights and applies gradients \
-                in 32-bit precision even if actual weights used in the model have lower precision.\
-                Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.::
+
+            False: results in using the same precision as the weights (default),
+            True: makes internal 32-bit copy of the weights and applies gradients
+            in 32-bit precision even if actual weights used in the model have lower precision.
+            Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, **kwargs):
         super(NAG, self).__init__(**kwargs)
@@ -1176,9 +1180,11 @@ class RMSProp(Optimizer):
     epsilon : float, optional
         Small value to avoid division by 0.
     centered : bool, optional
-        Flag to control which version of RMSProp to use.
-        ``True`` will use Graves's version of `RMSProp`,
-        ``False`` will use Tieleman & Hinton's version of `RMSProp`.
+        Flag to control which version of RMSProp to use.::
+
+            True: will use Graves's version of `RMSProp`,
+            False: will use Tieleman & Hinton's version of `RMSProp`.
+
     clip_weights : float, optional
         Clips weights into range ``[-clip_weights, clip_weights]``.
     """
