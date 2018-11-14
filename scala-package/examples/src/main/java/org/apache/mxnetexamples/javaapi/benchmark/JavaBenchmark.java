@@ -96,6 +96,7 @@ public class JavaBenchmark {
                 ObjectDetectionBenchmark inst = new ObjectDetectionBenchmark();
                 parse(inst, args);
                 model = inst;
+                break;
             default:
                 System.err.println("Model name not found! " + modelName);
                 System.exit(1);
