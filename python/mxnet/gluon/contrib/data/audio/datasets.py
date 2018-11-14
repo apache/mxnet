@@ -22,10 +22,11 @@ __all__ = ['AudioFolderDataset']
 
 import os
 import warnings
-from mxnet import gluon, nd
+from ....data import Dataset
+from ..... import ndarray as nd
 
 
-class AudioFolderDataset(gluon.data.dataset.Dataset):
+class AudioFolderDataset(Dataset):
     """A dataset for loading Audio files stored in a folder structure like::
 
         root/children_playing/0.wav
@@ -39,19 +40,17 @@ class AudioFolderDataset(gluon.data.dataset.Dataset):
     ----------
     root : str
         Path to root directory.
-
     transform : callable, default None
         A function that takes data and label and transforms them
-
     has_csv: default True
         If True, it means that a csv file has filename and its corresponding label
         If False, we have folder like structure
-
     train_csv: str, default None
         If has_csv is True, train_csv should be populated by the training csv filename
-
     file_format: str, default '.wav'
         The format of the audio files(.wav, .mp3)
+    skip_rows: int, default 0
+        While reading from csv file, how many rows to skip at the start of the file to aboid reading in header
 
     Attributes
     ----------

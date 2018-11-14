@@ -26,9 +26,9 @@ try:
 except ImportError as e:
     warnings.warn("gluon/contrib/data/audio/transforms.py : librosa dependency could not be resolved or \
     imported, could not provide some/all transform.")
-import mxnet as mx
-from mxnet import nd
-from mxnet.gluon.block import Block
+
+from ..... import ndarray as nd
+from ....block import Block
 
 
 class Loader(Block):
@@ -50,14 +50,14 @@ class Loader(Block):
 
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, res_type='kaiser_fast'):
         super(Loader, self).__init__()
-        self.kwargs = kwargs
+        self._restype = res_type
 
     def forward(self, x):
         if not librosa:
             raise RuntimeError("Librosa dependency is not installed! Install that and retry!")
-        X1, _ = librosa.load(x, **self.kwargs)
+        X1, _ = librosa.load(x, res_type=self._restype)
         return nd.array(X1)
 
 
@@ -89,7 +89,8 @@ class MFCC(Block):
 
     def forward(self, x):
         if not librosa:
-            raise RuntimeError("Librosa dependency is not installed! Install that and retry")
+            warnings.warn("Librosa dependency is not installed! Install that and retry")
+            return x
         if isinstance(x, np.ndarray):
             y = x
         elif isinstance(x, nd.NDArray):
@@ -134,7 +135,7 @@ class Scale(Block):
 
     def forward(self, x):
         if isinstance(x, np.ndarray):
-            return mx.nd.array(x/self.scale_factor)
+            return nd.array(x/self.scale_factor)
         return x / self.scale_factor
 
 
@@ -172,10 +173,10 @@ class PadTrim(Block):
 
     def forward(self, x):
         if  isinstance(x, np.ndarray):
-            x = mx.nd.array(x)
+            x = nd.array(x)
         if self._max_len > x.size:
-            pad = mx.nd.ones((self._max_len - x.size,)) * self._fill_value
-            x = mx.nd.concat(x, pad, dim=0)
+            pad = nd.ones((self._max_len - x.size,)) * self._fill_value
+            x = nd.concat(x, pad, dim=0)
         elif self._max_len < x.size:
             x = x[:self._max_len]
         return x
@@ -229,9 +230,9 @@ class MEL(Block):
 
     def forward(self, x):
         if librosa is None:
-            print("Cannot create spectrograms, since dependency librosa is not installed!")
+            warnings.warn("Cannot create spectrograms, since dependency librosa is not installed!")
             return x
-        if isinstance(x, mx.nd.NDArray):
+        if isinstance(x, nd.NDArray):
             x = x.asnumpy()
         specs = librosa.feature.melspectrogram(x, **self.kwargs)
         return nd.array(specs)
