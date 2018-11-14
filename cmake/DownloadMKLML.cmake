@@ -65,7 +65,7 @@ elseif(UNIX)
                   "-C" "${CMAKE_CURRENT_BINARY_DIR}/mklml/")
 
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
-
+  include_directories(${MKLROOT}/include)
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
 
 else()
