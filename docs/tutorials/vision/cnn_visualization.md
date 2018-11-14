@@ -22,7 +22,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 gradcam_file = "gradcam.py" 
-base_url = "https://github.com/apache/incubator-mxnet/tree/master/docs/tutorial_utils/{}?raw=true"
+base_url = "https://github.com/apache/incubator-mxnet/tree/master/docs/tutorial_utils/vision/cnn_visualization/{}?raw=true"
 mx.test_utils.download(base_url.format(gradcam_file), fname=gradcam_file)
 import gradcam
 ```
