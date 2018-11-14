@@ -135,10 +135,10 @@ struct QuantizedSumInitKernelWithBias {
 
 template<typename SrcType>
 void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
-                                          const OpContext &ctx,
-                                          const std::vector<NDArray> &in_data,
-                                          const std::vector<OpReqType> &req,
-                                          const std::vector<NDArray> &out_data) {
+                                    const OpContext &ctx,
+                                    const std::vector<NDArray> &in_data,
+                                    const std::vector<OpReqType> &req,
+                                    const std::vector<NDArray> &out_data) {
 #if MSHADOW_USE_MKL == 1
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
