@@ -29,6 +29,9 @@ import json
 import math
 import warnings
 from .symbol import Symbol
+import operator
+from functools import reduce
+
 
 def _str2tuple(string):
     """Convert shape string to list, internal use only.
@@ -44,6 +47,10 @@ def _str2tuple(string):
         Represents shape.
     """
     return re.findall(r"\d+", string)
+
+
+def _str2ints(string):
+    return map(int, _str2tuple(string))
 
 
 def convert_size(size_bytes):
@@ -143,30 +150,24 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             key = input_name
                         if key in shape_dict:
                             shape = shape_dict[key][1:]
-                            if len(shape) == 0:
+                            if not shape or op == 'Convolution' and pre_filter > 0:
                                 continue
-                            pre_filter = pre_filter + int(shape[0])
-        cur_param = 0
+                            pre_filter += int(shape[0])
         quantized_params = "_qconv" in node["name"] or "_scaledbinaryconv" in node["name"]
+        cur_param = 0
         if op == 'Convolution':
-            if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
-                num_group = int(node['attrs'].get('num_group', '1'))
-                cur_param = pre_filter * int(node["attrs"]["num_filter"]) \
-                   // num_group
-                for k in _str2tuple(node["attrs"]["kernel"]):
-                    cur_param *= int(k)
-            else:
-                num_group = int(node['attrs'].get('num_group', '1'))
-                cur_param = pre_filter * int(node["attrs"]["num_filter"]) \
-                   // num_group
-                for k in _str2tuple(node["attrs"]["kernel"]):
-                    cur_param *= int(k)
-                cur_param += int(node["attrs"]["num_filter"])
+            num_group = int(node['attrs'].get('num_group', '1'))
+            num_filter = int(node["attrs"]["num_filter"])
+            cur_param = pre_filter * num_filter // num_group
+            cur_param *= reduce(operator.mul,
+                                _str2ints(node["attrs"]["kernel"]))
+            if node["attrs"].get("no_bias", 'False') == 'False':
+                cur_param += num_filter
         elif op == 'FullyConnected':
-            if "no_bias" in node["attrs"] and node["attrs"]["no_bias"] == 'True':
-                cur_param = pre_filter * int(node["attrs"]["num_hidden"])
-            else:
+            if node["attrs"].get("no_bias", 'False') == 'False':
                 cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
+            else:
+                cur_param = pre_filter * int(node["attrs"]["num_hidden"])
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
