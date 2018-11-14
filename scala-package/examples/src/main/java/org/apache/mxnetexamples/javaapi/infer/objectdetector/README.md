@@ -11,15 +11,13 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 2. [Download artifacts](#download-artifacts)
 3. [Setup datapath and parameters](#setup-datapath-and-parameters)
 4. [Run the image inference example](#run-the-image-inference-example)
-5. [Infer APIs](#infer-api-details)
-6. [Next steps](#next-steps)
 
 
 ## Prerequisites
 
 1. MXNet
-2. MXNet Scala Package
-3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
+2. MXNet Scala/Java Package
+3. [IntelliJ IDE (or alternative IDE) project setup](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/java/mxnet_java_on_intellij.md) with the MXNet Scala Package
 4. wget
 
 
@@ -28,13 +26,13 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 ### Download Artifacts
 #### Step 1
 You can download the files using the script `get_ssd_data.sh`. It will download and place the model files in a `model` folder and the test image files in a `image` folder in the current directory.
-From the `scala-package/examples/scripts/infer/imageclassifier/` folder run:
+From the `scala-package/examples/scripts/infer/objectdetector/` folder run:
 
 ```bash
 ./get_ssd_data.sh
 ```
 
-**Note**: You may need to run `chmod +x get_resnet_data.sh` before running this script.
+**Note**: You may need to run `chmod +x get_ssd_data.sh` before running this script.
 
 Alternatively use the following links to download the Symbol and Params files via your browser:
 - [resnet50_ssd_model-symbol.json](https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json)
@@ -74,12 +72,12 @@ The followings is the parameters defined for this example, you can find more inf
 
 
 ## How to Run Inference
-After the previous steps, you should be able to run the code using the following script that will pass all of the required parameters to the Infer API.
+After the previous steps, you should be able to run the code using the following script that will pass all of the required parameters to the Java Infer API.
 
 From the `scala-package/examples/scripts/inferexample/objectdetector/` folder run:
 
 ```bash
-./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
+./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images cpu
 ```
 
 **Notes**:
@@ -101,16 +99,6 @@ Probabilties: 0.8226818
 the outputs come from the the input image, with top3 predictions picked.
 
 
-## Infer API Details
-This example uses ObjectDetector class provided by MXNet's scala package Infer APIs. It provides methods to load the images, create NDArray out of Java BufferedImage and run prediction using Classifier and Predictor APIs.
-
-
 ## References
 This documentation used the model and inference setup guide from the [MXNet Model Server SSD example](https://github.com/awslabs/mxnet-model-server/blob/master/examples/ssd/README.md).
 
-
-## Next Steps
-
-Check out the following related tutorials and examples for the Infer API:
-
-* [Image Classification with the MXNet Scala Infer API](../imageclassifier/README.md)

@@ -28,13 +28,13 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 ### Download Artifacts
 #### Step 1
 You can download the files using the script `get_ssd_data.sh`. It will download and place the model files in a `model` folder and the test image files in a `image` folder in the current directory.
-From the `scala-package/examples/scripts/infer/imageclassifier/` folder run:
+From the `scala-package/examples/scripts/infer/objectdetector/` folder run:
 
 ```bash
 ./get_ssd_data.sh
 ```
 
-**Note**: You may need to run `chmod +x get_resnet_data.sh` before running this script.
+**Note**: You may need to run `chmod +x get_ssd_data.sh` before running this script.
 
 Alternatively use the following links to download the Symbol and Params files via your browser:
 - [resnet50_ssd_model-symbol.json](https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json)
@@ -76,10 +76,10 @@ The followings is the parameters defined for this example, you can find more inf
 ## How to Run Inference
 After the previous steps, you should be able to run the code using the following script that will pass all of the required parameters to the Infer API.
 
-From the `scala-package/examples/scripts/inferexample/objectdetector/` folder run:
+From the `scala-package/examples/scripts/infer/objectdetector/` folder run:
 
 ```bash
-./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
+./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images cpu
 ```
 
 **Notes**:
