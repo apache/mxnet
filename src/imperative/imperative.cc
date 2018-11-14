@@ -494,9 +494,16 @@ std::vector<NDArray*> Imperative::Backward(
   bool prev_training = set_is_training(is_train);
   int prev_bulk_size = Engine::Get()->set_bulk_size(backward_bulk_size_);
 
-  RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
-           std::move(array_reqs), std::move(ref_count), &states, dispatch_modes,
-           is_recording());
+  try {
+    RunGraph(retain_graph, idx, arrays, num_forward_nodes, idx.num_nodes(),
+            std::move(array_reqs), std::move(ref_count), &states, dispatch_modes,
+            is_recording());
+  } catch (const dmlc::Error& e) {
+    Engine::Get()->set_bulk_size(prev_bulk_size);
+    set_is_recording(prev_recording);
+    set_is_training(prev_training);
+    throw e;
+  }
 
   Engine::Get()->set_bulk_size(prev_bulk_size);
   set_is_recording(prev_recording);

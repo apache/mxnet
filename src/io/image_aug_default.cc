@@ -209,7 +209,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
  public:
   // contructor
   DefaultImageAugmenter() {
-    rotateM_ = cv::Mat(2, 3, CV_32F);
     seed_init_state = false;
   }
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
@@ -550,8 +549,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
  private:
   // temporal space
   cv::Mat temp_;
-  // rotation param
-  cv::Mat rotateM_;
   // eigval and eigvec for adding pca noise
   // store eigval * eigvec as eigvec
   float eigvec[3][3] = { { 55.46f * -0.5675f, 4.794f * 0.7192f,  1.148f * 0.4009f },

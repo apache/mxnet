@@ -67,15 +67,13 @@ def get_model_metadata(model_file):
     -------
     model_metadata : dict
         A dictionary object mapping various metadata to its corresponding value.
-        The dictionary will have the following template.
-        {
-            'input_tensor_data' : <list of tuples representing the shape of the input paramters>,
-            'output_tensor_data' : <list of tuples representing the shape of the output
-                                    of the model>
-        }
+        The dictionary will have the following template::
 
+          'input_tensor_data' : list of tuples representing the shape of the input paramters
+          'output_tensor_data' : list of tuples representing the shape of the output of the model
     """
     graph = GraphProto()
+
     try:
         import onnx
     except ImportError:
