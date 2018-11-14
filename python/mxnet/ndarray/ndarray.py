@@ -949,63 +949,43 @@ fixed-size items.
             ``np.prod(new_shape)`` should be equal to ``np.prod(self.shape)``.
             Some dimensions of the shape can take special values from the set {0, -1, -2, -3, -4}.
             The significance of each is explained below:
-
             - ``0``  copy this dimension from the input to the output shape.
-
-              Example::
-
-              - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
-              - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
-
+            Example::
+            - input shape = (2,3,4), shape = (4,0,2), output shape = (4,3,2)
+            - input shape = (2,3,4), shape = (2,0,0), output shape = (2,3,4)
             - ``-1`` infers the dimension of the output shape by using the remainder of the
-              input dimensions keeping the size of the new array same as that of the input array.
-              At most one dimension of shape can be -1.
-
-              Example::
-
-              - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
-              - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
-              - input shape = (2,3,4), shape=(-1,), output shape = (24,)
-
+            input dimensions keeping the size of the new array same as that of the input array.
+            At most one dimension of shape can be -1.
+            Example::
+            - input shape = (2,3,4), shape = (6,1,-1), output shape = (6,1,4)
+            - input shape = (2,3,4), shape = (3,-1,8), output shape = (3,1,8)
+            - input shape = (2,3,4), shape=(-1,), output shape = (24,)
             - ``-2`` copy all/remainder of the input dimensions to the output shape.
-
-              Example::
-
-              - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
-              - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
-              - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
-
+            Example::
+            - input shape = (2,3,4), shape = (-2,), output shape = (2,3,4)
+            - input shape = (2,3,4), shape = (2,-2), output shape = (2,3,4)
+            - input shape = (2,3,4), shape = (-2,1,1), output shape = (2,3,4,1,1)
             - ``-3`` use the product of two consecutive dimensions of the input shape as the
-              output dimension.
-
-              Example::
-
-              - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
-              - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
-              - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
-              - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
-
+            output dimension.
+            Example::
+            - input shape = (2,3,4), shape = (-3,4), output shape = (6,4)
+            - input shape = (2,3,4,5), shape = (-3,-3), output shape = (6,20)
+            - input shape = (2,3,4), shape = (0,-3), output shape = (2,12)
+            - input shape = (2,3,4), shape = (-3,-2), output shape = (6,4)
             - ``-4`` split one dimension of the input into two dimensions passed subsequent to
-              -4 in shape (can contain -1).
-
-              Example::
-
-              - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
-              - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
-
+            -4 in shape (can contain -1).
+            Example::
+            - input shape = (2,3,4), shape = (-4,1,2,-2), output shape =(1,2,3,4)
+            - input shape = (2,3,4), shape = (2,-4,-1,3,-2), output shape = (2,1,3,4)
             - If the argument `reverse` is set to 1, then the special values are inferred from right
-              to left.
-
-              Example::
-
-              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
-                (40,5).
-              - with reverse=1, output shape will be (50,4).
-
+            to left.
+            Example::
+            - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+            (40,5).
+            - with reverse=1, output shape will be (50,4).
         reverse : bool, default False
             If true then the special values are inferred from right to left. Only supported as
             keyword argument.
-
 
         Returns
         -------
