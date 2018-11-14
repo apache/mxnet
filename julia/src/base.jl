@@ -26,6 +26,7 @@ Base.show(io::IO, e::MXError) = print(io, e.msg)
 # Common types used in MXNet API
 ################################################################################
 const MX_uint = Cuint
+const MX_long = Clonglong
 const MX_float = Cfloat
 const MX_handle = Ptr{Void}
 

@@ -245,8 +245,8 @@ See also the notes on NDArray shapes [`NDArray`](@ref).
 """
 function size(x::NDArray)
   ref_ndim  = Ref{MX_uint}(0)
-  ref_shape = Ref{Ptr{MX_uint}}(0)
-  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
+  ref_shape = Ref{Ptr{MX_long}}(0)
+  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_long}}),
           x, ref_ndim, ref_shape)
   tuple(map(Int, flipdim(unsafe_wrap(Array, ref_shape[], ref_ndim[]),1))...)
 end
@@ -278,8 +278,8 @@ ndims(x::NDArray) = ndims(x.handle)
 
 function ndims(x::MX_NDArrayHandle)::Int
   ref_ndim  = Ref{MX_uint}(0)
-  ref_shape = Ref{Ptr{MX_uint}}(0)
-  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
+  ref_shape = Ref{Ptr{MX_long}}(0)
+  @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_long}}),
           x, ref_ndim, ref_shape)
   ref_ndim[]
 end

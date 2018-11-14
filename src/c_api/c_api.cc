@@ -481,7 +481,7 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
 }
 
 int MXNDArrayGetShape(NDArrayHandle handle,
-                      dim_t *out_dim,
+                      mx_uint *out_dim,
                       const dim_t **out_pdata) {
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();

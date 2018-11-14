@@ -384,7 +384,7 @@ int MXNDArrayCreateNone(NDArrayHandle *out);
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-int MXNDArrayCreate(const mx_uint *in,
+int MXNDArrayCreate(const dim_t *in,
                               mx_uint ndim,
                               int dev_type,
                               int dev_id,
@@ -403,7 +403,7 @@ int MXNDArrayCreate(const mx_uint *in,
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-int MXNDArrayCreateEx(const mx_uint *in,
+int MXNDArrayCreateEx(const dim_t *in,
                               mx_uint ndim,
                               int dev_type,
                               int dev_id,
@@ -428,7 +428,7 @@ int MXNDArrayCreateEx(const mx_uint *in,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayCreateSparseEx(int storage_type,
-                                      const mx_uint *in,
+                                      const dim_t *in,
                                       mx_uint ndim,
                                       int dev_type,
                                       int dev_id,
@@ -437,7 +437,7 @@ int MXNDArrayCreateSparseEx(int storage_type,
                                       mx_uint num_aux,
                                       int *in,
                                       mx_uint *in,
-                                      const mx_uint *in,
+                                      const dim_t *in,
                                       NDArrayHandle *out);
 
 
@@ -589,8 +589,8 @@ int MXNDArrayFree(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArraySlice(NDArrayHandle handle,
-                             mx_uint slice_begin,
-                             mx_uint slice_end,
+                             dim_t slice_begin,
+                             dim_t slice_end,
                              NDArrayHandle *out);
 /*!
  * \brief Index the NDArray along axis 0.
@@ -600,7 +600,7 @@ int MXNDArraySlice(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayAt(NDArrayHandle handle,
-                          mx_uint idx,
+                          dim_t idx,
                           NDArrayHandle *out);
 /*!
  * \brief get the storage type of the array
@@ -642,7 +642,7 @@ int MXNDArrayReshape64(NDArrayHandle handle,
  */
 int MXNDArrayGetShape(NDArrayHandle handle,
                                 mx_uint *out_dim,
-                                const mx_uint **out_pdata);
+                                const dim_t **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
@@ -1293,16 +1293,16 @@ int MXSymbolInferShape(SymbolHandle sym,
                                  mx_uint num_args,
                                  const char** in,
                                  const mx_uint *in,
-                                 const mx_uint *in,
+                                 const dim_t *in,
                                  mx_uint *in_shape_size,
                                  const mx_uint **in_shape_ndim,
-                                 const mx_uint ***in_shape_data,
+                                 const dim_t ***in_shape_data,
                                  mx_uint *out_shape_size,
                                  const mx_uint **out_shape_ndim,
-                                 const mx_uint ***out_shape_data,
+                                 const dim_t ***out_shape_data,
                                  mx_uint *aux_shape_size,
                                  const mx_uint **aux_shape_ndim,
-                                 const mx_uint ***aux_shape_data,
+                                 const dim_t ***aux_shape_data,
                                  int *out);
 /*!
  * \brief partially infer shape of unknown input shapes given the known one.
@@ -1365,13 +1365,13 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
 int MXSymbolInferType(SymbolHandle sym,
                                 mx_uint num_args,
                                 const char** in,
-                                const int *in,
+                                const dim_t *in,
                                 mx_uint *in_type_size,
-                                const int **in_type_data,
+                                const dim_t **in_type_data,
                                 mx_uint *out_type_size,
-                                const int **out_type_data,
+                                const dim_t **out_type_data,
                                 mx_uint *aux_type_size,
-                                const int **aux_type_data,
+                                const dim_t **aux_type_data,
                                 int *out);
 //--------------------------------------------
 // Part 4: Executor interface
