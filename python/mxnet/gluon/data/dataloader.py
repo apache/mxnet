@@ -377,13 +377,13 @@ class _SameProcessIter(object):
         self._dataset = dataset
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
-        self._iter = iter(self._batch_sampler)
         self._pin_memory = pin_memory
+        self._reset()
 
     def __len__(self):
         return len(self._batch_sampler)
 
-    def reset(self):
+    def _reset(self):
         """Reset iterator."""
         self._iter = iter(self._batch_sampler)
 
@@ -402,6 +402,7 @@ class _SameProcessIter(object):
         return self.__next__()
 
     def __iter__(self):
+        self._reset()
         return self
 
 
