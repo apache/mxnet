@@ -625,7 +625,7 @@ class Lambda(Block):
 
             block = Lambda('tanh')
 
-        2) a function that conforms to "def function(*args)". For example::
+        2) a function that conforms to ``def function(*args)``. For example::
 
             block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
 

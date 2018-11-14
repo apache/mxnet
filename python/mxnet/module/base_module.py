@@ -279,8 +279,8 @@ class BaseModule(object):
     def iter_predict(self, eval_data, num_batch=None, reset=True, sparse_row_id_fn=None):
         """Iterates over predictions.
 
-        Example Usage:
-        ----------
+        Examples
+        --------
         >>> for pred, i_batch, batch in module.iter_predict(eval_data):
         ...     # pred is a list of outputs from the module
         ...     # i_batch is a integer

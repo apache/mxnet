@@ -151,7 +151,8 @@ def show_images(pred_str, images):
     for i in range(num_images):
         fig.add_subplot(rows, cols, i+1)
         plt.xlabel(titles[i])
-        plt.imshow(images[i], cmap='gray' if i==num_images-1 else None)
+        img = images[i].astype(np.uint8)
+        plt.imshow(img, cmap='gray' if i==num_images-1 else None)
     plt.show()
 ```
 
