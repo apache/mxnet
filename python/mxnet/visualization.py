@@ -161,13 +161,13 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             cur_param = pre_filter * num_filter // num_group
             cur_param *= reduce(operator.mul,
                                 _str2ints(node["attrs"]["kernel"]))
-            if node["attrs"].get("no_bias", 'False') == 'False':
+            if node["attrs"].get("no_bias", 'False') != 'True':
                 cur_param += num_filter
         elif op == 'FullyConnected':
-            if node["attrs"].get("no_bias", 'False') == 'False':
-                cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
-            else:
+            if node["attrs"].get("no_bias", 'False') == 'True':
                 cur_param = pre_filter * int(node["attrs"]["num_hidden"])
+            else:
+                cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
