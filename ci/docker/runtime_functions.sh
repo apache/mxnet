@@ -1220,6 +1220,7 @@ nightly_example_test_ubuntu_python3_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_TEST_KERNEL=python3
     cd /work/mxnet/tests/examples
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_examples.py --nologcapture
 
 }
 
@@ -1232,6 +1233,7 @@ nightly_example_test_ubuntu_python2_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_TEST_KERNEL=python2
     cd /work/mxnet/tests/examples
+    nosetests-2.7 --with-xunit --xunit-file nosetests_tutorials.xml test_examples.py --nologcapture
 }
 
 # Deploy
