@@ -734,11 +734,11 @@ inline void SetSliceOpOutputDimSize(const index_t i, const int b,
                                     mxnet::TShape* oshape) {
   if (e != b) {
     if (s > 0) {
-      CHECK_LT(b, e) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+      CHECK_LT(b, e) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (e - b - 1) / s + 1;
     } else {
-      CHECK_LT(e, b) << "slicing with begin=[" << i << "]=" << b << ", end[" << i << "]="
+      CHECK_LT(e, b) << "slicing with begin[" << i << "]=" << b << ", end[" << i << "]="
                      << e << ", and step[" << i << "]=" << s << " is invalid";
       (*oshape)[i] = (b - e - 1) / (-s) + 1;
     }
