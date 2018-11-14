@@ -81,13 +81,13 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateNone
 }
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
-  (JNIEnv *env, jobject obj, jintArray shape, jint ndim, jint devType,
+  (JNIEnv *env, jobject obj, jlongArray shape, jint ndim, jint devType,
     jint devId, jint delayAlloc, jint dtype, jobject ndArrayHandle) {
-  jint *shapeArr = env->GetIntArrayElements(shape, NULL);
+  jlong *shapeArr = env->GetLongArrayElements(shape, NULL);
   NDArrayHandle out;
   int ret = MXNDArrayCreateEx(reinterpret_cast<dim_t *>(shapeArr), static_cast<mx_uint>(ndim),
                               devType, devId, delayAlloc, dtype, &out);
-  env->ReleaseIntArrayElements(shape, shapeArr, 0);
+  env->ReleaseLongArrayElements(shape, shapeArr, 0);
   SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
   return ret;
 }
@@ -1526,7 +1526,7 @@ int FillSymbolInferShape
       // TODO(Yizhi): out of memory error thrown, return a specific error code ?
       return -1;
     }
-    env->SetIntArrayRegion(jshape, 0, shapeNdim[i], reinterpret_cast<const jint *>(shapeData[i]));
+    env->SetLongArrayRegion(jshape, 0, shapeNdim[i], reinterpret_cast<const jlong *>(shapeData[i]));
     env->CallObjectMethod(joutData, listAppend, jshape);
     env->DeleteLocalRef(jshape);
   }
@@ -1562,7 +1562,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   int complete;
 
   jint *argIndPtr = env->GetIntArrayElements(jargIndPtr, NULL);
-  jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
+  jlong *argShapeData = env->GetLongArrayElements(jargShapeData, NULL);
   int ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
                                static_cast<mx_uint>(jnumArgs),
                                keys,
@@ -1578,7 +1578,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
                                &auxShapeNdim,
                                &auxShapeData,
                                &complete);
-  env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
+  env->ReleaseLongArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
   if (ret == 0) {
