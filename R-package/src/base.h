@@ -354,8 +354,8 @@ inline std::vector<std::string> SafeGetListNames(const Rcpp::List& src) {
  * \param rshape The dimension in R
  * \return A internal vector representation of shapes in mxnet.
  */
-inline std::vector<mx_uint> Dim2InternalShape(const Rcpp::Dimension &rshape) {
-  std::vector<mx_uint> shape(rshape.size());
+inline std::vector<dim_t> Dim2InternalShape(const Rcpp::Dimension &rshape) {
+  std::vector<dim_t> shape(rshape.size());
   for (size_t i = 0; i < rshape.size(); ++i) {
     shape[rshape.size() - i - 1] = rshape[i];
   }

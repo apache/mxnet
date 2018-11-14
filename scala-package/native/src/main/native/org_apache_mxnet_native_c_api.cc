@@ -85,7 +85,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
     jint devId, jint delayAlloc, jint dtype, jobject ndArrayHandle) {
   jint *shapeArr = env->GetIntArrayElements(shape, NULL);
   NDArrayHandle out;
-  int ret = MXNDArrayCreateEx(reinterpret_cast<mx_uint *>(shapeArr), static_cast<mx_uint>(ndim),
+  int ret = MXNDArrayCreateEx(reinterpret_cast<dim_t *>(shapeArr), static_cast<mx_uint>(ndim),
                               devType, devId, delayAlloc, dtype, &out);
   env->ReleaseIntArrayElements(shape, shapeArr, 0);
   SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
@@ -354,7 +354,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoadFromRawBytes
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jobject ndimRef, jobject dataBuf) {
   mx_uint ndim;
-  const mx_uint *pdata;
+  const dim_t *pdata;
   int ret = MXNDArrayGetShape(reinterpret_cast<NDArrayHandle>(ndArrayPtr), &ndim, &pdata);
 
   // fill dataBuf
@@ -1549,15 +1549,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
 
   mx_uint inShapeSize;
   const mx_uint *inShapeNdim;
-  const mx_uint **inShapeData;
+  const dim_t **inShapeData;
 
   mx_uint outShapeSize;
   const mx_uint *outShapeNdim;
-  const mx_uint **outShapeData;
+  const dim_t **outShapeData;
 
   mx_uint auxShapeSize;
   const mx_uint *auxShapeNdim;
-  const mx_uint **auxShapeData;
+  const dim_t **auxShapeData;
 
   int complete;
 
@@ -1567,7 +1567,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
                                static_cast<mx_uint>(jnumArgs),
                                keys,
                                reinterpret_cast<const mx_uint *>(argIndPtr),
-                               reinterpret_cast<const mx_uint *>(argShapeData),
+                               reinterpret_cast<const dim_t *>(argShapeData),
                                &inShapeSize,
                                &inShapeNdim,
                                &inShapeData,

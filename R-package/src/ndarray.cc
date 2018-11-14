@@ -180,7 +180,7 @@ Rcpp::RObject NDArrayPacker::CreateNDArrayPacker() {
 
 Rcpp::Dimension NDArray::dim() const {
   mx_uint ndim;
-  const mx_uint *pshape;
+  const dim_t *pshape;
   MX_CALL(MXNDArrayGetShape(
       ptr_->handle, &ndim, &pshape));
   Rcpp::IntegerVector dat(pshape, pshape + ndim);
@@ -190,7 +190,7 @@ Rcpp::Dimension NDArray::dim() const {
 }
 
 NDArray NDArray::Clone() const {
-  std::vector<mx_uint> shape = Dim2InternalShape(this->dim());
+  std::vector<dim_t> shape = Dim2InternalShape(this->dim());
   Context ctx = this->ctx();
   NDArrayHandle handle;
   MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),
@@ -276,7 +276,7 @@ Rcpp::List NDArray::Load(const std::string& filename) {
 NDArray::RObjectType NDArray::Empty(
     const Rcpp::Dimension& rshape,
     const Context::RObjectType& rctx) {
-  std::vector<mx_uint> shape = Dim2InternalShape(rshape);
+  std::vector<dim_t> shape = Dim2InternalShape(rshape);
   Context ctx(rctx);
   NDArrayHandle handle;
   MX_CALL(MXNDArrayCreate(dmlc::BeginPtr(shape),

@@ -198,13 +198,13 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
 
   mx_uint in_shape_size;
   const mx_uint *in_shape_ndim;
-  const mx_uint **in_shape_data;
+  const dim_t **in_shape_data;
   mx_uint out_shape_size;
   const mx_uint *out_shape_ndim;
-  const mx_uint **out_shape_data;
+  const dim_t **out_shape_data;
   mx_uint aux_shape_size;
   const mx_uint *aux_shape_ndim;
-  const mx_uint **aux_shape_data;
+  const dim_t **aux_shape_data;
   int complete;
 
   MX_CALL(MXSymbolInferShape(
