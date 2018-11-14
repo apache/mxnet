@@ -106,6 +106,7 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
       return false;
     }
   }
+
   return true;
 }
 
