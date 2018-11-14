@@ -13,9 +13,9 @@ Install scipy with pip
 ```
 pip install scipy
 ```
-Install tensorboard with pip
+Install tensorboard and mxboard with pip
 ```
-pip install tensorboard
+pip install mxboard tensorflow
 ```
 
 On Single gpu
@@ -34,14 +34,14 @@ python capsulenet.py --batch_size 100 --devices gpu0,gpu1 --num_epoch 100 --lr 0
 * * *
 ## **Prerequisities**
 
-MXNet version above (0.11.0)  
+MXNet version above (1.2.0)  
 scipy version above (0.19.0)
 
 ***
 ## **Results**  
 Train time takes about 36 seconds for each epoch (batch_size=100, 2 gtx 1080 gpus)  
 
-CapsNet classification test error on MNIST  
+CapsNet classification test error on MNIST:
 
 ```
 python capsulenet.py --devices gpu0,gpu1 --lr 0.0005 --decay 0.99 --model_prefix lr_0_0005_decay_0_99 --batch_size 100 --num_routing 3 --num_epoch 200

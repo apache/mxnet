@@ -61,6 +61,24 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   }
 };
 
+struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam> {
+  TShape shape;
+  std::string ctx;
+  int dtype;
+  DMLC_DECLARE_PARAMETER(InitOpWithoutDTypeParam) {
+    DMLC_DECLARE_FIELD(shape)
+    .set_default(TShape())
+    .describe("The shape of the output");
+    DMLC_DECLARE_FIELD(ctx)
+    .set_default("")
+    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+              "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .describe("Target data type.");
+  }
+};
+
 struct EyeParam : public dmlc::Parameter<EyeParam> {
   nnvm::dim_t N;
   nnvm::dim_t M;
@@ -143,8 +161,8 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
               " E.g repeat=3, the element a will be repeated three times --> a, a, a.");
     DMLC_DECLARE_FIELD(infer_range)
     .set_default(false)
-    .describe("Whether to infer the stop position from the start, step, repeat, and output tensor"
-              "size.");
+    .describe("When set to True, infer the stop position from the start, step, "
+              "repeat, and output tensor size.");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."

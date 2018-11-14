@@ -28,13 +28,13 @@
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
+#include <mxnet/random_generator.h>
 #include <mxnet/operator.h>
 #include <cstring>
 #include <map>
 #include <string>
 #include <vector>
 #include <utility>
-#include "../common/random_generator.h"
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 #include "./random/sampler.h"
@@ -301,7 +301,7 @@ class LeakyReLUOp : public Operator {
     TShape result(dst.ndim());
     int s = src.ndim() - 1;
     for (int i = dst.ndim() - 1; i >= 0; i--) {
-      if (s >= 0 && (dst[i] == src[s] || src[s] == 1)) {
+      if (s >= 0 && i <= 1 && (dst[i] == src[s] || src[s] == 1)) {
         result[i] = src[s];
         s--;
       } else {

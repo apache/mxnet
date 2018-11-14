@@ -198,9 +198,9 @@ object Visualization {
       case None => null
       case Some(map) => map.asInstanceOf[Map[String, Any]]
     }
-    require(conf != null)
+    require(conf != null, "Invalid json")
 
-    require(conf.contains("nodes"))
+    require(conf.contains("nodes"), "Invalid json")
     val nodes = conf("nodes").asInstanceOf[List[Any]]
 
     // default attributes of node

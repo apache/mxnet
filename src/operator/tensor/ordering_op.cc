@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file ordering.cc
+ * \file ordering_op.cc
  * \brief CPU Implementation of the ordering operations
  */
 // this will be invoked by gcc and compile CPU version
@@ -74,8 +74,8 @@ Examples::
     const TopKParam& param = nnvm::get<TopKParam>(n->attrs.parsed);
     if (param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth) {
       std::vector<nnvm::NodeEntry> inputs;
-      index_t n_out = n->num_outputs();
-      for (index_t i = 0; i < n_out; ++i) {
+      uint32_t n_out = n->num_outputs();
+      for (uint32_t i = 0; i < n_out; ++i) {
         inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
       }
       return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs, n->attrs.dict);
@@ -136,8 +136,8 @@ Examples::
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const SortParam& param = nnvm::get<SortParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> inputs;
-    index_t n_out = n->num_outputs();
-    for (index_t i = 0; i < n_out; ++i) {
+    uint32_t n_out = n->num_outputs();
+    for (uint32_t i = 0; i < n_out; ++i) {
       inputs.emplace_back(nnvm::NodeEntry{ n, i, 0 });
     }
     return MakeNonlossGradNode("_backward_topk", n, {ograds[0]}, inputs,

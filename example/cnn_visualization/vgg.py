@@ -72,11 +72,17 @@ def get_vgg(num_layers, pretrained=False, ctx=mx.cpu(),
             root=os.path.join('~', '.mxnet', 'models'), **kwargs):
     layers, filters = vgg_spec[num_layers]
     net = VGG(layers, filters, **kwargs)
-    if pretrained:
-        from mxnet.gluon.model_zoo.model_store import get_model_file
-        batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''
-        net.load_params(get_model_file('vgg%d%s'%(num_layers, batch_norm_suffix),
-                                       root=root), ctx=ctx)
+    net.initialize(ctx=ctx)
+    
+    # Get the pretrained model
+    vgg = mx.gluon.model_zoo.vision.get_vgg(num_layers, pretrained=True, ctx=ctx)
+    
+    # Set the parameters in the new network
+    params = vgg.collect_params()
+    for key in params:
+        param = params[key]
+        net.collect_params()[net.prefix+key.replace(vgg.prefix, '')].set_data(param.data())
+   
     return net
 
 def vgg16(**kwargs):

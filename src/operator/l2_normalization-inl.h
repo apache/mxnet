@@ -211,7 +211,7 @@ class L2NormalizationOp : public Operator {
     }
   }
 
- private:
+ protected:
   L2NormalizationParam param_;
 };  // class L2NormalizationOp
 

@@ -29,21 +29,15 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * WARNING: it is your responsibility to clear this object through dispose().
  * </b>
  */
-class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotDisposed {
+class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeResource {
   private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
-  private var disposed = false
-  protected def isDisposed = disposed
 
-  /**
-   * Release the native memory.
-   * The object shall never be used after it is disposed.
-   */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxSymbolFree(handle)
-      disposed = true
-    }
-  }
+  // unable to get the byteAllocated for Symbol
+  override val bytesAllocated: Long = 0L
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxSymbolFree
+  override val ref: NativeResourceRef = super.register()
+
 
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))
   def +[@specialized(Int, Float, Double) V](other: V): Symbol = {
@@ -423,7 +417,13 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
       }
     val (argShapes, _, auxShapes) = inferShape(shapeDict)
     val (argTypes, _, auxTypes) = inferType(types)
-    require(argShapes != null && argTypes != null, "Input node is not complete")
+    require(argShapes != null, "Shape inference failed." +
+      s"Known shapes are $shapeDict for symbol arguments ${listArguments()} " +
+      s"and aux states ${listAuxiliaryStates()}")
+    require(argTypes != null, "Type inference failed." +
+      s"Known types as $typeDict for symbol arguments ${listArguments()} " +
+      s"and aux states ${listAuxiliaryStates()}")
+
     // alloc space
     val argNDArrays = (argShapes zip argTypes) map { case (shape, t) =>
       NDArray.zeros(shape, ctx, dtype = t)
@@ -715,10 +715,14 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
                          args: Iterable[_], argsGrad: Iterable[_],
                          gradsReq: Iterable[_], auxStates: Iterable[_],
                          group2ctx: Map[String, Context], sharedExec: Executor): Executor = {
-    require(args != null && !args.isInstanceOf[Set[_]])
-    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]])
-    require(auxStates == null || !auxStates.isInstanceOf[Set[_]])
-    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]])
+    require(args != null && !args.isInstanceOf[Set[_]],
+      s"args must be provided (Set is not supported)")
+    require(argsGrad == null || !argsGrad.isInstanceOf[Set[_]],
+      s"argsGrad must be provided (Set is not supported)")
+    require(auxStates == null || !auxStates.isInstanceOf[Set[_]],
+      s"auxStates must be provided (Set is not supported)")
+    require(gradsReq != null && !gradsReq.isInstanceOf[Set[_]],
+      s"gradsReq must be provided (Set is not supported)")
 
     val (argsHandle, argsNDArray) =
       if (args.isInstanceOf[Seq[_]]) {
@@ -756,14 +760,16 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     val reqsArray =
       if (gradsReq.isInstanceOf[Seq[_]]) {
         gradsReq.asInstanceOf[Seq[String]].map { req =>
-          require(Symbol.bindReqMap.contains(req), s"grad_req must be in ${Symbol.bindReqMap}")
+          require(Symbol.bindReqMap.contains(req),
+            s"grad_req $req must be in ${Symbol.bindReqMap}")
           Symbol.bindReqMap(req)
         }.toArray
       } else {
         val gradsReqMap = gradsReq.asInstanceOf[Map[String, String]]
         symbolArguments.map { req =>
           val value = gradsReqMap.getOrElse(req, "null")
-          require(Symbol.bindReqMap.contains(value), s"grad_req must be in ${Symbol.bindReqMap}")
+          require(Symbol.bindReqMap.contains(value),
+            s"grad_req $req must be in ${Symbol.bindReqMap}")
           Symbol.bindReqMap(value)
         }.toArray
       }
@@ -781,7 +787,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     }
 
     val execHandle = new ExecutorHandleRef
-    val sharedHadle = if (sharedExec != null) sharedExec.handle else 0L
+    val sharedHandle = if (sharedExec != null) sharedExec.handle else 0L
     checkCall(_LIB.mxExecutorBindEX(handle,
                                    ctx.deviceTypeid,
                                    ctx.deviceId,
@@ -794,7 +800,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
                                    argsGradHandle,
                                    reqsArray,
                                    auxArgsHandle,
-                                   sharedHadle,
+                                   sharedHandle,
                                    execHandle))
     val executor = new Executor(execHandle.value, this.clone())
     executor.argArrays = argsNDArray
@@ -820,6 +826,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     checkCall(_LIB.mxSymbolSaveToJSON(handle, jsonStr))
     jsonStr.value
   }
+
 }
 
 /**
@@ -967,7 +974,9 @@ object Symbol extends SymbolBase {
    * @param stop End of interval.
    * @param step Spacing between values. The default step size is 1.
    * @param repeat Number of times to repeat each element. The default repeat count is 1.
-   * @param infer_range Infer the stop value from output shape
+   * @param infer_range
+   *          When set to True, infer the stop position from the start, step,
+   *          repeat, and output tensor size.
    * @param ctx Device context. Default context is the current default context.
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
@@ -1083,9 +1092,9 @@ object Symbol extends SymbolBase {
           (key, value.toString)
         }
       }
-    require(symbols.isEmpty || symbolKwargs.isEmpty, String.format(
-      "%s can only accept input Symbols either as positional or keyword arguments, not both",
-      operator))
+    require(symbols.isEmpty || symbolKwargs.isEmpty,
+      s"$operator can only accept input Symbols either as positional or keyword arguments, " +
+        s"not both")
     if (symbols.isEmpty) {
       createFromNamedSymbols(operator, name, attr)(symbolKwargs, strKwargs)
     } else {
@@ -1217,7 +1226,8 @@ object Symbol extends SymbolBase {
    */
   private def getNDArrayInputs(argKey: String, args: Seq[NDArray], argNames: Seq[String],
                                allowMissing: Boolean): (Array[NDArrayHandle], Array[NDArray]) = {
-    require(args.length == argNames.length, s"Length of $argKey do not match number of arguments")
+    require(args.length == argNames.length,
+      s"Length of $argKey do not match number of arguments")
     val argHandles = args.map(_.handle)
     (argHandles.toArray, args.toArray)
   }
@@ -1232,7 +1242,8 @@ object Symbol extends SymbolBase {
           argArrays += narr.get
           argHandles += narr.get.handle
         case None =>
-          require(allowMissing, s"Must specify all the arguments in $argKey")
+          require(allowMissing,
+            s"Must specify all the arguments in $argKey. $name is unknown")
           argArrays += null
           argHandles += 0L
       }

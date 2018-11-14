@@ -49,13 +49,13 @@ Let us describe the MXNet's `export_model` API.
 help(onnx_mxnet.export_model)
 ```
 
-```python
+```
 Help on function export_model in module mxnet.contrib.onnx.mx2onnx.export_model:
 
 export_model(sym, params, input_shape, input_type=<type 'numpy.float32'>, onnx_file_path=u'model.onnx', verbose=False)
     Exports the MXNet model file, passed as a parameter, into ONNX model.
     Accepts both symbol,parameter objects as well as json and params filepaths as input.
-    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/ONNX
+    Operator support and coverage - https://cwiki.apache.org/confluence/display/MXNET/MXNet-ONNX+Integration
     
     Parameters
     ----------
@@ -121,7 +121,7 @@ from onnx import checker
 import onnx
 
 # Load onnx model
-model_proto = onnx.load(converted_model_path)
+model_proto = onnx.load_model(converted_model_path)
 
 # Check if converted ONNX protobuf is valid
 checker.check_graph(model_proto.graph)

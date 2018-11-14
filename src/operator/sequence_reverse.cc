@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 template <>
 Operator *CreateOp<cpu>(SequenceReverseParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType,
                            { op = new SequenceReverseOp<cpu, DType>(param); })
   return op;

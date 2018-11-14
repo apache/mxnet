@@ -1347,7 +1347,7 @@ class Symbol(SymbolBase):
         shared_buffer : Dict of string to `NDArray`
             The dict mapping argument names to the `NDArray` that can be reused for initializing
             the current executor. This buffer will be checked for reuse if one argument name
-            of the current executor is not found in `shared_arg_names`. The `NDArray`s are
+            of the current executor is not found in `shared_arg_names`. The `NDArray` s are
             expected have default storage type.
 
         kwargs : Dict of str->shape
@@ -2423,6 +2423,14 @@ class Symbol(SymbolBase):
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def softmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmin`.
+
+        The arguments are the same as for :py:func:`softmin`, with
+        this array as data.
+        """
+        return op.softmin(self, *args, **kwargs)
+
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
 
@@ -2430,6 +2438,23 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.squeeze(self, *args, **kwargs)
+
+    def get_backend_symbol(self, backend):
+        """Return symbol for target backend.
+
+        Parameters
+        ----------
+        backend : str
+            The backend names.
+
+        Returns
+        -------
+        out : Symbol
+            The created Symbol for target backend.
+        """
+        out = SymbolHandle()
+        check_call(_LIB.MXGenBackendSubgraph(self.handle, c_str(backend), ctypes.byref(out)))
+        return Symbol(out)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
@@ -2901,6 +2926,9 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, d
     repeat : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    infer_range : boolean, optional
+        When set to True, infer the stop position from the start, step,
+        repeat, and output tensor size.
     dtype : str or numpy.dtype, optional
         The value type of the inner value, default to ``np.float32``.
 

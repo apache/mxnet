@@ -38,7 +38,7 @@ brew install maven
 
 **Step 4.** Install OpenCV:
 ```
-brew install opencv@2
+brew install opencv
 ```
 
 
@@ -73,7 +73,6 @@ The configuration you should update is in the pom file's dependency for MXNet:
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.2.0</version>
 </dependency>
 ```
 
@@ -158,7 +157,7 @@ The project's `pom.xml` will be open for editing.
 
 **Step 3.** Replace the pom file's content with the following code. Changes include:
   - Project properties: `scala.version`, upgrading from `2.11.5` to `2.11.8`
-  - Project dependencies: adding the MXNet package from Maven and updating the dependency for JUnitRunner (specs2-junit_)
+  - Project dependencies: adding the MXNet package from Maven and updating the dependency for JUnitRunner (specs2-junit_) and logging
   - Build options: removing '-make:transitive'
 
 
@@ -204,18 +203,24 @@ The project's `pom.xml` will be open for editing.
     <encoding>UTF-8</encoding>
     <scala.version>2.11.8</scala.version>
     <scala.compat.version>2.11</scala.compat.version>
+    <slf4jVersion>1.7.7</slf4jVersion>
+    <platform>osx-x86_64-cpu</platform>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-      <version>1.2.0</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>${scala.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>args4j</groupId>
+      <artifactId>args4j</artifactId>
+      <version>2.0.29</version>
     </dependency>
 
     <!-- Test -->
@@ -236,6 +241,18 @@ The project's `pom.xml` will be open for editing.
       <artifactId>scalatest_${scala.compat.version}</artifactId>
       <version>2.2.4</version>
       <scope>test</scope>
+    </dependency>
+
+    <!-- Logging -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4jVersion}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4jVersion}</version>
     </dependency>
   </dependencies>
 
@@ -292,11 +309,24 @@ The project's `pom.xml` will be open for editing.
 
 Click "Import Changes" in this prompt.
 
-**Step 5.** Build the project:
+**Step 5.** Setup log4j configuration
+
+Create a folder `src/main/resources` and a new file in it `src/main/resources/log4j.properties` with the contents:
+
+```
+log4j.rootLogger = info, stdout
+
+log4j.appender.stdout = org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Target = System.out
+log4j.appender.stdout.layout = org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] [%c] [%p] - %m%n
+```
+
+**Step 6.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
 
-**Step 6.** Run the Hello World App:
+**Step 7.** Run the Hello World App:
 
 ![hello world app](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-world-app.png)
 
@@ -306,7 +336,7 @@ Navigate to the App included with the project.
 
 Run the App by clicking the green arrow, and verify the Hello World output
 
-**Step 7.** Run Sample MXNet Code in the App:
+**Step 8.** Run Sample MXNet Code in the App:
 
 ![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/scala/intellij-project-hello-mxnet.png)
 
@@ -336,29 +366,38 @@ Process finished with exit code 0
 
 ### Troubleshooting
 
-If you get an error, check the dependencies at the beginning of this tutorial. For example, you might see the following in the middle of the error messages.
+If you get an error, check the dependencies at the beginning of this tutorial. For example, you might see the following in the middle of the error messages, where `x.x` would the version it's looking for.
 
 ```
 ...
-Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
+Library not loaded: /usr/local/opt/opencv/lib/libopencv_calib3d.x.x.dylib
 ...
 ```
 
-This can be resolved be installing OpenCV2.
+This can be resolved be installing OpenCV.
 
 
+### Using MXNet from source
 
-### Troubleshooting
-
-If you get an error, check if it is like this one regarding OpenCV. For example, you might see the following in the middle of the error messages.
+If you chose to "Build from Source" when following the [install instructions](https://mxnet.incubator.apache.org/install/index.html) (or the detailed [build from source instructions](https://mxnet.incubator.apache.org/install/build_from_source.html#installing-mxnet-language-bindings)), you can use your custom build instead of the build from maven.  Use your build by editing the `pom.xml` file and replacing the `org.apache.mxnet` dependency with the following:
 
 ```
-...
-Library not loaded: /usr/local/opt/opencv@2/lib/libopencv_calib3d.2.4.dylib
-...
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>mxnet-core_${scala.version}-${platform}-sources</artifactId>
+      <scope>system</scope>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.3.1-SNAPSHOT-sources.jar</systemPath>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>mxnet-full_${scala.version}-${platform}</artifactId>
+      <scope>system</scope>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    </dependency>
 ```
 
-This can be resolved be installing OpenCV2.
+Note that you have to edit both of the `systemPath` properties to point to your generated jar files.
+
 
 ### Command Line Build Option
 

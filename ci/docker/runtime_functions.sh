@@ -23,6 +23,8 @@
 set -ex
 
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
+CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
+CI_CMAKE_CUDA_ARCH_BIN="52,70"
 
 clean_repo() {
     set -ex
@@ -245,6 +247,7 @@ build_centos7_cpu() {
     make \
         DEV=1 \
         USE_LAPACK=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
@@ -256,6 +259,7 @@ build_amzn_linux_cpu() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -277,6 +281,7 @@ build_centos7_mkldnn() {
 
     make \
         DEV=1 \
+        ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_MKLDNN=1 \
@@ -290,14 +295,16 @@ build_centos7_gpu() {
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
     make \
-        DEV=1 \
-        USE_LAPACK=1 \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_BLAS=openblas \
-        USE_CUDA=1 \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1 \
-        USE_DIST_KVSTORE=1 \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_LAPACK=1                              \
+        USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
+        USE_BLAS=openblas                         \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -311,6 +318,7 @@ build_ubuntu_cpu_openblas() {
     export CXX="ccache g++"
     make \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_DIST_KVSTORE=1            \
@@ -324,6 +332,7 @@ build_ubuntu_cpu_cmake_debug() {
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
@@ -336,12 +345,42 @@ build_ubuntu_cpu_cmake_debug() {
     popd
 }
 
+build_ubuntu_cpu_cmake_asan() {
+    set -ex
+
+    pushd .
+    cd /work/build
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_CXX_COMPILER=/usr/bin/g++-8 \
+        -DCMAKE_C_COMPILER=/usr/bin/gcc-8 \
+        -DUSE_CUDA=OFF \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_OPENCV=OFF \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_GPERFTOOLS=OFF \
+        -DUSE_JEMALLOC=OFF \
+        -DUSE_ASAN=ON \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        /work/mxnet
+    make -j $(nproc) mxnet
+    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
+    ASAN_OPTIONS=detect_leaks=0 \
+    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
+    make -j $(nproc) mlp_cpu
+    popd
+}
+
 build_ubuntu_cpu_clang39() {
     set -ex
      export CXX=clang++-3.9
     export CC=clang-3.9
      build_ccache_wrappers
      make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
@@ -358,6 +397,7 @@ build_ubuntu_cpu_clang60() {
     build_ccache_wrappers
 
     make  \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
@@ -400,6 +440,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
     build_ccache_wrappers
 
     make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -416,6 +457,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
     build_ccache_wrappers
 
     make \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -430,6 +472,7 @@ build_ubuntu_cpu_mkldnn() {
 
     make  \
         DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_MKLDNN=1                  \
@@ -480,18 +523,19 @@ build_ubuntu_gpu_tensorrt() {
 
     rm -rf build
     make \
-        DEV=1                                               \
-        USE_BLAS=openblas                                   \
-        USE_CUDA=1                                          \
-        USE_CUDA_PATH=/usr/local/cuda                       \
-        USE_CUDNN=1                                         \
-        USE_OPENCV=0                                        \
-        USE_DIST_KVSTORE=0                                  \
-        USE_TENSORRT=1                                      \
-        USE_JEMALLOC=0                                      \
-        USE_GPERFTOOLS=0                                    \
-        ONNX_NAMESPACE=onnx                                 \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70"\
+        DEV=1                                                \
+        ENABLE_TESTCOVERAGE=1                                \
+        USE_BLAS=openblas                                    \
+        USE_CUDA=1                                           \
+        USE_CUDA_PATH=/usr/local/cuda                        \
+        USE_CUDNN=1                                          \
+        USE_OPENCV=0                                         \
+        USE_DIST_KVSTORE=0                                   \
+        USE_TENSORRT=1                                       \
+        USE_JEMALLOC=0                                       \
+        USE_GPERFTOOLS=0                                     \
+        ONNX_NAMESPACE=onnx                                  \
+        CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
         -j$(nproc)
 }
 
@@ -501,13 +545,15 @@ build_ubuntu_gpu_mkldnn() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1                   \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_CPP_PACKAGE=1                         \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -517,12 +563,14 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                         \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=0                   \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=0                               \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -531,13 +579,15 @@ build_ubuntu_gpu_cuda91_cudnn7() {
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
     # build_ccache_wrappers
     make \
-        DEV=1                         \
-        USE_BLAS=openblas             \
-        USE_CUDA=1                    \
-        USE_CUDA_PATH=/usr/local/cuda \
-        USE_CUDNN=1                   \
-        USE_CPP_PACKAGE=1             \
-        USE_DIST_KVSTORE=1            \
+        DEV=1                                     \
+        ENABLE_TESTCOVERAGE=1                     \
+        USE_BLAS=openblas                         \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
 }
 
@@ -545,28 +595,36 @@ build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas
+    make -C amalgamation/     \
+        USE_BLAS=openblas     \
+        ENABLE_TESTCOVERAGE=1
 }
 
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
-    make -C amalgamation/ USE_BLAS=openblas MIN=1
+    make -C amalgamation/     \
+        USE_BLAS=openblas     \
+        MIN=1                 \
+        ENABLE_TESTCOVERAGE=1
 }
 
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=1               \
-        -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=1          \
-        -DUSE_MKLDNN=1             \
-        -DCMAKE_BUILD_TYPE=Release \
-        -G Ninja                   \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=1                            \
+        -DUSE_CUDNN=1                           \
+        -DUSE_MKLML_MKL=1                       \
+        -DUSE_MKLDNN=1                          \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -G Ninja                                \
         /work/mxnet
 
     ninja -v
@@ -579,15 +637,18 @@ build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DUSE_CUDA=1               \
-        -DUSE_CUDNN=1              \
-        -DUSE_MKLML_MKL=0          \
-        -DUSE_MKLDNN=0             \
-        -DUSE_DIST_KVSTORE=1       \
-        -DCMAKE_BUILD_TYPE=Release \
-        -G Ninja                   \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DENABLE_TESTCOVERAGE=ON                \
+        -DUSE_CUDA=1                            \
+        -DUSE_CUDNN=1                           \
+        -DUSE_MKLML_MKL=0                       \
+        -DUSE_MKLDNN=0                          \
+        -DUSE_DIST_KVSTORE=1                    \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DCUDA_ARCH_NAME=Manual                 \
+        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -G Ninja                                \
         /work/mxnet
 
     ninja -v
@@ -641,31 +702,8 @@ unittest_ubuntu_python2_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=7.0.3
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
-}
-
-tutorialtest_ubuntu_python3_gpu() {
-    set -ex
-    cd /work/mxnet/docs
-    export MXNET_DOCS_BUILD_MXNET=0
-    make html
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export PYTHONPATH=/work/mxnet/python/
-    export MXNET_TUTORIAL_TEST_KERNEL=python3
-    cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
-}
-
-tutorialtest_ubuntu_python2_gpu() {
-    set -ex
-    cd /work/mxnet/docs
-    export MXNET_DOCS_BUILD_MXNET=0
-    make html
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export PYTHONPATH=/work/mxnet/python/
-    export MXNET_TUTORIAL_TEST_KERNEL=python2
-    cd /work/mxnet/tests/tutorials
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
 unittest_ubuntu_python3_gpu() {
@@ -673,6 +711,7 @@ unittest_ubuntu_python3_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=7.0.3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -689,8 +728,9 @@ unittest_ubuntu_tensorrt_gpu() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    export CUDNN_VERSION=7.0.3
     python tests/python/tensorrt/lenet5_train.py
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose tests/python/tensorrt/
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -700,6 +740,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=7.0.3
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -710,19 +751,20 @@ unittest_ubuntu_python3_quantization_gpu() {
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=1 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export CUDNN_VERSION=7.0.3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 unittest_ubuntu_cpu_scala() {
     set -ex
-    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
-    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
     ./contrib/clojure-package/ci-test.sh
 }
 
@@ -739,8 +781,14 @@ unittest_ubuntu_gpu_cpp() {
 unittest_ubuntu_cpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
@@ -748,10 +796,44 @@ unittest_ubuntu_cpu_R() {
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg USE_BLAS=openblas R_LIBS=/tmp/r-site-library
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
+}
+
+unittest_ubuntu_cpu_julia06() {
+    set -ex
+    export PATH="/work/julia/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_PKGDIR='/work/julia-pkg'
+    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+
+    julia -e 'versioninfo()'
+    julia -e 'Pkg.init()'
+
+    # install package
+    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
+
+    # install dependencies
+    julia -e 'Pkg.resolve()'
+
+    # FIXME
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+
+    # use the prebuilt binary from $MXNET_HOME/lib
+    julia -e 'Pkg.build("MXNet")'
+
+    # run the script `julia/test/runtests.jl`
+    julia -e 'Pkg.test("MXNet")'
+
+    # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
+    julia -e 'using MXNet; mx._sig_checker()'
 }
 
 unittest_centos7_cpu() {
@@ -764,13 +846,13 @@ unittest_centos7_cpu() {
 unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
+    export CUDNN_VERSION=7.0.3
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
-	python example/onnx/super_resolution.py
 	pytest tests/python-pytest/onnx/import/mxnet_backend_test.py
 	pytest tests/python-pytest/onnx/import/onnx_import_test.py
 	pytest tests/python-pytest/onnx/import/gluon_backend_test.py
@@ -789,6 +871,17 @@ integrationtest_ubuntu_gpu_caffe() {
     set -ex
     export PYTHONPATH=/work/deps/caffe/python:./python
     python tools/caffe_converter/test_converter.py
+}
+
+integrationtest_ubuntu_cpu_asan() {
+    set -ex
+    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
+
+    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
+    export ASAN_OPTIONS=exitcode=0
+    cd /work/mxnet/build/cpp-package/example/
+    /work/mxnet/cpp-package/example/get_data.sh
+    ./mlp_cpu
 }
 
 integrationtest_ubuntu_gpu_cpp_package() {
@@ -815,8 +908,8 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 
 integrationtest_ubuntu_gpu_scala() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1
-    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1 ENABLE_TESTCOVERAGE=1
+    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -1006,6 +1099,33 @@ nightly_straight_dope_python3_multi_gpu_tests() {
       test_notebooks_multi_gpu.py --nologcapture
 }
 
+nightly_tutorial_test_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial 
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python3
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+}
+
+nightly_tutorial_test_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export PYTHONPATH=/work/mxnet/python/
+    export MXNET_TUTORIAL_TEST_KERNEL=python2
+    cd /work/mxnet/tests/tutorials
+    nosetests-3.4 --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
+}
+
+
 # Deploy
 
 deploy_docs() {
@@ -1015,6 +1135,31 @@ deploy_docs() {
     make docs
 
     popd
+}
+
+deploy_jl_docs() {
+    set -ex
+    export PATH="/work/julia/bin:$PATH"
+    export MXNET_HOME='/work/mxnet'
+    export JULIA_PKGDIR='/work/julia-pkg'
+    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+
+    julia -e 'versioninfo()'
+    julia -e 'Pkg.init()'
+    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
+    julia -e 'Pkg.resolve()'
+
+    # FIXME
+    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+
+    # use the prebuilt binary from $MXNET_HOME/lib
+    julia -e 'Pkg.build("MXNet")'
+    # build docs
+    julia -e 'Pkg.add("Documenter")'
+    julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'
+
+    # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
+    # ...
 }
 
 # broken_link_checker

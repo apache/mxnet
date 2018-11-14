@@ -311,9 +311,12 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_oihw:
       case mkldnn_ihwo:
       case mkldnn_hwio:
+      case mkldnn_oIhw8i:
+      case mkldnn_oIhw16i:
       case mkldnn_OIhw8i8o:
       case mkldnn_OIhw16i16o:
       case mkldnn_OIhw4i16o4i:
+      case mkldnn_OIhw4i16o4i_s8s8:
       case mkldnn_OIhw8i16o2i:
       case mkldnn_OIhw8o16i2o:
       case mkldnn_OIhw8o8i:
@@ -332,6 +335,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
   } else if (desc.data.ndims == 5) {
     switch (desc.data.format) {
       case mkldnn_goihw:
+      case mkldnn_hwigo:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
       case mkldnn_gOIhw4i16o4i:
@@ -523,6 +527,17 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
       CHECK(similar);
     });
   }
+}
+
+void OpCheck::CopyResult(const std::vector<mxnet::NDArray> &outputs_,
+                         const std::vector<size_t> &indice) {
+  CHECK(!MKLDNNStream::Get()->HasOps());
+  auto non_const_outputs_ = const_cast<std::vector<mxnet::NDArray> &>(outputs_);
+  for (auto i = indice.begin(); i != indice.end(); ++i) {
+    auto mem = outputs[*i].GetMKLDNNData();
+    non_const_outputs_[*i].CopyFrom(*mem);
+  }
+  MKLDNNStream::Get()->Submit();
 }
 
 bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,

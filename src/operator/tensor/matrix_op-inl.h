@@ -86,7 +86,7 @@ inline TShape InferReshapeShape(const nnvm::Tuple<IType>& shape,
   }
   auto dshape_len = dshape_vec.size();
   auto params_len = param_shape_vec.size();
-  for (index_t i = 0; i < params_len; ++i) {
+  for (size_t i = 0; i < params_len; ++i) {
     IType proposed_dim = param_shape_vec[i];
     if (proposed_dim == 0) {
       // keep same
@@ -992,7 +992,7 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 struct SliceAssignScalarParam : public dmlc::Parameter<SliceAssignScalarParam> {
-  real_t scalar;
+  double scalar;
   nnvm::Tuple<dmlc::optional<int>> begin, end;
   nnvm::Tuple<dmlc::optional<int>> step;
   DMLC_DECLARE_PARAMETER(SliceAssignScalarParam) {
@@ -2085,7 +2085,7 @@ void StackOpForward(const nnvm::NodeAttrs& attrs,
     Shape<3> oshape = Shape3(leading, mid, trailing);
     out = outputs[0].get_with_shape<xpu, 3, DType>(oshape, s);
 
-    for (index_t i = 0; i < inputs.size(); ++i) {
+    for (size_t i = 0; i < inputs.size(); ++i) {
       Shape<3> dshape = Shape3(leading, 1, trailing);
       data[i] = inputs[i].get_with_shape<xpu, 3, DType>(dshape, s);
     }
@@ -2119,7 +2119,7 @@ void StackOpBackward(const nnvm::NodeAttrs& attrs,
     Shape<3> oshape = Shape3(leading, mid, trailing);
     grad = inputs[0].get_with_shape<xpu, 3, DType>(oshape, s);
 
-    for (index_t i = 0; i < outputs.size(); ++i) {
+    for (size_t i = 0; i < outputs.size(); ++i) {
       Shape<3> dshape = Shape3(leading, 1, trailing);
       grad_in[i] = outputs[i].get_with_shape<xpu, 3, DType>(dshape, s);
     }

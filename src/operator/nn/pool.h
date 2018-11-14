@@ -73,7 +73,7 @@ namespace pool_enum {
 enum PoolingOpInputs {kData};
 enum PoolingOpOutputs {kOut, kMask};
 enum PoolingOpType {kMaxPooling, kAvgPooling, kSumPooling, kLpPooling};
-enum PoolingOpPadConventionType {kValid, kFull};
+enum PoolingOpPadConventionType {kValid, kFull, kSame};
 }  // namespace pool_enum
 
 /*!

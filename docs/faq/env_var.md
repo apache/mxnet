@@ -58,6 +58,19 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
   - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.  
+* MXNET_GPU_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of memory pool.
+  - Choices:
+    - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If a buffered memory chunk matches the size of a new request, the chunk from the memory pool will be returned and reused.
+    - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
+* MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
+  - The default was chosen to minimize global memory fragmentation within the GPU driver.  Set this to 1 to disable.
 
 ## Engine Type
 
@@ -138,7 +151,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 ## Control the profiler
 
-When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set MXNET_EXEC_BULK_EXEC_INFERENCE and MXNET_EXEC_BULK_EXEC_TRAIN to 0.
+When USE_PROFILER is enabled in Makefile or CMake, the following environments can be used to profile the application without changing code. Execution options may affect the granularity of profiling result. If you need profiling result of every operator, please set `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
 
 * MXNET_PROFILER_AUTOSTART
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -158,7 +171,17 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Performance tests are run to pick the convolution algo when value is 1 or 2
   - Value of 1 chooses the best algo in a limited workspace
   - Value of 2 chooses the fastest algo whose memory requirements may be larger than the default workspace threshold
-  
+
+* MXNET_CUDA_ALLOW_TENSOR_CORE
+  - 0(false) or 1(true) ```(default=1)```
+	- If set to '0', disallows Tensor Core use in CUDA ops.
+	- If set to '1', allows Tensor Core use in CUDA ops.
+  - This variable can only be set once in a session.
+
+* MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION
+  - 0(false) or 1(true) ```(default=0)```
+	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
+	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
 
 * MXNET_GLUON_REPO
   - Values: String ```(default='https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'```
@@ -172,6 +195,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+
+* MXNET_ENFORCE_DETERMINISM
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If set to true, MXNet will only use deterministic algorithms in forward and backward computation.
+  If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
+  of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
 
 Settings for Minimum Memory Usage
 ---------------------------------

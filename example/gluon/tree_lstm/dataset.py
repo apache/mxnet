@@ -115,7 +115,7 @@ class Vocab(object):
                 self.add(word)
             if word in self.tok2idx:
                 vectors[word] = [float(x) for x in tokens[1:]]
-        dim = len(vectors.values()[0])
+        dim = len(list(vectors.values())[0])
         def to_vector(tok):
             if tok in vectors and tok not in reset:
                 return vectors[tok]
@@ -154,7 +154,7 @@ class SICKDataIter(object):
 
     def reset(self):
         if self.shuffle:
-            mask = range(self.size)
+            mask = list(range(self.size))
             random.shuffle(mask)
             self.l_sentences = [self.l_sentences[i] for i in mask]
             self.r_sentences = [self.r_sentences[i] for i in mask]
