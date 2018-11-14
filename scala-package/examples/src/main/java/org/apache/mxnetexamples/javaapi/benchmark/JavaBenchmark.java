@@ -102,13 +102,6 @@ public class JavaBenchmark {
                 System.exit(1);
         }
         List<Context> context = getContext();
-        if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-                Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
-            context.add(Context.gpu());
-        } else {
-            context.add(Context.cpu());
-        }
-
         long[] result = new long[model.numRun];
         model.preProcessModel(context);
         if (runBatch) {
