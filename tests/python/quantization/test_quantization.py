@@ -224,7 +224,8 @@ def test_quantized_pooling():
 
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         pooling_fp32 = mx.sym.Pooling(data=data, kernel=kernel, pad=pad, stride=stride,
-                                        pool_type=pool_type, global_pool=global_pool, cudnn_off=False)
+                                      pool_type=pool_type, global_pool=global_pool, cudnn_off=False,
+                                      pooling_convention=convention)
         arg_shapes, _, _ = pooling_fp32.infer_shape(data=data_shape)
         arg_names = pooling_fp32.list_arguments()
         pooling_fp32_exe = pooling_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
