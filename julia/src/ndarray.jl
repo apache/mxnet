@@ -1121,18 +1121,6 @@ end
 const _ndsig = Dict{Symbol,Expr}()
 const _nddoc = Dict{Symbol,Any}()
 
-function _autoimport(name::Symbol, sig::Expr)
-  if name == :broadcasted
-    name = _broadcast_target(sig)
-  end
-
-  if isdefined(Base, name)
-    :(import Base: $name)
-  else
-    :()
-  end
-end
-
 _isinplace(name::Symbol) = endswith(string(name), "!")
 
 _writable(name::Symbol, x) =
@@ -1180,11 +1168,12 @@ function _docsig(fname::Symbol, sig::Expr, opname::String)
   end
 end
 
-macro _remap(sig::Expr, imp::Expr)
-  fname = (sig.head == :call) ? sig.args[1] : sig.args[1].args[1]  # case of `where`
-  opname = string(imp.args[1])
 
-  import_expr = _autoimport(fname, sig)
+macro _remap(sig::Expr, imp::Expr)
+  d = splitdef(:($sig = $imp))
+  @capture d[:name] (M_.fname_|fname_)
+
+  opname = string(imp.args[1])
 
   if isa(imp.args[2], Expr) && imp.args[2].head == :parameters
     ndin = imp.args[3:end]
@@ -1232,7 +1221,6 @@ macro _remap(sig::Expr, imp::Expr)
   func_def = Expr(:function, sig, func_body)
 
   esc(quote
-    $import_expr
     @doc $docstr
     $func_def
   end)
@@ -1247,31 +1235,31 @@ macro _remap(sig::Expr, imp::Symbol)
 end
 
 _ndsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
-@_remap reshape(arr::NDArray, dim...; reverse = false) reshape
-@_remap reshape(arr::NDArray, dim; reverse = false)    reshape
+@_remap Base.reshape(arr::NDArray, dim...; reverse = false) reshape
+@_remap Base.reshape(arr::NDArray, dim   ; reverse = false) reshape
 
-@_remap mean(arr::NDArray)         mean(arr)
-@_remap mean(arr::NDArray, region) mean(arr; axis = 0 .- region, keepdims = true)
+@_remap Statistics.mean(arr::NDArray)         mean(arr)
+@_remap Statistics.mean(arr::NDArray, region) mean(arr; axis = 0 .- region, keepdims = true)
 
-@_remap sum(arr::NDArray)       sum(arr)
-@_remap sum(arr::NDArray, dims) sum(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.sum(arr::NDArray)       sum(arr)
+@_remap Base.sum(arr::NDArray, dims) sum(arr; axis = 0 .- dims, keepdims = true)
 
-@_remap maximum(arr::NDArray)       max(arr)
-@_remap maximum(arr::NDArray, dims) max(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.maximum(arr::NDArray)       max(arr)
+@_remap Base.maximum(arr::NDArray, dims) max(arr; axis = 0 .- dims, keepdims = true)
 
-@_remap minimum(arr::NDArray)       min(arr)
-@_remap minimum(arr::NDArray, dims) min(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.minimum(arr::NDArray)       min(arr)
+@_remap Base.minimum(arr::NDArray, dims) min(arr; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
-@_remap dot(x::NDArray, y::NDArray) dot(y, x)
+@_remap LinearAlgebra.dot(x::NDArray, y::NDArray) dot(y, x)
 
 # See https://github.com/dmlc/MXNet.jl/pull/123
-@_remap transpose(arr::NDArray{T,1}) where T reshape(arr; shape = (1, length(arr)), reverse = true)
-@_remap transpose(arr::NDArray{T,2}) where T transpose(arr)
-@_remap permutedims(arr::NDArray, axes) transpose(arr; axes = length(axes) .- tuple(axes...))
+@_remap Base.transpose(arr::NDArray{T,1}) where T reshape(arr; shape = (1, length(arr)), reverse = true)
+@_remap Base.transpose(arr::NDArray{T,2}) where T transpose(arr)
+@_remap Base.permutedims(arr::NDArray, axes) transpose(arr; axes = length(axes) .- tuple(axes...))
 
-@_remap prod(arr::NDArray)       prod(arr)
-@_remap prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.prod(arr::NDArray)       prod(arr)
+@_remap Base.prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
 
 _nddoc[:clip] = _nddoc[:clip!] =
 """
@@ -1368,7 +1356,6 @@ The storage type of `sigmoid` output is always dense.
 function σ end
 const sigmoid = σ
 @_remap broadcasted(::typeof(σ), x::NDArray)       sigmoid(x)
-@_remap broadcasted(::typeof(sigmoid), x::NDArray) sigmoid(x)
 
 @doc doc"""
     relu.(x::NDArray)
