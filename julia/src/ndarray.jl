@@ -1122,7 +1122,7 @@ const _ndsig = Dict{Symbol,Expr}()
 const _nddoc = Dict{Symbol,Any}()
 
 function _autoimport(name::Symbol, sig::Expr)
-  if name == :broadcast_
+  if name == :broadcasted
     name = _broadcast_target(sig)
   end
 
@@ -1337,20 +1337,20 @@ julia> mx.expand_dims(x, 2)
 @_remap expand_dims(x::NDArray, dim) expand_dims(x; axis = -dim)
 
 # trigonometric functions, remap to keep consistent with Base
-@_remap broadcast_(::typeof(sin),  x::NDArray) sin(x)
-@_remap broadcast_(::typeof(cos),  x::NDArray) cos(x)
-@_remap broadcast_(::typeof(tan),  x::NDArray) tan(x)
-@_remap broadcast_(::typeof(asin), x::NDArray) arcsin(x)
-@_remap broadcast_(::typeof(acos), x::NDArray) arccos(x)
-@_remap broadcast_(::typeof(atan), x::NDArray) arctan(x)
+@_remap broadcasted(::typeof(sin),  x::NDArray) sin(x)
+@_remap broadcasted(::typeof(cos),  x::NDArray) cos(x)
+@_remap broadcasted(::typeof(tan),  x::NDArray) tan(x)
+@_remap broadcasted(::typeof(asin), x::NDArray) arcsin(x)
+@_remap broadcasted(::typeof(acos), x::NDArray) arccos(x)
+@_remap broadcasted(::typeof(atan), x::NDArray) arctan(x)
 
 # hyperbolic funcs, remap to keep consistent with Base
-@_remap broadcast_(::typeof(sinh),  x::NDArray) sinh(x)
-@_remap broadcast_(::typeof(cosh),  x::NDArray) cosh(x)
-@_remap broadcast_(::typeof(tanh),  x::NDArray) tanh(x)
-@_remap broadcast_(::typeof(asinh), x::NDArray) arcsinh(x)
-@_remap broadcast_(::typeof(acosh), x::NDArray) arccosh(x)
-@_remap broadcast_(::typeof(atanh), x::NDArray) arctanh(x)
+@_remap broadcasted(::typeof(sinh),  x::NDArray) sinh(x)
+@_remap broadcasted(::typeof(cosh),  x::NDArray) cosh(x)
+@_remap broadcasted(::typeof(tanh),  x::NDArray) tanh(x)
+@_remap broadcasted(::typeof(asinh), x::NDArray) arcsinh(x)
+@_remap broadcasted(::typeof(acosh), x::NDArray) arccosh(x)
+@_remap broadcasted(::typeof(atanh), x::NDArray) arctanh(x)
 
 # activation functions
 _nddoc[:σ] = _nddoc[:sigmoid] = doc"""
