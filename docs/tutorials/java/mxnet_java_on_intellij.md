@@ -108,11 +108,14 @@ TODO
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-**IntelliJ IDEA Alternative** If you want to use only Mave to create the project, you can create a new folder and run the following in the newly created folder :
+**IntelliJ IDEA Alternative** If you want to use only Maven to create the project, you can create a new folder and run the following in the newly created folder :
 ```bash
+mkdir java-proj
+cd java-proj
 mvn archetype:generate -DgroupId=mxnet -DartifactId=mxnetJava -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
 ```
-More on this can be found on a Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html).
+This command will create a new Java project folder with name `mxnetJava` inside `java-proj` folder.
+More on creating Maven projects can be found on this Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html).
 
 **Step 3.** Add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
  
