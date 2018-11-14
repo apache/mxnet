@@ -748,7 +748,7 @@ MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayGetShape(NDArrayHandle handle,
-                                uint *out_dim,
+                                mx_uint *out_dim,
                                 const dim_t **out_pdata);
 /*!
  * \brief get the content of the data in NDArray
