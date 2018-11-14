@@ -69,7 +69,7 @@ build/mlp_gpu
 The code implements a multilayer perceptron to train the MNIST data. The code demonstrates the use of the "SimpleBind"  C++ API and CSVIter. The CSVIter can iterate data that is in CSV format. The example can be run on CPU or GPU. The example usage is as follows:
 
 ```
-build/mlp_csv --train data/mnist/mnist_training_set.csv --test data/mnist/mnist_test_set.csv --epochs 10 --batch_size 100 --hidden_units "128,64,64" --gpu
+build/mlp_csv --train data/mnist_data/mnist_train.csv --test data/mnist_data/mnist_test.csv --epochs 10 --batch_size 100 --hidden_units "128 64 64" --gpu
 ```
 * To get the `mnist_training_set.csv` and `mnist_test_set.csv` please run the following command:
 ```python
