@@ -1353,7 +1353,7 @@ julia> mx.expand_dims(x, 2)
 @_remap broadcasted(::typeof(atanh), x::NDArray) arctanh(x)
 
 # activation functions
-_nddoc[:σ] = _nddoc[:sigmoid] = doc"""
+@doc doc"""
     σ.(x::NDArray)
     sigmoid.(x::NDArray)
 
@@ -1365,10 +1365,12 @@ Computes sigmoid of x element-wise.
 
 The storage type of `sigmoid` output is always dense.
 """
-@_remap broadcast_(::typeof(σ), x::NDArray)       sigmoid(x)
-@_remap broadcast_(::typeof(sigmoid), x::NDArray) sigmoid(x)
+function σ end
+const sigmoid = σ
+@_remap broadcasted(::typeof(σ), x::NDArray)       sigmoid(x)
+@_remap broadcasted(::typeof(sigmoid), x::NDArray) sigmoid(x)
 
-_nddoc[:relu] = doc"""
+@doc doc"""
     relu.(x::NDArray)
 
 Computes rectified linear.
@@ -1377,9 +1379,10 @@ Computes rectified linear.
 \max(x, 0)
 ```
 """
-@_remap broadcast_(::typeof(relu), x::NDArray) relu(x)
+function relu end
+@_remap broadcasted(::typeof(relu), x::NDArray) relu(x)
 
-_nddoc[:softmax] = doc"""
+@doc doc"""
     softmax.(x::NDArray, [dim = ndims(x)])
 
 Applies the softmax function.
@@ -1391,10 +1394,11 @@ and the elements along the given axis sum up to 1.
 softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
 ```
 """
-@_remap broadcast_(::typeof(softmax), x::NDArray) softmax(x; axis = -ndims(x))
-@_remap broadcast_(::typeof(softmax), x::NDArray, dim::Int) softmax(x; axis = -dim)
+function softmax end
+@_remap broadcasted(::typeof(softmax), x::NDArray)           softmax(x; axis = -ndims(x))
+@_remap broadcasted(::typeof(softmax), x::NDArray, dim::Int) softmax(x; axis = -dim)
 
-_nddoc[:log_softmax] = """
+"""
     log_softmax.(x::NDArray, [dim = ndims(x)])
 
 Computes the log softmax of the input.
@@ -1410,8 +1414,9 @@ julia> mx.log_softmax.(x)
  -1.41703  -0.41703  -2.31703
  -2.31703  -0.41703  -1.41703
 """
-@_remap broadcast_(::typeof(log_softmax), x::NDArray) log_softmax(x; axis = -ndims(x))
-@_remap broadcast_(::typeof(log_softmax), x::NDArray, dim::Int) log_softmax(x; axis = -dim)
+function log_softmax end
+@_remap broadcasted(::typeof(log_softmax), x::NDArray)           log_softmax(x; axis = -ndims(x))
+@_remap broadcasted(::typeof(log_softmax), x::NDArray, dim::Int) log_softmax(x; axis = -dim)
 
 ################################################################################
 # remapping to solving type unstablility
