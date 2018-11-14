@@ -657,6 +657,7 @@ Composite multiple symbols into a new one by an operator.
     log_softmax
     relu
     sigmoid
+    erf
 ```
 
 ### More
