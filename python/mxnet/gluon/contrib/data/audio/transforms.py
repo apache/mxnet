@@ -34,14 +34,30 @@ from mxnet.gluon.block import Block
 class Loader(Block):
     """
         This transform opens a filepath and converts that into an NDArray using librosa to load
+        res_type='kaiser_fast'
+
+    Parameters
+    ----------
+    Keyword arguments that can be passed, which are utilized by librosa module are:
+    res_type: string, default 'kaiser_fast' the resampling type - other accepateble values: 'kaiser_best'.
+
+
+    Inputs:
+        - **x**: audio file path to be loaded on to the NDArray.
+
+    Outputs:
+        - **out**: output array is a scaled NDArray with (samples, ).
+
     """
+
     def __init__(self, **kwargs):
-        super(Loader, self).__init__(**kwargs)
+        super(Loader, self).__init__()
+        self.kwargs = kwargs
 
     def forward(self, x):
         if not librosa:
             raise RuntimeError("Librosa dependency is not installed! Install that and retry!")
-        X1, _ = librosa.load(x, res_type='kaiser_fast')
+        X1, _ = librosa.load(x, **self.kwargs)
         return nd.array(X1)
 
 
@@ -50,16 +66,39 @@ class MFCC(Block):
         Extracts Mel frequency cepstrum coefficients from the audio data file
         More details : https://librosa.github.io/librosa/generated/librosa.feature.mfcc.html
 
-        returns:    An NDArray after extracting mfcc features from the input
+    Parameters
+    ----------
+    Keyword arguments that can be passed, which are utilized by librosa module are:
+    sr: int, default 22050
+        sampling rate of the input audio signal
+    n_mfcc: int, default 20
+        number of mfccs to return
+
+
+    Inputs:
+        - **x**: input tensor (samples, ) shape.
+
+    Outputs:
+        - **out**: output array is a scaled NDArray with (samples, ) shape.
+
     """
+
     def __init__(self, **kwargs):
-        super(MFCC, self).__init__(**kwargs)
+        self.kwargs = kwargs
+        super(MFCC, self).__init__()
 
     def forward(self, x):
         if not librosa:
             raise RuntimeError("Librosa dependency is not installed! Install that and retry")
+        if isinstance(x, np.ndarray):
+            y = x
+        elif isinstance(x, nd.NDArray):
+            y = x.asnumpy()
+        else:
+            warnings.warn("Input object is not numpy or NDArray... Cannot apply the transform: MFCC!")
+            return x
 
-        audio_tmp = np.mean(librosa.feature.mfcc(y=x.asnumpy(), sr=22050, n_mfcc=40).T, axis=0)
+        audio_tmp = np.mean(librosa.feature.mfcc(y=y, **self.kwargs).T, axis=0)
         return nd.array(audio_tmp)
 
 
@@ -67,8 +106,17 @@ class Scale(Block):
     """Scale audio numpy.ndarray from a 16-bit integer to a floating point number between
     -1.0 and 1.0. The 16-bit integer is the sample resolution or bit depth.
 
-    Args:
-        factor (int): maximum value of input tensor. default: 16-bit depth
+    Parameters
+    ----------
+    scale_factor : float
+        The factor to scale the input tensor by.
+
+
+    Inputs:
+        - **x**: input tensor (samples, ) shape.
+
+    Outputs:
+        - **out**: output array is a scaled NDArray with (samples, ) shape.
 
     Examples
     --------
@@ -80,19 +128,11 @@ class Scale(Block):
 
     """
 
-    def __init__(self, scale_factor=2**31, **kwargs):
+    def __init__(self, scale_factor=2**31):
         self.scale_factor = scale_factor
-        super(Scale, self).__init__(**kwargs)
+        super(Scale, self).__init__()
 
     def forward(self, x):
-        """
-        Args:
-            x : NDArray of audio of size (Number of samples X Number of channels(1 for mono, >2 for stereo))
-
-        Returns:
-            NDArray: Scaled by the scaling factor. (default between -1.0 and 1.0)
-
-        """
         if isinstance(x, np.ndarray):
             return mx.nd.array(x/self.scale_factor)
         return x / self.scale_factor
@@ -101,10 +141,19 @@ class Scale(Block):
 class PadTrim(Block):
     """Pad/Trim a 1d-NDArray of NPArray (Signal or Labels)
 
-    Args:
-        x (NDArray): Array( numpy.ndarray or mx.nd.NDArray) of audio of shape (samples, )
-        max_len (int): Length to which the array will be padded or trimmed to.
-        fill_value: If there is a need of padding, what value to padd at the end of the input x
+    Parameters
+    ----------
+    max_len : int
+        Length to which the array will be padded or trimmed to.
+    fill_value: int or float
+        If there is a need of padding, what value to padd at the end of the input array
+
+
+    Inputs:
+        - **x**: input tensor (samples, ) shape.
+
+    Outputs:
+        - **out**: output array is a scaled NDArray with (max_len, ) shape.
 
     Examples
     --------
@@ -116,18 +165,12 @@ class PadTrim(Block):
 
     """
 
-    def __init__(self, max_len, fill_value=0, **kwargs):
+    def __init__(self, max_len, fill_value=0):
         self._max_len = max_len
         self._fill_value = fill_value
-        super(PadTrim, self).__init__(**kwargs)
+        super(PadTrim, self).__init__()
 
     def forward(self, x):
-        """
-
-        Returns:
-            Tensor: (1 x max_len)
-
-        """
         if  isinstance(x, np.ndarray):
             x = mx.nd.array(x)
         if self._max_len > x.size:
@@ -140,6 +183,25 @@ class PadTrim(Block):
 
 class MEL(Block):
     """Create MEL Spectrograms from a raw audio signal. Relatively pretty slow.
+
+    Parameters
+    ----------
+    Keyword arguments that can be passed, which are utilized by librosa module are:
+    sr: int, default 22050
+        sampling rate of the input audio signal
+    n_fft: int, default 2048
+        length of the Fast fourier transform window
+    n_mels: int,
+        number of mel bands to generate
+    hop_length: int, default 512
+        total samples between successive frames
+
+
+    Inputs:
+        - **x**: input tensor (samples, ) shape.
+
+    Outputs:
+        - **out**: output array which consists of mel spectograms, shape = (n_mels, 1)
 
        Usage (see librosa.feature.melspectrogram docs):
            MEL(sr=16000, n_fft=1600, hop_length=800, n_mels=64)
@@ -166,18 +228,6 @@ class MEL(Block):
         super(MEL, self).__init__()
 
     def forward(self, x):
-        """
-
-        Args:
-            tensor (Tensor): Tensor of audio of size (samples [n] x channels [c])
-
-        Returns:
-            tensor (Tensor): n_mels x hops x channels (BxLxC), where n_mels is
-                the number of mel bins, hops is the number of hops, and channels
-                is unchanged.
-
-        """
-
         if librosa is None:
             print("Cannot create spectrograms, since dependency librosa is not installed!")
             return x
