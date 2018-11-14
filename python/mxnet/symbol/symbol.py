@@ -1113,7 +1113,7 @@ class Symbol(SymbolBase):
             mx_uint(len(indptr) - 1),
             keys,
             c_array_buf(mx_uint, array('I', indptr)),
-            c_array_buf(mx_long, array('q', sdata)),
+            c_array_buf(mx_long, array('l', sdata)),
             ctypes.byref(arg_shape_size),
             ctypes.byref(arg_shape_ndim),
             ctypes.byref(arg_shape_data),
