@@ -168,7 +168,7 @@ Symbol::RObjectType Symbol::GetOutput(mx_uint index) const {
 // helper function to convert shape into Rcpp vector
 inline Rcpp::List BuildShapeData(mx_uint shape_size,
                                  const mx_uint *shape_ndim,
-                                 const mx_uint **shape_data,
+                                 const dim_t **shape_data,
                                  const std::vector<std::string> &names) {
   Rcpp::List ret(shape_size);
   for (mx_uint i = 0; i < shape_size; ++i) {
@@ -185,12 +185,12 @@ SEXP Symbol::InferShape(const Rcpp::List& kwargs) const {
       << "Need to pass parameters in key=value style.\n";
   std::vector<std::string> keys = kwargs.names();
   std::vector<mx_uint> arg_ind_ptr(1, 0);
-  std::vector<mx_uint> arg_shape_data;
+  std::vector<dim_t> arg_shape_data;
 
   for (size_t i = 0; i < kwargs.size(); ++i) {
     RCHECK(keys[i].length() != 0)
       << "Need to pass parameters in key=value style.\n";
-    std::vector<mx_uint> dim = Dim2InternalShape(kwargs[i]);
+    std::vector<dim_t> dim = Dim2InternalShape(kwargs[i]);
     arg_shape_data.insert(arg_shape_data.end(), dim.begin(), dim.end());
     arg_ind_ptr.push_back(static_cast<mx_uint>(arg_shape_data.size()));
   }

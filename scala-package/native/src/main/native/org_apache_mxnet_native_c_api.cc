@@ -1519,7 +1519,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolCreateFromFile
 
 int FillSymbolInferShape
   (JNIEnv *env, jmethodID listAppend, jobject joutData,
-    mx_uint shapeSize, const mx_uint *shapeNdim, const mx_uint **shapeData) {
+    mx_uint shapeSize, const mx_uint *shapeNdim, const dim_t **shapeData) {
   for (size_t i = 0; i < shapeSize; ++i) {
     jintArray jshape = env->NewIntArray(shapeNdim[i]);
     if (jshape == NULL) {
