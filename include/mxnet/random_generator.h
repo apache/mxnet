@@ -55,8 +55,6 @@ class RandGenerator<cpu, DType> {
    public:
     typedef typename std::conditional<std::is_floating_point<DType>::value,
                                       DType, double>::type FType;
-    typedef typename std::conditional<std::is_integral<DType>::value,
-                                      DType, int>::type IType;
     explicit Impl(RandGenerator<cpu, DType> *gen, int state_idx)
         : engine_(gen->states_ + state_idx) {}
 

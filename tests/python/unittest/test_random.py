@@ -863,7 +863,7 @@ def test_randint_extremes():
 def test_randint_generator():
     ctx = mx.context.cpu()
     for dtype in ['int32', 'int64']:
-        for low, high in [(50000000, 50001000),(-50000000,-990000),(-500,199),(-2147483647,2147483647)]:
+        for low, high in [(50000000, 50001000),(-50000000,-9900),(-500,199),(-2147483647,2147483647)]:
             scale = high - low
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)            
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly

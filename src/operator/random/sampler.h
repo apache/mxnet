@@ -103,10 +103,10 @@ struct SampleRandIntKernel {
       index_t nBatch(1 + (nSample - 1) / nParm);
       if (sizeof(IType) == sizeof(int64_t))
         out[i] = OType(lower[i / nBatch] +
-                     (upper[i / nBatch] - lower[i / nBatch]) * genImpl.rand_int64());
+                     genImpl.rand_int64() % (upper[i / nBatch] - lower[i / nBatch]));
       else
         out[i] = OType(lower[i / nBatch] +
-                      (upper[i / nBatch] - lower[i / nBatch]) * genImpl.rand());
+                     genImpl.rand() % (upper[i / nBatch] - lower[i / nBatch]));
     });
   }
 };

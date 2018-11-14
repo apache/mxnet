@@ -303,5 +303,5 @@ def randint(low, high, shape=_Null, dtype=_Null, **kwargs):
     dtype : {'int32', 'int64'}, optional
         Data type of output samples. Default is 'int32'
     """
-    return _random_helper(_internal._random_randint, _internal._sample_uniform,
+    return _random_helper(_internal._random_randint, None,
                           [low, high], shape, dtype, kwargs)
