@@ -225,11 +225,11 @@ if __name__ == '__main__':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
         calib_layer = lambda name: name.endswith('_output')
-        excluded_sym_names += ['squeezenet0_flatten0_flatten0',
-                               'squeezenet0_pool0_fwd',
-                               'squeezenet0_pool1_fwd',
-                               'squeezenet0_pool2_fwd',
-                               'squeezenet0_pool3_fwd']
+        excluded_sym_names += ['squeezenet0_flatten0_flatten0']
+        #                       'squeezenet0_pool0_fwd',
+        #                       'squeezenet0_pool1_fwd',
+        #                       'squeezenet0_pool2_fwd',
+        #                       'squeezenet0_pool3_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['squeezenet0_conv0_fwd']
     elif args.model == 'mobilenet1.0':
