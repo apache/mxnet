@@ -39,7 +39,7 @@ import scala.collection.JavaConverters._
   */
 
 // JavaDoc description of class to be updated in https://issues.apache.org/jira/browse/MXNET-1178
-class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
+class Predictor private (val predictor: org.apache.mxnet.infer.Predictor){
   def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc],
            contexts: java.util.List[Context], epoch: Int)
   = this {
@@ -79,7 +79,7 @@ class Predictor(val predictor: org.apache.mxnet.infer.Predictor){
       .asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq))
     // TODO: For some reason the implicit wasn't working here when trying to use convert.
     // So did it this way. Needs to be figured out
-    (ret map {a => new NDArray(a)}).asJava
+    (ret map {a => NDArray.fromNDArray(a)}).asJava
   }
 
   private def convert[B, A <% B](l: IndexedSeq[A]): IndexedSeq[B] = l map { a => a: B }

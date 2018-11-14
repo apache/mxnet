@@ -25,7 +25,7 @@ import collection.JavaConverters._
   * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
   * @param deviceId The device id of the device, needed for GPU
   */
-class Context(val context: org.apache.mxnet.Context) {
+class Context private (val context: org.apache.mxnet.Context) {
 
   val deviceTypeid: Int = context.deviceTypeid
 

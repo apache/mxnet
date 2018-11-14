@@ -1,6 +1,6 @@
-# Single Shot Multi Object Detection using Scala Inference API
+# Single Shot Multi Object Detection using Java Inference API
 
-In this example, you will learn how to use Scala Inference API to run Inference on pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
+In this example, you will learn how to use Java Inference API to run Inference on pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
 
 The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html). The network is a SSD model built on Resnet50 as base network to extract image features. The model is trained to detect the following entities (classes): ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']. For more details about the model, you can refer to the [MXNet SSD example](https://github.com/apache/incubator-mxnet/tree/master/example/ssd).
 
@@ -19,7 +19,7 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 
 1. MXNet
 2. MXNet Scala Package
-3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
+3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/java/mxnet_java_on_intellij.html) with the MXNet Scala/Java Package
 4. wget
 
 
@@ -28,18 +28,13 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 ### Download Artifacts
 #### Step 1
 You can download the files using the script `get_ssd_data.sh`. It will download and place the model files in a `model` folder and the test image files in a `image` folder in the current directory.
-From the `scala-package/examples/scripts/infer/imageclassifier/` folder run:
+From the `scala-package/examples/scripts/infer/objectdetector/` folder run:
 
 ```bash
 ./get_ssd_data.sh
 ```
 
-**Note**: You may need to run `chmod +x get_resnet_data.sh` before running this script.
-
-Alternatively use the following links to download the Symbol and Params files via your browser:
-- [resnet50_ssd_model-symbol.json](https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json)
-- [resnet50_ssd_model-0000.params](https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params)
-- [synset.txt](https://github.com/awslabs/mxnet-model-server/blob/master/examples/ssd/synset.txt)
+**Note**: You may need to run `chmod +x get_ssd_data.sh` before running this script.
 
 In the pre-trained model, the `input_name` is `data` and shape is `(1, 3, 512, 512)`.
 This shape translates to: a batch of `1` image, the image has color and uses `3` channels (RGB), and the image has the dimensions of `512` pixels in height by `512` pixels in width.
@@ -57,13 +52,6 @@ The output shape is `(1, 6132, 6)`. As with the input, the `1` is the number of 
 
 ### Setup Datapath and Parameters
 #### Step 2
-The code `Line 31: val baseDir = System.getProperty("user.dir")` in the example will automatically searches the work directory you have defined. Please put the files in your [work directory](https://stackoverflow.com/questions/16239130/java-user-dir-property-what-exactly-does-it-mean). <!-- how do you define the work directory? -->
-
-Alternatively, if you would like to use your own path, please change line 31 into your own path
-```scala
-val baseDir = <Your Own Path>
-```
-
 The followings is the parameters defined for this example, you can find more information in the `class SSDClassifierExample`.
 
 | Argument                      | Comments                                 |
@@ -102,15 +90,8 @@ the outputs come from the the input image, with top3 predictions picked.
 
 
 ## Infer API Details
-This example uses ObjectDetector class provided by MXNet's scala package Infer APIs. It provides methods to load the images, create NDArray out of Java BufferedImage and run prediction using Classifier and Predictor APIs.
+This example uses ObjectDetector class provided by MXNet's Java Infer APIs. It provides methods to load the images, create NDArray out of Java BufferedImage and run prediction using Classifier and Predictor APIs.
 
 
 ## References
 This documentation used the model and inference setup guide from the [MXNet Model Server SSD example](https://github.com/awslabs/mxnet-model-server/blob/master/examples/ssd/README.md).
-
-
-## Next Steps
-
-Check out the following related tutorials and examples for the Infer API:
-
-* [Image Classification with the MXNet Scala Infer API](../imageclassifier/README.md)
