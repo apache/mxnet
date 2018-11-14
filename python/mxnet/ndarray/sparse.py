@@ -1009,9 +1009,9 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
         raise ValueError('invalid shape')
     result = CSRNDArray(_new_alloc_handle(storage_type, shape, ctx, False, dtype,
                                           [indptr_type, indices_type], aux_shapes))
-    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_int(-1)))
-    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indptr.handle, ctypes.c_int(0)))
-    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(1)))
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, data.handle, ctypes.c_longlong(-1)))
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indptr.handle, ctypes.c_longlong(0)))
+    check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_longlong(1)))
     return result
     # pylint: enable= no-member, protected-access
 

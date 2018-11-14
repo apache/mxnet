@@ -650,7 +650,7 @@ MXNET_DLL int MXNDArraySyncCopyToCPU(NDArrayHandle handle,
  */
 MXNET_DLL int MXNDArraySyncCopyFromNDArray(NDArrayHandle handle_dst,
                                            const NDArrayHandle handle_src,
-                                           const int i);
+                                           const dim_t i);
 
 /*!
  * \brief check whether the NDArray format is valid
