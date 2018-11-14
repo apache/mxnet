@@ -106,6 +106,22 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true)
         }
       }
+    },
+    'Examples: Python2': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/examples-test-python2') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_example_test_ubuntu_python2_gpu', true)
+        }
+      }
+    },
+    'Examples: Python3': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/example-test-python3') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_example_test_ubuntu_python3_gpu', true)
+        }
+      }
     }
   }
 }

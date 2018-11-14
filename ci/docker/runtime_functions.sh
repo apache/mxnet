@@ -1211,6 +1211,28 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
     nosetests-3.4 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
+nightly_example_test_ubuntu_python3_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_TEST_KERNEL=python3
+    cd /work/mxnet/tests/examples
+
+}
+
+nightly_example_test_ubuntu_python2_gpu() {
+    set -ex
+    cd /work/mxnet/docs
+    export BUILD_VER=tutorial
+    export MXNET_DOCS_BUILD_MXNET=0
+    make html
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_TEST_KERNEL=python2
+    cd /work/mxnet/tests/examples
+}
 
 # Deploy
 
