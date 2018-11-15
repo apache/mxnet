@@ -184,6 +184,12 @@ int main(int argc, char const *argv[]) {
   auto val_iter = MXDataIter("MNISTIter");
   setDataIter(&val_iter, "Label", data_files, batch_size);
 
+  // initialize parameters
+  Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2);
+  for (auto &arg : args_map) {
+    xavier(arg.first, &arg.second);
+  }
+
   Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay)
@@ -194,7 +200,7 @@ int main(int argc, char const *argv[]) {
   auto *exec = resnet.SimpleBind(ctx, args_map);
   auto arg_names = resnet.ListArguments();
 
-  // Create metrics 
+  // Create metrics
   Accuracy train_acc, val_acc;
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
