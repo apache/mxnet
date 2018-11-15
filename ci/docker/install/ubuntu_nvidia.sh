@@ -18,6 +18,7 @@
 # under the License.
 
 set -ex
+apt-get update || true
 apt install -y software-properties-common
 
 # Adding ppas frequently fails due to busy gpg servers, retry 5 times with 5 minute delays.
@@ -25,5 +26,5 @@ for i in 1 2 3 4 5; do add-apt-repository -y ppa:graphics-drivers && break || sl
 
 # Retrieve ppa:graphics-drivers and install nvidia-drivers.
 # Note: DEBIAN_FRONTEND required to skip the interactive setup steps
-apt update
+apt-get update || true
 DEBIAN_FRONTEND=noninteractive apt install -y --no-install-recommends cuda-9-1
