@@ -18,7 +18,7 @@
 # under the License.
 
 hw_type=cpu
-if [[ $1 = gpu ]]
+if [[ $4 = gpu ]]
 then
     hw_type=gpu
 fi

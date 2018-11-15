@@ -198,7 +198,7 @@ object NDArray extends NDArrayBase {
   * will result in leaking native memory.
   * </b>
   */
-class NDArray(val nd : org.apache.mxnet.NDArray ) {
+class NDArray private[mxnet] (val nd : org.apache.mxnet.NDArray ) {
 
   def this(arr : Array[Float], shape : Shape, ctx : Context) = {
     this(org.apache.mxnet.NDArray.array(arr, shape, ctx))
