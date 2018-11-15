@@ -92,6 +92,27 @@ class TestImage(unittest.TestCase):
             cv_image = cv2.imread(img)
             assert_almost_equal(image.asnumpy(), cv_image)
 
+    def test_imdecode_bytearray(self):
+        try:
+            import cv2
+        except ImportError:
+            return
+        for img in TestImage.IMAGES:
+            with open(img, 'rb') as fp:
+                str_image = bytearray(fp.read())
+                image = mx.image.imdecode(str_image, to_rgb=0)
+            cv_image = cv2.imread(img)
+            assert_almost_equal(image.asnumpy(), cv_image)
+
+    @raises(mx.base.MXNetError)
+    def test_imdecode_empty_buffer(self):
+        mx.image.imdecode(b'', to_rgb=0)
+
+    @raises(mx.base.MXNetError)
+    def test_imdecode_invalid_image(self):
+        image = mx.image.imdecode(b'clearly not image content')
+        assert_equal(image, None)
+
     def test_scale_down(self):
         assert mx.image.scale_down((640, 480), (720, 120)) == (640, 106)
         assert mx.image.scale_down((360, 1000), (480, 500)) == (360, 375)

@@ -17,7 +17,7 @@
 
 # This example is inspired by https://github.com/jason71995/Keras-GAN-Library,
 # https://github.com/kazizzad/DCGAN-Gluon-MxNet/blob/master/MxnetDCGAN.ipynb
-# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py
+# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dc_gan/dcgan.py
 
 
 import os

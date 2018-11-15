@@ -1347,7 +1347,7 @@ class Symbol(SymbolBase):
         shared_buffer : Dict of string to `NDArray`
             The dict mapping argument names to the `NDArray` that can be reused for initializing
             the current executor. This buffer will be checked for reuse if one argument name
-            of the current executor is not found in `shared_arg_names`. The `NDArray`s are
+            of the current executor is not found in `shared_arg_names`. The `NDArray` s are
             expected have default storage type.
 
         kwargs : Dict of str->shape
@@ -2926,6 +2926,9 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, d
     repeat : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    infer_range : boolean, optional
+        When set to True, infer the stop position from the start, step,
+        repeat, and output tensor size.
     dtype : str or numpy.dtype, optional
         The value type of the inner value, default to ``np.float32``.
 

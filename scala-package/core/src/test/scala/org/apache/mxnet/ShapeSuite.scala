@@ -29,4 +29,19 @@ class ShapeSuite extends FunSuite with BeforeAndAfterAll {
     assert(Shape(1, 2, 3) === Shape(1, 2, 3))
     assert(Shape(1, 2) != Shape(1, 2, 3))
   }
+
+  test("drop") {
+    val s = Shape(1, 2, 3)
+    val s2 = s.drop(1)
+    assert(s == Shape(1, 2, 3))
+    assert(s2 == Shape(2, 3))
+    val s3 = s.drop(2)
+    assert(s3 == Shape(3))
+  }
+
+  test("slice") {
+    val s = Shape(1, 2, 3)
+    val s2 = s.slice(0, 1)
+    assert(s2 == Shape(1))
+  }
 }

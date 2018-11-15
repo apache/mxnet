@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file elementwise_scatter_op.h
+ * \file elemwise_scatter_op.h
  * \brief Function definition of elementwise scatter operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_SCATTER_OP_H_

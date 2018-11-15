@@ -36,6 +36,11 @@ def import_to_gluon(model_file, ctx):
     -------
     sym_block : :class:`~mxnet.gluon.SymbolBlock`
         A SymbolBlock object representing the given model file.
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
+
     """
     graph = GraphProto()
     try:
@@ -43,6 +48,6 @@ def import_to_gluon(model_file, ctx):
     except ImportError:
         raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                           + " install - https://github.com/onnx/onnx#installation")
-    model_proto = onnx.load(model_file)
+    model_proto = onnx.load_model(model_file)
     net = graph.graph_to_gluon(model_proto.graph, ctx)
     return net
