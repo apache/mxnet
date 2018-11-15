@@ -47,8 +47,8 @@ using namespace mxnet::cpp;
 class Predictor {
  public:
     Predictor() {}
-    Predictor(const std::string model_json,
-              const std::string model_params,
+    Predictor(const std::string& model_json,
+              const std::string& model_params,
               const Shape& input_shape,
               bool gpu_context_type = false,
               const std::string& synset_file = "",
@@ -60,7 +60,8 @@ class Predictor {
     void LoadModel(const std::string& model_json_file);
     void LoadParameters(const std::string& model_parameters_file);
     void LoadSynset(const std::string& synset_file);
-    void LoadInputImage(const std::string& image_file);
+    NDArray LoadInputImage(const std::string& image_file);
+    void LoadMeanImageData();
     void NormalizeInput(const std::string& mean_image_file);
 
     NDArray mean_img;
@@ -70,7 +71,7 @@ class Predictor {
     Symbol net;
     Executor *executor;
     Shape input_shape;
-    NDArray image_data;
+    NDArray mean_image_data;
     Context global_ctx = Context::cpu();
     string mean_image_file;
 };
@@ -91,8 +92,8 @@ class Predictor {
  *
  *  The SimpleBind is expected to be invoked only once.
  */
-Predictor::Predictor(const std::string model_json,
-                     const std::string model_params,
+Predictor::Predictor(const std::string& model_json,
+                     const std::string& model_params,
                      const Shape& input_shape,
                      bool gpu_context_type,
                      const std::string& synset_file,
@@ -102,6 +103,7 @@ Predictor::Predictor(const std::string model_json,
   if (gpu_context_type) {
     global_ctx = Context::gpu();
   }
+
   // Load the model
   LoadModel(model_json);
 
@@ -115,11 +117,20 @@ Predictor::Predictor(const std::string model_json,
   if (!synset_file.empty()) {
     LoadSynset(synset_file);
   }
+
+  /*
+   * Load the mean image data if specified.
+   */
+  if (!mean_image_file.empty()) {
+    LoadMeanImageData();
+  }
+
   // Create an executor after binding the model to input parameters.
   args_map["data"] = NDArray(input_shape, global_ctx, false);
   executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
                               map<string, OpReqType>(), aux_map);
 }
+
 
 /*
  * The following function loads the model from json file.
@@ -173,9 +184,26 @@ void Predictor::LoadSynset(const string& synset_file) {
 
 
 /*
+ * The following function loads the mean data from mean image file.
+ * This data will be used for normalizing the image before running the forward
+ * pass.
+ *
+ */
+void Predictor::LoadMeanImageData() {
+  LG << "Load the mean image data that will be used to normalize "
+     << "the image before running forward pass.";
+  mean_image_data = NDArray(input_shape, global_ctx, false);
+  mean_image_data.SyncCopyFromCPU(
+        NDArray::LoadToMap(mean_image_file)["mean_img"].GetData(),
+        input_shape.Size());
+  NDArray::WaitAll();
+}
+
+
+/*
  * The following function loads the input image.
  */
-void Predictor::LoadInputImage(const std::string& image_file) {
+NDArray Predictor::LoadInputImage(const std::string& image_file) {
   LG << "Loading the image " << image_file << std::endl;
   vector<float> array;
   cv::Mat mat = cv::imread(image_file);
@@ -191,25 +219,10 @@ void Predictor::LoadInputImage(const std::string& image_file) {
       }
     }
   }
-  image_data = NDArray(input_shape, global_ctx, false);
+  NDArray image_data = NDArray(input_shape, global_ctx, false);
   image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
   NDArray::WaitAll();
-}
-
-
-/*
- * The following function normalizes input image data by substracting the
- * mean data.
- */
-void Predictor::NormalizeInput(const std::string& mean_image_file) {
-  LG << "Normalizing image using " << mean_image_file;
-  mean_img = NDArray(input_shape, global_ctx, false);
-  mean_img.SyncCopyFromCPU(
-        NDArray::LoadToMap(mean_image_file)["mean_img"].GetData(),
-        input_shape.Size());
-  NDArray::WaitAll();
-  image_data.Slice(0, 1) -= mean_img;
-  return;
+  return image_data;
 }
 
 
@@ -220,11 +233,11 @@ void Predictor::NormalizeInput(const std::string& mean_image_file) {
  */
 void Predictor::PredictImage(const std::string& image_file) {
   // Load the input image
-  LoadInputImage(image_file);
+  NDArray image_data = LoadInputImage(image_file);
 
   // Normalize the image
   if (!mean_image_file.empty()) {
-    NormalizeInput(mean_image_file);
+    image_data.Slice(0, 1) -= mean_image_data;
   }
 
   LG << "Running the forward pass on model to predict the image";
