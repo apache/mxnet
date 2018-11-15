@@ -81,9 +81,9 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 | OS | Step 1 | Step 2 |
 |---|---|---|
-|macOS | [Shared Library for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala) |
-| Ubuntu | [Shared Library for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala) |
-| Windows | [Shared Library for Windows](http://mxnet.incubator.apache.org/install/windows_setup.html#build-the-shared-library) | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a> |
+|macOS | [Shared Library for macOS](../install/osx_setup.html#build-the-shared-library) | [Scala Package for macOS](http://mxnet.incubator.apache.org/install/osx_setup.html#install-the-mxnet-package-for-scala) |
+| Ubuntu | [Shared Library for Ubuntu](../install/ubuntu_setup.html#installing-mxnet-on-ubuntu) | [Scala Package for Ubuntu](http://mxnet.incubator.apache.org/install/ubuntu_setup.html#install-the-mxnet-package-for-scala) |
+| Windows | [Shared Library for Windows](../install/windows_setup.html#build-the-shared-library) | <a class="github-button" href="https://github.com/apache/incubator-mxnet/issues/10549" data-size="large" data-show-count="true" aria-label="Issue apache/incubator-mxnet on GitHub">Call for Contribution</a> |
 
 
 #### Build Java from an Existing MXNet Installation
@@ -98,7 +98,7 @@ This will install both the Java Inference API and the required MXNet-Scala packa
 
 ## Documentation
 
-Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API](http://mxnet.incubator.apache.org/api/java/index.html) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
+Javadocs are generated as part of the docs build pipeline. You can find them published in the [Java API](../api/java/index.html) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
 
 To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions).
 
@@ -106,6 +106,6 @@ To build the docs yourself, follow the [developer build docs instructions](https
 
 ## Resources
 
-* [Java API](http://mxnet.incubator.apache.org/api/java/index.html)
-* [javadocs](https://mxnet.incubator.apache.org/api/java/docs/index.html#org.apache.mxnet.package)
+* [Java API](../api/java/index.html)
+* [javadocs](../api/java/docs/index.html#org.apache.mxnet.package)
 * [MXNet-Java Tutorials](../tutorials/java)
