@@ -1,6 +1,6 @@
 # Run MXNet Java Examples Using the IntelliJ IDE (macOS)
 
-This tutorial guides you through setting up a simple Java project in IntelliJ IDE on macOS and demonstrates usage of the MXNet Java APIs. 
+This tutorial guides you through setting up a simple Java project in IntelliJ IDE on macOS and demonstrates usage of the MXNet Java APIs.
 
 ## Prerequisites:
 To use this tutorial you need the following pre-requisites:
@@ -108,6 +108,15 @@ TODO
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
+**IntelliJ IDEA Alternative** If you want to use only Maven to create the project, you can create a new folder and run the following in the newly created folder :
+```bash
+mkdir java-proj
+cd java-proj/
+mvn archetype:generate -DgroupId=mxnet -DartifactId=mxnetJava -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+```
+This command will create a new Java project folder with name `mxnetJava` inside `java-proj` folder.
+More on creating Maven projects can be found on this Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html).
+
 **Step 3.** Add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
  
 ```html
@@ -119,6 +128,10 @@ The project's `pom.xml` will be open for editing.
 ```
 
 To view the latest MXNet Maven packages, you can check [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22)
+
+Note :
+- Change the osx-x86_64 to linux-x86_64 if your platform is linux.
+- Change cpu into gpu if you have a gpu backed machine and want to use gpu.
 
 
 **Step 4.** Import dependencies with Maven:
