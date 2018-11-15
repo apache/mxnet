@@ -700,9 +700,9 @@ core_logic: {
     },
     'Scala: CentOS CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-cpu') {
+        ws('workspace/ut-scala-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_dist_lib, true)
+            utils.unpack_and_init('centos7_cpu', mx_lib, true)
             utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
             utils.publish_test_coverage()
           }
