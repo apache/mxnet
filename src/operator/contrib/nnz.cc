@@ -182,7 +182,8 @@ This operator only supports CSR matrix on CPU.
 .set_attr<nnvm::FInferType>("FInferType", NNZType)
 .set_attr<FInferStorageType>("FInferStorageType", NNZStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", NNZComputeEx<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "Input");
+.add_argument("data", "NDArray-or-Symbol", "Input")
+.add_arguments(NNZParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
