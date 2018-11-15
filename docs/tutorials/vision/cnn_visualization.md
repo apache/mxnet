@@ -182,6 +182,7 @@ Next, we'll write a method to get an image, preprocess it, predict category and 
 2. **Guided Grad-CAM:** Guided Grad-CAM shows which exact pixels contributed the most to the CNN's decision.
 3. **Saliency map:** Saliency map is a monochrome image showing which pixels contributed the most to the CNN's decision. Sometimes, it is easier to see the areas in the image that most influence the output in a monochrome image than in a color image.
 
+
 ```python
 def visualize(net, img_path, conv_layer_name):
     orig_img = mx.img.imread(img_path)
