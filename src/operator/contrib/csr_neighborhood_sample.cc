@@ -89,7 +89,7 @@ NNVM_REGISTER_OP(_contrib_neighbor_sample)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CSRNeighborSampleComputeExCPU)
 .add_argument("csr_matrix", "NDArray-or-Symbol", "csr matrix")
 .add_argument("seed_array", "NDArray-or-Symbol", "seed vertices")
-.add_arguments(NeighborSampleParam::__FIELDS__());    
+.add_arguments(NeighborSampleParam::__FIELDS__());
 
 }  // op
 }  // mxnet

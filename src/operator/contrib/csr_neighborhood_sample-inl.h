@@ -52,7 +52,7 @@ typedef int64_t dgl_id_t;
 // input[0]: Graph
 // input[1]: seed_vertices
 // args[0]: num_hops
-// args[1]: num_neighbor 
+// args[1]: num_neighbor
 // args[2]: max_num_vertices
 //------------------------------------------------------------------------------
 
@@ -66,7 +66,7 @@ typedef int64_t dgl_id_t;
 struct ver_node {
   dgl_id_t vertex_id;
   int level;
-}; 
+};
 
 // How to set the default value?
 struct NeighborSampleParam : public dmlc::Parameter<NeighborSampleParam> {
@@ -119,7 +119,7 @@ static bool CSRNeighborSampleShape(const nnvm::NodeAttrs& attrs,
   // Check the graph shape
   CHECK_EQ(in_attrs->at(0)[0], in_attrs->at(0)[1]);
 
-  const NeighborSampleParam& params = 
+  const NeighborSampleParam& params =
     nnvm::get<NeighborSampleParam>(attrs.parsed);
 
   TShape out_shape(1);
@@ -180,7 +180,7 @@ static void GetSample(std::vector<dgl_id_t>& ver_list,
   size_t sample_count = 0;
   for (;;) {
     // rand_num = [0, ver_list.size()-1]
-    size_t rand_num = rand() % ver_list.size(); 
+    size_t rand_num = rand() % ver_list.size();
     auto got = mp.find(rand_num);
     if (got != mp.end() && mp[rand_num]) {
       // re-sample
@@ -204,7 +204,7 @@ static void CSRNeighborSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 2U);
 
-  const NeighborSampleParam& params = 
+  const NeighborSampleParam& params =
     nnvm::get<NeighborSampleParam>(attrs.parsed);
 
   // set seed for random sampling
@@ -257,22 +257,22 @@ static void CSRNeighborSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
       tmp_sampled_src_list.clear();
       tmp_sampled_edge_list.clear();
 
-      GetSrcList(val_list, 
-                 col_list, 
-                 indptr, 
-                 dst_id, 
-                 tmp_src_list, 
+      GetSrcList(val_list,
+                 col_list,
+                 indptr,
+                 dst_id,
+                 tmp_src_list,
                  tmp_edge_list);
 
-      GetSample(tmp_src_list, 
-                tmp_edge_list, 
-                num_neighbor, 
+      GetSample(tmp_src_list,
+                tmp_edge_list,
+                num_neighbor,
                 tmp_sampled_src_list,
                 tmp_sampled_edge_list);
 
       ver_mp[dst_id] = tmp_sampled_src_list;
       edge_mp[dst_id] = tmp_sampled_edge_list;
-      
+
       sub_vertices_count++;
       if (sub_vertices_count == max_num_vertices) {
         break;
