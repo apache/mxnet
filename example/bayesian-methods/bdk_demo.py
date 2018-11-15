@@ -194,7 +194,7 @@ def run_mnist_SGLD(training_num=50000):
                             thin_interval=100, burn_in_iter_num=1000)
 
 
-def run_mnist_DistilledSGLD(training_num=50000, xpu=0):
+def run_mnist_DistilledSGLD(training_num=50000, xpu=None):
     X, Y, X_test, Y_test = load_mnist(training_num)
     minibatch_size = 100
     if training_num >= 10000:
@@ -237,7 +237,7 @@ def run_mnist_DistilledSGLD(training_num=50000, xpu=0):
                       perturb_deviation=perturb_deviation, minibatch_size=100, dev=dev(xpu))
 
 
-def run_toy_SGLD(xpu=0):
+def run_toy_SGLD(xpu=None):
     X, Y, X_test, Y_test = load_toy()
     minibatch_size = 1
     teacher_noise_precision = 1.0 / 9.0
@@ -259,7 +259,7 @@ def run_toy_SGLD(xpu=0):
              minibatch_size=minibatch_size, dev=dev(xpu))
 
 
-def run_toy_DistilledSGLD(xpu=0):
+def run_toy_DistilledSGLD(xpu=None):
     X, Y, X_test, Y_test = load_toy()
     minibatch_size = 1
     teacher_noise_precision = 1.0
@@ -290,7 +290,7 @@ def run_toy_DistilledSGLD(xpu=0):
                       dev=dev(xpu))
 
 
-def run_toy_HMC(xpu=0):
+def run_toy_HMC(xpu=None):
     X, Y, X_test, Y_test = load_toy()
     minibatch_size = Y.shape[0]
     noise_precision = 1 / 9.0
