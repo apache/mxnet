@@ -101,7 +101,7 @@ public class JavaBenchmark {
                 System.err.println("Model name not found! " + modelName);
                 System.exit(1);
         }
-        List<Context> context = bindToDeivce();
+        List<Context> context = bindToDevice();
         long[] result = new long[model.numRun];
         model.preProcessModel(context);
         if (runBatch) {
