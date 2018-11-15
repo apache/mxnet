@@ -16,6 +16,7 @@ By default, the examples are built to be run on GPU. To build examples to run on
 
 The examples that are built to be run on GPU may not work on the non-GPU machines.
 The makefile will also download the necessary data files and store in a data folder. (The download will take couple of minutes, but will be done only once on a fresh installation.)
+Before runing examples, make sure **LD\_LIBRARY\_PATH** environment variable setup correctly. For example `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/ubuntu/incubator-mxnet/lib` on ubuntu using gpu.
 
 
 ## Examples
