@@ -57,9 +57,22 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         Rotal length of printed lines
     positions: list
         Relative or absolute positions of log elements in each line.
+
     Returns
     ------
     None
+
+    Notes
+    -----
+    If ``mxnet`` is imported, the visualization module can be used in its short-form.
+    For example, if we ``import mxnet`` as follows::
+
+        import mxnet
+
+    this method in visualization module can be used in its short-form as::
+
+        mxnet.viz.print_summary(...)
+
     """
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
@@ -238,6 +251,18 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     >>> digraph = mx.viz.plot_network(net, shape={'data':(100,200)},
     ... node_attrs={"fixedsize":"false"})
     >>> digraph.view()
+
+    Notes
+    -----
+    If ``mxnet`` is imported, the visualization module can be used in its short-form.
+    For example, if we ``import mxnet`` as follows::
+
+        import mxnet
+
+    this method in visualization module can be used in its short-form as::
+
+        mxnet.viz.plot_network(...)
+
     """
     # todo add shape support
     try:
