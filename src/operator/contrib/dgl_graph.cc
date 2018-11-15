@@ -24,10 +24,13 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
-#include "./operator_common.h"
-#include "./elemwise_op_common.h"
-#include "../imperative/imperative_utils.h"
-#include "./subgraph_op_common.h"
+#include "../operator_common.h"
+#include "../elemwise_op_common.h"
+#include "../../imperative/imperative_utils.h"
+#include "../subgraph_op_common.h"
+#include "../mshadow_op.h"
+#include "../mxnet_op.h"
+#include "../tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
