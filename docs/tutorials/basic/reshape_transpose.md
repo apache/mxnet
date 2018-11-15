@@ -117,7 +117,7 @@ print x.shape
 
 (1L, 3L, 2L, 2L, 64L, 64L) <!--notebook-skip-line-->
 
-This splits up the third dimension into ```[2,2]```.  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
+This splits up the third dimension into ```[2,2]```, so (1L, 3L, **4L** , 64L, 64L) becomes (1L, 3L, **2L** , **2L** , 64L, 64L)  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
 ```
 x = x.transpose((0, 1, 4, 2, 5, 3))
 print x.shape
@@ -128,7 +128,7 @@ x = x.reshape(0, 0, -3, -3)
 
 (1L, 3L, 128L, 128L) <!--notebook-skip-line-->
 
-Reshape -3 will calculate the dot product between the current and subsequent column.
+Reshape -3 will calculate the dot product between the current and subsequent column. So (1L, 3L, **64L** , **2L** , ***64L, 2L*** ) becomes (1L, 3L, **128L** , ***128L*** )
 
 #### Most Common Pitfalls 
 In this section we want to show some of the most common pitfalls that happen when your input data is not correctly shaped.
@@ -173,6 +173,7 @@ output = network(a)
 print (output.shape)
 ```
 (1, 196, 128)  <!--notebook-skip-line-->
+
 Instead of ```(1, 999, 128)``` the shape is now ```(1, 196, 128)```. But during the training loop, calculating the loss would crash because of shape mismatch between labels and output. You may get an error like the following:
 ```
 mxnet.base.MXNetError: [10:56:29] src/ndarray/ndarray.cc:229: Check failed: shape_.Size() == shape.Size() (127872 vs. 25088) NDArray.Reshape: target shape must have the same size as current shape when recording with autograd.
