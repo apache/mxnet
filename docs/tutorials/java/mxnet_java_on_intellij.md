@@ -111,7 +111,7 @@ The project's `pom.xml` will be open for editing.
 **IntelliJ IDEA Alternative** If you want to use only Maven to create the project, you can create a new folder and run the following in the newly created folder :
 ```bash
 mkdir java-proj
-cd java-proj
+cd java-proj/
 mvn archetype:generate -DgroupId=mxnet -DartifactId=mxnetJava -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
 ```
 This command will create a new Java project folder with name `mxnetJava` inside `java-proj` folder.
