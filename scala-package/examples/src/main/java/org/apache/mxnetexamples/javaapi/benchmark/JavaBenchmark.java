@@ -67,7 +67,7 @@ public class JavaBenchmark {
 
     }
 
-    private static List<Context> getContext()  {
+    private static List<Context> bindToDevice()  {
         List<Context> context = new ArrayList<Context>();
         if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
                 Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
@@ -101,14 +101,7 @@ public class JavaBenchmark {
                 System.err.println("Model name not found! " + modelName);
                 System.exit(1);
         }
-        List<Context> context = getContext();
-        if (System.getenv().containsKey("SCALA_TEST_ON_GPU") &&
-                Integer.valueOf(System.getenv("SCALA_TEST_ON_GPU")) == 1) {
-            context.add(Context.gpu());
-        } else {
-            context.add(Context.cpu());
-        }
-
+        List<Context> context = bindToDevice();
         long[] result = new long[model.numRun];
         model.preProcessModel(context);
         if (runBatch) {
