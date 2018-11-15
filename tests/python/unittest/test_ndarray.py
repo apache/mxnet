@@ -20,7 +20,7 @@ import numpy as np
 from distutils.version import LooseVersion
 import os
 import pickle as pkl
-from nose.tools import raises
+from nose.tools import assert_raises, raises
 from common import with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
@@ -140,13 +140,13 @@ def test_ndarray_setitem():
     x_np[:, -3:-1, -2:-1] = 1
     assert same(x.asnumpy(), x_np)
 
-    # numpy assignment for empty axis
-    for trivial_shape in [(), (1,), (1, 1), (1, 1, 1)]:
-        if trivial_shape == tuple():
-            with mx.np_shape():
-                x = mx.nd.zeros(trivial_shape)
-        else:
-            x = mx.nd.zeros(trivial_shape)
+    # Scalar array, no assignment allowed
+    x = mx.nd.zeros(())
+    with assert_raises(IndexError):
+        x[:] = 1
+
+    for trivial_shape in [(1,), (1, 1), (1, 1, 1)]:
+        x = mx.nd.zeros(trivial_shape)
         x[:] = np.ones(trivial_shape)
         x_np = np.ones(trivial_shape, dtype=x.dtype)
         assert x.shape == trivial_shape

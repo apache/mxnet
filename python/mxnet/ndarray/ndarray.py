@@ -445,8 +445,7 @@ fixed-size items.
                [ 6.,  0.,  4.]], dtype=float32)
         """
         key = _expand_index_implicit_axes(key, self.shape)
-        conv_key, _ = _convert_index_int_to_slice(key)
-        slc_key = tuple(idx for idx in conv_key if idx is not None)
+        slc_key = tuple(idx for idx in key if idx is not None)
         indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
 
         indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
@@ -695,11 +694,17 @@ fixed-size items.
             indices = broadcasted_indices
         return op.stack(*indices)
 
-    def _prepare_value_nd(self, value, vshape):
-        """Given value and vshape, create an `NDArray` from value with the same
-        context and dtype as the current one and broadcast it to vshape."""
+    def _prepare_value_nd(self, value, new_axes, bcast_shape):
+        """Return a broadcast `NDArray` with same context and dtype as ``self``.
+
+        Before broadcasting, ``new_axes`` of length 1 will be added to
+        ``value``. This is done in contrast to blindly reshaping based on
+        ``bcast_shape``, since the latter would silently ignore wrongly shaped
+        ``value`` arrays, e.g. ``nd.zeros((2, 3))[:, :1] = nd.ones(2)``.
+        """
         if isinstance(value, numeric_types):
-            value_nd = full(vshape, value, ctx=self.context, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            new_axes = []  # ignore for scalar
         elif isinstance(value, NDArray):
             value_nd = value.as_in_context(self.context)
             if value_nd.dtype != self.dtype:
@@ -711,31 +716,42 @@ fixed-size items.
                 raise TypeError('NDArray does not support assignment with non-array-like '
                                 'object {} of type {}'.format(value, type(value)))
 
-        if value_nd.shape != vshape:
-            value_nd = value_nd.broadcast_to(vshape)
+        value_nd = _add_empty_axes(value_nd, new_axes)
+        if value_nd.shape != bcast_shape:
+            value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
 
     def _set_nd_basic_indexing(self, key, value):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
-        if len(key) != self.ndim:
-            raise ValueError(
-                'length of `key` must be equal to `self.ndim`, but {} != {}.'
-                'This is a bug, please report it!'
-                ''.format(len(key), self.ndim))
+        if len(key) < self.ndim:
+            raise RuntimeError(
+                'too few indices in basic indexing: expected `ndim` ({}) '
+                'but got {}. This is a bug, please report it!'
+                ''.format(self.ndim, len(key))
+            )
+        elif len(key) > self.ndim:
+            raise IndexError(
+                'too many indices ({}) for array with {} dimensions'
+                ''.format(len(key), self.ndim)
+            )
         for idx in key:
-            if not isinstance(idx, py_slice):
+            if not isinstance(idx, (py_slice, integer_types)):
                 raise RuntimeError(
-                    '`key` may only contain `slice` objects in the basic '
-                    'implementation, indexing, got object of type {}. '
+                    '`key` may only contain `slice` or integer objects in the '
+                    'basic implementation, got object of type {}. '
                     'This is a bug, please report it!'
                     ''.format(type(idx)))
         begin, end, step = _basic_indexing_tuple_to_begin_end_step(key, self.shape)
+        int_axes = [ax for ax in range(len(key))
+                    if isinstance(key[ax], integer_types)]
         indexed_shape = tuple((e - b) // s for b, e, s in zip(begin, end, step))
 
         if indexed_shape == self.shape:
             # Easy case, overwrite whole array.
             if isinstance(value, NDArray):
                 if value.handle is not self.handle:
+                    # Need to do this before `broadcast_to`.
+                    value = _add_empty_axes(value, int_axes)
                     if value.shape != self.shape:
                         value = value.broadcast_to(self.shape)
                     value.copyto(self)
@@ -745,12 +761,15 @@ fixed-size items.
                     dtype=self.dtype, out=self
                 )
             elif isinstance(value, (np.ndarray, np.generic)):
+                value = _add_empty_axes(value, int_axes)
                 if isinstance(value, np.generic) or value.shape != self.shape:
                     value = np.broadcast_to(value, self.shape)
                 self._sync_copyfrom(value)
             else:
                 # Other array-like
-                value_nd = self._prepare_value_nd(value, self.shape)
+                value_nd = self._prepare_value_nd(
+                    value, new_axes=int_axes, bcast_shape=self.shape
+                )
                 value_nd.copyto(self)
 
         elif isinstance(value, numeric_types):
@@ -759,7 +778,9 @@ fixed-size items.
             )
 
         else:
-            value_nd = self._prepare_value_nd(value, indexed_shape)
+            value_nd = self._prepare_value_nd(
+                value, new_axes=int_axes, bcast_shape=indexed_shape
+            )
             _internal._slice_assign(self, value_nd, begin, end, step, out=self)
 
     def _set_nd_advanced_indexing(self, key, value):
@@ -2343,8 +2364,8 @@ def _expand_index_implicit_axes(idcs, shape):
         if idx is Ellipsis:
             if ell_idx is not None:
                 raise IndexError(
-                    "Cannot use more than one ellipsis (`...`) "
-                    "for indexing")
+                    'Cannot use more than one ellipsis (`...`) '
+                    'for indexing')
             else:
                 ell_idx = i
         else:
@@ -2366,17 +2387,23 @@ def _expand_index_implicit_axes(idcs, shape):
 
     return expanded_idcs
 
+
+def _int_to_slice(idx):
+    """Return a slice that indexes the same entries as a single int."""
+    if idx == -1:
+        # Avoid slice(-1, 0)
+        return slice(-1, None)
+    else:
+        return slice(idx, idx + 1)
+
+
 def _convert_index_int_to_slice(idcs):
     """Return the converted indexing tuple and the integer axes."""
     int_axes = []
     conv_idcs = []
     for ax, idx in enumerate(idcs):
         if isinstance(idx, integer_types):
-            if idx == -1:
-                # Avoid slice(-1, 0)
-                conv_idcs.append(slice(-1, None))
-            else:
-                conv_idcs.append(slice(idx, idx + 1))
+            conv_idcs.append(_int_to_slice(idx))
             int_axes.append(ax)
         else:
             conv_idcs.append(idx)
@@ -2397,7 +2424,7 @@ def _new_axes_after_indexing(idcs):
         if idx is None:
             new_axes.append(ax)
             ax += 1
-        elif hasattr(idx, "ndim"):
+        elif hasattr(idx, 'ndim'):
             ax += idx.ndim
         elif isinstance(idx, integer_types):
             pass
@@ -2407,10 +2434,23 @@ def _new_axes_after_indexing(idcs):
     return tuple(new_axes)
 
 
+def _add_empty_axes(arr, axes):
+    """Reshape array so that it has axes of length 1 at ``axes``."""
+    if not axes:
+        return arr
+
+    shape = list(arr.shape)
+    for ax in axes:
+        shape.insert(ax, 1)
+    return arr.reshape(shape)
+
+
 def _basic_indexing_tuple_to_begin_end_step(idcs, shape):
     """Map a tuple of ``slice`` and ``None`` (ignored) to begin, end, step tuples."""
-    not_none_idcs = [idx for idx in idcs if idx is not None]
-    sss_list = [slc.indices(n) for slc, n in zip(not_none_idcs, shape)]
+    idcs = [idx for idx in idcs if idx is not None]
+    idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
+            for idx in idcs]
+    sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
     return tuple(zip(*sss_list))
 
 
@@ -2639,9 +2679,16 @@ def array(source_array, ctx=None, dtype=None):
                 source_array = np.array(source_array, dtype=dtype)
             except:
                 raise TypeError('source_array must be array like object')
-    arr = empty(source_array.shape, ctx, dtype)
-    arr[:] = source_array
-    return arr
+
+    if source_array.shape == ():
+        # In this case we can't assign, so we need to go through an auxiliary array
+        arr = empty((1,), ctx, dtype)
+        arr[:] = source_array
+        return arr.reshape(())
+    else:
+        arr = empty(source_array.shape, ctx, dtype)
+        arr[:] = source_array
+        return arr
 
 
 def moveaxis(tensor, source, destination):
