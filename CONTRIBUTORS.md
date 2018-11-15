@@ -196,10 +196,10 @@ List of Contributors
 Label Bot
 ---------
 * [mxnet-label-bot](https://github.com/mxnet-label-bot)
-  - mxnet-label-bot provides users with the functionality to add labels from the repository to issues
-  - To use me, comment: <br>
-  @mxnet-label-bot add [specify comma seperated labels here] <br>
-  @mxnet-label-bot remove [specify comma seperated labels here] <br>
-  @mxnet-label-bot update [specify comma seperated labels here] <br>
-  (i.e. @mxnet-label-bot update ['label1', 'label2'])
+  - mxnet-label-bot provides users with the functionality to manage labels for Issues/Pull Requests on the repository
+  - To use me, comment:
+    - @mxnet-label-bot add [specify comma separated labels here]
+    - @mxnet-label-bot remove [specify comma separated labels here]
+    - @mxnet-label-bot update [specify comma separated labels here] <br>
+  (i.e. @mxnet-label-bot update [Bug, Python])
   - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)
