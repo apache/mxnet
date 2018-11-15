@@ -34,6 +34,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This Class is a demo to show how users can use Predictor APIs to do
+ * Image Classification with all hand-crafted Pre-processing.
+ * All helper functions for image pre-processing are
+ * currently available in ObjectDetector class.
+ */
 public class PredictorExample {
     @Option(name = "--model-path-prefix", usage = "input model directory and prefix of the model")
     private String modelPathPrefix = "/model/ssd_resnet50_512";
@@ -42,6 +48,12 @@ public class PredictorExample {
 
     final static Logger logger = LoggerFactory.getLogger(PredictorExample.class);
 
+    /**
+     * Load the image from file to buffered image
+     * It can be replaced by loadImageFromFile from ObjectDetector
+     * @param inputImagePath input image Path in String
+     * @return Buffered image
+     */
     private static BufferedImage loadIamgeFromFile(String inputImagePath) {
         BufferedImage buf = null;
         try {
@@ -52,6 +64,14 @@ public class PredictorExample {
         return buf;
     }
 
+    /**
+     * Reshape the current image using ImageIO and Graph2D
+     * It can be replaced by reshapeImage from ObjectDetector
+     * @param buf Buffered image
+     * @param newWidth desired width
+     * @param newHeight desired height
+     * @return a reshaped bufferedImage
+     */
     private static BufferedImage reshapeImage(BufferedImage buf, int newWidth, int newHeight) {
         BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = resizedImage.createGraphics();
@@ -60,6 +80,12 @@ public class PredictorExample {
         return resizedImage;
     }
 
+    /**
+     * Convert an image from a buffered image into pixels float array
+     * It can be replaced by bufferedImageToPixels from ObjectDetector
+     * @param buf buffered image
+     * @return Float array
+     */
     private static float[] imagePreprocess(BufferedImage buf) {
         // Get height and width of the image
         int w = buf.getWidth();
@@ -92,6 +118,11 @@ public class PredictorExample {
         return result;
     }
 
+    /**
+     * Helper class to print the maximum prediction result
+     * @param probabilities The float array of probability
+     * @param modelPathPrefix model Path needs to load the synset.txt
+     */
     private static String printMaximumClass(float[] probabilities,
                                             String modelPathPrefix) throws IOException {
         String synsetFilePath = modelPathPrefix.substring(0,
