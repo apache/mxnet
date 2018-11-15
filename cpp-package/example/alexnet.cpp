@@ -275,7 +275,6 @@ int main(int argc, char const *argv[]) {
     train_iter.Reset();
     while (train_iter.Next()) {
       auto batch = train_iter.GetDataBatch();
-      LG << train_iter.GetDataBatch().index.size();
       /*use copyto to feed new data and label to the executor*/
       batch.data.CopyTo(&args_map["data"]);
       batch.label.CopyTo(&args_map["label"]);
