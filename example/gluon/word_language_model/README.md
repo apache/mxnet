@@ -41,7 +41,7 @@ usage: train.py [-h] [--model MODEL] [--emsize EMSIZE] [--nhid NHID]
                 [--batch_size N] [--bptt BPTT] [--dropout DROPOUT] [--tied]
                 [--cuda] [--log-interval N] [--save SAVE] [--gctype GCTYPE]
                 [--gcthreshold GCTHRESHOLD] [--hybridize] [--static-alloc]
-                [--static-shape]
+                [--static-shape] [--export-only]
 
 MXNet Autograd RNN/LSTM Language Model on Wikitext-2.
 
