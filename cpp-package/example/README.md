@@ -27,9 +27,9 @@ This directory contains following examples. In order to run the examples, ensure
 
 The example implements the C++ version of AlexNet. The networks trains on MNIST data. The number of epochs can be specified as a command line argument. For example to train with 10 epochs use the following:
 
-	```
-	build/alexnet 10
-	```
+```
+build/alexnet 10
+```
 
 ### [googlenet.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/googlenet.cpp>)
 
