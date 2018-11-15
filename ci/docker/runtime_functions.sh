@@ -764,7 +764,6 @@ unittest_ubuntu_cpu_scala() {
 unittest_centos7_cpu_scala() {
     set -ex
     cd /work/mxnet
-    bash ci/docker/install/centos7_scala.sh
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
     make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
