@@ -30,37 +30,6 @@ except ImportError as e:
 from ..... import ndarray as nd
 from ....block import Block
 
-
-class Loader(Block):
-    """
-        This transform opens a filepath and converts that into an NDArray using librosa to load
-        res_type='kaiser_fast'
-
-    Parameters
-    ----------
-    Keyword arguments that can be passed, which are utilized by librosa module are:
-    res_type: string, default 'kaiser_fast' the resampling type - other accepateble values: 'kaiser_best'.
-
-
-    Inputs:
-        - **x**: audio file path to be loaded on to the NDArray.
-
-    Outputs:
-        - **out**: output array is a scaled NDArray with (samples, ).
-
-    """
-
-    def __init__(self, res_type='kaiser_fast'):
-        super(Loader, self).__init__()
-        self._restype = res_type
-
-    def forward(self, x):
-        if not librosa:
-            raise RuntimeError("Librosa dependency is not installed! Install that and retry!")
-        X1, _ = librosa.load(x, res_type=self._restype)
-        return nd.array(X1)
-
-
 class MFCC(Block):
     """
         Extracts Mel frequency cepstrum coefficients from the audio data file

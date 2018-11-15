@@ -24,6 +24,11 @@ import os
 import warnings
 from ....data import Dataset
 from ..... import ndarray as nd
+try:
+    import librosa
+except ImportError as e:
+    warnings.warn("gluon/contrib/data/audio/datasets.py : librosa dependency could not be resolved or \
+    imported, could not load audio onto the numpy array.")
 
 
 class AudioFolderDataset(Dataset):
@@ -59,9 +64,8 @@ class AudioFolderDataset(Dataset):
     items : list of tuples
         List of all audio in (filename, label) pairs.
     """
-    def __init__(self, root, transform=None, has_csv=False, train_csv=None, file_format='.wav', skip_rows=0):
+    def __init__(self, root, has_csv=False, train_csv=None, file_format='.wav', skip_rows=0):
         self._root = os.path.expanduser(root)
-        self._transform = transform
         self._exts = ['.wav']
         self._format = file_format
         self._has_csv = has_csv
@@ -118,8 +122,17 @@ class AudioFolderDataset(Dataset):
         """
             Retrieve the item (data, label) stored at idx in items
         """
+        filename = self.items[idx][0]
+        label = self.items[idx][1]
 
-        return self.items[idx][0], self.items[idx][1]
+        if librosa is not None:
+            X1, _ = librosa.load(filename, res_type='kaiser_fast')
+            return nd.array(X1), label
+
+        else:
+            warnings.warn(" Dependency librosa is not installed! \
+            Cannot load the audio(wav) file into the numpy.ndarray.")
+            return self.items[idx][0], self.items[idx][1]
 
     def __len__(self):
         """

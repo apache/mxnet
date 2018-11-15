@@ -37,12 +37,17 @@ import warnings
 import mxnet as mx
 from mxnet import gluon, nd, autograd
 from mxnet.gluon.contrib.data.audio.datasets import AudioFolderDataset
-from mxnet.gluon.contrib.data.audio.transforms import Loader, MFCC
+from mxnet.gluon.contrib.data.audio.transforms import MFCC
 try:
     import argparse
 except ImportError as er:
     warnings.warn("Argument parsing module could not be imported and hence \
     no arguments passed to the script can actually be parsed.")
+try:
+    import librosa
+except ImportError as er:
+    warnings.warn("ALibrosa module could not be imported and hence \
+    audio could not be loaded onto numpy array.")
 
 
 # Defining a neural network with number of labels
@@ -67,7 +72,7 @@ def evaluate_accuracy(data_iterator, net):
     return acc.get()[1]
 
 
-def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
+def train(train_dir=None, pred_directory='./Test', train_csv=None, epochs=30, batch_size=32):
     """
         The function responsible for running the training the model.
     """
@@ -82,11 +87,9 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 
     print("Loading the dataset took ", (tock-tick), " seconds.")
     print("\n=======================================\n")
-
-    print("The synset for the dataset are: ", aud_dataset.synsets)
-    print("Seeing one item from the dataset here...\n")
-    print(aud_dataset.__getitem__(0))
     print("Number of output classes = ", len(aud_dataset.synsets))
+    print("\nThe labels are : \n")
+    print(aud_dataset.synsets)
     # Get the model to train
     net = get_net(len(aud_dataset.synsets))
     print("\nNeural Network = \n")
@@ -103,12 +106,10 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
     trainer = gluon.Trainer(net.collect_params(), 'adadelta')
     print("Optimizer - Trainer function initialized!\n")
     print("=======================================\n")
-
-
     print("Loading the dataset to the Gluon's OOTB Dataloader...")
 
     #Getting the data loader out of the AudioDataset and passing the transform
-    aud_transform = gluon.data.vision.transforms.Compose([Loader(), MFCC()])
+    aud_transform = gluon.data.vision.transforms.Compose([MFCC()])
     tick = time.time()
 
     audio_train_loader = gluon.data.DataLoader(aud_dataset.transform_first(aud_transform), batch_size=32, shuffle=True)
@@ -144,6 +145,43 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 
     print("Training the sound classification for ", epochs, " epochs, MLP model took ", (tock-tick), " seconds")
     print("====================== END ======================\n")
+    predict(net, aud_transform, aud_dataset.synsets, pred_directory=pred_directory)
+
+
+def predict(net, audio_transform, synsets, pred_directory='./Test'):
+    """
+        The function is used to run predictions on the audio files in the directory `pred_directory`
+
+    Parameters
+    ----------
+    Keyword arguments that can be passed, which are utilized by librosa module are:
+    net: The model that has been trained.
+
+    pred_directory: string, default ./Test
+       The directory that contains the audio files on which predictions are to be made
+    """
+    if not librosa:
+        warnings.warn("Librosa dependency not installed! Cnnot load the audio to make predictions. Exitting.")
+        return
+
+    if not os.path.exists(pred_directory):
+        warnings.warn("The directory on which predictions are to be made is not found!")
+        return
+
+    if len(os.listdir(pred_directory)) == 0:
+        warnings.warn("The directory on which predictions are to be made is empty! Exitting...")
+        return
+
+    file_names = os.listdir(pred_directory)
+    full_file_names = [os.path.join(pred_directory, item) for item in file_names]
+
+    print("\nStarting predictions for audio files in ", pred_directory, " ....\n")
+    for filename in full_file_names:
+        X1, _ = librosa.load(filename, res_type='kaiser_fast')
+        transformed_test_data = audio_transform(mx.nd.array(X1))
+        output = net(transformed_test_data.reshape((1, -1)))
+        prediction = nd.argmax(output, axis=1)
+        print(filename, " -> ", synsets[(int)(prediction.asscalar())])
 
 
 if __name__ == '__main__':
@@ -155,7 +193,10 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', '-e', help="Enter the number of epochs \
     you would want to run the training for.", type=int)
     parser.add_argument('--batch_size', '-b', help="Enter the batch_size of data", type=int)
+    parser.add_argument('--pred', '-p', help="Enter the folder path that contains your audio \
+    files for which you would want to make predictions on.", type=str)
     args = parser.parse_args()
+    pred_directory = args.pred
 
     if args:
         if args.train:
@@ -177,5 +218,5 @@ if __name__ == '__main__':
             batch_size = args.batch_size
         else:
             batch_size = 32
-    train(train_dir=train_dir, train_csv=train_csv, epochs=epochs, batch_size=batch_size)
+    train(train_dir=train_dir, train_csv=train_csv, epochs=epochs, batch_size=batch_size, pred_directory=pred_directory)
     print("Urban sounds classification DONE!")
