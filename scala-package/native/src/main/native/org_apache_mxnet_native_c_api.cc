@@ -1521,7 +1521,7 @@ int FillSymbolInferShape
   (JNIEnv *env, jmethodID listAppend, jobject joutData,
     mx_uint shapeSize, const mx_uint *shapeNdim, const dim_t **shapeData) {
   for (size_t i = 0; i < shapeSize; ++i) {
-    jintArray jshape = env->NewIntArray(shapeNdim[i]);
+    jlongArray jshape = env->NewLongArray(shapeNdim[i]);
     if (jshape == NULL) {
       // TODO(Yizhi): out of memory error thrown, return a specific error code ?
       return -1;
