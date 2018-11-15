@@ -1586,7 +1586,7 @@ Upon calling, the output arguments will be automatically initialized with empty 
 Those functions always return the output arguments. If there is only one output (the typical situation), that
 object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
 """
-function _get_ndarray_function_def(name :: String)
+function _get_ndarray_function_def(name::String)
   func_name = Symbol(name)
 
   func_def = quote
@@ -1720,6 +1720,13 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_hypot",
 ]
 
+const _import_map = Dict{Symbol,Union{Missing,Module}}(
+  :shuffle => Random,
+  :norm    => LinearAlgebra,
+  :diag    => LinearAlgebra,
+  :gamma   => missing,
+)
+
 macro _import_ndarray_functions()
   names = filter(n -> ∉(lowercase(n), _op_import_bl), _get_libmx_op_names())
 
@@ -1730,9 +1737,12 @@ macro _import_ndarray_functions()
     func_def, func_def2 = _get_ndarray_function_def(name)
 
     func_name = Symbol(name)
-    expr = quote
-      # TODO the explicit exclusion of take will no longer be necessary when it is removed from Base
-      $((isdefined(Base, func_name) && func_name ≠ :take) ? :(import Base.$func_name) : :())
+
+    mod = get(_import_map, func_name, Base)
+    import_exrp = isdefined(mod, func_name) ? :(import $(Symbol(mod)): $func_name) : :()
+
+    quote
+      $import_exrp
       $func_def
       @doc $desc
       $func_def2
@@ -1744,4 +1754,4 @@ macro _import_ndarray_functions()
   end)
 end
 
-@_import_ndarray_functions()
+@_import_ndarray_functions
