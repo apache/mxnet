@@ -109,7 +109,7 @@ class NDArray {
    * \param ctx context of NDArray
    * \param dtype data type of this ndarray
    */
-  NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
+  explicit NDArray(Context ctx, int dtype = mshadow::default_type_flag) {
     ptr_ = std::make_shared<Chunk>(TShape(mshadow::Shape1(0)), ctx, true, dtype);
     dtype_ = dtype;
     storage_type_ = kDefaultStorage;
@@ -984,7 +984,7 @@ class NDArray {
 #endif
       }
     }
-    /*! \brief initialize the shape and dtype for this Chunk, assuming it is not initialized before. */
+    /*! \brief initialize the shape and dtype, assuming it is not initialized before. */
     void Init(const TShape &shape, int dtype) {
       auto size = shape.Size();
       storage_shape = shape;
