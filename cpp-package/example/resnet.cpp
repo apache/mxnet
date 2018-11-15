@@ -184,7 +184,7 @@ int main(int argc, char const *argv[]) {
   auto val_iter = MXDataIter("MNISTIter");
   setDataIter(&val_iter, "Label", data_files, batch_size);
 
-  Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay)
      ->SetParam("momentum", 0.9)
@@ -194,9 +194,12 @@ int main(int argc, char const *argv[]) {
   auto *exec = resnet.SimpleBind(ctx, args_map);
   auto arg_names = resnet.ListArguments();
 
+  // Create metrics 
+  Accuracy train_acc, val_acc;
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
     train_iter.Reset();
+    train_acc.Reset();
     while (train_iter.Next()) {
       auto data_batch = train_iter.GetDataBatch();
       data_batch.data.CopyTo(&args_map["data"]);
@@ -211,10 +214,11 @@ int main(int argc, char const *argv[]) {
         opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
       }
       NDArray::WaitAll();
+      train_acc.Update(data_batch.label, exec->outputs[0]);
     }
 
-    Accuracy acu;
     val_iter.Reset();
+    val_acc.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
       data_batch.data.CopyTo(&args_map["data"]);
@@ -222,9 +226,10 @@ int main(int argc, char const *argv[]) {
       NDArray::WaitAll();
       exec->Forward(false);
       NDArray::WaitAll();
-      acu.Update(data_batch.label, exec->outputs[0]);
+      val_acc.Update(data_batch.label, exec->outputs[0]);
     }
-    LG << "Accuracy: " << acu.Get();
+    LG << "Train Accuracy: " << train_acc.Get();
+    LG << "Validation Accuracy: " << val_acc.Get();
   }
   delete exec;
   MXNotifyShutdown();
