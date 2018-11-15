@@ -37,7 +37,7 @@ from mxnet.test_utils import rand_ndarray
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import setup_module, with_seed, teardown, assertRaises, assert_raises_cudnn_not_satisfied
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -433,23 +433,20 @@ def test_large_models():
 
 @with_seed()
 def test_conv_invalid_cudnn_flag():
-    try:
-        _check_layer_forward(nn.Conv1D(16, 3, in_channels=4, cudnn='fail_me'), (1, 4, 10))
-        assert False, "Gluon Conv1D block did not raise the AssertionError for invalid cudnn flag."
-    except AssertionError:
-        pass
+    # Conv1D should fail for invalid cudnn flag
+    assertRaises(AssertionError,
+                _check_layer_forward,
+                nn.Conv1D(16, 3, in_channels=4, cudnn='fail_me'), (1, 4, 10))
 
-    try:
-        _check_layer_forward(nn.Conv2D(16, (3, 4), in_channels=4, cudnn='fail_me'), (1, 4, 20, 20))
-        assert False, "Gluon Conv2D block did not raise the AssertionError for invalid cudnn flag."
-    except AssertionError:
-        pass
+    # Conv2D should fail for invalid cudnn flag
+    assertRaises(AssertionError,
+                _check_layer_forward,
+                nn.Conv2D(16, (3, 4), in_channels=4, cudnn='fail_me'), (1, 4, 20, 20))
 
-    try:
-        _check_layer_forward(nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='fail_me'), (1, 4, 10, 10, 10))
-        assert False, "Gluon Conv3D block did not raise the AssertionError for invalid cudnn flag."
-    except AssertionError:
-        pass
+    # Conv3D should fail for invalid cudnn flag
+    assertRaises(AssertionError,
+                _check_layer_forward,
+                nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='fail_me'), (1, 4, 10, 10, 10))
 
 @with_seed()
 def test_conv():
