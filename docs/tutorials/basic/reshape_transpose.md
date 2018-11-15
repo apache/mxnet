@@ -12,7 +12,7 @@ import numpy as np
 
 
 ```python
-img_array = mpimg.imread('https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/cat.png')
+img_array = mpimg.imread('https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/cat.png')
 plt.imshow(img_array)
 plt.axis("off")
 print (img_array.shape)
@@ -20,7 +20,7 @@ print (img_array.shape)
 
 (210, 200, 3) <!--notebook-skip-line-->
 
-![png](https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/cat.png) <!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/cat.png) <!--notebook-skip-line-->
 
 
 The color image has the following properties:
@@ -39,12 +39,12 @@ plt.axis("off")
 ```
 (200, 210, 3)<!--notebook-skip-line-->
 
-![png](https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/reshaped_image.png) <!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/reshaped_image.png) <!--notebook-skip-line-->
 
 
 As we can see the first and second dimensions have changed. However the image can't be identified as cat anylonger. In order to understand what happened, let's have a look at the image below.
 
-<img src="https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/reshape.png" style="width:700px;height:300px;">
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/reshape.png" style="width:700px;height:300px;">
 
 While the number of rows and columns changed, the layout of the underlying data did not. The pixel values that have been in one row are still in one row. This means for instance that pixel 10 in the upper right corner ends up in the middle of the image instead of the lower left corner. Consequently contextual information gets lost, because the relative position of pixel values is not the same anymore. As one can imagine a neural network would not be able to classify such an image as cat. 
 
@@ -57,12 +57,12 @@ plt.imshow(transposed)
 plt.axis("off")
 ```
 
-![png](https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/transposed_image.png) <!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/transposed_image.png) <!--notebook-skip-line-->
 
 
 As we can see width and height changed, by rotating pixel values by 90 degrees. Transpose does the following:
 
-<img src="https://raw.githubusercontent.com/NRauschmayr/web-data/tutorial_transpose_reshape/mxnet/doc/tutorials/basic/transpose_reshape/transpose.png" style="width:700px;height:300px;">
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/transpose.png" style="width:700px;height:300px;">
 
 As shown in the diagram, the axis have been flipped: pixel values that have been in the first row are now in the first column.
 ## When to transpose/reshape with MXNet
@@ -89,23 +89,27 @@ network.hybridize()
 network.initialize(mx.init.Xavier(), ctx=mx.cpu())
 a = mx.random.uniform(shape=(1,100,1000))
 network(a)
+output = network(a)
+print (output.shape)
 ```
+(1, 999, 128) <!--notebook-skip-line-->
 #### Advanced reshaping with MXNet ndarrays
 It is sometimes useful to automatically infer the shape of tensors. Especially when you deal with very deep neural networks, it may not always be clear what the shape of a tensor is after a specific layer. For instance you may want the tensor to be two-dimensional where one dimension is the known batch_size. With ```mx.nd.array(-1, batch_size)``` the first dimension will be automatically inferred. Here a simplified example:
 ```
 batch_size = 100
-input_data = mx.random.uniform(shape=(20,100,batch_size))
-reshaped = input_data.reshape(-1,batch_size)
+input_data = mx.random.uniform(shape=(batch_size, 20,100))
+reshaped = input_data.reshape(batch_size, -1)
 print (input_data.shape, reshaped.shape) 
 ```
-(20L, 100L, 100L), (2000L, 100L) <!--notebook-skip-line-->
+(100L, 20L, 100L), (100L, 2000L) <!--notebook-skip-line-->
 
 The reshape function of [MXNet's NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=reshape#mxnet.ndarray.NDArray.reshape) allows even more advanced transformations: For instance:0 copies the dimension from the input to the output shape,  -2 copies all/remainder of the input dimensions to the output shape. With -3 reshape uses the product of two consecutive dimensions of the input shape as the output dim.  With -4 reshape splits one dimension of the input into two dimensions passed subsequent to -4. Here an example:
 ```
 x = mx.nd.random.uniform(shape=(1, 3, 4, 64, 64))
 
 ```
-Assume ```x``` is a tensor, with the shape ```[batch_size, channel, upscale, width, height]```. Now we want to split the third dimension and multiply it with width and height. We can do 
+Assume ```x```  with the shape ```[batch_size, channel, upscale, width, height]``` is the output of a model for image superresolution. Now we want to apply the upscale on width and height, to increase the 64x64 to an 128x128 image.
+To do so, we can use advanced reshaping, where we have to split the third dimension (upscale) and multiply it with width and height. We can do 
 ```
 x = x.reshape(1, 3, -4, 2, 2, 0, 0)
 print x.shape
@@ -113,7 +117,7 @@ print x.shape
 
 (1L, 3L, 2L, 2L, 64L, 64L) <!--notebook-skip-line-->
 
-Which splits up the third dimension into ```[2,2]```.  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
+This splits up the third dimension into ```[2,2]```.  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
 ```
 x = x.transpose((0, 1, 4, 2, 5, 3))
 print x.shape
@@ -124,6 +128,62 @@ x = x.reshape(0, 0, -3, -3)
 
 (1L, 3L, 128L, 128L) <!--notebook-skip-line-->
 
-This was just a toy example. But such transformations are for instance done in image superresolution where you increase width and height of the input image and ```x``` would be the output of a CNN that computes an upscale feature vector.
+Reshape -3 will calculate the dot product between the current and subsequent column.
 
+#### Most Common Pitfalls 
+In this section we want to show some of the most common pitfalls that happen when your input data is not correctly shaped.
+
+##### Forward Pass
+
+You execute the forward pass and get an error message followed by a very long stacktrace, for instance:
+
+```
+*** Error in `python': free(): invalid pointer: 0x00007fde5405a918 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6(+0x777e5)[0x7fdf475927e5]
+/lib/x86_64-linux-gnu/libc.so.6(+0x8037a)[0x7fdf4759b37a]
+/lib/x86_64-linux-gnu/libc.so.6(cfree+0x4c)[0x7fdf4759f53c]
+/home/ubuntu/anaconda3/lib/python3.6/site-packages/mxnet/libmxnet.so(MXExecutorReshape+0x1852)[0x7fdecef2c6e2]
+/home/ubuntu/anaconda3/lib/python3.6/lib-dynload/../../libffi.so.6(ffi_call_unix64+0x4c)[0x7fdf46332ec0]
+/home/ubuntu/anaconda3/lib/python3.6/lib-dynload/../../libffi.so.6(ffi_call+0x22d)[0x7fdf4633287d]
+/home/ubuntu/anaconda3/lib/python3.6/lib-dynload/_ctypes.cpython-36m-x86_64-linux-gnu.so(_ctypes_callproc+0x2ce)[0x7fdf46547e2e]
+/home/ubuntu/anaconda3/lib/python3.6/lib-dynload/_ctypes.cpython-36m-x86_64-linux-gnu.so(+0x12865)[0x7fdf46548865]
+python(_PyObject_FastCallDict+0x8b)[0x56457eba2d7b]
+python(+0x19e7ce)[0x56457ec327ce]
+python(_PyEval_EvalFrameDefault+0x2fa)[0x56457ec54cba]
+python(+0x197dae)[0x56457ec2bdae]
+[...]
+
+```
+This is happening when you your data does not have the shape ```[batch_size, channel, width, height]``` e.g. your data may be a one-dimensional vector or when the color channel may be the last dimension instead of the second one.
+
+##### Backward Pass
+In other cases the forward pass may not fail, but the shape of the network output is not as expected. For instance in our previous RNN example, nothing is preventing us to skip the transpose. 
+
+```network = gluon.nn.HybridSequential()
+with network.name_scope():
+       network.add(gluon.nn.Conv1D(196, kernel_size=2, strides=1))
+       #network.add(gluon.nn.HybridLambda(lambda F, x: F.transpose(x, (0, 2, 1))))
+       network.add(gluon.rnn.GRU(128))
+
+network.hybridize()
+network.initialize(mx.init.Xavier(), ctx=mx.cpu())
+a = mx.random.uniform(shape=(1,100,1000))
+output = network(a)
+print (output.shape)
+```
+(1, 196, 128)  <!--notebook-skip-line-->
+Instead of ```(1, 999, 128)``` the shape is now ```(1, 196, 128)```. But during the training loop, calculating the loss would crash because of shape mismatch between labels and output. You may get an error like the following:
+```
+mxnet.base.MXNetError: [10:56:29] src/ndarray/ndarray.cc:229: Check failed: shape_.Size() == shape.Size() (127872 vs. 25088) NDArray.Reshape: target shape must have the same size as current shape when recording with autograd.
+
+Stack trace returned 6 entries:
+[bt] (0) 0   libmxnet.so                         0x00000001126c0b90 libmxnet.so + 15248
+[bt] (1) 1   libmxnet.so                         0x00000001126c093f libmxnet.so + 14655
+[bt] (2) 2   libmxnet.so                         0x0000000113cd236d MXNDListFree + 1407789
+[bt] (3) 3   libmxnet.so                         0x0000000113b345ca MXNDArrayReshape64 + 970
+[bt] (4) 4   libffi.6.dylib                      0x000000010b399884 ffi_call_unix64 + 76
+[bt] (5) 5   ???                                 0x00007fff54cadf50 0x0 + 140734615969616
+
+```
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
