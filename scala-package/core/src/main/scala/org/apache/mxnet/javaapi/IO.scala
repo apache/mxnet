@@ -17,7 +17,7 @@
 
 package org.apache.mxnet.javaapi
 
-class DataDesc private (val dataDesc: org.apache.mxnet.DataDesc) {
+class DataDesc private[mxnet] (val dataDesc: org.apache.mxnet.DataDesc) {
 
   def this(name: String, shape: Shape, dType: DType.DType, layout: String) =
     this(new org.apache.mxnet.DataDesc(name, shape, dType, layout))

@@ -41,7 +41,7 @@ import scala.collection.JavaConverters._
   *                           Defaults to CPU.
   * @param epoch              Model epoch to load; defaults to 0
   */
-class ObjectDetector private (val objDetector: org.apache.mxnet.infer.ObjectDetector){
+class ObjectDetector private[mxnet] (val objDetector: org.apache.mxnet.infer.ObjectDetector){
 
   def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc], contexts:
   java.util.List[Context], epoch: Int)
