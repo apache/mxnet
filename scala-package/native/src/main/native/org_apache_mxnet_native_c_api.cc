@@ -1534,7 +1534,7 @@ int FillSymbolInferShape
 }
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   (JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumArgs, jobjectArray jkeys,
-    jintArray jargIndPtr, jintArray jargShapeData,
+    jintArray jargIndPtr, jlongArray jargShapeData,
     jobject jinShapeData, jobject joutShapeData, jobject jauxShapeData, jobject jcomplete) {
   const char **keys = NULL;
   if (jkeys != NULL) {
