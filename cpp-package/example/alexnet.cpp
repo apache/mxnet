@@ -234,15 +234,6 @@ int main(int argc, char const *argv[]) {
      * initializer to call*/
     xavier(arg.first, &arg.second);
   }
-  /*print out to check the shape of the net*/
-  for (const auto &s : Net.ListArguments()) {
-    LG << s;
-    const auto &k = args_map[s].GetShape();
-    for (const auto &i : k) {
-      std::cout << i << " ";
-    }
-    std::cout << std::endl;
-  }
 
   /*these binary files should be generated using im2rc tools, which can be found
    * in mxnet/bin*/
