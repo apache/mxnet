@@ -7,7 +7,7 @@ The SSD model is trained on the Pascal VOC 2012 dataset. The network is a SSD mo
 ## Prerequisites
 
 To complete this tutorial, you need the following:
-* [MXNet Java Setup on IntelliJ IDEA](/java/mxnet_java_on_intellij.html) 
+* [MXNet Java Setup on IntelliJ IDEA](/java/mxnet_java_on_intellij.html) (Optional)
 * [wget](https://www.gnu.org/software/wget/) To download model artifacts 
 * SSD Model artifacts
     * Use the following script to get the SSD Model files : 
