@@ -160,9 +160,9 @@ class Dense(HybridBlock):
         Activation function to use. See help on `Activation` layer.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias : bool
+    use_bias : bool, default True
         Whether the layer uses a bias vector.
-    flatten: bool
+    flatten: bool, default True
         Whether the input tensor should be flattened.
         If true, all but the first axis of input data are collapsed together.
         If false, all but the last axis of input data are kept the same, and the transformation
