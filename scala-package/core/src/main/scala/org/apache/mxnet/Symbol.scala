@@ -264,7 +264,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
     val auxShapeData = ListBuffer.empty[Array[Int]]
     val complete = new RefInt
 
-    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.length - 1, keys, indPtr, values,
+    checkCall(_LIB.mxSymbolInferShape(handle, indPtr.length - 1, keys, indPtr, values.map(_.toLong),
       argShapeData, outShapeData, auxShapeData, complete))
     if (complete.value != 0) {
       (argShapeData.map(s => Shape(s)).toIndexedSeq,

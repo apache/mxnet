@@ -135,7 +135,7 @@ object NDArray extends NDArrayBase {
                              dtype: DType = DType.Float32): NDArrayHandle = {
     val hdl = new NDArrayHandleRef
     checkCall(_LIB.mxNDArrayCreateEx(
-      shape.toArray,
+      shape.toArray.map(_.toLong),
       shape.length,
       ctx.deviceTypeid,
       ctx.deviceId,
@@ -1012,7 +1012,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   def shape: Shape = {
     val ndim = new MXUintRef
     val data = ArrayBuffer[Int]()
-    checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
+    checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data.map(_.toLong)))
     require(ndim.value == data.length, s"ndim=$ndim, while len(data)=${data.length}")
     Shape(data)
   }
