@@ -59,4 +59,5 @@ def test_cifar():
     shutil.rmtree(temp_dir, ignore_errors=True)
     if not os.path.isdir(working_dir):
         os.makedirs(working_dir)
+        os.chdir(working_dir)
     assert _run_command(example_name , ['python',os.path.join(example_dir,'train_cifar10.py')])
