@@ -117,10 +117,7 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
     return true;
   } else {
     // currently, only max-pooling is supported for full convention
-    if (param.pool_type == pool_enum::kMaxPooling)
-      return true;
-    else
-      return false;
+    return param.pool_type == pool_enum::kMaxPooling;
   }
 }
 
