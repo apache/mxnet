@@ -656,6 +656,7 @@ The `ndarray` package provides several classes:
     log_softmax
     relu
     sigmoid
+    erf
 ```
 
 ### More

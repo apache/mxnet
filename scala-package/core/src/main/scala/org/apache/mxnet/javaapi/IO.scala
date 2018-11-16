@@ -17,6 +17,8 @@
 
 package org.apache.mxnet.javaapi
 
+import scala.language.implicitConversions
+
 class DataDesc(val dataDesc: org.apache.mxnet.DataDesc) {
 
   def this(name: String, shape: Shape, dType: DType.DType, layout: String) =

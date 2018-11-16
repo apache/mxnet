@@ -144,7 +144,7 @@ abstract class Optimizer extends Serializable {
   def deserializeState(bytes: Array[Byte]): AnyRef
 
   // Set individual learning rate scale for parameters
-  @deprecated("Use setLrMult instead.")
+  @deprecated("Use setLrMult instead.", "0.10.0")
   def setLrScale(lrScale: Map[Int, Float]): Unit = {
     val argsLrScale: Map[Either[Int, String], Float] = lrScale.map { case (k, v) => Left(k) -> v }
     setLrMult(argsLrScale)
