@@ -51,7 +51,7 @@ def predict(pred_dir='./Test'):
         return
 
     # Loading synsets
-    if not os.path.exists('./sysnet.txt'):
+    if not os.path.exists('./synset.txt'):
         warnings.warn("The synstes or labels for the dataset do not exist. Please run the training script first.")
         return
 
