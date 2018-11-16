@@ -19,7 +19,6 @@
 """
 import os
 import warnings
-import argparse
 import mxnet as mx
 from mxnet import nd
 from mxnet.gluon.contrib.data.audio.transforms import MFCC
@@ -48,7 +47,7 @@ def predict(pred_dir='./Test'):
         return
 
     if len(os.listdir(pred_dir)) == 0:
-        warnings.warn("The directory on which predictions are to be made is empty! Exitting...")
+        warnings.warn("The directory on which predictions are to be made is empty! Exiting...")
         return
 
     # Loading synsets
@@ -78,10 +77,15 @@ def predict(pred_dir='./Test'):
 
 
 if __name__ == '__main__':
+    try:
+        import argparse
+        parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet")
+        parser.add_argument('--pred', '-p', help="Enter the folder path that contains your audio files", type=str)
+        args = parser.parse_args()
+        pred_dir = args.pred
 
-    parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet")
-    parser.add_argument('--pred', '-p', help="Enter the folder path that contains your audio files", type=str)
-    args = parser.parse_args()
-    pred_dir = args.pred
+    except ImportError:
+        warnings.warn("Argparse module not installed! passing default arguments.")
+        pred_dir = './Test'
     predict(pred_dir=pred_dir)
     print("Urban sounds classification Prediction DONE!")

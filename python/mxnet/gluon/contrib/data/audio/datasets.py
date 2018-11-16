@@ -55,7 +55,7 @@ class AudioFolderDataset(Dataset):
     file_format: str, default '.wav'
         The format of the audio files(.wav, .mp3)
     skip_rows: int, default 0
-        While reading from csv file, how many rows to skip at the start of the file to aboid reading in header
+        While reading from csv file, how many rows to skip at the start of the file to avoid reading in header
 
     Attributes
     ----------
@@ -78,10 +78,9 @@ class AudioFolderDataset(Dataset):
             Populates synsets - a map of index to label for the data items.
             Populates the data in the dataset, making tuples of (data, label)
         """
+        self.synsets = []
+        self.items = []
         if not self._has_csv:
-            self.synsets = []
-            self.items = []
-
             for folder in sorted(os.listdir(root)):
                 path = os.path.join(root, folder)
                 if not os.path.isdir(path):
@@ -97,8 +96,6 @@ class AudioFolderDataset(Dataset):
                         continue
                     self.items.append((file_name, label))
         else:
-            self.synsets = []
-            self.items = []
             data_tmp = []
             label_tmp = []
             skipped_rows = 0

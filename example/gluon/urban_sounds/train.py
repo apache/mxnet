@@ -14,22 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
 """
-    Urban Sounds Dataset:
-
-    To be able to run this example:
-
-    1. Download the dataset(train.zip, test.zip) required for this example from the location:
-    **https://drive.google.com/drive/folders/0By0bAi7hOBAFUHVXd1JCN3MwTEU**
-    2. Extract both the zip archives into the **current directory** -
-       after unzipping you would get 2 new folders namely,\
-       **Train** and **Test** and two csv files - **train_csv.csv**, **test_csv.csv**
-    3. Apache MXNet is installed on the machine. For instructions, go to the link:
-    **https://mxnet.incubator.apache.org/install/ **
-    4. Librosa is installed. To install, follow the instructions here:
-     **https://librosa.github.io/librosa/install.html**
-
+    The module to run training on the Urban sounds dataset
 """
 import os
 import time
@@ -39,13 +25,6 @@ from mxnet import gluon, nd, autograd
 from mxnet.gluon.contrib.data.audio.datasets import AudioFolderDataset
 from mxnet.gluon.contrib.data.audio.transforms import MFCC
 import model
-
-try:
-    import argparse
-except ImportError as er:
-    warnings.warn("Argument parsing module could not be imported and hence \
-    no arguments passed to the script can actually be parsed.")
-
 # Defining a function to evaluate accuracy
 def evaluate_accuracy(data_iterator, net):
     acc = mx.metric.Accuracy()
@@ -72,7 +51,7 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
     # Make a dataset from the local folder containing Audio data
     print("\nMaking an Audio Dataset...\n")
     tick = time.time()
-    aud_dataset = AudioFolderDataset('./Train', has_csv=True, train_csv='./train.csv', file_format='.wav', skip_rows=1)
+    aud_dataset = AudioFolderDataset(train_dir, has_csv=True, train_csv=train_csv, file_format='.wav', skip_rows=1)
     tock = time.time()
 
     print("Loading the dataset took ", (tock-tick), " seconds.")
@@ -143,34 +122,45 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet")
-    parser.add_argument('--train', '-t', help="Enter the folder path that contains your audio files", type=str)
-    parser.add_argument('--csv', '-c', help="Enter the filename of the csv that contains filename\
-    to label mapping", type=str)
-    parser.add_argument('--epochs', '-e', help="Enter the number of epochs \
-    you would want to run the training for.", type=int)
-    parser.add_argument('--batch_size', '-b', help="Enter the batch_size of data", type=int)
-    args = parser.parse_args()
+    try:
+        import argparse
+        parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet")
+        parser.add_argument('--train', '-t', help="Enter the folder path that contains your audio files", type=str)
+        parser.add_argument('--csv', '-c', help="Enter the filename of the csv that contains filename\
+        to label mapping", type=str)
+        parser.add_argument('--epochs', '-e', help="Enter the number of epochs \
+        you would want to run the training for.", type=int)
+        parser.add_argument('--batch_size', '-b', help="Enter the batch_size of data", type=int)
+        args = parser.parse_args()
 
-    if args:
-        if args.train:
-            train_dir = args.train
-        else:
-            train_dir = './Train'
+        if args:
+            if args.train:
+                train_dir = args.train
+            else:
+                train_dir = './Train'
 
-        if args.csv:
-            train_csv = args.csv
-        else:
-            train_csv = './train.csv'
+            if args.csv:
+                train_csv = args.csv
+            else:
+                train_csv = './train.csv'
 
-        if args.epochs:
-            epochs = args.epochs
-        else:
-            epochs = 35
+            if args.epochs:
+                epochs = args.epochs
+            else:
+                epochs = 30
 
-        if args.batch_size:
-            batch_size = args.batch_size
-        else:
-            batch_size = 32
+            if args.batch_size:
+                batch_size = args.batch_size
+            else:
+                batch_size = 32
+
+    except ImportError as er:
+        warnings.warn("Argument parsing module could not be imported and hence \
+        no arguments passed to the script can actually be parsed. Passing default arguments.")
+        train_dir = './Train'
+        train_csv = './train.csv'
+        epochs = 30
+        batch_size = 32
+
     train(train_dir=train_dir, train_csv=train_csv, epochs=epochs, batch_size=batch_size)
     print("Urban sounds classification Training DONE!")
