@@ -36,7 +36,7 @@ cp ../../build/cpp-package/example/lenet_with_mxdataiter .
 cp ../../build/cpp-package/example/resnet .
 ./resnet 5
 
-cp ../../build/cpp-package/example/resnet .
+cp ../../build/cpp-package/example/inception-bn .
 ./inception-bn 5
 
 cp ../../build/cpp-package/example/mlp .
