@@ -48,7 +48,7 @@ def test_edge_id():
 
 def generate_graph(n):
     arr = sp.sparse.random(n, n, density=0.2, format='coo')
-    arr.data = np.arange(0, len(arr.row), dtype=np.int32)
+    arr.data = np.arange(0, len(arr.row), dtype=np.float32)
     return arr.tocsr(), mx.nd.sparse.csr_matrix(arr.tocsr()).astype(np.int64)
 
 def test_subgraph():
