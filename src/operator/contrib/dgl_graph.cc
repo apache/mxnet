@@ -135,6 +135,7 @@ class Bitmap {
 class HashTableChecker {
   std::unordered_map<dgl_id_t, dgl_id_t> oldv2newv;
   Bitmap map;
+
  public:
   HashTableChecker(const dgl_id_t *vid_data, int64_t len): map(vid_data, len) {
     oldv2newv.reserve(len);
@@ -177,6 +178,8 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
   const size_t len = varr.shape()[0];
   const dgl_id_t *vid_data = data.dptr<dgl_id_t>();
   HashTableChecker def_check(vid_data, len);
+  // check if varr is sorted.
+  std::is_sorted(vid_data, vid_data + len);
 
   // Collect the non-zero entries in from the original graph.
   std::vector<dgl_id_t> row_idx(len + 1);
@@ -511,7 +514,8 @@ struct edge_id_csr_forward {
                                   const CType* u, const CType* v) {
     const int64_t target_row_id = static_cast<int64_t>(u[i]);
     const IType target_col_id = static_cast<IType>(v[i]);
-    auto ptr = std::find(in_indices + in_indptr[target_row_id], in_indices + in_indptr[target_row_id + 1], target_col_id);
+    auto ptr = std::find(in_indices + in_indptr[target_row_id],
+                         in_indices + in_indptr[target_row_id + 1], target_col_id);
     if (ptr == in_indices + in_indptr[target_row_id + 1]) {
       // does not exist in the range
       out_data[i] = DType(-1);
