@@ -155,8 +155,8 @@ if __name__ == '__main__':
                 batch_size = 32
 
     except ImportError as er:
-        warnings.warn("Argument parsing module could not be imported and hence \
-        no arguments passed to the script can actually be parsed. Passing default arguments.")
+        warnings.warn("Argument parsing module could not be imported \
+        Passing default arguments.")
         train_dir = './Train'
         train_csv = './train.csv'
         epochs = 30
