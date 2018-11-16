@@ -44,6 +44,8 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& out_data) {
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args * 3));
+  CHECK_EQ(out_data.size(), 3U);
   // Collect data and output min/max
   std::vector<float> data_min(param_.num_args);
   std::vector<float> data_max(param_.num_args);
