@@ -297,8 +297,8 @@ Composite multiple symbols into a new one by an operator.
     Symbol.take
     Symbol.one_hot
     Symbol.pick
-    Symbol.ravel_multi_index
-    Symbol.unravel_index
+    ravel_multi_index
+    unravel_index
 ```
 
 ### Get internal and output symbol
@@ -577,7 +577,7 @@ Composite multiple symbols into a new one by an operator.
     broadcast_logical_and
     broadcast_logical_or
     broadcast_logical_xor
-    broadcast_logical_not
+    logical_not
 ```
 
 ### Random sampling
@@ -657,6 +657,7 @@ Composite multiple symbols into a new one by an operator.
     log_softmax
     relu
     sigmoid
+    erf
 ```
 
 ### More

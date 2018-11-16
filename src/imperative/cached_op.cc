@@ -855,10 +855,15 @@ OpStatePtr CachedOp::Forward(
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
 
   OpStatePtr op_state;
-  if (config_.static_alloc) {
-    op_state = StaticForward(default_ctx, inputs, outputs);
-  } else {
-    op_state = DynamicForward(default_ctx, inputs, outputs);
+  try {
+    if (config_.static_alloc) {
+      op_state = StaticForward(default_ctx, inputs, outputs);
+    } else {
+      op_state = DynamicForward(default_ctx, inputs, outputs);
+    }
+  } catch (const dmlc::Error& e) {
+    Engine::Get()->set_bulk_size(prev_bulk_size);
+    throw e;
   }
 
   Engine::Get()->set_bulk_size(prev_bulk_size);
@@ -1058,10 +1063,15 @@ void CachedOp::Backward(
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
 
-  if (config_.static_alloc) {
-    StaticBackward(retain_graph, state, inputs, reqs, outputs);
-  } else {
-    DynamicBackward(retain_graph, state, inputs, reqs, outputs);
+  try {
+    if (config_.static_alloc) {
+      StaticBackward(retain_graph, state, inputs, reqs, outputs);
+    } else {
+      DynamicBackward(retain_graph, state, inputs, reqs, outputs);
+    }
+  } catch (const dmlc::Error& e) {
+    Engine::Get()->set_bulk_size(prev_bulk_size);
+    throw e;
   }
 
   Engine::Get()->set_bulk_size(prev_bulk_size);
