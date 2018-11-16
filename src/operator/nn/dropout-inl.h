@@ -83,6 +83,7 @@ class DropoutOp {
                                 int n, double p, int* r) {
     typename RandGenerator<xpu, DType>::Impl genImpl(&gen, 1);
     const int seed = 17 + abs(genImpl.rand() % 4096);
+    CHECK_GE(seed, 0);
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
 #pragma omp parallel num_threads(nthr)
     {
