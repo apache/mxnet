@@ -173,7 +173,7 @@ class HashTableChecker {
 
 static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
                         const NDArray &sub_csr, const NDArray *old_eids) {
-  TBlob data = varr.data();
+  const TBlob data = varr.data();
   int64_t num_vertices = csr_arr.shape()[0];
   const size_t len = varr.shape()[0];
   const dgl_id_t *vid_data = data.dptr<dgl_id_t>();
@@ -267,7 +267,7 @@ NNVM_REGISTER_OP(_contrib_dgl_subgraph)
   const DGLSubgraphParam& params = nnvm::get<DGLSubgraphParam>(attrs.parsed);
   std::vector<std::string> names;
   names.reserve(params.num_args);
-  names.push_back("graph");
+  names.emplace_back("graph");
   for (int i = 1; i < params.num_args; ++i)
     names.push_back("varray" + std::to_string(i - 1));
   return names;
