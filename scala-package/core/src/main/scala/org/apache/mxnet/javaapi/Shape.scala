@@ -18,6 +18,7 @@
 package org.apache.mxnet.javaapi
 
 import collection.JavaConverters._
+import scala.language.implicitConversions
 
 /**
   * Shape of [[NDArray]] or other data

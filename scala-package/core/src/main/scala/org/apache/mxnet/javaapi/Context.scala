@@ -17,6 +17,7 @@
 package org.apache.mxnet.javaapi
 
 import collection.JavaConverters._
+import scala.language.implicitConversions
 
 /**
   * Constructing a context which is used to specify the device and device type that will

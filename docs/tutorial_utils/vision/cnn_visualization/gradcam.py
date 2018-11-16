@@ -249,8 +249,8 @@ def visualize(net, preprocessed_img, orig_img, conv_layer_name):
     imggrad = get_image_grad(net, preprocessed_img)
     conv_out, conv_out_grad = get_conv_out_grad(net, preprocessed_img, conv_layer_name=conv_layer_name)
 
-    cam = get_cam(imggrad, conv_out)
-    
+    cam = get_cam(conv_out_grad, conv_out)
+    cam = cv2.resize(cam, (imggrad.shape[1], imggrad.shape[2]))
     ggcam = get_guided_grad_cam(cam, imggrad)
     img_ggcam = grad_to_image(ggcam)
     

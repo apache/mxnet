@@ -3496,6 +3496,10 @@ def test_special_functions_using_scipy():
     mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
+    # erf
+    mathematical_core("erf", lambda x: mx.sym.erf(x), lambda x: scipy_special.erf(x),
+                     lambda x: 2.0 / math.sqrt(math.pi) * math.exp(-(x ** 2)), 0.5, 0.5)
+
 
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
@@ -4769,24 +4773,25 @@ def test_index_copy():
     x = mx.nd.zeros((5,3))
     t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
     index = mx.nd.array([0,4,2], dtype=np.int64)
-
-    x.attach_grad()
-    t.attach_grad()
-    index.attach_grad()
-
-    with mx.autograd.record():
-        out = mx.nd.contrib.index_copy(x, index, t)
-    out.backward()
-
     tensor = mx.nd.array([[1,2,3],[0,0,0],[7,8,9],[0,0,0],[4,5,6]])
     x_grad = mx.nd.array([[0,0,0],[1,1,1],[0,0,0],[1,1,1],[0,0,0]])
     t_grad = mx.nd.array([[1,1,1],[1,1,1],[1,1,1]])
-    index_grad = mx.nd.array([0,0,0])
 
+    t.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.index_copy(x, index, t)
+    out.backward()
+    assert same(out.asnumpy(), tensor.asnumpy())
+    assert same(t.grad.asnumpy(), t_grad.asnumpy())
+
+    x.attach_grad()
+    t.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.index_copy(x, index, t)
+    out.backward()
     assert same(out.asnumpy(), tensor.asnumpy())
     assert same(x.grad.asnumpy(), x_grad.asnumpy())
     assert same(t.grad.asnumpy(), t_grad.asnumpy())
-    assert same(index.grad.asnumpy(), index_grad.asnumpy())
 
 @with_seed()
 def test_div_sqrt_dim():

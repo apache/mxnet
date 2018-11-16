@@ -16,6 +16,7 @@
  */
 
 package org.apache.mxnet.javaapi
+import scala.language.implicitConversions
 
 class DataDesc private[mxnet] (val dataDesc: org.apache.mxnet.DataDesc) {
 
