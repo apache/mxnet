@@ -55,7 +55,7 @@ def _get_cuddn_controls(cudnn_flag):
     assert cudnn_flag in ('off', 'no_autotune', 'fastest', 'limited_workspace', 'default', None), \
         "Invalid cudnn flag - '{0}' provided. \
         Supported options - 'off', 'no_autotune', \
-        'fastest','limited_workspace', 'default'".format(cudnn_flag)
+        'fastest', 'limited_workspace', 'default'".format(cudnn_flag)
 
     # Default cudnn controls - Use cudnn and use limited_workspace tuning.
     cudnn_off = False

@@ -435,18 +435,15 @@ def test_large_models():
 def test_conv_invalid_cudnn_flag():
     # Conv1D should fail for invalid cudnn flag
     assertRaises(AssertionError,
-                _check_layer_forward,
-                nn.Conv1D(16, 3, in_channels=4, cudnn='fail_me'), (1, 4, 10))
+                 nn.Conv1D, 16, 3, in_channels=4, cudnn='fail_me')
 
     # Conv2D should fail for invalid cudnn flag
     assertRaises(AssertionError,
-                _check_layer_forward,
-                nn.Conv2D(16, (3, 4), in_channels=4, cudnn='fail_me'), (1, 4, 20, 20))
+                 nn.Conv2D, 16, (3, 4), in_channels=4, cudnn='fail_me')
 
     # Conv3D should fail for invalid cudnn flag
     assertRaises(AssertionError,
-                _check_layer_forward,
-                nn.Conv3D(16, (5, 4, 3), in_channels=4, cudnn='fail_me'), (1, 4, 10, 10, 10))
+                 nn.Conv3D, 16, (5, 4, 3), in_channels=4, cudnn='fail_me')
 
 @with_seed()
 def test_conv():
