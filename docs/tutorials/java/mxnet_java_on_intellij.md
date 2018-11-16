@@ -12,48 +12,29 @@ To use this tutorial you need the following pre-requisites:
 
 ### MacOS Prerequisites
 
-**Step 1.** Install brew:
+You can run the following commands to install the prerequisites.
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-```
-
-Or, if you already have brew, update it:
-```
 brew update
-```
-
-**Step 2.** Install Java 8:
-```
 brew tap caskroom/versions
 brew cask install java8
-```
-
-**Step 3.** Install maven:
-```
 brew install maven
-```
-
-**Step 4.** Install OpenCV:
-```
 brew install opencv
 ```
 
 You can also run this tutorial on an Ubuntu machine after installing the following prerequisites.
 ### Ubuntu Prerequisites
 
-**Step 1.** Download the MXNet source.
+Run the following commands to install the prerequisites.
 
 ```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet
+wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
+sudo ./ubuntu_core.sh
+wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_scala.sh
+sudo ./ubuntu_scala.sh
 ```
 
-**Step 2.** Run the dependency installation scripts.
-
-```bash
-sudo ./ci/docker/install/ubuntu_core.sh
-sudo ./ci/docker/install/ubuntu_scala.sh
-```
+Note : You might need to run `chmod u+x ubuntu_core.sh` and `chmod u+x ubuntu_scala` before running the scripts.
 
 The `ubuntu_scala.sh` installs the common dependencies required for both MXNet Scala and MXNet Java packages.
 
@@ -92,30 +73,18 @@ ArtifactId: javaMXNet
 1.0-SNAPSHOT
 ```
 
-TODO
 ![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-properties.png)
 
 Review the project's properties. The settings can be left as their default.
 
-TODO
 ![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-location.png)
 
 Set the project's location. The rest of the settings can be left as their default.
 
-TODO
 ![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-pom.png)
 
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
-
-**IntelliJ IDEA Alternative** If you want to use only Maven to create the project, you can create a new folder and run the following in the newly created folder :
-```bash
-mkdir java-proj
-cd java-proj/
-mvn archetype:generate -DgroupId=mxnet -DartifactId=mxnetJava -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
-```
-This command will create a new Java project folder with name `mxnetJava` inside `java-proj` folder.
-More on creating Maven projects can be found on this Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html).
 
 **Step 3.** Add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
  
@@ -145,38 +114,18 @@ Click "Import Changes" in this prompt.
 **Step 5.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
-**Step 6.** Navigate to the App.java class in the project and paste the following code, overwriting the original hello world code.
-```java
-package mxnet;
+**Step 6.** Navigate to the App.java class in the project and paste the code from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/src/main/java/sample/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
+You can also grab the entire [Java Demo project](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/README.md)
 
-import org.apache.mxnet.javaapi.Context;
-import org.apache.mxnet.javaapi.NDArray;
+**Step 7.** Now run the App.java. 
 
-public class App 
-{
-    public static void main( String[] args )
-    {
-        NDArray nd = NDArray.ones(Context.cpu(), new int[] {10, 20});
-        System.out.println( "Testing MXNet by generating a 10x20 NDArray" );
-        System.out.println("Shape of NDArray is : " + nd.shape());
-    }
-}
-``` 
- 
-**Step 7.** Now run the App.java by clicking the green arrow as highlighted in the image below.
-
-![run hello mxnet](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-run-projects.png)
-
-
-The result should be this output:
+The result should be something similar to this:
 
 ```
-Testing MXNet by generating a 10x20 NDArray
-Shape of NDArray is : (10,20)
-
+Hello World!
+(1,2)
 Process finished with exit code 0
 ```
-
 
 ### Troubleshooting
 
@@ -189,7 +138,6 @@ Library not loaded: /usr/local/opt/opencv/lib/libopencv_calib3d.x.x.dylib
 ```
 
 This can be resolved be installing OpenCV.
-
 
 ### Command Line Build Option
 
