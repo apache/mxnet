@@ -115,7 +115,7 @@ def build_scala_docs(app):
         '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
         '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
     ])
-    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation'
+    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation; exit 0'
              .format(scala_path, scala_doc_sources, scala_doc_classpath))
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
