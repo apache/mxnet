@@ -96,16 +96,6 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
   return true;
 }
 
-inline static bool ConcatStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
-                                     DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
-                                     std::vector<int>* out_attrs) {
-  const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), static_cast<size_t>(param_.num_args * 3));
-  CHECK_EQ(out_attrs->size(), 3U);
-
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
-}
-
 NNVM_REGISTER_OP(_contrib_quantized_concat)
 .describe(R"code(Joins input arrays along a given axis.
 
@@ -140,7 +130,6 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 })
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
-.set_attr<FInferStorageType>("FInferStorageType", ConcatStorageType)
 .set_attr<std::string>("key_var_num_args", "num_args");
 
 NNVM_REGISTER_OP(Concat)
