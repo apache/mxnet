@@ -114,7 +114,6 @@ OpStatePtr Imperative::Invoke(
       outputs[i]->WaitToRead();
       outputs[i]->SetShapeFromChunk();
     }
-    CHECK(outputs[i]->shape().ndim());
   }
   return ret;
 }
