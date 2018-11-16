@@ -10,6 +10,10 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
+  <properties>
+    <skipTests>true</skipTests>
+  </properties>
+
   <artifactId>mxnet-core_2.11</artifactId>
   <name>MXNet Scala Package - Core</name>
 
@@ -18,12 +22,6 @@
       <id>unittest</id>
       <properties>
         <skipTests>false</skipTests>
-      </properties>
-    </profile>
-    <profile>
-      <id>integrationtest</id>
-      <properties>
-        <skipTests>true</skipTests>
       </properties>
     </profile>
     <profile>
