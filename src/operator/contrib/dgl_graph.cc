@@ -173,7 +173,7 @@ class HashTableChecker {
 
 static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
                         const NDArray &sub_csr, const NDArray *old_eids) {
-  const TBlob data = varr.data();
+  const TBlob &data = varr.data();
   int64_t num_vertices = csr_arr.shape()[0];
   const size_t len = varr.shape()[0];
   const dgl_id_t *vid_data = data.dptr<dgl_id_t>();
