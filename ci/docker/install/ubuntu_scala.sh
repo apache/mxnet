@@ -24,11 +24,13 @@ set -ex
 cd "$(dirname "$0")"
 # install libraries for mxnet's scala package on ubuntu
 echo 'Installing Scala...'
+apt-get update || true
 apt-get install -y software-properties-common
-apt-get update
+apt-get update || true
 apt-get install -y openjdk-8-jdk
 apt-get install -y openjdk-8-jre
 
-apt-get update && apt-get install -y \
+apt-get update || true
+apt-get install -y \
     maven \
     scala
