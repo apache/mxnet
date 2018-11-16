@@ -75,7 +75,7 @@ class Sequential(Block):
         return len(self._children)
 
     def hybridize(self, active=True, **kwargs):
-        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        """Activates or deactivates `HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
         Parameters

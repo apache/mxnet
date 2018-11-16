@@ -805,10 +805,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location : list or tuple or dict
         Argument values used as location to compute gradient
 
-        - if type is list of numpy.ndarray
+        - if type is list of numpy.ndarray, \
             inner elements should have the same order as mxnet.sym.list_arguments().
-        - if type is dict of str -> numpy.ndarray
+
+        - if type is dict of str -> numpy.ndarray, \
             maps the name of arguments to the corresponding numpy.ndarray.
+
         *In either case, value of all the arguments must be provided.*
     aux_states : list or tuple or dict, optional
         The auxiliary states required when generating the executor for the symbol.
@@ -829,7 +831,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     References
     ---------
-    ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
+    [1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
     # cannot use finite differences with small eps without high precision
