@@ -32,6 +32,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <algorithm>
 #include "../operator_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
@@ -87,6 +88,34 @@ inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
       if (idx_dptr[i]) {
         NDArray src = data.At(i);
         NDArray dst = out.At(j++);
+        CHECK(src.shape() == dst.shape());
+        mxnet_op::copy(stream, dst.data(), src.data());
+      }
+    }
+  });
+}
+
+inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
+                                const OpContext &ctx,
+                                const std::vector<NDArray> &inputs,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &outputs) {
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 2U);
+  // inputs: {ograd, data, idx}
+  // outputs: {igrad_data, igrad_idx}
+  // TODO(@junrushao1994): how to declare no igrad w.r.t. index?
+  const NDArray& ograd = inputs[0];
+  const NDArray& idx = inputs[2];
+  const NDArray& igrad_data = outputs[0];
+  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
+    DType* idx_dptr = idx.data().dptr<DType>();
+    int length = idx.shape()[0];
+    mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
+    for (int i = 0, j = 0; i < length; i++) {
+      if (idx_dptr[i]) {
+        NDArray src = ograd.At(j++);
+        NDArray dst = igrad_data.At(i);
         CHECK(src.shape() == dst.shape());
         mxnet_op::copy(stream, dst.data(), src.data());
       }

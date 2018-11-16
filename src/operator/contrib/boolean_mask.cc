@@ -54,8 +54,16 @@ which stands for the rows in x where the corresonding element in index is non-ze
 .set_num_outputs(1)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward)
 .set_attr<FInferStorageType>("FInferStorageType", BooleanMaskStorageType)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_contrib_BooleanMask"})
 .add_argument("data", "NDArray-or-Symbol", "Data")
 .add_argument("index", "NDArray-or-Symbol", "Mask")
+.add_arguments(BooleanMaskParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_contrib_BooleanMask)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskBackward)
 .add_arguments(BooleanMaskParam::__FIELDS__());
 
 }  // namespace op
