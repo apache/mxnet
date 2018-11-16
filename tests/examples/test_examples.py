@@ -17,14 +17,15 @@
 
 #pylint: disable=no-member, too-many-locals, too-many-branches, no-self-use, broad-except, lost-exception, too-many-nested-blocks, too-few-public-methods, invalid-name
 """
-    This file tests and ensures that the examples run correctly.
+    This file tests and ensures that the examples run out of the box.
 
 """
 import os
 import sys
 import subprocess
+import logging
 
-def _run_command(command):
+def _run_command(test_name, command):
     """Runs the script using command
 
     Parameters
@@ -38,16 +39,24 @@ def _run_command(command):
         True if there are no warnings or errors.
     """
     errors = []
+    logging.info("Running test for {}".format(test_name))
     try:
-    	check_call(command)
+    	subprocess.check_call(command)
     except Exception as err:
         err_msg = str(err)
         errors.append(err_msg)
-    finally:
-        if len(errors) > 0:
+        if errors:
             logging.error('\n'.join(errors))
             return False
-        return True
+    return True
 
 def test_cifar():
-   assert _run_command(['python','example/image-classification/train_cifar10.py'])
+    example_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'examples','image_classification')
+    temp_dir = 'tmpdir'
+    example_name = 'test_cifar10'
+    working_dir = os.path.join(*([temp_dir] + example_name)
+    logging.info("Cleaning and setting up temp directory '{}'".format(working_dir))
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    if not os.path.isdir(working_dir):
+        os.makedirs(working_dir)
+    assert _run_command(example_name , ['python',os.path.join(example_dir,'train_cifar10.py')])
