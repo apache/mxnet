@@ -35,6 +35,7 @@
 #include "../operator_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -47,7 +48,6 @@ struct BooleanMaskParam : public dmlc::Parameter<BooleanMaskParam> {
   }
 };
 
-template <typename xpu>
 inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
                                const OpContext &ctx,
                                const std::vector<NDArray> &inputs,
@@ -56,32 +56,41 @@ inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   const BooleanMaskParam& param = nnvm::get<BooleanMaskParam>(attrs.parsed);
-  CHECK_EQ(param.axis, 0);
-  CHECK_EQ(inputs[0].shape()[param.axis], inputs[1].shape()[0]);
-  CHECK_EQ(inputs[1].shape().ndim(), 1U);
+  const int axis = param.axis;
+  const NDArray &data = inputs[0];
+  const NDArray &idx = inputs[1];
+  const NDArray &out = outputs[0];
+  CHECK_EQ(axis, 0) << "Not supported yet";
+  CHECK_EQ(data.shape()[axis], idx.shape()[0]);
+  CHECK_EQ(idx.shape().ndim(), 1U);
+  // count the number of 1s in `idx`, so that we could know the output dimension
   size_t valid_num = 0;
-  const TBlob &idx = inputs[1].data();
-  MSHADOW_TYPE_SWITCH(inputs[1].dtype(), DType, {
-    for (int i = 0; i < inputs[1].shape()[0]; i++) {
-      if (idx.dptr<DType>()[i])
-        valid_num++;
+  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
+    DType* idx_dptr = idx.data().dptr<DType>();
+    int length = idx.shape()[0];
+    for (int i = 0; i < length; i++) {
+      if (idx_dptr[i]) {
+        ++valid_num;
+      }
     }
   });
-  TShape s = inputs[0].shape();
-  s[0] = valid_num;
-  const_cast<NDArray &>(outputs[0]).Init(s);
-  size_t j = 0;
-  size_t ele_size = mshadow::mshadow_sizeof(inputs[0].dtype());
-  MSHADOW_TYPE_SWITCH(inputs[1].dtype(), DType, {
-  for (int i = 0; i < inputs[1].shape()[0]; i++) {
-    if (idx.dptr<DType>()[i]) {
-      NDArray src = inputs[0].At(i);
-      NDArray dst = outputs[0].At(j);
-      CHECK(src.shape() == dst.shape());
-      memcpy(dst.data().dptr_, src.data().dptr_, src.shape().Size() * ele_size);
-      j++;
+  // set the output shape forcefully
+  TShape s = data.shape();
+  s[axis] = valid_num;
+  const_cast<NDArray &>(out).Init(s);
+  // do the copy
+  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
+    DType* idx_dptr = idx.data().dptr<DType>();
+    int length = idx.shape()[0];
+    mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
+    for (int i = 0, j = 0; i < length; i++) {
+      if (idx_dptr[i]) {
+        NDArray src = data.At(i);
+        NDArray dst = out.At(j++);
+        CHECK(src.shape() == dst.shape());
+        mxnet_op::copy(stream, dst.data(), src.data());
+      }
     }
-  }
   });
 }
 

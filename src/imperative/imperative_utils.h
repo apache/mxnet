@@ -117,14 +117,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_shapes.push_back(i->shape());
   }
-  const bool dynamic_shape_exists = [&]() {
-    if (!infershape.count(attrs.op)) {
-      return true;
-    }
+  bool is_dynamic_shape_existing = false;
+  if (!infershape.count(attrs.op)) {
+    is_dynamic_shape_existing = true;
+  } else {
     CHECK(infershape[attrs.op](attrs, &in_shapes, &out_shapes));
     CHECK_EQ(out_shapes.size(), outputs.size());
-    return false;
-  }();
+  }
   // infer type
   std::vector<int>& in_types = ret->arg_types;
   in_types.clear();
@@ -181,7 +180,7 @@ inline void SetShapeType(const Context& ctx,
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (outputs[i]->is_none()) {
-      if (dynamic_shape_exists) {
+      if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
         *outputs[i] = NDArray(ctx, out_types[i]);
       } else if (storage_type == kDefaultStorage) {

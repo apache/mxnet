@@ -41,16 +41,19 @@ bool BooleanMaskStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+// TODO(@junrushao1994): update the docstring after the PR is almost done.
 NNVM_REGISTER_OP(_contrib_BooleanMask)
 .describe(R"code(
+Experimental CPU-only support for boolean masking.
+Given an NDArray x, and a 1-d NDArray index,
+the operator produces an un-predeterminable shaped 2-d NDArray y,
+which stands for the rows in x where the corresonding element in index is non-zero.
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BooleanMaskParam>)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward)
 .set_attr<FInferStorageType>("FInferStorageType", BooleanMaskStorageType)
-//.set_attr<nnvm::FGradient>("FGradient",
-//  ElemwiseGradUseNone{"_backward_contrib_BooleanMask"})
 .add_argument("data", "NDArray-or-Symbol", "Data")
 .add_argument("index", "NDArray-or-Symbol", "Mask")
 .add_arguments(BooleanMaskParam::__FIELDS__());
