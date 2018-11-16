@@ -58,6 +58,11 @@ def export_model(sym, params, input_shape, input_type=np.float32,
     -------
     onnx_file_path : str
         Onnx file path
+
+    Notes
+    -----
+    This method is available when you ``import mxnet.contrib.onnx``
+
     """
 
     try:
