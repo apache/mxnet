@@ -597,7 +597,7 @@ rpkg:
 
 rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
-	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file("r-package_coverage.json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
+	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file("r-package_coverage.json");writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \
