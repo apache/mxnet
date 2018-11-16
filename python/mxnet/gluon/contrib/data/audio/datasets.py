@@ -113,9 +113,9 @@ class AudioFolderDataset(Dataset):
                         self.synsets.append(label)
                     data_tmp.append(os.path.join(self._root, line.split(",")[0]))
                     label_tmp.append(self.synsets.index(label))
-            
+
             #Generating the synset.txt file now
-            with open("./synset.txt","w") as synsets_file:
+            with open("./synset.txt", "w") as synsets_file:
                 for item in self.synsets:
                     synsets_file.write(item+os.linesep)
             print("Synsets is generated  as synset.txt")

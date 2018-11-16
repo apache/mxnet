@@ -22,8 +22,8 @@ import warnings
 import argparse
 import mxnet as mx
 from mxnet import nd
-from model import get_net
 from mxnet.gluon.contrib.data.audio.transforms import MFCC
+from model import get_net
 
 def predict(pred_dir='./Test'):
     """

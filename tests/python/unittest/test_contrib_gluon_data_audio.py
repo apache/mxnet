@@ -17,6 +17,7 @@
 
 """Testing audio transforms in gluon container."""
 from __future__ import print_function
+import warnings
 import numpy as np
 from mxnet import gluon
 from mxnet.gluon.contrib.data.audio import transforms
@@ -66,6 +67,11 @@ def test_mfcc():
     """
         Function to test extraction of mfcc from audio signal
     """
+    try:
+        import librosa
+    except ImportError:
+        warnings.warn("Librosa not installed! pip install librosa and then continue.")
+        return
     audio_samples = np.random.rand(20)
     n_mfcc = 64
     mfcc = gluon.contrib.data.audio.transforms.MFCC(n_mfcc=n_mfcc)
@@ -79,6 +85,11 @@ def test_mel():
     """
         Function to test extraction of MEL spectrograms from audio signal
     """
+    try:
+        import librosa
+    except ImportError:
+        warnings.warn("Librosa not installed! pip install librosa and then continue.")
+        return
     audio_samples = np.random.rand(20)
     n_mels = 256
     mel = gluon.contrib.data.audio.transforms.MEL(n_mels=n_mels)
