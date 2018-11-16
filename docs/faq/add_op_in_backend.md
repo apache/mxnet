@@ -489,9 +489,9 @@ in the computational graph. MXNet would
 add the missing argument with name `quadratic0_data`, where the prefix
 `quadratic0` is the operator name appended with an index and the postfix
 `data` comes from the return value of the user defined `FListInputName` function.
-Users still can generate an executor for the `quand_func` like the following:
+Users still can generate an executor for the `quad_func` like the following:
 ```python
-quand_exe = quand_func.simple_bind(ctx=mx.cpu(), quandratic0_data=(1,))
+quad_exe = quad_func.simple_bind(ctx=mx.cpu(), quadratic0_data=(1,))
 ```
 - Line 12: Register shape inference function.
 - Line 13: Register type inference function.

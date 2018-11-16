@@ -19,9 +19,6 @@
 from __future__ import print_function
 import sys
 import os
-# code to automatically download dataset
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path = [os.path.join(curr_path, "../autoencoder")] + sys.path
 import mxnet as mx
 import numpy as np
 import data
@@ -33,14 +30,14 @@ from solver import Solver, Monitor
 import logging
 
 def cluster_acc(Y_pred, Y):
-  from sklearn.utils.linear_assignment_ import linear_assignment
-  assert Y_pred.size == Y.size
-  D = max(Y_pred.max(), Y.max())+1
-  w = np.zeros((D,D), dtype=np.int64)
-  for i in range(Y_pred.size):
-    w[Y_pred[i], int(Y[i])] += 1
-  ind = linear_assignment(w.max() - w)
-  return sum([w[i,j] for i,j in ind])*1.0/Y_pred.size, w
+    from sklearn.utils.linear_assignment_ import linear_assignment
+    assert Y_pred.size == Y.size
+    D = max(Y_pred.max(), Y.max())+1
+    w = np.zeros((D,D), dtype=np.int64)
+    for i in range(Y_pred.size):
+        w[Y_pred[i], int(Y[i])] += 1
+    ind = linear_assignment(w.max() - w)
+    return sum([w[i,j] for i,j in ind])*1.0/Y_pred.size, w
 
 class DECModel(model.MXModel):
     class DECLoss(mx.operator.NumpyOp):
@@ -87,9 +84,9 @@ class DECModel(model.MXModel):
         ae_model = AutoEncoderModel(self.xpu, [X.shape[1],500,500,2000,10], pt_dropout=0.2)
         if not os.path.exists(save_to+'_pt.arg'):
             ae_model.layerwise_pretrain(X_train, 256, 50000, 'sgd', l_rate=0.1, decay=0.0,
-                                        lr_scheduler=mx.misc.FactorScheduler(20000,0.1))
+                                        lr_scheduler=mx.lr_scheduler.FactorScheduler(20000,0.1))
             ae_model.finetune(X_train, 256, 100000, 'sgd', l_rate=0.1, decay=0.0,
-                              lr_scheduler=mx.misc.FactorScheduler(20000,0.1))
+                              lr_scheduler=mx.lr_scheduler.FactorScheduler(20000,0.1))
             ae_model.save(save_to+'_pt.arg')
             logging.log(logging.INFO, "Autoencoder Training error: %f"%ae_model.eval(X_train))
             logging.log(logging.INFO, "Autoencoder Validation error: %f"%ae_model.eval(X_val))
@@ -160,6 +157,8 @@ class DECModel(model.MXModel):
 
 def mnist_exp(xpu):
     X, Y = data.get_mnist()
+    if not os.path.isdir('data'):
+        os.makedirs('data')
     dec_model = DECModel(xpu, X, 10, 1.0, 'data/mnist')
     acc = []
     for i in [10*(2**j) for j in range(9)]:
