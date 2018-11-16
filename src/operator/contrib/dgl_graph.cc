@@ -239,9 +239,9 @@ static void DGLSubgraphComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
   const DGLSubgraphParam& params = nnvm::get<DGLSubgraphParam>(attrs.parsed);
-  size_t num_g = params.num_args - 1;
+  int num_g = params.num_args - 1;
 #pragma omp parallel for
-  for (size_t i = 0; i < num_g; i++) {
+  for (int i = 0; i < num_g; i++) {
     const NDArray *old_eids = params.return_mapping ? &outputs[i + num_g] : nullptr;
     GetSubgraph(inputs[0], inputs[i + 1], outputs[i], old_eids);
   }
@@ -351,9 +351,9 @@ static void SubgraphCompactComputeExCPU(const nnvm::NodeAttrs& attrs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
   const SubgraphCompactParam& params = nnvm::get<SubgraphCompactParam>(attrs.parsed);
-  size_t num_g = get_num_graphs(params);
+  int num_g = get_num_graphs(params);
 #pragma omp parallel for
-  for (size_t i = 0; i < num_g; i++) {
+  for (int i = 0; i < num_g; i++) {
     CompactSubgraph(inputs[0], inputs[i + num_g], outputs[i]);
   }
 }
