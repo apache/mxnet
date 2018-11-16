@@ -2,6 +2,7 @@
 
 Autoencoder architectures are often used for unsupervised feature learning. This [link](http://ufldl.stanford.edu/tutorial/unsupervised/Autoencoders/) contains an introduction tutorial to autoencoders. This example illustrates a simple autoencoder using a stack of convolutional layers for both the encoder and the decoder. 
 
+
 ![](https://cdn-images-1.medium.com/max/800/1*LSYNW5m3TN7xRX61BZhoZA.png)
 
 ([Diagram source](https://towardsdatascience.com/autoencoders-introduction-and-implementation-3f40483b0a85))
