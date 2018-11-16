@@ -132,7 +132,7 @@ docker_tag_image_cpu "${mxnet_version}_cpu" "latest" "python" > ${LOGDIR}/docker
 #Build and Test dockerfiles - GPU
 docker_generate_image_gpu "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu.cu90" "python" > ${LOGDIR}/docker_gpu_cu90.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.cu90.mkl" "python" > ${LOGDIR}/docker_gpu_cu90_mkl.out 2>&1 &
-docker_tag_image_gpu "${mxnet_version}_gpu_cu90" "gpu" "python" > ${LOGDIR}/docker_gpu_cu90.out 2>&1 &
+docker_tag_image_gpu "${mxnet_version}_gpu_cu90" "gpu" "python" > ${LOGDIR}/docker_gpu 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu80" "Dockerfile.mxnet.python.gpu.cu80" "python" > ${LOGDIR}/docker_gpu_cu80.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu80_mkl" "Dockerfile.mxnet.python.gpu.cu80.mkl" "python" > ${LOGDIR}/docker_gpu_cu80_mkl.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu92" "Dockerfile.mxnet.python.gpu.cu92" "python" > ${LOGDIR}/docker_gpu_cu92.out 2>&1 &

@@ -6,7 +6,6 @@ It uses the appropriate pip binaries to build different docker images. Both pyth
 * {version}_cpu_mkl
 * {version}_gpu_cu90 
 * {version}_gpu_cu90_mkl
-* {version}_gpu (same as gpu_cu90)
 * {version}_gpu_cu80 
 * {version}_gpu_cu80_mkl
 * {version}_gpu_cu92 
