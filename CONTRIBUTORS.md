@@ -200,6 +200,8 @@ Label Bot
   - To use me, comment:
     - @mxnet-label-bot add [specify comma separated labels here]
     - @mxnet-label-bot remove [specify comma separated labels here]
-    - @mxnet-label-bot update [specify comma separated labels here] <br>
-  (i.e. @mxnet-label-bot update [Bug, Python])
+    - @mxnet-label-bot update [specify comma separated labels here]  
+      (i.e. @mxnet-label-bot update [Bug, Python])
+  
+  - Available label names which are supported: [Labels](https://github.com/apache/incubator-mxnet/labels)
   - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)
