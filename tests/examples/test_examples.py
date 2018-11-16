@@ -50,7 +50,7 @@ def _run_command(test_name, command):
             return False
     return True
 
-def test_cifar():
+def test_cifar_default():
     example_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'examples','image_classification')
     temp_dir = 'tmpdir'
     example_name = 'test_cifar10'
