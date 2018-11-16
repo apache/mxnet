@@ -242,7 +242,7 @@ static void DGLSubgraphComputeExCPU(const nnvm::NodeAttrs& attrs,
   size_t num_g = params.num_args - 1;
 #pragma omp parallel for
   for (size_t i = 0; i < num_g; i++) {
-    const NDArray *old_eids = params.return_mapping ? &outputs[i + num_g] : nullptr ;
+    const NDArray *old_eids = params.return_mapping ? &outputs[i + num_g] : nullptr;
     GetSubgraph(inputs[0], inputs[i + 1], outputs[i], old_eids);
   }
 }
