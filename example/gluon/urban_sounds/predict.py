@@ -14,8 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-    Prediction module for Urban Sounds Classification
+""" Prediction module for Urban Sounds Classification
 """
 import os
 import warnings
@@ -24,35 +23,35 @@ from mxnet import nd
 from mxnet.gluon.contrib.data.audio.transforms import MFCC
 from model import get_net
 
-def predict(pred_dir='./Test'):
-    """
-        The function is used to run predictions on the audio files in the directory `pred_directory`
+def predict(prediction_dir='./Test'):
+    """The function is used to run predictions on the audio files in the directory `pred_directory`.
 
     Parameters
     ----------
-    Keyword arguments that can be passed, which are utilized by librosa module are:
-    net: The model that has been trained.
-
-    pred_directory: string, default ./Test
-       The directory that contains the audio files on which predictions are to be made
+    net: 
+        The model that has been trained.
+    prediction_dir: string, default ./Test
+        The directory that contains the audio files on which predictions are to be made
+        
     """
+
     try:
         import librosa
     except ImportError:
         warnings.warn("Librosa is not installed! please run the following command pip install librosa.")
         return
 
-    if not os.path.exists(pred_dir):
+    if not os.path.exists(prediction_dir):
         warnings.warn("The directory on which predictions are to be made is not found!")
         return
 
-    if len(os.listdir(pred_dir)) == 0:
+    if len(os.listdir(prediction_dir)) == 0:
         warnings.warn("The directory on which predictions are to be made is empty! Exiting...")
         return
 
     # Loading synsets
     if not os.path.exists('./synset.txt'):
-        warnings.warn("The synstes or labels for the dataset do not exist. Please run the training script first.")
+        warnings.warn("The synset or labels for the dataset do not exist. Please run the training script first.")
         return
 
     with open("./synset.txt", "r") as f:
@@ -64,11 +63,12 @@ def predict(pred_dir='./Test'):
         return
 
     net.load_parameters("./net.params")
-    file_names = os.listdir(pred_dir)
-    full_file_names = [os.path.join(pred_dir, item) for item in file_names]
+    file_names = os.listdir(prediction_dir)
+    full_file_names = [os.path.join(prediction_dir, item) for item in file_names]
     mfcc = MFCC()
-    print("\nStarting predictions for audio files in ", pred_dir, " ....\n")
+    print("\nStarting predictions for audio files in ", prediction_dir, " ....\n")
     for filename in full_file_names:
+        # Argument kaiser_fast to res_type is faster than 'kaiser_best'. To reduce the load time, passing kaiser_fast.
         X1, _ = librosa.load(filename, res_type='kaiser_fast')
         transformed_test_data = mfcc(mx.nd.array(X1))
         output = net(transformed_test_data.reshape((1, -1)))
@@ -87,5 +87,5 @@ if __name__ == '__main__':
     except ImportError:
         warnings.warn("Argparse module not installed! passing default arguments.")
         pred_dir = './Test'
-    predict(pred_dir=pred_dir)
+    predict(prediction_dir=pred_dir)
     print("Urban sounds classification Prediction DONE!")

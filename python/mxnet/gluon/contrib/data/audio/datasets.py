@@ -47,11 +47,8 @@ class AudioFolderDataset(Dataset):
         Path to root directory.
     transform : callable, default None
         A function that takes data and label and transforms them
-    has_csv: default True
-        If True, it means that a csv file has filename and its corresponding label
-        If False, we have folder like structure
     train_csv: str, default None
-        If has_csv is True, train_csv should be populated by the training csv filename
+       train_csv should be populated by the training csv filename
     file_format: str, default '.wav'
         The format of the audio files(.wav, .mp3)
     skip_rows: int, default 0
@@ -64,12 +61,17 @@ class AudioFolderDataset(Dataset):
     items : list of tuples
         List of all audio in (filename, label) pairs.
     """
-    def __init__(self, root, has_csv=False, train_csv=None, file_format='.wav', skip_rows=0):
+    def __init__(self, root, train_csv=None, file_format='.wav', skip_rows=0):
+        if not librosa:
+            warnings.warn("pip install librosa to continue.")
+            return
         self._root = os.path.expanduser(root)
         self._exts = ['.wav']
         self._format = file_format
-        self._has_csv = has_csv
         self._train_csv = train_csv
+        if file_format.lower() not in self._exts:
+            warnings.warn("format {} not supported currently.".format(file_format))
+            return
         self._list_audio_files(self._root, skip_rows=skip_rows)
 
 
@@ -80,7 +82,7 @@ class AudioFolderDataset(Dataset):
         """
         self.synsets = []
         self.items = []
-        if not self._has_csv:
+        if self._train_csv is None:
             for folder in sorted(os.listdir(root)):
                 path = os.path.join(root, folder)
                 if not os.path.isdir(path):

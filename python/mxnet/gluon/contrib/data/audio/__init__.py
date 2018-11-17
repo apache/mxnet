@@ -18,7 +18,3 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Audio utilities."""
-
-from .datasets import *
-
-from . import transforms

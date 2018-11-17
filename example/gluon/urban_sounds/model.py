@@ -16,7 +16,9 @@
 # under the License.
 
 """
-    This module builds a model an MLP woth a configurable output layer( number of units in the last layer)
+    This module builds a model an MLP with a configurable output layer( number of units in the last layer).
+    Users can pass any number of units in the last layer. SInce this dataset has 10 labels,
+    the default value of num_labels = 10
 """
 import mxnet as mx
 from mxnet import gluon
@@ -27,6 +29,6 @@ def get_net(num_labels=10):
     with net.name_scope():
         net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
         net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
-    net.add(gluon.nn.Dense(num_labels))
+        net.add(gluon.nn.Dense(num_labels))
     net.collect_params().initialize(mx.init.Normal(1.))
     return net

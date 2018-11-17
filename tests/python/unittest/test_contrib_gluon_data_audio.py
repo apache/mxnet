@@ -74,7 +74,7 @@ def test_mfcc():
         return
     audio_samples = np.random.rand(20)
     n_mfcc = 64
-    mfcc = gluon.contrib.data.audio.transforms.MFCC(n_mfcc=n_mfcc)
+    mfcc = gluon.contrib.data.audio.transforms.MFCC(num_mfcc=n_mfcc)
 
     mfcc_features = mfcc(audio_samples)
     assert mfcc_features.shape[0] == n_mfcc
@@ -92,7 +92,7 @@ def test_mel():
         return
     audio_samples = np.random.rand(20)
     n_mels = 256
-    mel = gluon.contrib.data.audio.transforms.MEL(n_mels=n_mels)
+    mel = gluon.contrib.data.audio.transforms.MEL(num_mels=n_mels)
 
     mels = mel(audio_samples)
     assert mels.shape[0] == n_mels

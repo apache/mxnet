@@ -31,16 +31,14 @@ from ..... import ndarray as nd
 from ....block import Block
 
 class MFCC(Block):
-    """
-        Extracts Mel frequency cepstrum coefficients from the audio data file
-        More details : https://librosa.github.io/librosa/generated/librosa.feature.mfcc.html
+    """Extracts Mel frequency cepstrum coefficients from the audio data file
+    More details : https://librosa.github.io/librosa/generated/librosa.feature.mfcc.html
 
-    Parameters
+    Attributes
     ----------
-    Keyword arguments that can be passed, which are utilized by librosa module are:
-    sr: int, default 22050
+    sampling_rate: int, default 22050
         sampling rate of the input audio signal
-    n_mfcc: int, default 20
+    num_mfcc: int, default 20
         number of mfccs to return
 
 
@@ -52,8 +50,9 @@ class MFCC(Block):
 
     """
 
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
+    def __init__(self, sampling_rate=22050, num_mfcc=20):
+        self._sampling_rate = sampling_rate
+        self._num_fcc = num_mfcc
         super(MFCC, self).__init__()
 
     def forward(self, x):
@@ -65,10 +64,10 @@ class MFCC(Block):
         elif isinstance(x, nd.NDArray):
             y = x.asnumpy()
         else:
-            warnings.warn("Input object is not numpy or NDArray... Cannot apply the transform: MFCC!")
+            warnings.warn("MFCC - allowed datatypes mx.nd.NDArray and numpy.ndarray")
             return x
 
-        audio_tmp = np.mean(librosa.feature.mfcc(y=y, **self.kwargs).T, axis=0)
+        audio_tmp = np.mean(librosa.feature.mfcc(y=y, sr=self._sampling_rate, n_mfcc=self._num_fcc).T, axis=0)
         return nd.array(audio_tmp)
 
 
@@ -76,7 +75,7 @@ class Scale(Block):
     """Scale audio numpy.ndarray from a 16-bit integer to a floating point number between
     -1.0 and 1.0. The 16-bit integer is the sample resolution or bit depth.
 
-    Parameters
+    Attributes
     ----------
     scale_factor : float
         The factor to scale the input tensor by.
@@ -111,7 +110,7 @@ class Scale(Block):
 class PadTrim(Block):
     """Pad/Trim a 1d-NDArray of NPArray (Signal or Labels)
 
-    Parameters
+    Attributes
     ----------
     max_len : int
         Length to which the array will be padded or trimmed to.
@@ -154,14 +153,13 @@ class PadTrim(Block):
 class MEL(Block):
     """Create MEL Spectrograms from a raw audio signal. Relatively pretty slow.
 
-    Parameters
+    Attributes
     ----------
-    Keyword arguments that can be passed, which are utilized by librosa module are:
-    sr: int, default 22050
+    sampling_rate: int, default 22050
         sampling rate of the input audio signal
-    n_fft: int, default 2048
+    num_fft: int, default 2048
         length of the Fast fourier transform window
-    n_mels: int,
+    num_mels: int, default 20
         number of mel bands to generate
     hop_length: int, default 512
         total samples between successive frames
@@ -193,8 +191,11 @@ class MEL(Block):
 
     """
 
-    def __init__(self, **kwargs):
-        self.kwargs = kwargs
+    def __init__(self, sampling_rate=22050, num_fft=2048, num_mels=20, hop_length=512):
+        self._sampling_rate = sampling_rate
+        self._num_fft = num_fft
+        self._num_mels = num_mels
+        self._hop_length = hop_length
         super(MEL, self).__init__()
 
     def forward(self, x):
@@ -203,6 +204,7 @@ class MEL(Block):
             return x
         if isinstance(x, nd.NDArray):
             x = x.asnumpy()
-        specs = librosa.feature.melspectrogram(x, **self.kwargs)
+        specs = librosa.feature.melspectrogram(x, sr=self._sampling_rate,\
+        n_fft=self._num_fft, n_mels=self._num_mels, hop_length=self._hop_length)
         return nd.array(specs)
  
