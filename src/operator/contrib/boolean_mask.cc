@@ -41,8 +41,21 @@ bool BooleanMaskStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+bool BooleanMaskBackStorageType(const nnvm::NodeAttrs& attrs,
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 3);
+  CHECK_EQ(out_attrs->size(), 2);
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    out_attrs->at(i) = kDefaultStorage;
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  return true;
+}
+
 // TODO(@junrushao1994): update the docstring after the PR is almost done.
-NNVM_REGISTER_OP(_contrib_BooleanMask)
+NNVM_REGISTER_OP(_contrib_boolean_mask)
 .describe(R"code(
 Experimental CPU-only support for boolean masking.
 Given an NDArray x, and a 1-d NDArray index,
@@ -54,15 +67,16 @@ which stands for the rows in x where the corresonding element in index is non-ze
 .set_num_outputs(1)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward)
 .set_attr<FInferStorageType>("FInferStorageType", BooleanMaskStorageType)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_contrib_BooleanMask"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_contrib_boolean_mask"})
 .add_argument("data", "NDArray-or-Symbol", "Data")
 .add_argument("index", "NDArray-or-Symbol", "Mask")
 .add_arguments(BooleanMaskParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_contrib_BooleanMask)
+NNVM_REGISTER_OP(_backward_contrib_boolean_mask)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FInferStorageType>("FInferStorageType", BooleanMaskBackStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskBackward)
 .add_arguments(BooleanMaskParam::__FIELDS__());
 

@@ -84,7 +84,7 @@ inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
     DType* idx_dptr = idx.data().dptr<DType>();
     int length = idx.shape()[0];
     mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
-    for (int i = 0, j = 0; i < length; i++) {
+    for (int i = 0, j = 0; i < length; ++i) {
       if (idx_dptr[i]) {
         NDArray src = data.At(i);
         NDArray dst = out.At(j++);
@@ -104,7 +104,6 @@ inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   // inputs: {ograd, data, idx}
   // outputs: {igrad_data, igrad_idx}
-  // TODO(@junrushao1994): how to declare no igrad w.r.t. index?
   const NDArray& ograd = inputs[0];
   const NDArray& idx = inputs[2];
   const NDArray& igrad_data = outputs[0];
@@ -112,7 +111,10 @@ inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
     DType* idx_dptr = idx.data().dptr<DType>();
     int length = idx.shape()[0];
     mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
-    for (int i = 0, j = 0; i < length; i++) {
+    MSHADOW_TYPE_SWITCH(igrad_data.dtype(), igrad_data_DType, {
+      mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(stream, igrad_data.data().Size(), igrad_data.data().dptr<igrad_data_DType>());
+    });
+    for (int i = 0, j = 0; i < length; ++i) {
       if (idx_dptr[i]) {
         NDArray src = ograd.At(j++);
         NDArray dst = igrad_data.At(i);

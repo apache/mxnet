@@ -4792,6 +4792,22 @@ def test_index_copy():
     assert same(t.grad.asnumpy(), t_grad.asnumpy())
     assert same(index.grad.asnumpy(), index_grad.asnumpy())
 
+
+@with_seed()
+def test_boolean_mask():
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 1, 0])
+    data.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.boolean_mask(data, index)
+    out.backward()
+    data.grad.wait_to_read()
+    expected = np.array([[4, 5, 6]])
+    expected_grad = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]])
+    assert same(out.asnumpy(), expected)
+    assert same(data.grad.asnumpy(), expected_grad)
+
+
 @with_seed()
 def test_div_sqrt_dim():
     data_tmp = np.random.normal(0, 1, (5, 10, 8))
