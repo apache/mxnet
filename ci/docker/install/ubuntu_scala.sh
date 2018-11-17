@@ -24,8 +24,9 @@ set -ex
 cd "$(dirname "$0")"
 # install libraries for mxnet's scala package on ubuntu
 echo 'Installing Scala...'
+apt-get update || true
 apt-get install -y software-properties-common
-apt-get update
+apt-get update || true
 apt-get install -y openjdk-8-jdk
 apt-get install -y openjdk-8-jre
 
@@ -34,7 +35,8 @@ echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/
 #apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
 #apt-key adv --keyserver keys.gnupg.net --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
 apt-key add sbt.gpg
-apt-get update && apt-get install -y \
+apt-get update || true
+apt-get install -y \
     maven \
     sbt \
     scala
