@@ -112,7 +112,10 @@ inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
     int length = idx.shape()[0];
     mshadow::Stream<cpu> *stream = ctx.get_stream<cpu>();
     MSHADOW_TYPE_SWITCH(igrad_data.dtype(), igrad_data_DType, {
-      mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(stream, igrad_data.data().Size(), igrad_data.data().dptr<igrad_data_DType>());
+      mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
+        stream,
+        igrad_data.data().Size(),
+        igrad_data.data().dptr<igrad_data_DType>());
     });
     for (int i = 0, j = 0; i < length; ++i) {
       if (idx_dptr[i]) {
