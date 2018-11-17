@@ -248,7 +248,25 @@ static void DGLSubgraphComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_dgl_subgraph)
-.MXNET_DESCRIBE("")
+.describe(R"code(This operator constructs an induced subgraph for
+a given set of vertices from a graph. It returns two CSR matrices
+if return_mapping is True: the first matrix contains edges with
+new edge Ids, the second matrix contains edges with the original
+edge Ids.
+Example::
+  x=[[1, 0, 0, 2],
+     [3, 0, 4, 0],
+     [0, 5, 0, 0],
+     [0, 6, 7, 0]]
+  v = [0, 1, 2]
+  dgl_subgraph(x, v, return_mapping=True) =
+    [[1, 0, 0],
+     [2, 0, 3],
+     [0, 4, 0]],
+    [[1, 0, 0],
+     [3, 0, 4],
+     [0, 5, 0]]
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DGLSubgraphParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const DGLSubgraphParam& params = nnvm::get<DGLSubgraphParam>(attrs.parsed);
