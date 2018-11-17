@@ -182,9 +182,9 @@ object SSDClassifierExample {
   def checkExist(arr : Array[String]) : Boolean = {
     var exist : Boolean = true
     for (item <- arr) {
-      if (!(Files.exists(Paths.get(item)))) {
+      exist = Files.exists(Paths.get(item)) && exist
+      if (!exist) {
         logger.error("Cannot find: " + item)
-        exist = false
       }
     }
     exist

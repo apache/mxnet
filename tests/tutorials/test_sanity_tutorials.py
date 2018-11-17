@@ -50,15 +50,12 @@ whitelist = ['basic/index.md',
              'scala/mnist.md',
              'scala/index.md',
              'scala/mxnet_scala_on_intellij.md',
-             'scala/mxnet_java_install_and_run_examples.md',
              'sparse/index.md',
              'speech_recognition/index.md',
              'unsupervised_learning/index.md',
              'vision/index.md',
              'tensorrt/index.md',
-             'tensorrt/inference_with_trt.md',
-             'java/mxnet_java_on_intellij.md',
-             'java/ssd_inference.md']
+             'tensorrt/inference_with_trt.md']
 whitelist_set = set(whitelist)
 
 def test_tutorial_downloadable():
