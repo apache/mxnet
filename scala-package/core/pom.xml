@@ -10,6 +10,10 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
+  <properties>
+    <skipTests>true</skipTests>
+  </properties>
+
   <artifactId>mxnet-core_2.11</artifactId>
   <name>MXNet Scala Package - Core</name>
 
@@ -18,12 +22,6 @@
       <id>unittest</id>
       <properties>
         <skipTests>false</skipTests>
-      </properties>
-    </profile>
-    <profile>
-      <id>integrationtest</id>
-      <properties>
-        <skipTests>true</skipTests>
       </properties>
     </profile>
     <profile>
@@ -86,12 +84,11 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.0</version>
         <configuration>
-          <skipTests>false</skipTests>
+          <argLine>
+            -Djava.library.path=${project.parent.basedir}/native/${platform}/target
+          </argLine>
+          <skipTests>${skipTests}</skipTests>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.scalastyle</groupId>
-        <artifactId>scalastyle-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.scalastyle</groupId>

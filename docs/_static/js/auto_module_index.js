@@ -10,12 +10,14 @@ function auto_index(module) {
     var html = "<ul>";
 
     for (var i = 0; i < targets.length; ++i) {
-      var id = $(targets[i]).attr('id');
-      // remove 'mxnet.' prefix to make menus shorter
-      var id_simple = id.replace(/^mxnet\./, '');
-      html += "<li><a class='reference internal' href='#";
-      html += id;
-      html += "'>" + id_simple + "</a></li>";
+	var id = $(targets[i]).attr('id');
+	if ( id ) {
+	    // remove 'mxnet.' prefix to make menus shorter
+	    var id_simple = id.replace(/^mxnet\./, '');
+	    html += "<li><a class='reference internal' href='#";
+	    html += id;
+	    html += "'>" + id_simple + "</a></li>";
+	}
     }
 
     html += "</ul>";

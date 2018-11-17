@@ -13,13 +13,11 @@
   <artifactId>mxnet-examples_2.11</artifactId>
   <name>MXNet Scala Package - Examples</name>
 
+  <properties>
+    <skipTests>true</skipTests>
+  </properties>
+
   <profiles>
-    <profile>
-      <id>unittest</id>
-      <properties>
-        <skipTests>true</skipTests>
-      </properties>
-    </profile>
     <profile>
       <id>integrationtest</id>
       <properties>

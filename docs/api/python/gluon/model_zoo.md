@@ -26,6 +26,7 @@ In the rest of this document, we list routines provided by the `gluon.model_zoo`
 ```eval_rst
 .. currentmodule:: mxnet.gluon.model_zoo.vision
 .. automodule:: mxnet.gluon.model_zoo.vision
+    :noindex:
 ```
 
 The following table summarizes the available models.
@@ -232,6 +233,7 @@ The following table summarizes the available models.
 .. automodule:: mxnet.gluon.model_zoo.vision
     :members:
     :imported-members:
+    :noindex:
 
 ```
 

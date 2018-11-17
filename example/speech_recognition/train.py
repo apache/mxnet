@@ -51,7 +51,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     from distutils.dir_util import mkpath
     from log_util import LogUtil
 
-    log = LogUtil().getlogger()
+    log = LogUtil.getInstance().getlogger()
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
     #seq_len = args.config.get('arch', 'max_t_count')

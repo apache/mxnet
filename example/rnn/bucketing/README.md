@@ -2,6 +2,15 @@ RNN Example
 ===========
 This folder contains RNN examples using high level mxnet.rnn interface.
 
+--------------
+
+## Gluon Implementation
+
+You can check this improved [Gluon implementation](http://gluon-nlp.mxnet.io/model_zoo/language_model/index.html#word-language-model) in gluon-nlp, the largest LSTM model reaches a perplexity of 65.62.
+
+--------------
+
+
 ## Data
 1) Review the license for the Sherlock Holmes dataset and ensure that you agree to it. Then uncomment the lines in the 'get_sherlockholmes_data.sh' script that download the dataset.
 
@@ -23,11 +32,11 @@ This folder contains RNN examples using high level mxnet.rnn interface.
 
   For Python2 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
+      $ python [cudnn_rnn_bucketing.py](cudnn_rnn_bucketing.py) --gpus 0,1,2,3
 
   For Python3 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
+      $ python3 [cudnn_rnn_bucketing.py](cudnn_rnn_bucketing.py) --gpus 0,1,2,3
 
 
 ### Performance Note:

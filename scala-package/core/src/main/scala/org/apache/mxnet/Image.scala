@@ -42,7 +42,7 @@ object Image {
   def imDecode(buf: Array[Byte], flag: Int,
                to_rgb: Boolean,
                out: Option[NDArray]): NDArray = {
-    val nd = NDArray.array(buf.map(_.toFloat), Shape(buf.length))
+    val nd = NDArray.array(buf.map( x => (x & 0xFF).toFloat), Shape(buf.length))
     val byteND = NDArray.api.cast(nd, "uint8")
     val args : ListBuffer[Any] = ListBuffer()
     val map : mutable.Map[String, Any] = mutable.Map()
