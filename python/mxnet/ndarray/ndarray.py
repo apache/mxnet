@@ -544,6 +544,10 @@ fixed-size items.
         for new_ax in new_axes:
             final_shape.insert(new_ax, 1)
 
+        if int_axes == tuple(range(self.ndim)):
+            # Override for single element indexing
+            final_shape = (1,)
+
         return sliced.reshape(final_shape)
 
     # pylint: enable=line-too-long
@@ -716,7 +720,13 @@ fixed-size items.
                 raise TypeError('NDArray does not support assignment with non-array-like '
                                 'object {} of type {}'.format(value, type(value)))
 
-        value_nd = _add_empty_axes(value_nd, new_axes)
+        # First reshape `value_nd` to a new shape that incorporates existing
+        # axes, new axes and broadcasting axes in the right way.
+        tmp_shape = _new_shape_for_bcast(
+            value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes
+        )
+        value_nd = value_nd.reshape(tmp_shape)
+
         if value_nd.shape != bcast_shape:
             value_nd = value_nd.broadcast_to(bcast_shape)
         return value_nd
@@ -741,30 +751,50 @@ fixed-size items.
                     'basic implementation, got object of type {}. '
                     'This is a bug, please report it!'
                     ''.format(type(idx)))
-        begin, end, step = _basic_indexing_tuple_to_begin_end_step(key, self.shape)
         int_axes = [ax for ax in range(len(key))
                     if isinstance(key[ax], integer_types)]
-        indexed_shape = tuple((e - b) // s for b, e, s in zip(begin, end, step))
+        begin, end, step = _basic_indexing_tuple_to_begin_end_step(
+            key, self.shape, keep_none=False
+        )
+        indexed_shape = tuple((abs(e - b) - 1) // abs(s) + 1
+                              for b, e, s in zip(begin, end, step))
+        can_assign_directly = (
+            (indexed_shape == self.shape) and all(s > 0 for s in step)
+        )
+        begin, end, step = _basic_indexing_tuple_to_begin_end_step(
+            key, self.shape, keep_none=True
+        )
 
-        if indexed_shape == self.shape:
+        if can_assign_directly:
             # Easy case, overwrite whole array.
             if isinstance(value, NDArray):
                 if value.handle is not self.handle:
                     # Need to do this before `broadcast_to`.
-                    value = _add_empty_axes(value, int_axes)
+                    tmp_shape = _new_shape_for_bcast(
+                        value.shape, target_ndim=self.ndim, new_axes=int_axes
+                    )
+                    value = value.reshape(tmp_shape)
+
                     if value.shape != self.shape:
                         value = value.broadcast_to(self.shape)
                     value.copyto(self)
+
             elif isinstance(value, numeric_types):
                 _internal._full(
                     shape=self.shape, value=float(value), ctx=self.context,
                     dtype=self.dtype, out=self
                 )
+
             elif isinstance(value, (np.ndarray, np.generic)):
-                value = _add_empty_axes(value, int_axes)
+                tmp_shape = _new_shape_for_bcast(
+                    value.shape, target_ndim=self.ndim, new_axes=int_axes
+                )
+                value = value.reshape(tmp_shape)
+
                 if isinstance(value, np.generic) or value.shape != self.shape:
                     value = np.broadcast_to(value, self.shape)
                 self._sync_copyfrom(value)
+
             else:
                 # Other array-like
                 value_nd = self._prepare_value_nd(
@@ -802,7 +832,17 @@ fixed-size items.
                     'implementation, indexing, got object of type {}. '
                     'This is a bug, please report it!'
                     ''.format(type(idx)))
-        begin, end, step = _basic_indexing_tuple_to_begin_end_step(key, self.shape)
+        begin, _, _ = _basic_indexing_tuple_to_begin_end_step(
+            key, self.shape, keep_none=False
+        )
+        for ax, (b, n) in enumerate(zip(begin, self.shape)):
+            if b >= n:
+                raise IndexError(
+                    'index {} is out of bounds for axis {} with size {}'
+                    ''.format(b, ax, n))
+        begin, end, step = _basic_indexing_tuple_to_begin_end_step(
+            key, self.shape, keep_none=True
+        )
         return op.slice(self, begin, end, step)
 
     def _get_nd_advanced_indexing(self, key):
@@ -2434,23 +2474,35 @@ def _new_axes_after_indexing(idcs):
     return tuple(new_axes)
 
 
-def _add_empty_axes(arr, axes):
-    """Reshape array so that it has axes of length 1 at ``axes``."""
-    if not axes:
-        return arr
+def _new_shape_for_bcast(shape, target_ndim, new_axes):
+    """Return shape with added axes for broadcasting in ``target_ndim`` dimensions."""
+    new_shape = [None] * target_ndim
+    for new_ax in new_axes:
+        new_shape[new_ax] = 1
 
-    shape = list(arr.shape)
-    for ax in axes:
-        shape.insert(ax, 1)
-    return arr.reshape(shape)
+    # Replace `None` from the right with `shape` entries from the right as
+    # long as possible, thereafter with 1.
+    ax_s = 1
+    for ax in range(1, target_ndim + 1):
+        if new_shape[-ax] is None:
+            try:
+                new_shape[-ax] = shape[-ax_s]
+                ax_s += 1
+            except IndexError:
+                new_shape[-ax] = 1
+
+    return new_shape
 
 
-def _basic_indexing_tuple_to_begin_end_step(idcs, shape):
+def _basic_indexing_tuple_to_begin_end_step(idcs, shape, keep_none=True):
     """Map a tuple of ``slice`` and ``None`` (ignored) to begin, end, step tuples."""
     idcs = [idx for idx in idcs if idx is not None]
     idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
             for idx in idcs]
-    sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
+    if keep_none:
+        sss_list = [(slc.start, slc.stop, slc.step) for slc in idcs]
+    else:
+        sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
     return tuple(zip(*sss_list))
 
 
