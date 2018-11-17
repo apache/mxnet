@@ -36,7 +36,7 @@ class MacrosSuite extends FunSuite with BeforeAndAfterAll {
     )
     val output = List(
       ("org.apache.mxnet.Symbol", true),
-      ("java.lang.Integer", false),
+      ("Int", false),
       ("org.apache.mxnet.Shape", true),
       ("String", true),
       ("Any", false)

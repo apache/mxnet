@@ -4,7 +4,7 @@ This is an project created to use Maven-published Scala package with two Scala e
 User are required to use `mvn package` to build the package,
  which are shown below:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 SCALA_VERSION=2.11.8 MXNET_VERSION=1.3.0
+export SCALA_VERSION_PROFILE=2.11 SCALA_VERSION=2.11.8 MXNET_VERSION=1.2.0
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
@@ -12,9 +12,7 @@ mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dscala.version=$(SCALA_VERSION)
 ```
 These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`, `SCALA_VERSION`)
-should be set before executing the line above.
-
-To obtain the most recent MXNet version, please click [here](https://mvnrepository.com/search?q=org.apache.mxnet)
+should be set before executing the line above. 
  
 You can also use the `Makefile` as an alternative to do the same thing. Simply do the following:
 ```Bash
@@ -27,7 +25,7 @@ This will load the default parameter for all the environment variable.
 ### Hello World
 The Scala file is being executed using Java. You can execute the helloWorld example as follows:
 ```Bash
-java -cp $CLASSPATH sample.HelloWorld
+java -Xmx8G  -cp $CLASSPATH sample.HelloWorld
 ```
 However, you have to define the Classpath before you run the demo code. More information can be found in the `demo.sh` And you can run the bash script as follows:
 ```Bash
@@ -43,7 +41,7 @@ You can review the complete example [here](https://github.com/apache/incubator-m
 
 you can run using the command shown below:
 ```Bash
-java -cp $CLASSPATH sample.ImageClassificationExample
+java -Xmx8G  -cp $CLASSPATH sample.ImageClassificationExample
 ```
 or script as follows:
 ```Bash
@@ -61,7 +59,7 @@ make scalaclean
 ```
 
 ## Q & A
-If you are facing opencv issue on Ubuntu, please try as follows to install opencv 3.4 (required by 1.2.0 package and above)
+If you are facing opencv issue on Ubuntu, please try as follows to install opencv 3.4 (required by 1.2.0 package)
 ```Bash
 sudo add-apt-repository ppa:timsc/opencv-3.4
 sudo apt-get update

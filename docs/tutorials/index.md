@@ -156,13 +156,6 @@ Select API:&nbsp;
 * [MXNet-Scala  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples)
 <hr>
 
-## Java Tutorials
-* Getting Started
-    * [Developer Environment Setup on IntelliJ IDE](/tutorials/java/mxnet_java_on_intellij.html)
-* [Multi Object Detection using pre-trained Single Shot Detector (SSD) Model](/tutorials/java/ssd_inference.html)
-* [MXNet-Java  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples)
-<hr>
-
 ## C++ Tutorials
 
 * Models
