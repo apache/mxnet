@@ -40,7 +40,7 @@ private[mxnet] class LibInfo {
                                  paramVals: Array[String]): Int
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
-  @native def mxNDArrayCreateEx(shape: Array[Long],
+  @native def mxNDArrayCreateEx(shape: Array[Int],
                                 ndim: Int,
                                 devType: Int,
                                 devId: Int,
@@ -75,7 +75,7 @@ private[mxnet] class LibInfo {
                              paramVals: Array[Array[Byte]]): Int
   @native def mxNDArrayGetShape(handle: NDArrayHandle,
                                 ndim: MXUintRef,
-                                data: ArrayBuffer[Long]): Int
+                                data: ArrayBuffer[Int]): Int
   @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
                                      data: Array[Byte],
                                      size: Int): Int
@@ -236,7 +236,7 @@ private[mxnet] class LibInfo {
                                  numArgs: MXUint,
                                  keys: Array[String],
                                  argIndPtr: Array[MXUint],
-                                 argShapeData: Array[Long],
+                                 argShapeData: Array[MXUint],
                                  inShapeData: ListBuffer[Array[Int]],
                                  outShapeData: ListBuffer[Array[Int]],
                                  auxShapeData: ListBuffer[Array[Int]],
