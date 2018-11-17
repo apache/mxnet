@@ -16,10 +16,9 @@
  */
 
 package org.apache.mxnet.javaapi
-
 import scala.language.implicitConversions
 
-class DataDesc(val dataDesc: org.apache.mxnet.DataDesc) {
+class DataDesc private[mxnet] (val dataDesc: org.apache.mxnet.DataDesc) {
 
   def this(name: String, shape: Shape, dType: DType.DType, layout: String) =
     this(new org.apache.mxnet.DataDesc(name, shape, dType, layout))
@@ -32,5 +31,13 @@ object DataDesc{
 
   implicit def toDataDesc(dataDesc: DataDesc): org.apache.mxnet.DataDesc = dataDesc.dataDesc
 
+  /**
+    * Get the dimension that corresponds to the batch size.
+    * @param layout layout string. For example, "NCHW".
+    * @return An axis indicating the batch_size dimension. When data-parallelism is used,
+    *         the data will be automatically split and concatenate along the batch_size dimension.
+    *         Axis can be -1, which means the whole array will be copied
+    *         for each data-parallelism device.
+    */
   def getBatchAxis(layout: String): Int = org.apache.mxnet.DataDesc.getBatchAxis(Some(layout))
 }

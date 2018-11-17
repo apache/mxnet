@@ -1,6 +1,6 @@
-# Single Shot Multi Object Detection using Scala Inference API
+# Single Shot Multi Object Detection using Java Inference API
 
-In this example, you will learn how to use Scala Inference API to run Inference on pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
+In this example, you will learn how to use Java Inference API to run Inference on pre-trained Single Shot Multi Object Detection (SSD) MXNet model.
 
 The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.uk/pascal/VOC/voc2012/index.html). The network is a SSD model built on Resnet50 as base network to extract image features. The model is trained to detect the following entities (classes): ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle', 'bus', 'car', 'cat', 'chair', 'cow', 'diningtable', 'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor']. For more details about the model, you can refer to the [MXNet SSD example](https://github.com/apache/incubator-mxnet/tree/master/example/ssd).
 
@@ -19,7 +19,7 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 
 1. MXNet
 2. MXNet Scala Package
-3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html) with the MXNet Scala Package
+3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/java/mxnet_java_on_intellij.html) with the MXNet Scala/Java Package
 4. wget
 
 
@@ -67,7 +67,7 @@ After the previous steps, you should be able to run the code using the following
 From the `scala-package/examples/scripts/inferexample/objectdetector/` folder run:
 
 ```bash
-./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
+./run_ssd_example.sh ../models/resnet50_ssd/resnet50_ssd/resnet50_ssd_model ../images/dog.jpg ../images
 ```
 
 **Notes**:
@@ -90,15 +90,8 @@ the outputs come from the the input image, with top3 predictions picked.
 
 
 ## Infer API Details
-This example uses ObjectDetector class provided by MXNet's scala package Infer APIs. It provides methods to load the images, create NDArray out of Java BufferedImage and run prediction using Classifier and Predictor APIs.
+This example uses ObjectDetector class provided by MXNet's Java Infer APIs. It provides methods to load the images, create NDArray out of Java BufferedImage and run prediction using Classifier and Predictor APIs.
 
 
 ## References
 This documentation used the model and inference setup guide from the [MXNet Model Server SSD example](https://github.com/awslabs/mxnet-model-server/blob/master/examples/ssd/README.md).
-
-
-## Next Steps
-
-Check out the following related tutorials and examples for the Infer API:
-
-* [Image Classification with the MXNet Scala Infer API](../imageclassifier/README.md)
