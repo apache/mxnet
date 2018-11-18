@@ -4795,6 +4795,8 @@ def test_index_copy():
 
 @with_seed()
 def test_boolean_mask():
+    if default_context().device_type != 'cpu':
+        return
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 0])
     data.attach_grad()

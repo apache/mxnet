@@ -28,6 +28,17 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(BooleanMaskParam);
 
+
+bool BooleanMaskType(const nnvm::NodeAttrs& attrs,
+                     std::vector<int> *in_attrs,
+                     std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return out_attrs->at(0) != -1;
+}
+
 bool BooleanMaskStorageType(const nnvm::NodeAttrs& attrs,
                             const int dev_mask,
                             DispatchMode* dispatch_mode,
@@ -65,7 +76,8 @@ which stands for the rows in x where the corresonding element in index is non-ze
 .set_attr_parser(ParamParser<BooleanMaskParam>)
 .set_num_inputs(2)
 .set_num_outputs(1)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward)
+.set_attr<nnvm::FInferType>("FInferType", BooleanMaskType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward<cpu>)
 .set_attr<FInferStorageType>("FInferStorageType", BooleanMaskStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_contrib_boolean_mask"})
 .add_argument("data", "NDArray-or-Symbol", "Data")
@@ -77,7 +89,7 @@ NNVM_REGISTER_OP(_backward_contrib_boolean_mask)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BooleanMaskBackStorageType)
-.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskBackward)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskBackward<cpu>)
 .add_arguments(BooleanMaskParam::__FIELDS__());
 
 }  // namespace op
