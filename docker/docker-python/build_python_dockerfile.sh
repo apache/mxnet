@@ -17,8 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-
 # Check Params
 programname=$0
 
@@ -127,7 +125,6 @@ docker_tag_image_gpu(){
 }
 
 check_errors(){
-    set +e
     egrep -i "not found|error|returned a non-zero code|fail" ${LOGDIR}/docker*
     if [ $? -eq 0 ]; then
         echo "ERROR: One of the build/test commands failed. Refer to the filename above to see which image tag caused it."
@@ -135,7 +132,6 @@ check_errors(){
     else
         echo "Success: No errors found"
     fi
-    set -e
 }
 
 # Build and Test dockerfiles - CPU
