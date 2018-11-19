@@ -41,6 +41,7 @@ from ..context import Context, current_context
 from . import _internal
 from . import op
 from ._internal import NDArrayBase
+from .utils import get_array_typecode
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
@@ -131,7 +132,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """
     hdl = NDArrayHandle()
     check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_long, native_array('l', shape)),
+        c_array_buf(mx_long, native_array(get_array_typecode(), shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),

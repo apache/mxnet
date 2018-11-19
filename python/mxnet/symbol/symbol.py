@@ -45,6 +45,8 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
+from ..ndarray.utils import get_array_typecode
+
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
@@ -1113,7 +1115,7 @@ class Symbol(SymbolBase):
             mx_uint(len(indptr) - 1),
             keys,
             c_array_buf(mx_uint, array('I', indptr)),
-            c_array_buf(mx_long, array('l', sdata)),
+            c_array_buf(mx_long, array(get_array_typecode(), sdata)),
             ctypes.byref(arg_shape_size),
             ctypes.byref(arg_shape_ndim),
             ctypes.byref(arg_shape_data),

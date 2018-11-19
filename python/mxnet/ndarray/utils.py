@@ -271,3 +271,9 @@ def save(fname, data):
                                   mx_uint(len(handles)),
                                   handles,
                                   keys))
+
+def get_array_typecode():
+    if sys.version_info.major > 2:
+        return 'q'
+    else:
+        return 'l'

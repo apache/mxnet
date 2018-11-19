@@ -56,6 +56,7 @@ from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
 from .ndarray import _ufunc_helper
+from .utils import get_array_typecode
 
 
 try:
@@ -90,7 +91,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     num_aux = mx_uint(len(aux_types))
     check_call(_LIB.MXNDArrayCreateSparseEx(
         ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
-        c_array_buf(mx_long, native_array('l', shape)),
+        c_array_buf(mx_long, native_array(get_array_typecode(), shape)),
         mx_uint(len(shape)),
         ctypes.c_int(ctx.device_typeid),
         ctypes.c_int(ctx.device_id),
@@ -99,7 +100,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         num_aux,
         c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
         c_array_buf(mx_uint, native_array('I', aux_shape_lens)),
-        c_array_buf(mx_long, native_array('l', aux_shapes)),
+        c_array_buf(mx_long, native_array(get_array_typecode(), aux_shapes)),
         ctypes.byref(hdl)))
     return hdl
 
