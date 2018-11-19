@@ -52,17 +52,34 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwd_(
     bool has_bias, const mkldnn::memory::desc &out_md,
     const mkldnn::engine &engine, const mkldnn::memory::dims &strides,
     const mkldnn::memory::dims &padding, const mkldnn::memory::dims &dilates) {
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // for computation compared with the actual tensor size. Currently, MKL-DNN
+  // operators are still reusing those memory from memory planning and the
+  // memory size may smaller than what MKL-DNN kernels require. So here we need
+  // select suboptimal kernel for computation according to tensor sizes.
   if (!has_bias) {
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
         mkldnn::algorithm::convolution_direct, out_md, weights_md, data_md, strides,
         dilates, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, engine);
+    auto deconv_pd =  mkldnn::convolution_forward::primitive_desc(desc, engine);
+    while (deconv_pd.dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weights_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   } else {
     auto bias_md = GetBiasDesc(data_md);
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
         mkldnn::algorithm::convolution_direct, out_md, weights_md, bias_md,
         data_md, strides, dilates, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, engine);
+    auto deconv_pd =  mkldnn::convolution_forward::primitive_desc(desc, engine);
+    while (deconv_pd.dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weights_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   }
 }
 
@@ -90,7 +107,18 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
   mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
       out_md, weight_md, data_md, strides, dilate, padding, padding,
       mkldnn::padding_kind::zero);
-  return mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
+  auto deconv_pd = mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // for computation compared with the actual tensor size. Currently, MKL-DNN
+  // operators are still reusing those memory from memory planning and the
+  // memory size may smaller than what MKL-DNN kernels require. So here we need
+  // select suboptimal kernel for computation according to tensor sizes.
+  while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+         deconv_pd.diff_src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+         deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+    CHECK(deconv_pd.next_impl()) << "No implementation";
+  }
+  return deconv_pd;
 }
 
 static mkldnn::convolution_forward::primitive_desc GetDeconvBwdDataImpl(
@@ -137,16 +165,34 @@ GetDeconvBwdWeightsImpl(
   mkldnn::memory::dims dilate{0, 0};
   dilate[0] = param.dilate[0] - 1;
   dilate[1] = param.dilate[1] - 1;
+
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // for computation compared with the actual tensor size. Currently, MKL-DNN
+  // operators are still reusing those memory from memory planning and the
+  // memory size may smaller than what MKL-DNN kernels require. So here we need
+  // select suboptimal kernel for computation according to tensor sizes.
   if (!has_bias) {
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, data_md, strides, dilate, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    auto deconv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.diff_weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   } else {
     auto bias_md = GetBiasDesc(data_md);
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, bias_md, data_md, strides, dilate, padding, padding,
         mkldnn::padding_kind::zero);
-    return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    auto deconv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.diff_weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   }
 }
 

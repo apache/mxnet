@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
- * \brief CPU Implementation of unary function.
+ * \file elemwise_binary_op_basic.cc
+ * \brief CPU Implementation of basic elementwise binary broadcast operators
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
@@ -76,6 +76,9 @@ static inline bool ElemwiseAddStorageType(const nnvm::NodeAttrs& attrs,
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_add)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddStorageType)
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, op::mshadow_op::plus>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseAddEx)
 .set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */
                             [](const NodeAttrs& attrs) {
@@ -156,6 +159,7 @@ NNVM_REGISTER_OP(_backward_add)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<bool>("TIsMKLDNN", true)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseNone<
   cpu, mshadow_op::identity, mshadow_op::identity>)

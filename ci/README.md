@@ -5,6 +5,8 @@ Docker containers
 
 You need docker and nvidia docker if you have a GPU.
 
+Also you need to run `pip3 install docker` as it uses the [docker python module](https://docker-py.readthedocs.io/en/stable/containers.html#)
+
 If you are in ubuntu an easy way to install Docker CE is executing the
 following script:
 
@@ -90,3 +92,29 @@ For all builds a directory from the host system is mapped where ccache will stor
 compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds 
 significantly. You can set this directory explicitly by setting CCACHE_DIR environment 
 variable. All ccache instances are currently set to be 10 Gigabytes max in size.
+
+
+## Testing with QEMU
+To run the unit tests under qemu:
+```
+./build.py -p armv7 && ./build.py -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu
+```
+
+To get a shell on the container and debug issues with the emulator itself, we build the container
+and then execute it interactively. We can afterwards use port 2222 on the host to connect with SSH.
+
+
+```
+ci/build.py -p test.arm_qemu -b && docker run -p2222:2222 -ti mxnetci/build.test.arm_qemu
+```
+
+Then from another terminal:
+
+```
+ssh -o StrictHostKeyChecking=no -p 2222 qemu@localhost
+```
+
+There are two pre-configured users: `root` and `qemu` both without passwords.
+
+
+

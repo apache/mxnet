@@ -55,6 +55,17 @@ def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_
     output.wait_to_read()
   return mod.get_outputs()
 
+def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
+  mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
+  mod.bind(for_training=False,
+           data_shapes=[('data', data_shape)],
+           label_shapes=[('softmax_label', label_shape)])
+  mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
+  mod.forward(batch, is_train=False)
+  for output in mod.get_outputs():
+    output.wait_to_read()
+  return mod.get_outputs()
+
 def check_quantize(sym, data_shape):
   fc = mx.sym.FullyConnected(data=sym, num_hidden=10, flatten=True, name='fc')
   sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
@@ -99,6 +110,7 @@ def check_quantize(sym, data_shape):
   quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
   for i in range(len(ref_out)):
     assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
+  check_qsym_dummy_forward(qsym, batch, data_shape, label_shape)
 
 
 @with_seed()

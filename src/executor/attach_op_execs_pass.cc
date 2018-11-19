@@ -159,9 +159,13 @@ class StatefulComputeExExecutor : public OpExecutor {
     op_ctx.run_ctx = rctx;
 #if MXNET_USE_MKLDNN == 1
     InvalidateOutputs(out_array, req);
-    CreateDefaultInputs(in_array, &in_array_fallback);
-    fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
-    return;
+    // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
+    const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
+    if (!is_mkldnn.get(attrs_.op, false)) {
+      CreateDefaultInputs(in_array, &in_array_fallback);
+      fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
+      return;
+    }
 #endif
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
@@ -180,12 +184,14 @@ class StatefulComputeExExecutor : public OpExecutor {
     return state_;
   }
 
-  explicit StatefulComputeExExecutor(const OpStatePtr& state,
+  explicit StatefulComputeExExecutor(const NodeAttrs& attrs,
+                                     const OpStatePtr& state,
                                      const FStatefulComputeEx& fcompute,
                                      ExecType exec_type)
-      : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+      : attrs_(attrs), state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
+  NodeAttrs attrs_;
   OpStatePtr state_;
   FStatefulComputeEx fcompute_;
   ExecType exec_type_;
@@ -302,7 +308,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
         op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-      ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
+      ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs, state,
+                                                           fcompute_ex, exec_type);
     } else {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);
@@ -322,7 +329,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
       ret[i] = std::make_shared<StatefulComputeExExecutor>(
-          ret[fwd_id].get()->state(), fcompute_ex, exec_type);
+          inode.source->attrs, ret[fwd_id].get()->state(), fcompute_ex,
+          exec_type);
     } else {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);

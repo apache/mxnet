@@ -22,6 +22,7 @@ import org.apache.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.implicitConversions
 
 /**
  * Symbolic configuration API of mxnet. <br />
@@ -29,21 +30,15 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
  * WARNING: it is your responsibility to clear this object through dispose().
  * </b>
  */
-class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotDisposed {
+class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeResource {
   private val logger: Logger = LoggerFactory.getLogger(classOf[Symbol])
-  private var disposed = false
-  protected def isDisposed = disposed
 
-  /**
-   * Release the native memory.
-   * The object shall never be used after it is disposed.
-   */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxSymbolFree(handle)
-      disposed = true
-    }
-  }
+  // unable to get the byteAllocated for Symbol
+  override val bytesAllocated: Long = 0L
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxSymbolFree
+  override val ref: NativeResourceRef = super.register()
+
 
   def +(other: Symbol): Symbol = Symbol.createFromListedSymbols("_Plus")(Array(this, other))
   def +[@specialized(Int, Float, Double) V](other: V): Symbol = {
@@ -793,7 +788,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     }
 
     val execHandle = new ExecutorHandleRef
-    val sharedHadle = if (sharedExec != null) sharedExec.handle else 0L
+    val sharedHandle = if (sharedExec != null) sharedExec.handle else 0L
     checkCall(_LIB.mxExecutorBindEX(handle,
                                    ctx.deviceTypeid,
                                    ctx.deviceId,
@@ -806,7 +801,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
                                    argsGradHandle,
                                    reqsArray,
                                    auxArgsHandle,
-                                   sharedHadle,
+                                   sharedHandle,
                                    execHandle))
     val executor = new Executor(execHandle.value, this.clone())
     executor.argArrays = argsNDArray
@@ -832,6 +827,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends WarnIfNotD
     checkCall(_LIB.mxSymbolSaveToJSON(handle, jsonStr))
     jsonStr.value
   }
+
 }
 
 /**
@@ -979,7 +975,9 @@ object Symbol extends SymbolBase {
    * @param stop End of interval.
    * @param step Spacing between values. The default step size is 1.
    * @param repeat Number of times to repeat each element. The default repeat count is 1.
-   * @param infer_range Infer the stop value from output shape
+   * @param infer_range
+   *          When set to True, infer the stop position from the start, step,
+   *          repeat, and output tensor size.
    * @param ctx Device context. Default context is the current default context.
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
