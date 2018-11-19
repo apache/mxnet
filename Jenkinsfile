@@ -152,7 +152,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_lib, true)
+            utils.pack_lib('centos7_cpu', mx_dist_lib, true)
           }
         }
       }
@@ -693,6 +693,17 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    },
+    'Scala: CentOS CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-scala-centos7-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('centos7_cpu', mx_dist_lib, true)
+            utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
             utils.publish_test_coverage()
           }
         }
