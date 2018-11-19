@@ -36,15 +36,14 @@ def _run_command(test_name, command):
 
     Returns
     -------
-        True if there are no warnings or errors.
+    True if there are no warnings or errors.
     """
     errors = []
     logging.info("Running test for {}".format(test_name))
     try:
     	subprocess.check_call(command)
     except Exception as err:
-        err_msg = str(err)
-        errors.append(err_msg)
+        errors.append(str(err))
         if errors:
             logging.error('\n'.join(errors))
             return False
@@ -54,7 +53,7 @@ def test_cifar_default():
     example_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'examples','image_classification')
     temp_dir = 'tmpdir'
     example_name = 'test_cifar10'
-    working_dir = os.path.join(*([temp_dir] + example_name)
+    working_dir = os.path.join(*([temp_dir] + example_name))
     logging.info("Cleaning and setting up temp directory '{}'".format(working_dir))
     shutil.rmtree(temp_dir, ignore_errors=True)
     if not os.path.isdir(working_dir):
