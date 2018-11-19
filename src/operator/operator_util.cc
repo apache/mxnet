@@ -407,13 +407,13 @@ class SimpleOpPropBase : public OperatorProperty {
     CHECK_LE(in_type->size(), this->ListArguments().size());
     int dtype = -1;
     // reduce dtype to a common one.
-    for (unsigned i = 0; i < in_type->size(); ++i) {
+    for (int i : *in_type) {
       if (dtype == -1) {
-        dtype = in_type->at(i);
+        dtype = i;
       } else {
-        CHECK(in_type->at(i) == -1 ||
-              in_type->at(i) == dtype) <<
-          "Non-uniform input data type. Expected " << dtype << "got " << in_type->at(i);
+        CHECK(i == -1 ||
+            i == dtype) <<
+          "Non-uniform input data type. Expected " << dtype << "got " << i;
       }
     }
 
