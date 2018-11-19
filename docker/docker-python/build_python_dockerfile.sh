@@ -123,6 +123,17 @@ docker_tag_image_gpu(){
     docker_test_image_gpu ${image_tag} ${python_version}
 }
 
+check_errors(){
+    set +e
+    egrep -i "not found|error|returned a non-zero code|fail" ${LOGDIR}/docker*
+    if [ $? -eq 0 ]; then
+        echo "ERROR: One of the build/test commands failed. Refer to the filename above to see which image tag caused it."
+        exit 1
+    else
+        echo "Success: No errors found"
+    fi
+    set -e
+}
 
 # Build and Test dockerfiles - CPU
 docker_generate_image_cpu "${mxnet_version}_cpu" "Dockerfile.mxnet.python.cpu" "python"  > ${LOGDIR}/docker_cpu.out 2>&1 &
@@ -165,12 +176,7 @@ docker_tag_image_gpu "${mxnet_version}_gpu_cu90_mkl_py3" "latest_gpu_mkl_py3" "p
 wait
 
 # Parse all the docker logfiles to make sure there is no error. Fail script if error is found.
-egrep -i "not found|error|returned a non-zero code|fail" ${LOGDIR}/docker*
-if [ $? -eq 0 ]
-then
-        echo "ERROR: One of the build/test commands failed. Refer to the filename above to see which image tag caused it."
-        exit 1
-fi
+check_errors
 
 # Push dockerfiles
 echo "All images were successfully built. Now login to dockerhub and push images"
