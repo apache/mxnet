@@ -83,10 +83,18 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateNone
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
   (JNIEnv *env, jobject obj, jintArray shape, jint ndim, jint devType,
     jint devId, jint delayAlloc, jint dtype, jobject ndArrayHandle) {
+  // TODO: this is a workaround to get scala unit test pass
+  // need to update scala APIs to support large array
+  const size_t length = env->GetArrayLength(shape);
   jint *shapeArr = env->GetIntArrayElements(shape, NULL);
+  jlong *tmpShapeArr = new jlong[length];
+  for (size_t i = 0; i < length; ++i) {
+    tmpShapeArr[i] = shapeArr[i];
+  }
   NDArrayHandle out;
-  int ret = MXNDArrayCreateEx(reinterpret_cast<dim_t *>(shapeArr), static_cast<mx_uint>(ndim),
+  int ret = MXNDArrayCreateEx(reinterpret_cast<dim_t *>(tmpShapeArr), static_cast<mx_uint>(ndim),
                               devType, devId, delayAlloc, dtype, &out);
+  delete[] tmpShapeArr;
   env->ReleaseIntArrayElements(shape, shapeArr, 0);
   SetLongField(env, ndArrayHandle, reinterpret_cast<jlong>(out));
   return ret;
@@ -381,8 +389,10 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyToCPU
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jbyteArray data, jint size) {
   jbyte *pdata = env->GetByteArrayElements(data, NULL);
+  // TODO: this is a workaround to get scala unit test pass
+  // need to update scala APIs to support large array
   int ret = MXNDArraySyncCopyToCPU(reinterpret_cast<NDArrayHandle>(ndArrayPtr),
-                                   reinterpret_cast<void *>(pdata), size);
+                                   reinterpret_cast<void *>(pdata), static_cast<dim_t>(size));
   env->ReleaseByteArrayElements(data, pdata, 0);  // copy back to java array automatically
   return ret;
 }
@@ -417,8 +427,11 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   (JNIEnv *env, jobject obj, jlong arrayPtr, jfloatArray sourceArr, jint arrSize) {
   jfloat *sourcePtr = env->GetFloatArrayElements(sourceArr, NULL);
+  // TODO: this is a workaround to get scala unit test pass
+  // need to update scala APIs to support large array
   int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
-                                     static_cast<const mx_float *>(sourcePtr), arrSize);
+                                     static_cast<const mx_float *>(sourcePtr), 
+                                     static_cast<jlong>(arrSize));
   env->ReleaseFloatArrayElements(sourceArr, sourcePtr, 0);
   return ret;
 }
@@ -1563,11 +1576,18 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
 
   jint *argIndPtr = env->GetIntArrayElements(jargIndPtr, NULL);
   jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
+  // TODO: this is a workaround to get scala unit test pass
+  // need to update scala APIs to support large array
+  const size_t argShapeLength = env->GetArrayLength(jargShapeData);
+  jlong *argShapeDataTmp = new jlong[argShapeLength];
+  for (size_t i = 0; i < argShapeLength; ++i) {
+    argShapeDataTmp[i] = argShapeData[i];
+  }
   int ret = MXSymbolInferShape(reinterpret_cast<SymbolHandle>(symbolPtr),
                                static_cast<mx_uint>(jnumArgs),
                                keys,
                                reinterpret_cast<const mx_uint *>(argIndPtr),
-                               reinterpret_cast<const dim_t *>(argShapeData),
+                               reinterpret_cast<const dim_t *>(argShapeDataTmp),
                                &inShapeSize,
                                &inShapeNdim,
                                &inShapeData,
@@ -1578,6 +1598,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
                                &auxShapeNdim,
                                &auxShapeData,
                                &complete);
+  delete[] argShapeDataTmp;
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
