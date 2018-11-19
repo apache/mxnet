@@ -27,7 +27,7 @@ from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential, BatchNorm
 
 class Concurrent(Sequential):
-    """Lays `Block`s concurrently.
+    """Lays `Block` s concurrently.
 
     This block feeds its input to all children blocks, and
     produce the output by concatenating all the children blocks' outputs
@@ -60,7 +60,7 @@ class Concurrent(Sequential):
 
 
 class HybridConcurrent(HybridSequential):
-    """Lays `HybridBlock`s concurrently.
+    """Lays `HybridBlock` s concurrently.
 
     This block feeds its input to all children blocks, and
     produce the output by concatenating all the children blocks' outputs

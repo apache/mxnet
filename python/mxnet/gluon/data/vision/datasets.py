@@ -45,8 +45,7 @@ class MNIST(dataset._DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
@@ -106,8 +105,7 @@ class FashionMNIST(MNIST):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
@@ -139,8 +137,7 @@ class CIFAR10(dataset._DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
@@ -204,8 +201,7 @@ class CIFAR100(CIFAR10):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
@@ -242,8 +238,7 @@ class ImageRecordDataset(dataset.RecordFileDataset):
 
         If 1, always convert images to colored (RGB).
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
         transform=lambda data, label: (data.astype(np.float32)/255, label)
 
@@ -279,8 +274,7 @@ class ImageFolderDataset(dataset.Dataset):
         If 0, always convert loaded images to greyscale (1 channel).
         If 1, always convert loaded images to colored (3 channels).
     transform : callable, default None
-        A function that takes data and label and transforms them:
-    ::
+        A function that takes data and label and transforms them::
 
         transform = lambda data, label: (data.astype(np.float32)/255, label)
 

@@ -76,22 +76,21 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
   std::vector<nnvm::NodePtr> var_nodes;
   orig_entries->clear();
   orig_entries->reserve(input_entries.size());
-  for (size_t i = 0; i < input_entries.size(); i++) {
-    nnvm::NodeEntry *e = input_entries[i];
+  for (auto input_entry : input_entries) {
     // If the node is a variable itself, we may want to skip the node.
-    if (e->node->is_variable() && skip_var)
+    if (input_entry->node->is_variable() && skip_var)
       continue;
 
     auto it = std::find_if(orig_entries->begin(), orig_entries->end(),
-                           pred_entry(*e));
+                           pred_entry(*input_entry));
     bool exist = (it != orig_entries->end());
-    orig_entries->push_back(*e);
+    orig_entries->push_back(*input_entry);
     nnvm::NodePtr n;
     // If we haven't seen the entry before, we need to create a new var node
     // for the node entry.
     if (!exist) {
       nnvm::Symbol sym;
-      sym.outputs.push_back(*e);
+      sym.outputs.push_back(*input_entry);
       n = nnvm::CreateVariableNode(sym.ListOutputNames()[0]);
     } else {
       // Otherwise, we use the var node created before.
@@ -100,7 +99,7 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
       n = var_nodes[idx];
     }
     var_nodes.push_back(n);
-    *e = nnvm::NodeEntry{n, 0, 0};
+    *input_entry = nnvm::NodeEntry{n, 0, 0};
   }
   return true;
 }
