@@ -185,10 +185,8 @@ docker_account_login
 # Python2
 docker_push_image "${mxnet_version}_cpu"
 docker_push_image "${mxnet_version}_cpu_mkl"
-docker_push_image "latest"
 docker_push_image "${mxnet_version}_gpu_cu90"
 docker_push_image "${mxnet_version}_gpu_cu90_mkl"
-docker_push_image "gpu"
 docker_push_image "${mxnet_version}_gpu_cu80"
 docker_push_image "${mxnet_version}_gpu_cu80_mkl"
 docker_push_image "${mxnet_version}_gpu_cu92"
@@ -203,6 +201,14 @@ docker_push_image "${mxnet_version}_gpu_cu80_py3"
 docker_push_image "${mxnet_version}_gpu_cu80_mkl_py3"
 docker_push_image "${mxnet_version}_gpu_cu92_py3"
 docker_push_image "${mxnet_version}_gpu_cu92_mkl_py3"
+
+docker_push_image "latest"
+docker_push_image "gpu"
+docker_push_image "latest_cpu_mkl_py2"
+docker_push_image "latest_cpu_mkl_py3"
+docker_push_image "latest_gpu_mkl_py2"
+docker_push_image "latest_gpu_mkl_py3"
+
 
 docker_account_logout
 
