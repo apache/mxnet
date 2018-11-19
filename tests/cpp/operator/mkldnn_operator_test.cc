@@ -188,7 +188,7 @@ OpAttrs GetLRNOp() {
   attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"nsize" , "3"});
   attrs.attrs.op->attr_parser(&attrs.attrs);
-  attrs.accept_dims.insert(4);  // TODO(alex): (MXNET-845)
+  attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
