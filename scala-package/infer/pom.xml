@@ -13,17 +13,15 @@
     <artifactId>mxnet-infer_2.11</artifactId>
     <name>MXNet Scala Package - Inference</name>
 
+    <properties>
+        <skipTests>true</skipTests>
+    </properties>
+
     <profiles>
         <profile>
             <id>unittest</id>
             <properties>
                 <skipTests>false</skipTests>
-            </properties>
-        </profile>
-        <profile>
-            <id>integrationtest</id>
-            <properties>
-                <skipTests>true</skipTests>
             </properties>
         </profile>
         <profile>

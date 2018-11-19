@@ -4,6 +4,14 @@ SSD is an unified framework for object detection with a single network.
 
 You can use the code to train/evaluate/test for object detection task.
 
+-------------------
+
+## Gluon Implementation
+
+You can find a Gluon implementation on [gluon-cv](https://gluon-cv.mxnet.io/build/examples_detection/train_ssd_voc.html).
+
+-------------------
+
 ### Disclaimer
 This is a re-implementation of original SSD which is based on caffe. The official
 repository is available [here](https://github.com/weiliu89/caffe/tree/ssd).
@@ -94,6 +102,7 @@ will open a window that will display the camera output together with the detecti
 with the detection threshold to get more or less detections.
 
 ### Train the model
+* Note that we recommend to use gluon-cv to train the model, please refer to [gluon-cv ssd](https://gluon-cv.mxnet.io/build/examples_detection/train_ssd_voc.html).
 This example only covers training on Pascal VOC dataset. Other datasets should
 be easily supported by adding subclass derived from class `Imdb` in `dataset/imdb.py`.
 See example of `dataset/pascal_voc.py` for details.

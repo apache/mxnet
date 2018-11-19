@@ -58,12 +58,10 @@ class StorageFallbackOpExecutor : public OpExecutor {
     if (!init_) {
       pre_temp_buf_.clear();
       post_temp_buf_.clear();
-      for (size_t i = 0; i < in_array.size(); i++) {
-        auto &nd = in_array[i];
+      for (const auto& nd : in_array) {
         pre_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
       }
-      for (size_t i = 0; i < out_array.size(); i++) {
-        auto &nd = out_array[i];
+      for (const auto& nd : out_array) {
         post_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
       }
       init_ = true;
