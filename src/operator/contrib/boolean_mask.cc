@@ -78,14 +78,14 @@ bool BooleanMaskBackStorageType(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(_contrib_boolean_mask)
 .describe(R"code(
 Experimental CPU-only support for boolean masking.
-Given an n-d NDArray x, and a 1-d NDArray index,
-the operator produces an un-predeterminable shaped n-d NDArray y,
+Given an n-d NDArray data, and a 1-d NDArray index,
+the operator produces an un-predeterminable shaped n-d NDArray out,
 which stands for the rows in x where the corresonding element in index is non-zero.
 
->>> x = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+>>> data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
 >>> index = mx.nd.array([0, 1, 0])
->>> y = mx.nd.contrib.boolean_mask(data, index)
->>> y
+>>> out = mx.nd.contrib.boolean_mask(data, index)
+>>> out
 
 [[4. 5. 6.]]
 <NDArray 1x3 @cpu(0)>
