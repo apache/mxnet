@@ -83,7 +83,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateNone
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayCreateEx
   (JNIEnv *env, jobject obj, jintArray shape, jint ndim, jint devType,
     jint devId, jint delayAlloc, jint dtype, jobject ndArrayHandle) {
-  // TODO: this is a workaround to get scala unit test pass
+  // TODO(andrewfayres): this is a workaround to get scala unit test pass
   // need to update scala APIs to support large array
   const size_t length = env->GetArrayLength(shape);
   jint *shapeArr = env->GetIntArrayElements(shape, NULL);
@@ -389,7 +389,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyToCPU
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jbyteArray data, jint size) {
   jbyte *pdata = env->GetByteArrayElements(data, NULL);
-  // TODO: this is a workaround to get scala unit test pass
+  // TODO(andrewfayres): this is a workaround to get scala unit test pass
   // need to update scala APIs to support large array
   int ret = MXNDArraySyncCopyToCPU(reinterpret_cast<NDArrayHandle>(ndArrayPtr),
                                    reinterpret_cast<void *>(pdata), static_cast<dim_t>(size));
@@ -427,7 +427,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayReshape
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   (JNIEnv *env, jobject obj, jlong arrayPtr, jfloatArray sourceArr, jint arrSize) {
   jfloat *sourcePtr = env->GetFloatArrayElements(sourceArr, NULL);
-  // TODO: this is a workaround to get scala unit test pass
+  // TODO(andrewfayres): this is a workaround to get scala unit test pass
   // need to update scala APIs to support large array
   int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
                                      static_cast<const mx_float *>(sourcePtr), 
@@ -1576,7 +1576,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
 
   jint *argIndPtr = env->GetIntArrayElements(jargIndPtr, NULL);
   jint *argShapeData = env->GetIntArrayElements(jargShapeData, NULL);
-  // TODO: this is a workaround to get scala unit test pass
+  // TODO(andrewfayres): this is a workaround to get scala unit test pass
   // need to update scala APIs to support large array
   const size_t argShapeLength = env->GetArrayLength(jargShapeData);
   jlong *argShapeDataTmp = new jlong[argShapeLength];
