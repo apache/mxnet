@@ -48,6 +48,9 @@ LOGDIR=~/temp/docker_logs
 if [ -d "${LOGDIR}" ]; then
   rm -rf ${LOGDIR}
 fi
+
+# Create ~/temp if it does not exist
+mkdir -p ~/temp
 mkdir ${LOGDIR}
 
 
