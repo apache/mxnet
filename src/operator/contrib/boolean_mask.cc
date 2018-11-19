@@ -46,8 +46,12 @@ bool BooleanMaskStorageType(const nnvm::NodeAttrs& attrs,
                             std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    out_attrs->at(i) = kDefaultStorage;
+  for (int &attr : *in_attrs) {
+    CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
+  }
+  for (int &attr : *out_attrs) {
+    attr = kDefaultStorage;
+  }
   *dispatch_mode = DispatchMode::kFComputeEx;
   return true;
 }
@@ -59,19 +63,33 @@ bool BooleanMaskBackStorageType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3);
   CHECK_EQ(out_attrs->size(), 2);
+  for (int &attr : *in_attrs) {
+    CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
+  }
+  for (int &attr : *out_attrs) {
+    attr = kDefaultStorage;
+  }
   for (size_t i = 0; i < out_attrs->size(); i++)
     out_attrs->at(i) = kDefaultStorage;
   *dispatch_mode = DispatchMode::kFComputeEx;
   return true;
 }
 
-// TODO(@junrushao1994): update the docstring after the PR is almost done.
 NNVM_REGISTER_OP(_contrib_boolean_mask)
 .describe(R"code(
 Experimental CPU-only support for boolean masking.
-Given an NDArray x, and a 1-d NDArray index,
-the operator produces an un-predeterminable shaped 2-d NDArray y,
+Given an n-d NDArray x, and a 1-d NDArray index,
+the operator produces an un-predeterminable shaped n-d NDArray y,
 which stands for the rows in x where the corresonding element in index is non-zero.
+
+>>> x = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+>>> index = mx.nd.array([0, 1, 0])
+>>> y = mx.nd.contrib.boolean_mask(data, index)
+>>> y
+
+[[4. 5. 6.]]
+<NDArray 1x3 @cpu(0)>
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<BooleanMaskParam>)
 .set_num_inputs(2)

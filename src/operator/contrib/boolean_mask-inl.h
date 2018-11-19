@@ -35,6 +35,7 @@
 #include <algorithm>
 #include "../operator_common.h"
 #include "../mxnet_op.h"
+#include "../tensor/init_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 
@@ -55,6 +56,8 @@ inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
                                const std::vector<NDArray> &inputs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
+  // TODO(@junrushao1994): This implementation is a proof-of-concept,
+  // hence very slow actually. Performance should be improved in the future.
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   const BooleanMaskParam& param = nnvm::get<BooleanMaskParam>(attrs.parsed);
@@ -113,12 +116,7 @@ inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
     DType* idx_dptr = idx.data().dptr<DType>();
     int length = idx.shape()[0];
     mshadow::Stream<xpu> *stream = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(igrad_data.dtype(), igrad_data_DType, {
-      mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
-        stream,
-        igrad_data.data().Size(),
-        igrad_data.data().dptr<igrad_data_DType>());
-    });
+    Fill<false>(stream, igrad_data.data(), req[0], 0);
     for (int i = 0, j = 0; i < length; ++i) {
       if (idx_dptr[i]) {
         NDArray src = ograd.At(j++);
