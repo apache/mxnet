@@ -160,8 +160,6 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 // Allow publishing to GitHub with a custom context (the status shown under a PR)
 // Credit to https://plugins.jenkins.io/github
 def get_repo_url() {
-  //item = Jenkins.instance.getItemByFullName("JOB_NAME")
-  //return item.getScm().getUserRemoteConfigs()[0].getUrl()
   checkout scm
   sh "git config --get remote.origin.url > .git/remote-url"
   return readFile(".git/remote-url").trim()
