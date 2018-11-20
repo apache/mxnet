@@ -91,23 +91,28 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
   }
 }
 
-def publish_test_coverage() {
-    // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
-    lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
+def get_git_commit_hash() {
+  lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
     lastCommitMessage = lastCommitMessage.trim()
     if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
         // Merge commit applied by Jenkins, skip that commit
-        GIT_COMMIT_HASH = sh (script: "git rev-parse @~", returnStdout: true)
+        git_commit_hash = sh (script: "git rev-parse @~", returnStdout: true)
     } else {
-        GIT_COMMIT_HASH = sh (script: "git rev-parse @", returnStdout: true)
+        git_commit_hash = sh (script: "git rev-parse @", returnStdout: true)
     }
+    return git_commit_hash
+}
+
+def publish_test_coverage() {
+    // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
+    git_commit_hash = get_git_commit_hash()
    
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${GIT_COMMIT_HASH} -P ${env.CHANGE_ID}"
+      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${git_commit_hash} -P ${env.CHANGE_ID}"
     } else {
       // Branch execution
-      codecovArgs = "-B ${env.BRANCH_NAME} -C ${GIT_COMMIT_HASH}"
+      codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
     }
 
     // To make sure we never fail because test coverage reporting is not available
@@ -144,6 +149,56 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   sh command
 }
 
+// Allow publishing to GitHub with a custom context (the status shown under a PR)
+// Credit to https://plugins.jenkins.io/github
+def get_repo_url() {
+  //item = Jenkins.instance.getItemByFullName("JOB_NAME")
+  //return item.getScm().getUserRemoteConfigs()[0].getUrl()
+
+  sh "git config --get remote.origin.url > .git/remote-url"
+  return readFile(".git/remote-url").trim()
+}
+
+def update_github_commit_status(state, message) {
+  node(NODE_LINUX_CPU) {
+    // NOTE: https://issues.jenkins-ci.org/browse/JENKINS-39482
+    //The GitHubCommitStatusSetter requires that the Git Server is defined under 
+    //*Manage Jenkins > Configure System > GitHub > GitHub Servers*. 
+    //Otherwise the GitHubCommitStatusSetter is not able to resolve the repository name 
+    //properly and you would see an empty list of repos:
+    //[Set GitHub commit status (universal)] PENDING on repos [] (sha:xxxxxxx) with context:test/mycontext
+    //See https://cwiki.apache.org/confluence/display/MXNET/Troubleshooting#Troubleshooting-GitHubcommit/PRstatusdoesnotgetpublished
+    repoUrl = get_repo_url()
+    commitSha = get_git_commit_hash()
+    context = get_github_context()
+    print repoUrl
+
+    step([
+      $class: 'GitHubCommitStatusSetter',
+      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
+      commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
+      statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
+      errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
+      statusResultSource: [
+        $class: 'ConditionalStatusResultSource',
+        results: [[$class: "AnyBuildResult", message: message, state: state]]
+      ]
+    ])
+  }
+}
+
+def get_github_context() {
+  // Since we use multi-branch pipelines, Jenkins appends the branch name to the job name
+  if (JOB_NAME.contains('/')) {
+    short_job_name = JOB_NAME.split('/')[0] 
+  } else {
+    short_job_name = JOB_NAME
+  }
+  
+  return "ci/jenkins/${short_job_name}"
+}
+
 
 
 def assign_node_labels(args) {
@@ -164,15 +219,18 @@ def main_wrapper(args) {
   // assign any caught errors here
   err = null
   try {
+    update_github_commit_status('PENDING', 'Job has been enqueued')
     args['core_logic']()
 
     // set build status to success at the end
     currentBuild.result = "SUCCESS"
+    update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
     node(NODE_LINUX_CPU) {
       sh "echo caught ${caughtError}"
       err = caughtError
       currentBuild.result = "FAILURE"
+      update_github_commit_status('FAILURE', 'Job failed')
     }
   } finally {
     node(NODE_LINUX_CPU) {
