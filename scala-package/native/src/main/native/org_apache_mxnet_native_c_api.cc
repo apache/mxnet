@@ -430,7 +430,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   // TODO(andrewfayres): this is a workaround to get scala unit test pass
   // need to update scala APIs to support large array
   int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
-                                     static_cast<const mx_float *>(sourcePtr), 
+                                     static_cast<const mx_float *>(sourcePtr),
                                      static_cast<jlong>(arrSize));
   env->ReleaseFloatArrayElements(sourceArr, sourcePtr, 0);
   return ret;
