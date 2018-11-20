@@ -18,6 +18,7 @@
 # coding: utf-8
 """Utility functions for NDArray and BaseSparseNDArray."""
 import ctypes
+import sys
 
 from ..base import _LIB, check_call, py_str, c_str, string_types, mx_uint, NDArrayHandle
 from ..base import c_array, c_handle_array, c_str_array
