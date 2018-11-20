@@ -392,7 +392,7 @@ def test_softmax_with_large_negative_inputs():
     exec1.forward()[0].wait_to_read()
     ndarr = exec1.outputs[0][0][0][0]
     nparr = ndarr.asnumpy()
-    assert(np.isnan(nparr).any(), False)
+    assert np.array_equal(nparr, np.array([1.0,1.0]))
 
 @with_seed()
 def test_non_mkldnn_fcomputeex():
