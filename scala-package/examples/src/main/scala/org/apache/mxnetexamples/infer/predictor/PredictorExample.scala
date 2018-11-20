@@ -70,11 +70,14 @@ object PredictorExample {
       context = Context.gpu()
     }
 
-    val inputDesc = IndexedSeq(new DataDesc("data", Shape(1, 3, 224, 224),
+    val imgWidth = 224
+    val imgHeight = 224
+
+    val inputDesc = IndexedSeq(new DataDesc("data", Shape(1, 3, imgHeight, imgWidth),
       DType.Float32, Layout.NCHW))
 
     val predictor = loadModel(inst.modelPathPrefix, inputDesc, context, 0)
-    val img = preProcess(inst.inputImagePath, 224, 224)
+    val img = preProcess(inst.inputImagePath, imgHeight, imgWidth)
     val result = doInference(predictor, img)(0).toArray
     postProcess(inst.modelPathPrefix, result)
   }
