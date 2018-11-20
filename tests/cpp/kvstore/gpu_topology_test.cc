@@ -28,24 +28,20 @@
 #include <mxnet/kvstore.h>
 #include "../src/kvstore/gpu_topology.h"
 
-void GenerateMatrix(std::vector<float>* W, int num_gpus, float k,
-                    std::mt19937* gen) {
+void GenerateMatrix(std::vector<float>* W, int num_gpus, std::mt19937* gen) {
   std::uniform_real_distribution<> dis(0., 1.);
   for (int row = 0; row < num_gpus; ++row) {
     for (int col = row+1; col < num_gpus; ++col) {
-      float sample = dis(*gen);
-      if (sample < k)
-        continue;
-      sample = dis(*gen);
-      if (sample < 0.33f) {
-        (*W)[row*num_gpus+col] = 1.f;
-        (*W)[col*num_gpus+row] = 1.f;
+      double sample = dis(*gen);
+      if (sample < 0.33) {
+        (*W)[row*num_gpus+col] = 1.;
+        (*W)[col*num_gpus+row] = 1.;
       } else if (sample < 0.66f) {
-        (*W)[row*num_gpus+col] = 2.f;
-        (*W)[col*num_gpus+row] = 2.f;
+        (*W)[row*num_gpus+col] = 2.;
+        (*W)[col*num_gpus+row] = 2.;
       } else {
-        (*W)[row*num_gpus+col] = 3.f;
-        (*W)[col*num_gpus+row] = 3.f;
+        (*W)[row*num_gpus+col] = 3.;
+        (*W)[col*num_gpus+row] = 3.;
       }
     }
   }
@@ -71,11 +67,12 @@ void TestComputeTreesRandomized(int num_gpus, float alpha, int backtrack,
   bool satisfied = false;
   std::vector<float> W(num_gpus*num_gpus, 0.f);
   int depth = mxnet::kvstore::ComputeDepth(num_gpus);
-  while (!satisfied) {
-    float k = dis(*gen);
-    std::fill(W.begin(), W.end(), 0.f);
-    GenerateMatrix(&W, num_gpus, k, gen);
-    satisfied = IsSatisfactory(W, num_gpus, depth);
+  GenerateMatrix(&W, num_gpus, gen);
+  satisfied = IsSatisfactory(W, num_gpus, depth);
+  if (mxnet::kvstore::kLogTree && !satisfied) {
+    LOG(ERROR) << " topology connectivity not satisfied "
+                  "(out edges per node less than tree depth)";
+    mxnet::kvstore::PrintMatrix("W", W, num_gpus, num_gpus);
   }
 
   std::vector<std::vector<size_t>> topo;
@@ -561,8 +558,7 @@ TEST(GpuTopology, TestComputeTrees1) {
   std::mt19937 gen(1);
   float alpha = 0.7;
   bool backtrack = true;
-  // Do 5 randomized tests per GPU count from 2 to 16
-  for (int num_gpus = 2; num_gpus <= 16; ++num_gpus) {
+  for (int num_gpus = 2; num_gpus <= 8; ++num_gpus) {
     LOG(INFO) << "Testing " << num_gpus << " x " << num_gpus;
     for (int i = 0; i < 5; ++i) {
       TestComputeTreesRandomized(num_gpus, alpha, backtrack, &gen);
