@@ -220,6 +220,17 @@ def parallel_stage(stage_name, steps) {
 }
 
 def assign_node_labels(args) {
+  // This function allows to assign instance labels to the generalized placeholders. 
+  // This serves two purposes:
+  // 1. Allow generalized placeholders (e.g. NODE_WINDOWS_CPU) in the job definition
+  //    in order to abstract away the underlying node label. This allows to schedule a job
+  //    onto a different node for testing or security reasons. This could be, for example,
+  //    when you want to test a new set of slaves on separate labels or when a job should
+  //    only be run on restricted slaves
+  // 2. Restrict the allowed job types within a Jenkinsfile. For example, a UNIX-CPU-only
+  //    Jenkinsfile should not allowed access to Windows or GPU instances. This prevents
+  //    users from just copy&pasting something into an existing Jenkinsfile without
+  //    knowing about the limitations.
   NODE_LINUX_CPU = args.linux_cpu
   NODE_LINUX_GPU = args.linux_gpu
   NODE_LINUX_GPU_P3 = args.linux_gpu_p3
