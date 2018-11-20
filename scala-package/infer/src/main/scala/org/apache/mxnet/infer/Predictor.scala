@@ -17,7 +17,6 @@
 
 package org.apache.mxnet.infer
 
-import org.apache.mxnet.WarnIfNotDisposed.{logger, traceProperty}
 import org.apache.mxnet.io.NDArrayIter
 import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
 import org.apache.mxnet.module.Module
@@ -85,7 +84,7 @@ class Predictor(modelPathPrefix: String,
     the acceptable range of the model
    */
   private val traceProperty = "mxnet.disableShapeCheck"
-  lazy val shapeCheckDisabld = {
+  private lazy val shapeCheckDisabled = {
     val value = Try(System.getProperty(traceProperty).toBoolean).getOrElse(false)
     if (value) {
       logger.warn("Shape check is disabled (property {} is set)", traceProperty)
@@ -189,7 +188,7 @@ class Predictor(modelPathPrefix: String,
     for((i, d) <- inputBatch.zip(iDescriptors)) {
        require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
          "All inputs should be of same batch size")
-      if (!shapeCheckDisabld) {
+      if (!shapeCheckDisabled) {
         require(i.shape.drop(batchIndex + 1) == d.shape.drop(batchIndex + 1),
           s"Input Data Shape: ${i.shape} should match the inputDescriptor " +
             s"shape: ${d.shape} except batchSize")
