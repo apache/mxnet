@@ -35,7 +35,7 @@ enum QuantizedConcatOutputs { kOut, kMin, kMax };
 }
 
 static float GetScale(const NDArray& data, float min, float max) {
-  auto data_range = (data.dtype() == mshadow::kInt8) ? int8_range : uint8_range;
+  auto data_range = (data.dtype() == mshadow::kInt8) ? INT8_RANGE : UINT8_RANGE;
   return data_range / MaxAbs(min, max);
 }
 
