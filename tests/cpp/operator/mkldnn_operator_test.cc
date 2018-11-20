@@ -329,7 +329,7 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
 
 OpAttrs GetBNOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("LRN");
+  attrs.attrs.op = Op::Get("BN");
   attrs.num_inputs = 1;
   attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"nsize" , "3"});
@@ -348,9 +348,9 @@ OpAttrs GetBNOp() {
   return attrs;
 }
 
-OpAttrs GetBNBackwardsOp() {
+OpAttrs GetBNBackwardOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("_backward_LRN");
+  attrs.attrs.op = Op::Get("_backward_BN");
   attrs.num_inputs = 3;
   attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"nsize" , "3"});
@@ -1240,7 +1240,7 @@ TEST(IMPERATIVE, DeconvOp) {
 
 TEST(IMPERATIVE, BNOp) {
   OpAttrs forward_attrs = GetBNOp();
-  OpAttrs backwards_attrs = GetBNBackwardsOp();
+  OpAttrs backwards_attrs = GetBNBackwardOp();
   TestOpEx(forward_attrs, backwards_attrs);
 }
 
