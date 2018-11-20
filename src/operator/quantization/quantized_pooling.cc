@@ -127,8 +127,8 @@ inline static bool QuantizedPoolingStorageType(const nnvm::NodeAttrs &attrs,
 #else
   CHECK_EQ(out_attrs->size(), 3);
 #endif
-  for (size_t i = 0; i < out_attrs->size(); i++)
-    (*out_attrs)[i] = kDefaultStorage;
+  for (int& out_attr : *out_attrs)
+    out_attr = kDefaultStorage;
   return true;
 }
 

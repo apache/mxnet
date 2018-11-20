@@ -21,16 +21,11 @@
 # the whole docker cache for the image
 
 set -ex
-cd "$(dirname "$0")"
-# install libraries for mxnet's scala package on ubuntu
-echo 'Installing Scala...'
-apt-get update || true
-apt-get install -y software-properties-common
-apt-get update || true
-apt-get install -y openjdk-8-jdk
-apt-get install -y openjdk-8-jre
 
-apt-get update || true
-apt-get install -y \
-    maven \
-    scala
+yum install -y java-1.8.0-openjdk-devel
+# Build from source with Maven
+wget http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+tar xzf apache-maven-3.3.9-bin.tar.gz
+mkdir /usr/local/maven
+mv apache-maven-3.3.9/ /usr/local/maven/
+alternatives --install /usr/bin/mvn mvn /usr/local/maven/apache-maven-3.3.9/bin/mvn 1

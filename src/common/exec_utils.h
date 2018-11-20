@@ -591,14 +591,14 @@ inline nnvm::Graph AssignContext(nnvm::Graph g,
 
   g.attrs["device"] = std::make_shared<dmlc::any>(std::move(device));
   g = nnvm::pass::PlaceDevice(g, "__ctx_group__", device_map, "_CrossDeviceCopy");
-  const auto& assigned_device = g.GetAttr<nnvm::DeviceVector>("device");
+  const auto& assigned_devices = g.GetAttr<nnvm::DeviceVector>("device");
 
   exec::ContextVector vcontext;
-  for (size_t i = 0; i < assigned_device.size(); ++i) {
-    if (assigned_device[i] == -1) {
+  for (auto context : assigned_devices) {
+    if (context == -1) {
       vcontext.push_back(default_ctx);
     } else {
-      vcontext.push_back(ctx_list[assigned_device[i]]);
+      vcontext.push_back(ctx_list[context]);
     }
   }
 
