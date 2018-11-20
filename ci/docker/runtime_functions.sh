@@ -768,6 +768,12 @@ unittest_centos7_cpu_scala() {
     make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
 
+unittest_mkldnn_cpu_scala() {
+    set -ex
+    make scalapkg USE_BLAS=openblas USE_MKLDNN=1 ENABLE_TESTCOVERAGE=1
+    make scalaunittest USE_BLAS=openblas USE_MKLDNN=1 ENABLE_TESTCOVERAGE=1
+}
+
 unittest_ubuntu_cpu_clojure() {
     set -ex
     make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
