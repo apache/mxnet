@@ -87,7 +87,7 @@ class AudioFolderDataset(Dataset):
             for folder in sorted(os.listdir(root)):
                 path = os.path.join(root, folder)
                 if not os.path.isdir(path):
-                    warnings.warn('Ignoring %s, which is not a directory.'%path, stacklevel=3)
+                    warnings.warn('Ignoring {}, which is not a directory.'.format(path))
                     continue
                 label = len(self.synsets)
                 self.synsets.append(folder)
@@ -95,12 +95,11 @@ class AudioFolderDataset(Dataset):
                     file_name = os.path.join(path, filename)
                     ext = os.path.splitext(file_name)[1]
                     if ext.lower() not in self._exts:
-                        warnings.warn('Ignoring %s of type %s. Only support %s'%(filename, ext, ', '.join(self._exts)))
+                        warnings.warn('Ignoring {} of type {}. Only support {}'\
+                        .format(filename, ext, ', '.join(self._exts)))
                         continue
                     self.items.append((file_name, label))
         else:
-            data_tmp = []
-            label_tmp = []
             skipped_rows = 0
             with open(self._train_csv, "r") as traincsv:
                 for line in traincsv:
@@ -111,35 +110,27 @@ class AudioFolderDataset(Dataset):
                     label = line.split(",")[1].strip()
                     if label not in self.synsets:
                         self.synsets.append(label)
-                    data_tmp.append(os.path.join(self._root, line.split(",")[0]))
-                    label_tmp.append(self.synsets.index(label))
+                    if self._format not in filename:
+                        filename = filename+self._format
+                    self.items.append((filename, nd.array(self.synsets.index(label)).reshape((1,))))
 
             #Generating the synset.txt file now
             if not os.path.exists("./synset.txt"):
                 with open("./synset.txt", "w") as synsets_file:
                     for item in self.synsets:
                         synsets_file.write(item+os.linesep)
-                print("Synsets is generated  as synset.txt")
+                print("Synsets is generated as synset.txt")
             else:
                 warnings.warn("Synset file already exists in the current directory! Not generating synset.txt.")
 
-            self._label = nd.array(label_tmp)
-            for i, _ in enumerate(data_tmp):
-                if self._format not in data_tmp[i]:
-                    self.items.append((data_tmp[i]+self._format, self._label[i]))
 
     def __getitem__(self, idx):
         """Retrieve the item (data, label) stored at idx in items"""
         filename = self.items[idx][0]
         label = self.items[idx][1]
-
-        # res_type is resampling type for the audio signal
-        # can be passed values like 'kaiser_best', 'kaiser_fast'. 'kaiser_fast' performs better and used
-        # more than kaiser_best
         if librosa is not None:
             X1, _ = librosa.load(filename, res_type='kaiser_fast')
             return nd.array(X1), label
-
         else:
             warnings.warn(" Dependency librosa is not installed! \
             Cannot load the audio(wav) file into the numpy.ndarray.")

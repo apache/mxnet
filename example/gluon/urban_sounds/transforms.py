@@ -99,6 +99,9 @@ class Scale(Block):
         super(Scale, self).__init__()
 
     def forward(self, x):
+        if self.scale_factor == 0:
+            warnings.warn("Scale factor cannot be 0.")
+            return x
         if isinstance(x, np.ndarray):
             return nd.array(x/self.scale_factor)
         return x / self.scale_factor

@@ -28,7 +28,7 @@ import model
 def evaluate_accuracy(data_iterator, net):
     """Function to evaluate accuracy of any data iterator passed to it as an argument"""
     acc = mx.metric.Accuracy()
-    for _, (data, label) in enumerate(data_iterator):
+    for data, label in data_iterator:
         output = net(data)
         predictions = nd.argmax(output, axis=1)
         predictions = predictions.reshape((-1, 1))
@@ -89,7 +89,7 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 
     for e in range(epochs):
         cumulative_loss = 0
-        for _, (data, label) in enumerate(audio_train_loader):
+        for data, label in audio_train_loader:
             with autograd.record():
                 output = net(data)
                 loss = softmax_loss(output, label)
