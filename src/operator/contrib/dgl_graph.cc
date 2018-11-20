@@ -249,9 +249,10 @@ static void DGLSubgraphComputeExCPU(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_contrib_dgl_subgraph)
 .describe(R"code(This operator constructs an induced subgraph for
-a given set of vertices from a graph. It returns two CSR matrices
-if return_mapping is True: the first matrix contains edges with
-new edge Ids, the second matrix contains edges with the original
+a given set of vertices from a graph. The operator accepts multiple
+sets of vertices as input. For each set of vertices, it returns a pair
+of CSR matrices if return_mapping is True: the first matrix contains edges
+with new edge Ids, the second matrix contains edges with the original
 edge Ids.
 Example::
   x=[[1, 0, 0, 2],
