@@ -59,20 +59,20 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
     oshape[H] = 1;
     oshape[W] = 1;
   } else {
-     if (param.pooling_convention == pool_enum::kValid) {
-      oshape[2] = 1 +
-                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
+    if (param.pooling_convention == pool_enum::kValid) {
+      oshape[H] = 1 +
+                  (dshape[H] + 2 * param.pad[0] - param.kernel[0]) /
                       param.stride[0];
-      oshape[3] = 1 +
-                  (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
+      oshape[W] = 1 +
+                  (dshape[W] + 2 * param.pad[1] - param.kernel[1]) /
                       param.stride[1];
     } else {
-      oshape[2] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
+      oshape[H] = 1 + static_cast<int>(std::ceil(
+                          static_cast<float>(dshape[H] + 2 * param.pad[0] -
                                              param.kernel[0]) /
                           param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[3] + 2 * param.pad[1] -
+      oshape[W] = 1 + static_cast<int>(std::ceil(
+                          static_cast<float>(dshape[W] + 2 * param.pad[1] -
                                              param.kernel[1]) /
                           param.stride[1]));
     }
