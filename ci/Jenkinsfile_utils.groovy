@@ -95,6 +95,10 @@ return 0
   }
 }
 
+def get_jenkins_master_url() {
+    return env.BUILD_URL.split('/')[2].split(':')[0]
+}
+
 def get_git_commit_hash() {
   lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
   lastCommitMessage = lastCommitMessage.trim()

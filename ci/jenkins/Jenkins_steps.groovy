@@ -1075,7 +1075,13 @@ def docs_website() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-            sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+
+            master_url = utils.get_jenkins_master_url()
+            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
+                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
+            } else {
+                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}" 
+            }
           }
         }
       }
