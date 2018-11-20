@@ -575,6 +575,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
 
+      CHECK_NE(forward_attrs.accept_dims.size(), 0);
       if (forward_attrs.accept_dims.find(in_arr.arr.shape().ndim()) ==
           forward_attrs.accept_dims.end())
         continue;
