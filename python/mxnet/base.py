@@ -215,7 +215,10 @@ _LIB = _load_lib()
 # type definitions
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
-mx_long = ctypes.c_longlong
+if sys.version_info.major > 2:
+    mx_long = ctypes.c_longlong
+else:
+    mx_long = ctypes.c_long
 mx_float_p = ctypes.POINTER(mx_float)
 mx_real_t = np.float32
 NDArrayHandle = ctypes.c_void_p
