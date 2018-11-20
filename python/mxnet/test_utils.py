@@ -261,10 +261,14 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     Parameters
     ----------
     shape: list or tuple
-    stype: str, valid values: "csr" or "row_sparse"
-    density, optional: float, should be between 0 and 1
-    distribution, optional: str, valid values: "uniform" or "powerlaw"
-    dtype, optional: numpy.dtype, default value is None
+    stype: str
+        valid values: "csr" or "row_sparse"
+    density: float, optional
+        should be between 0 and 1
+    distribution: str, optional
+        valid values: "uniform" or "powerlaw"
+    dtype: numpy.dtype, optional
+        default value is None
 
     Returns
     -------
@@ -336,7 +340,7 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
         assert(False), "unknown storage type"
         return False
 
-def rand_ndarray(shape, stype, density=None, dtype=None,
+def rand_ndarray(shape, stype='default', density=None, dtype=None,
                  modifier_func=None, shuffle_csr_indices=False, distribution=None):
     if stype == 'default':
         arr = mx.nd.array(random_arrays(shape), dtype=dtype)
@@ -1379,7 +1383,7 @@ def list_gpus():
     for cmd in nvidia_smi:
         try:
             re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
-        except OSError:
+        except (subprocess.CalledProcessError, OSError):
             pass
     return range(len([i for i in re.split('\n') if 'GPU' in i]))
 
@@ -1998,3 +2002,20 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if compare_states:
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
+
+class EnvManager(object):
+    """Environment variable setter and unsetter via with idiom"""
+    def __init__(self, key, val):
+        self._key = key
+        self._next_val = val
+        self._prev_val = None
+
+    def __enter__(self):
+        self._prev_val = os.environ.get(self._key)
+        os.environ[self._key] = self._next_val
+
+    def __exit__(self, ptype, value, trace):
+        if self._prev_val:
+            os.environ[self._key] = self._prev_val
+        else:
+            del os.environ[self._key]

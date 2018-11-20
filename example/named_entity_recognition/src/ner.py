@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 parser = argparse.ArgumentParser(description="Deep neural network for multivariate time series forecasting",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--data-dir', type=str, default='../preprocessed_data',
+parser.add_argument('--data-dir', type=str, default='../data',
                     help='relative path to input data')
 parser.add_argument('--output-dir', type=str, default='../results',
                     help='directory to save model files to')

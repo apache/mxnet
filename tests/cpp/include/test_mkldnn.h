@@ -116,10 +116,15 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
                                            data_md, weight_md, out_md, strides,
                                            padding, padding, mkldnn::padding_kind::zero);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
-    std::vector<mkldnn::memory::format> ret(2);
+    while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(pd.next_impl()) << "No implementation";
+    }
+
+    std::vector<mkldnn::memory::format> ret(1);
     ret[0] = static_cast<mkldnn::memory::format>(pd.dst_primitive_desc().desc().data.format);
-    ret[1] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
-    printf("format: %d, %d\n", ret[0], ret[1]);
+    printf("format: %d \n", ret[0]);
     return ret;
   } else if (num_dims == 5) {
     mkldnn::memory::dims data_dims{1, 32, 112, 112};
@@ -139,6 +144,12 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
                                            data_md, weight_md, out_md, strides,
                                            padding, padding, mkldnn::padding_kind::zero);
     mkldnn::convolution_forward::primitive_desc pd(desc, CpuEngine::Get()->get_engine());
+    while (pd.dst_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           pd.src_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(pd.next_impl()) << "No implementation";
+    }
+
     std::vector<mkldnn::memory::format> ret(1);
     ret[0] = static_cast<mkldnn::memory::format>(pd.weights_primitive_desc().desc().data.format);
     printf("format: %d\n", ret[0]);
@@ -189,7 +200,6 @@ inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = fals
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
     if (!spatial_data_format) {
       pds.push_back(GetMemPD(s1, dtype, formats[0]));
-      pds.push_back(GetMemPD(s2, dtype, formats[1]));
     }
   }
   {
@@ -247,7 +257,7 @@ enum ArrayTypes {
 
 inline NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input,
     bool is_deconv = false) {
-  CHECK(kernel.ndim() == 2) << "mkldnn only supports 2d filters on 4d inputs";
+  CHECK_EQ(kernel.ndim(), 2) << "mkldnn only supports 2d filters on 4d inputs";
   TShape target_shape(4);
   target_shape[0] = is_deconv ? input[1] : num_filters;
   target_shape[1] = is_deconv ? num_filters : input[1];

@@ -17,6 +17,7 @@
 package org.apache.mxnet.javaapi
 
 import collection.JavaConverters._
+import scala.language.implicitConversions
 
 class Context(val context: org.apache.mxnet.Context) {
 

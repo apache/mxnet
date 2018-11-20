@@ -162,7 +162,7 @@ If building on CPU and using OpenBLAS:
 
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd mxnet
+    cd incubator-mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
 ```
 
@@ -170,7 +170,7 @@ If building on CPU and using MKL and MKL-DNN (make sure MKL is installed accordi
 
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd mxnet
+    cd incubator-mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=mkl USE_MKLDNN=1
 ```
 
@@ -178,7 +178,7 @@ If building on GPU and you want OpenCV and OpenBLAS (make sure you have installe
 
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd mxnet
+    cd incubator-mxnet
     make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
@@ -189,7 +189,7 @@ Building from source creates a library called ```libmxnet.so``` in the `lib` fol
 You may also want to add the MXNet shared library to your `LD_LIBRARY_PATH`:
 
 ```bash
-export LD_LIBRARY_PATH=~/incubator-mxnet/lib
+export LD_LIBRARY_PATH=$PWD/lib
 ```
 
 After building the MXNet library, you may install language bindings.
