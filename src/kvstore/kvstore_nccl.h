@@ -341,6 +341,7 @@ class KVStoreNCCL : public KVStoreLocal {
         }
       } else {
         auto& buf = merge_buf_[key];
+        (void)buf;
         int root = src.ctx().dev_id;
         assert(root == buf.ctx().dev_id);
         root_id = FindRootId(dst, root);
