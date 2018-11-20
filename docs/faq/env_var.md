@@ -194,7 +194,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   
 * MXNET_MKLDNN_CACHE_SIZE
   - Values: Int ```(default=-1)```
-  - Flag to set MKLDNN cache size. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded.
+  - Flag to set MKLDNN cache size. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use MKLDNN and different input shape.
 
 Settings for Minimum Memory Usage
 ---------------------------------
