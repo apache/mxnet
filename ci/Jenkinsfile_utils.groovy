@@ -65,8 +65,10 @@ def init_git_win() {
 // pack libraries for later use
 def pack_lib(name, libs, include_gcov_data = false) {
   sh """
+set +e
 echo "Packing ${libs} into ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+return 0
 """
   stash includes: libs, name: name
 
@@ -82,8 +84,10 @@ def unpack_and_init(name, libs, include_gcov_data = false) {
   init_git()
   unstash name
   sh """
+set +e
 echo "Unpacked ${libs} from ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+return 0
 """
   if (include_gcov_data) {
     // Restore GCNO files that are required for GCOV to operate during runtime
