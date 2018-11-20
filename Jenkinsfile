@@ -735,17 +735,6 @@ core_logic: {
         }
       }
     },
-    'Scala: MKLDNN-CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-mkldnn-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
-            utils.docker_run('mkldnn_cpu', 'unittest_mkldnn_cpu_scala', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
     'Clojure: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-clojure-cpu') {
