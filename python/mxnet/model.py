@@ -87,7 +87,7 @@ def _create_kvstore(kvstore, num_device, arg_params):
     arg_params : dict of str to `NDArray`.
         Model parameter, dict of name to `NDArray` of net's weights.
     """
-    update_on_kvstore = True
+    update_on_kvstore = bool(int(os.getenv('MXNET_UPDATE_ON_KVSTORE', 1)))
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
@@ -157,6 +157,7 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
     """Perform update of param_arrays from grad_arrays not on kvstore."""
+    updates = [[] for _ in range(num_device)]
     for i, pair in enumerate(zip(param_arrays, grad_arrays)):
         arg_list, grad_list = pair
         if grad_list[0] is None:
@@ -173,7 +174,10 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             # state for the same index but on diff devs, TODO(mli)
             # use a better solution later
             w, g = p
-            updater(index*num_device+k, g, w)
+            updates[k].append((index*num_device+k, g, w))
+    for dev_updates in updates:
+        i, w, g = zip(*dev_updates)
+        updater(i, w, g)
 
 
 def _multiple_callbacks(callbacks, *args, **kwargs):
