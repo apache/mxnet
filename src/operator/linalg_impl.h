@@ -348,17 +348,17 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
       if ((cc_major >= 5) && use_tensor_ops) {
         CUBLAS_CALL(cublasGemmStridedBatchedEx(
             blas_handle, (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
-            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), C.size(2), C.size(0),
-            (tB ? B.size(2) : B.size(0)), &alpha, B.dptr_, CUDA_R_16F,
-            B.stride_, B.size(1) * B.stride_, A.dptr_, CUDA_R_16F, A.stride_,
-            A.size(1) * A.stride_, &beta, C.dptr_, CUDA_R_16F, C.stride_,
+            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), C.size(2), C.size(1),
+            (tB ? B.size(2) : B.size(1)), &alpha, B.dptr_, CUDA_R_32F,
+            B.stride_, B.size(1) * B.stride_, A.dptr_, CUDA_R_32F, A.stride_,
+            A.size(1) * A.stride_, &beta, C.dptr_, CUDA_R_32F, C.stride_,
             C.size(1) * C.stride_, A.size(0), CUDA_R_32F,
             CUBLAS_GEMM_DEFAULT_TENSOR_OP));
       } else {
         CUBLAS_CALL(cublasSgemmStridedBatched(
             blas_handle, (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
-            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), C.size(2), C.size(0),
-            (tB ? B.size(2) : B.size(0)), &alpha, B.dptr_, B.stride_,
+            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), C.size(2), C.size(1),
+            (tB ? B.size(2) : B.size(1)), &alpha, B.dptr_, B.stride_,
             B.size(1) * B.stride_, A.dptr_, A.stride_, A.size(1) * A.stride_,
             &beta, C.dptr_, C.stride_, C.size(1) * C.stride_, A.size(0)));
       }
