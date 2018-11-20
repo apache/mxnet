@@ -383,6 +383,17 @@ def test_fullyconnected():
     for stype in stypes:
         check_fullyconnected_training(stype)
 
+def test_softmax_with_large_negative_inputs():
+    input_data = mx.nd.array([[[[-1e30,-1e30]]]])
+    data = mx.sym.Variable('data')
+    out1 = data.softmax(axis=1)
+    exec1 = out1.bind(mx.cpu(), args={'data': input_data, 'softmax_label': mx.nd.ones([1]),
+                                      'fc_weight': mx.nd.ones([2,2]), 'fc1_weight': mx.nd.ones([2,2])})
+    exec1.forward()[0].wait_to_read()
+    ndarr = exec1.outputs[0][0][0][0]
+    nparr = ndarr.asnumpy()
+    assert(np.isnan(nparr).any(), False)
+
 @with_seed()
 def test_non_mkldnn_fcomputeex():
     # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
