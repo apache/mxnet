@@ -77,5 +77,36 @@ def find_lib_path():
     return lib_path
 
 
+def find_include_path():
+    """Find MXNet dynamic library files.
+
+    Returns
+    -------
+    incl_path : string
+        Path to the header files.
+    """
+    incl_from_env = os.environ.get('MXNET_INCLUDE_PATH')
+    if incl_from_env:
+        if os.path.isfile(incl_from_env):
+            if not os.path.isabs(incl_from_env):
+                logging.warning("MXNET_INCLUDE_PATH should be an absolute path, instead of: %s",
+                                incl_from_env)
+            else:
+                if os.name == 'nt':
+                    os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(incl_from_env)
+                return [incl_from_env]
+        else:
+            logging.warning("MXNET_INCLUDE_PATH '%s' doesn't exist", incl_from_env)
+
+    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+    incl_path = os.path.join(curr_path, '../../include/')
+    if len(incl_path) == 0:
+        raise RuntimeError('Cannot find the MXNet include path.\n')
+
+    if os.name == 'nt':
+        os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(incl_path)
+    return incl_path
+
+
 # current version
 __version__ = "1.3.1"
