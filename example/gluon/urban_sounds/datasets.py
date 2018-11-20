@@ -54,12 +54,14 @@ class AudioFolderDataset(Dataset):
     skip_rows: int, default 0
         While reading from csv file, how many rows to skip at the start of the file to avoid reading in header
 
+
     Attributes
     ----------
     synsets : list
         List of class names. `synsets[i]` is the name for the integer label `i`
     items : list of tuples
         List of all audio in (filename, label) pairs.
+
     """
     def __init__(self, root, train_csv=None, file_format='.wav', skip_rows=0):
         if not librosa:
@@ -127,9 +129,7 @@ class AudioFolderDataset(Dataset):
                     self.items.append((data_tmp[i]+self._format, self._label[i]))
 
     def __getitem__(self, idx):
-        """
-            Retrieve the item (data, label) stored at idx in items
-        """
+        """Retrieve the item (data, label) stored at idx in items"""
         filename = self.items[idx][0]
         label = self.items[idx][1]
 
@@ -143,9 +143,7 @@ class AudioFolderDataset(Dataset):
             return self.items[idx][0], self.items[idx][1]
 
     def __len__(self):
-        """
-            Retrieves the number of items in the dataset
-        """
+        """Retrieves the number of items in the dataset"""
         return len(self.items)
 
 
@@ -171,5 +169,6 @@ class AudioFolderDataset(Dataset):
         -------
         Dataset
             The transformed dataset.
+
         """
         return super(AudioFolderDataset, self).transform_first(fn, lazy=False)
