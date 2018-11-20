@@ -24,7 +24,7 @@ import numpy as np
 try:
     import librosa
 except ImportError as e:
-    warnings.warn("gluon/contrib/data/audio/transforms.py : librosa dependency could not be resolved or \
+    warnings.warn("librosa dependency could not be resolved or \
     imported, could not provide some/all transform.")
 
 from mxnet import ndarray as nd

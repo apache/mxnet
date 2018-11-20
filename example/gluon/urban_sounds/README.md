@@ -20,3 +20,7 @@ To be able to run this example:
    `pip install librosa`,
    For more details, refer here:
    **https://librosa.github.io/librosa/install.html**
+
+
+For information on the current design of how the AudioFolderDataset is implemented, refer below:
+**https://cwiki.apache.org/confluence/display/MXNET/Gluon+-+Audio**

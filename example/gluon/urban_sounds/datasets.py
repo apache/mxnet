@@ -27,8 +27,8 @@ from mxnet import ndarray as nd
 try:
     import librosa
 except ImportError as e:
-    warnings.warn("gluon/contrib/data/audio/datasets.py : librosa dependency could not be resolved or \
-    imported, could not load audio onto the numpy array.")
+    warnings.warn("librosa dependency could not be resolved or \
+    imported, could not load audio onto the numpy array. pip install librosa")
 
 
 class AudioFolderDataset(Dataset):
@@ -50,7 +50,7 @@ class AudioFolderDataset(Dataset):
     train_csv: str, default None
        train_csv should be populated by the training csv filename
     file_format: str, default '.wav'
-        The format of the audio files(.wav, .mp3)
+        The format of the audio files(.wav)
     skip_rows: int, default 0
         While reading from csv file, how many rows to skip at the start of the file to avoid reading in header
 
@@ -133,6 +133,9 @@ class AudioFolderDataset(Dataset):
         filename = self.items[idx][0]
         label = self.items[idx][1]
 
+        # res_type is resampling type for the audio signal
+        # can be passed values like 'kaiser_best', 'kaiser_fast'. 'kaiser_fast' performs better and used
+        # more than kaiser_best
         if librosa is not None:
             X1, _ = librosa.load(filename, res_type='kaiser_fast')
             return nd.array(X1), label
@@ -147,12 +150,14 @@ class AudioFolderDataset(Dataset):
         return len(self.items)
 
 
-    def transform_first(self, fn, lazy=True):
+    def transform_first(self, fn, lazy=False):
         """Returns a new dataset with the first element of each sample
         transformed by the transformer function `fn`.
 
         This is useful, for example, when you only want to transform data
         while keeping label as is.
+        lazy=False is passed to transform_first for dataset so that all tramsforms could be performed in
+        one shot and not during training. This is a performance consideration.
 
         Parameters
         ----------
