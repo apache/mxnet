@@ -171,7 +171,6 @@ def update_github_commit_status(state, message) {
     repoUrl = get_repo_url()
     commitSha = get_git_commit_hash()
     context = get_github_context()
-    print repoUrl
 
     step([
       $class: 'GitHubCommitStatusSetter',
@@ -199,7 +198,18 @@ def get_github_context() {
   return "ci/jenkins/${short_job_name}"
 }
 
-
+def parallel_stage(stage_name, steps) {
+    // Allow to pass an array of steps that will be executed in parallel in a stage
+    new_map = [:]
+    
+    for (def step in steps) {
+        new_map = new_map << step
+    }
+    
+    stage(stage_name) {
+      parallel new_map
+    }
+}
 
 def assign_node_labels(args) {
   NODE_LINUX_CPU = args.linux_cpu

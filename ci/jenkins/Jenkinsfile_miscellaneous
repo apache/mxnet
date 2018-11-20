@@ -20,8 +20,6 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
-
 // timeout in minutes
 max_time = 120
 
@@ -30,55 +28,21 @@ node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build') {
-    parallel 'CPU: ASAN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-asan') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
-            utils.pack_lib('cpu_asan', mx_lib_cpp_examples_cpu)
-          }
-        }
-      }
-    },
-    'Amalgamation MIN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/amalgamationmin') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_amalgamation_min', false)
-          }
-        }
-      }
-    },
-    'Amalgamation': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/amalgamation') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_amalgamation', false)
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Build', [
+    custom_steps.compile_unix_asan_cpu(),
+    custom_steps.compile_unix_amalgamation_min(),
+    custom_steps.compile_unix_amalgamation()
+  ]) 
 
-  stage('Tests') {
-    parallel 'CPU ASAN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-cpu-asan') {
-            utils.unpack_and_init('cpu_asan', mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Tests', [
+    custom_steps.misc_asan_cpu()
+  ]) 
 }
 ,
 failure_handler: {

@@ -20,301 +20,43 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-
-// Python wheels
-mx_pip = 'build/*.whl'
-
-// for scala build, need to pass extra libs when run with dist_kvstore
-mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
-// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-// mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
-mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
-mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/lenet, build/cpp-package/example/alexnet, build/cpp-package/example/googlenet, build/cpp-package/example/lenet_with_mxdataiter, build/cpp-package/example/resnet, build/cpp-package/example/mlp, build/cpp-package/example/mlp_cpu, build/cpp-package/example/mlp_gpu, build/cpp-package/example/test_score, build/cpp-package/example/test_optimizer'
-mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/mlp_cpu'
-
 // timeout in minutes
 max_time = 120
-
-
-// Python unittest for CPU
-// Python 2
-def python2_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu', false)
-  }
-}
-
-// Python 3
-def python3_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu', false)
-  }
-}
-
-// Python 3
-def python3_ut_asan(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
-  }
-}
-
-def python3_ut_mkldnn(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
-  }
-}
-
-// GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
-// both CPU and GPU
-// Python 2
-def python2_gpu_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_gpu', true)
-  }
-}
-
-// Python 3
-def python3_gpu_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu', true)
-  }
-}
-
-// Python 3 NOCUDNN
-def python3_gpu_ut_nocudnn(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_nocudnn', true)
-  }
-}
-
-def deploy_docs() {
-  parallel 'Docs': {
-    node(NODE_LINUX_CPU) {
-      ws('workspace/docs') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          utils.init_git()
-          utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-          sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-        }
-      }
-    }
-  },
-  'Julia docs': {
-    node(NODE_LINUX_CPU) {
-      ws('workspace/julia-docs') {
-        timeout(time: max_time, unit: 'MINUTES') {
-          utils.unpack_and_init('cpu', mx_lib)
-          utils.docker_run('ubuntu_cpu', 'deploy_jl_docs', false)
-        }
-      }
-    }
-  }
-}
 
 node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build') {
-    parallel 'CPU: Openblas': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-openblas') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_dist_lib, true)
-          }
-        }
-      }
-    },
-    'CPU: Openblas, debug': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-openblas') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
-            utils.pack_lib('cpu_debug', mx_cmake_lib_debug, true)
-          }
-        }
-      }
-    },
-    'CPU: MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-mkldnn-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu', mx_mkldnn_lib, true)
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Build', [
+    custom_steps.compile_unix_cpu_openblas(),
+    custom_steps.compile_unix_openblas_debug_cpu(),
+    custom_steps.compile_unix_mkldnn_cpu()
+  ]) 
 
-  stage('Tests') {
-    parallel 'Python2: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python2-cpu') {
-          try {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            python2_ut('ubuntu_cpu')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_cpu_train.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_cpu_quantization.xml')
-          }
-        }
-      }
-    },
-    'Python3: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-cpu') {
-          try {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            python3_ut('ubuntu_cpu')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
-          }
-        }
-      }
-    },
-    'Python3: CPU debug': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-cpu-debug') {
-          try {
-            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug, true)
-            python3_ut('ubuntu_cpu')
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
-          }
-        }
-      }
-    },
-    'Python2: MKLDNN-CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python2-mkldnn-cpu') {
-          try {
-            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
-            python2_ut('ubuntu_cpu')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_mkldnn_cpu_quantization.xml')
-          }
-        }
-      }
-    },
-    'Python3: MKLDNN-CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-mkldnn-cpu') {
-          try {
-            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
-            python3_ut_mkldnn('ubuntu_cpu')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
-          }
-        }
-      }
-    },
-    'Scala: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_dist_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
-    'Clojure: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-clojure-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_dist_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
-    'Perl: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-perl-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
-    'R: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-r-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    },
-    'Julia 0.6: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-julia06-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia06', false)
-          }
-        }
-      }
-    },
-    'Onnx CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/it-onnx-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_onnx', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }
+  utils.parallel_stage('Tests', [
+    custom_steps.test_unix_python2_cpu(),
+    custom_steps.test_unix_python3_cpu(),
+    custom_steps.test_unix_python3_debug_cpu(),
+    custom_steps.test_unix_python2_mkldnn_cpu(),
+    custom_steps.test_unix_python3_mkldnn_cpu(),
+    custom_steps.test_unix_scala_cpu(),
+    custom_steps.test_unix_clojure_cpu(),
+    custom_steps.test_unix_r_cpu(),
+    custom_steps.test_unix_julia_cpu(),
+    custom_steps.test_unix_onnx_cpu(),
+
     /*  Disabled due to master build failure:
      *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
      *  https://github.com/apache/incubator-mxnet/issues/11801
-
-    'dist-kvstore tests CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/it-dist-kvstore') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }, */
-  }
+    custom_steps.test_unix_distributed_kvstore_cpu()
+    */
+  ])
 }
 ,
 failure_handler: {

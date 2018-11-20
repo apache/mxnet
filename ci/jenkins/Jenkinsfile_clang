@@ -20,8 +20,6 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-
 // timeout in minutes
 max_time = 120
 
@@ -29,65 +27,19 @@ node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build') {
-    parallel 'CPU: Clang 3.9': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang39') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39', false)
-          }
-        }
-      }
-    },
-    'CPU: Clang 6': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang60') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60', false)
-          }
-        }
-      }
-    },
-    'CPU: Clang Tidy': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang60_tidy') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang_tidy', false)
-          }
-        }
-      }
-    },
-    'CPU: Clang 3.9 MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang39') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib, true)
-          }
-        }
-      }
-    },
-    'CPU: Clang 6 MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang60') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib, true)
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Build', [
+    custom_steps.compile_unix_clang_3_9_cpu(),
+    custom_steps.compile_unix_clang_6_cpu(),
+    custom_steps.compile_unix_clang_tidy_cpu(),
+    custom_steps.compile_unix_clang_3_9_mkldnn_cpu(),
+    custom_steps.compile_unix_clang_6_mkldnn_cpu()
+  ]) 
 }
 ,
 failure_handler: {

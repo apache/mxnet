@@ -27,29 +27,16 @@ node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Sanity Check') {
-    parallel 'Lint': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/sanity-lint') {
-          utils.init_git()
-          utils.docker_run('ubuntu_cpu', 'sanity_check', false)
-        }
-      }
-    },
-    'RAT License': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/sanity-rat') {
-          utils.init_git()
-          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Sanity Check', [
+    custom_steps.sanity_lint(),
+    custom_steps.sanity_rat_license()
+  ])    
 }
 ,
 failure_handler: {

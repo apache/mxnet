@@ -27,48 +27,20 @@ node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build') {
-    parallel 'CPU: Openblas': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-openblas') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_dist_lib, true)
-          }
-        }
-      }
-    }
-  }
-  
-  stage('Deploy') {
-    parallel 'Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'deploy_docs', false)
-            sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-          }
-        }
-      }
-    },
-    'Julia docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/julia-docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'deploy_jl_docs', false)
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Build', [
+    custom_steps.compile_unix_cpu_openblas()
+  ])
+
+  utils.parallel_stage('Deploy', [
+    custom_steps.docs_website(),
+    custom_steps.docs_julia()
+  ])
 }
 ,
 failure_handler: {

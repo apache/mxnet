@@ -20,79 +20,28 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-
-// for scala build, need to pass extra libs when run with dist_kvstore
-mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
-
 // timeout in minutes
 max_time = 120
-
 
 node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build') {
-    parallel 'CPU: CentOS 7': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_dist_lib, true)
-          }
-        }
-      }
-    },
-    'CPU: CentOS 7 MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-mkldnn') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn', mx_lib, true)
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Build', [
+    custom_steps.compile_centos7_cpu(),
+    custom_steps.compile_centos7_cpu_mkldnn()
+  ]) 
 
-  stage('Tests') {
-    parallel 'Python3: CentOS 7 CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init('centos7_cpu', mx_lib, true)
-              utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
-              utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_train.xml')
-            }
-          }
-        }
-      }
-    },
-    'Scala: CentOS CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('centos7_cpu', mx_dist_lib, true)
-            utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Tests', [
+    custom_steps.test_centos7_python3_cpu(),
+    custom_steps.test_centos7_scala_cpu()
+  ]) 
 }
 ,
 failure_handler: {

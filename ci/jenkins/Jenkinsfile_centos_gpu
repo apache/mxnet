@@ -20,9 +20,6 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-
 // timeout in minutes
 max_time = 120
 
@@ -30,42 +27,19 @@ node('mxnetlinux-cpu') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
+  custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
 utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
-  stage('Build') {
-    parallel 'GPU: CentOS 7': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_gpu', 'build_centos7_gpu', false)
-            utils.pack_lib('centos7_gpu', mx_lib, true)
-          }
-        }
-      }
-    }
-  }
-
-  stage('Tests') {
-    parallel 'Python3: CentOS 7 GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/build-centos7-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init('centos7_gpu', mx_lib, true)
-              utils.docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
-            }
-          }
-        }
-      }
-    }
-  }
+  utils.parallel_stage('Build', [
+    custom_steps.compile_centos7_cpu_mkldnn()
+  ]) 
+  
+  utils.parallel_stage('Tests', [
+    custom_steps.test_centos7_python3_gpu()
+  ]) 
 }
 ,
 failure_handler: {
