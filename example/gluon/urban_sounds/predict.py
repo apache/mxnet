@@ -28,11 +28,11 @@ def predict(prediction_dir='./Test'):
 
     Parameters
     ----------
-    net: 
+    net:
         The model that has been trained.
     prediction_dir: string, default ./Test
         The directory that contains the audio files on which predictions are to be made
-        
+
     """
 
     try:

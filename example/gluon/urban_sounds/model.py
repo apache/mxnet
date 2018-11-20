@@ -15,10 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-    This module builds a model an MLP with a configurable output layer( number of units in the last layer).
-    Users can pass any number of units in the last layer. SInce this dataset has 10 labels,
-    the default value of num_labels = 10
+"""This module builds a model an MLP with a configurable output layer( number of units in the last layer).
+Users can pass any number of units in the last layer. SInce this dataset has 10 labels,
+the default value of num_labels = 10
 """
 import mxnet as mx
 from mxnet import gluon

@@ -22,7 +22,6 @@ __all__ = ['AudioFolderDataset']
 
 import os
 import warnings
-import mxnet as mx
 from mxnet.gluon.data import Dataset
 from mxnet import ndarray as nd
 try:
@@ -77,9 +76,8 @@ class AudioFolderDataset(Dataset):
 
 
     def _list_audio_files(self, root, skip_rows=0):
-        """
-            Populates synsets - a map of index to label for the data items.
-            Populates the data in the dataset, making tuples of (data, label)
+        """Populates synsets - a map of index to label for the data items.
+        Populates the data in the dataset, making tuples of (data, label)
         """
         self.synsets = []
         self.items = []
@@ -115,10 +113,13 @@ class AudioFolderDataset(Dataset):
                     label_tmp.append(self.synsets.index(label))
 
             #Generating the synset.txt file now
-            with open("./synset.txt", "w") as synsets_file:
-                for item in self.synsets:
-                    synsets_file.write(item+os.linesep)
-            print("Synsets is generated  as synset.txt")
+            if not os.path.exists("./synset.txt"):
+                with open("./synset.txt", "w") as synsets_file:
+                    for item in self.synsets:
+                        synsets_file.write(item+os.linesep)
+                print("Synsets is generated  as synset.txt")
+            else:
+                warnings.warn("Synset file already exists in the current directory! Not generating synset.txt.")
 
             self._label = nd.array(label_tmp)
             for i, _ in enumerate(data_tmp):

@@ -56,9 +56,6 @@ class MFCC(Block):
         super(MFCC, self).__init__()
 
     def forward(self, x):
-        if not librosa:
-            warnings.warn("Librosa dependency is not installed! Install that and retry")
-            return x
         if isinstance(x, np.ndarray):
             y = x
         elif isinstance(x, nd.NDArray):
@@ -199,9 +196,6 @@ class MEL(Block):
         super(MEL, self).__init__()
 
     def forward(self, x):
-        if librosa is None:
-            warnings.warn("Cannot create spectrograms, since dependency librosa is not installed!")
-            return x
         if isinstance(x, nd.NDArray):
             x = x.asnumpy()
         specs = librosa.feature.melspectrogram(x, sr=self._sampling_rate,\
