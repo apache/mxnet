@@ -19,7 +19,14 @@ package org.apache.mxnet.javaapi
 import collection.JavaConverters._
 import scala.language.implicitConversions
 
-class Context(val context: org.apache.mxnet.Context) {
+/**
+  * Constructing a context which is used to specify the device and device type that will
+  * be utilized by the engine.
+  *
+  * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
+  * @param deviceId The device id of the device, needed for GPU
+  */
+class Context private[mxnet] (val context: org.apache.mxnet.Context) {
 
   val deviceTypeid: Int = context.deviceTypeid
 
@@ -27,6 +34,11 @@ class Context(val context: org.apache.mxnet.Context) {
   = this(new org.apache.mxnet.Context(deviceTypeName, deviceId))
 
   def withScope[T](body: => T): T = context.withScope(body)
+
+  /**
+    * Return device type of current context.
+    * @return device_type
+    */
   def deviceType: String = context.deviceType
 
   override def toString: String = context.toString
@@ -43,6 +55,5 @@ object Context {
   val gpu: Context = org.apache.mxnet.Context.gpu()
   val devtype2str = org.apache.mxnet.Context.devstr2type.asJava
   val devstr2type = org.apache.mxnet.Context.devstr2type.asJava
-
   def defaultCtx: Context = org.apache.mxnet.Context.defaultCtx
 }

@@ -142,12 +142,12 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   int dtype = -1;
 
-  for (size_t i = 0; i < in_type->size(); ++i) {
+  for (int i : *in_type) {
     if (dtype == -1) {
-      dtype = in_type->at(i);
+      dtype = i;
     } else {
-      CHECK(in_type->at(i) == dtype ||
-            in_type->at(i) == -1) <<
+      CHECK(i == dtype ||
+          i == -1) <<
           "Non-uniform data type in Concat";
     }
   }

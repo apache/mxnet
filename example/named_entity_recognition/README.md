@@ -16,3 +16,11 @@ To reproduce the preprocessed training data:
 To train the model:
 
 - `$ cd src && python ner.py`
+
+To run inference using trained model:
+
+1. Recreate the bucketing module using `sym_gen` defined in `ner.py`
+2. Loading saved parameters using `module.set_params()`
+
+Refer to the `test` function in the [Bucketing Module example](https://github.com/apache/incubator-mxnet/blob/master/example/rnn/bucketing/cudnn_rnn_bucketing.py)
+and this [issue](https://github.com/apache/incubator-mxnet/issues/5008) on Bucketing Module Prediction
