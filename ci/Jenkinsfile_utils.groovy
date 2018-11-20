@@ -93,14 +93,14 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
 
 def get_git_commit_hash() {
   lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
-    lastCommitMessage = lastCommitMessage.trim()
-    if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
-        // Merge commit applied by Jenkins, skip that commit
-        git_commit_hash = sh (script: "git rev-parse @~", returnStdout: true)
-    } else {
-        git_commit_hash = sh (script: "git rev-parse @", returnStdout: true)
-    }
-    return git_commit_hash
+  lastCommitMessage = lastCommitMessage.trim()
+  if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
+      // Merge commit applied by Jenkins, skip that commit
+      git_commit_hash = sh (script: "git rev-parse @~", returnStdout: true)
+  } else {
+      git_commit_hash = sh (script: "git rev-parse @", returnStdout: true)
+  }
+  return git_commit_hash
 }
 
 def publish_test_coverage() {
@@ -154,7 +154,7 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 def get_repo_url() {
   //item = Jenkins.instance.getItemByFullName("JOB_NAME")
   //return item.getScm().getUserRemoteConfigs()[0].getUrl()
-
+  checkout scm
   sh "git config --get remote.origin.url > .git/remote-url"
   return readFile(".git/remote-url").trim()
 }

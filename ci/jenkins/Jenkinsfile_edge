@@ -1,0 +1,122 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// Python wheels
+mx_pip = 'build/*.whl'
+
+// timeout in minutes
+max_time = 120
+
+node('mxnetlinux-cpu') {
+  // Loading the utilities requires a node context unfortunately
+  checkout scm
+  utils = load('ci/Jenkinsfile_utils.groovy')
+}
+utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
+
+utils.main_wrapper(
+core_logic: {
+  stage('Build') {
+    parallel 'NVidia Jetson / ARMv8':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-jetson-armv8') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('jetson', 'build_jetson', false)
+          }
+        }
+      }
+    },
+    'ARMv7':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ARMv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('armv7', 'build_armv7', false)
+            utils.pack_lib('armv7', mx_pip)
+          }
+        }
+      }
+    },
+    'ARMv6':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ARMv6') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('armv6', 'build_armv6', false)
+          }
+        }
+      }
+    },
+    'ARMv8':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ARMv8') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('armv8', 'build_armv8', false)
+          }
+        }
+      }
+    },
+    'Android / ARMv8':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/android64') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('android_armv8', 'build_android_armv8', false)
+          }
+        }
+      }
+    },
+    'Android / ARMv7':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/androidv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('android_armv7', 'build_android_armv7', false)
+          }
+        }
+      }
+    }
+  }
+
+  stage('Tests') {
+    parallel 'ARMv7 QEMU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-armv7-qemu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('armv7', mx_pip)
+            sh "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu"
+          }
+        }
+      }
+    }
+  }
+}
+,
+failure_handler: {
+  // Only send email if master or release branches failed
+  if (currentBuild.result == "FAILURE" && (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("v"))) {
+    emailext body: 'Build for MXNet branch ${BRANCH_NAME} has broken. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[BUILD FAILED] Branch ${BRANCH_NAME} build ${BUILD_NUMBER}', to: '${EMAIL}'
+  }
+}
+)
