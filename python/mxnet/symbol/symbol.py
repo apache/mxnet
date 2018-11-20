@@ -45,7 +45,7 @@ from ..executor import Executor
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
-from ..ndarray.utils import get_array_typecode
+from ..ndarray.ndarray import get_array_typecode
 
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",

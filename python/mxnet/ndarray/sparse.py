@@ -56,7 +56,7 @@ from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
 from .ndarray import _ufunc_helper
-from .utils import get_array_typecode
+from .ndarray import get_array_typecode
 
 
 try:

@@ -29,6 +29,7 @@ except ImportError:
 
 from array import array as native_array
 import ctypes
+import sys
 import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
@@ -41,14 +42,13 @@ from ..context import Context, current_context
 from . import _internal
 from . import op
 from ._internal import NDArrayBase
-from .utils import get_array_typecode
 
 __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRAD_REQ_MAP",
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
            "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
+           "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack", "get_array_typecode"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -4034,3 +4034,10 @@ def from_dlpack(dlpack):
     # delete the deleter of the old dlpack
     ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
     return NDArray(handle=handle)
+
+
+def get_array_typecode():
+    if sys.version_info.major > 2:
+        return 'q'
+    else:
+        return 'l'
