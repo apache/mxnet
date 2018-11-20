@@ -72,8 +72,8 @@ class AudioFolderDataset(Dataset):
         self._format = file_format
         self._train_csv = train_csv
         if file_format.lower() not in self._exts:
-            warnings.warn("format {} not supported currently.".format(file_format))
-            return
+            raise RuntimeError("format {} not supported currently.".format(file_format))
+
         self._list_audio_files(self._root, skip_rows=skip_rows)
 
 
