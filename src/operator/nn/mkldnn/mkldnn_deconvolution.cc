@@ -415,7 +415,8 @@ static inline MKLDNNDeconvBackwardData &GetDeconvBwdData(
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNDeconvBackwardData bwd(param, data, weights, output);
-    auto ins_ret = AddToCache(bwds, std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardData>(key, bwd));
+    auto ins_ret = AddToCache(
+        bwds, std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardData>(key, bwd));
     CHECK(ins_ret.second);
     it = ins_ret.first;
   }
