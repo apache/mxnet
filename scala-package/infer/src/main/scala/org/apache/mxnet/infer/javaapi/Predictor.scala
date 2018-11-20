@@ -83,7 +83,7 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     * This method is useful when the input is a batch of data
     * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
     *
-    * @param input       List of NDArrays
+    * @param input             List of NDArrays
     * @return                  Output of predictions as NDArrays
     */
   def predictWithNDArray(input: java.util.List[NDArray]):
