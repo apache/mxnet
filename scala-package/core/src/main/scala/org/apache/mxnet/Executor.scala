@@ -108,7 +108,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                         "to enable allocation of new arrays.")
           newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context, arr.dtype))
           if (dArr != null) {
-            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context, arr.dtype))
+            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context, dArr.dtype))
           }
         } else {
           newArgDict = newArgDict + (name -> arr.reshape(newShape.toArray))
