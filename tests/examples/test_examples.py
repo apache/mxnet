@@ -24,7 +24,7 @@ import os
 import sys
 import subprocess
 import logging
-
+import shutil
 def _run_command(test_name, command):
     """Runs the script using command
 
@@ -50,13 +50,25 @@ def _run_command(test_name, command):
     return True
 
 def test_cifar_default():
-    example_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'examples','image_classification')
+    example_dir = os.path.join(os.getcwd(), '..', '..', 'example','image-classification')
     temp_dir = 'tmpdir'
     example_name = 'test_cifar10'
-    working_dir = os.path.join(*([temp_dir] + example_name))
+    working_dir = os.path.join(*([temp_dir] + [example_name]))
     logging.info("Cleaning and setting up temp directory '{}'".format(working_dir))
     shutil.rmtree(temp_dir, ignore_errors=True)
     if not os.path.isdir(working_dir):
         os.makedirs(working_dir)
         os.chdir(working_dir)
-    assert _run_command(example_name , ['python',os.path.join(example_dir,'train_cifar10.py')])
+    assert _run_command(example_name , ['python',os.path.join(example_dir,'train_cifar10.py'),'--num-epochs','1'])
+
+def test_cifar_gpu():
+    example_dir = os.path.join(os.getcwd(), '..', '..', 'example','image-classification')
+    temp_dir = 'tmpdir'
+    example_name = 'test_cifar10'
+    working_dir = os.path.join(*([temp_dir] + [example_name]))
+    logging.info("Cleaning and setting up temp directory '{}'".format(working_dir))
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    if not os.path.isdir(working_dir):
+        os.makedirs(working_dir)
+        os.chdir(working_dir)
+    assert _run_command(example_name , ['python',os.path.join(example_dir,'train_cifar10.py'),'--num-epochs','1','gpus','0'])
