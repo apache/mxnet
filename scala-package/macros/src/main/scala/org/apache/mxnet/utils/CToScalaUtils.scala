@@ -21,19 +21,20 @@ private[mxnet] object CToScalaUtils {
 
 
   // Convert C++ Types to Scala Types
-  def typeConversion(in : String, argType : String = "",
-                     argName : String, returnType : String) : String = {
+  def typeConversion(in : String, argType : String = "", argName : String,
+                     returnType : String) : String = {
+    val header = returnType.split("\\.").dropRight(1)
     in match {
-      case "Shape(tuple)" | "ShapeorNone" => "org.apache.mxnet.Shape"
+      case "Shape(tuple)" | "ShapeorNone" => s"${header.mkString(".")}.Shape"
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
       => s"Array[$returnType]"
-      case "float" | "real_t" | "floatorNone" => "org.apache.mxnet.Base.MXFloat"
-      case "int" | "intorNone" | "int(non-negative)" => "Int"
-      case "long" | "long(non-negative)" => "Long"
-      case "double" | "doubleorNone" => "Double"
+      case "float" | "real_t" | "floatorNone" => "java.lang.Float"
+      case "int" | "intorNone" | "int(non-negative)" => "java.lang.Integer"
+      case "long" | "long(non-negative)" => "java.lang.Long"
+      case "double" | "doubleorNone" => "java.lang.Double"
       case "string" => "String"
-      case "boolean" | "booleanorNone" => "Boolean"
+      case "boolean" | "booleanorNone" => "java.lang.Boolean"
       case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
@@ -52,8 +53,8 @@ private[mxnet] object CToScalaUtils {
     * @param argType Raw arguement Type description
     * @return (Scala_Type, isOptional)
     */
-  def argumentCleaner(argName: String,
-                      argType : String, returnType : String) : (String, Boolean) = {
+  def argumentCleaner(argName: String, argType : String,
+                      returnType : String) : (String, Boolean) = {
     val spaceRemoved = argType.replaceAll("\\s+", "")
     var commaRemoved : Array[String] = new Array[String](0)
     // Deal with the case e.g: stype : {'csr', 'default', 'row_sparse'}

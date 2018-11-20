@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.implicitConversions
 import scala.ref.WeakReference
 
 /**
@@ -403,6 +404,9 @@ object NDArray extends NDArrayBase {
    * @param stop End of interval.
    * @param step Spacing between values. The default step size is 1.
    * @param repeat Number of times to repeat each element. The default repeat count is 1.
+   * @param infer_range
+   *          When set to True, infer the stop position from the start, step,
+   *          repeat, and output tensor size.
    * @param ctx Device context. Default context is the current default context.
    * @param dType The data type of the `NDArray`. The default datatype is `DType.Float32`.
    * @return NDArray of evenly spaced values in the specified range.
@@ -562,16 +566,20 @@ object NDArray extends NDArrayBase {
  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true,
-                             addToCollector: Boolean = true) extends WarnIfNotDisposed {
+                             addToCollector: Boolean = true) extends NativeResource {
   if (addToCollector) {
     NDArrayCollector.collect(this)
   }
 
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxNDArrayFree
+  override val bytesAllocated: Long = DType.numOfBytes(this.dtype) * this.shape.product
+
+  override val ref: NativeResourceRef = super.register()
+
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
-  @volatile private var disposed = false
-  def isDisposed: Boolean = disposed
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -584,11 +592,10 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * The NDArrays it depends on will NOT be disposed. <br />
    * The object shall never be used after it is disposed.
    */
-  def dispose(): Unit = {
-    if (!disposed) {
-      _LIB.mxNDArrayFree(handle)
+  override def dispose(): Unit = {
+    if (!super.isDisposed) {
+      super.dispose()
       dependencies.clear()
-      disposed = true
     }
   }
 
@@ -1034,6 +1041,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     // TODO: naive implementation
     shape.hashCode + toArray.hashCode
   }
+
 }
 
 private[mxnet] object NDArrayConversions {

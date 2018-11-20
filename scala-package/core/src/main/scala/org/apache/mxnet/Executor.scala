@@ -45,7 +45,7 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) extends WarnIfNotDisposed {
+                              private[mxnet] val symbol: Symbol) extends NativeResource {
   private[mxnet] var argArrays: Array[NDArray] = null
   private[mxnet] var gradArrays: Array[NDArray] = null
   private[mxnet] var auxArrays: Array[NDArray] = null
@@ -59,14 +59,15 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
-  private var disposed = false
-  protected def isDisposed = disposed
-
-  def dispose(): Unit = {
-    if (!disposed) {
-      outputs.foreach(_.dispose())
-      _LIB.mxExecutorFree(handle)
-      disposed = true
+  override def nativeAddress: CPtrAddress = handle
+  override def nativeDeAllocator: (CPtrAddress => Int) = _LIB.mxExecutorFree
+  // cannot determine the off-heap size of this object
+  override val bytesAllocated: Long = 0
+  override val ref: NativeResourceRef = super.register()
+  override def dispose(): Unit = {
+    if (!super.isDisposed) {
+      super.dispose()
+      outputs.foreach(o => o.dispose())
     }
   }
 
@@ -223,7 +224,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of argument arrrays.
    * @return The dictionary that maps name of arguments to NDArrays.
-   * @throws IllegalArgumentException if there are duplicated names in the arguments.
    */
   def argDict: Map[String, NDArray] = {
     if (_argDict == null) {
@@ -235,7 +235,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of gradient arrays.
    * @return The dictionary that maps name of arguments to gradient arrays.
-   * @throws IllegalArgumentException if there are duplicated names in the grads.
    */
   def gradDict: Map[String, NDArray] = {
     if (_gradDict == null) {
@@ -247,7 +246,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of auxiliary states arrays.
    * @return The dictionary that maps name of auxiliary states to NDArrays.
-   * @throws IllegalArgumentException if there are duplicated names in the auxiliary states.
    */
   def auxDict: Map[String, NDArray] = {
     if (_auxDict == null) {
@@ -264,8 +262,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
    *        Whether allow extra parameters that are not needed by symbol
    *        If this is True, no error will be thrown when arg_params or aux_params
    *        contain extra parameters that is not needed by the executor.
-   * @throws IllegalArgumentException
-   *         If there is additional parameters in the dict but allow_extra_params=False
    */
   def copyParamsFrom(argParams: Map[String, NDArray],
                      auxParams: Map[String, NDArray],
@@ -305,4 +301,5 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
     checkCall(_LIB.mxExecutorPrint(handle, str))
     str.value
   }
+
 }

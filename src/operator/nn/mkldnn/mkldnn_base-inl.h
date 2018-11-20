@@ -225,6 +225,18 @@ static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
   }
 }
 
+static inline size_t GetMemDescSize(const mkldnn::memory::desc &md) {
+  if (md.data.ndims == 0) return 0;
+
+  size_t ret = 1;
+  for (int i = 0; i < md.data.ndims; i++) {
+    ret *= md.data.dims[i];
+  }
+
+  ret *= mshadow::mshadow_sizeof(get_mxnet_type(md.data.data_type));
+  return ret;
+}
+
 inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
   mkldnn::memory::dims dims(ndim);
   for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];

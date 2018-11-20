@@ -216,12 +216,12 @@ class SpatialTransformerProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int i_type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = i_type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(i_type == dtype ||
+              i_type == -1) <<
                 "Non-uniform data type in SpatialTransformer";
         }
       }

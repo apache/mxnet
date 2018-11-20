@@ -16,6 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+/*!
+ * \file elemwise_scatter_op.cc
+ * \brief CPU implementation of elementwise scatter operators
+ */
 #include "./elemwise_binary_op-inl.h"
 #include "./elemwise_binary_scalar_op.h"
 #include "./elemwise_scatter_op.h"
