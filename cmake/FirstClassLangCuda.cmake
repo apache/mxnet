@@ -120,6 +120,16 @@ else()
   list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "5.2+PTX")
 endif ()
 
+if (CUDA_TOOLSET VERSION_GREATER "9.0")
+  list(APPEND CUDA_KNOWN_GPU_ARCHITECTURES "Volta")
+  list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "7.0")
+endif()
+
+if (CUDA_TOOLSET VERSION_GREATER "10.0")
+  list(APPEND CUDA_KNOWN_GPU_ARCHITECTURES "Turing")
+  list(APPEND CUDA_COMMON_GPU_ARCHITECTURES "7.5")
+endif()
+
 ################################################################################################
 # Function for selecting GPU arch flags for nvcc based on CUDA_ARCH_NAME
 # Usage:
