@@ -41,8 +41,7 @@ Go to the [MXNet-Java demo project's README](https://github.com/apache/incubator
 
 #### Maven Repository
 
-Package information can be found in the Maven Repository:
-https://mvnrepository.com/artifact/org.apache.mxnet
+Package information can be found in this [Maven Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~)
 
 **Linux CPU**
 ```html
@@ -50,6 +49,8 @@ https://mvnrepository.com/artifact/org.apache.mxnet
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <scope>system</scope>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 
@@ -59,6 +60,8 @@ https://mvnrepository.com/artifact/org.apache.mxnet
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+    <scope>system</scope>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 
@@ -68,6 +71,8 @@ https://mvnrepository.com/artifact/org.apache.mxnet
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+    <scope>system</scope>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 
