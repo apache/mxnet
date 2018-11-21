@@ -4457,7 +4457,7 @@ def test_softmax_with_large_inputs():
         exec1.forward()[0].wait_to_read()
         ndarr = exec1.outputs[0][0][0][0]
         nparr = ndarr.asnumpy()
-        assert np.array_equal(nparr, true_output)
+        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
 
     softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
