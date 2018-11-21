@@ -443,7 +443,7 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
 
 
 def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kwargs):
-    """Concurrent sampling from multiple multinomial distributions.
+        """Concurrent sampling from multiple multinomial distributions.
 
     .. note:: The input distribution must be normalized, i.e. `data` must sum to
               1 along its last dimension.
@@ -469,8 +469,24 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
         Data type of the sample output array. The default is int32.
         Note that the data type of the log likelihood array is the same with that of `data`.
 
+    Returns
+    -------
+    Returns an NDArray with dimensions (d1, d2, ..., dn-1, s1, s2, ..., sn), where d1 thru
+    dn represent dimensions of *data*, and s1 thru sn represent values of the *shape* tuple.
+    The returned NDArray contains (d1, d2, ..., dn-1) groups of 0-indexed values sampled 
+    from the each respective multinomial distribution provided at data[d1][d2][...][dn-1].
+    Each group is of shape (s1, s2, ..., sn).
+
+    If *get_prob* is set to True, this function returns a list of format: 
+    [ndarray_output, log_likelihood_output], where log_likelihood_output is an NDArray of the
+    same shape as the sampled outputs. 
+
     Examples
     --------
+    >>> probs = mx.nd.array([0, 0.1, 0.2, 0.3, 0.4])
+    >>> mx.nd.random.multinomial(probs)
+    [3]
+    <NDArray 1 @cpu(0)>
     >>> probs = mx.nd.array([[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]])
     >>> mx.nd.random.multinomial(probs)
     [3 1]
