@@ -349,7 +349,7 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
 
 OpAttrs GetBNOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("BN");
+  attrs.attrs.op = Op::Get("BatchNorm");
   attrs.num_inputs = 1;
   attrs.num_outputs = 2;
   attrs.attrs.dict.insert({"nsize" , "3"});
@@ -370,7 +370,7 @@ OpAttrs GetBNOp() {
 
 OpAttrs GetBNBackwardOp() {
   OpAttrs attrs;
-  attrs.attrs.op = Op::Get("_backward_BN");
+  attrs.attrs.op = Op::Get("_backward_BatchNorm");
   attrs.num_inputs = 3;
   attrs.num_outputs = 1;
   attrs.attrs.dict.insert({"nsize" , "3"});
