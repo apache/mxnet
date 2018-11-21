@@ -179,7 +179,7 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
   const dgl_id_t *vid_data = data.dptr<dgl_id_t>();
   HashTableChecker def_check(vid_data, len);
   // check if varr is sorted.
-  std::is_sorted(vid_data, vid_data + len);
+  CHECK(std::is_sorted(vid_data, vid_data + len)) << "The input vertex list has to be sorted";
 
   // Collect the non-zero entries in from the original graph.
   std::vector<dgl_id_t> row_idx(len + 1);
@@ -440,7 +440,7 @@ Example::
   edge_id(x, u, v) = [ 1, -1, 2, -1, -1, 3 ]
 
 The storage type of ``edge_id`` output depends on storage types of inputs
-  - quadratic(csr, default, default) = default
+  - edge_id(csr, default, default) = default
   - default and rsp inputs are not supported
 
 )code" ADD_FILELINE)
@@ -454,10 +454,6 @@ The storage type of ``edge_id`` output depends on storage types of inputs
 .set_attr<nnvm::FInferType>("FInferType", EdgeIDType)
 .set_attr<FInferStorageType>("FInferStorageType", EdgeIDStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", EdgeIDForwardEx<cpu>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("u", "NDArray-or-Symbol", "u ndarray")
 .add_argument("v", "NDArray-or-Symbol", "v ndarray");
