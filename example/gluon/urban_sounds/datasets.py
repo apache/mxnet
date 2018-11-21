@@ -112,7 +112,7 @@ class AudioFolderDataset(Dataset):
                         self.synsets.append(label)
                     if self._format not in filename:
                         filename = filename+self._format
-                    self.items.append((filename, nd.array(self.synsets.index(label)).reshape((1,))))
+                    self.items.append((filename, nd.array([self.synsets.index(label)]).reshape((1,))))
 
             #Generating the synset.txt file now
             if not os.path.exists("./synset.txt"):
