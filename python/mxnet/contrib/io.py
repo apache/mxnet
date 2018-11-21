@@ -37,8 +37,8 @@ class DataLoaderIter(DataIter):
     dtype : str, optional
         The dtype specifier, can be float32 or float16
 
-    Example usage:
-    ----------
+    Examples
+    --------
     >>> import mxnet as mx
     >>> from mxnet.gluon.data.vision import MNIST
     >>> from mxnet.gluon.data import DataLoader
