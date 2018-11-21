@@ -356,6 +356,7 @@ OpAttrs GetBNOp() {
   attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
+  attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
@@ -373,6 +374,7 @@ OpAttrs GetBNBackwardOp() {
   attrs.num_inputs = 3;
   attrs.num_outputs = 3;
   attrs.dispatches.resize(2);
+  attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.requests.insert(OpReqType::kWriteTo);
   return attrs;
 }
