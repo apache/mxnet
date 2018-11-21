@@ -71,13 +71,13 @@ https://mvnrepository.com/artifact/org.apache.mxnet
 </dependency>
 ```
 
-**NOTE:** You may specify the version you wish to use by adding the version number to the `dependency` block. For example, to use v1.2.0 you would add `<version>1.2.0</version>`. Otherwise Maven will use the latest version available.
+**NOTE:** You may specify the version you wish to use by adding the version number to the `dependency` block. For example, to use v1.3.1 you would add `<version>1.3.1</version>`. Otherwise Maven will use the latest version available.
 
 <hr>
 
 ## Source
 
-The previously mentioned setup with Maven is recommended. Otherwise, the following instructions for macOS, Ubuntu, and Windows are provided for reference only:
+The previously mentioned setup with Maven is recommended. Otherwise, the following instructions for macOS and Ubuntu are provided for reference only:
 
 | OS | Step 1 | Step 2 |
 |---|---|---|
@@ -108,4 +108,4 @@ To build the docs yourself, follow the [developer build docs instructions](https
 
 * [Java API](../api/java/index.html)
 * [javadocs](../api/java/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Java Tutorials](../tutorials/java)
+* [MXNet-Java Tutorials](../../tutorials/index.html#java-tutorials)
