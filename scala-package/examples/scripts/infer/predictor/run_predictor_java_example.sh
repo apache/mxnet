@@ -18,7 +18,7 @@
 # under the License.
 
 hw_type=cpu
-if [[ $4 = gpu ]]
+if [[ $3 = gpu ]]
 then
     hw_type=gpu
 fi
@@ -37,11 +37,8 @@ CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET
 MODEL_DIR=$1
 # input image
 INPUT_IMG=$2
-# which input image dir
-INPUT_DIR=$3
 
 java -Xmx8G -cp $CLASS_PATH \
-	org.apache.mxnetexamples.infer.objectdetector.SSDClassifierExample \
+	org.apache.mxnetexamples.javaapi.infer.predictor.PredictorExample \
 	--model-path-prefix $MODEL_DIR \
-	--input-image $INPUT_IMG \
-	--input-dir $INPUT_DIR
+	--input-image $INPUT_IMG
