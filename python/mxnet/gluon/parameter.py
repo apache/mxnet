@@ -580,7 +580,7 @@ class Constant(Parameter):
     will not change during training. But you can still update their values
     manually with the `set_data` method.
 
-    `Constant`s can be created with either::
+    `Constant` s can be created with either::
 
         const = mx.gluon.Constant('const', [[1,2],[3,4]])
 

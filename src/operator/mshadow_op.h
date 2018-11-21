@@ -169,6 +169,10 @@ struct softrelu : public mxnet_op::tunable {
 
 MXNET_UNARY_MATH_OP(softrelu_grad, -math::expm1(-a));
 
+MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
+
+MXNET_SIMPLE_UNARY_MATH_OP(erf);
+
 MXNET_SIMPLE_UNARY_MATH_OP(exp);
 
 MXNET_SIMPLE_UNARY_MATH_OP(expm1);

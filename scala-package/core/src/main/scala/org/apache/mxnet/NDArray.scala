@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.implicitConversions
 import scala.ref.WeakReference
 
 /**

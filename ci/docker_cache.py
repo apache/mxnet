@@ -78,7 +78,7 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, use_cache=True)
+        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, no_cache=False)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
@@ -125,6 +125,10 @@ def load_docker_cache(registry, docker_tag) -> None:
     :return: None
     """
     # We don't have to retag the image since it's already in the right format
+    if not registry:
+        return
+    assert docker_tag
+
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
     subprocess.call(pull_cmd)  # Don't throw an error if the image does not exist
