@@ -353,6 +353,7 @@ OpAttrs GetBNOp() {
   attrs.num_inputs = 1;
   attrs.num_outputs = 2;
   attrs.dispatches.resize(2);
+  attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
   attrs.input_types = ArrayTypes::Normal |
