@@ -4449,6 +4449,16 @@ def test_log_softmax():
             check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
+def test_softmax_with_large_negative_inputs():
+    input_data = mx.nd.array([[[[-1e30,-1e30]]]])
+    data = mx.sym.Variable('data')
+    out1 = data.softmax(axis=1)
+    exec1 = out1.bind(mx.cpu(), args={'data': input_data, 'softmax_label': mx.nd.ones([1]),
+                                      'fc_weight': mx.nd.ones([2,2]), 'fc1_weight': mx.nd.ones([2,2])})
+    exec1.forward()[0].wait_to_read()
+    ndarr = exec1.outputs[0][0][0][0]
+    nparr = ndarr.asnumpy()
+    assert np.array_equal(nparr, np.array([1.0,1.0]))
 
 @with_seed()
 def test_pick():
