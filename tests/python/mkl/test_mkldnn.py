@@ -383,16 +383,20 @@ def test_fullyconnected():
     for stype in stypes:
         check_fullyconnected_training(stype)
 
-def test_softmax_with_large_negative_inputs():
-    input_data = mx.nd.array([[[[-1e30,-1e30]]]])
-    data = mx.sym.Variable('data')
-    out1 = data.softmax(axis=1)
-    exec1 = out1.bind(mx.cpu(), args={'data': input_data, 'softmax_label': mx.nd.ones([1]),
-                                      'fc_weight': mx.nd.ones([2,2]), 'fc1_weight': mx.nd.ones([2,2])})
-    exec1.forward()[0].wait_to_read()
-    ndarr = exec1.outputs[0][0][0][0]
-    nparr = ndarr.asnumpy()
-    assert np.array_equal(nparr, np.array([1.0,1.0]))
+def test_softmax_with_large_inputs():
+    def softmax_forward(input_data, true_output):
+        data = mx.sym.Variable('data')
+        out1 = data.softmax(axis=1)
+        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1.forward()[0].wait_to_read()
+        ndarr = exec1.outputs[0][0][0][0]
+        nparr = ndarr.asnumpy()
+        assert np.array_equal(nparr, true_output)
+
+    softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
 def test_non_mkldnn_fcomputeex():
