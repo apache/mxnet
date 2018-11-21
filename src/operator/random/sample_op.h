@@ -751,7 +751,7 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
   }
   bool dtype_ok = (dtype == kFloat16) || (dtype == kFloat32) ||
   (dtype == kFloat64);
-  CHECK_EQ(dtype_ok, true) << "Output type must be float16, float32, float64: dtype is "
+  CHECK(dtype_ok) << "Output type must be float16, float32, float64: dtype is "
   << dtype_out << " vs " << kFloat16 << " or " << kFloat32 << " or "
   << kFloat64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
@@ -782,11 +782,11 @@ inline bool SampleOpType<SampleRandIntParam>(const nnvm::NodeAttrs& attrs,
       dtype = param.dtype;
     } else {
       // Use default
-      dtype = kFloat32;
+      dtype = kInt32;
     }
   }
   bool dtype_ok = (dtype == kInt32) || (dtype == kInt64);
-  CHECK_EQ(dtype_ok, true) << "Output type must be int32, int64: dtype is "
+  CHECK(dtype_ok) << "Output type must be int32, int64: dtype is "
   << dtype_out << " vs " << kInt32 << " or " << kInt64;
   TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
   return true;

@@ -557,13 +557,6 @@ def randint(low, high, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     >>> mx.nd.random.randint(-10, 10, shape=(2,))
     [ -5  4]
     <NDArray 2 @cpu(0)>
-    >>> low = mx.nd.array([1,2,3])
-    >>> high = mx.nd.array([2,3,4])
-    >>> mx.nd.random.randint(low, high, shape=2)
-    [[ 1  1]
-     [ 2  2]
-     [ 3  3]]
-    <NDArray 3x2 @cpu(0)>
     """
     return _random_helper(_internal._random_randint, None,
                           [low, high], shape, dtype, ctx, out, kwargs)

@@ -865,7 +865,7 @@ def test_randint_generator():
     for dtype in ['int32', 'int64']:
         for low, high in [(50000000, 50001000),(-50000000,-9900),(-500,199),(-2147483647,2147483647)]:
             scale = high - low
-            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)            
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
