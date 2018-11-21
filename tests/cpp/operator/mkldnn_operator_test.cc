@@ -352,8 +352,6 @@ OpAttrs GetBNOp() {
   attrs.attrs.op = Op::Get("BatchNorm");
   attrs.num_inputs = 1;
   attrs.num_outputs = 2;
-  attrs.attrs.dict.insert({"nsize" , "3"});
-  attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.requests.insert(OpReqType::kWriteInplace);
@@ -373,8 +371,6 @@ OpAttrs GetBNBackwardOp() {
   attrs.attrs.op = Op::Get("_backward_BatchNorm");
   attrs.num_inputs = 3;
   attrs.num_outputs = 1;
-  attrs.attrs.dict.insert({"nsize" , "3"});
-  attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
   return attrs;
