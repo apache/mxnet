@@ -350,8 +350,8 @@ OpAttrs GetDeconvBackwardOp(int kernel, int num_filters, int dim, int stride, in
 OpAttrs GetBNOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("BatchNorm");
-  attrs.num_inputs = 1;
-  attrs.num_outputs = 2;
+  attrs.num_inputs = 5;
+  attrs.num_outputs = 3;
   attrs.dispatches.resize(2);
   attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
@@ -371,7 +371,7 @@ OpAttrs GetBNBackwardOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_BatchNorm");
   attrs.num_inputs = 3;
-  attrs.num_outputs = 1;
+  attrs.num_outputs = 3;
   attrs.dispatches.resize(2);
   attrs.requests.insert(OpReqType::kWriteTo);
   return attrs;
