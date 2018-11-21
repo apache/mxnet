@@ -4453,7 +4453,7 @@ def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
         data = mx.sym.Variable('data')
         out1 = data.softmax(axis=1)
-        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1 = out1.bind(default_context(), args={'data': input_data})
         exec1.forward()[0].wait_to_read()
         ndarr = exec1.outputs[0][0][0][0]
         nparr = ndarr.asnumpy()
