@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2018 by Contributors
- * \file quantize_concat.cc
+ * \file quantized_concat.cc
  * \brief
  */
 
@@ -35,7 +35,7 @@ enum QuantizedConcatOutputs { kOut, kMin, kMax };
 }
 
 static float GetScale(const NDArray& data, float min, float max) {
-  auto data_range = (data.dtype() == mshadow::kInt8) ? INT8_RANGE : UINT8_RANGE;
+  auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   return data_range / MaxAbs(min, max);
 }
 
