@@ -147,7 +147,7 @@ static MKLDNNActForward &GetActForward(const ActivationParam& param,
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNActForward fwd(param, ctx.is_train, in_data, in_mem);
-    it = AddToCache(fwds, key, fwd);
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
@@ -258,7 +258,7 @@ static inline MKLDNNActBackward &GetActBackward(const ActivationParam &param,
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNActBackward bwd(param, in_data, in_mem, *out_grad.GetMKLDNNData());
-    it = AddToCache(bwds, key, bwd);
+    it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }

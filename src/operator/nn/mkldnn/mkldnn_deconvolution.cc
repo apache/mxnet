@@ -328,7 +328,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
   if (it == fwds.end()) {
     bool has_bias = (bias != nullptr);
     MKLDNNDeconvForward fwd(param, data, weights, has_bias, output);
-    it = AddToCache(fwds, key, fwd);
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
@@ -422,7 +422,7 @@ static inline MKLDNNDeconvBackwardData &GetDeconvBwdData(
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNDeconvBackwardData bwd(param, data, weights, output);
-    it = AddToCache(bwds, key, bwd);
+    it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }

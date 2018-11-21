@@ -189,7 +189,7 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
   auto it = lrn_fwds.find(key);
   if (it == lrn_fwds.end()) {
     MKLDNNLRNFwd fwd(param, ctx.is_train, in_data);
-    it = AddToCache(lrn_fwds, key, fwd);
+    it = AddToCache(&lrn_fwds, key, fwd);
   }
   return it->second;
 }
@@ -281,7 +281,7 @@ static MKLDNNLRNBwd &GetLRNBwd(const LRNParam &param, const NDArray &in_data,
     const mkldnn::memory::desc diff_md =
         out_grad.GetMKLDNNData()->get_primitive_desc().desc();
     MKLDNNLRNBwd bwd(param, in_data_md, diff_md);
-    it = AddToCache(lrn_bwds, key, bwd);
+    it = AddToCache(&lrn_bwds, key, bwd);
   }
   return it->second;
 }

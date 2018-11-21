@@ -87,7 +87,7 @@ static MKLDNNConcatFwd &GetConcatForward(
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNConcatFwd fwd(concat_dim, data_md);
-    it = AddToCache(fwds, key, fwd);
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
