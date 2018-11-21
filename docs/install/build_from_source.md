@@ -285,4 +285,3 @@ The following table provides links to each language binding by operating system:
 | R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
 | Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
 | Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |
-
