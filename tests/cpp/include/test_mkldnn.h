@@ -231,6 +231,7 @@ struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
   std::set<OpReqType> requests;
+  std::unordered_set<int> accept_dims;
   int num_inputs;
   int num_outputs;
   int input_types;
