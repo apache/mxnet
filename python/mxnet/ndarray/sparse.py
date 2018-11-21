@@ -341,7 +341,7 @@ class CSRNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : int or slice
+        key : int or mxnet.ndarray.NDArray.slice
             Indexing key.
 
         Examples
@@ -389,7 +389,7 @@ class CSRNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : mxnet.ndarray.NDArray.slice
             The indexing key.
         value : NDArray or CSRNDArray or numpy.ndarray
             The value to set.
@@ -626,7 +626,7 @@ class RowSparseNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : mxnet.ndarray.NDArray.slice
             Indexing key.
 
         Examples
@@ -654,7 +654,7 @@ class RowSparseNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : mxnet.ndarray.NDArray.slice
             The indexing key.
         value : NDArray or numpy.ndarray
             The value to set.
@@ -1025,28 +1025,28 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
 
     - row_sparse_array(D):
         to construct a RowSparseNDArray with a dense ndarray ``D``
-            -  **D** (*array_like*) - An object exposing the array interface, an object whose \
-            `__array__` method returns an array, or any (nested) sequence.
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is ``D.dtype`` if ``D`` is an NDArray or numpy.ndarray, \
-            float32 otherwise.
+        -  **D** (*array_like*) - An object exposing the array interface, an object whose \
+        `__array__` method returns an array, or any (nested) sequence.
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        The default dtype is ``D.dtype`` if ``D`` is an NDArray or numpy.ndarray, \
+        float32 otherwise.
 
     - row_sparse_array(S)
         to construct a RowSparseNDArray with a sparse ndarray ``S``
-            -  **S** (*RowSparseNDArray*) - A sparse ndarray.
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is ``S.dtype``.
+        -  **S** (*RowSparseNDArray*) - A sparse ndarray.
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        The default dtype is ``S.dtype``.
 
     - row_sparse_array((D0, D1 .. Dn))
         to construct an empty RowSparseNDArray with shape ``(D0, D1, ... Dn)``
-            -  **D0, D1 .. Dn** (*int*) - The shape of the ndarray
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        -  **D0, D1 .. Dn** (*int*) - The shape of the ndarray
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
             The default dtype is float32.
 
     - row_sparse_array((data, indices))
@@ -1057,35 +1057,35 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
         represented by RowSparseNDArray ``rsp`` has \
         ``dense[rsp.indices[i], :, :, :, ...] = rsp.data[i, :, :, :, ...]``
         The row indices for are expected to be **sorted in ascending order.** \
-            - **data** (*array_like*) - An object exposing the array interface, which \
-            holds all the non-zero row slices of the array.
-            - **indices** (*array_like*) - An object exposing the array interface, which \
-            stores the row index for each row slice with non-zero elements.
-            - **shape** (*tuple of int, optional*) - The shape of the array. The default \
-            shape is inferred from the indices and indptr arrays.
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is float32.
+        - **data** (*array_like*) - An object exposing the array interface, which \
+        holds all the non-zero row slices of the array.
+        - **indices** (*array_like*) - An object exposing the array interface, which \
+        stores the row index for each row slice with non-zero elements.
+        - **shape** (*tuple of int, optional*) - The shape of the array. The default \
+        shape is inferred from the indices and indptr arrays.
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        The default dtype is float32.
 
     Parameters
     ----------
-    arg1: NDArray, numpy.ndarray, RowSparseNDArray, tuple of int or tuple of array_like
+    arg1 : NDArray, numpy.ndarray, RowSparseNDArray, tuple of int or tuple of array_like
         The argument to help instantiate the row sparse ndarray. See above for further details.
     shape : tuple of int, optional
-        The shape of the row sparse ndarray.
+        The shape of the row sparse ndarray. (Default value = None)
     ctx : Context, optional
         Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        The data type of the output array.
+        The data type of the output array. (Default value = None)
 
     Returns
     -------
     RowSparseNDArray
         An `RowSparseNDArray` with the `row_sparse` storage representation.
 
-    Example
-    -------
+    Examples
+    --------
     >>> a = mx.nd.sparse.row_sparse_array(([[1, 2], [3, 4]], [1, 4]), shape=(6, 2))
     >>> a.asnumpy()
     array([[ 0.,  0.],

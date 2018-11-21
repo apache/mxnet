@@ -51,10 +51,9 @@ void AggregateStats::Dump(std::ostream& os, bool clear) {
      << "\tNote that counter items are counter values and not time units."
      << std::endl;
   std::unique_lock<std::mutex> lk(m_);
-  for (auto type_iter = stats_.begin(), type_e_iter = stats_.end();
-       type_iter != type_e_iter; ++type_iter) {
-    const std::string& type = type_iter->first;
-    const std::unordered_map<std::string, StatData>& mm = type_iter->second;
+  for (const auto& stat : stats_) {
+    const std::string& type = stat.first;
+    const std::unordered_map<std::string, StatData>& mm = stat.second;
     if (!mm.empty()) {
       os << type << std::endl << "=================" << std::endl;
       os << std::setw(25) << std::left  << "Name"
@@ -87,10 +86,10 @@ void AggregateStats::Dump(std::ostream& os, bool clear) {
          << std::setw(16) << std::right
          << "-------------"
          << std::endl;
-      for (auto iter = mm.begin(), e_iter = mm.end(); iter != e_iter; ++iter) {
-        const StatData &data = iter->second;
+      for (const auto& iter : mm) {
+        const StatData &data = iter.second;
         if (data.type_ == StatData::kDuration || data.type_ == StatData::kCounter) {
-          const std::string &name = iter->first;
+          const std::string &name = iter.first;
           os << std::setw(25) << std::left << name
              << std::setw(16) << std::right << data.total_count_;
           os << " "
