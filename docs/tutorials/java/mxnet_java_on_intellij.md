@@ -52,11 +52,11 @@ Choose the Maven project type.
 
 Select the checkbox for `Create from archetype`, then choose `org.apache.maven.archetypes:maven-archetype-quickstart` from the list below. More on this can be found on a Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html). 
 
-![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/project-archetype.png)
+![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/project-archetype.png)
 
 click `Next`.
 
-![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-metadata.png)
+![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-metadata.png)
 
 Set the project's metadata. For this tutorial, use the following:
 
@@ -73,15 +73,15 @@ ArtifactId: javaMXNet
 1.0-SNAPSHOT
 ```
 
-![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-properties.png)
+![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-properties.png)
 
 Review the project's properties. The settings can be left as their default.
 
-![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-location.png)
+![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-location.png)
 
 Set the project's location. The rest of the settings can be left as their default.
 
-![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-pom.png)
+![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-pom.png)
 
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
@@ -107,7 +107,7 @@ Note :
 
   - Note the prompt in the lower right corner that states "Maven projects need to be imported". If this is not visible, click on the little greed balloon that appears in the lower right corner.
 
-![import_dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/project-import-changes.png)
+![import_dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/project-import-changes.png)
 
 Click "Import Changes" in this prompt.
 
