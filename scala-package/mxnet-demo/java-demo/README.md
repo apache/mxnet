@@ -2,8 +2,8 @@
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
 Please copy the downloaded MXNet Java package jar file under the `java-demo` folder.
-You can download the package from [here](https://repository.apache.org/#nexus-search;quick~mxnet).
-Please download `1.3.1-SNAPSHOT` or above version to test to run this demo.
+You can download the package from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~).
+Please download `1.3.1-SNAPSHOT` or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to test to run this demo.
 
 Please make sure to rename the `jar` file you have download as the name that match the `MXNET_VERSION`, it looks similar as below:
 ```

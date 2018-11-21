@@ -95,7 +95,7 @@ The project's `pom.xml` will be open for editing.
 </dependency>
 ```
 
-To view the latest MXNet Maven packages, you can check [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22)
+To view the latest MXNet Maven packages, you can check [MXNet Maven package repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~)
 
 Note :
 - Change the osx-x86_64 to linux-x86_64 if your platform is linux.
