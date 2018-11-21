@@ -621,7 +621,7 @@ class LogisticLoss(Loss):
 
     where `pred` is the classifier prediction and `label` is the target tensor
     containing values -1 or 1 (0 or 1 if `label_format` is binary).
-     `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
+    `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------

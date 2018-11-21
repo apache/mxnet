@@ -134,6 +134,14 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   }
 }
 
+static inline int GetPaddingSizeFull(int x, int padl, int padr, int k, int s) {
+  if ((x + padl + padr - k) % s != 0) {
+    return (padr + s - ((x + padl + padr - k) % s));
+  } else {
+    return padr;
+  }
+}
+
 mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
     const PoolingParam &param, const bool is_train, const memory::desc &data_md,
     const memory::desc &out_md) {
@@ -154,11 +162,17 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
   int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
   int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
 
+  if (param.pooling_convention == pool_enum::kFull) {
+    pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
+    pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
+  }
+
   const mkldnn::engine engine = CpuEngine::Get()->get_engine();
   if (param.global_pool) {
     pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
     stride_h_ = stride_w_ = 1;
   }
+
   if (pad_t_ != 0 || pad_l_ != 0) {
     CHECK(param.pool_type == pool_enum::kAvgPooling ||
           param.pool_type == pool_enum::kMaxPooling)
@@ -166,7 +180,6 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
     CHECK_LT(pad_l_, kernel_w_);
     CHECK_LT(pad_t_, kernel_h_);
   }
-
 
   const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
   mkldnn::prop_kind kind = mkldnn::prop_kind::forward_scoring;
@@ -227,17 +240,22 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
     int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
     int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
 
+    if (param.pooling_convention == pool_enum::kFull) {
+      pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
+      pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
+    }
+
     if (param.global_pool) {
-        pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
-        stride_h_ = stride_w_ = 1;
+      pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
+      stride_h_ = stride_w_ = 1;
     }
 
     if (pad_t_ != 0 || pad_l_ != 0) {
-        CHECK(param.pool_type == pool_enum::kAvgPooling ||
-              param.pool_type == pool_enum::kMaxPooling)
-              << "Padding implemented only for average and max pooling.";
-        CHECK_LT(pad_l_, kernel_w_);
-        CHECK_LT(pad_t_, kernel_h_);
+      CHECK(param.pool_type == pool_enum::kAvgPooling ||
+            param.pool_type == pool_enum::kMaxPooling)
+            << "Padding implemented only for average and max pooling.";
+      CHECK_LT(pad_l_, kernel_w_);
+      CHECK_LT(pad_t_, kernel_h_);
     }
 
     const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
@@ -353,6 +371,12 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
     int pad_t_ = param.pad[0], pad_b_ = param.pad[0];
     int pad_l_ = param.pad[1], pad_r_ = param.pad[1];
     int stride_h_ = param.stride[0], stride_w_ = param.stride[1];
+
+    if (param.pooling_convention == pool_enum::kFull) {
+      pad_b_ = GetPaddingSizeFull(data_md.data.dims[2], pad_t_, pad_b_, kernel_h_, stride_h_);
+      pad_r_ = GetPaddingSizeFull(data_md.data.dims[3], pad_l_, pad_r_, kernel_w_, stride_w_);
+    }
+
     if (param.global_pool) {
       pad_t_ = pad_b_ = pad_l_ = pad_r_ = 0;
       stride_h_ = stride_w_ = 1;

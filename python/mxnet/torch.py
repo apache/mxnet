@@ -85,7 +85,7 @@ def _make_torch_function(handle):
                 'Invoke with\n{res}= mxnet.th.{name}(Parameters)\nor\n'+
                 'mxnet.th.{name}({res}, Parameters).\n\n' +
                 '{param_str}\n' +
-                'Reference: ' +
+                'References: ' +
                 'https://github.com/torch/torch7/blob/master/doc/maths.md\n').format(
                     name=func_name[4:], param_str=param_str,
                     res=res))
