@@ -40,11 +40,12 @@ if _DOC_SET not in parser.sections():
 
 for section in [ _DOC_SET ]:
     print("Document sets to generate:")
-    for candidate in [ 'scala_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
+    for candidate in [ 'scala_docs', 'java_docs', 'clojure_docs', 'doxygen_docs', 'r_docs' ]:
         print('%-12s  : %s' % (candidate, parser.get(section, candidate)))
 
 _MXNET_DOCS_BUILD_MXNET = parser.getboolean('mxnet', 'build_mxnet')
 _SCALA_DOCS = parser.getboolean(_DOC_SET, 'scala_docs')
+_JAVA_DOCS = parser.getboolean(_DOC_SET, 'java_docs')
 _CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
 _DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
 _R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
@@ -58,7 +59,8 @@ _CODE_MARK = re.compile('^([ ]*)```([\w]*)')
 # language names and the according file extensions and comment symbol
 _LANGS = {'python' : ('py', '#'),
           'r' : ('R','#'),
-          'scala' : ('scala', '#'),
+          'scala' : ('scala', '//'),
+          'java' : ('java', '//'),
           'julia' : ('jl', '#'),
           'perl' : ('pl', '#'),
           'cpp' : ('cc', '//'),
@@ -101,21 +103,39 @@ def build_r_docs(app):
     _run_cmd('mkdir -p ' + dest_path + '; mv ' + pdf_path + ' ' + dest_path)
 
 def build_scala(app):
-    """build scala for scala docs and clojure docs to use"""
+    """build scala for scala docs, java docs, and clojure docs to use"""
     _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
     _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
 
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
-    # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite\"`; exit 0')
+    scala_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"Suite\"'
+    scala_doc_classpath = ':'.join([
+        '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
+        '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
+    ])
+    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation; exit 0'
+             .format(scala_path, scala_doc_sources, scala_doc_classpath))
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
+    # 'index' and 'package.html' do not exist in later versions of scala; delete these after upgrading scala>2.12.x
     scaladocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
     for doc_file in scaladocs:
-        _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path)
+        _run_cmd('cd ' + scala_path + ' && mv -f ' + doc_file + ' ' + dest_path + '; exit 0')
+
+def build_java_docs(app):
+    """build java docs and then move the outdir"""
+    java_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/org/apache/mxnet/'
+    # scaldoc fails on some apis, so exit 0 to pass the check
+    _run_cmd('cd ' + java_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/javaapi\" | egrep -v \"Suite\"`; exit 0')
+    dest_path = app.builder.outdir + '/api/java/docs'
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    javadocs = ['index', 'index.html', 'org', 'lib', 'index.js', 'package.html']
+    for doc_file in javadocs:
+        _run_cmd('cd ' + java_path + ' && mv -f ' + doc_file + ' ' + dest_path + '; exit 0')
 
 def build_clojure_docs(app):
     """build clojure doc and then move the outdir"""
@@ -125,7 +145,7 @@ def build_clojure_docs(app):
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
     clojure_doc_path = app.builder.srcdir + '/../contrib/clojure-package/target/doc'
-    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path)
+    _run_cmd('cd ' + clojure_doc_path + ' && cp -r *  ' + dest_path + '; exit 0')
 
 def _convert_md_table_to_rst(table):
     """Convert a markdown table to rst format"""
@@ -404,7 +424,6 @@ def add_buttons(app, docname, source):
         # source[i] = '\n'.join(lines)
 
 def setup(app):
-
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
     if os.getenv('MXNET_DOCS_BUILD_MXNET', '1') == '1' or _MXNET_DOCS_BUILD_MXNET:
@@ -419,6 +438,9 @@ def setup(app):
     if _SCALA_DOCS:
         print("Building Scala Docs!")
         app.connect("builder-inited", build_scala_docs)
+    if _JAVA_DOCS:
+        print("Building Java Docs!")
+        app.connect("builder-inited", build_java_docs)
     if _CLOJURE_DOCS:
         print("Building Clojure Docs!")
         app.connect("builder-inited", build_clojure_docs)

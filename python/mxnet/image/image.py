@@ -1322,8 +1322,8 @@ class ImageIter(io.DataIter):
 
     def read_image(self, fname):
         """Reads an input image `fname` and returns the decoded raw bytes.
-        Example usage:
-        ----------
+        Examples
+        --------
         >>> dataIter.read_image('Face.jpg') # returns decoded raw bytes.
         """
         with open(os.path.join(self.path_root, fname), 'rb') as fin:

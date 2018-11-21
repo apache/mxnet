@@ -32,6 +32,7 @@
 #include "../elemwise_op_common.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
+#include "../tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
@@ -83,12 +84,12 @@ void IndexCopyForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<int req>
 struct index_copy_backward {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i,
                                   int dim,
                                   int index_size,
+                                  int req1, int req2,
                                   DType* out_grad,
                                   IType* index,
                                   DType* in_grad_1,
@@ -98,12 +99,12 @@ struct index_copy_backward {
       int idx = static_cast<int>(index[p]);
       if (i >= idx*dim && i < (idx+1)*dim) {
         int offset = i - idx*dim;
-        KERNEL_ASSIGN(in_grad_2[p*dim+offset], req, out_grad[i]);
+        KERNEL_ASSIGN(in_grad_2[p*dim+offset], req2, out_grad[i]);
         return;
       }
     }
     // Copy to in_grad_1
-    KERNEL_ASSIGN(in_grad_1[i], req, out_grad[i]);
+    KERNEL_ASSIGN(in_grad_1[i], req1, out_grad[i]);
   }
 };
 
@@ -122,18 +123,19 @@ void IndexCopyBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& in_grad_2 = outputs[2];
   int dim = inputs[3].Size() / inputs[2].Size();
   int index_size = inputs[2].Size();
+  Fill<false>(s, outputs[0], req[0], 0);
+  Fill<false>(s, outputs[2], req[2], 0);
   // index_copy_backward
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(index.type_flag_, IType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        mxnet_op::Kernel<index_copy_backward<req_type>, xpu>::Launch(s,
+      mxnet_op::Kernel<index_copy_backward, xpu>::Launch(s,
                                       out_grad.Size(),
                                       dim, index_size,
+                                      req[0], req[2],
                                       out_grad.dptr<DType>(),
                                       index.dptr<IType>(),
                                       in_grad_1.dptr<DType>(),
                                       in_grad_2.dptr<DType>());
-      });
     });
   });
 }

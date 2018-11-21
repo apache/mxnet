@@ -17,7 +17,7 @@
 
 SCALA_VERSION_PROFILE := 2.11
 SCALA_VERSION := 2.11.8
-MXNET_VERSION := 1.2.0
+MXNET_VERSION := 1.3.1-SNAPSHOT
 
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
@@ -41,13 +41,13 @@ else
 	endif
 endif
 
-scalademo:
+javademo:
 	(mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
 
-scalaclean:
+javaclean:
 	(mvn clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \

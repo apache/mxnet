@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -13,26 +15,30 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License
+# under the License.
 
-.PHONY: no_optimization with_inplace with_sharing with_both
+hw_type=cpu
+if [[ $3 = gpu ]]
+then
+    hw_type=gpu
+fi
 
-no_optimization:
-	@echo "Estimating the cost with no optimization..."
-	@NNVM_EXEC_ENABLE_INPLACE=false NNVM_EXEC_MATCH_RANGE=0 python inception_memcost.py
+platform=linux-x86_64
 
-with_inplace:
-	@echo "Estimating the cost with inplace optimization..."
-	@NNVM_EXEC_ENABLE_INPLACE=true MXNET_EXEC_MATCH_RANGE=0 python inception_memcost.py
+if [[ $OSTYPE = [darwin]* ]]
+then
+    platform=osx-x86_64
+fi
 
-with_sharing:
-	@echo "Estimating the cost with memory sharing ..."
-	@NNVM_EXEC_ENABLE_INPLACE=false python inception_memcost.py
+MXNET_ROOT=$(cd "$(dirname $0)/../../../../../"; pwd)
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
 
-with_both:
-	@echo "Estimating the cost with all optimizations ..."
-	@python inception_memcost.py
+# model dir and prefix
+MODEL_DIR=$1
+# input image
+INPUT_IMG=$2
 
-forward_only:
-	@echo "Estimating the cost of forward only ..."
-	@python inception_memcost.py 'null'
+java -Xmx8G -cp $CLASS_PATH \
+	org.apache.mxnetexamples.javaapi.infer.predictor.PredictorExample \
+	--model-path-prefix $MODEL_DIR \
+	--input-image $INPUT_IMG

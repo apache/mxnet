@@ -20,6 +20,32 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
+
+/***
+ *      _____  _                          
+ *     |  __ \| |                         
+ *     | |__) | | ___  __ _ ___  ___      
+ *     |  ___/| |/ _ \/ _` / __|/ _ \     
+ *     | | | || |  __/ (_| \__ \  __/     
+ *     |_|_| ||_|\___|\__,_|___/\___|     
+ *      / _` |/ _ \                       
+ *     | (_| | (_) |_                     
+ *      \__,_|\___/| |                    
+ *      _ __   ___ | |_                   
+ *     | '_ \ / _ \| __|    _ _  __       
+ *     | | | | (_) | |_    | (_)/ _|      
+ *     |_|_|_|\___/_\__| __| |_| |_ _   _ 
+ *     | '_ ` _ \ / _ \ / _` | |  _| | | |
+ *     | | | | | | (_) | (_| | | | | |_| |
+ *     |_| |_| |_|\___/ \__,_|_|_|  \__, |
+ *                                   __/ |
+ *                                  |___/ 
+ *
+ * This file is about to be deprecated! See https://github.com/apache/incubator-mxnet/pull/13344
+ * for more details
+ */
+
+
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
@@ -152,7 +178,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_lib, true)
+            utils.pack_lib('centos7_cpu', mx_dist_lib, true)
           }
         }
       }
@@ -693,6 +719,17 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    },
+    'Scala: CentOS CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-scala-centos7-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('centos7_cpu', mx_dist_lib, true)
+            utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
             utils.publish_test_coverage()
           }
         }
