@@ -195,8 +195,8 @@ def update_github_commit_status(state, message) {
 
 def get_github_context() {
   // Since we use multi-branch pipelines, Jenkins appends the branch name to the job name
-  if (JOB_NAME.contains('/')) {
-    short_job_name = JOB_NAME.split('/')[0] 
+  if (env.BRANCH_NAME) {
+    short_job_name = JOB_NAME.substring(0, JOB_NAME.lastIndexOf('/')) 
   } else {
     short_job_name = JOB_NAME
   }
