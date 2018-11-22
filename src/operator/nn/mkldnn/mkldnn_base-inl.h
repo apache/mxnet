@@ -148,7 +148,7 @@ static inline bool MKLDNNEnvSet() {
 }
 
 static inline int GetMKLDNNCacheSize() {
-  static int mkldnn_cache_size = dmlc::GetEnv("MXNET_MKLDNN_CACHE_SIZE", -1);
+  static int mkldnn_cache_size = dmlc::GetEnv("MXNET_MKLDNN_CACHE_NUM", -1);
   return mkldnn_cache_size;
 }
 
