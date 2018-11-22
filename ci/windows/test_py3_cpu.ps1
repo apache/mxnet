@@ -20,7 +20,7 @@ $env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\lib\libmxnet.dll
 $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 c:\Anaconda3\envs\py3\Scripts\pip install -r tests\requirements.txt
-c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1.0 --timer-warning 15.0 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
+c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
 if (! $?) { Throw ("Error running unittest") }
-c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1.0 --timer-warning 15.0 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
+c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
 if (! $?) { Throw ("Error running train tests") }
