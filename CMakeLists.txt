@@ -224,8 +224,8 @@ if(ENABLE_TESTCOVERAGE)
 endif()
 
 if(USE_MKLDNN)
-  SET(MKLDNN_LIBRARY_TYPE STATIC)
   include(cmake/DownloadMKLML.cmake)
+  set(MKLDNN_LIBRARY_TYPE "STATIC" CACHE INTERNAL "" FORCE)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
