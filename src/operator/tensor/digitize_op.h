@@ -31,6 +31,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
+#include <mxnet/base.h>
 
 
 namespace mxnet {
