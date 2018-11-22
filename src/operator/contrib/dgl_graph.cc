@@ -428,8 +428,9 @@ void EdgeIDForwardEx(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_edge_id)
-.describe(R"code(This operator implements the edge_id function for csr arrays,
-where output[i] = input[u[i], v[i]] if input[u[i], v[i]] is a non-zero element of input,
+.describe(R"code(This operator implements the edge_id function for a graph
+stored in a CSR matrix (the value of the CSR stores the edge Id of the graph).
+output[i] = input[u[i], v[i]] if there is an edge between u[i] and v[i]],
 otherwise output[i] will be -1. Both u and v should be 1D vectors.
 Example::
   x = [[ 1, 0, 0 ],
