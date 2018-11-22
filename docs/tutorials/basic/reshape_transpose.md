@@ -1,6 +1,6 @@
 
 ## Difference between reshape and transpose operators
-Modyfing the shape of tensors is a very common operation in Deep Learning. For instance, when using pretrained neural networks it is often required to adjust input data dimensions to correspond to what the network has been trained on, e.g. tensors of shape `[batch_size, channels, width, height]`.  This notebook discusses briefly the difference between the operators [Reshape](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.NDArray.reshape) and [Transpose](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.transpose). Both allow to change the shape, however they are not the same and are commonly mistaken.
+Modifying the shape of tensors is a very common operation in Deep Learning. For instance, when using pretrained neural networks it is often necessary to adjust the input data dimensions to correspond to what the network has been trained on, e.g. tensors of shape `[batch_size, channels, width, height]`.  This notebook discusses briefly the difference between the operators [Reshape](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.NDArray.reshape) and [Transpose](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.transpose). Both allow you to change the shape, however they are not the same and are commonly mistaken.
 
 
 ```python
@@ -28,7 +28,7 @@ The color image has the following properties:
 * height: 200 pixels
 * colors: 3 (RGB)
 
-Now lets reshape the image in order to exchange width and height dimension.
+Now lets reshape the image in order to exchange width and height dimensions.
 
 
 ```python
@@ -42,7 +42,7 @@ plt.axis("off")
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/reshaped_image.png) <!--notebook-skip-line-->
 
 
-As we can see the first and second dimensions have changed. However the image can't be identified as cat anylonger. In order to understand what happened, let's have a look at the image below.
+As we can see the first and second dimensions have changed. However the image can't be identified as cat any longer. In order to understand what happened, let's have a look at the image below.
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/reshape.png" style="width:700px;height:300px;">
 
@@ -64,11 +64,11 @@ As we can see width and height changed, by rotating pixel values by 90 degrees. 
 
 <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/transpose.png" style="width:700px;height:300px;">
 
-As shown in the diagram, the axis have been flipped: pixel values that have been in the first row are now in the first column.
+As shown in the diagram, the axes have been flipped: pixel values that were in the first row are now in the first column.
 ## When to transpose/reshape with MXNet
 In this chapter we discuss when transpose and reshape is used in MXNet. 
 #### Channel first for images
-Images are usually stored in the format height, wight, channel. When working with [convolutional](https://mxnet.incubator.apache.org/api/python/gluon/nn.html#mxnet.gluon.nn.Conv1D) layers, MXNet expects the layout to be `NCHW` (batch, channel, height, width). MXNet uses this layout because of performance reasons on the GPU. Consequently, images need to be transposed to have the right format. For instance, you may have a function like the following:
+Images are usually stored in the format height, wight, channel. When working with [convolutional](https://mxnet.incubator.apache.org/api/python/gluon/nn.html#mxnet.gluon.nn.Conv1D) layers, MXNet expects the layout to be `NCHW` (batch, channel, height, width). This is in contrast to Tensorflow, where image tensors are in the form `NHWC`. MXNet uses `NCHW` layout because of performance reasons on the GPU. When preprocessing the input images, you may have a function like the following:
 ``` 
 def transform(data, label): 
      return data.astype(np.float32).transpose((2,0,1))/255.0, np.float32(label)
@@ -94,7 +94,7 @@ print (output.shape)
 ```
 (1, 999, 128) <!--notebook-skip-line-->
 #### Advanced reshaping with MXNet ndarrays
-It is sometimes useful to automatically infer the shape of tensors. Especially when you deal with very deep neural networks, it may not always be clear what the shape of a tensor is after a specific layer. For instance you may want the tensor to be two-dimensional where one dimension is the known batch_size. With ```mx.nd.array(-1, batch_size)``` the first dimension will be automatically inferred. Here a simplified example:
+It is sometimes useful to automatically infer the shape of tensors. Especially when you deal with very deep neural networks, it may not always be clear what the shape of a tensor is after a specific layer. For instance you may want the tensor to be two-dimensional where one dimension is the known batch_size. With ```mx.nd.array(-1, batch_size)``` the first dimension will be automatically inferred. Here is a simplified example:
 ```
 batch_size = 100
 input_data = mx.random.uniform(shape=(batch_size, 20,100))
@@ -155,7 +155,7 @@ python(+0x197dae)[0x56457ec2bdae]
 [...]
 
 ```
-This is happening when you your data does not have the shape ```[batch_size, channel, width, height]``` e.g. your data may be a one-dimensional vector or when the color channel may be the last dimension instead of the second one.
+This happens when you your data does not have the shape ```[batch_size, channel, width, height]``` e.g. your data may be a one-dimensional vector or when the color channel may be the last dimension instead of the second one.
 
 ##### Backward Pass
 In other cases the forward pass may not fail, but the shape of the network output is not as expected. For instance in our previous RNN example, nothing is preventing us to skip the transpose. 
