@@ -26,11 +26,28 @@
 
 #include "./digitize_op.h"
 
-namespace mxnet {
-    namespace op {
+#include <thrust/binary_search.h>
+#include <thrust/distance.h>
 
-        NNVM_REGISTER_OP(diag)
-        .set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward<gpu>);
+namespace mxnet{
+namespace op {
 
-    }  // namespace op
+  NNVM_REGISTER_OP(diag)
+      .set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward < gpu > );
+
+
+  template<>
+  void DigitizeOp::ForwardKernel::Map<gpu>(int i,
+                                           const DType *in_data,
+                                           DType *out_data,
+                                           const mshadow::Tensor<gpu, 1, BType> bins,
+                                           const bool right) {
+    auto data = in_data[i];
+    auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
+                      : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
+
+    out_data[i] = thrust::distance(bins.dptr_, elem);
+  }
+
+}  // namespace op
 }  // namespace mxnet
