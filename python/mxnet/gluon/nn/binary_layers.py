@@ -37,7 +37,7 @@ class BinaryLayerConfig:
         if bits == 32:
             return activation in ['identity', 'approx_sign', 'relu', 'clip', 'leaky_clip']
         elif bits == 1:
-            return activation in ['det_sign', 'sign_approx_sign']
+            return activation in ['det_sign', 'sign_approx_sign', 'round']
         return activation in ['round', 'dorefa']  # DoReFa paper only applies round activation
 
     @staticmethod
