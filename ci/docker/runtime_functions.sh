@@ -139,6 +139,7 @@ build_armv6() {
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
+        -DUSE_MKLDNN=0FF \
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
@@ -170,6 +171,7 @@ build_armv7() {
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
+        -DUSE_MKLDNN=0FF \
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
@@ -190,6 +192,7 @@ build_armv8() {
         -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
+        -DUSE_MKLDNN=0FF \
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
@@ -215,6 +218,7 @@ build_android_armv7() {
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
+        -DUSE_MKLDNN=0FF \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
@@ -234,6 +238,7 @@ build_android_armv8() {
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_MKLDNN=0FF \
         -G Ninja /work/mxnet
     ninja -v
 }
