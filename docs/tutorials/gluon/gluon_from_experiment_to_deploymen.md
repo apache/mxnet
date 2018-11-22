@@ -40,7 +40,9 @@ data
 
 ```
 
-## Define Hyper-paramerters
+
+# Training using Gluon
+### Define Hyper-paramerters
 Now let's first import neccesarry packages:
 ```python
 import mxnet as mx
@@ -73,7 +75,7 @@ ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 batch_size = per_device_batch_size * max(num_gpus, 1)
 ```
 
-## Data pre-processing
+### Data pre-processing
 
 We can use Gluon DataSet API, DataLoader API, and Transform API to load the images and do data augmentation:
 ```python
@@ -117,7 +119,7 @@ test_data = gluon.data.DataLoader(
  ```
 
 
-## Loading pre-trained model
+### Loading pre-trained model
 
 We will use pre-trained ResNet50_v2 model, all you need to do is re-define the last softmax layer for your case. Specify the number of classes in your data and initialize the weights.
 You can also add layers to the network according to your needs.
@@ -140,7 +142,7 @@ metric = mx.metric.Accuracy()
 L = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
-## Fine-tuning model on your custom dataset
+### Fine-tuning model on your custom dataset
 
 Now let's define the test metrics and start fine-tuning.
 
@@ -197,19 +199,202 @@ print('[Finished] Test-acc: %.3f' % (test_acc))
 Note we are able to reach a test accuracy of 93% with only 20 epochs in less than 20 minutes, this is really fast because we used the
 pre-trained weights from ResNet50, it's been trained on a marge larget dataset: ImageNet, so it works really well to capture features on our small dataset.
 
-## Save fine-tuned model
+### Save fine-tuned model
 
 We now have a trained our custom model. This can be exported into files using the export function. The export function will export the model architecture into a .json file and model parameters into a .params file.
 
 ```python
-net.export("flower-recognition", epoch=1)
+net.export("flower-recognition", epoch=20)
 ```
-export in this case creates flower-recognitio-symbol.json and flower-recognitio-0001.params in the current directory.
+export in this case creates `flower-recognition-symbol.json` and `flower-recognition-0020.params` in the current directory.
 
-## Load and inference using C API
+## Load and inference using C++ API
 
-(WIP)
+### Setup MXNet C++ API
+TODO: replace link with offical link after PR merged.
+MXNet provide several language bindings for inference, for example C++, Scala, Java. In this tutorial we will focus on using C++ for inference. The code is modified from
+MXNet [C++ Inference example](https://github.com/leleamol/incubator-mxnet/tree/inception-example/cpp-package/example/inference).
+To use C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](https://mxnet.incubator.apache.org/install/ubuntu_setup.html), and [C++ Package documentation](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
+to enable C++ API.
+In summary you just need to build MXNet from source with `USE_CPP_PACKAGE` flag set to 1 using`make -j USE_CPP_PACKAGE=1`.
+
+### Write Predictor in C++
+Now let's write prediction code in C++.  What will use a Predictor Class to do the following jobs:
+1. Load the pre-trained model,
+2. Load the parameters of pre-trained model,
+3. Load the image to be classified  in to NDArray.
+4. Run the forward pass and predict the input image.
+
+```cpp
+class Predictor {
+ public:
+    Predictor() {}
+    Predictor(const std::string& model_json,
+              const std::string& model_params,
+              const Shape& input_shape,
+              bool gpu_context_type = false,
+              const std::string& synset_file = "",
+              const std::string& mean_image_file = "");
+    void PredictImage(const std::string& image_file);
+    ~Predictor();
+
+ private:
+    void LoadModel(const std::string& model_json_file);
+    void LoadParameters(const std::string& model_parameters_file);
+    void LoadSynset(const std::string& synset_file);
+    NDArray LoadInputImage(const std::string& image_file);
+    void LoadMeanImageData();
+    void NormalizeInput(const std::string& mean_image_file);
+
+    NDArray mean_img;
+    map<string, NDArray> args_map;
+    map<string, NDArray> aux_map;
+    std::vector<std::string> output_labels;
+    Symbol net;
+    Executor *executor;
+    Shape input_shape;
+    NDArray mean_image_data;
+    Context global_ctx = Context::cpu();
+    string mean_image_file;
+};
+```
+
+### Load network symbol and parameters
+
+In the Predictor constructor, you need a few information including paths to saved json and param files. After that add the following two methods to load the netowrk and its parameters.
+```cpp
+void Predictor::LoadModel(const std::string& model_json_file) {
+  LG << "Loading the model from " << model_json_file << std::endl;
+  net = Symbol::Load(model_json_file);
+}
+
+
+/*
+ * The following function loads the model parameters.
+ */
+void Predictor::LoadParameters(const std::string& model_parameters_file) {
+    LG << "Loading the model parameters from " << model_parameters_file << std::endl;
+    map<string, NDArray> paramters;
+    NDArray::Load(model_parameters_file, 0, &paramters);
+    for (const auto &k : paramters) {
+      if (k.first.substr(0, 4) == "aux:") {
+        auto name = k.first.substr(4, k.first.size() - 4);
+        aux_map[name] = k.second.Copy(global_ctx);
+      }
+      if (k.first.substr(0, 4) == "arg:") {
+        auto name = k.first.substr(4, k.first.size() - 4);
+        args_map[name] = k.second.Copy(global_ctx);
+      }
+    }
+    /*WaitAll is need when we copy data between GPU and the main memory*/
+    NDArray::WaitAll();
+}
+```
+
+### Load Input Image
+
+Now let's add a method to load the input image we want to predict and converts it to NDArray for prediction.
+```cpp
+NDArray Predictor::LoadInputImage(const std::string& image_file) {
+  LG << "Loading the image " << image_file << std::endl;
+  vector<float> array;
+  cv::Mat mat = cv::imread(image_file);
+  /*resize pictures to (224, 224) according to the pretrained model*/
+  int height = input_shape[2];
+  int width = input_shape[3];
+  int channels = input_shape[1];
+  cv::resize(mat, mat, cv::Size(height, width));
+  for (int c = 0; c < channels; ++c) {
+    for (int i = 0; i < height; ++i) {
+      for (int j = 0; j < width; ++j) {
+        array.push_back(static_cast<float>(mat.data[(i * height + j) * 3 + c]));
+      }
+    }
+  }
+  NDArray image_data = NDArray(input_shape, global_ctx, false);
+  image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
+  NDArray::WaitAll();
+  return image_data;
+}
+```
+
+### Run inference
+
+Finally, let's run the inference. It's basicaaly using MXNet executor to do a forward pass.
+
+```cpp
+void Predictor::PredictImage(const std::string& image_file) {
+  // Load the input image
+  NDArray image_data = LoadInputImage(image_file);
+
+  // Normalize the image
+  if (!mean_image_file.empty()) {
+    image_data.Slice(0, 1) -= mean_image_data;
+  }
+
+  LG << "Running the forward pass on model to predict the image";
+  /*
+   * The executor->arg_arrays represent the arguments to the model.
+   *
+   * Copying the image_data that contains the NDArray of input image
+   * to the arg map of the executor. The input is stored with the key "data" in the map.
+   *
+   */
+  image_data.CopyTo(&(executor->arg_dict()["data"]));
+  NDArray::WaitAll();
+
+  // Run the forward pass.
+  executor->Forward(false);
+
+  // The output is available in executor->outputs.
+  auto array = executor->outputs[0].Copy(global_ctx);
+  NDArray::WaitAll();
+
+  float best_accuracy = 0.0;
+  std::size_t best_idx = 0;
+
+  // Find out the maximum accuracy and the index associated with that accuracy.
+  for (std::size_t i = 0; i < array.Size(); ++i) {
+    if (array.At(0, i) > best_accuracy) {
+      best_accuracy = array.At(0, i);
+      best_idx = i;
+    }
+  }
+
+  if (output_labels.empty()) {
+    LG << "The model predicts the highest accuracy of " << best_accuracy << " at index "
+       << best_idx;
+  } else {
+    LG << "The model predicts the input image to be a [" << output_labels[best_idx]
+       << " ] with Accuracy = " << array.At(0, best_idx) << std::endl;
+  }
+}
+```
+
+### Compile and Run Inference Code
+
+You can find the full code [here](https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/inception_inference.cpp)
+, and to compile it use this [Makefile](https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/Makefile)
+
+Now you will be able to compile the run inference, just do `make all` and pass the parameters as follows
+```bash
+make all
+LD_LIBRARY_PATH=../incubator-mxnet/lib/ ./inception_inference --symbol "flower-recognition-symbol.json" --params "flower-recognition-0020.params" --image ./data/test/0/image_06736.jpg
+```
+Then it will predict your iamge
+
+```bash
+[22:26:49] inception_inference.cpp:128: Loading the model from flower-recognition-symbol.json
+
+[22:26:49] inception_inference.cpp:137: Loading the model parameters from flower-recognition-0020.params
+
+[22:26:50] inception_inference.cpp:179: Loading the image ./data/test/0/image_06736.jpg
+
+[22:26:50] inception_inference.cpp:230: Running the forward pass on model to predict the image
+[22:26:50] inception_inference.cpp:260: The model predicts the highest accuracy of 7.17001 at index 3
+```
 
 ## References
 
-https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html
+1. https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html
+2. https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/
