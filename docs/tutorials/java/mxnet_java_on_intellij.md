@@ -85,17 +85,17 @@ Set the project's location. The rest of the settings can be left as their defaul
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-**Step 3.** Add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
+**Step 3.** Download the MXNet Java API package from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~) and add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
  
 ```html
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.4.0</version>
+  <version>1.3.1-SNAPSHOT</version>
+  <scope>system</scope>
+  <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
-
-To view the latest MXNet Maven packages, you can check [MXNet Maven package repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~)
 
 Note :
 - Change the osx-x86_64 to linux-x86_64 if your platform is linux.
