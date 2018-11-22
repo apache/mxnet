@@ -225,7 +225,7 @@ endif()
 
 if(USE_MKLDNN)
   include(cmake/DownloadMKLML.cmake)
-  SET(MKLDNN_LIBRARY_TYPE STATIC)
+  set(MKLDNN_LIBRARY_TYPE "STATIC" CACHE INTERNAL "" FORCE)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
