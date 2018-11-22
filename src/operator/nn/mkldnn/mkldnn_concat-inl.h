@@ -37,11 +37,6 @@ namespace mxnet {
 namespace op {
 
 class MKLDNNConcatFwd {
-  std::shared_ptr<mkldnn::concat> fwd;
-  std::vector<std::shared_ptr<mkldnn::memory>> data;
-  std::vector<mkldnn::primitive::at> data_mem;
-  std::shared_ptr<mkldnn::memory> out;
-
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
@@ -76,6 +71,12 @@ class MKLDNNConcatFwd {
   const mkldnn::concat &GetFwd() const {
     return *fwd;
   }
+
+ private:
+  std::shared_ptr<mkldnn::concat> fwd;
+  std::vector<std::shared_ptr<mkldnn::memory>> data;
+  std::vector<mkldnn::primitive::at> data_mem;
+  std::shared_ptr<mkldnn::memory> out;
 };
 
 static MKLDNNConcatFwd &GetConcatForward(

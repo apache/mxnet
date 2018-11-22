@@ -119,7 +119,7 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
   for (int i = 0; i < params.num_args; ++i) {
     ret.push_back(std::string("arg") + std::to_string(i));
   }
-  for (int i = params.num_args; i < params.num_args * 2; ++i) {
+  for (int i = 0; i < params.num_args; ++i) {
     ret.push_back(std::string("arg") + std::to_string(i) + "_min");
     ret.push_back(std::string("arg") + std::to_string(i) + "_max");
   }
