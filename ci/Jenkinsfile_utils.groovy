@@ -161,8 +161,7 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 // Credit to https://plugins.jenkins.io/github
 def get_repo_url() {
   checkout scm
-  sh "git config --get remote.origin.url > .git/remote-url"
-  return readFile(".git/remote-url").trim()
+  return sh(returnStdout: true, script: "git config --get remote.origin.url").trim()
 }
 
 def update_github_commit_status(state, message) {
