@@ -12,4 +12,4 @@ The MXNet Java package makes it easy to quickly deploy an existing model into a 
 See the [tutorial page](../../tutorials/index.html#java-tutorials) for detailed tutorials and examples using the Java Inference API.
 
 ## Java Inference API Reference
-The [Java Infer API javadocs](../../docs/index.html#org.apache.mxnet.infer.package) provides detailed API information.
+The [Java Infer API javadocs](docs/index.html#org.apache.mxnet.infer.package) provides detailed API information.
