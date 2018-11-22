@@ -315,8 +315,56 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
                               &beta, C.dptr_, C.stride_, C.size(1) * C.stride_, A.size(0))) \
   }
 
-  LINALG_GPU_BATCH_GEMM(SgemmStridedBatched, float)
   LINALG_GPU_BATCH_GEMM(DgemmStridedBatched, double)
+
+  #if CUDA_VERSION < 9010
+  LINALG_GPU_BATCH_GEMM(SgemmStridedBatched, float)
+  #else
+    template <>
+    inline void linalg_batch_gemm<gpu, float>(const Tensor<gpu, 3, float>& A,
+                                              const Tensor<gpu, 3, float>& B,
+                                              const Tensor<gpu, 3, float>& C,
+                                              float alpha, float beta, bool tA,
+                                              bool tB, Stream<gpu>* s) {
+      using namespace mxnet;
+      using mshadow::gpu;
+      CHECK_NOTNULL(s);
+      linalg_check_batch_size(A.size(0), B.size(0), C.size(0));
+      check_gemm(A[0], B[0], C[0], alpha, beta, tA, tB);
+      auto blas_handle = Stream<gpu>::GetBlasHandle(s);
+      bool use_tensor_ops =
+          GetEnvAllowTensorCore() && GetEnvAllowTensorCoreConversion();
+
+      using namespace mshadow::cuda;
+      auto cublas_math_mode =
+          use_tensor_ops ? CUBLAS_TENSOR_OP_MATH : CUBLAS_DEFAULT_MATH;
+      auto previous_math_mode = SetCublasMathMode(blas_handle, cublas_math_mode);
+
+      // cublasGemmStridedBatchedEx is only supported for GPU with architecture
+      // capabilities equal or greater than 5.0. Fall back to
+      // cublasSgemmStridedBatched, which doesn't support implicit conversion
+      // to half-precision to use TensorCores
+      auto cc_major = (s->prop).major;
+      if ((cc_major >= 5) && use_tensor_ops) {
+        CUBLAS_CALL(cublasGemmStridedBatchedEx(
+            blas_handle, (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
+            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), C.size(2), C.size(1),
+            (tB ? B.size(2) : B.size(1)), &alpha, B.dptr_, CUDA_R_32F,
+            B.stride_, B.size(1) * B.stride_, A.dptr_, CUDA_R_32F, A.stride_,
+            A.size(1) * A.stride_, &beta, C.dptr_, CUDA_R_32F, C.stride_,
+            C.size(1) * C.stride_, A.size(0), CUDA_R_32F,
+            CUBLAS_GEMM_DEFAULT_TENSOR_OP));
+      } else {
+        CUBLAS_CALL(cublasSgemmStridedBatched(
+            blas_handle, (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
+            (tA ? CUBLAS_OP_T : CUBLAS_OP_N), C.size(2), C.size(1),
+            (tB ? B.size(2) : B.size(1)), &alpha, B.dptr_, B.stride_,
+            B.size(1) * B.stride_, A.dptr_, A.stride_, A.size(1) * A.stride_,
+            &beta, C.dptr_, C.stride_, C.size(1) * C.stride_, A.size(0)));
+      }
+      SetCublasMathMode(blas_handle, previous_math_mode);
+    }
+  #endif  // CUDA_VERSION < 9010
 
 // Version where matrix rows are given by second axis.
 #define LINALG_GPU_BATCH_GEMM_AXIS(fname, DType) \
