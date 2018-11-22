@@ -25,35 +25,54 @@
 */
 
 #include "./digitize_op.h"
+#include <mxnet/base.h>
+#include <vector>
+#include <algorithm>
+
 
 namespace mxnet {
 namespace op {
 
-        DMLC_REGISTER_PARAMETER(DigitizeParam);
+template<>
+void DigitizeOp::ForwardKernel::Map<cpu>(int i,
+                                         const DType *in_data,
+                                         DType *out_data,
+                                         const mshadow::Tensor<cpu, 1, BType> bins,
+                                         const bool right) {
+
+  const auto data = in_data[i];
+  auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
+                    : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
+
+  out_data[i] = std::distance(bins.dptr_, elem);
+}
+
+
+DMLC_REGISTER_PARAMETER(DigitizeParam);
 
 NNVM_REGISTER_OP(digitize)
-.describe(R"code(Full operator description:
+    .describe(R"code(Full operator description:
 .. math::
 
     ...
 
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<DigitizeParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-[](const NodeAttrs& attrs) {
-return std::vector<std::string>{"data"};
-})
-.set_attr<nnvm::FInferShape>("FInferShape", DigitizeOpShape)
-.set_attr<nnvm::FInferType>("FInferType", DigitizeOpType)
-.set_attr<FCompute>("FCompute", DigitizeOpForward<cpu>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-[](const NodeAttrs& attrs) {
-return std::vector<std::pair<int, int> >{{0, 0}};
-})
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(DigitizeParam::__FIELDS__());
+    .set_attr_parser(ParamParser<DigitizeParam>)
+    .set_num_inputs(1)
+    .set_num_outputs(1)
+    .set_attr<nnvm::FListInputNames>("FListInputNames",
+                                     [](const NodeAttrs &attrs) {
+                                       return std::vector<std::string>{ "data" };
+                                     })
+    .set_attr<nnvm::FInferShape>("FInferShape", DigitizeOp::InferShape)
+        //.set_attr<nnvm::FInferType>("FInferType", DigitizeOpType)
+    .set_attr<FCompute>("FCompute", DigitizeOp::Forward<cpu>)
+    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                    [](const NodeAttrs &attrs) {
+                                      return std::vector<std::pair<int, int>>{{ 0, 0 }};
+                                    })
+    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_arguments(DigitizeParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
