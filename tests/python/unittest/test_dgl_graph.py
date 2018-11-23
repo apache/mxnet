@@ -64,6 +64,10 @@ def test_subgraph():
         v1 = vertices[subv1]
         row_start = int(subgs[0].indptr[subv1].asnumpy()[0])
         row_end = int(subgs[0].indptr[subv1 + 1].asnumpy()[0])
+        if row_start >= len(subgs[0].indices):
+            remain = subgs[0].indptr[subv1:].asnumpy()
+            assert np.sum(remain == row_start) == len(remain)
+            break
         row = subgs[0].indices[row_start:row_end]
         for j, subv2 in enumerate(row.asnumpy()):
             v2 = vertices[subv2]
