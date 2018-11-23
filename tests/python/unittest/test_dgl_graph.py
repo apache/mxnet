@@ -56,6 +56,8 @@ def test_subgraph():
     vertices = np.unique(np.random.randint(0, 100, size=(20)))
     subgs = mx.nd.contrib.dgl_subgraph(g, mx.nd.array(vertices, dtype=np.int64),
                                        return_mapping=True)
+    subgs[0].check_format()
+    subgs[1].check_format()
     assert_array_equal(subgs[0].indptr, subgs[1].indptr)
     assert_array_equal(subgs[0].indices, subgs[1].indices)
     sp_subg = subgs[1].asscipy()
