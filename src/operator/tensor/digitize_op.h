@@ -81,10 +81,11 @@ public:
   struct ForwardKernel {
     template<typename xpu>
     MSHADOW_XINLINE static void Map(int i,
-                                    DType *in_data,
-                                    DType *out_data,
-                                    mshadow::Tensor<xpu, 1, BType> bins,
-                                    bool right);
+                                    const OpContext &ctx,
+                                    const TBlob &input_data,
+                                    const TBlob &bins,
+                                    TBlob &out_data,
+                                    const bool right);
   };
 
   template<class ForwardIterator, typename DType>
@@ -158,12 +159,23 @@ public:
   }
 };
 
-template<typename xpu, typename DType, typename BType>
-void DigitizeOp::ForwardKernel::Map<xpu>(int i,
-                                         DType *in_data,
-                                         DType *out_data,
-                                         mshadow::Tensor<xpu, 1, BType> bins,
-                                         bool right);
+template
+    <>
+void DigitizeOp::ForwardKernel::Map<cpu>(int i,
+                                         const OpContext &ctx,
+                                         const TBlob &input_data,
+                                         const TBlob &bins,
+                                         TBlob &out_data,
+                                         const bool right);
+
+template
+    <>
+void DigitizeOp::ForwardKernel::Map<gpu>(int i,
+                                         const OpContext &ctx,
+                                         const TBlob &input_data,
+                                         const TBlob &bins,
+                                         TBlob &out_data,
+                                         const bool right);
 
 
 }  // namespace op

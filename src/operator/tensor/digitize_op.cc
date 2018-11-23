@@ -33,18 +33,31 @@
 namespace mxnet {
 namespace op {
 
+// TODO: How to use templated pointers instead of TBlobs here?
 template<>
 void DigitizeOp::ForwardKernel::Map<cpu>(int i,
-                                         const DType *in_data,
-                                         DType *out_data,
-                                         const mshadow::Tensor<cpu, 1, BType> bins,
-                                         const bool right) {
+                                         const OpContext &ctx,
+                                         const TBlob &input_data,
+                                         const TBlob &bins,
+                                         TBlob &out_data,
+                                         const bool right){
+  using namespace mshadow;
 
-  const auto data = in_data[i];
-  auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-                    : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
+  auto s = ctx.get_stream<cpu>();
 
-  out_data[i] = std::distance(bins.dptr_, elem);
+  MSHADOW_TYPE_SWITCH(bins.type_flag_, BType, {
+    const Tensor<cpu, 1, BType> bins_tensor = bins.FlatTo1D<cpu, BType>(s);
+
+    MSHADOW_TYPE_SWITCH(input_data.type_flag_, OType, {
+      const auto *data = input_data.FlatTo1D<cpu, OType>(s).dptr_;
+
+      auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i])
+                        : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i]);
+
+      out_data[i] = std::distance(bins.dptr_, elem);
+    });
+  });
+
 }
 
 
