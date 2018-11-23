@@ -39,7 +39,8 @@ void Copy<cpu, cpu>(const TBlob &from, TBlob *to,
   MSHADOW_TYPE_SWITCH(to->type_flag_, DType, {
     if (to->type_flag_ == from.type_flag_) {
       const index_t size = from.Size();
-      CHECK_EQ(size, to->Size());
+      CHECK_EQ(size, to->Size()) << "copying size mismatch, from: " << size * sizeof(DType)
+               << " bytes, to: " << to->Size() * sizeof(DType) << " bytes.";
       common::ParallelCopy(to->dptr<DType>(), from.dptr<DType>(), size);
     } else {
       MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
