@@ -1141,7 +1141,7 @@ _broadcast_target(sig::Expr) = sig.args[2].args[].args[end]
 Generate docstring from function signature
 """
 function _docsig(fname::Symbol, sig::Expr, opname::String)
-  if fname !== :broadcast_
+  if fname !== :broadcasted
     get(_nddoc, fname, "    $sig") * "\n" * _getdocdefine(opname)
   else
     name = _broadcast_target(sig)
@@ -1355,7 +1355,8 @@ The storage type of `sigmoid` output is always dense.
 """
 function σ end
 const sigmoid = σ
-@_remap broadcasted(::typeof(σ), x::NDArray)       sigmoid(x)
+_nddoc[:σ] = false
+@_remap broadcasted(::typeof(σ), x::NDArray) sigmoid(x)
 
 @doc doc"""
     relu.(x::NDArray)
@@ -1367,6 +1368,7 @@ Computes rectified linear.
 ```
 """
 function relu end
+_nddoc[:relu] = false
 @_remap broadcasted(::typeof(relu), x::NDArray) relu(x)
 
 @doc doc"""
@@ -1382,6 +1384,7 @@ softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
 ```
 """
 function softmax end
+_nddoc[:softmax] = false
 @_remap broadcasted(::typeof(softmax), x::NDArray)           softmax(x; axis = -ndims(x))
 @_remap broadcasted(::typeof(softmax), x::NDArray, dim::Int) softmax(x; axis = -dim)
 
@@ -1402,6 +1405,7 @@ julia> mx.log_softmax.(x)
  -2.31703  -0.41703  -1.41703
 """
 function log_softmax end
+_nddoc[:log_softmax] = false
 @_remap broadcasted(::typeof(log_softmax), x::NDArray)           log_softmax(x; axis = -ndims(x))
 @_remap broadcasted(::typeof(log_softmax), x::NDArray, dim::Int) log_softmax(x; axis = -dim)
 
