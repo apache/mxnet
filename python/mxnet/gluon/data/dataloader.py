@@ -292,12 +292,6 @@ class _MultiWorkerIter(object):
             # send shutdown signal to all worker processes
             for _ in range(self._num_workers):
                 self._key_queue.put((None, None))
-            # wait 0.5 sec for workers to shut down if necessary
-            for w in self._workers:
-                if w.is_alive():
-                    import time
-                    time.sleep(0.5)   # allow 0.5 sec to join
-                    break
             # force shut down any alive worker processes
             for w in self._workers:
                 if w.is_alive():
