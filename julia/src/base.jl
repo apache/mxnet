@@ -187,7 +187,7 @@ dump_mx_param(val::Float32)    = @sprintf("%.8e", val)
 dump_mx_param(val::Float16)    = @sprintf("%.4e", val)
 dump_mx_param(val::Irrational) = @sprintf("%.16e", val)
 dump_mx_param(shape::NTuple{N,<:Integer}) where N =
-  string(reverse(shape)...)
+  string(reverse(shape))
 
 
 """
