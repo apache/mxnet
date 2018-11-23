@@ -26,3 +26,7 @@
 [submodule "3rdparty/onnx-tensorrt"]
 	path = 3rdparty/onnx-tensorrt
 	url = https://github.com/onnx/onnx-tensorrt.git
+[submodule "3rdparty/nvidia_cub"]
+	path = 3rdparty/nvidia_cub
+	url = https://github.com/NVlabs/cub.git
+	branch = 1.8.0
