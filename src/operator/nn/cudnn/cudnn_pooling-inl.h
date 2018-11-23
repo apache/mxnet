@@ -73,7 +73,7 @@ class CuDNNPoolingOp {
     CUDNN_CALL(cudnnDestroyPoolingDescriptor(pooling_desc_));
   }
 
-  // Return boolean saying whether pooling configuration is supported
+  // Return boolean saying whether pooling configuration is supported.
   bool Forward(const OpContext &ctx, const TBlob &in_data,
       const OpReqType &req, const TBlob &out_data) {
     using namespace mshadow;
