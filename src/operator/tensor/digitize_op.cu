@@ -32,22 +32,35 @@
 namespace mxnet{
 namespace op {
 
+      template<>
+      void DigitizeOp::ForwardKernel::Map<gpu>(int i,
+                                               const OpContext &ctx,
+                                               const TBlob &input_data,
+                                               const TBlob &bins,
+                                               TBlob &out_data,
+                                               const bool right){
+        using namespace mshadow;
+
+        auto s = ctx.get_stream<gpu>();
+
+        MSHADOW_TYPE_SWITCH(bins.type_flag_, BType, {
+          const Tensor<cpu, 1, BType> bins_tensor = bins.FlatTo1D<gpu, BType>(s);
+
+          MSHADOW_TYPE_SWITCH(input_data.type_flag_, OType, {
+            const auto *data = input_data.FlatTo1D<gpu, OType>(s).dptr_;
+
+            auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i])
+                              : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i]);
+
+            out_data[i] = thrust::distance(bins.dptr_, elem);
+
+          });
+        });
+
+      }
+
   NNVM_REGISTER_OP(diag)
       .set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward < gpu > );
-
-
-  template<>
-  void DigitizeOp::ForwardKernel::Map<gpu>(int i,
-                                           const DType *in_data,
-                                           DType *out_data,
-                                           const mshadow::Tensor<gpu, 1, BType> bins,
-                                           const bool right) {
-    auto data = in_data[i];
-    auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-                      : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
-
-    out_data[i] = thrust::distance(bins.dptr_, elem);
-  }
 
 }  // namespace op
 }  // namespace mxnet
