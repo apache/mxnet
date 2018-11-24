@@ -525,6 +525,37 @@ struct Kernel<OP, cpu> {
   }
 
   /*!
+   * \brief Launch a generic CPU kernel with dynamic schedule. This is recommended
+   * for irregular workloads such as spmv.
+   * When using this for a new kernel op, add declaration and tuning objects to
+   * operator_tune.cc
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   */
+  template<typename ...Args>
+  inline static bool LaunchDynamic(mshadow::Stream<cpu> *, const int64_t N, Args... args) {
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount(false);
+    if (omp_threads < 2) {
+      for (int64_t i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_threads) schedule(dynamic)
+      for (int64_t i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    }
+#else
+    for (int64_t i = 0; i < N; ++i) {
+      OP::Map(i, args...);
+    }
+#endif
+    return true;
+  }
+
+  /*!
    * \brief Launch CPU kernel which has OMP tuning data available.
    * When using this for a new kernel op, add declaration and tuning objects to
    * operator_tune.cc

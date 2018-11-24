@@ -791,6 +791,11 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
               s, num_threads, data_out.dptr<DType>());
         }
         num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+        bool dynamic = false;
+        if (data_out.shape_[0] > 1024 * 10) {
+          dynamic = true;
+          num_threads = data_out.Size() / 1024;
+        }
         dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
         if (trans_lhs) {
           mxnet_op::Kernel<DotCsrTransDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
@@ -798,10 +803,17 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
               col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
               lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
         } else {
-          mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
-              data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-              col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
-              data_out.shape_[0], data_out.shape_[1]);
+          if (dynamic) {
+            mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::LaunchDynamic(s, num_threads,
+                data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
+                data_out.shape_[0], data_out.shape_[1]);
+          } else {
+            mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
+                data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
+                data_out.shape_[0], data_out.shape_[1]);
+          }
         }
       });
     });
