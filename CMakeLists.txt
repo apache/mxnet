@@ -187,6 +187,7 @@ if(USE_TENSORRT)
   include_directories(${ONNX_PATH})
   include_directories(3rdparty/onnx-tensorrt/)
   include_directories(3rdparty/)
+  include_directories(3rdparty/onnx-tensorrt/third_party/onnx/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
 
