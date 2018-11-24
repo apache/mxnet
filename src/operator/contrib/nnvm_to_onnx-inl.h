@@ -37,7 +37,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include <algorithm>
 #include <iostream>
