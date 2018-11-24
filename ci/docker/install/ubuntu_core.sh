@@ -41,10 +41,11 @@ apt-get install -y \
     unzip \
     wget
 
-
-# Ubuntu 14.04
-if [[ $(lsb_release -r | grep 14.04) ]]; then
-    apt-get install -y cmake3
-else
-    apt-get install -y cmake
-fi
+# Note: we specify an exact cmake version to work around a cmake 3.10 CUDA 10 issue.
+# Reference: https://github.com/clab/dynet/issues/1457
+mkdir /opt/cmake && cd /opt/cmake
+wget -nv https://cmake.org/files/v3.12/cmake-3.12.4-Linux-x86_64.sh
+sh cmake-3.12.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
+ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+rm cmake-3.12.4-Linux-x86_64.sh
+cmake --version
