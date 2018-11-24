@@ -22,6 +22,10 @@
 
 set -ex
 apt-get update || true
+
+# Avoid interactive package installers such as tzdata.
+ENV DEBIAN_FRONTEND noninteractive
+
 apt-get install -y \
     apt-transport-https \
     build-essential \
