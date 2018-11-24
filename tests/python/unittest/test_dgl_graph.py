@@ -26,6 +26,41 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 import unittest
 
+def test_uniform_sample():
+    shape = (5, 5)
+    data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
+    indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
+    indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
+    a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
+    seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
+    out = mx.nd.contrib.csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
+    sample_id = out[0]
+    count = 0
+    for data in sample_id:
+        if data != -1:
+            count = count + 1
+
+    assert (mx.nd.array([count-1], dtype=np.int64)== sample_id[-1])
+
+def test_non_uniform_sample():
+    shape = (5, 5)
+    prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
+    data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
+    indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
+    indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
+    a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
+
+    seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
+    out = mx.nd.contrib.csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
+
+    sample_id = out[0]
+    count = 0
+    for data in sample_id:
+        if data != -1:
+            count = count + 1
+
+    assert (mx.nd.array([count-1], dtype=np.int64)== sample_id[-1])
+
 def test_edge_id():
     shape = rand_shape_2d()
     data = rand_ndarray(shape, stype='csr', density=0.4)
