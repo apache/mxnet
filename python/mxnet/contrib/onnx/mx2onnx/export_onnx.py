@@ -242,6 +242,14 @@ class MXNetGraph(object):
         onnx_processed_outputs = []
         index_lookup = []
 
+        graph_output_names = list()
+        for output_name in sym.list_outputs():
+            if output_name.endswith('_output'):
+                graph_output_names.append(output_name[:-len('_output')])
+            else:
+                logging.warning("output '{}' does not end with '_output'".format(output_name))
+                graph_output_names.append(output_name)
+
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
             op = node["op"]
@@ -294,7 +302,7 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
-                        if idx == (len(mx_graph) - 1):
+                        if converted_node.name in graph_output_names:
                             # If converted node doesnt have name, use it from output field
                             if not converted_node.name:
                                 onnx_processed_outputs.append(
