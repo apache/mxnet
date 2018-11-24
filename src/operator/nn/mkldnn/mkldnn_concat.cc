@@ -87,10 +87,7 @@ static MKLDNNConcatFwd &GetConcatForward(
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNConcatFwd fwd(concat_dim, data_md);
-    auto ins_ret = fwds.insert(std::pair<OpSignature, MKLDNNConcatFwd>(
-            key, fwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
