@@ -794,7 +794,9 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
         bool dynamic = false;
         if (data_out.shape_[0] > 1024 * 10) {
           dynamic = true;
-          num_threads = data_out.Size() / 1024;
+          // each unit of work processes at least 1024 elements in the output
+          const dim_t unit_work_per_thread = 1024;
+          num_threads = data_out.Size() / unit_work_per_thread;
         }
         dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
         if (trans_lhs) {
