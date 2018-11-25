@@ -33,7 +33,7 @@ namespace op {
 void CornerPoolingParamParser(nnvm::NodeAttrs *attrs) {
   CornerPoolingParam param;
   param.Init(attrs->dict);
-  attrs->parsed = std::move(param);
+  attrs->parsed = param;
 }
 
 
@@ -53,10 +53,9 @@ static bool CornerPoolingShape(const nnvm::NodeAttrs &attrs,
 
   CHECK_EQ(dshape.ndim(), 4U)
       << "CornerPooling: Input data should be  4D in (batch, channel, h, w)";
-  TShape oshape = dshape;
   if (dshape.ndim() == 0) return false;
   out_shape->clear();
-  out_shape->push_back(oshape);
+  out_shape->push_back(dshape);
   return true;
 }
 
