@@ -18,6 +18,7 @@
 """Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
+from multiprocessing import current_process
 
 import ctypes
 import struct
@@ -65,6 +66,7 @@ class MXRecordIO(object):
         self.uri = c_str(uri)
         self.handle = RecordIOHandle()
         self.flag = flag
+        self.pid = None
         self.is_open = False
         self.open()
 
@@ -78,6 +80,7 @@ class MXRecordIO(object):
             self.writable = False
         else:
             raise ValueError("Invalid flag %s"%self.flag)
+        self.pid = current_process().pid
         self.is_open = True
 
     def __del__(self):
@@ -118,6 +121,7 @@ class MXRecordIO(object):
         else:
             check_call(_LIB.MXRecordIOReaderFree(self.handle))
         self.is_open = False
+        self.pid = None
 
     def reset(self):
         """Resets the pointer to first item.
@@ -156,6 +160,8 @@ class MXRecordIO(object):
             Buffer to write.
         """
         assert self.writable
+        assert self.pid == current_process().pid, \
+            "writing in different process is forbidden"
         check_call(_LIB.MXRecordIOWriterWriteRecord(self.handle,
                                                     ctypes.c_char_p(buf),
                                                     ctypes.c_size_t(len(buf))))
@@ -182,6 +188,10 @@ class MXRecordIO(object):
             Buffer read.
         """
         assert not self.writable
+        if not self.pid == current_process().pid:
+            # in forked process, obtain a new handle
+            # print("PID not matching, reset")
+            self.reset()
         buf = ctypes.c_char_p()
         size = ctypes.c_size_t()
         check_call(_LIB.MXRecordIOReaderReadRecord(self.handle,
