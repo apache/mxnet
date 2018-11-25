@@ -24,13 +24,11 @@
 #include <mxnet/operator_util.h>
 #include <dmlc/logging.h>
 #include <dmlc/optional.h>
-#include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../../imperative/imperative_utils.h"
 #include "../subgraph_op_common.h"
-#include "../mshadow_op.h"
-#include "../mxnet_op.h"
 #include "../tensor/init_op.h"
+#include "./dgl_graph-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -459,6 +457,69 @@ The storage type of ``edge_id`` output depends on storage types of inputs
 .add_argument("u", "NDArray-or-Symbol", "u ndarray")
 .add_argument("v", "NDArray-or-Symbol", "v ndarray");
 
+///////////////////////// DGL Adjacency ///////////////////////////
+
+inline bool DGLAdjacencyShape(const nnvm::NodeAttrs& attrs,
+                              std::vector<TShape>* in_attrs,
+                              std::vector<TShape>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+}
+
+inline bool DGLAdjacencyType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_EQ(in_attrs->at(0), mshadow::kInt64);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
+  return out_attrs->at(0) != -1;
+}
+
+inline bool DGLAdjacencyStorageType(const nnvm::NodeAttrs& attrs,
+                                    const int dev_mask,
+                                    DispatchMode* dispatch_mode,
+                                    std::vector<int>* in_attrs,
+                                    std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U) << "Only works for 2d arrays";
+  CHECK_EQ(out_attrs->size(), 1U);
+  int& out_stype = out_attrs->at(0);
+  bool dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                        dispatch_mode, DispatchMode::kFComputeEx);
+  if (!dispatched) {
+    LOG(ERROR) << "Cannot dispatch edge_id storage type, only works for csr matrices";
+  }
+  return dispatched;
+}
+
+NNVM_REGISTER_OP(_contrib_dgl_adjacency)
+.describe(R"code(This operator converts a CSR matrix whose values are edge Ids
+to an adjacency matrix whose values are ones.
+Example::
+  x = [[ 1, 0, 0 ],
+       [ 0, 2, 0 ],
+       [ 0, 0, 3 ]]
+  dgl_adjacency(x) =
+      [[ 1, 0, 0 ],
+       [ 0, 1, 0 ],
+       [ 0, 0, 1 ]]
+
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", DGLAdjacencyShape)
+.set_attr<nnvm::FInferType>("FInferType", DGLAdjacencyType)
+.set_attr<FInferStorageType>("FInferStorageType", DGLAdjacencyStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", DGLAdjacencyForwardEx<cpu>)
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray");
 
 }  // namespace op
 }  // namespace mxnet

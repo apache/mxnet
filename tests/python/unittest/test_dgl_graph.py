@@ -75,6 +75,16 @@ def test_subgraph():
             v2 = vertices[subv2]
             assert sp_g[v1, v2] == sp_subg[subv1, subv2]
 
+def test_adjacency():
+    sp_g, g = generate_graph(100)
+    start = time.time()
+    adj = mx.nd.contrib.dgl_adjacency(g)
+    assert adj.dtype == np.float32
+    assert adj.shape == g.shape
+    assert_array_equal(adj.indptr, g.indptr)
+    assert_array_equal(adj.indices, g.indices)
+    assert_array_equal(adj.data, mx.nd.ones(shape=g.indices.shape))
+
 if __name__ == "__main__":
     import nose
     nose.runmodule()
