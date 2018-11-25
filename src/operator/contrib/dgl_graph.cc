@@ -27,7 +27,6 @@
 #include "../elemwise_op_common.h"
 #include "../../imperative/imperative_utils.h"
 #include "../subgraph_op_common.h"
-#include "../tensor/init_op.h"
 #include "./dgl_graph-inl.h"
 
 namespace mxnet {

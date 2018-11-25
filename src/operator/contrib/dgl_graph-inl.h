@@ -32,6 +32,7 @@
 #include "../operator_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../tensor/init_op.h"
 
 namespace mxnet {
 namespace op {
