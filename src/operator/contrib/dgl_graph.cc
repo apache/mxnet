@@ -762,11 +762,11 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
   const NeighborSampleParam& params =
     nnvm::get<NeighborSampleParam>(attrs.parsed);
 
-  size_t num_subgraphs = inputs.size() - 1;
+  int num_subgraphs = inputs.size() - 1;
   CHECK_EQ(outputs.size(), 3 * num_subgraphs);
 
 #pragma omp parallel for
-  for (size_t i = 0; i < num_subgraphs; i++) {
+  for (int i = 0; i < num_subgraphs; i++) {
     SampleSubgraph(inputs[0],                     // graph_csr
                    inputs[i + 1],                 // seed vector
                    outputs[i],                    // sample_id
@@ -825,13 +825,13 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
   const NeighborSampleParam& params =
     nnvm::get<NeighborSampleParam>(attrs.parsed);
 
-  size_t num_subgraphs = inputs.size() - 2;
+  int num_subgraphs = inputs.size() - 2;
   CHECK_EQ(outputs.size(), 4 * num_subgraphs);
 
   const float* probability = inputs[1].data().dptr<float>();
 
 #pragma omp parallel for
-  for (size_t i = 0; i < num_subgraphs; i++) {
+  for (int i = 0; i < num_subgraphs; i++) {
     float* sub_prob = outputs[i+2*num_subgraphs].data().dptr<float>();
     SampleSubgraph(inputs[0],                     // graph_csr
                    inputs[i + 2],                 // seed vector
