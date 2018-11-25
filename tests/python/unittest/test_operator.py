@@ -7243,6 +7243,16 @@ def test_softmax_cross_entropy():
     np_one_hot_label[np.arange(batch_size), np_label] = 1.
     check_symbolic_forward(sym, {'data' : np_data, 'label' : np_label}, [np.array([f_sm_ce(np_sm, np_one_hot_label)])], rtol=1e-3, atol=1e-5)
 
+@with_seed()
+def test_corner_pooling():
+    data = mx.sym.Variable(name='data')
+    for corner_type in ['left','right','bottom','right']:
+        test = mx.sym.ROIPooling(data=data, corner_pooling_type=corner_type)
+        x = np.random.rand(5,128,128,128)
+        check_numeric_gradient(sys=test, location=[x],
+                               grad_nodes={'data':'write'},
+                               atoi=1e-2)
+
 
 @with_seed()
 def test_invalid_kernel_size():

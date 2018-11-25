@@ -36,6 +36,7 @@ In the rest of this document, we list routines provided by the `symbol.contrib` 
 
     AdaptiveAvgPooling2D
     BilinearResize2D
+    CornerPooling
     CTCLoss
     DeformableConvolution
     DeformablePSROIPooling

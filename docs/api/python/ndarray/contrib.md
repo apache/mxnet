@@ -37,6 +37,7 @@ In the rest of this document, we list routines provided by the `ndarray.contrib`
     AdaptiveAvgPooling2D
     BilinearResize2D
     CTCLoss
+    CornerPooling
     DeformableConvolution
     DeformablePSROIPooling
     MultiBoxDetection
