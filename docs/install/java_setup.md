@@ -76,8 +76,6 @@ Package information can be found in this [Maven Repository](https://repository.a
 </dependency>
 ```
 
-**NOTE:** You may specify the version you wish to use by adding the version number to the `dependency` block. For example, to use v1.3.1 you would add `<version>1.3.1</version>`. Otherwise Maven will use the latest version available.
-
 <hr>
 
 ## Source
