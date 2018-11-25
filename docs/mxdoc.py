@@ -127,7 +127,7 @@ def build_scala_docs(app):
 
 def build_java_docs(app):
     """build java docs and then move the outdir"""
-    java_path = './../scala-package'
+    java_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
     find_cmd = '`find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep \"\/javaapi\" | egrep -v \"Suite\"`'
     _run_cmd('cd ' + java_path + '; scaladoc ' + find_cmd +'; exit 0')
