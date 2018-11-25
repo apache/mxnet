@@ -25,6 +25,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/ndarray.h>
 #include <map>
+#include <algorithm>
 #include <vector>
 #include <string>
 #include <utility>
@@ -59,7 +60,7 @@ void DGLAdjacencyForwardEx(const nnvm::NodeAttrs& attrs,
   mxnet_op::copy(s, outputs[0].aux_data(csr::kIndPtr), in_indptr);
 }
 
-}
-}
+}  // namespace op
+}  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_CONTRIB_DGL_GRAPH_INL_H_
