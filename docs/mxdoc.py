@@ -127,9 +127,10 @@ def build_scala_docs(app):
 
 def build_java_docs(app):
     """build java docs and then move the outdir"""
-    java_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/org/apache/mxnet/'
+    java_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + java_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/javaapi\" | egrep -v \"Suite\"`; exit 0')
+    find_cmd = '`find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep \"\/javaapi\" | egrep -v \"Suite\"`'
+    _run_cmd('cd ' + java_path + '; scaladoc ' + find_cmd +'; exit 0')
     dest_path = app.builder.outdir + '/api/java/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
