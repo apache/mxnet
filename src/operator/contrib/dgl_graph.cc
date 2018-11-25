@@ -765,7 +765,7 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
   size_t num_subgraphs = inputs.size() - 1;
   CHECK_EQ(outputs.size(), 3 * num_subgraphs);
 
-#pragma omp parallel for
+//#pragma omp parallel for
   for (size_t i = 0; i < num_subgraphs; i++) {
     SampleSubgraph(inputs[0],                     // graph_csr
                    inputs[i + 1],                 // seed vector
@@ -781,9 +781,8 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_csr_neighbor_uniform_sample)
-.MXNET_DESCRIBE(R"code(This operator samples sub-graph from a csr graph via an
-  uniform probability. 
-
+.describe(R"code(This operator samples sub-graph from a csr graph via an
+uniform probability. 
 For example:
 shape = (5, 5)
 data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
@@ -791,7 +790,6 @@ indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
 indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
 a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
 a.asnumpy()
-
 seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
 out = mx.nd.contrib.csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
 )code" ADD_FILELINE)
@@ -832,7 +830,7 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
 
   const float* probability = inputs[1].data().dptr<float>();
 
-#pragma omp parallel for
+//#pragma omp parallel for
   for (size_t i = 0; i < num_subgraphs; i++) {
     float* sub_prob = outputs[i+2*num_subgraphs].data().dptr<float>();
     SampleSubgraph(inputs[0],                     // graph_csr
@@ -849,9 +847,8 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
 }
 
 NNVM_REGISTER_OP(_contrib_csr_neighbor_non_uniform_sample)
-.MXNET_DESCRIBE(R"code(This operator samples sub-graph from a csr graph via an
-  uniform probability. 
-
+.describe(R"code(This operator samples sub-graph from a csr graph via an
+uniform probability. 
 For example:
 shape = (5, 5)
 prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
@@ -859,7 +856,6 @@ data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=n
 indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
 indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
 a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
-
 seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
 out = mx.nd.contrib.csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
 )code" ADD_FILELINE)
