@@ -41,7 +41,6 @@ except ImportError:
 
 from . import sampler as _sampler
 from ... import nd, context
-from ...recordio import MXRecordIO
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
@@ -164,29 +163,9 @@ def _as_in_context(data, ctx):
         return [_as_in_context(d, ctx) for d in data]
     return data
 
-def _recursive_fork_recordio(obj, depth, max_depth=1000):
-    """Recursively find instance of MXRecordIO and reset file handler.
-    This is required for MXRecordIO which holds a C pointer to a opened file after fork.
-    """
-    if depth >= max_depth:
-        return
-    if isinstance(obj, MXRecordIO):
-        obj.close()
-        obj.open()  # re-obtain file hanlder in new process
-    elif (hasattr(obj, '__dict__')):
-        for _, v in obj.__dict__.items():
-            _recursive_fork_recordio(v, depth + 1, max_depth)
 
 def worker_loop(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
-    # re-fork a new recordio handler in new process if applicable
-    # for a dataset with transform function, the depth of MXRecordIO is 1
-    # for a lazy transformer, the depth is 2
-    # for a user defined transformer, the depth is unknown, try a reasonable depth
-    # limit = sys.getrecursionlimit()
-    # max_recursion_depth = min(limit - 5, max(10, limit // 2))
-    # _recursive_fork_recordio(dataset, 0, max_recursion_depth)
-
     while True:
         idx, samples = key_queue.get()
         if idx is None:
