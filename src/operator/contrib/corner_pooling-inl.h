@@ -28,7 +28,7 @@
 
 #include <vector>
 
-#include <dmlc/parameter.h>
+#include "dmlc/parameter.h"
 #include "../operator_common.h"
 
 namespace mxnet {

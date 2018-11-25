@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include <mshadow/cuda/tensor_gpu-inl.cuh>
-#include <mshadow/tensor.h>
+#include "mshadow/cuda/tensor_gpu-inl.cuh"
+#include "mshadow/tensor.h"
 
 
 namespace mxnet {
