@@ -86,10 +86,19 @@ op::ONNXParam ConvertNnvmGraphToOnnx(
   }
 
   ModelProto model_proto;
-  // Need to determine IR versions and features to support
+
+  // We're currently serializing our models in ONNX 3, opset 8 as it is best supported by the
+  // currently linked version of the onnx-tensorrt library.
+  // More information on ONNX versions and opsets can be found at:
+  // https://github.com/onnx/onnx/blob/master/docs/IR.md
+
   auto opset_proto = model_proto.add_opset_import();
-  opset_proto->set_version(static_cast<int64>(8));
-  model_proto.set_ir_version(static_cast<int64>(3));
+  const int64 onnx_opset = 8;
+  const int64 onnx_major_version = 3;
+
+  // Declare our ONNX versions in our protobuf model.
+  opset_proto->set_version(onnx_opset);
+  model_proto.set_ir_version(onnx_major_version);
 
   GraphProto* graph_proto = model_proto.mutable_graph();
   auto subgraph_name_id = subgraph_count.fetch_add(1);
