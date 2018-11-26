@@ -442,87 +442,77 @@ static void GetSrcList(const dgl_id_t* val_list,
   }
 }
 
+static void RandomSample(size_t set_size,
+                         size_t num,
+                         std::vector<size_t>* out) {
+  std::unordered_set<size_t> sampled_idxs;
+  while (sampled_idxs.size() < num) {
+    sampled_idxs.insert(rand_r(&seed) % set_size);
+  }
+  out->clear();
+  for (auto it = sampled_idxs.begin(); it != sampled_idxs.end(); it++) {
+    out->push_back(*it);
+  }
+}
+
+static void NegateSet(const std::vector<size_t> &idxs,
+                      size_t set_size,
+                      std::vector<size_t>* out) {
+  // idxs must have been sorted.
+  auto it = idxs.begin();
+  size_t i = 0;
+  CHECK_GT(set_size, idxs.back());
+  for (; i < set_size && it != idxs.end(); i++) {
+    if (*it == i) {
+      it++;
+      continue;
+    }
+    out->push_back(i);
+  }
+  for (; i < set_size; i++) {
+    out->push_back(i);
+  }
+}
+
 /*
- * Uniform sample via random shuffle
+ * Uniform sample
  */
-static void GetUniformSampleShuffle(const std::vector<dgl_id_t>& ver_list,
-                                    const std::vector<dgl_id_t>& edge_list,
-                                    const size_t max_num_neighbor,
-                                    std::vector<dgl_id_t>* out,
-                                    std::vector<dgl_id_t>* out_edge) {
+static void GetUniformSample(const std::vector<dgl_id_t>& ver_list,
+                             const std::vector<dgl_id_t>& edge_list,
+                             const size_t max_num_neighbor,
+                             std::vector<dgl_id_t>* out_ver,
+                             std::vector<dgl_id_t>* out_edge) {
   CHECK_EQ(ver_list.size(), edge_list.size());
   // Copy ver_list to output
   if (ver_list.size() <= max_num_neighbor) {
     for (size_t i = 0; i < ver_list.size(); ++i) {
-      out->push_back(ver_list[i]);
+      out_ver->push_back(ver_list[i]);
       out_edge->push_back(edge_list[i]);
     }
     return;
   }
   // If we just sample a small number of elements from a large neighbor list.
-  std::vector<size_t> sorted_idxs(max_num_neighbor);
-  if (ver_list.size() > max_num_neighbor * 10) {
-    std::unordered_set<size_t> sampled_idxs;
-    while (sampled_idxs.size() < max_num_neighbor) {
-      // rand_num = [0, ver_list.size()-1]
-      size_t rand_num = rand_r(&seed) % ver_list.size();
-      sampled_idxs.insert(rand_num);
-    }
-    size_t i = 0;
-    for (auto it = sampled_idxs.begin(); it != sampled_idxs.end(); it++, i++)
-      sorted_idxs[i] = *it;
+  std::vector<size_t> sorted_idxs;
+  if (ver_list.size() > max_num_neighbor * 2) {
+    sorted_idxs.reserve(max_num_neighbor);
+    RandomSample(ver_list.size(), max_num_neighbor, &sorted_idxs);
+    std::sort(sorted_idxs.begin(), sorted_idxs.end());
   } else {
-    // The vertex list is relatively small. We just shuffle the list and
-    // take the first few.
-    std::vector<size_t> idxs(ver_list.size());
-    for (size_t i = 0; i < idxs.size(); i++) idxs[i] = i;
-    std::random_shuffle(idxs.begin(), idxs.end());
-    for (size_t i = 0; i < max_num_neighbor; i++)
-      sorted_idxs[i] = idxs[i];
+    std::vector<size_t> negate;
+    negate.reserve(ver_list.size() - max_num_neighbor);
+    RandomSample(ver_list.size(), ver_list.size() - max_num_neighbor,
+                 &negate);
+    std::sort(negate.begin(), negate.end());
+    NegateSet(negate, ver_list.size(), &sorted_idxs);
   }
-  std::sort(sorted_idxs.begin(), sorted_idxs.end());
-
+  // verify the result.
+  CHECK_EQ(sorted_idxs.size(), max_num_neighbor);
+  for (size_t i = 1; i < sorted_idxs.size(); i++) {
+    CHECK_GT(sorted_idxs[i], sorted_idxs[i - 1]);
+  }
   for (auto idx : sorted_idxs) {
-    out->push_back(ver_list[idx]);
+    out_ver->push_back(ver_list[idx]);
     out_edge->push_back(edge_list[idx]);
-  }
-}
-
-/*
- * Uniform sample via re-sample
- */
-static void GetUniformSampleReplace(const std::vector<dgl_id_t>& ver_list,
-                                    const std::vector<dgl_id_t>& edge_list,
-                                    const size_t max_num_neighbor,
-                                    std::vector<dgl_id_t>* out,
-                                    std::vector<dgl_id_t>* out_edge) {
-  CHECK_EQ(ver_list.size(), edge_list.size());
-  // Copy ver_list to output
-  if (ver_list.size() <= max_num_neighbor) {
-    for (size_t i = 0; i < ver_list.size(); ++i) {
-      out->push_back(ver_list[i]);
-      out_edge->push_back(edge_list[i]);
-    }
-    return;
-  }
-  // Make sample
-  std::unordered_map<size_t, bool> mp;
-  size_t sample_count = 0;
-  for (;;) {
-    // rand_num = [0, ver_list.size()-1]
-    size_t rand_num = rand_r(&seed) % ver_list.size();
-    auto got = mp.find(rand_num);
-    if (got != mp.end() && mp[rand_num]) {
-      // re-sample
-      continue;
-    }
-    mp[rand_num] = true;
-    out->push_back(ver_list[rand_num]);
-    out_edge->push_back(edge_list[rand_num]);
-    sample_count++;
-    if (sample_count == max_num_neighbor) {
-      break;
-    }
   }
 }
 
@@ -533,13 +523,13 @@ static void GetNonUniformSample(const float* probability,
                                 const std::vector<dgl_id_t>& ver_list,
                                 const std::vector<dgl_id_t>& edge_list,
                                 const size_t max_num_neighbor,
-                                std::vector<dgl_id_t>* out,
+                                std::vector<dgl_id_t>* out_ver,
                                 std::vector<dgl_id_t>* out_edge) {
   CHECK_EQ(ver_list.size(), edge_list.size());
   // Copy ver_list to output
   if (ver_list.size() <= max_num_neighbor) {
     for (size_t i = 0; i < ver_list.size(); ++i) {
-      out->push_back(ver_list[i]);
+      out_ver->push_back(ver_list[i]);
       out_edge->push_back(edge_list[i]);
     }
     return;
@@ -552,11 +542,11 @@ static void GetNonUniformSample(const float* probability,
   }
   ArrayHeap arrayHeap(sp_prob);
   arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index);
-  out->resize(max_num_neighbor);
+  out_ver->resize(max_num_neighbor);
   out_edge->resize(max_num_neighbor);
   for (size_t i = 0; i < max_num_neighbor; ++i) {
     size_t idx = sp_index[i];
-    out->at(i) = ver_list[idx];
+    out_ver->at(i) = ver_list[idx];
     out_edge->at(i) = edge_list[idx];
   }
 }
@@ -631,7 +621,7 @@ static void SampleSubgraph(const NDArray &csr,
                  &tmp_edge_list);
       if (probability == nullptr) {  // uniform-sample
         // Here we can also use GetUniformSampleShuffle() API
-        GetUniformSampleReplace(tmp_src_list,
+        GetUniformSample(tmp_src_list,
                        tmp_edge_list,
                        num_neighbor,
                        &tmp_sampled_src_list,
@@ -709,11 +699,18 @@ static void SampleSubgraph(const NDArray &csr,
     }
   }
   // Construct sub_csr_graph
-  std::vector<dgl_id_t> sub_val;
-  std::vector<dgl_id_t> sub_col_list;
-  std::vector<dgl_id_t> sub_indptr(max_num_vertices+1, 0);
-  sub_val.reserve(num_edges);
-  sub_col_list.reserve(num_edges);
+  TShape shape_1(1);
+  TShape shape_2(1);
+  shape_1[0] = num_edges;
+  shape_2[0] = max_num_vertices+1;
+  sub_csr.CheckAndAllocData(shape_1);
+  sub_csr.CheckAndAllocAuxData(csr::kIdx, shape_1);
+  sub_csr.CheckAndAllocAuxData(csr::kIndPtr, shape_2);
+  dgl_id_t* val_list_out = sub_csr.data().dptr<dgl_id_t>();
+  dgl_id_t* col_list_out = sub_csr.aux_data(1).dptr<dgl_id_t>();
+  dgl_id_t* indptr_out = sub_csr.aux_data(0).dptr<dgl_id_t>();
+
+  size_t collected_nedges = 0;
   for (size_t i = 0, index = 1; i < num_vertices; i++) {
     dgl_id_t dst_id = *(out + i);
     auto it = neigh_mp.find(dst_id);
@@ -721,34 +718,19 @@ static void SampleSubgraph(const NDArray &csr,
       const auto &edges = it->second.edges;
       const auto &neighs = it->second.neighs;
       CHECK_EQ(edges.size(), neighs.size());
-      for (auto& val : edges) {
-        sub_val.push_back(val);
-      }
-      for (auto& val : neighs) {
-        sub_col_list.push_back(val);
-      }
-      sub_indptr[index] = sub_indptr[index-1] + edges.size();
+      std::copy(edges.begin(), edges.end(), val_list_out + collected_nedges);
+      std::copy(neighs.begin(), neighs.end(), col_list_out + collected_nedges);
+      collected_nedges += edges.size();
+      indptr_out[index] = indptr_out[index-1] + edges.size();
     } else {
-      sub_indptr[index] = sub_indptr[index-1];
+      indptr_out[index] = indptr_out[index-1];
     }
     index++;
   }
-  // Copy sub_csr_graph to output[1]
-  TShape shape_1(1);
-  TShape shape_2(1);
-  shape_1[0] = sub_val.size();
-  shape_2[0] = sub_indptr.size();
-  sub_csr.CheckAndAllocData(shape_1);
-  sub_csr.CheckAndAllocAuxData(csr::kIdx, shape_1);
-  sub_csr.CheckAndAllocAuxData(csr::kIndPtr, shape_2);
-
-  dgl_id_t* val_list_out = sub_csr.data().dptr<dgl_id_t>();
-  dgl_id_t* col_list_out = sub_csr.aux_data(1).dptr<dgl_id_t>();
-  dgl_id_t* indptr_out = sub_csr.aux_data(0).dptr<dgl_id_t>();
-
-  std::copy(sub_val.begin(), sub_val.end(), val_list_out);
-  std::copy(sub_col_list.begin(), sub_col_list.end(), col_list_out);
-  std::copy(sub_indptr.begin(), sub_indptr.end(), indptr_out);
+  for (dgl_id_t i = num_vertices+1; i <= max_num_vertices; ++i) {
+    indptr_out[i] = indptr_out[i-1];
+  }
+  CHECK_EQ(collected_nedges, num_edges);
 }
 
 /*
