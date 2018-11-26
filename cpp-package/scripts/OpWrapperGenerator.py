@@ -406,6 +406,7 @@ if __name__ == "__main__":
                       "#include \"mxnet-cpp/op_util.h\"\n"
                       "#include \"mxnet-cpp/operator.h\"\n"
                       "#include \"dmlc/optional.h\"\n"
+                      "#include \"nnvm/tuple.h\"\n"
                       "\n"
                       "namespace mxnet {\n"
                       "namespace cpp {\n"
