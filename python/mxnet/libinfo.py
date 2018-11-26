@@ -77,7 +77,8 @@ def find_lib_path():
     return lib_path
 
 def find_include_path():
-    """Find MXNet dynamic library files.
+    """Find MXNet included header files.
+
      Returns
     -------
     incl_path : string
