@@ -29,6 +29,7 @@ from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
 import unittest
+import os
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
     dshape = (N, T, I)
@@ -4449,6 +4450,20 @@ def test_log_softmax():
             check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
+def test_softmax_with_large_inputs():
+    def softmax_forward(input_data, true_output):
+        data = mx.sym.Variable('data')
+        out1 = data.softmax(axis=1)
+        exec1 = out1.bind(default_context(), args={'data': input_data})
+        exec1.forward()[0].wait_to_read()
+        ndarr = exec1.outputs[0][0][0][0]
+        nparr = ndarr.asnumpy()
+        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
+
+    softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
 def test_pick():
@@ -5242,46 +5257,10 @@ def test_deformable_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-# Helper functions for test_laop
-
-def _make_symm_symbol(a, ndims):
-    assert ndims >= 2
-    tr_shape = list(range(ndims))
-    tr_shape[-1] = ndims-2
-    tr_shape[-2] = ndims-1
-    tr_shape = tuple(tr_shape)
-    return 0.5 * (a + mx.sym.transpose(a, axes=tr_shape))
-
-def _make_triangle_symm(a, ndims, m, lower, dtype=np.float32):
-    assert ndims >= 2
-    # The last two dimensions must both be m
-    # Create mask for lower triangle and diagonal
-    index = mx.sym.arange(start=0, stop=m, step=1, dtype=np.int32)
-    lt_mask = mx.sym.one_hot(index, depth=m, dtype=dtype)
-    for j in range(1, m):
-        part1 = mx.sym.zeros(shape=(j, m), dtype=dtype)
-        index = mx.sym.arange(start=0, stop=m-j, step=1, dtype=np.int32)
-        part2 = mx.sym.one_hot(index, depth=m, dtype=dtype)
-        lt_mask = lt_mask + mx.sym.concat(*[part1, part2], dim=0)
-    if not lower:
-        lt_mask = mx.sym.reshape(lt_mask, shape=(m, m))
-        lt_mask = mx.sym.transpose(lt_mask, axes=(1, 0))
-    shp = tuple([1]*(ndims-2) + [m, m])
-    lt_mask = mx.sym.reshape(lt_mask, shape=shp)
-    return mx.sym.broadcast_mul(a, lt_mask)
-
-# @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
-# tracked at https://github.com/apache/incubator-mxnet/issues/11718
-@with_seed()
-def test_laop():
-    dtype = np.float64
-    rtol_fw = 1e-7
-    atol_fw = 1e-9
+def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
     num_eps = 1e-6
     rtol_bw = 1e-5
     atol_bw = 1e-6
-    # enable numerical checking of gradients
-    grad_check = 1
 
     data1 = mx.symbol.Variable('data1')
     data2 = mx.symbol.Variable('data2')
@@ -5296,15 +5275,14 @@ def test_laop():
     rep_3x = lambda a, m, n :\
         np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
 
-    # Test gemm separately from other la-operators.
     shape1 = (2, 3)
     shape2 = (3, 2)
     shape3 = (3, 3)
     shape4 = (2, 2)
-    data_in1 = np.random.uniform(1, 10, shape1)
-    data_in2 = np.random.uniform(1, 10, shape2)
-    data_in3 = np.random.uniform(1, 10, shape3)
-    data_in4 = np.random.uniform(1, 10, shape4)
+    data_in1 = np.random.uniform(1, 10, shape1).astype(dtype)
+    data_in2 = np.random.uniform(1, 10, shape2).astype(dtype)
+    data_in3 = np.random.uniform(1, 10, shape3).astype(dtype)
+    data_in4 = np.random.uniform(1, 10, shape4).astype(dtype)
     # Check all transpositions of gemm operator.
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
@@ -5406,7 +5384,71 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_gemm, [a2, b2])
 
-    # Now test all the other operators.
+# Test gemm separately from other la-operators.
+@with_seed()
+def test_gemm():
+    _gemm_test_helper(np.float64, True)
+    os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
+    _gemm_test_helper(np.float32, False, rtol_fw = 1e-5, atol_fw = 1e-7)
+    if default_context().device_type == 'gpu':
+        os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "1"
+        _gemm_test_helper(np.float32, False, rtol_fw = 2e-5, atol_fw = 2e-7)
+        os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
+
+# Helper functions for test_laop
+
+def _make_symm_symbol(a, ndims):
+    assert ndims >= 2
+    tr_shape = list(range(ndims))
+    tr_shape[-1] = ndims-2
+    tr_shape[-2] = ndims-1
+    tr_shape = tuple(tr_shape)
+    return 0.5 * (a + mx.sym.transpose(a, axes=tr_shape))
+
+def _make_triangle_symm(a, ndims, m, lower, dtype=np.float32):
+    assert ndims >= 2
+    # The last two dimensions must both be m
+    # Create mask for lower triangle and diagonal
+    index = mx.sym.arange(start=0, stop=m, step=1, dtype=np.int32)
+    lt_mask = mx.sym.one_hot(index, depth=m, dtype=dtype)
+    for j in range(1, m):
+        part1 = mx.sym.zeros(shape=(j, m), dtype=dtype)
+        index = mx.sym.arange(start=0, stop=m-j, step=1, dtype=np.int32)
+        part2 = mx.sym.one_hot(index, depth=m, dtype=dtype)
+        lt_mask = lt_mask + mx.sym.concat(*[part1, part2], dim=0)
+    if not lower:
+        lt_mask = mx.sym.reshape(lt_mask, shape=(m, m))
+        lt_mask = mx.sym.transpose(lt_mask, axes=(1, 0))
+    shp = tuple([1]*(ndims-2) + [m, m])
+    lt_mask = mx.sym.reshape(lt_mask, shape=shp)
+    return mx.sym.broadcast_mul(a, lt_mask)
+
+# @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11718
+@with_seed()
+def test_laop():
+    dtype = np.float64
+    rtol_fw = 1e-7
+    atol_fw = 1e-9
+    num_eps = 1e-6
+    rtol_bw = 1e-5
+    atol_bw = 1e-6
+    # enable numerical checking of gradients
+    grad_check = 1
+
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
+    data3 = mx.symbol.Variable('data3')
+
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+    rep_3x = lambda a, m, n :\
+        np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
+
     for lower in [True, False]:
         upper = not lower
 
