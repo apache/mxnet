@@ -218,6 +218,7 @@ List of Contributors
 * [Dang Trung Kien](https://github.com/kiendang)
 * [Zach Boldyga](https://github.com/zboldyga)
 * [Gordon Reid](https://github.com/gordon1992)
+* [Mikhail Lobanov](https://github.com/lobanov-m)
 * [Ming Yang](http://ufoym.com)
 * [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
 * [Neo Chien](https://github.com/cchung100m)
