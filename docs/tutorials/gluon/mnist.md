@@ -8,13 +8,13 @@ MNIST is a widely used dataset for the hand-written digit classification task. I
 
 **Figure 1:** Sample images from the MNIST dataset.
 
-This tutorial uses MXNet's high-level *Gluon* interface to implement neural networks in an imperative fashion. It is based on [the corresponding tutorial written with the symbolic approach](https://mxnet.io/tutorials/python/mnist.html).
+This tutorial uses MXNet's high-level *Gluon* interface to implement neural networks in an imperative fashion. It is based on [the corresponding tutorial written with the symbolic approach](https://mxnet.incubator.apache.org/tutorials/python/mnist.html).
 
 ## Prerequisites
 
 To complete this tutorial, you need:
 
-- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.io/install/index.html).
+- MXNet. See the instructions for your operating system in [Setup and Installation](https://mxnet.incubator.apache.org/install/index.html).
 - The Python [`requests`](http://docs.python-requests.org/en/master/) library.
 - (Optional) The [Jupyter Notebook](https://jupyter.org/index.html) software for interactively running the provided `.ipynb` file.
 
@@ -97,7 +97,7 @@ Common choices for activation functions are [sigmoid](https://en.wikipedia.org/w
 In this example, we'll use the ReLU activation function since it has several nice properties that make it a good default choice.
 
 The following code declares three fully connected (or *dense*) layers with 128, 64 and 10 neurons each, where the last number of neurons matches the number of output classes in our dataset.
-To build the neural network, we use a [`Sequential` layer](https://mxnet.io/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential), which is a convenience class to build a linear stack of layers, often called a *feed-forward neural net*.
+To build the neural network, we use a [`Sequential` layer](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential), which is a convenience class to build a linear stack of layers, often called a *feed-forward neural net*.
 
 ```python
 net = nn.Sequential()
@@ -110,7 +110,7 @@ with net.name_scope():
 #### Initialize parameters and optimizer
 
 Before the network can be used, its parameters (weight and bias) need to be set to initial values that are sufficiently random while keeping the magnitude of gradients limited.
-The [Xavier](https://mxnet.io/api/python/optimization/optimization.html#mxnet.initializer.Xavier) initializer is usually a good default choice.
+The [Xavier](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.initializer.Xavier) initializer is usually a good default choice.
 
 Since the `net.initialize()` method creates arrays for its parameters, it needs to know where to store the values: in CPU or GPU memory.
 Like many other functions and classes that deal with memory management in one way or another, it takes an optional `ctx` (short for *context*) argument, where the return value of either `mx.cpu()` or `mx.gpu()` can be provided.
@@ -129,8 +129,8 @@ It determines the size of steps that the algorithm takes in search of parameters
 In general, hyperparameters refer to *non-learnable* values that need to be chosen before training and that have an effect on the outcome.
 In this example, further hyperparameters are the number of layers in the network, the number of neurons of the first two layers, the activation function and (later) the loss function.
 
-The SGD optimization method can be accessed in MXNet Gluon through the [`Trainer`](https://mxnet.io/api/python/gluon/gluon.html#trainer) class.
-Internally, it makes use of the [`SGD`](https://mxnet.io/api/python/optimization/optimization.html#mxnet.optimizer.SGD) optimizer class.
+The SGD optimization method can be accessed in MXNet Gluon through the [`Trainer`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#trainer) class.
+Internally, it makes use of the [`SGD`](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.optimizer.SGD) optimizer class.
 
 ```python
 trainer = gluon.Trainer(
