@@ -29,7 +29,7 @@ python train.py --cuda --tied --nhid 650 --emsize 650 --epochs 40  --dropout 0.5
 python train.py --cuda --tied --nhid 1500 --emsize 1500 --epochs 60  --dropout 0.65     # Test ppl of 88.42
 ```
 ```
-python train.py --export-only # hybridize and export model graph (requires mxboard)
+python train.py --export-only # hybridize and export model graph. See below for how to visualize the graph with mxboard (separately installed).
 ```
 
 <br>
@@ -71,4 +71,13 @@ optional arguments:
   --export-only         export a symbol graph and exit
 ```
 
+If [mxboard](https://github.com/awslabs/mxboard) is installed, use the following approach to visualize the graph
+```python
+import mxnet, mxboard
+with mxboard.SummaryWriter(logdir='./model-graph') as sw:
+    sw.add_graph(mxnet.sym.load('./model-symbol.json'))
+```
+```bash
+tensorboard --logdir=./model-graph/
+```
 ![model graph](./model-graph.png?raw=true "rnn model graph")

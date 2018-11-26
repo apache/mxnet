@@ -65,7 +65,7 @@ parser.add_argument('--static-alloc', action='store_true',
 parser.add_argument('--static-shape', action='store_true',
                     help='whether to use static-shape hybridize in mxnet>=1.3')
 parser.add_argument('--export-only', action='store_true',
-                    help='export a symbol graph and exit')
+                    help='export a symbol graph and exit', default=False)
 args = parser.parse_args()
 
 print(args)
@@ -218,11 +218,7 @@ def train():
 
 if __name__ == '__main__':
     train()
-    if args.export_only:
-        from mxboard import SummaryWriter
-        with SummaryWriter(logdir='./model-graph') as sw:
-            sw.add_graph(mx.sym.load('./model-symbol.json'))
-    else:
+    if not args.export_only:
         model.load_parameters(args.save, context)
         test_L = eval(test_data)
         print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
