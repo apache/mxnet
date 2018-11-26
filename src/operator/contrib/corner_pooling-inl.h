@@ -160,8 +160,11 @@ inline void corner_pool_grad(mshadow::Stream<cpu> *s,
                              const int corner_pooling_type,
                              OpReqType req_type,
                              DType *in_grad) {
-  mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, ishape.Size(),
-                                                    in_grad);
+  if (mxnet::kNullOp == req_type) return;
+  if (mxnet::kAddTo != req_type) {
+    mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, ishape.Size(),
+                                                      in_grad);
+  }
   const int height = ishape[2], width = ishape[3];
   const index_t data_offset = width * height;
   if (corner_pooling_type == 0 || corner_pooling_type == 1) {
