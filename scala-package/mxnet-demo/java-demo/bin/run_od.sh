@@ -18,4 +18,4 @@
 CURR_DIR=$(cd $(dirname $0)/../; pwd)
 
 CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/*
-java -Xmx8G  -cp $CLASSPATH sample.ObjectDetection
+java -Xmx8G  -cp $CLASSPATH mxnet.ObjectDetection
