@@ -53,13 +53,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import logging
 import json
-import numpy as np
 
-from .... import context
 from .... import ndarray as nd
-from .... import io
-from .... import module as mod
-from .... import symbol
 
 
 class MXNetGraph(object):
@@ -128,7 +123,7 @@ class MXNetGraph(object):
     def get_outputs(sym, params, in_shape, in_label):
         """ Infer output shapes and return dictionary of output name to shape
 
-        :param symbol.Symbol sym: symbol to perform infer shape on
+        :param :class:`~mxnet.symbol.Symbol` sym: symbol to perform infer shape on
         :param dic of (str, nd.NDArray) params:
         :param list of tuple(int, ...) in_shape: list of all input shapes
         :param  in_label: name of label typically used in loss that may be left in graph. This name is
@@ -150,7 +145,7 @@ class MXNetGraph(object):
             if name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
             else:
-                logging.warning("output '{}' does not end with '_output'".format(name))
+                logging.warning("output '%s' does not end with '_output'", name)
                 out_names.append(name)
 
         assert len(out_shapes) == len(out_names)
