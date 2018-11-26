@@ -222,9 +222,9 @@ It is always a good idea to actually look at the images on which the network per
 We do that with the help of a small function that produces a list of the images which the network got wrong, together with the predicted and true labels.
 
 ```python
-def get_mislabelled(loader):
-    """Return list of ``(input, pred_lbl, true_lbl)`` for mislabelled samples."""
-    mislabelled = []
+def get_mislabeled(loader):
+    """Return list of ``(input, pred_lbl, true_lbl)`` for mislabeled samples."""
+    mislabeled = []
     for inputs, labels in loader:
         inputs = inputs.as_in_context(ctx)
         labels = labels.as_in_context(ctx)
@@ -233,20 +233,20 @@ def get_mislabelled(loader):
         preds = nd.argmax(outputs, axis=1)
         for i, p, l in zip(inputs, preds, labels):
             if p != l:
-                mislabelled.append(
+                mislabeled.append(
                     (i.asnumpy(), int(p.asnumpy()), int(l.asnumpy()))
                 )
-    return mislabelled
+    return mislabeled
 ```
 
-We can now get the mislabelled images in the training and validation sets and plot a selection of them:
+We can now get the mislabeled images in the training and validation sets and plot a selection of them:
 
 ```python
 import numpy as np
 
 sample_size = 8
-wrong_train = get_mislabelled(train_loader)
-wrong_val = get_mislabelled(val_loader)
+wrong_train = get_mislabeled(train_loader)
+wrong_val = get_mislabeled(val_loader)
 wrong_train_sample = [wrong_train[i] for i in np.random.randint(0, len(wrong_train), size=sample_size)]
 wrong_val_sample = [wrong_val[i] for i in np.random.randint(0, len(wrong_val), size=sample_size)]
 
@@ -273,7 +273,7 @@ for ax, (img, pred, lbl) in zip(axs, wrong_val_sample):
 ![png](./wrong_train.png)
 ![png](./wrong_val.png)
 
-In this case, it is rather obvious that our MLP network is either too simple or not trained long enough to perform really great on this dataset, as can be seen from the fact that some of the mislabelled examples are rather "easy" and should not be a challenge for our neural net.
+In this case, it is rather obvious that our MLP network is either too simple or not trained long enough to perform really great on this dataset, as can be seen from the fact that some of the mislabeled examples are rather "easy" and should not be a challenge for our neural net.
 As it turns out, moving to the CNN architecture presented in the following section will give a big performance boost.
 
 ### Convolutional Neural Network
