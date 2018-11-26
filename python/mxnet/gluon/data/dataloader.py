@@ -250,13 +250,21 @@ class _MultiWorkerIter(object):
         self._reset()
 
     def __len__(self):
+        """Get length of iterator.
+
+        Returns
+        -------
+        int
+            Length of iterator, equals to batch_sampler length.
+
+        """
         return len(self._batch_sampler)
 
     def __del__(self):
         self.shutdown()
 
     def _reset(self):
-        """Reset iterator with multiprocessing workers alive."""
+        """Reset iterator with multiprocessing workers alive. Internal use. """
         assert not self._shutdown, "call reset after shutdown is forbidden"
         # clear key queue
         removed_idx = set()
@@ -286,7 +294,7 @@ class _MultiWorkerIter(object):
             self._push_next()
 
     def _push_next(self):
-        """Assign next batch workload to workers."""
+        """Assign next batch workload to workers. Internal use only. """
         r = next(self._iter, None)
         if r is None:
             return
@@ -294,6 +302,14 @@ class _MultiWorkerIter(object):
         self._sent_idx += 1
 
     def __next__(self):
+        """Return next sample, will raise `StopIteration` reaching end.
+
+        Returns
+        -------
+        NDArray
+            Batched sample data.
+
+        """
         assert not self._shutdown, "call __next__ after shutdown is forbidden"
         if self._rcvd_idx == self._sent_idx:
             assert not self._data_buffer, "Data buffer should be empty at this moment"
@@ -308,14 +324,35 @@ class _MultiWorkerIter(object):
                 return batch
 
     def next(self):
+        """Compatible portal for __next__ in python2.
+
+        Returns
+        -------
+        type
+            Description of returned object.
+
+        """
         return self.__next__()
 
     def __iter__(self):
+        """Requiring iterator will reset current instance, but keep all workers
+        alive, thus save re-init time of forking processes.
+
+        Returns
+        -------
+        iterator
+            Iterator of self.
+
+        """
         self._reset()
         return self
 
     def shutdown(self):
-        """Shutdown internal workers by pushing terminate signals."""
+        """
+        Shutdown internal workers by pushing terminate signals. Once shutdown,
+        you cannot use this instance again, you will need to obtain a new
+        _MultiWorkerIter by `iter(dataloader)`.
+        """
         if not self._shutdown:
             # send shutdown signal to the fetcher and join data queue first
             # Remark:   loop_fetcher need to be joined prior to the workers.
@@ -360,6 +397,14 @@ class _SameProcessIter(object):
         self._reset()
 
     def __len__(self):
+        """Get length of iterator.
+
+        Returns
+        -------
+        int
+            Length of iterator, equals to batch_sampler length.
+
+        """
         return len(self._batch_sampler)
 
     def _reset(self):
@@ -367,6 +412,14 @@ class _SameProcessIter(object):
         self._iter = iter(self._batch_sampler)
 
     def __next__(self):
+        """Return next sample, will raise `StopIteration` reaching end.
+
+        Returns
+        -------
+        NDArray
+            Batched sample data.
+
+        """
         try:
             batch = next(self._iter)
         except StopIteration:
@@ -378,9 +431,25 @@ class _SameProcessIter(object):
             return ret
 
     def next(self):
+        """Compatible portal for __next__ in python2.
+
+        Returns
+        -------
+        type
+            Description of returned object.
+
+        """
         return self.__next__()
 
     def __iter__(self):
+        """Requiring iterator will reset current instance.
+
+        Returns
+        -------
+        iterator
+            Iterator of self.
+
+        """
         self._reset()
         return self
 
