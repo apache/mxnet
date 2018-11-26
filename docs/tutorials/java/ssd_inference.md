@@ -181,6 +181,6 @@ The results returned by the inference call translate into the regions in the ima
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](/api/java/infer.html)
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/examples/src/main/java/org/apache/mxnetexamples/infer/)
+* [Java Inference API](/api/java/index.html)
+* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index](/tutorials/index.html)

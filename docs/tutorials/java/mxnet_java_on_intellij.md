@@ -12,7 +12,7 @@ To use this tutorial you need the following pre-requisites:
 
 ### MacOS Prerequisites
 
-You can run the following commands to install the prerequisites.
+Run the following commands to install the prerequisites on MacOS.
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 brew update
@@ -22,10 +22,9 @@ brew install maven
 brew install opencv
 ```
 
-You can also run this tutorial on an Ubuntu machine after installing the following prerequisites.
 ### Ubuntu Prerequisites
 
-Run the following commands to install the prerequisites.
+Run the following commands to install the prerequisites on Ubuntu.
 
 ```bash
 wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
@@ -166,6 +165,6 @@ java -cp target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/* mxnet.App
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](https://mxnet.incubator.apache.org/api/java/infer.html)
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/examples/src/main/java/org/apache/mxnetexamples/infer/)
+* [Java Inference API](/api/java/index.html)
+* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index](http://mxnet.io/tutorials/index.html)
