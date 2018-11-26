@@ -444,6 +444,8 @@ You can use the Maven packages defined in the following `dependency` to include 
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+    <scope>system</scope>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>
@@ -459,6 +461,8 @@ You can use the Maven packages defined in the following `dependency` to include 
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <scope>system</scope>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>
@@ -719,6 +723,8 @@ You can use the Maven packages defined in the following `dependency` to include 
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+    <scope>system</scope>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>
