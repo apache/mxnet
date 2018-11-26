@@ -428,16 +428,16 @@ core_logic: {
         }
       }
     },
-    'NVidia Jetson / ARMv8':{
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-jetson-armv8') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('jetson', 'build_jetson', false)
-          }
-        }
-      }
-    },
+    //'NVidia Jetson / ARMv8':{
+    //  node(NODE_LINUX_CPU) {
+    //    ws('workspace/build-jetson-armv8') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        utils.init_git()
+    //        utils.docker_run('jetson', 'build_jetson', false)
+    //      }
+    //    }
+    //  }
+    //},
     'ARMv7':{
       node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv7') {
