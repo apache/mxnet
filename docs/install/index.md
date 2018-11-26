@@ -9,6 +9,7 @@
    c_plus_plus.md
    centos_setup.md
    download.md
+   java_setup.md
    osx_setup.md
    raspbian_setup.md
    scala_setup.md
@@ -52,6 +53,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active languages">Python</button>
   <button type="button" class="btn btn-default opt languages">Scala</button>
+  <button type="button" class="btn btn-default opt languages">Java</button>
   <button type="button" class="btn btn-default opt languages">R</button>
   <button type="button" class="btn btn-default opt languages">Julia</button>
   <button type="button" class="btn btn-default opt languages">Perl</button>
@@ -430,6 +432,40 @@ You can use the Maven packages defined in the following `dependency` to include 
 </div> <!-- End of scala -->
 
 
+
+<div class="java">
+<div class="gpu">
+<br/>
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of gpu -->
+
+<div class="cpu">
+<br/>
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu -->
+</div> <!-- End of java -->
+
+
 <div class="julia">
 <div class="cpu gpu">
 </br>
@@ -671,6 +707,28 @@ Not available at this time. <br>
 </div>
 </div> <!-- End of scala -->
 
+
+<div class="java">
+<div class="cpu">
+</br>
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu  -->
+<div class="gpu">
+
+Not available at this time. <br>
+
+</div>
+</div> <!-- End of java -->
 
 
 <div class="julia">
@@ -967,6 +1025,14 @@ MXNet-Scala for Windows is not yet available.
 <br/>
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala -->
+
+<div class="java">
+<div class="cpu gpu">
+<br/>
+MXNet-Java for Windows is not yet available.
+<br/>
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of java -->
 
 <div class="julia">
 <div class="cpu gpu">
