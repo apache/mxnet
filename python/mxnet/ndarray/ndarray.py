@@ -392,17 +392,19 @@ fixed-size items.
         else:
             self.handle = None
 
-    # pylint: disable=line-too-long
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
 
-        Sets value to self[key]. This functions supports advanced indexing defined in the following reference with
-        some restrictions.
+        Sets ``self[key]`` to ``value``.
 
-        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
+        with some restrictions:
 
-        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
-          while not for key=[[1, 2]].
+        - If ``key`` is of type ``list``, only a list of integers, e.g.
+          ``key=[1, 2]``, is supported. Nested lists like ``key=[[1, 2]]`` are
+          not supported.
         - Boolean array indexing is not supported.
 
         Parameters
@@ -444,9 +446,21 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
-        key = _expand_index_implicit_axes(key, self.shape)
+        key = _indexing_key_expand_implicit_axes(key, self.shape)
         slc_key = tuple(idx for idx in key if idx is not None)
         indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
+
+        if len(slc_key) < self.ndim:
+            raise RuntimeError(
+                'too few indices after normalization: expected `ndim` ({}) '
+                'but got {}. This is a bug, please report it!'
+                ''.format(self.ndim, len(slc_key))
+            )
+        elif len(slc_key) > self.ndim:
+            raise IndexError(
+                'too many indices ({}) for array with {} dimensions'
+                ''.format(len(slc_key), self.ndim)
+            )
 
         indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
@@ -456,22 +470,28 @@ fixed-size items.
         else:
             raise ValueError(
                 'Indexing NDArray with index {} of type {} is not supported'
-                ''.format(key, type(key)))
-    # pylint: enable=line-too-long
+                ''.format(key, type(key))
+            )
 
-    # pylint: disable=line-too-long
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
 
-        Returns a sliced view of this array if the elements fetched are contiguous in memory;
-        otherwise, returns a newly created NDArray.
-        This functions supports advanced indexing defined in the following reference with
-        some restrictions.
+        Returns the subarray ``self[key]``.
 
-        https://docs.scipy.org/doc/numpy-1.13.0/reference/arrays.indexing.html#combining-advanced-and-basic-indexing
+        For basic indexing, i.e., if ``key`` consists only of integers,
+        ``slice``, ``Ellipsis`` (``...``) and ``None``, a mutable view is
+        returned that shares memory with this array if the accessed portion is
+        contiguous in memory.
+        Otherwise, a newly created ``NDArray`` is returned.
 
-        - If key is a list type, only a list of integers is supported, e.g. key=[1, 2] is supported,
-          while not for key=[[1, 2]].
+        This functions supports advanced indexing as defined in `the NumPy
+        advanced indexing documentation
+        <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
+        with some restrictions:
+
+        - If ``key`` is of type ``list``, only a list of integers, e.g.
+          ``key=[1, 2]``, is supported. Nested lists like ``key=[[1, 2]]`` are
+          not supported.
         - Boolean array indexing is not supported.
 
         Parameters
@@ -524,53 +544,49 @@ fixed-size items.
         >>> x[None, ..., None].shape
         (1, 2, 2, 2, 1)
         """
-        key = _expand_index_implicit_axes(key, self.shape)
-        conv_key, int_axes = _convert_index_int_to_slice(key)
-        new_axes = _new_axes_after_indexing(key)
-        slc_key = tuple(idx for idx in conv_key if idx is not None)
-        indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
+        key = _indexing_key_expand_implicit_axes(key, self.shape)
+        if len(key) == 0:
+            raise ValueError('indexing key cannot be an empty tuple')
 
+        indexing_dispatch_code = _get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
-            sliced = self._get_nd_basic_indexing(slc_key)
+            return self._get_nd_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            sliced = self._get_nd_advanced_indexing(key)
+            return self._get_nd_advanced_indexing(key)
         else:
-            raise ValueError(
-                'Indexing NDArray with index {} of type {} is not supported'
-                ''.format(key, type(key)))
-
-        final_shape = [sliced.shape[i] for i in range(sliced.ndim)
-                       if i not in int_axes]
-        for new_ax in new_axes:
-            final_shape.insert(new_ax, 1)
-
-        if int_axes == tuple(range(self.ndim)):
-            # Override for single element indexing
-            final_shape = (1,)
-
-        return sliced.reshape(final_shape)
-
-    # pylint: enable=line-too-long
+            raise RuntimeError
 
     def _get_index_nd(self, key):
-        """Returns an index array for use in scatter_nd and gather_nd."""
-        def _is_advanced_index(index):
-            """The definition of advanced index here includes integers as well, while
-            integers are considered as basic index type when the key contains only
-            slices and integers."""
-            return not isinstance(index, py_slice)
+        """Return an index array for use in `scatter_nd` and `gather_nd`."""
+        key_nd = tuple(idx for idx in key if idx is not None)
+        if len(key_nd) < self.ndim:
+            raise RuntimeError(
+                'too few indices after normalization: expected `ndim` ({}) '
+                'but got {}. This is a bug, please report it!'
+                ''.format(self.ndim, len(key_nd))
+            )
+        elif len(key_nd) > self.ndim:
+            raise IndexError(
+                'too many indices ({}) for array with {} dimensions'
+                ''.format(len(key_nd), self.ndim)
+            )
+        ndim = len(key_nd)
 
-        if isinstance(key, (NDArray, np.ndarray, list, integer_types, py_slice)):
-            key = (key,)
+        conv_key = _advanced_indexing_convert_to_arrays(
+            key_nd, self.shape, self.context
+        )
 
-        assert isinstance(key, tuple),\
-            'index=%s must be a NDArray, or np.ndarray, or list, or tuple ' \
-            ' type to use advanced indexing, received type=%s' % (str(key), str(type(key)))
+        # TODO: continue here
 
-        assert len(key) > 0, "Cannot slice with empty indices"
+        adv_axes = [ax for ax in range(ndim) if _is_advanced_index(key_nd[ax])]
+        adv_idcs = [conv_key[ax] for ax in adv_axes]
+        adv_block_shape = _broadcast_shapes(adv_idcs)
+        adv_block_extra_ndim = len(adv_block_shape) - len(adv_axes)
+
+        bas_axes = [ax for ax in range(ndim) if not _is_advanced_index(key_nd[ax])]
+        bas_shape = sum((conv_key[ax].shape for ax in bas_axes), ())
+
         shape = self.shape
-        assert len(shape) >= len(key),\
-            "Slicing dimensions exceeds array dimensions, %d vs %d" % (len(key), len(shape))
         indices = []
         dtype = 'int32'  # index data type passed to gather_nd op
         need_broadcast = (len(key) != 1)
@@ -612,22 +628,22 @@ fixed-size items.
         if len(advanced_indices) == 0:
             raise ValueError('Advanced index tuple must contain at least one of the following types:'
                              ' list, tuple, NDArray, np.ndarray, integer, received index=%s' % key)
-        # determine the output array's shape by checking whether advanced_indices are all adjacent
+        # Determine the output array's shape by checking whether advanced_indices are all adjacent
         # or separated by slices
         advanced_indices_adjacent = True
-        for i in range(0, len(advanced_indices)-1):
-            if advanced_indices[i] + 1 != advanced_indices[i+1]:
+        for i in range(0, len(advanced_indices) - 1):
+            if advanced_indices[i] + 1 != advanced_indices[i + 1]:
                 advanced_indices_adjacent = False
                 break
 
-        index_bshape_list = []  # index broadcasted shape
+        index_bshape_list = []  # index broadcast shape
         if advanced_indices_adjacent:
             for i in range(0, advanced_indices[0]):
                 index_bshape_list.extend(indices[i].shape)
                 if not need_broadcast and indices[i].shape != advanced_index_bshape:
                     need_broadcast = True
             index_bshape_list.extend(advanced_index_bshape)
-            for i in range(advanced_indices[-1]+1, len(indices)):
+            for i in range(advanced_indices[-1] + 1, len(indices)):
                 if not need_broadcast and indices[i].shape != advanced_index_bshape:
                     need_broadcast = True
                 index_bshape_list.extend(indices[i].shape)
@@ -653,7 +669,7 @@ fixed-size items.
         # broadcast the reshaped array to (1, 2, 4, 3); to broadcast key[1], we first
         # reshape it into (1, 2, 1, 1), then broadcast the reshaped array to (1, 2, 4, 3).
         if need_broadcast:
-            broadcasted_indices = []
+            broadcast_indices = []
             idx_rshape = [1] * len(index_bshape)
             if advanced_indices_adjacent:
                 advanced_index_bshape_start = advanced_indices[0]  # start index of advanced_index_bshape in index_shape
@@ -674,7 +690,7 @@ fixed-size items.
                             raise ValueError('basic index i=%d cannot be between advanced index i=%d and i=%d'
                                              % (i, advanced_indices[0], advanced_indices[-1]))
                     # broadcast current index to the final shape
-                    broadcasted_indices.append(indices[i].reshape(tuple(idx_rshape)).broadcast_to(index_bshape))
+                    broadcast_indices.append(indices[i].reshape(tuple(idx_rshape)).broadcast_to(index_bshape))
                     # reset idx_rshape to ones
                     for j, _ in enumerate(idx_rshape):
                         idx_rshape[j] = 1
@@ -690,12 +706,12 @@ fixed-size items.
                         idx_rshape[basic_index_offset] = indices[i].shape[0]
                         basic_index_offset += 1
                     # broadcast current index to the final shape
-                    broadcasted_indices.append(indices[i].reshape(tuple(idx_rshape)).broadcast_to(index_bshape))
+                    broadcast_indices.append(indices[i].reshape(tuple(idx_rshape)).broadcast_to(index_bshape))
                     # reset idx_rshape to ones
                     for j, _ in enumerate(idx_rshape):
                         idx_rshape[j] = 1
 
-            indices = broadcasted_indices
+            indices = broadcast_indices
         return op.stack(*indices)
 
     def _prepare_value_nd(self, value, new_axes, bcast_shape):
@@ -722,7 +738,7 @@ fixed-size items.
 
         # First reshape `value_nd` to a new shape that incorporates existing
         # axes, new axes and broadcasting axes in the right way.
-        tmp_shape = _new_shape_for_bcast(
+        tmp_shape = _shape_for_bcast(
             value_nd.shape, target_ndim=len(bcast_shape), new_axes=new_axes
         )
         value_nd = value_nd.reshape(tmp_shape)
@@ -733,17 +749,6 @@ fixed-size items.
 
     def _set_nd_basic_indexing(self, key, value):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
-        if len(key) < self.ndim:
-            raise RuntimeError(
-                'too few indices in basic indexing: expected `ndim` ({}) '
-                'but got {}. This is a bug, please report it!'
-                ''.format(self.ndim, len(key))
-            )
-        elif len(key) > self.ndim:
-            raise IndexError(
-                'too many indices ({}) for array with {} dimensions'
-                ''.format(len(key), self.ndim)
-            )
         for idx in key:
             if not isinstance(idx, (py_slice, integer_types)):
                 raise RuntimeError(
@@ -753,15 +758,16 @@ fixed-size items.
                     ''.format(type(idx)))
         int_axes = [ax for ax in range(len(key))
                     if isinstance(key[ax], integer_types)]
-        begin, end, step = _basic_indexing_tuple_to_begin_end_step(
+        begin, end, step = _basic_indexing_key_to_begin_end_step(
             key, self.shape, keep_none=False
         )
-        indexed_shape = tuple((abs(e - b) - 1) // abs(s) + 1
-                              for b, e, s in zip(begin, end, step))
+        indexed_shape = tuple(
+            _get_dim_size(b, e, s) for b, e, s in zip(begin, end, step)
+        )
         can_assign_directly = (
             (indexed_shape == self.shape) and all(s > 0 for s in step)
         )
-        begin, end, step = _basic_indexing_tuple_to_begin_end_step(
+        begin, end, step = _basic_indexing_key_to_begin_end_step(
             key, self.shape, keep_none=True
         )
 
@@ -770,7 +776,7 @@ fixed-size items.
             if isinstance(value, NDArray):
                 if value.handle is not self.handle:
                     # Need to do this before `broadcast_to`.
-                    tmp_shape = _new_shape_for_bcast(
+                    tmp_shape = _shape_for_bcast(
                         value.shape, target_ndim=self.ndim, new_axes=int_axes
                     )
                     value = value.reshape(tmp_shape)
@@ -786,7 +792,7 @@ fixed-size items.
                 )
 
             elif isinstance(value, (np.ndarray, np.generic)):
-                tmp_shape = _new_shape_for_bcast(
+                tmp_shape = _shape_for_bcast(
                     value.shape, target_ndim=self.ndim, new_axes=int_axes
                 )
                 value = value.reshape(tmp_shape)
@@ -823,27 +829,61 @@ fixed-size items.
 
     def _get_nd_basic_indexing(self, key):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
-        if len(key) == 0:
-            raise ValueError('basic index cannot be an empty tuple')
-        for idx in key:
+        key_nd = tuple(idx for idx in key if idx is not None)
+        if len(key_nd) < self.ndim:
+            raise RuntimeError(
+                'too few indices after normalization: expected `ndim` ({}) '
+                'but got {}. This is a bug, please report it!'
+                ''.format(self.ndim, len(key_nd))
+            )
+        elif len(key_nd) > self.ndim:
+            raise IndexError(
+                'too many indices ({}) for array with {} dimensions'
+                ''.format(len(key_nd), self.ndim)
+            )
+
+        none_axes = [ax for ax in range(len(key)) if key[ax] is None]
+        slc_key, int_axes = _indexing_key_int_to_slice(key_nd)
+        new_axes = _axes_after_indexing(none_axes, key_nd, self.ndim)
+
+        # Make sure we don't accidentally have advanced indexing or
+        # unsupported entries.
+        for idx in slc_key:
             if not isinstance(idx, py_slice):
                 raise RuntimeError(
-                    '`key` may only contain `slice` objects in the basic '
-                    'implementation, indexing, got object of type {}. '
+                    'found object of type {} instead of `slice`. '
                     'This is a bug, please report it!'
                     ''.format(type(idx)))
-        begin, _, _ = _basic_indexing_tuple_to_begin_end_step(
-            key, self.shape, keep_none=False
+
+        # Check index bounds. Only `begin` is relevant, `end` is automatically
+        # clipped.
+        begin, _, _ = _basic_indexing_key_to_begin_end_step(
+            slc_key, self.shape, keep_none=False
         )
         for ax, (b, n) in enumerate(zip(begin, self.shape)):
-            if b >= n:
+            if not -(n + 1) <= b <= n:
                 raise IndexError(
                     'index {} is out of bounds for axis {} with size {}'
                     ''.format(b, ax, n))
-        begin, end, step = _basic_indexing_tuple_to_begin_end_step(
-            key, self.shape, keep_none=True
+
+        # Do the slicing.
+        begin, end, step = _basic_indexing_key_to_begin_end_step(
+            slc_key, self.shape, keep_none=True
         )
-        return op.slice(self, begin, end, step)
+        # TODO: copy-free indexing if possible
+        sliced = op.slice(self, begin, end, step)
+
+        # Reshape to final shape due to integer and `None` entries in `key`.
+        final_shape = [sliced.shape[i] for i in range(sliced.ndim)
+                       if i not in int_axes]
+        for ax in new_axes:
+            final_shape.insert(ax, 1)
+
+        if final_shape == []:
+            # Override for single element indexing
+            final_shape = [1]
+
+        return sliced.reshape(final_shape)
 
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
@@ -2386,46 +2426,46 @@ fixed-size items.
         return to_dlpack_for_write(self)
 
 
-def _expand_index_implicit_axes(idcs, shape):
+def _indexing_key_expand_implicit_axes(key, shape):
     """Make implicit axes explicit by adding ``slice(None)``."""
 
-    if not isinstance(idcs, tuple):
-        # NOTE: `arr[idcs]` should be equivalent to `arr[(idcs,)]`, but in
+    if not isinstance(key, tuple):
+        # NOTE: `arr[key]` should be equivalent to `arr[(key,)]`, but in
         # some cases this is not true currently, e.g., with `slice` objects.
-        idcs = (idcs,)
+        key = (key,)
 
     # We need to loop explicitly since tuple functions like `index()` or
     # `count()` use `==` internally, which doesn't play well with fancy
     # indexing.
     ell_idx = None
     num_none = 0
-    nonell_idcs = []
-    for i, idx in enumerate(idcs):
+    nonell_key = []
+    for i, idx in enumerate(key):
         if idx is Ellipsis:
             if ell_idx is not None:
                 raise IndexError(
-                    'Cannot use more than one ellipsis (`...`) '
-                    'for indexing')
+                    'Cannot use more than one ellipsis (`...`) for indexing'
+                )
             else:
                 ell_idx = i
         else:
             if idx is None:
                 num_none += 1
-            nonell_idcs.append(idx)
+            nonell_key.append(idx)
 
-    nonell_idcs = tuple(nonell_idcs)
+    nonell_key = tuple(nonell_key)
 
     if ell_idx is None:
         # This handles the case of "too few" indices, e.g., `nd.zeros((2, 3))[0]`,
         # where the ellipsis is implicitly after the last entry.
-        ell_idx = len(shape)
+        ell_idx = len(nonell_key)
 
-    ell_ndim = len(shape) + num_none - len(nonell_idcs)
-    expanded_idcs = (nonell_idcs[:ell_idx] +
+    ell_ndim = len(shape) + num_none - len(nonell_key)
+    expanded_key = (nonell_key[:ell_idx] +
                      (slice(None),) * ell_ndim +
-                     nonell_idcs[ell_idx:])
+                     nonell_key[ell_idx:])
 
-    return expanded_idcs
+    return expanded_key
 
 
 def _int_to_slice(idx):
@@ -2437,7 +2477,7 @@ def _int_to_slice(idx):
         return slice(idx, idx + 1)
 
 
-def _convert_index_int_to_slice(idcs):
+def _indexing_key_int_to_slice(idcs):
     """Return the converted indexing tuple and the integer axes."""
     int_axes = []
     conv_idcs = []
@@ -2451,31 +2491,33 @@ def _convert_index_int_to_slice(idcs):
     return tuple(conv_idcs), tuple(int_axes)
 
 
-def _new_axes_after_indexing(idcs):
-    """Return indices of new axes after slicing (potentially fancy).
+def _axes_after_indexing(axes, key, ndim):
+    """Return indices of ``axes`` after slicing with ``key``.
 
     Integer entries are considered as collapsed axes after indexing, i.e.,
-    the input to this function should be the non-int-to-slice-converted
-    indices.
+    ``key`` should not be the result of int-to-slice conversion, but the
+    original indices.
     """
-    ax = 0
-    new_axes = []
-    for idx in idcs:
-        if idx is None:
-            new_axes.append(ax)
-            ax += 1
-        elif hasattr(idx, 'ndim'):
-            ax += idx.ndim
-        elif isinstance(idx, integer_types):
-            pass
-        else:
-            ax += 1
-
-    return tuple(new_axes)
+    steps = [0] + [getattr(idx, 'ndim', 1) for idx in key]
+    for _ in range(len(key), ndim):
+        steps.append(1)
+    assert len(steps) == 1 + ndim
+    cum_steps = np.cumsum(steps)
+    axes_in_bounds = [ax for ax in axes if ax < len(cum_steps)]
+    axes_out_of_bounds = [ax for ax in axes if ax >= len(cum_steps)]
+    axes_after = tuple(cum_steps[axes_in_bounds])
+    oob_offsets = [ax - ndim for ax in axes_out_of_bounds]
+    axes_after += tuple(cum_steps[-1] + offset for offset in oob_offsets)
+    return axes_after
 
 
-def _new_shape_for_bcast(shape, target_ndim, new_axes):
-    """Return shape with added axes for broadcasting in ``target_ndim`` dimensions."""
+def _shape_for_bcast(shape, target_ndim, new_axes):
+    """Return shape with added axes for broadcasting in ``target_ndim`` dimensions.
+
+    The returned shape has fixed ``1`` entries in locations indexed by ``new_axes``,
+    and the rest is filled from the back with ``shape`` while possible, after
+    that with ``1``.
+    """
     new_shape = [None] * target_ndim
     for new_ax in new_axes:
         new_shape[new_ax] = 1
@@ -2491,10 +2533,10 @@ def _new_shape_for_bcast(shape, target_ndim, new_axes):
             except IndexError:
                 new_shape[-ax] = 1
 
-    return new_shape
+    return tuple(new_shape)
 
 
-def _basic_indexing_tuple_to_begin_end_step(idcs, shape, keep_none=True):
+def _basic_indexing_key_to_begin_end_step(idcs, shape, keep_none=True):
     """Map a tuple of ``slice`` and ``None`` (ignored) to begin, end, step tuples."""
     idcs = [idx for idx in idcs if idx is not None]
     idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
@@ -2506,30 +2548,78 @@ def _basic_indexing_tuple_to_begin_end_step(idcs, shape, keep_none=True):
     return tuple(zip(*sss_list))
 
 
+def _is_advanced_index(idx):
+    """Return whether ``idx`` is an advanced index (array-like or integer).
+
+    Note that in contrast to basic indexing, integers are considered advanced
+    indices in the context of advanced indexing as they participate in
+    broadcasting.
+    """
+    if isinstance(idx, (NDArray, np.ndarray, integer_types, list, tuple)):
+        return True
+    elif isinstance(idx, py_slice) or idx is None:
+        return False
+    else:
+        raise RuntimeError('illegal index type {}'.format(type(idx)))
+
+
+def _advanced_indexing_convert_to_arrays(key, shape, ctx):
+    """Convert all entries in ``key`` to `NDArray` for advanced indexing.
+
+    The ``key`` is assumed to have the same length as ``shape`` and may not
+    contain any ``None`` entries.
+    """
+    idx_dtype = 'int32'
+    converted = []
+    for idx, n in zip(key, shape):
+
+        if isinstance(idx, NDArray):
+            if idx.dtype != idx_dtype:
+                idx = idx.astype(idx_dtype)
+            idx = idx.as_in_context(ctx)
+
+        elif isinstance(idx, (np.ndarray, list, tuple)):
+            idx = array(idx, ctx, idx_dtype)
+
+        elif isinstance(idx, integer_types):
+            idx = array([idx], ctx, idx_dtype)
+
+        elif isinstance(idx, py_slice):
+            start, stop, step = idx.indices(n)
+            idx = arange(start, stop, step, ctx=ctx, dtype=idx_dtype)
+
+        else:
+            raise RuntimeError('illegal index type {}'.format(type(idx)))
+
+        converted.append(idx)
+
+    return tuple(converted)
+
+
 def _get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
-    if isinstance(key, (NDArray, np.ndarray)):
-        return _NDARRAY_ADVANCED_INDEXING
-    elif isinstance(key, list):
-        # TODO(junwu): Add support for nested lists besides integer list
-        for i in key:
-            if not isinstance(i, integer_types):
-                raise TypeError('Indexing NDArray only supports a list of integers as index'
-                                ' when key is of list type, received element=%s of type=%s'
-                                % (str(i), str(type(i))))
-        return _NDARRAY_ADVANCED_INDEXING
-    elif isinstance(key, (integer_types, py_slice)):
+    assert isinstance(key, tuple)
+
+    for idx in key:
+        if isinstance(key, list):
+            for i in key:
+                if not isinstance(i, integer_types):
+                    raise TypeError(
+                        'Indexing NDArray only supports a list of integers as index '
+                        'when key is of list type, got entry {} of type {}.'
+                        ''.format(i, type(i))
+                    )
+
+        if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+            return _NDARRAY_ADVANCED_INDEXING
+
+        elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
+            raise ValueError(
+                'NDArray does not support slicing with key {} of type {}.'
+                ''.format(idx), type(idx)
+            )
+
         return _NDARRAY_BASIC_INDEXING
-    elif isinstance(key, tuple):
-        for idx in key:
-            if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
-                return _NDARRAY_ADVANCED_INDEXING
-            elif not isinstance(idx, (py_slice, integer_types)):
-                raise ValueError("NDArray does not support slicing with key %s of type %s."
-                                 % (str(idx), str(type(idx))))
-        return _NDARRAY_BASIC_INDEXING
-    else:
-        return _NDARRAY_UNSUPPORTED_INDEXING
 
 
 def _get_index_range(start, stop, length, step=1):
@@ -2617,6 +2707,14 @@ def _get_broadcast_shape(shape1, shape2):
         shape[i] = max(a, b)
         i -= 1
     return tuple(shape)
+
+
+def _broadcast_shapes(seq):
+    """Return the broadcast shape of all advanced indices in ``seq``.
+
+    All entries are assumed to have a ``shape`` property.
+    """
+    return reduce(_get_broadcast_shape, [x.shape for x in seq], ())
 
 
 def onehot_encode(indices, out):
