@@ -30,6 +30,7 @@
 
 #include "dmlc/parameter.h"
 #include "../operator_common.h"
+#include "../mxnet_op.h"
 
 namespace mxnet {
 namespace op {
@@ -88,10 +89,10 @@ inline void corner_pool(mshadow::Stream<cpu> *s,
                         const int corner_pooling_type,
                         OpReqType req_type,
                         DType *out_data) {
+  CHECK_EQ(req_type, kWriteTo)
+    << "Only support req=kWriteTo in corner pooling operations";
   using mshadow::red::limits::MinValue;
 // const TShape &oshape = ishape;
-  CHECK_EQ(req_type, kWriteTo)
-      << "Only support req=kWriteTo in corner pooling operations";
   int height = ishape[2], width = ishape[3];
   if (corner_pooling_type == 0 || corner_pooling_type == 1) {
     // top or bottom
@@ -159,6 +160,8 @@ inline void corner_pool_grad(mshadow::Stream<cpu> *s,
                              const int corner_pooling_type,
                              OpReqType req_type,
                              DType *in_grad) {
+  mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, ishape.Size(),
+                                                    in_grad);
   const int height = ishape[2], width = ishape[3];
   const index_t data_offset = width * height;
   if (corner_pooling_type == 0 || corner_pooling_type == 1) {

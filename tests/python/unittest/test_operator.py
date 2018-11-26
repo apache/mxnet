@@ -7246,12 +7246,14 @@ def test_softmax_cross_entropy():
 @with_seed()
 def test_corner_pooling():
     data = mx.sym.Variable(name='data')
-    for corner_type in ['left','right','bottom','right']:
+    dirs = ['left','right','bottom','right']
+    for corner_type in dirs:
         test = mx.sym.CornerPooling(data=data, corner_pooling_type=corner_type)
-        x = np.random.rand(5,128,128,128)
-        check_numeric_gradient(sys=test, location=[x],
+        x = np.random.rand(3,2,4,5)
+        check_numeric_gradient(sym=test, location=[x],
                                grad_nodes={'data':'write'},
-                               atoi=1e-2)
+                               numeric_eps=1e-4, rtol=1e-1, atol=1e-4)
+
 
 
 @with_seed()
