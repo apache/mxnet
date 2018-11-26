@@ -22,8 +22,9 @@ import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
 import org.apache.mxnet.module.Module
 
 import scala.collection.mutable.ListBuffer
-import org.slf4j.LoggerFactory
 import scala.util.Try
+import org.slf4j.LoggerFactory
+
 
 /**
  * Base Trait for MXNet Predictor classes.
