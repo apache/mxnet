@@ -59,13 +59,13 @@ parser.add_argument('--gctype', type=str, default='none',
 parser.add_argument('--gcthreshold', type=float, default=0.5,
                     help='threshold for 2bit gradient compression')
 parser.add_argument('--hybridize', action='store_true',
-                    help='whether to hybridize in mxnet>=1.3')
+                    help='whether to hybridize in mxnet>=1.3 (default=False)')
 parser.add_argument('--static-alloc', action='store_true',
-                    help='whether to use static-alloc hybridize in mxnet>=1.3')
+                    help='whether to use static-alloc hybridize in mxnet>=1.3 (default=False)')
 parser.add_argument('--static-shape', action='store_true',
-                    help='whether to use static-shape hybridize in mxnet>=1.3')
+                    help='whether to use static-shape hybridize in mxnet>=1.3 (default=False)')
 parser.add_argument('--export-only', action='store_true',
-                    help='export a symbol graph and exit', default=False)
+                    help='export a symbol graph and exit (default=False)')
 args = parser.parse_args()
 
 print(args)

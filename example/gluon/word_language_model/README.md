@@ -65,10 +65,12 @@ optional arguments:
                         `none` for now.
   --gcthreshold GCTHRESHOLD
                         threshold for 2bit gradient compression
-  --hybridize           whether to hybridize in mxnet>=1.3
+  --hybridize           whether to hybridize in mxnet>=1.3 (default=False)
   --static-alloc        whether to use static-alloc hybridize in mxnet>=1.3
+                        (default=False)
   --static-shape        whether to use static-shape hybridize in mxnet>=1.3
-  --export-only         export a symbol graph and exit
+                        (default=False)
+  --export-only         export a symbol graph and exit (default=False)
 ```
 
 You may visualize the graph with `mxnet.viz.plot_network` without any additional dependencies. Alternatively, if [mxboard](https://github.com/awslabs/mxboard) is installed, use the following approach for interactive visualization.
