@@ -1333,6 +1333,7 @@ def test_ndarray_indexing():
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
 
     def test_setitem(np_array, index, is_scalar):
+        print("index:", index)
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
                 np_array[np_index] = np_value
@@ -1341,7 +1342,13 @@ def test_ndarray_indexing():
             else:
                 np_array[np_index] = mx_value
             mx_array[mx_index] = mx_value
-            assert same(np_array, mx_array.asnumpy())
+            passed = same(np_array, mx_array.asnumpy())
+            if not passed:
+                not_eq = np_array != mx_array.asnumpy()
+                print(np.where(not_eq))
+                print(np_array[not_eq])
+                print(mx_array.asnumpy()[not_eq])
+                assert False
 
         np_index = index
         if isinstance(index, mx.nd.NDArray):
@@ -1361,22 +1368,30 @@ def test_ndarray_indexing():
             # test value is a numeric type
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             value_nd = [np.random.randint(low=-10000, high=0)]
+            print("scalar value, represented as", value_nd)
             assert_same(np_array, np_index, mx_array, index, value_nd, value_nd[0])
         else:
             indexed_array_shape = np_array[np_index].shape
+            print("shape without broadcasting:", indexed_array_shape)
             np_indexed_array = np.random.randint(low=-10000, high=0, size=indexed_array_shape)
             # test value is a numpy array without broadcast
+            print("fully-shaped rhs, shape:", np_indexed_array.shape)
             assert_same(np_array, np_index, mx_array, index, np_indexed_array)
             # test value is an numeric_type
+            print("scalar rhs")
             assert_same(np_array, np_index, mx_array, index, np.random.randint(low=-10000, high=0))
             if len(indexed_array_shape) > 1:
+                print("shape without broadcasting:", indexed_array_shape)
                 # test NDArray with broadcast
+                print("from NDArray")
                 assert_same(np_array, np_index, mx_array, index,
                             mx.nd.random.uniform(low=-10000, high=0, shape=(indexed_array_shape[-1],)))
                 # test numpy array with broadcast
+                print("from numpy.ndarray")
                 assert_same(np_array, np_index, mx_array, index,
                             np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],)))
                 # test list with broadcast
+                print("from list")
                 assert_same(np_array, np_index, mx_array, index,
                             [np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
 
