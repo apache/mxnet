@@ -46,20 +46,20 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_data.size(), 3U);
-  // Collect data and output min/max
+  // Collect data min/max and output_neg_min, output_pos_max
   std::vector<float> data_min(param_.num_args);
   std::vector<float> data_max(param_.num_args);
-  float output_min = 0.f;
-  float output_max = 0.f;
+  float output_neg_min = 0.f; // 0.f is the maximum for output_neg_min
+  float output_pos_max = 0.f; // 0.f is the minimum for output_pos_max
   for (int i = 0; i < param_.num_args; ++i) {
     data_min[i] = in_data[param_.num_args + 2 * i].data().dptr<float>()[0];
-    if (data_min[i] < output_min) output_min = data_min[i];
+    if (data_min[i] < output_neg_min) output_neg_min = data_min[i];
     data_max[i] = in_data[param_.num_args + 2 * i + 1].data().dptr<float>()[0];
-    if (data_max[i] > output_max) output_max = data_max[i];
+    if (data_max[i] > output_pos_max) output_pos_max = data_max[i];
   }
-  out_data[quantized_concat_enum::kMin].data().dptr<float>()[0] = output_min;
-  out_data[quantized_concat_enum::kMax].data().dptr<float>()[0] = output_max;
-  auto out_scale = GetScale(out_data[quantized_concat_enum::kOut], output_min, output_max);
+  out_data[quantized_concat_enum::kMin].data().dptr<float>()[0] = output_neg_min;
+  out_data[quantized_concat_enum::kMax].data().dptr<float>()[0] = output_pos_max;
+  auto out_scale = GetScale(out_data[quantized_concat_enum::kOut], output_neg_min, output_pos_max);
   std::vector<mkldnn::memory::primitive_desc> data_md;
   std::vector<const mkldnn::memory*> data_mem;
   // new_data_mem is for auto-free new created mkldnn memory

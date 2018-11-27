@@ -40,37 +40,14 @@ class MKLDNNConcatFwd {
  public:
   mkldnn::concat::primitive_desc fwd_pd;
 
-  MKLDNNConcatFwd(
-      int concat_dim,
-      const std::vector<mkldnn::memory::primitive_desc> &data_md): fwd_pd(concat_dim, data_md) {
+  MKLDNNConcatFwd(int concat_dim, const std::vector<mkldnn::memory::primitive_desc> &data_md)
+      : fwd_pd(concat_dim, data_md) {
     data.resize(data_md.size());
   }
 
-  void SetNewMem(const std::vector<const mkldnn::memory *> &in_data,
-                 const mkldnn::memory &output) {
-    CHECK_EQ(in_data.size(), data.size());
-    for (size_t i = 0; i < data.size(); i++) {
-      if (this->data[i] == nullptr) {
-        this->data[i] = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-                in_data[i]->get_primitive_desc(), in_data[i]->get_data_handle()));
-        this->data_mem.push_back(*this->data[i]);
-      } else {
-        this->data[i]->set_data_handle(in_data[i]->get_data_handle());
-      }
-    }
-    if (this->out == nullptr)
-      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-              fwd_pd.dst_primitive_desc(), output.get_data_handle()));
-    else
-      this->out->set_data_handle(output.get_data_handle());
+  void SetNewMem(const std::vector<const mkldnn::memory *> &in_data, const mkldnn::memory &output);
 
-    if (this->fwd == nullptr)
-      fwd.reset(new mkldnn::concat(fwd_pd, data_mem, *out));
-  }
-
-  const mkldnn::concat &GetFwd() const {
-    return *fwd;
-  }
+  const mkldnn::concat &GetFwd() const;
 
  private:
   std::shared_ptr<mkldnn::concat> fwd;
