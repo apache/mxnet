@@ -79,7 +79,7 @@ def find_lib_path():
 def find_include_path():
     """Find MXNet included header files.
 
-     Returns
+    Returns
     -------
     incl_path : string
         Path to the header files.
@@ -93,7 +93,7 @@ def find_include_path():
             else:
                 if os.name == 'nt':
                     os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(incl_from_env)
-                return [incl_from_env]
+                return incl_from_env
         else:
             logging.warning("MXNET_INCLUDE_PATH '%s' doesn't exist", incl_from_env)
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
