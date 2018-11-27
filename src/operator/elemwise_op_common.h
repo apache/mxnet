@@ -100,7 +100,7 @@ inline bool ElemwiseStorageAttr(const nnvm::NodeAttrs& attrs,
  *  \tparam rsp whether row sparse stype is supported
  *  \tparam rsp whether csr stype is supported
  */
-template<int n_in, int n_out, bool cpu_only, bool rsp, bool csr>
+template<index_t n_in, index_t n_out, bool cpu_only, bool rsp, bool csr>
 inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
                                 const int dev_mask,
                                 DispatchMode* dispatch_mode,
@@ -115,7 +115,7 @@ inline bool ElemwiseStorageType(const nnvm::NodeAttrs& attrs,
 template<typename AttrType, bool (*is_none)(const AttrType&),
          bool (*assign)(AttrType*, const AttrType&), bool reverse_infer,
          std::string (*attr_string)(const AttrType&),
-         int n_in = -1, int n_out = -1>
+         index_t n_in = -1, index_t n_out = -1>
 inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
                          std::vector<AttrType> *in_attrs,
                          std::vector<AttrType> *out_attrs,
@@ -154,7 +154,7 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<int n_in, int n_out>
+template<index_t n_in, index_t n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
@@ -168,7 +168,7 @@ inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
     attrs, in_attrs, out_attrs, TShape());
 }
 
-template<int n_in, int n_out>
+template<index_t n_in, index_t n_out>
 inline bool ElemwiseType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {

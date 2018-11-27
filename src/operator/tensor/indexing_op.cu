@@ -439,22 +439,22 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
 
 struct backward_gather_nd_gpu {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, int N, int M, int K,
+  MSHADOW_XINLINE static void Map(index_t i, index_t N, index_t M, index_t K,
                                   const mshadow::Shape<10> strides,
                                   DType* out, const DType* data,
                                   const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
       offset += strides[j] * static_cast<int>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       atomicAdd(out + (offset + j), data[i * K + j]);
     }
   }
 };
 
 template<typename DType, typename IType>
-inline void GatherNDBackwardImpl(int N, int M, int K,
+inline void GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                                  const mshadow::Shape<10> strides,
                                  DType* out,
                                  const DType* data,

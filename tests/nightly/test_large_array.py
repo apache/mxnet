@@ -17,18 +17,43 @@
 
 import unittest
 import mxnet as mx
+import numpy as np
 from mxnet import gluon, nd
 
+# dimension constants
+MEDIUM_X = 10000
+LARGE_X = MEDIUM_X * MEDIUM_X
+SMALL_Y = 50
+LARGE_SIZE = LARGE_X * SMALL_Y
 
 class TestLargeArray(unittest.TestCase):
-    def test_ndarray2numpy(self):
-        m = gluon.nn.Embedding(14000, 128)
+    def test_gluon_embedding(self):
+        m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
         m.initialize()
-        ind = nd.zeros((700000, 128))
-        x = m(ind)
-        x.shape
-        test = x.asnumpy()
-        assert (x.shape == test.shape)
+        a = nd.zeros((MEDIUM_X, SMALL_Y))
+        b = m(a)
+        assert b.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
+        assert b.asnumpy().size == LARGE_SIZE
+
+    def test_ndarray_zeros(self):
+        a = nd.zeros(shape=(LARGE_X, SMALL_Y))
+        assert a[-1][0] == 0
+        assert a.shape == (LARGE_X, SMALL_Y)
+        assert a.size == LARGE_SIZE
+
+    def test_ndarray_ones(self):
+        a = nd.ones(shape=(LARGE_X, SMALL_Y))
+        assert a[-1][0] == 1
+        assert nd.sum(a).asnumpy() == LARGE_SIZE
+
+    def test_ndarray_random_uniform(self):
+        a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
+        assert a[-1][0] != 0
+
+    def test_ndarray_empty(self):
+        a = np.empty((LARGE_X, SMALL_Y))
+        b = nd.array(a)
+        assert b.shape == (LARGE_X, SMALL_Y)
 
 if __name__ == '__main__':
     unittest.main()
