@@ -148,8 +148,6 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
                      NDArrayHandle *aux_states,
                      ExecutorHandle shared_exec,
                      ExecutorHandle *out) {
-  Executor* exec = nullptr;
-
   API_BEGIN();
   nnvm::Symbol *symb = static_cast<nnvm::Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
@@ -181,7 +179,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
   *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
                         arg_grad_vec, grad_req_vec, aux_states_vec,
                         reinterpret_cast<Executor*>(shared_exec));
-  API_END_HANDLE_ERROR(delete exec);
+  API_END();
 }
 
 /*!
