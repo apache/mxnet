@@ -206,7 +206,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: Int ```(default=200000)```
   - The minimum size to call parallel copy by openMP in CPU2CPU mode.
   - When the array size is bigger than this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
-  - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by mshadow::Copy(to, from) in single thread.
+  - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
 
 Settings for Minimum Memory Usage
 ---------------------------------
