@@ -438,24 +438,28 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+
 ```html
 <dependency>
     <groupId>org.apache.mxnet.contrib.clojure</groupId>
     <artifactId>clojure-mxnet-linux-gpu</artifactId>
 </dependency>
 ```
+
 <br>
 </div> <!-- End of gpu -->
 <div class="cpu">
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+
 ```html
 <dependency>
     <groupId>org.apache.mxnet.contrib.clojure</groupId>
     <artifactId>clojure-mxnet-linux-cpu</artifactId>
 </dependency>
 ```
+
 <br>
 </div> <!-- End of cpu -->
 </div> <!-- End of clojure -->
@@ -477,6 +481,7 @@ You can use the Maven packages defined in the following dependency to include MX
     <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
+
 <br>
 </div> <!-- End of gpu -->
 
@@ -747,12 +752,14 @@ Not available at this time. <br>
 </br>
 You can use the Maven packages defined in the following dependency to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+
 ```html
 <dependency>
     <groupId>org.apache.mxnet.contrib.clojure</groupId>
     <artifactId>clojure-mxnet-osx-cpu</artifactId>
 </dependency>
 ```
+
 <br>
 </div> <!-- End of cpu  -->
 <div class="gpu">
