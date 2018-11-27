@@ -783,7 +783,6 @@ OpStatePtr CachedOp::StaticForward(
   return recording ? state_ptr : OpStatePtr();
 }
 
-
 OpStatePtr CachedOp::DynamicForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,

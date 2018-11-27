@@ -37,12 +37,16 @@ def test_dynamic_shape():
 
     block = _TestBlock()
     block.hybridize()
-
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 1])
-    result = block(data, index)
+    data.attach_grad()
+    with mx.autograd.record():
+        result = block(data, index)
+    result.backward()
     result_nd = np.array([[4, 5, 6], [7, 8, 9]])
+    data_grad_nd = np.array([[0., 0., 0.], [1., 1., 1.], [1., 1., 1.]])
     assert_almost_equal(result.asnumpy(), result_nd)
+    assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
 
 
 if __name__ == '__main__':
