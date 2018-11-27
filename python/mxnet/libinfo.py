@@ -91,8 +91,6 @@ def find_include_path():
                 logging.warning("MXNET_INCLUDE_PATH should be an absolute path, instead of: %s",
                                 incl_from_env)
             else:
-                if os.name == 'nt':
-                    os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(incl_from_env)
                 return incl_from_env
         else:
             logging.warning("MXNET_INCLUDE_PATH '%s' doesn't exist", incl_from_env)
