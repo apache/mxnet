@@ -204,4 +204,3 @@ class MEL(Block):
         specs = librosa.feature.melspectrogram(x, sr=self._sampling_rate,\
         n_fft=self._num_fft, n_mels=self._num_mels, hop_length=self._hop_length)
         return nd.array(specs)
- 

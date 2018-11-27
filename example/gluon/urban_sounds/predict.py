@@ -22,6 +22,10 @@ import mxnet as mx
 from mxnet import nd
 from transforms import MFCC
 from model import get_net
+try:
+    import librosa
+except ImportError:
+    raise ImportError("Librosa is not installed! please run the following command pip install librosa.")
 
 def predict(prediction_dir='./Test'):
     """The function is used to run predictions on the audio files in the directory `pred_directory`.
@@ -34,12 +38,6 @@ def predict(prediction_dir='./Test'):
         The directory that contains the audio files on which predictions are to be made
 
     """
-
-    try:
-        import librosa
-    except ImportError:
-        warnings.warn("Librosa is not installed! please run the following command pip install librosa.")
-        return
 
     if not os.path.exists(prediction_dir):
         warnings.warn("The directory on which predictions are to be made is not found!")

@@ -116,10 +116,14 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 
 
 if __name__ == '__main__':
+    training_dir = './Train'
+    training_csv = './train.csv'
+    eps = 30
+    batch_sz = 32
 
     try:
         import argparse
-        parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet")
+        parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet Gluon")
         parser.add_argument('--train', '-t', help="Enter the folder path that contains your audio files", type=str)
         parser.add_argument('--csv', '-c', help="Enter the filename of the csv that contains filename\
         to label mapping", type=str)
@@ -131,31 +135,21 @@ if __name__ == '__main__':
         if args:
             if args.train:
                 training_dir = args.train
-            else:
-                training_dir = './Train'
 
             if args.csv:
                 training_csv = args.csv
-            else:
-                training_csv = './train.csv'
 
             if args.epochs:
                 eps = args.epochs
-            else:
-                eps = 30
 
             if args.batch_size:
                 batch_sz = args.batch_size
-            else:
-                batch_sz = 32
+
 
     except ImportError as er:
         warnings.warn("Argument parsing module could not be imported \
         Passing default arguments.")
-        training_dir = './Train'
-        training_csv = './train.csv'
-        eps = 30
-        batch_sz = 32
+
 
     train(train_dir=training_dir, train_csv=training_csv, epochs=eps, batch_size=batch_sz)
     print("Urban sounds classification Training DONE!")
