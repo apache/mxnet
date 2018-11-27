@@ -132,7 +132,12 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       }).toSeq
     val packageName = "NDArrayBase"
     val packageDef = "package org.apache.mxnet.javaapi"
-    writeFile(filePath + "javaapi/", packageName, packageDef, absFuncs)
+    writeFile(
+      filePath + "javaapi/",
+      packageDef,
+      packageName,
+      "import org.apache.mxnet.annotation.Experimental",
+      absFuncs)
   }
 
   def generateAPIDocFromBackend(func: Func, withParam: Boolean = true): String = {
