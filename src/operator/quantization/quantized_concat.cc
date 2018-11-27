@@ -130,7 +130,9 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 })
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
-.set_attr<std::string>("key_var_num_args", "num_args");
+.set_attr<std::string>("key_var_num_args", "num_args")
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
+.add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(Concat)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
