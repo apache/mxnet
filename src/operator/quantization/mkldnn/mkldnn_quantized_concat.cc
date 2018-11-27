@@ -49,8 +49,8 @@ static void MKLDNNQuantizedConcatForward(const nnvm::NodeAttrs& attrs, const OpC
   // Collect data min/max and output_neg_min, output_pos_max
   std::vector<float> data_min(param_.num_args);
   std::vector<float> data_max(param_.num_args);
-  float output_neg_min = 0.f; // 0.f is the maximum for output_neg_min
-  float output_pos_max = 0.f; // 0.f is the minimum for output_pos_max
+  float output_neg_min = 0.f;  // 0.f is the maximum for output_neg_min
+  float output_pos_max = 0.f;  // 0.f is the minimum for output_pos_max
   for (int i = 0; i < param_.num_args; ++i) {
     data_min[i] = in_data[param_.num_args + 2 * i].data().dptr<float>()[0];
     if (data_min[i] < output_neg_min) output_neg_min = data_min[i];
