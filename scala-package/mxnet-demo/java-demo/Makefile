@@ -41,7 +41,7 @@ else
 endif
 
 javademo:
-	(mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn install dependency:copy-dependencies package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION))
 
