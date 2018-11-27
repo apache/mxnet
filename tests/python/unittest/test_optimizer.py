@@ -976,8 +976,8 @@ class PyAdaGrad(mx.optimizer.Optimizer):
         div = grad / mx.nd.sqrt(history + self.float_stable_eps)
         weight[:] += (div + weight * wd) * -lr
 
+@with_seed()
 def test_adagrad():
-    mx.random.seed(0)
     opt1 = PyAdaGrad
     opt2 = mx.optimizer.AdaGrad
     shape = (3, 4, 5)
@@ -1001,6 +1001,83 @@ def test_adagrad():
                                               w_stype='row_sparse', g_stype='row_sparse')
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               g_stype='row_sparse')
+
+# AdaDelta
+class PyAdaDelta(mx.optimizer.Optimizer):
+    """The python reference of AdaDelta optimizer.
+
+    This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
+    learning rate method*, available at https://arxiv.org/abs/1212.5701.
+
+    This optimizer updates each weight by::
+
+        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        acc_grad = rho * acc_grad + (1. - rho) * grad ** 2
+        cur_delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
+        acc_delta = rho * acc_delta + (1. - rho) * cur_delta ** 2
+        weight -= (cur_delta + wd * weight)
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    rho: float
+        Decay rate for both squared gradients and delta.
+    epsilon : float
+        Small value to avoid division by 0.
+    """
+    def __init__(self, rho=0.90, epsilon=1e-5, **kwargs):
+        super(PyAdaDelta, self).__init__(**kwargs)
+        self.rho = rho
+        self.epsilon = epsilon
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context),
+                mx.nd.zeros(weight.shape, weight.context))
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        wd = self._get_wd(index)
+
+        grad *= self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        acc_grad, acc_delta = state
+
+        acc_grad[:] = self.rho * acc_grad + (1. - self.rho) * grad ** 2
+        current_delta = mx.nd.sqrt(acc_delta + self.epsilon) / mx.nd.sqrt(acc_grad + self.epsilon) * grad
+        acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta ** 2
+
+        # update weight
+        weight[:] -= current_delta + wd * weight
+
+@with_seed()
+def test_adadelta():
+    opt1 = PyAdaDelta
+    opt2 = mx.optimizer.AdaDelta
+    shape = (3, 4, 5)
+    rho_options = [{'rho': 0.9}]
+    eps_options = [{}, {'epsilon': 1e-8}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.0}]
+    for dtype in [np.float16, np.float32]:
+        for eps_option in eps_options:
+            for cg_option in cg_options:
+                for rg_option in rg_options:
+                    for wd_option in wd_options:
+                        for rho_option in rho_options:
+                            kwarg = {}
+                            kwarg.update(rho_option)
+                            kwarg.update(eps_option)
+                            kwarg.update(cg_option)
+                            kwarg.update(rg_option)
+                            kwarg.update(wd_option)
+                            if dtype is np.float16:
+                                kwarg.update({'multi_precision': True})
+                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 
 def test_factor_scheduler():
