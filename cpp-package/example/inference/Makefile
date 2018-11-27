@@ -16,9 +16,6 @@
 # under the License.
 
 
-prebuild :
-	$(shell cp -r ../../../lib ./)
-	$(shell wget -nc -O mean_224.nd https://github.com/dmlc/web-data/raw/master/mxnet/example/feature_extract/mean_224.nd)
 CPPEX_SRC = $(wildcard *.cpp)
 CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
 OPENCV_CFLAGS=`pkg-config --cflags opencv`
@@ -30,10 +27,10 @@ CXX=g++
 CFLAGS=$(COMMFLAGS) -I../../../3rdparty/tvm/nnvm/include -I../../../3rdparty/dmlc-core/include -I ../../include -I ../../../include -Wall -O3 -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
 CPPEX_EXTRA_LDFLAGS := -L../../../lib -lmxnet $(OPENCV_LDFLAGS)
 
-all: prebuild  $(CPPEX_EXE)
+all: $(CPPEX_EXE)
 
 debug: CPPEX_CFLAGS += -DDEBUG -g
-debug: prebuild all
+debug: all
 
 
 $(CPPEX_EXE):% : %.cpp

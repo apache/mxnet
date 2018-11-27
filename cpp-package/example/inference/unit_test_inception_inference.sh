@@ -27,7 +27,11 @@ make all
 
 
 # Running the example with dog image.
-LD_LIBRARY_PATH=../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+if [ "$(uname)" == "Darwin" ]; then
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+else
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+fi
 result=`grep -c "pug-dog" inception_inference.log`
 if [ $result == 1 ];
 then

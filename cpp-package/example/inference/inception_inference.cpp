@@ -27,6 +27,7 @@
  * 5. Run the forward pass and predict the input image.
  */
 
+#include <sys/stat.h>
 #include <iostream>
 #include <fstream>
 #include <map>
@@ -63,7 +64,10 @@ class Predictor {
     NDArray LoadInputImage(const std::string& image_file);
     void LoadMeanImageData();
     void NormalizeInput(const std::string& mean_image_file);
-
+    inline bool FileExists(const std::string& name) {
+        struct stat buffer;
+        return (stat(name.c_str(), &buffer) == 0);
+    }
     NDArray mean_img;
     map<string, NDArray> args_map;
     map<string, NDArray> aux_map;
@@ -110,18 +114,18 @@ Predictor::Predictor(const std::string& model_json,
   LoadParameters(model_params);
 
   /*
-   * Load the synset file containing the image labels, if provided.
    * The data will be used to output the exact label that matches highest output of the model.
    */
-  if (!synset_file.empty()) {
-    LoadSynset(synset_file);
-  }
+  LoadSynset(synset_file);
 
   /*
    * Load the mean image data if specified.
    */
   if (!mean_image_file.empty()) {
     LoadMeanImageData();
+  } else {
+    LG << "Mean image file for normalizing the input is not provide."
+       << " It may affect the accuracy of the prediction.";
   }
 
   // Create an executor after binding the model to input parameters.
@@ -134,6 +138,10 @@ Predictor::Predictor(const std::string& model_json,
  * The following function loads the model from json file.
  */
 void Predictor::LoadModel(const std::string& model_json_file) {
+  if (!FileExists(model_json_file)) {
+    LG << "Model file " << model_json_file << " does not exist";
+    throw std::runtime_error("Model file does not exist");
+  }
   LG << "Loading the model from " << model_json_file << std::endl;
   net = Symbol::Load(model_json_file);
 }
@@ -143,21 +151,25 @@ void Predictor::LoadModel(const std::string& model_json_file) {
  * The following function loads the model parameters.
  */
 void Predictor::LoadParameters(const std::string& model_parameters_file) {
-    LG << "Loading the model parameters from " << model_parameters_file << std::endl;
-    map<string, NDArray> paramters;
-    NDArray::Load(model_parameters_file, 0, &paramters);
-    for (const auto &k : paramters) {
-      if (k.first.substr(0, 4) == "aux:") {
-        auto name = k.first.substr(4, k.first.size() - 4);
-        aux_map[name] = k.second.Copy(global_ctx);
-      }
-      if (k.first.substr(0, 4) == "arg:") {
-        auto name = k.first.substr(4, k.first.size() - 4);
-        args_map[name] = k.second.Copy(global_ctx);
-      }
+  if (!FileExists(model_parameters_file)) {
+    LG << "Parameter file " << model_parameters_file << " does not exist";
+    throw std::runtime_error("Model parameters does not exist");
+  }
+  LG << "Loading the model parameters from " << model_parameters_file << std::endl;
+  map<string, NDArray> paramters;
+  NDArray::Load(model_parameters_file, 0, &paramters);
+  for (const auto &k : paramters) {
+    if (k.first.substr(0, 4) == "aux:") {
+      auto name = k.first.substr(4, k.first.size() - 4);
+      aux_map[name] = k.second.Copy(global_ctx);
     }
-    /*WaitAll is need when we copy data between GPU and the main memory*/
-    NDArray::WaitAll();
+    if (k.first.substr(0, 4) == "arg:") {
+      auto name = k.first.substr(4, k.first.size() - 4);
+      args_map[name] = k.second.Copy(global_ctx);
+    }
+  }
+  /*WaitAll is need when we copy data between GPU and the main memory*/
+  NDArray::WaitAll();
 }
 
 
@@ -166,6 +178,10 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
  * This information will be used later to report the label of input image.
  */
 void Predictor::LoadSynset(const string& synset_file) {
+  if (!FileExists(synset_file)) {
+    LG << "Synset file " << synset_file << " does not exist";
+    throw std::runtime_error("Synset file does not exist");
+  }
   LG << "Loading the synset file.";
   std::ifstream fi(synset_file.c_str());
   if (!fi.is_open()) {
@@ -202,6 +218,10 @@ void Predictor::LoadMeanImageData() {
  * The following function loads the input image.
  */
 NDArray Predictor::LoadInputImage(const std::string& image_file) {
+  if (!FileExists(image_file)) {
+    LG << "Image file " << image_file << " does not exist";
+    throw std::runtime_error("Image file does not exist");
+  }
   LG << "Loading the image " << image_file << std::endl;
   vector<float> array;
   cv::Mat mat = cv::imread(image_file);
@@ -256,7 +276,7 @@ void Predictor::PredictImage(const std::string& image_file) {
   auto array = executor->outputs[0].Copy(global_ctx);
   NDArray::WaitAll();
 
-  float best_accuracy = 0.0;
+  float best_accuracy = 0.0f;
   std::size_t best_idx = 0;
 
   // Find out the maximum accuracy and the index associated with that accuracy.
@@ -380,11 +400,14 @@ int main(int argc, char** argv) {
 
     // Run the forward pass to predict the image.
     predict.PredictImage(input_image);
+  } catch (std::runtime_error &error) {
+    LG << "Execution failed with ERROR: " << error.what();
   } catch (...) {
     /*
      * If underlying MXNet code has thrown an exception the error message is
      * accessible through MXGetLastError() function.
      */
+    LG << "Execution failed with following MXNet error";
     LG << MXGetLastError();
   }
   return 0;
