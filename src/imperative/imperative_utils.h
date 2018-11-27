@@ -560,8 +560,12 @@ inline void PushOperator(const OpStatePtr& state,
 inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
                                bool use_inputs,
                                std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                               std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                               std::pair<uint32_t, uint32_t> entry_range = {0, 0},
+                               bool *contain_unknown = nullptr) {
   using namespace nnvm;
+  if (contain_unknown != nullptr) {
+    *contain_unknown = false;
+  }
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
     if (g.attrs.count("shape_inputs") &&
@@ -595,8 +599,11 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
     g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
     g = exec::InferShape(std::move(g));
   }
-  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
-
+  if (contain_unknown == nullptr) {
+    CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
+  } else {
+    *contain_unknown = g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U;
+  }
   return false;
 }
 
@@ -1001,6 +1008,18 @@ void RunGraph(const bool retain_graph,
               std::vector<OpStatePtr> *p_states,
               const DispatchModeVector &dispatch_modes,
               bool recording);
+
+
+void NaiveRunGraph(const bool retain_graph,
+                   const Context& default_ctx,
+                   const nnvm::IndexedGraph& idx,
+                   const std::vector<NDArray*> arrays,
+                   size_t node_start, size_t node_end,
+                   std::vector<OpReqType>&& array_reqs,
+                   std::vector<uint32_t>&& ref_count,
+                   std::vector<OpStatePtr> *p_states,
+                   const DispatchModeVector &dispatch_modes,
+                   bool recording);
 
 }  // namespace imperative
 }  // namespace mxnet

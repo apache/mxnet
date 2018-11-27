@@ -262,6 +262,29 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
   return ret;
 }
 
+bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
+                                       const std::vector<NDArray*>& inputs) {
+  using namespace nnvm;
+  using namespace imperative;
+  CHECK_EQ(inputs.size(), num_inputs());
+
+  auto state_ptr = GetCachedOpState(default_ctx);
+  auto& state = state_ptr.get_state<CachedOpState>();
+
+  nnvm::Graph& g = state.info.fwd_graph;
+  ShapeVector shape_inputs;
+  shape_inputs.reserve(inputs.size());
+  for (auto input : inputs) {
+    shape_inputs.emplace_back(input->shape());
+  }
+  bool contain_dynamic_shape = false;
+  CheckAndInferShape(&g, std::move(shape_inputs), true,
+                     {0, 0}, {0, 0},
+                     &contain_dynamic_shape);
+  g.attrs.erase("shape");
+  g.attrs.erase("shape_inputs");
+  return contain_dynamic_shape;
+}
 
 bool CachedOp::SetForwardGraph(
     GraphInfo* info,
@@ -285,12 +308,19 @@ bool CachedOp::SetForwardGraph(
   }
 
   bool match = true;
-  match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
+  bool contain_dynamic_shape = false;
+  match &= CheckAndInferShape(&g, std::move(shape_inputs), true,
+                              {0, 0}, {0, 0}, &contain_dynamic_shape);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
   exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
-
+  // When dynmaic shape exists, it is not feasible to plan memory ahead of time
+  if (contain_dynamic_shape) {
+    g.attrs.erase("forward_mem_plan");
+    g.attrs.erase("full_mem_plan");
+    return false;
+  }
   if (!match) {
     g.attrs.erase("forward_mem_plan");
     g.attrs.erase("full_mem_plan");
@@ -777,11 +807,9 @@ OpStatePtr CachedOp::DynamicForward(
   size_t num_inputs = idx.input_nodes().size();
   auto& buff = runtime.buff;
   auto& states = runtime.op_states;
-
   // Allocate entries
-  states.resize(idx.num_nodes());
   buff.resize(idx.num_node_entries());
-  states.reserve(idx.num_nodes());
+  states.resize(idx.num_nodes());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
   for (auto& buffered_array : buff) {
@@ -834,6 +862,61 @@ OpStatePtr CachedOp::DynamicForward(
   return op_state;
 }
 
+OpStatePtr CachedOp::NaiveForward(
+    const Context& default_ctx,
+    const std::vector<NDArray*>& inputs,
+    const std::vector<NDArray*>& outputs) {
+  using namespace nnvm;
+  using namespace imperative;
+  // Initialize
+  bool recording = Imperative::Get()->is_recording();
+  auto op_state = OpStatePtr::Create<DynamicRuntime>();
+  auto& runtime = op_state.get_state<DynamicRuntime>();
+  {
+    auto state_ptr = GetCachedOpState(default_ctx);
+    auto& state = state_ptr.get_state<CachedOpState>();
+    std::lock_guard<std::mutex> lock(state.mutex);
+    SetForwardGraph(&state.info, recording, inputs);
+    runtime.info.fwd_graph = state.info.fwd_graph;
+  }
+  // build the indexed graph
+  nnvm::Graph& g = runtime.info.fwd_graph;
+  const auto& idx = g.indexed_graph();
+  const size_t num_inputs = idx.input_nodes().size();
+  const size_t num_entries = idx.num_node_entries();
+  std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t> >(
+    recording ? "full_ref_count" : "forward_ref_count");
+  // construct `arrays`
+  runtime.buff.resize(num_entries);
+  std::vector<NDArray*> arrays;
+  arrays.reserve(num_entries);
+  for (auto& item : runtime.buff) {
+    arrays.push_back(&item);
+  }
+  for (size_t i = 0; i < num_inputs; ++i) {
+    arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
+  }
+  for (size_t i = 0; i < idx.outputs().size(); ++i) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    if (!arrays[eid]->is_none()) *outputs[i] = arrays[eid]->Detach();
+    arrays[eid] = outputs[i];
+  }
+  // construct `array_reqs`
+  std::vector<OpReqType> array_reqs;
+  array_reqs.reserve(num_entries);
+  for (size_t i = 0; i < num_entries; ++i) {
+    array_reqs.push_back(ref_count[i] == 0 ? kNullOp : kWriteTo);
+  }
+  // other stuff
+  auto& states = runtime.op_states;
+  states.resize(idx.num_nodes());
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
+                std::move(array_reqs), std::move(ref_count), &states,
+                dispatch_modes, recording && inlining_);
+  return op_state;
+}
+
 OpStatePtr CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& inputs,
@@ -858,7 +941,9 @@ OpStatePtr CachedOp::Forward(
 
   OpStatePtr op_state;
   try {
-    if (config_.static_alloc) {
+    if (this->CheckDynamicShapeExists(default_ctx, inputs)) {
+      op_state = NaiveForward(default_ctx, inputs, outputs);
+    } else if (config_.static_alloc) {
       op_state = StaticForward(default_ctx, inputs, outputs);
     } else {
       op_state = DynamicForward(default_ctx, inputs, outputs);

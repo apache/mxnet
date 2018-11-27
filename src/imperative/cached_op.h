@@ -181,6 +181,13 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  bool CheckDynamicShapeExists(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs);
+  OpStatePtr NaiveForward(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<NDArray*>& outputs);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
