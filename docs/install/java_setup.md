@@ -41,41 +41,48 @@ Go to the [MXNet-Java demo project's README](https://github.com/apache/incubator
 
 #### Maven Repository
 
-Package information can be found in this [Maven Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~)
+MXNet-Java can be easily included in your Maven managed project. The Java packages are currently available as nightly builds on Maven. Add the following Maven repository to your `pom.xml` to fetch the Java packages :
+
+```html
+<repositories>
+    <repository>
+      <id>Apache Snapshot</id>
+      <url>https://repository.apache.org/content/groups/snapshots</url>
+    </repository>
+</repositories>
+```
+
+Also, add the dependency which corresponds to your platform to the `dependencies` tag :
 
 **Linux CPU**
 ```html
-<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu -->
 <dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+  <groupId>org.apache.mxnet</groupId>
+  <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+  <version>1.3.1-SNAPSHOT</version>
 </dependency>
 ```
 
 **Linux GPU**
 ```html
-<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu -->
 <dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-    <scope>system</scope>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
+  <groupId>org.apache.mxnet</groupId>
+  <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+  <version>1.3.1-SNAPSHOT</version>
 </dependency>
 ```
 
 **macOS CPU**
 ```html
-<!-- https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu -->
 <dependency>
-    <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+  <groupId>org.apache.mxnet</groupId>
+  <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+  <version>1.3.1-SNAPSHOT</version>
 </dependency>
 ```
 
+
+The official Java Packages will be released with the release of MXNet 1.4 and will be available on  [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 <hr>
 
 ## Source
