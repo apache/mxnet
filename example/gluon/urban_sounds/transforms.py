@@ -115,7 +115,7 @@ class PadTrim(Block):
     max_len : int
         Length to which the array will be padded or trimmed to.
     fill_value: int or float
-        If there is a need of padding, what value to padd at the end of the input array
+        If there is a need of padding, what value to pad at the end of the input array.
 
 
     Inputs:
@@ -158,7 +158,7 @@ class MEL(Block):
     sampling_rate: int, default 22050
         sampling rate of the input audio signal
     num_fft: int, default 2048
-        length of the Fast fourier transform window
+        length of the Fast Fourier transform window
     num_mels: int, default 20
         number of mel bands to generate
     hop_length: int, default 512

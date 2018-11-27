@@ -45,7 +45,7 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
     # Make a dataset from the local folder containing Audio data
     print("\nMaking an Audio Dataset...\n")
     tick = time.time()
-    aud_dataset = AudioFolderDataset(train_dir, train_csv=train_csv, file_format='.wav', skip_rows=1)
+    aud_dataset = AudioFolderDataset(train_dir, train_csv=train_csv, file_format='.wav', skip_header=True)
     tock = time.time()
 
     print("Loading the dataset took ", (tock-tick), " seconds.")

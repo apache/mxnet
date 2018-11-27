@@ -39,7 +39,7 @@ class AudioFolderDataset(Dataset):
         root/drilling/26.wav
         root/dog_barking/42.wav
             OR
-        Files(wav) and a csv file that has filename and associated label
+        Files(wav) and a csv file that has file name and associated label
 
     Parameters
     ----------
@@ -51,8 +51,8 @@ class AudioFolderDataset(Dataset):
        train_csv should be populated by the training csv filename
     file_format: str, default '.wav'
         The format of the audio files(.wav)
-    skip_rows: int, default 0
-        While reading from csv file, how many rows to skip at the start of the file to avoid reading in header
+    skip_header: boolean, default False
+        While reading from csv file, whether to skip at the start of the file to avoid reading in header
 
 
     Attributes
@@ -63,7 +63,7 @@ class AudioFolderDataset(Dataset):
         List of all audio in (filename, label) pairs.
 
     """
-    def __init__(self, root, train_csv=None, file_format='.wav', skip_rows=0):
+    def __init__(self, root, train_csv=None, file_format='.wav', skip_header=False):
         if not librosa:
             warnings.warn("pip install librosa to continue.")
             return
@@ -73,7 +73,10 @@ class AudioFolderDataset(Dataset):
         self._train_csv = train_csv
         if file_format.lower() not in self._exts:
             raise RuntimeError("format {} not supported currently.".format(file_format))
-
+        if skip_header:
+            skip_rows = 1
+        else:
+            skip_rows = 0
         self._list_audio_files(self._root, skip_rows=skip_rows)
 
 
@@ -153,7 +156,7 @@ class AudioFolderDataset(Dataset):
         Parameters
         ----------
         fn : callable
-            A transformer function that takes the first elemtn of a sample
+            A transformer function that takes the first element of a sample
             as input and returns the transformed element.
         lazy : bool, default True
             If False, transforms all samples at once. Otherwise,

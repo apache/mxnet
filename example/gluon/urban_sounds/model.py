@@ -27,7 +27,7 @@ def get_net(num_labels=10):
     net = gluon.nn.Sequential()
     with net.name_scope():
         net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
-        net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
+        net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer ( 256 nodes )
         net.add(gluon.nn.Dense(num_labels))
-    net.collect_params().initialize(mx.init.Normal(1.))
+    net.collect_params().initialize(mx.init.Xavier())
     return net

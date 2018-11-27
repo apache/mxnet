@@ -24,3 +24,42 @@ To be able to run this example:
 
 For information on the current design of how the AudioFolderDataset is implemented, refer below:
 **https://cwiki.apache.org/confluence/display/MXNET/Gluon+-+Audio**
+
+## Usage 
+
+For training:
+
+- arguments
+  - train : The folder/directory that contains the audio(wav) files locally. Default = "./Train"
+  - csv: The file name of the csv file that contains audio file name to label mapping. Default = "train.csv"
+  - epochs : Number of epochs to train the model. Default = 30
+  - batch_size : The batch size for training. Default = 32
+
+
+###### default setting
+```
+python train.py
+``` 
+or
+
+###### manual setting
+```
+python train.py --train ./Train --csv train.csv --batch_size 32 --epochs 30 
+```
+
+For prediction:
+
+- arguments
+  - pred : The folder/directory that contains the audio(wav) files which are to be classified. Default = "./Test"
+
+
+###### default setting
+```
+python predict.py
+``` 
+or
+
+###### manual setting
+```
+python train.py --pred ./Test
+```
