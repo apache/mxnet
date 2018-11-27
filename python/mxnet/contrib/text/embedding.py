@@ -475,7 +475,8 @@ class GloVe(_TokenEmbedding):
     the resulting representations showcase interesting linear substructures of the word vector
     space. (Source from https://nlp.stanford.edu/projects/glove/)
 
-    Reference:
+    References
+    ----------
 
     GloVe: Global Vectors for Word Representation.
     Jeffrey Pennington, Richard Socher, and Christopher D. Manning.
@@ -545,7 +546,8 @@ class FastText(_TokenEmbedding):
     representations and text classifiers. It works on standard, generic hardware. Models can later
     be reduced in size to even fit on mobile devices. (Source from https://fasttext.cc/)
 
-    References:
+    References
+    ----------
 
     Enriching Word Vectors with Subword Information.
     Piotr Bojanowski, Edouard Grave, Armand Joulin, and Tomas Mikolov.

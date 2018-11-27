@@ -205,10 +205,10 @@ NNVM_REGISTER_OP(_contrib_AdaptiveAvgPooling2D)
 Applies a 2D adaptive average pooling over a 4D input with the shape of (NCHW).
 The pooling kernel and stride sizes are automatically chosen for desired output sizes.
 
-- If a single integer is provided for output_size, the output size is
+- If a single integer is provided for output_size, the output size is \
   (N x C x output_size x output_size) for any input (NCHW).
 
-- If a tuple of integers (height, width) are provided for output_size, the output size is
+- If a tuple of integers (height, width) are provided for output_size, the output size is \
   (N x C x height x width) for any input (NCHW).
 
 )code" ADD_FILELINE)

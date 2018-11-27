@@ -805,10 +805,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location : list or tuple or dict
         Argument values used as location to compute gradient
 
-        - if type is list of numpy.ndarray
+        - if type is list of numpy.ndarray, \
             inner elements should have the same order as mxnet.sym.list_arguments().
-        - if type is dict of str -> numpy.ndarray
+
+        - if type is dict of str -> numpy.ndarray, \
             maps the name of arguments to the corresponding numpy.ndarray.
+
         *In either case, value of all the arguments must be provided.*
     aux_states : list or tuple or dict, optional
         The auxiliary states required when generating the executor for the symbol.
@@ -829,7 +831,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     References
     ---------
-    ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
+    [1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
     # cannot use finite differences with small eps without high precision
@@ -1844,21 +1846,23 @@ def var_check(generator, sigma, nsamples=1000000):
 
 def chi_square_check(generator, buckets, probs, nsamples=1000000):
     """Run the chi-square test for the generator. The generator can be both continuous and discrete.
-    If the generator is continuous, the buckets should contain tuples of (range_min, range_max) and
-     the probs should be the corresponding ideal probability within the specific ranges.
-    Otherwise, the buckets should be the possible output of the discrete distribution and the probs
-     should be groud-truth probability.
+
+    If the generator is continuous, the buckets should contain tuples of (range_min, range_max) \
+    and the probs should be the corresponding ideal probability within the specific ranges. \
+    Otherwise, the buckets should be the possible output of the discrete distribution and the \
+    probs should be groud-truth probability.
 
     Usually the user is required to specify the probs parameter.
 
-    After obtatining the p value, we could further use the standard p > 0.05 threshold to get
-     the final result.
+    After obtatining the p value, we could further use the standard p > 0.05 threshold to get \
+    the final result.
 
     Examples::
-        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, 0, 1), 5)
-        generator = lambda x: np.random.normal(0, 1.0, size=x)
-        p = chi_square_check(generator=generator, buckets=buckets, probs=probs)
-        assert(p > 0.05)
+
+      buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, 0, 1), 5)
+      generator = lambda x: np.random.normal(0, 1.0, size=x)
+      p = chi_square_check(generator=generator, buckets=buckets, probs=probs)
+      assert(p > 0.05)
 
     Parameters
     ----------
@@ -1867,8 +1871,8 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
         generator(N) should generate N random samples.
     buckets: list of tuple or list of number
         The buckets to run the chi-square the test. Make sure that the buckets cover
-         the whole range of the distribution. Also, the buckets must be in ascending order and have
-         no intersection
+        the whole range of the distribution. Also, the buckets must be in ascending order and have
+        no intersection
     probs: list or tuple
         The ground-truth probability of the random value fall in a specific bucket.
     nsamples:int

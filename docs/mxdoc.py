@@ -110,8 +110,13 @@ def build_scala(app):
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
-    # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + scala_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/core|\/infer\" | egrep -v \"Suite|javaapi\"`; exit 0')
+    scala_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"Suite\"'
+    scala_doc_classpath = ':'.join([
+        '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
+        '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
+    ])
+    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation; exit 0'
+             .format(scala_path, scala_doc_sources, scala_doc_classpath))
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
@@ -122,9 +127,10 @@ def build_scala_docs(app):
 
 def build_java_docs(app):
     """build java docs and then move the outdir"""
-    java_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/org/apache/mxnet/'
+    java_path = app.builder.srcdir + '/../scala-package'
     # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + java_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/javaapi\" | egrep -v \"Suite\"`; exit 0')
+    find_cmd = '`find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep \"\/javaapi\" | egrep -v \"Suite\"`'
+    _run_cmd('cd ' + java_path + '; scaladoc ' + find_cmd +'; exit 0')
     dest_path = app.builder.outdir + '/api/java/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)

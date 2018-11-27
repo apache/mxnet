@@ -159,7 +159,7 @@ inline static std::vector<mkldnn::memory::format> GetMKLDNNFormat(size_t num_dim
   }
 }
 
-inline static TestArrayShapes GetTestArrayShapes() {
+inline static TestArrayShapes GetTestArrayShapes(bool spatial_data_format = false) {
   int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
   std::vector<TShape> shapes;
   std::vector<mkldnn::memory::primitive_desc> pds;
@@ -198,7 +198,9 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s2, dtype, mkldnn::memory::format::oihw));
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(4, dtype);
-    pds.push_back(GetMemPD(s1, dtype, formats[0]));
+    if (!spatial_data_format) {
+      pds.push_back(GetMemPD(s1, dtype, formats[0]));
+    }
   }
   {
     // 5D
@@ -208,7 +210,9 @@ inline static TestArrayShapes GetTestArrayShapes() {
     pds.push_back(GetMemPD(s, dtype, mkldnn::memory::format::goihw));
 
     std::vector<mkldnn::memory::format> formats = GetMKLDNNFormat(5, dtype);
-    pds.push_back(GetMemPD(s, dtype, formats[0]));
+    if (!spatial_data_format) {
+      pds.push_back(GetMemPD(s, dtype, formats[0]));
+    }
   }
 
   TestArrayShapes ret;
@@ -227,6 +231,7 @@ struct OpAttrs {
   nnvm::NodeAttrs attrs;
   std::vector<DispatchMode> dispatches;
   std::set<OpReqType> requests;
+  std::unordered_set<int> accept_dims;
   int num_inputs;
   int num_outputs;
   int input_types;
@@ -249,6 +254,38 @@ enum ArrayTypes {
   NormalReusedDiffDtype = 4096,
   All = 8191,
 };
+
+
+inline NDArray CreateKernelNDArray(TShape kernel, int num_filters, TShape input,
+    bool is_deconv = false) {
+  CHECK_EQ(kernel.ndim(), 2) << "mkldnn only supports 2d filters on 4d inputs";
+  TShape target_shape(4);
+  target_shape[0] = is_deconv ? input[1] : num_filters;
+  target_shape[1] = is_deconv ? num_filters : input[1];
+  target_shape[2] = kernel[0];
+  target_shape[3] = kernel[1];
+  int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  NDArray arr(target_shape, Context());
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::nchw);
+  InitMKLDNNArray(&arr, pd);
+  return arr;
+}
+
+inline NDArray CreateBiasNDArray(TShape target_shape) {
+  int dtype = mshadow::DataType<mshadow::default_real_t>::kFlag;
+  NDArray arr(target_shape, Context());
+  auto pd = GetMemPD(target_shape, dtype, mkldnn::memory::format::x);
+  InitMKLDNNArray(&arr, pd);
+  return arr;
+}
+
+inline int CalculateWidthConvOutput(int width, int kernel, int padding, int stride) {
+  return (width - kernel + 2 * padding) / stride  + 1;
+}
+
+inline int CalculateWidthDeconvOutput(int width, int kernel, int padding, int stride) {
+  return stride * (width - 1) + kernel - 2 * padding;
+}
 
 inline std::string CreateShapeString(int value, int dim) {
   std::stringstream ss;
@@ -293,21 +330,21 @@ inline void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  */
 inline std::vector<NDArrayAttrs> GetTestInputArrays(
     int types = ArrayTypes::All, bool rand = false,
-    int num_inputs = 1, int dim = 0) {
-  TestArrayShapes tas = GetTestArrayShapes();
+    std::vector<float> scale = {1}, bool spatial_data_format = false) {
+  TestArrayShapes tas = GetTestArrayShapes(spatial_data_format);
   std::vector<nnvm::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs;
   std::string desc;
 
-  int slice_amount = 1;
-  if (dim == 0)
-    slice_amount = num_inputs;
+  int slice_amount = scale[0];
   for (auto shape : shapes) {
-    if (dim >= shape.ndim())
+    if (scale.size() > shape.ndim())
       continue;
-    shape[dim] = shape[dim] * num_inputs;
+
+    for (size_t dim = 0; dim < scale.size(); ++dim)
+      shape[dim] = static_cast<int>(round(shape[dim] * scale[dim]));
 
     // Type 1.
     NDArray arr(shape, Context());
@@ -326,12 +363,12 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
 
 
     for (auto pd : pds) {
-      if (num_inputs > 1) {
+      for (size_t dim = 0; dim < scale.size(); ++dim) {
         // preserve if matching layout else just expand on 0 dim
         if (shape.ndim() == pd.desc().data.ndims)
-          pd = GetExpandedMemPD(pd, num_inputs, dim);
+          pd = GetExpandedMemPD(pd, scale[dim], dim);
         else
-          pd = GetExpandedMemPD(pd, num_inputs);
+          pd = GetExpandedMemPD(pd, scale[dim]);
       }
 
       if (shape.Size() != pd.get_size() / sizeof(mshadow::default_real_t))
