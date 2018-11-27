@@ -1,9 +1,6 @@
 # MXNet Java Sample Project
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
-You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~).
-Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to test to run this demo.
-
 You can use the `Makefile` to make the Java package. Simply do the following:
 ```Bash
 make javademo
@@ -15,14 +12,15 @@ You can use the following instruction as an alternative to achieve the same resu
 User are required to use `mvn package` to build the package,
  which are shown below:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 SCALA_VERSION=2.11.8 MXNET_VERSION=1.3.1-SNAPSHOT
+export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.3.1-SNAPSHOT
 export SCALA_PKG_PROFILE=
-mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION)
+mvn package -Dmxnet.profile=$SCALA_PKG_PROFILE \
+		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE \
+		-Dmxnet.version=$MXNET_VERSION
 ```
 These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`)
 should be set before executing the line above.
+The `SCALA_PKG_PROFILE` should be chosen from `osx-x86_64-cpu`, `linux-x86_64-cpu` or `linux-x86_64-gpu`.
 
 
 ## Run
@@ -79,3 +77,8 @@ sudo add-apt-repository ppa:timsc/opencv-3.4
 sudo apt-get update
 sudo apt install libopencv-imgcodecs3.4
 ```
+
+Is there any other version available?
+
+You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~).
+Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.
