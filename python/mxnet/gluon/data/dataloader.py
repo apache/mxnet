@@ -192,7 +192,8 @@ def fetcher_loop(data_queue, data_buffer, pin_memory=False, data_buffer_lock=Non
 
 class _MultiWorkerIter(object):
     """Interal multi-worker iterator for DataLoader.
-    It allow reset() to reuse iterator with all workers alive.
+    Re-acquiring this iterator by `iter()` function will reset it 
+    with all workers alive in order to save re-initialization overhead.
 
     Parameters
     ----------
@@ -370,7 +371,8 @@ class _MultiWorkerIter(object):
 
 
 class _SameProcessIter(object):
-    """Same Process Iterator, which allow reset().
+    """Same Process Iterator.
+    Re-acquire this iterator by `iter()` function will reset it.
 
     Parameters
     ----------
