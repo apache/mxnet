@@ -325,7 +325,7 @@ def test_onnx_export_list_shape():
 
 @with_seed()
 def test_onnx_export_extra_params():
-    net = nn.HybridSequential(prefix='list_shape_net')
+    net = nn.HybridSequential(prefix='extra_params_net')
     with net.name_scope():
         net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
     _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
