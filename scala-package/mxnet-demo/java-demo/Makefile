@@ -16,7 +16,6 @@
 # under the License.
 
 SCALA_VERSION_PROFILE := 2.11
-SCALA_VERSION := 2.11.8
 MXNET_VERSION := 1.3.1-SNAPSHOT
 
 ifeq ($(OS),Windows_NT)
@@ -44,11 +43,9 @@ endif
 javademo:
 	(mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
-		-Dscala.version=$(SCALA_VERSION))
+		-Dmxnet.version=$(MXNET_VERSION))
 
 javaclean:
 	(mvn clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
-		-Dscala.version=$(SCALA_VERSION))
+		-Dmxnet.version=$(MXNET_VERSION))

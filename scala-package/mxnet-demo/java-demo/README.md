@@ -1,15 +1,10 @@
 # MXNet Java Sample Project
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
-Please copy the downloaded MXNet Java package jar file under the `java-demo` folder (where this `README` lives).
-You can download the package from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~).
-Please download `1.3.1-SNAPSHOT` or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to test to run this demo.
+You can find official release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~).
+Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to test to run this demo.
 
-Please make sure to rename the `jar` file you have download as the name that match the `MXNET_VERSION`, it looks similar as below:
-```
-mv mxnet-full_2.11-osx-x86_64-cpu-1.3.1-20181120.200740-24.jar mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar 
-```
-You can use the `Makefile` to do the same thing. Simply do the following:
+You can use the `Makefile` to make the Java package. Simply do the following:
 ```Bash
 make javademo
 ```
@@ -24,10 +19,9 @@ export SCALA_VERSION_PROFILE=2.11 SCALA_VERSION=2.11.8 MXNET_VERSION=1.3.1-SNAPS
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
-		-Dscala.version=$(SCALA_VERSION)
+		-Dmxnet.version=$(MXNET_VERSION)
 ```
-These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`, `SCALA_VERSION`)
+These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`)
 should be set before executing the line above.
 
 
