@@ -37,6 +37,54 @@
 namespace mxnet {
 namespace op {
 
+namespace activation {
+
+int GradNumInputs(int act_type) {
+#if MXNET_USE_CUDNN == 1
+    // check activation.cu \sa ActivationGradCompute
+    switch (act_type) {
+        case kReLU:
+        case kSoftReLU:
+            return 2;
+        case kSoftSign:
+        case kTanh:
+        case kSigmoid:
+            return 3;
+        default:
+            CHECK(false) << "missing activation type";
+    }
+#elif MXNET_USE_MKLDNN == 1
+    // \sa ActivationGradComputeExCPU
+    switch (act_type) {
+        case kReLU:
+            return 2;
+        case kSigmoid:
+        case kTanh:
+        case kSoftReLU:
+        case kSoftSign:
+            return 3;
+        default:
+            CHECK(false) << "missing activation type";
+    }
+#else
+    // check activation-inl.h \sa ActivationGradComputeImpl
+    switch (act_type) {
+        case kReLU:
+        case kSigmoid:
+        case kTanh:
+        case kSoftReLU:
+            return 2;
+        case kSoftSign:
+            return 3;
+        default:
+            CHECK(false) << "missing activation type";
+    }
+#endif
+    // unreachable
+    return -1;
+}
+}  // namespace activation
+
 DMLC_REGISTER_PARAMETER(ActivationParam);
 
 // This will determine the order of the inputs for backward computation.
@@ -44,22 +92,57 @@ struct ActivationGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
+    // ograds, output...
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.emplace_back(nnvm::NodeEntry{n, activation::kOut, 0});
 
     const NodeAttrs& attrs = n->attrs;
+    using namespace activation;
     int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
-    if (act_type == activation::kSoftSign) {
-      // for softsign need the inputs to compute the activation.
-      heads.push_back(n->inputs[activation::kData]);
-    }
-
-#if (MXNET_USE_CUDNN == 1 || MXNET_USE_MKLDNN == 1)
+#if MXNET_USE_CUDNN == 1
     // for ReLU, no need to pass input data. This enables inplace optimization during the
     // forward pass.
-    if (act_type != activation::kReLU &&
-        act_type != activation::kSoftSign) {
-      heads.push_back(n->inputs[activation::kData]);
+    // check activation.cu \sa ActivationGradCompute
+    switch (act_type) {
+        case kReLU:
+        case kSoftReLU:
+            break;
+        case kSoftSign:
+        case kTanh:
+        case kSigmoid:
+            heads.push_back(n->inputs[activation::kData]);
+            break;
+        default:
+            CHECK(false) << "missing activation type";
+    }
+#elif MXNET_USE_MKLDNN == 1
+    // \sa ActivationGradComputeExCPU
+    switch (act_type) {
+        case kReLU:
+            break;
+        case kSoftSign:
+        case kTanh:
+        case kSoftReLU:
+        case kSigmoid:
+            heads.push_back(n->inputs[activation::kData]);
+            break;
+        default:
+            CHECK(false) << "missing activation type";
+    }
+
+#else
+    // check activation-inl.h \sa ActivationGradComputeImpl
+    switch (act_type) {
+        case kSoftSign:
+            heads.push_back(n->inputs[activation::kData]);
+            break;
+        case kReLU:
+        case kTanh:
+        case kSoftReLU:
+        case kSigmoid:
+            break;
+        default:
+            CHECK(false) << "missing activation type";
     }
 #endif
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
@@ -89,11 +172,11 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  bool relu = param.act_type == activation::kReLU;
-  CHECK_EQ(inputs.size(), relu ? 2U : 3U);
+  CHECK_EQ(inputs.size(), activation::GradNumInputs(param.act_type));
   if (SupportMKLDNN(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     // XXX: for y = relu(x), y is passed as "in_data" to Backward()
+    const bool relu = param.act_type == activation::kReLU;
     MKLDNNActivationBackward(attrs, ctx, inputs[0], relu ? inputs[1] : inputs[2], req[0],
                              outputs[0]);
      MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -122,16 +205,12 @@ inline static bool BackwardActStorageType(const nnvm::NodeAttrs& attrs,
                                           std::vector<int> *in_attrs,
                                           std::vector<int> *out_attrs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  if (param.act_type != activation::kReLU) {
-    CHECK_EQ(in_attrs->size(), 3U);
-  } else {
-    // for ReLU activation, the backward pass only needs ograd and output
-    CHECK_EQ(in_attrs->size(), 2U);
-  }
+  CHECK_EQ(in_attrs->size(), activation::GradNumInputs(param.act_type));
   return MKLDNNStorageType(attrs, dev_mask, SupportMKLDNNAct(param),
                            dispatch_mode, in_attrs, out_attrs);
 }
 #endif
+
 
 MXNET_OPERATOR_REGISTER_UNARY(Activation)
 .describe(R"code(Applies an activation function element-wise to the input.
@@ -163,18 +242,16 @@ The following activation functions are supported:
 
 NNVM_REGISTER_OP(_backward_Activation)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
-    // for ReLU activation, the backward pass only needs ograd and output
-    if (act_type == activation::kReLU) return 2;
-    return 3;
-  })
+    const int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
+    return activation::GradNumInputs(act_type);
+})
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BackwardActStorageType)
 #endif
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<-1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })

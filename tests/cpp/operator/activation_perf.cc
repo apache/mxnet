@@ -47,7 +47,7 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
     "softrelu",
     "softsign"
   };
-  for(const string& activation : activations) {
+  for (const string& activation : activations) {
     kwargs_t activation_args = {{"act_type", activation}};
     test::op::CoreOperatorRunner<float> runner;
     runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
