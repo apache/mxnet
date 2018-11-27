@@ -28,11 +28,14 @@ import os
 import unittest
 import logging
 import tarfile
+import tempfile
 from collections import namedtuple
 import numpy as np
 import numpy.testing as npt
 from onnx import numpy_helper, helper
 from onnx import TensorProto
+from mxnet import nd, sym
+from mxnet.gluon import nn
 from mxnet.test_utils import download
 from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
@@ -237,6 +240,79 @@ def test_square():
     numpy_op = np.square(input1)
 
     npt.assert_almost_equal(result, numpy_op)
+
+
+def _assert_sym_equal(lhs, rhs):
+    assert lhs.list_inputs() == rhs.list_inputs()  # input names must be identical
+    assert len(lhs.list_outputs()) == len(rhs.list_outputs())  # number of outputs must be identical
+
+
+def _force_list(output):
+    if isinstance(output, nd.NDArray):
+        return [output]
+    return list(output)
+
+
+def _optional_group(symbols, group=False):
+    if group:
+        return sym.Group(symbols)
+    else:
+        return symbols
+
+
+def _check_onnx_export(net, group_outputs=False):
+    net.initialize()
+    data = nd.random.uniform(0, 1, (1, 1024))
+    output = _force_list(net(data))  # initialize weights
+    net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
+    net_params = {name:param._reduce() for name, param in net.collect_params().items()}
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        onnx_file_path = os.path.join(tmpdirname, 'net.onnx')
+        export_path = onnx_mxnet.export_model(
+            sym=net_sym,
+            params=net_params,
+            input_shape=[data.shape],
+            onnx_file_path=onnx_file_path)
+        assert export_path == onnx_file_path
+        # Try importing the model to symbol
+        _assert_sym_equal(net_sym, onnx_mxnet.import_model(export_path)[0])
+
+        # Try importing the model to gluon
+        imported_net = onnx_mxnet.import_to_gluon(export_path, ctx=None)
+        _assert_sym_equal(net_sym, _optional_group(imported_net(sym.Variable('data')), group_outputs))
+
+        # Confirm network outputs are the same
+        imported_net_output = _force_list(imported_net(data))
+        for out, imp_out in zip(output, imported_net_output):
+            mx.test_utils.assert_almost_equal(out.asnumpy(), imp_out.asnumpy())
+
+
+@with_seed()
+def test_onnx_export_single_output():
+    net = nn.HybridSequential(prefix='single_output_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net)
+
+
+@with_seed()
+def test_onnx_export_multi_output():
+    class MultiOutputBlock(nn.HybridBlock):
+        def __init__(self):
+            super(MultiOutputBlock, self).__init__()
+            with self.name_scope():
+                self.net = nn.HybridSequential()
+                for i in range(10):
+                    self.net.add(nn.Dense(100 + i * 10, activation='relu'))
+
+        def hybrid_forward(self, F, x):
+            out = tuple(block(x) for block in self.net._children.values())
+            return out
+
+    net = MultiOutputBlock()
+    assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
+    _check_onnx_export(net, group_outputs=True)
+
 
 if __name__ == '__main__':
     test_models("bvlc_googlenet", (1, 3, 224, 224), (1, 1000))
