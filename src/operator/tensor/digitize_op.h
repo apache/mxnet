@@ -153,6 +153,27 @@ struct CheckMonotonic {
       CHECK_LT(bins[i], bins[i + 1]) << "Bins vector is not strictly monotonic and increasing";
     } // TODO: Make sure the next element in bins is actually bins[i+1]
   }
+
+  return true;
+}
+
+
+inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
+                           std::vector<int> *in_attrs,
+                           std::vector<int> *out_attrs) {
+  auto &input_type = (*in_attrs)[0];
+  auto &output_type = (*out_attrs)[0];
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, input_type);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, output_type);
+  return out_attrs->at(0) != -1;
+}
+
+
+template<typename xpu, typename DType, typename BType>
+struct ForwardKernel {
+  static void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu, 1, BType>
+  &bins, const bool right);
 };
 
 
