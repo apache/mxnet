@@ -29,7 +29,7 @@ from six import StringIO
 from six.moves import configparser
 
 _BUILD_VER = os.getenv('BUILD_VER', 'default')
-print("Building version {}".format(_BUILD_VER))
+print(f'Building version {_BUILD_VER}')
 _DOC_SET = 'document_sets_' + _BUILD_VER
 
 parser = configparser.SafeConfigParser()
@@ -119,8 +119,7 @@ def build_scala_docs(app):
     ])
     # There are unresolvable errors on mxnet 1.2.x. We are ignoring those errors while aborting the ci on newer versions
     scala_ignore_errors = '; exit 0' if '1.2.' in _BUILD_VER else ''
-    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation {}'
-             .format(scala_path, scala_doc_sources, scala_doc_classpath, scala_ignore_errors))
+    _run_cmd(f'cd {scala_path}; scaladoc `{scala_doc_sources}` -classpath {scala_doc_classpath} -feature -deprecation {scala_ignore_errors}')
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
@@ -139,8 +138,7 @@ def build_java_docs(app):
         '`find core -name "*-SNAPSHOT.jar" | tr "\\n" ":" `',
         '`find infer -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
     ])
-    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation'
-             .format(java_path, java_doc_sources, java_doc_classpath))
+    _run_cmd(f'cd {java_path}; scaladoc `{java_doc_sources}` -classpath {java_doc_classpath} -feature -deprecation')
     dest_path = app.builder.outdir + '/api/java/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
