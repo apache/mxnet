@@ -325,8 +325,8 @@ void printUsage() {
     std::cout << "inception_inference --symbol <model symbol file in json format>  "
               << "--params <model params file> "
               << "--image <path to the image used for prediction "
+              << "--synset file containing labels for prediction "
               << "[--input_shape <dimensions of input image e.g \"3 224 224\"]"
-              << "[--synset file containing labels for prediction] "
               << "[--mean file containing mean image for normalizing the input image "
               << "[--gpu]  Specify this option if workflow needs to be run in gpu context "
               << std::endl;
@@ -370,8 +370,8 @@ int main(int argc, char** argv) {
         index++;
     }
 
-  if (model_file_json.empty() || model_file_params.empty()) {
-    LG << "ERROR: Model details such as symbols and/or param files are not specified";
+  if (model_file_json.empty() || model_file_params.empty() || synset_file.empty()) {
+    LG << "ERROR: Model details such as symbol, param and/or synset files are not specified";
     printUsage();
     return 1;
   }
