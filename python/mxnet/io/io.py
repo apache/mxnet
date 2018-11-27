@@ -490,8 +490,8 @@ class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
     ``mx.nd.sparse.CSRNDArray`` or ``scipy.sparse.csr_matrix``.
 
-    Example usage:
-    ----------
+    Examples
+    --------
     >>> data = np.arange(40).reshape((10,2,2))
     >>> labels = np.ones([10, 1])
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')

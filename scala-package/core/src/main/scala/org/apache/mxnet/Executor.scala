@@ -224,7 +224,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of argument arrrays.
    * @return The dictionary that maps name of arguments to NDArrays.
-   * @throws IllegalArgumentException if there are duplicated names in the arguments.
    */
   def argDict: Map[String, NDArray] = {
     if (_argDict == null) {
@@ -236,7 +235,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of gradient arrays.
    * @return The dictionary that maps name of arguments to gradient arrays.
-   * @throws IllegalArgumentException if there are duplicated names in the grads.
    */
   def gradDict: Map[String, NDArray] = {
     if (_gradDict == null) {
@@ -248,7 +246,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   /**
    * Get dictionary representation of auxiliary states arrays.
    * @return The dictionary that maps name of auxiliary states to NDArrays.
-   * @throws IllegalArgumentException if there are duplicated names in the auxiliary states.
    */
   def auxDict: Map[String, NDArray] = {
     if (_auxDict == null) {
@@ -265,8 +262,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
    *        Whether allow extra parameters that are not needed by symbol
    *        If this is True, no error will be thrown when arg_params or aux_params
    *        contain extra parameters that is not needed by the executor.
-   * @throws IllegalArgumentException
-   *         If there is additional parameters in the dict but allow_extra_params=False
    */
   def copyParamsFrom(argParams: Map[String, NDArray],
                      auxParams: Map[String, NDArray],

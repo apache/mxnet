@@ -269,8 +269,8 @@ int MXSymbolListAttr(SymbolHandle symbol,
   }
   *out_size = attr_list.size()/2;
   ret->ret_vec_charp.clear();
-  for (size_t i = 0; i < attr_list.size(); ++i) {
-    ret->ret_vec_charp.push_back(attr_list[i].c_str());
+  for (const auto& attr : attr_list) {
+    ret->ret_vec_charp.push_back(attr.c_str());
   }
   *out = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
@@ -298,8 +298,8 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
   }
   *out_size = attr_list.size()/2;
   ret->ret_vec_charp.clear();
-  for (size_t i = 0; i < attr_list.size(); ++i) {
-    ret->ret_vec_charp.push_back(attr_list[i].c_str());
+  for (auto &attr : attr_list) {
+    ret->ret_vec_charp.push_back(attr.c_str());
   }
   *out = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();

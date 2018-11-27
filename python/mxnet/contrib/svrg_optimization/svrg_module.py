@@ -37,8 +37,7 @@ class SVRGModule(Module):
     data_names : list of str
         Defaults to `('data')` for a typical model used in image classification.
     label_names : list of str
-        Defaults to `('softmax_label')` for a typical model used in image
-        classification.
+        Defaults to `('softmax_label')` for a typical model used in image classification.
     logger : Logger
         Defaults to `logging`.
     context : Context or list of Context
@@ -48,18 +47,19 @@ class SVRGModule(Module):
     fixed_param_names: list of str
         Default ``None``, indicating no network parameters are fixed.
     state_names : list of str
-        states are similar to data and label, but not provided by data iterator.
+        states are similar to data and label, but not provided by data iterator. \
         Instead they are initialized to 0 and can be set by `set_states()`.
     group2ctxs : dict of str to context or list of context, or list of dict of str to context
         Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
     compression_params : dict
-        Specifies type of gradient compression and additional arguments depending
-        on the type of compression being used. For example, 2bit compression requires a threshold.
-        Arguments would then be {'type':'2bit', 'threshold':0.5}
-        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
+        Specifies type of gradient compression and additional arguments depending \
+        on the type of compression being used. For example, 2bit compression requires a threshold. \
+        Arguments would then be {'type':'2bit', 'threshold':0.5} \
+        See mxnet.KVStore.set_gradient_compression method for more details on gradient compression. \
     update_freq: int
-        Specifies the number of times to update the full gradients to be used in the SVRG optimization. For instance,
+        Specifies the number of times to update the full gradients to be used in the SVRG optimization. For instance, \
         update_freq = 2 will calculates the gradients over all data every two epochs
+
     Examples
     --------
     >>> # An example of declaring and using SVRGModule.

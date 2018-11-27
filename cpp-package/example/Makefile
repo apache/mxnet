@@ -41,7 +41,7 @@ debug: prebuild all
 
 
 $(CPPEX_EXE):% : %.cpp
-	$(CXX) -std=c++0x $(CFLAGS)  $(CPPEX_CFLAGS) -o build/$@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+	$(CXX) -std=c++11 $(CFLAGS)  $(CPPEX_CFLAGS) -o build/$@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
 
 clean:
 	@rm -rf build

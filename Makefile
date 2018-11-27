@@ -340,7 +340,7 @@ endif
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
 ifeq ($(CUDA_ARCH),)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70 75
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
@@ -596,7 +596,7 @@ rpkg:
 
 rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
-	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file("r-package_coverage.json");writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
+	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package; \

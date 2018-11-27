@@ -76,9 +76,9 @@ Graph UpgradeJSON_FixParsing(Graph g) {
         n->op()->attr_parser(&(n->attrs));
 
       // add back removed hidden keys
-      for (const auto &kv : hidden_keys) {
+      for (const auto& kv : hidden_keys) {
         bool flag = false;
-        for (const auto &key : kHiddenKeys) {
+        for (const auto& key : kHiddenKeys) {
           size_t pos = kv.first.rfind(key);
           if (pos == 0 && key.length() == kv.first.length()) {
             n->attrs.dict["__"+key+"__"] = kv.second;
@@ -211,8 +211,8 @@ Graph LoadLegacyJSONPass(Graph g) {
               << ". Attempting to upgrade...";
     upgrading = true;
   }
-  for (auto it = upgrader_list.begin(); it != upgrader_list.end(); ++it) {
-    if (it->first > version) load = it->second(load);
+  for (auto& upgrader : upgrader_list) {
+    if (upgrader.first > version) load = upgrader.second(load);
   }
   if (upgrading) LOG(INFO) << "Symbol successfully upgraded!";
   return load;
