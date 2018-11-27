@@ -792,7 +792,8 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
         }
         num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
         bool dynamic = false;
-        if (data_out.shape_[0] > 1024 * 10) {
+        const dim_t large_matrix_threshold = 1024 * 10;
+        if (data_out.shape_[0] > large_matrix_threshold) {
           dynamic = true;
           // each unit of work processes at least 1024 elements in the output
           const dim_t unit_work_per_thread = 1024;
