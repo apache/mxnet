@@ -437,6 +437,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <div class="gpu">
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
+
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
 
 ```html
@@ -451,6 +452,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <div class="cpu">
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
+
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
 
 ```html
@@ -751,6 +753,7 @@ Not available at this time. <br>
 <div class="cpu">
 </br>
 You can use the Maven packages defined in the following dependency to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
+
 <a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
 
 ```html
