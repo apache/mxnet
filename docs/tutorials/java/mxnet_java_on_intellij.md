@@ -12,7 +12,7 @@ To use this tutorial you need the following pre-requisites:
 
 ### MacOS Prerequisites
 
-You can run the following commands to install the prerequisites.
+Run the following commands to install the prerequisites on MacOS.
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 brew update
@@ -22,10 +22,9 @@ brew install maven
 brew install opencv
 ```
 
-You can also run this tutorial on an Ubuntu machine after installing the following prerequisites.
 ### Ubuntu Prerequisites
 
-Run the following commands to install the prerequisites.
+Run the following commands to install the prerequisites on Ubuntu.
 
 ```bash
 wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
@@ -52,11 +51,11 @@ Choose the Maven project type.
 
 Select the checkbox for `Create from archetype`, then choose `org.apache.maven.archetypes:maven-archetype-quickstart` from the list below. More on this can be found on a Maven tutorial : [Maven in 5 Minutes](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html). 
 
-![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/project-archetype.png)
+![maven project type - archetype](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/project-archetype.png)
 
 click `Next`.
 
-![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-metadata.png)
+![project metadata](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-metadata.png)
 
 Set the project's metadata. For this tutorial, use the following:
 
@@ -73,15 +72,15 @@ ArtifactId: javaMXNet
 1.0-SNAPSHOT
 ```
 
-![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-properties.png)
+![project properties](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-properties.png)
 
 Review the project's properties. The settings can be left as their default.
 
-![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-location.png)
+![project location](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-location.png)
 
 Set the project's location. The rest of the settings can be left as their default.
 
-![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/intellij-project-pom.png)
+![project 1](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/intellij-project-pom.png)
 
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
@@ -107,7 +106,7 @@ Note :
 
   - Note the prompt in the lower right corner that states "Maven projects need to be imported". If this is not visible, click on the little greed balloon that appears in the lower right corner.
 
-![import_dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/java/project-import-changes.png)
+![import_dependencies](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/java/project-import-changes.png)
 
 Click "Import Changes" in this prompt.
 
@@ -166,6 +165,6 @@ java -cp target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/* mxnet.App
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](https://mxnet.incubator.apache.org/api/java/infer.html)
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/examples/src/main/java/org/apache/mxnetexamples/infer/)
+* [Java Inference API](/api/java/index.html)
+* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index](http://mxnet.io/tutorials/index.html)

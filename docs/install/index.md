@@ -1033,6 +1033,9 @@ Follow the four steps in this [docker documentation](https://docs.docker.com/eng
 
 ## Build
 
+**Please use a Native build with gcc 4 as explained below, higher compiler versions currently cause test
+failures on ARM**
+
 The following command will build a container with dependencies and tools and then compile MXNet for
 ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`, copy this
 file to your Raspberry Pi.

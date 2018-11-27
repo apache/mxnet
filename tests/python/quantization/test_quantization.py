@@ -214,7 +214,7 @@ def test_quantized_conv():
 
 @with_seed()
 def test_quantized_pooling():
-    def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype):
+    def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype, convention='valid'):
         if is_test_for_native_cpu():
             print('skipped testing quantized_pooling for native cpu since it is not supported yet')
             return
@@ -224,7 +224,8 @@ def test_quantized_pooling():
 
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         pooling_fp32 = mx.sym.Pooling(data=data, kernel=kernel, pad=pad, stride=stride,
-                                        pool_type=pool_type, global_pool=global_pool, cudnn_off=False)
+                                      pool_type=pool_type, global_pool=global_pool, cudnn_off=False,
+                                      pooling_convention=convention)
         arg_shapes, _, _ = pooling_fp32.infer_shape(data=data_shape)
         arg_names = pooling_fp32.list_arguments()
         pooling_fp32_exe = pooling_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
@@ -242,9 +243,10 @@ def test_quantized_pooling():
         min_data = mx.sym.Variable(name='min_data')
         max_data = mx.sym.Variable(name='max_data')
         quantized_pooling = mx.sym.contrib.quantized_pooling(data=qdata, min_data=min_data,
-                                                                max_data=max_data, kernel=kernel,
-                                                                pad=pad, stride=stride, pool_type=pool_type,
-                                                                global_pool=global_pool)
+                                                             max_data=max_data, kernel=kernel,
+                                                             pad=pad, stride=stride, pool_type=pool_type,
+                                                             global_pool=global_pool,
+                                                             pooling_convention=convention)
         pooling_int8_exe = quantized_pooling.simple_bind(ctx=mx.current_context(), grad_req='null')
         qarg_names = quantized_pooling.list_arguments()
         pooling_int8_exe.arg_dict[qarg_names[0]][:] = pooling_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
@@ -265,6 +267,12 @@ def test_quantized_pooling():
         check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), True, qdtype)
         check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), False, qdtype)
         check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), True, qdtype)
+
+        check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), False, qdtype, 'full')
+        check_quantized_pooling((3, 4, 56, 56), (3, 3), 'max', (0, 0), (2, 2), True, qdtype, 'full')
+        check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), False, qdtype, 'full')
+        check_quantized_pooling((3, 512, 7, 7), (7, 7), 'avg', (0, 0), (1, 1), True, qdtype, 'full')
+
 
 @with_seed()
 def test_quantized_fc():
