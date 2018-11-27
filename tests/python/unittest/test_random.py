@@ -877,6 +877,10 @@ def test_randint_generator():
                         for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+with_seed()
+def test_randint_without_dtype():
+    a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
+    assert(a.dtype, 'int32')
 
 if __name__ == '__main__':
     import nose
