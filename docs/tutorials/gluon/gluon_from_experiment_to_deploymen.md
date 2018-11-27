@@ -4,8 +4,9 @@
 
 MXNet Gluon API comes with a lot of great features and it can provide you everything you need from experiment to deploy the model.
 In this tutorial, we will walk you through a common used case on how to build a model using gluon, train it on your data, and deploy it for inference.
+We will keep each section short and please follow the links or references if you want to know more about each topic we covered.
 
-Let's say you want to build a service that provides flower species recognition. A common use case is, you don't have enough data to train a good model like ResNet50.
+Now let's say you want to build a service that provides flower species recognition. A common use case is, you don't have enough data to train a good model like ResNet50.
 What you can do is utilize pre-trained model from Gluon, tweak the model according to your neeed, fine-tune the model on your small dataset, and deploy the model to integrate with your service.
 
 We will use the [Oxford 102 Category Flower Dateset](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/) as an example to show you the steps.
@@ -396,5 +397,7 @@ Then it will predict your iamge
 
 ## References
 
+1. https://github.com/Arsey/keras-transfer-learning-for-oxford102
 1. https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html
 2. https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/
+3. https://gluon-crash-course.mxnet.io/
