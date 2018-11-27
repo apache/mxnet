@@ -529,9 +529,9 @@ struct Kernel<OP, cpu> {
    * for irregular workloads such as spmv.
    * When using this for a new kernel op, add declaration and tuning objects to
    * operator_tune.cc
-   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
    * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \param args Varargs to eventually pass to the OP::Map() function
    */
   template<typename ...Args>
   inline static bool LaunchDynamic(mshadow::Stream<cpu> *, const int64_t N, Args... args) {
