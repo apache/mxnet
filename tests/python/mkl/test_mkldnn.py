@@ -398,6 +398,24 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
+def test_deconvolution_inference():
+    np.random.seed(12345)
+    num_filter = 256
+    num_group = 1
+    kernel = (3, 3)
+    pad = (1, 1)
+    shape = (1, 256, 200, 233)
+    x = mx.sym.Variable('x')
+    w = mx.sym.Variable('w')
+    y = mx.sym.Deconvolution(data=x, weight=w, num_filter=num_filter, num_group=num_group, kernel=kernel, no_bias=True, pad=pad)
+    exe = y.simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
+    exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
+    exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
+    for i in range(10):
+        exe.forward(is_train=False)
+        o = exe.outputs[0]
+        t = o.asnumpy()
+
 @with_seed()
 def test_non_mkldnn_fcomputeex():
     # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
