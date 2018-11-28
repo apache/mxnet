@@ -30,7 +30,6 @@ namespace op {
 
 static bool ConcatShape(const nnvm::NodeAttrs& attrs, std::vector<TShape>* in_shape,
                         std::vector<TShape>* out_shape) {
-  using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args * 3));
   CHECK_EQ(out_shape->size(), 3U);
