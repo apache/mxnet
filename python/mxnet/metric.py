@@ -91,6 +91,10 @@ class EvalMetric(object):
         self.output_names = output_names
         self.label_names = label_names
         self._kwargs = kwargs
+        if "has_global_stats" in kwargs:
+            self._has_global_stats = kwargs["has_global_stats"]
+        else:
+            self._has_global_stats = False
         self.reset()
 
     def __str__(self):
@@ -148,6 +152,14 @@ class EvalMetric(object):
         """Resets the internal evaluation result to initial state."""
         self.num_inst = 0
         self.sum_metric = 0.0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
+
+    def reset_local(self):
+        """Resets the local portion of the internal evaluation results
+        to initial state."""
+        self.num_inst = 0
+        self.sum_metric = 0.0
 
     def get(self):
         """Gets the current evaluation result.
@@ -164,6 +176,24 @@ class EvalMetric(object):
         else:
             return (self.name, self.sum_metric / self.num_inst)
 
+    def get_global(self):
+        """Gets the current global evaluation result.
+
+        Returns
+        -------
+        names : list of str
+           Name of the metrics.
+        values : list of float
+           Value of the evaluations.
+        """
+        if self._has_global_stats:
+            if self.global_num_inst == 0:
+                return (self.name, float('nan'))
+            else:
+                return (self.name, self.global_sum_metric / self.global_num_inst)
+        else:
+            return self.get()
+
     def get_name_value(self):
         """Returns zipped name and value pairs.
 
@@ -178,6 +208,24 @@ class EvalMetric(object):
         if not isinstance(value, list):
             value = [value]
         return list(zip(name, value))
+
+    def get_global_name_value(self):
+        """Returns zipped name and value pairs for global results.
+
+        Returns
+        -------
+        list of tuples
+            A (name, value) tuple list.
+        """
+        if self._has_global_stats:
+            name, value = self.get_global()
+            if not isinstance(name, list):
+                name = [name]
+            if not isinstance(value, list):
+                value = [value]
+            return list(zip(name, value))
+        else:
+            return self.get_name_value()
 
 # pylint: disable=invalid-name
 register = registry.get_register_func(EvalMetric, 'metric')
@@ -263,7 +311,8 @@ class CompositeEvalMetric(EvalMetric):
     def __init__(self, metrics=None, name='composite',
                  output_names=None, label_names=None):
         super(CompositeEvalMetric, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         if metrics is None:
             metrics = []
         self.metrics = [create(i) for i in metrics]
@@ -325,6 +374,15 @@ class CompositeEvalMetric(EvalMetric):
         except AttributeError:
             pass
 
+    def reset_local(self):
+        """Resets the local portion of the internal evaluation results
+        to initial state."""
+        try:
+            for metric in self.metrics:
+                metric.reset_local()
+        except AttributeError:
+            pass
+
     def get(self):
         """Returns the current evaluation result.
 
@@ -339,6 +397,28 @@ class CompositeEvalMetric(EvalMetric):
         values = []
         for metric in self.metrics:
             name, value = metric.get()
+            if isinstance(name, string_types):
+                name = [name]
+            if isinstance(value, numeric_types):
+                value = [value]
+            names.extend(name)
+            values.extend(value)
+        return (names, values)
+
+    def get_global(self):
+        """Returns the current evaluation result.
+
+        Returns
+        -------
+        names : list of str
+           Name of the metrics.
+        values : list of float
+           Value of the evaluations.
+        """
+        names = []
+        values = []
+        for metric in self.metrics:
+            name, value = metric.get_global()
             if isinstance(name, string_types):
                 name = [name]
             if isinstance(value, numeric_types):
@@ -395,7 +475,8 @@ class Accuracy(EvalMetric):
                  output_names=None, label_names=None):
         super(Accuracy, self).__init__(
             name, axis=axis,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.axis = axis
 
     def update(self, labels, preds):
@@ -423,8 +504,11 @@ class Accuracy(EvalMetric):
 
             check_label_shapes(label, pred_label)
 
-            self.sum_metric += (pred_label == label).sum()
+            num_correct = (pred_label == label).sum()
+            self.sum_metric += num_correct
+            self.global_sum_metric += num_correct
             self.num_inst += len(pred_label)
+            self.global_num_inst += len(pred_label)
 
 
 @register
@@ -467,7 +551,8 @@ class TopKAccuracy(EvalMetric):
                  output_names=None, label_names=None):
         super(TopKAccuracy, self).__init__(
             name, top_k=top_k,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.top_k = top_k
         assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
         self.name += '_%d' % self.top_k
@@ -498,8 +583,11 @@ class TopKAccuracy(EvalMetric):
                 num_classes = pred_label.shape[1]
                 top_k = min(num_classes, self.top_k)
                 for j in range(top_k):
-                    self.sum_metric += (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
+                    num_correct = (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
+                    self.sum_metric += num_correct
+                    self.global_sum_metric += num_correct
             self.num_inst += num_samples
+            self.global_num_inst += num_samples
 
 
 class _BinaryClassificationMetrics(object):
@@ -649,7 +737,8 @@ class F1(EvalMetric):
         self.average = average
         self.metrics = _BinaryClassificationMetrics()
         EvalMetric.__init__(self, name=name,
-                            output_names=output_names, label_names=label_names)
+                            output_names=output_names, label_names=label_names,
+                            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -667,18 +756,25 @@ class F1(EvalMetric):
         for label, pred in zip(labels, preds):
             self.metrics.update_binary_stats(label, pred)
 
+        fscore = self.metrics.fscore
         if self.average == "macro":
-            self.sum_metric += self.metrics.fscore
+            self.sum_metric += fscore
+            self.global_sum_metric += fscore
             self.num_inst += 1
+            self.global_num_inst += 1
             self.metrics.reset_stats()
         else:
-            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+            self.sum_metric = fscore * self.metrics.total_examples
+            self.global_sum_metric = fscore * self.metrics.total_examples
             self.num_inst = self.metrics.total_examples
+            self.global_num_inst = self.metrics.total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
-        self.num_inst = 0.
+        self.num_inst = 0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
         self.metrics.reset_stats()
 
 
@@ -750,7 +846,8 @@ class MCC(EvalMetric):
         self._average = average
         self._metrics = _BinaryClassificationMetrics()
         EvalMetric.__init__(self, name=name,
-                            output_names=output_names, label_names=label_names)
+                            output_names=output_names, label_names=label_names,
+                            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -768,18 +865,25 @@ class MCC(EvalMetric):
         for label, pred in zip(labels, preds):
             self._metrics.update_binary_stats(label, pred)
 
+        matthewscc = self._metrics.matthewscc
         if self._average == "macro":
-            self.sum_metric += self._metrics.matthewscc
+            self.sum_metric += matthewscc
+            self.global_sum_metric += matthewscc
             self.num_inst += 1
+            self.global_num_inst += 1
             self._metrics.reset_stats()
         else:
-            self.sum_metric = self._metrics.matthewscc * self._metrics.total_examples
+            self.sum_metric = matthewscc * self._metrics.total_examples
+            self.global_sum_metric = matthewscc * self._metrics.total_examples
             self.num_inst = self._metrics.total_examples
+            self.global_num_inst = self._metrics.total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
         self.num_inst = 0.
+        self.global_sum_metric = 0.
+        self.global_num_inst = 0.
         self._metrics.reset_stats()
 
 
@@ -841,7 +945,8 @@ class Perplexity(EvalMetric):
                  output_names=None, label_names=None):
         super(Perplexity, self).__init__(
             name, ignore_label=ignore_label,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.ignore_label = ignore_label
         self.axis = axis
 
@@ -871,7 +976,9 @@ class Perplexity(EvalMetric):
             loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
             num += pred.size
         self.sum_metric += loss
+        self.global_sum_metric += loss
         self.num_inst += num
+        self.global_num_inst += num
 
     def get(self):
         """Returns the current evaluation result.
@@ -882,6 +989,17 @@ class Perplexity(EvalMetric):
             Representing name of the metric and evaluation result.
         """
         return (self.name, math.exp(self.sum_metric/self.num_inst))
+
+    def get_global(self):
+        """Returns the current global evaluation result.
+
+        Returns
+        -------
+        Tuple of (str, float)
+            Representing name of the metric and evaluation result.
+        """
+        num = self.global_num_inst if self.global_num_inst > 0 else float('nan')
+        return (self.name, math.exp(self.global_sum_metric/num))
 
 ####################
 # REGRESSION METRICS
@@ -921,7 +1039,8 @@ class MAE(EvalMetric):
     def __init__(self, name='mae',
                  output_names=None, label_names=None):
         super(MAE, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -945,8 +1064,11 @@ class MAE(EvalMetric):
             if len(pred.shape) == 1:
                 pred = pred.reshape(pred.shape[0], 1)
 
-            self.sum_metric += numpy.abs(label - pred).mean()
+            mae = numpy.abs(label - pred).mean()
+            self.sum_metric += mae
+            self.global_sum_metric += mae
             self.num_inst += 1 # numpy.prod(label.shape)
+            self.global_num_inst += 1 # numpy.prod(label.shape)
 
 
 @register
@@ -981,7 +1103,8 @@ class MSE(EvalMetric):
     def __init__(self, name='mse',
                  output_names=None, label_names=None):
         super(MSE, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1005,8 +1128,11 @@ class MSE(EvalMetric):
             if len(pred.shape) == 1:
                 pred = pred.reshape(pred.shape[0], 1)
 
-            self.sum_metric += ((label - pred)**2.0).mean()
+            mse = ((label - pred)**2.0).mean()
+            self.sum_metric += mse
+            self.global_sum_metric += mse
             self.num_inst += 1 # numpy.prod(label.shape)
+            self.global_num_inst += 1 # numpy.prod(label.shape)
 
 
 @register
@@ -1041,7 +1167,8 @@ class RMSE(EvalMetric):
     def __init__(self, name='rmse',
                  output_names=None, label_names=None):
         super(RMSE, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1065,8 +1192,11 @@ class RMSE(EvalMetric):
             if len(pred.shape) == 1:
                 pred = pred.reshape(pred.shape[0], 1)
 
-            self.sum_metric += numpy.sqrt(((label - pred)**2.0).mean())
+            rmse = numpy.sqrt(((label - pred)**2.0).mean())
+            self.sum_metric += rmse
+            self.global_sum_metric += rmse
             self.num_inst += 1
+            self.global_num_inst += 1
 
 
 @register
@@ -1110,7 +1240,8 @@ class CrossEntropy(EvalMetric):
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, eps=eps,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.eps = eps
 
     def update(self, labels, preds):
@@ -1134,8 +1265,11 @@ class CrossEntropy(EvalMetric):
             assert label.shape[0] == pred.shape[0]
 
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
-            self.sum_metric += (-numpy.log(prob + self.eps)).sum()
+            ce = (-numpy.log(prob + self.eps)).sum()
+            self.sum_metric += ce
+            self.global_sum_metric += ce
             self.num_inst += label.shape[0]
+            self.global_num_inst += label.shape[0]
 
 @register
 @alias('nll_loss')
@@ -1178,7 +1312,8 @@ class NegativeLogLikelihood(EvalMetric):
                  output_names=None, label_names=None):
         super(NegativeLogLikelihood, self).__init__(
             name, eps=eps,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.eps = eps
 
     def update(self, labels, preds):
@@ -1202,8 +1337,11 @@ class NegativeLogLikelihood(EvalMetric):
             num_examples = pred.shape[0]
             assert label.shape[0] == num_examples, (label.shape[0], num_examples)
             prob = pred[numpy.arange(num_examples, dtype=numpy.int64), numpy.int64(label)]
-            self.sum_metric += (-numpy.log(prob + self.eps)).sum()
+            nll = (-numpy.log(prob + self.eps)).sum()
+            self.sum_metric += nll
+            self.global_sum_metric += nll
             self.num_inst += num_examples
+            self.global_num_inst += num_examples
 
 @register
 @alias('pearsonr')
@@ -1238,7 +1376,8 @@ class PearsonCorrelation(EvalMetric):
     def __init__(self, name='pearsonr',
                  output_names=None, label_names=None):
         super(PearsonCorrelation, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1256,8 +1395,11 @@ class PearsonCorrelation(EvalMetric):
             check_label_shapes(label, pred, False, True)
             label = label.asnumpy()
             pred = pred.asnumpy()
-            self.sum_metric += numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
+            pearson_corr = numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
+            self.sum_metric += pearson_corr
+            self.global_sum_metric += pearson_corr
             self.num_inst += 1
+            self.global_num_inst += 1
 
 
 @register
@@ -1278,7 +1420,8 @@ class Loss(EvalMetric):
     def __init__(self, name='loss',
                  output_names=None, label_names=None):
         super(Loss, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
 
     def update(self, _, preds):
 
@@ -1286,8 +1429,11 @@ class Loss(EvalMetric):
             preds = [preds]
 
         for pred in preds:
-            self.sum_metric += ndarray.sum(pred).asscalar()
+            loss = ndarray.sum(pred).asscalar()
+            self.sum_metric += loss
+            self.global_sum_metric += loss
             self.num_inst += pred.size
+            self.global_num_inst += pred.size
 
 
 @register
@@ -1353,7 +1499,8 @@ class CustomMetric(EvalMetric):
         super(CustomMetric, self).__init__(
             name, feval=feval,
             allow_extra_outputs=allow_extra_outputs,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self._feval = feval
         self._allow_extra_outputs = allow_extra_outputs
 
@@ -1379,10 +1526,14 @@ class CustomMetric(EvalMetric):
             if isinstance(reval, tuple):
                 (sum_metric, num_inst) = reval
                 self.sum_metric += sum_metric
+                self.global_sum_metric += sum_metric
                 self.num_inst += num_inst
+                self.global_num_inst += num_inst
             else:
                 self.sum_metric += reval
+                self.global_sum_metric += reval
                 self.num_inst += 1
+                self.global_num_inst += 1
 
     def get_config(self):
         raise NotImplementedError("CustomMetric cannot be serialized")
