@@ -37,7 +37,7 @@ def evaluate_accuracy(data_iterator, net):
 
 
 def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
-    """The function responsible for running the training the model."""
+    """Function responsible for running the training the model."""
 
     if not train_dir or not os.path.exists(train_dir) or not train_csv:
         warnings.warn("No train directory could be found ")
@@ -100,7 +100,7 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 
         if e%5 == 0:
             train_accuracy = evaluate_accuracy(audio_train_loader, net)
-            print("Epoch %s. Loss: %s Train accuracy : %s " % (e, cumulative_loss/num_examples, train_accuracy))
+            print("Epoch {}. Loss: {} Train accuracy : {} ".format(e, cumulative_loss/num_examples, train_accuracy))
             print("\n------------------------------\n")
 
     train_accuracy = evaluate_accuracy(audio_train_loader, net)

@@ -163,7 +163,7 @@ class AudioFolderDataset(Dataset):
         fn : callable
             A transformer function that takes the first element of a sample
             as input and returns the transformed element.
-        lazy : bool, default True
+        lazy : bool, default False
             If False, transforms all samples at once. Otherwise,
             transforms each sample on demand. Note that if `fn`
             is stochastic, you must set lazy to True or you will
