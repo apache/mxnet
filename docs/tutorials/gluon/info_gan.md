@@ -311,18 +311,18 @@ with SummaryWriter(logdir='./logs/') as sw:
 
             # logging
             if idx % 10 == 0:
-           
+                count = idx + 1
                 logging.info('speed: {} samples/s'.format(batch_size / (time.time() - starttime)))
                 logging.info('discriminator loss = %f, generator loss = %f at iter %d epoch %d'
-                         %(d_error_epoch.asscalar()/idx,g_error_epoch.asscalar()/idx, idx, epoch))
+                         %(d_error_epoch.asscalar()/count,g_error_epoch.asscalar()/count, count, epoch))
 
                 g_input,_,_ = create_generator_input()
                 
                 # create some fake image for logging in MXBoard
                 fake_image = generator(g_input)
 
-                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/idx}, global_step=counter)
-                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/idx}, global_step=counter)
+                sw.add_scalar(tag='Loss_D', value={'test':d_error_epoch.asscalar()/count}, global_step=counter)
+                sw.add_scalar(tag='Loss_G', value={'test':d_error_epoch.asscalar()/count}, global_step=counter)
                 sw.add_image(tag='data_image', image=((fake_image[0]+ 1.0) * 127.5).astype(np.uint8)  , global_step=counter)
                 sw.flush()
         
