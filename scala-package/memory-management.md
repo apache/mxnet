@@ -13,7 +13,7 @@ If an MXNet object or an Iterable containing MXNet objects is returned from the 
 an outer scope if ResourceScope's are stacked.  
 
 **Usage** 
-```
+```scala
 ResourceScope.using() {
     ResourceScope.using() {
         val r1 = NDArray.ones(Shape(2, 2))
@@ -84,7 +84,7 @@ made all MXNet objects [AutoCloseable](https://docs.oracle.com/javase/8/docs/api
 We recommend to avoid manually managing MXNet objects and instead to use `ResourceScope.using` as this could leak memory if you miss calling dispose( at some point GC will kick in and be cleaned up due to Phantom Reference)
 and create unreadable code.   
 
-```
+```scala
 def showDispose(): Unit = {
     val r = NDArray.ones(Shape (2, 2))
     r.dispose()
@@ -96,13 +96,13 @@ Memory Management in MXNet Java is similar to Scala, We recommend to use [Resour
 Java 7 onwards supports [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) where the resources declared in the try block are automatically closed. 
 The above discussed ResourceScope implements AutoCloseable and tracks all MXNet Objects created at a Thread Local scope level. 
 
-```
+```java
 try(ResourceScope scope = new ResourceScope()) {
     NDArray test = NDArray.ones((Shape (2,2))
 }
 ```
 or 
-```
+```java
 try {
     ResourceScope scope = new ResourceScope()
     NDArray test = NDArray.ones((Shape(2,2))
