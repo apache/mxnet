@@ -36,7 +36,6 @@ except ImportError:
 
 from . import sampler as _sampler
 from ... import nd, context
-from ...recordio import MXRecordIO
 
 if sys.platform == 'darwin' or sys.platform == 'win32':
     def rebuild_ndarray(*args):
@@ -159,29 +158,9 @@ def _as_in_context(data, ctx):
         return [_as_in_context(d, ctx) for d in data]
     return data
 
-def _recursive_fork_recordio(obj, depth, max_depth=1000):
-    """Recursively find instance of MXRecordIO and reset file handler.
-    This is required for MXRecordIO which holds a C pointer to a opened file after fork.
-    """
-    if depth >= max_depth:
-        return
-    if isinstance(obj, MXRecordIO):
-        obj.close()
-        obj.open()  # re-obtain file hanlder in new process
-    elif (hasattr(obj, '__dict__')):
-        for _, v in obj.__dict__.items():
-            _recursive_fork_recordio(v, depth + 1, max_depth)
 
 def worker_loop_v1(dataset, key_queue, data_queue, batchify_fn):
     """Worker loop for multiprocessing DataLoader."""
-    # re-fork a new recordio handler in new process if applicable
-    # for a dataset with transform function, the depth of MXRecordIO is 1
-    # for a lazy transformer, the depth is 2
-    # for a user defined transformer, the depth is unknown, try a reasonable depth
-    # limit = sys.getrecursionlimit()
-    # max_recursion_depth = min(limit - 5, max(10, limit // 2))
-    # _recursive_fork_recordio(dataset, 0, max_recursion_depth)
-
     while True:
         idx, samples = key_queue.get()
         if idx is None:
@@ -189,7 +168,7 @@ def worker_loop_v1(dataset, key_queue, data_queue, batchify_fn):
         batch = batchify_fn([dataset[i] for i in samples])
         data_queue.put((idx, batch))
 
-def fetcher_loop_v1(data_queue, data_buffer, pin_memory=False):
+def fetcher_loop_v1(data_queue, data_buffer, pin_memory=False, data_buffer_lock=None):
     """Fetcher loop for fetching data from queue and put in reorder dict."""
     while True:
         idx, batch = data_queue.get()
@@ -238,7 +217,7 @@ class _MultiWorkerIterV1(object):
 
         self._fetcher = threading.Thread(
             target=fetcher_loop_v1,
-            args=(self._data_queue, self._data_buffer, pin_memory))
+            args=(self._data_queue, self._data_buffer, pin_memory, self._data_buffer_lock))
         self._fetcher.daemon = True
         self._fetcher.start()
 
@@ -391,17 +370,18 @@ class DataLoaderV1(object):
 
         # multi-worker
         return _MultiWorkerIterV1(self._num_workers, self._dataset,
-                                self._batchify_fn, self._batch_sampler, self._pin_memory)
+                                  self._batchify_fn, self._batch_sampler, self._pin_memory)
 
     def __len__(self):
         return len(self._batch_sampler)
 
-def worker_fn(samples, batchify_fn):
+_worker_dataset = None
+def _worker_fn(samples, batchify_fn):
     """Function for processing data in worker process."""
     # it is required that each worker process has to fork a new MXIndexedRecordIO handle
     # preserving dataset as global variable can save tons of overhead and is safe in new process
-    global dataset
-    batch = batchify_fn([dataset[i] for i in samples])
+    global _worker_dataset
+    batch = batchify_fn([_worker_dataset[i] for i in samples])
     batch = [batch] if not isinstance(batch, (list, tuple)) else batch
     ret = [reduce_ndarray(x)[1] for x in batch]  # reduce_ndarray(x)[0] is the rebuild function
     return ret
@@ -409,7 +389,7 @@ def worker_fn(samples, batchify_fn):
 class _MultiWorkerIter(object):
     """Internal multi-worker iterator for DataLoader."""
     def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
-                 worker_fn=worker_fn, prefetch=0):
+                 worker_fn=_worker_fn, prefetch=0):
         self._worker_pool = worker_pool
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
@@ -543,8 +523,8 @@ class DataLoader(object):
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if self._num_workers > 0:
             def worker_initializer(data):
-                global dataset
-                dataset = data
+                global _worker_dataset
+                _worker_dataset = data
 
             self._worker_pool = multiprocessing.Pool(
                 self._num_workers, initializer=worker_initializer, initargs=[self._dataset])
@@ -568,7 +548,7 @@ class DataLoader(object):
 
         # multi-worker
         return _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
-                                pin_memory=self._pin_memory, worker_fn=worker_fn,
+                                pin_memory=self._pin_memory, worker_fn=_worker_fn,
                                 prefetch=self._prefetch)
 
     def __len__(self):
