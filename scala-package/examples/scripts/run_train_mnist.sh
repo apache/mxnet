@@ -35,7 +35,7 @@ fi
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
 echo $MXNET_ROOT
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
 # model dir
 DATA_PATH=$2

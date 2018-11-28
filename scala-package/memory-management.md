@@ -1,13 +1,13 @@
 # JVM Memory Management
-The Scala and Java binding of Apache MXNet uses native memory(C++ Heap either in RAM or GPU memory) in most of the MXNet Scala objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.,. the Scala classes associated with them act as wrappers, 
-the operations on these objects are directed to the MXNet C++ backend via JNI for performance , so the bytes are also stored in the native heap for fast access.   
+The Scala and Java bindings of Apache MXNet uses native memory(C++ heap either in RAM or GPU memory) for most of the MXNet Scala objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.,. 
+The Scala classes associated with them act as wrappers, the operations on these objects are directed to the MXNet C++ backend via JNI for performance , so the bytes are also stored in the native heap for fast access.
 
-The JVM using the Garbage Collector only manages objects allocated in the JVM Heap and is not aware of the memory footprint of these objects in the native memory, hence allocation/deAllocation of the native memory has to be managed by MXNet Scala.  
-Allocating native memory is straight forward and is done during the construction of the object by a calling the associated C++ API through JNI, however since JVM languages do not have destructors, De-Allocation of these objects becomes problematic and has to explicitly de-allocated. 
-To make it easy, MXNet Scala provides a few modes of operation.
+The JVM using the Garbage Collector only manages objects allocated in the JVM Heap and is not aware of the memory footprint of these objects in the native memory, hence allocation/deallocation of the native memory has to be managed by MXNet Scala.
+Allocating native memory is straight forward and is done during the construction of the object by a calling the associated C++ API through JNI, However since JVM languages do not have destructors, deallocation of these objects needs to be done explicitly.
+To make it easy, MXNet Scala provides a few modes of operation, explained in detail below.
 
 ## Memory Management in Scala 
-### [ResourceScope.using](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L106) (Recommended)
+### 1.  [ResourceScope.using](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L106) (Recommended)
 `ResourceScope.using` provides the familiar Java try-with-resources primitive in Scala and also extends to automatically manage the memory of all the MXNet objects created in the code block (`body`) associated with it by tracking the allocations in a stack. 
 If an MXNet object or an Iterable containing MXNet objects is returned from the code-block, it is automatically excluded from de-allocation in the current scope and moved to 
 an outer scope if ResourceScope's are stacked.  
@@ -27,7 +27,7 @@ ResourceScope.using() {
 ```
 In the example above, we have two ResourceScopes stacked together, 4 NDArrays `(r1, r2, r3, r4)` are created in the inner scope, the inner scope returns 
 `(r3, r4)`. The ResourceScope code recognizes that it should not de-allocate these objects and automatically moves `r3` and  `r4` to the outer scope. The outer scope 
-returns `r4` from its code-block, so ResourceScope.using removes this from its list of objects to be de-allocated. All other objects are automatically released(native memory) by calling the C++ Backend to free the memory. 
+returns `r4` from its code-block and deallocates `r3`, so ResourceScope.using removes this from its list of objects to be de-allocated. All other objects are automatically released(native memory) by calling the C++ Backend to free the memory.
 
 **Note:**
 You should consider stacking ResourceScope when you have layers of functionality in your application code which creates a lot of MXNet objects like NDArray. 
@@ -35,15 +35,15 @@ This is because you don't want to hold onto all the memory that is created for t
 For example if you were writing Training code in MXNet Scala, it is recommended not to use one-uber ResourceScope block that runs the entire training code, 
 instead you should stack multiple scopes one where you run forward backward passes on each batch, 
 and 2nd scope for each epoch and an outer scope that runs the entire training script, like the example below
-```
+```scala
 ResourceScope.using() {
- val m = Module(...)
+ val m = Module()
  m.bind()
  val k = KVStore(...)
  ResourceScope.using() {
      val itr = MXIterator(..)
      val num_epochs: Int = 100
-     ... 
+     //... 
      for (i <- 0 until num_epoch) {
      ResourceScope.using() {
         val dataBatch = itr.next()
@@ -53,12 +53,13 @@ ResourceScope.using() {
            m.update()
         }
      }
+   }
  }
 }
 
 ```  
        
-### Using Phantom References (Recommended for some use cases)
+### 2.  Using Phantom References (Recommended for some use cases)
 
 Apache MXNet uses [Phantom References](https://docs.oracle.com/javase/8/docs/api/java/lang/ref/PhantomReference.html) to track all MXNet Objects that has native memory associated with it. 
 When the Garbage Collector runs, GC identifies unreachable Scala/Java objects in the JVM Heap and finalizes them, 
@@ -90,14 +91,10 @@ def showDispose(): Unit = {
 }
 ```
 
-## Memory Management in Java
+## 3. Memory Management in Java
 Memory Management in MXNet Java is similar to Scala, We recommend to use [ResourceScope](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L32) in a `try-with-resources` block or in a `try-finally` block.   
-Java 8 onwards supports [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) where the resources declared in the try block is automatically closed. 
+Java 7 onwards supports [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) where the resources declared in the try block is automatically closed. 
 The above discussed ResourceScope implements AutoCloseable and tracks all MXNet Objects created at a Thread Local scope level. 
-
-**Note:**  
-The capability of not de-allocating returned MXNet objects and Iterables containing MXNet objects 
-It is highly recommended to use a stack of try-with-resource ResourceScope's for the reason discussed in Scala's ResourceScope Note section.
 
 ```
 try(ResourceScope scope = new ResourceScope()) {
@@ -108,10 +105,16 @@ or
 ```
 try {
     ResourceScope scope = new ResourceScope()
-    NDArray r = NDArray.ones((Shape(2,2))
+    NDArray test = NDArray.ones((Shape(2,2))
 } finally {
-   scope.close()
+    scope.close()
 }
 ``` 
+**Note:**
+ResourceScope within a try block tracks all MXNet Native Object Allocations (NDArray, Symbol, Executor, etc.,) and deallocates at
+the end of the try block even the objects that are returned, ie., in the above even if `test` were to be returned the native memory associated
+with it would be deallocated and if you use it outside of the try block, the process might crash due to illegal memory access.
 
+If you want to retain certain objects created within the try block, you should explicitly remove them from the scope by calling `scope.moveToOuterScope`
+It is highly recommended to use a stack of try-with-resource ResourceScope's so you do not have explicitly manage the lifecycle of the Native objects.
 
