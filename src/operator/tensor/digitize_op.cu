@@ -25,26 +25,25 @@
 */
 
 #include "./digitize_op.h"
-
 #include <thrust/binary_search.h>
 #include <thrust/distance.h>
 
 namespace mxnet {
 namespace op {
 
-
-template<typename DType, typename BType>
-struct ForwardKernel<gpu, DType, BType> {
-    MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data,
-        mshadow::Tensor<gpu, 1, BType> &bins, const bool right) {
-
-      const auto data = in_data[i];
-      auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-                        : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
-
-      out_data[i] = thrust::distance(bins.dptr_, elem);
-    }
-};
+//
+//template<typename DType, typename BType>
+//struct ForwardKernel<gpu, DType, BType> {
+//    MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data,
+//        mshadow::Tensor<gpu, 1, BType> &bins, const bool right) {
+//
+//      const auto data = in_data[i];
+//      auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
+//                        : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
+//
+//      out_data[i] = thrust::distance(bins.dptr_, elem);
+//    }
+//};
 
 //template <>
 //void DigitizeOp::ForwardKernel::Map<gpu>(int i,
@@ -71,6 +70,9 @@ struct ForwardKernel<gpu, DType, BType> {
 //  });
 //
 //}
+
+
+auto lalala = &ForwardKernel<gpu, float, float>::Map;
 
 NNVM_REGISTER_OP(digitize)
 .set_attr<FCompute>("FCompute<gpu>", Forward < gpu > );

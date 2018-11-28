@@ -34,18 +34,18 @@ namespace mxnet {
 namespace op {
 
 
-template<typename DType, typename BType>
-struct ForwardKernel<cpu, DType, BType> {
-  static void Map(int i, const DType *in_data, DType *out_data,
-                  mshadow::Tensor<cpu, 1, BType> &bins, const bool right) {
-
-    const auto data = in_data[i];
-    auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-                      : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
-
-    out_data[i] = std::distance(bins.dptr_, elem);
-  }
-};
+//template<typename DType, typename BType>
+//struct ForwardKernel<cpu, DType, BType> {
+//  static void Map(int i, const DType *in_data, DType *out_data,
+//                  mshadow::Tensor<cpu, 1, BType> &bins, const bool right) {
+//
+//    const auto data = in_data[i];
+//    auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
+//                      : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
+//
+//    out_data[i] = std::distance(bins.dptr_, elem);
+//  }
+//};
 
 
 

@@ -25,12 +25,13 @@
 #ifndef MXNET_OPERATOR_TENSOR_DIGITIZE_H_
 #define MXNET_OPERATOR_TENSOR_DIGITIZE_H_
 
+#include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include <mxnet/base.h>
+
 
 namespace mxnet {
 namespace op {
@@ -91,8 +92,23 @@ inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
 
 template<typename xpu, typename DType, typename BType>
 struct ForwardKernel {
-  static void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu, 1, BType>
+  static MSHADOW_XINLINE void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu,
+      1, BType>
   &bins, const bool right);
+};
+
+
+template<typename DType, typename BType>
+struct ForwardKernel<cpu, DType, BType> {
+  static MSHADOW_XINLINE void Map(int i, const DType *in_data, DType *out_data,
+                  mshadow::Tensor<cpu, 1, BType> &bins, const bool right) {
+
+    const auto data = in_data[i];
+    auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
+                      : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
+
+    out_data[i] = std::distance(bins.dptr_, elem);
+  }
 };
 
 
@@ -102,6 +118,91 @@ void CheckMonotonic(DType *begin, DType *end) {
   CHECK_EQ(std::adjacent_find(begin, end, std::greater_equal<DType>()), end)
     << "Bins vector must be strictly monotonically increasing";
 }
+//
+//
+//template<typename xpu>
+//void Forward(const nnvm::NodeAttrs &attrs,
+//             const OpContext &ctx,
+//             const std::vector<TBlob> &inputs,
+//             const std::vector<OpReqType> &req,
+//             const std::vector<TBlob> &outputs) {
+//  using namespace mshadow;
+//
+//  auto s = ctx.get_stream<xpu>();
+//  const bool right = nnvm::get<DigitizeParam>(attrs.parsed).right;
+//
+//  // Verify bins is strictly monotonic
+//  MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, BType, {
+//    const auto &bins = inputs[1];
+//    const auto bin_dims = bins.shape_.Size();
+//
+//    if (bin_dims == 1) {
+//      const Tensor<xpu, 1, BType> bins_tensor = bins.FlatTo1D<xpu, BType>(s);
+//      const auto *data = bins_tensor.dptr_;
+//      CheckMonotonic(data, data + bins_tensor.size(0));
+//
+//      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+//          mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s,
+//              inputs[0].dptr<DType>(), outputs[0].dptr<DType>(), bins_tensor, right);
+//      });
+//
+//    } else {
+//      const Tensor<xpu, 2, BType> bins_tensor = bins.FlatTo2D<xpu, BType>(s);
+//
+//      for (auto i = 0; i < bins_tensor.size(0); ++i) {
+//        const auto *data = bins_tensor[i].dptr_;
+//        CheckMonotonic(data, data + bins_tensor[i].size(0));
+//
+//        MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+//            mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s, inputs[0].dptr_,
+//                                                                            outputs[0].dptr_,
+//                                                                            bins_tensor[i],
+//                                                                            right);
+//        });
+//      }
+//    }
+//
+//  });
+//}
+
+
+}  // namespace op
+}  // namespace mxnet
+
+#ifdef __CUDACC__
+
+#include <thrust/binary_search.h>
+#include <thrust/distance.h>
+
+
+namespace mxnet {
+namespace op {
+
+template<typename DType, typename BType>
+struct ForwardKernel<gpu, DType, BType> {
+  MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data,
+                                  mshadow::Tensor<gpu, 1, BType> &bins, const bool right) {
+
+    const auto data = in_data[i];
+    auto
+        elem =
+        right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data,
+                                    thrust::less<BType>())
+              : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data,
+                                    thrust::less<BType>());
+
+    out_data[i] = thrust::distance(bins.dptr_, elem);
+  }
+};
+
+}  // namespace op
+}  // namespace mxnet
+
+#endif
+
+
+namespace mxnet {
+namespace op {
 
 
 template<typename xpu>
@@ -127,7 +228,10 @@ void Forward(const nnvm::NodeAttrs &attrs,
 
       MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
           mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s,
-              inputs[0].dptr<DType>(), outputs[0].dptr<DType>(), bins_tensor, right);
+                                                                          outputs[0].Size(),
+                                                                          inputs[0].dptr<DType>(),
+                                                                          outputs[0].dptr<DType>(),
+                                                                          bins_tensor, right);
       });
 
     } else {
@@ -138,8 +242,10 @@ void Forward(const nnvm::NodeAttrs &attrs,
         CheckMonotonic(data, data + bins_tensor[i].size(0));
 
         MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-            mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s, inputs[0].dptr_,
-                                                                            outputs[0].dptr_,
+            mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s,
+                                                                            outputs[0].Size(),
+                                                                            inputs[0].dptr<DType>(),
+                                                                            outputs[0].dptr<DType>(),
                                                                             bins_tensor[i],
                                                                             right);
         });
@@ -150,10 +256,6 @@ void Forward(const nnvm::NodeAttrs &attrs,
 }
 
 }  // namespace op
-}// namespace mxnet
+}  // namespace mxnet
 
-//#ifdef __CUDACC__
-//#include "./digitize_op.cuh"
-//#endif
-//
 #endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_H_
