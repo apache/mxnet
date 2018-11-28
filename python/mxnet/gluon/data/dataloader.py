@@ -191,9 +191,9 @@ def fetcher_loop(data_queue, data_buffer, pin_memory=False, data_buffer_lock=Non
 
 
 class _MultiWorkerIter(object):
-    """Interal multi-worker iterator for DataLoader.
-    Re-acquiring this iterator by `iter()` function will reset it
-    with all workers alive in order to save re-initialization overhead.
+    """Internal multi-worker iterator for DataLoader.
+    Re-acquire this iterator by `iter()` function will reset it if previous iteration is finished.
+    All workers are still alive in order to save re-initialization overhead.
 
     Parameters
     ----------
@@ -212,6 +212,13 @@ class _MultiWorkerIter(object):
         If ``True``, the dataloader will copy NDArrays into pinned memory
         before returning them. Copying from CPU pinned memory to GPU is faster
         than from normal CPU memory.
+    worker_fn : callable
+        `worker_fn` is the multiprocess worker function to process data in worker processes.
+        It defaults to `worker_loop(dataset, key_queue, data_queue, batchify_fn)`.
+        `worker_fn` takes inputs of `dataset` for input data, `key_queue` for (idx, batch_sample)
+        from batch sampler, `data_queue` for storing processed batch data as `NDArray`, and
+        `batchify_fn` for explicit batching instructions.
+        It is not recommanded to customize `worker_fn` unless you have specific use cases.
 
     """
     def __init__(self, num_workers, dataset, batchify_fn, batch_sampler, pin_memory=False,
@@ -231,6 +238,7 @@ class _MultiWorkerIter(object):
         self._sent_idx = 0
         self._iter = iter(self._batch_sampler)
         self._shutdown = False
+        self._stop = False
 
         workers = []
         for _ in range(self._num_workers):
@@ -289,6 +297,7 @@ class _MultiWorkerIter(object):
         self._rcvd_idx = 0
         self._sent_idx = 0
         self._iter = iter(self._batch_sampler)
+        self._stop = False
 
         # pre-fetch
         for _ in range(2 * self._num_workers):
@@ -314,6 +323,7 @@ class _MultiWorkerIter(object):
         assert not self._shutdown, "call __next__ after shutdown is forbidden"
         if self._rcvd_idx == self._sent_idx:
             assert not self._data_buffer, "Data buffer should be empty at this moment"
+            self._stop = True
             raise StopIteration
 
         while True:
@@ -329,8 +339,8 @@ class _MultiWorkerIter(object):
 
         Returns
         -------
-        type
-            Description of returned object.
+        NDArray
+            Batched sample data.
 
         """
         return self.__next__()
@@ -345,7 +355,9 @@ class _MultiWorkerIter(object):
             Iterator of self.
 
         """
-        self._reset()
+        assert not self._shutdown, "get iterator after shutdown is forbidden"
+        if self._stop:
+            self._reset()
         return self
 
     def shutdown(self):
@@ -372,7 +384,7 @@ class _MultiWorkerIter(object):
 
 class _SameProcessIter(object):
     """Same Process Iterator.
-    Re-acquire this iterator by `iter()` function will reset it.
+    Re-acquire this iterator by `iter()` function will reset it if previous iteration is finished.
 
     Parameters
     ----------
@@ -396,6 +408,7 @@ class _SameProcessIter(object):
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
         self._pin_memory = pin_memory
+        self._stop = False
         self._reset()
 
     def __len__(self):
@@ -412,6 +425,7 @@ class _SameProcessIter(object):
     def _reset(self):
         """Reset iterator."""
         self._iter = iter(self._batch_sampler)
+        self._stop = False
 
     def __next__(self):
         """Return next sample, will raise `StopIteration` reaching end.
@@ -425,6 +439,7 @@ class _SameProcessIter(object):
         try:
             batch = next(self._iter)
         except StopIteration:
+            self._stop = True
             raise StopIteration
         else:
             ret = self._batchify_fn([self._dataset[idx] for idx in batch])
@@ -437,8 +452,8 @@ class _SameProcessIter(object):
 
         Returns
         -------
-        type
-            Description of returned object.
+        NDArray
+            Batched sample data.
 
         """
         return self.__next__()
@@ -452,7 +467,8 @@ class _SameProcessIter(object):
             Iterator of self.
 
         """
-        self._reset()
+        if self._stop:
+            self._reset()
         return self
 
 
