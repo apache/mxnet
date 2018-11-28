@@ -408,8 +408,8 @@ def worker_fn(samples, batchify_fn):
 
 class _MultiWorkerIter(object):
     """Internal multi-worker iterator for DataLoader."""
-    def __init__(self, worker_pool, num_workers, batchify_fn, batch_sampler, pin_memory=False,
-                 worker_fn=worker_fn):
+    def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
+                 worker_fn=worker_fn, prefetch=0):
         self._worker_pool = worker_pool
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
@@ -418,8 +418,9 @@ class _MultiWorkerIter(object):
         self._sent_idx = 0
         self._iter = iter(self._batch_sampler)
         self._worker_fn = worker_fn
+        self._pin_memory = pin_memory
         # pre-fetch
-        for _ in range(num_workers * 2):
+        for _ in range(prefetch):
             self._push_next()
 
     def __len__(self):
@@ -435,6 +436,7 @@ class _MultiWorkerIter(object):
         self._sent_idx += 1
 
     def __next__(self):
+        self._push_next()
         if self._rcvd_idx == self._sent_idx:
             assert not self._data_buffer, "Data buffer should be empty at this moment"
             raise StopIteration
@@ -444,9 +446,10 @@ class _MultiWorkerIter(object):
         ret = self._data_buffer.pop(self._rcvd_idx)
         shared_batch = ret.get()
         batch = tuple([rebuild_ndarray(*x) for x in shared_batch])
+        if self._pin_memory:
+            batch = _as_in_context(batch, context.cpu_pinned())
         batch = batch[0] if len(batch) == 1 else batch
         self._rcvd_idx += 1
-        self._push_next()
         return batch
 
     def next(self):
@@ -500,10 +503,18 @@ class DataLoader(object):
         If ``True``, the dataloader will copy NDArrays into pinned memory
         before returning them. Copying from CPU pinned memory to GPU is faster
         than from normal CPU memory.
+    prefetch : int, default is `num_workers * 2`
+        The number of prefetching batches only works if `num_workers` > 0.
+        If `prefetch` > 0, it allow worker process to prefetch certain batches before
+        acquiring data from iterators.
+        Note that using large prefetching batch will provide smoother bootstrapping performance,
+        but will consume more shared_memory. Using smaller number may forfeit the purpose of using
+        multiple worker processes, try reduce `num_workers` in this case.
+        By default it defaults to `num_workers * 2`.
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
-                 num_workers=0, pin_memory=False):
+                 num_workers=0, pin_memory=False, prefetch=None):
         self._dataset = dataset
         self._pin_memory = pin_memory
 
@@ -529,6 +540,7 @@ class DataLoader(object):
         self._batch_sampler = batch_sampler
         self._num_workers = num_workers if num_workers >= 0 else 0
         self._worker_pool = None
+        self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if self._num_workers > 0:
             def worker_initializer(data):
                 global dataset
@@ -555,8 +567,9 @@ class DataLoader(object):
             return same_process_iter()
 
         # multi-worker
-        return _MultiWorkerIter(
-            self._worker_pool, self._num_workers, self._batchify_fn, self._batch_sampler, self._pin_memory)
+        return _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
+                                pin_memory=self._pin_memory, worker_fn=worker_fn,
+                                prefetch=self._prefetch)
 
     def __len__(self):
         return len(self._batch_sampler)
