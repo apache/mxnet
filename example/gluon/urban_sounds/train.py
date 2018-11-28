@@ -14,8 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""The module to run training on the Urban sounds dataset
-"""
+"""The module to run training on the Urban sounds dataset"""
+from __future__ import print_function
 import os
 import time
 import warnings
@@ -24,6 +24,7 @@ from mxnet import gluon, nd, autograd
 from datasets import AudioFolderDataset
 from transforms import MFCC
 import model
+
 
 def evaluate_accuracy(data_iterator, net):
     """Function to evaluate accuracy of any data iterator passed to it as an argument"""
@@ -87,7 +88,7 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
     batch_size = batch_size
     num_examples = len(aud_dataset)
 
-    for e in range(epochs):
+    for epoch in range(epochs):
         cumulative_loss = 0
         for data, label in audio_train_loader:
             with autograd.record():
@@ -98,9 +99,9 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
             trainer.step(batch_size)
             cumulative_loss += mx.nd.sum(loss).asscalar()
 
-        if e%5 == 0:
+        if epoch%5 == 0:
             train_accuracy = evaluate_accuracy(audio_train_loader, net)
-            print("Epoch {}. Loss: {} Train accuracy : {} ".format(e, cumulative_loss/num_examples, train_accuracy))
+            print("Epoch {}. Loss: {} Train accuracy : {} ".format(epoch, cumulative_loss/num_examples, train_accuracy))
             print("\n------------------------------\n")
 
     train_accuracy = evaluate_accuracy(audio_train_loader, net)
@@ -118,8 +119,8 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
 if __name__ == '__main__':
     training_dir = './Train'
     training_csv = './train.csv'
-    eps = 30
-    batch_sz = 32
+    epochs = 30
+    batch_size = 32
 
     try:
         import argparse
@@ -140,10 +141,10 @@ if __name__ == '__main__':
                 training_csv = args.csv
 
             if args.epochs:
-                eps = args.epochs
+                epochs = args.epochs
 
             if args.batch_size:
-                batch_sz = args.batch_size
+                batch_size = args.batch_size
 
 
     except ImportError as er:
@@ -151,5 +152,5 @@ if __name__ == '__main__':
         Passing default arguments.")
 
 
-    train(train_dir=training_dir, train_csv=training_csv, epochs=eps, batch_size=batch_sz)
+    train(train_dir=training_dir, train_csv=training_csv, epochs=epochs, batch_size=batch_size)
     print("Urban sounds classification Training DONE!")

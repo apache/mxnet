@@ -14,8 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-""" Prediction module for Urban Sounds Classification
-"""
+""" Prediction module for Urban Sounds Classification"""
+from __future__ import print_function
 import os
 import warnings
 import mxnet as mx
@@ -25,7 +25,8 @@ from model import get_net
 try:
     import librosa
 except ImportError:
-    raise ImportError("Librosa is not installed! please run the following command pip install librosa.")
+    raise ImportError("Librosa is not installed! please run the following command:\
+     `pip install librosa`")
 
 def predict(prediction_dir='./Test'):
     """The function is used to run predictions on the audio files in the directory `pred_directory`.

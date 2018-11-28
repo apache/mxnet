@@ -18,6 +18,7 @@
 # coding: utf-8
 # pylint: disable=
 """ Audio Dataset container."""
+from __future__ import print_function
 __all__ = ['AudioFolderDataset']
 
 import os
@@ -75,7 +76,7 @@ class AudioFolderDataset(Dataset):
         self._format = file_format
         self._train_csv = train_csv
         if file_format.lower() not in self._exts:
-            raise RuntimeError("format {} not supported currently.".format(file_format))
+            raise RuntimeError("Format {} not supported currently.".format(file_format))
         skip_rows = 0
         if skip_header:
             skip_rows = 1
@@ -96,7 +97,7 @@ class AudioFolderDataset(Dataset):
             # train_csv contains mapping between filename and label
             self._csv_labelled_dataset(root, skip_rows=skip_rows)
 
-        #Generating the synset.txt file now
+        # Generating the synset.txt file now
         if not os.path.exists("./synset.txt"):
             with open("./synset.txt", "w") as synsets_file:
                 for item in self.synsets:

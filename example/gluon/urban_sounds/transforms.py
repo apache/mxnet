@@ -14,10 +14,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
 # coding: utf-8
 # pylint: disable= arguments-differ
-"Audio transforms."
+"""Audio transforms."""
 
 import warnings
 import numpy as np
