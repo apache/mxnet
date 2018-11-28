@@ -1,9 +1,9 @@
 (ns org.apache.clojure-mxnet.symbol
-    (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
-                              min repeat reverse set sort take to-array empty sin
-                              get apply shuffle])
-    (:require [org.apache.clojure-mxnet.util :as util])
-    (:import (org.apache.mxnet Symbol)))
+  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
+                            min repeat reverse set sort take to-array empty sin
+                            get apply shuffle ref])
+  (:require [org.apache.clojure-mxnet.util :as util])
+  (:import (org.apache.mxnet Symbol)))
 
 ;; Do not edit - this is auto-generated
 

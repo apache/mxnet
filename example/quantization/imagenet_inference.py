@@ -93,6 +93,7 @@ def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples,
     if logger is not None:
         logger.info('Finished inference with %d images' % num)
         logger.info('Finished with %f images per second', speed)
+        logger.warn('Note: GPU performance is expected to be slower than CPU. Please refer quantization/README.md for details')
         for m in metrics:
             logger.info(m.get())
 

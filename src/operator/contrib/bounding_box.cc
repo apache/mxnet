@@ -47,22 +47,29 @@ the in_grad will be assigned 0.
 In summary, gradients are sticked to its boxes, will either be moved or discarded
 according to its original index in input.
 
-Input requirements:
-1. Input tensor have at least 2 dimensions, (n, k), any higher dims will be regarded
-as batch, e.g. (a, b, c, d, n, k) == (a*b*c*d, n, k)
-2. n is the number of boxes in each batch
-3. k is the width of each box item.
+Input requirements::
+
+  1. Input tensor have at least 2 dimensions, (n, k), any higher dims will be regarded
+  as batch, e.g. (a, b, c, d, n, k) == (a*b*c*d, n, k)
+  2. n is the number of boxes in each batch
+  3. k is the width of each box item.
 
 By default, a box is [id, score, xmin, ymin, xmax, ymax, ...],
 additional elements are allowed.
+
 - `id_index`: optional, use -1 to ignore, useful if `force_suppress=False`, which means
-we will skip highly overlapped boxes if one is `apple` while the other is `car`.
+  we will skip highly overlapped boxes if one is `apple` while the other is `car`.
+
 - `coord_start`: required, default=2, the starting index of the 4 coordinates.
-Two formats are supported:
-  `corner`: [xmin, ymin, xmax, ymax]
-  `center`: [x, y, width, height]
+  Two formats are supported:
+
+    - `corner`: [xmin, ymin, xmax, ymax]
+
+    - `center`: [x, y, width, height]
+
 - `score_index`: required, default=1, box score/confidence.
-When two boxes overlap IOU > `overlap_thresh`, the one with smaller score will be suppressed.
+  When two boxes overlap IOU > `overlap_thresh`, the one with smaller score will be suppressed.
+
 - `in_format` and `out_format`: default='corner', specify in/out box formats.
 
 Examples::

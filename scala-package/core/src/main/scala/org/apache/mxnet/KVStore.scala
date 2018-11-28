@@ -286,7 +286,7 @@ class KVStore(private[mxnet] val handle: KVStoreHandle) extends NativeResource {
       case cachedStates: MXKVStoreCachedStates =>
         val bis = new BufferedInputStream (new FileInputStream (fname) )
         try {
-        val bArray = Stream.continually (bis.read).takeWhile (- 1 !=).map (_.toByte).toArray
+        val bArray = Stream.continually (bis.read).takeWhile (_ != -1).map (_.toByte).toArray
           cachedStates.deserializeState(bArray)
         } finally {
           bis.close ()

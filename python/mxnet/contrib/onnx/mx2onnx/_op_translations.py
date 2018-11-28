@@ -681,7 +681,7 @@ def convert_softmax_output(node, **kwargs):
     """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
     and return the created node.
     """
-    name, _, _ = get_inputs(node, kwargs)
+    name = node["name"]
 
     input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
     input1 = kwargs["proc_nodes"][input1_idx]
@@ -955,7 +955,7 @@ def convert_argmax(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis"))
-    keepdims = int(attrs.get("keepdims")) if "keepdims" in attrs  else 1
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     node = onnx.helper.make_node(
         'ArgMax',
@@ -975,7 +975,7 @@ def convert_argmin(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis"))
-    keepdims = int(attrs.get("keepdims")) if "keepdims" in attrs  else 1
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     node = onnx.helper.make_node(
         'ArgMin',
@@ -1012,7 +1012,7 @@ def convert_min(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1047,7 +1047,7 @@ def convert_max(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1082,7 +1082,7 @@ def convert_mean(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1117,7 +1117,7 @@ def convert_prod(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(

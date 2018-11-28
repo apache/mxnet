@@ -52,6 +52,7 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="btn-group opt-group" role="group">
   <button type="button" class="btn btn-default opt active languages">Python</button>
   <button type="button" class="btn btn-default opt languages">Scala</button>
+  <button type="button" class="btn btn-default opt languages">Clojure</button>
   <button type="button" class="btn btn-default opt languages">R</button>
   <button type="button" class="btn btn-default opt languages">Julia</button>
   <button type="button" class="btn btn-default opt languages">Perl</button>
@@ -430,6 +431,39 @@ You can use the Maven packages defined in the following `dependency` to include 
 </div> <!-- End of scala -->
 
 
+<div class="clojure">
+<div class="gpu">
+<br/>
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet.contrib.clojure</groupId>
+    <artifactId>clojure-mxnet-linux-gpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of gpu -->
+
+<div class="cpu">
+<br/>
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet.contrib.clojure</groupId>
+    <artifactId>clojure-mxnet-linux-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu -->
+</div> <!-- End of clojure -->
+
+
 <div class="julia">
 <div class="cpu gpu">
 </br>
@@ -670,6 +704,30 @@ Not available at this time. <br>
 
 </div>
 </div> <!-- End of scala -->
+
+
+
+<div class="clojure">
+<div class="cpu">
+</br>
+You can use the Maven packages defined in the following `dependency` to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+
+```html
+<dependency>
+    <groupId>org.apache.mxnet.contrib.clojure</groupId>
+    <artifactId>clojure-mxnet-osx-cpu</artifactId>
+</dependency>
+```
+<br>
+</div> <!-- End of cpu  -->
+<div class="gpu">
+
+Not available at this time. <br>
+
+</div> <!-- End of gpu -->
+</div> <!-- End of clojure -->
 
 
 
@@ -968,6 +1026,14 @@ MXNet-Scala for Windows is not yet available.
 </div> <!-- End of cpu gpu -->
 </div> <!-- End of scala -->
 
+<div class="clojure">
+<div class="cpu gpu">
+<br/>
+MXNet-Clojure for Windows is not yet available.
+<br/>
+</div> <!-- End of cpu gpu -->
+</div> <!-- End of clojure -->
+
 <div class="julia">
 <div class="cpu gpu">
 </br>
@@ -1032,6 +1098,9 @@ The complete MXNet library and its requirements can take almost 200MB of RAM, an
 Follow the four steps in this [docker documentation](https://docs.docker.com/engine/installation/linux/linux-postinstall/#manage-docker-as-a-non-root-user) to allow managing docker containers without *sudo*.
 
 ## Build
+
+**Please use a Native build with gcc 4 as explained below, higher compiler versions currently cause test
+failures on ARM**
 
 The following command will build a container with dependencies and tools and then compile MXNet for
 ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none-any.whl`, copy this

@@ -261,10 +261,14 @@ def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=Non
     Parameters
     ----------
     shape: list or tuple
-    stype: str, valid values: "csr" or "row_sparse"
-    density, optional: float, should be between 0 and 1
-    distribution, optional: str, valid values: "uniform" or "powerlaw"
-    dtype, optional: numpy.dtype, default value is None
+    stype: str
+        valid values: "csr" or "row_sparse"
+    density: float, optional
+        should be between 0 and 1
+    distribution: str, optional
+        valid values: "uniform" or "powerlaw"
+    dtype: numpy.dtype, optional
+        default value is None
 
     Returns
     -------
@@ -801,10 +805,12 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     location : list or tuple or dict
         Argument values used as location to compute gradient
 
-        - if type is list of numpy.ndarray
+        - if type is list of numpy.ndarray, \
             inner elements should have the same order as mxnet.sym.list_arguments().
-        - if type is dict of str -> numpy.ndarray
+
+        - if type is dict of str -> numpy.ndarray, \
             maps the name of arguments to the corresponding numpy.ndarray.
+
         *In either case, value of all the arguments must be provided.*
     aux_states : list or tuple or dict, optional
         The auxiliary states required when generating the executor for the symbol.
@@ -825,7 +831,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     References
     ---------
-    ..[1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
+    [1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
     # cannot use finite differences with small eps without high precision
@@ -1840,21 +1846,23 @@ def var_check(generator, sigma, nsamples=1000000):
 
 def chi_square_check(generator, buckets, probs, nsamples=1000000):
     """Run the chi-square test for the generator. The generator can be both continuous and discrete.
-    If the generator is continuous, the buckets should contain tuples of (range_min, range_max) and
-     the probs should be the corresponding ideal probability within the specific ranges.
-    Otherwise, the buckets should be the possible output of the discrete distribution and the probs
-     should be groud-truth probability.
+
+    If the generator is continuous, the buckets should contain tuples of (range_min, range_max) \
+    and the probs should be the corresponding ideal probability within the specific ranges. \
+    Otherwise, the buckets should be the possible output of the discrete distribution and the \
+    probs should be groud-truth probability.
 
     Usually the user is required to specify the probs parameter.
 
-    After obtatining the p value, we could further use the standard p > 0.05 threshold to get
-     the final result.
+    After obtatining the p value, we could further use the standard p > 0.05 threshold to get \
+    the final result.
 
     Examples::
-        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, 0, 1), 5)
-        generator = lambda x: np.random.normal(0, 1.0, size=x)
-        p = chi_square_check(generator=generator, buckets=buckets, probs=probs)
-        assert(p > 0.05)
+
+      buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, 0, 1), 5)
+      generator = lambda x: np.random.normal(0, 1.0, size=x)
+      p = chi_square_check(generator=generator, buckets=buckets, probs=probs)
+      assert(p > 0.05)
 
     Parameters
     ----------
@@ -1863,8 +1871,8 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
         generator(N) should generate N random samples.
     buckets: list of tuple or list of number
         The buckets to run the chi-square the test. Make sure that the buckets cover
-         the whole range of the distribution. Also, the buckets must be in ascending order and have
-         no intersection
+        the whole range of the distribution. Also, the buckets must be in ascending order and have
+        no intersection
     probs: list or tuple
         The ground-truth probability of the random value fall in a specific bucket.
     nsamples:int
@@ -1998,3 +2006,20 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if compare_states:
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
     assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
+
+class EnvManager(object):
+    """Environment variable setter and unsetter via with idiom"""
+    def __init__(self, key, val):
+        self._key = key
+        self._next_val = val
+        self._prev_val = None
+
+    def __enter__(self):
+        self._prev_val = os.environ.get(self._key)
+        os.environ[self._key] = self._next_val
+
+    def __exit__(self, ptype, value, trace):
+        if self._prev_val:
+            os.environ[self._key] = self._prev_val
+        else:
+            del os.environ[self._key]

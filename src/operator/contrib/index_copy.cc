@@ -37,30 +37,32 @@ static bool IndexCopyType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_index_copy)
-.describe(R"code(Copies the elements of a `new_tensor` into the `old_tensor` by 
-selecting the indices in the order given in `index`. The output will be a new tensor 
-contains the rest elements of old tensor and the copied elements of new tensor. 
-For example, if `index[i] == j`, then the `i`th row of `new_tensor` is copied to the 
-`j`th row of output.
+.describe(R"code(Copies the elements of a `new_tensor` into the `old_tensor`.
 
-The `index` must be a vector and it must have the same size with the `0`th dimimention of 
-`new_tensor`. Also, the `0`th dimimention of old_tensor must `>=` the `0`th dimimention of 
+This operator copies the elements by selecting the indices in the order given in `index`.
+The output will be a new tensor containing the rest elements of old tensor and
+the copied elements of new tensor.
+For example, if `index[i] == j`, then the `i` th row of `new_tensor` is copied to the
+`j` th row of output.
+
+The `index` must be a vector and it must have the same size with the `0` th dimension of
+`new_tensor`. Also, the `0` th dimension of old_tensor must `>=` the `0` th dimension of
 `new_tensor`, or an error will be raised.
 
 Examples::
 
-x = mx.nd.zeros((5,3))
-t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
-index = mx.nd.array([0,4,2])
+    x = mx.nd.zeros((5,3))
+    t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
+    index = mx.nd.array([0,4,2])
 
-mx.nd.contrib.index_copy(x, index, t)
+    mx.nd.contrib.index_copy(x, index, t)
 
-[[1. 2. 3.]
- [0. 0. 0.]
- [7. 8. 9.]
- [0. 0. 0.]
- [4. 5. 6.]]
-<NDArray 5x3 @cpu(0)>
+    [[1. 2. 3.]
+     [0. 0. 0.]
+     [7. 8. 9.]
+     [0. 0. 0.]
+     [4. 5. 6.]]
+    <NDArray 5x3 @cpu(0)>
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)
