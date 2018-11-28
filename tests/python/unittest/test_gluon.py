@@ -1242,7 +1242,7 @@ def check_hybrid_static_memory(train_modes, **kwargs):
 def test_hybrid_static_memory():
     check_hybrid_static_memory(train_mode=[True, False])
     check_hybrid_static_memory(train_mode=[True, False], static_alloc=True)
-    # TODO: MKLDNN does not work with static_shape backwards
+    # TODO: MKLDNN (issue #13445) does not work with static_shape backwards
     check_hybrid_static_memory(train_mode=[True], static_alloc=True, static_shape=True)
 
 def check_hybrid_static_memory_switching(**kwargs):
