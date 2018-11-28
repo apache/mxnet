@@ -1,6 +1,6 @@
 # JVM Memory Management
-The Scala and Java bindings of Apache MXNet uses native memory(C++ heap either in RAM or GPU memory) for most of the MXNet Scala objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.,. 
-The Scala classes associated with them act as wrappers, the operations on these objects are directed to the MXNet C++ backend via JNI for performance , so the bytes are also stored in the native heap for fast access.
+The Scala and Java bindings of Apache MXNet uses native memory(C++ heap either in RAM or GPU memory) for most of the MXNet Scala objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.,
+The Scala classes associated with them act as wrappers, the operations on these objects are directed to the MXNet C++ backend via JNI for performance, so the bytes are also stored in the native heap for fast access.
 
 The JVM using the Garbage Collector only manages objects allocated in the JVM Heap and is not aware of the memory footprint of these objects in the native memory, hence allocation/deallocation of the native memory has to be managed by MXNet Scala.
 Allocating native memory is straight forward and is done during the construction of the object by a calling the associated C++ API through JNI, However since JVM languages do not have destructors, deallocation of these objects needs to be done explicitly.
@@ -61,10 +61,10 @@ ResourceScope.using() {
        
 ### 2.  Using Phantom References (Recommended for some use cases)
 
-Apache MXNet uses [Phantom References](https://docs.oracle.com/javase/8/docs/api/java/lang/ref/PhantomReference.html) to track all MXNet Objects that has native memory associated with it. 
+Apache MXNet uses [Phantom References](https://docs.oracle.com/javase/8/docs/api/java/lang/ref/PhantomReference.html) to track all MXNet Objects that have native memory associated with it. 
 When the Garbage Collector runs, GC identifies unreachable Scala/Java objects in the JVM Heap and finalizes them, 
 we take advantage of Garbage Collector which enqueues objects into a reference queue that are ready to be reclaimed, 
-at which point we do pre-mortem clean up by call the MXNet backend C++ API to free the native memory. 
+at which point we do pre-mortem clean up by calling the corresponding MXNet backend API to free the native memory. 
  
 In this approach, you do not have to write any special code to have native memory cleaned up, however this approach solely depends on the Garbage collector to run and find unreachable objects.
 You can control the frequency of Garbage Collector by calling System.gc() at strategic points such as at the end of an epoch or at the end of a mini-batch in Training.
@@ -93,7 +93,7 @@ def showDispose(): Unit = {
 
 ## 3. Memory Management in Java
 Memory Management in MXNet Java is similar to Scala, We recommend to use [ResourceScope](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L32) in a `try-with-resources` block or in a `try-finally` block.   
-Java 7 onwards supports [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) where the resources declared in the try block is automatically closed. 
+Java 7 onwards supports [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) where the resources declared in the try block are automatically closed. 
 The above discussed ResourceScope implements AutoCloseable and tracks all MXNet Objects created at a Thread Local scope level. 
 
 ```
