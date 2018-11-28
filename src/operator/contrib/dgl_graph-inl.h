@@ -48,6 +48,7 @@ void DGLAdjacencyForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   CHECK_EQ(inputs[0].storage_type(), kCSRStorage);
   CHECK_EQ(outputs[0].storage_type(), kCSRStorage);
+  CHECK_EQ(req[0], kWriteTo);
   const TBlob &in_idx = inputs[0].aux_data(csr::kIdx);
   const TBlob &in_indptr = inputs[0].aux_data(csr::kIndPtr);
 

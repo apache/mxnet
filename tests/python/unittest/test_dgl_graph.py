@@ -77,7 +77,6 @@ def test_subgraph():
 
 def test_adjacency():
     sp_g, g = generate_graph(100)
-    start = time.time()
     adj = mx.nd.contrib.dgl_adjacency(g)
     assert adj.dtype == np.float32
     assert adj.shape == g.shape

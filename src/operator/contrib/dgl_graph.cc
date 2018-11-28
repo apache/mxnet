@@ -490,15 +490,18 @@ inline bool DGLAdjacencyStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = storage_type_assign(&out_stype, kCSRStorage,
                                         dispatch_mode, DispatchMode::kFComputeEx);
   if (!dispatched) {
-    LOG(ERROR) << "Cannot dispatch edge_id storage type, only works for csr matrices";
+    LOG(ERROR) << "Cannot dispatch output storage type: " << common::stype_string(out_stype)
+        << ". dgl_adjacency only works for csr matrices";
   }
   return dispatched;
 }
 
 NNVM_REGISTER_OP(_contrib_dgl_adjacency)
 .describe(R"code(This operator converts a CSR matrix whose values are edge Ids
-to an adjacency matrix whose values are ones.
+to an adjacency matrix whose values are ones. The output CSR matrix always has
+the data value of float32.
 Example::
+
   x = [[ 1, 0, 0 ],
        [ 0, 2, 0 ],
        [ 0, 0, 3 ]]
