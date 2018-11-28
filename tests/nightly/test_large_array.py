@@ -88,9 +88,10 @@ def test_broadcast():
     assert np.sum(res[-1].asnumpy() == LARGE_X) == a.shape[1]
 
 def test_clip():
-    a = nd.arange(0, LARGE_Y).reshape(LARGE_Y, 1)
-    res = nd.clip(a, a_min=100, a_max=1000)
-    assert np.sum(res[-1].asnumpy() == 1000) == a.shape[1]
+    a = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
+    b = nd.broadcast_to(a, shape=(a.shape[0], SMALL_Y))
+    res = nd.clip(b, a_min=100, a_max=1000)
+    assert np.sum(res[-1].asnumpy() == 1000) == b.shape[1]
 
 def test_take():
     # Test take
@@ -106,9 +107,8 @@ def test_slice():
 
 def test_slice_assign():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
-    res = a.copy()
-    res[LARGE_X-1:LARGE_X] = 1000
-    assert np.sum(res[-1].asnumpy() == 1000) == a.shape[1]
+    a[LARGE_X-1:LARGE_X] = 1000
+    assert np.sum(a[-1].asnumpy() == 1000) == a.shape[1]
  
 def test_expand_dims():
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
