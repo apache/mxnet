@@ -410,10 +410,9 @@ def test_deconvolution_inference():
     exe = y.simple_bind(ctx=mx.cpu(), x=shape, grad_req='null')
     exe.arg_arrays[0][:] = np.random.normal(size=exe.arg_arrays[0].shape)
     exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
-    for i in range(10):
-        exe.forward(is_train=False)
-        o = exe.outputs[0]
-        t = o.asnumpy()
+    exe.forward(is_train=False)
+    o = exe.outputs[0]
+    t = o.asnumpy()
 
 @with_seed()
 def test_non_mkldnn_fcomputeex():
