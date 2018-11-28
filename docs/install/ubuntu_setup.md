@@ -177,6 +177,7 @@ If building on CPU and using MKL and MKL-DNN (make sure MKL is installed accordi
     cd incubator-mxnet
     echo "USE_OPENCV = 1" >> ./config.mk
     echo "USE_BLAS = openblas" >> ./config.mk
+    echo "USE_CUDA = 0" >> ./config.mk
     echo "USE_MKLDNN = 1" >> ./config.mk
     make -j $(nproc)
 ```
