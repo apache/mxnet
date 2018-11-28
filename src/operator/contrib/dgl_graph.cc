@@ -39,36 +39,25 @@ typedef int64_t dgl_id_t;
 
 ////////////////////////////// Graph Sampling ///////////////////////////////
 
-unsigned int seed = 123;
-
-/*
- * This is used for BFS traversal
- */
-struct ver_node {
-  dgl_id_t vertex_id;
-  int level;
-};
-
 /*
  * ArrayHeap is used to sample elements from vector
  */
 class ArrayHeap {
  public:
-  // ctor & dctor
   explicit ArrayHeap(const std::vector<float>& prob) {
-    this->vec_size = prob.size();
-    this->bit_len = ceil(log2(vec_size));
-    this->limit = 1 << bit_len;
+    vec_size_ = prob.size();
+    bit_len_ = ceil(log2(vec_size_));
+    limit_ = 1 << bit_len_;
     // allocate twice the size
-    this->heap.resize(limit << 1, 0);
+    heap_.resize(limit_ << 1, 0);
     // allocate the leaves
-    for (int i = limit; i < vec_size+limit; ++i) {
-      heap[i] = prob[i-limit];
+    for (int i = limit_; i < vec_size_+limit_; ++i) {
+      heap_[i] = prob[i-limit_];
     }
     // iterate up the tree (this is O(m))
-    for (int i = bit_len-1; i >= 0; --i) {
+    for (int i = bit_len_-1; i >= 0; --i) {
       for (int j = (1 << i); j < (1 << (i + 1)); ++j) {
-        heap[j] = heap[j << 1] + heap[(j << 1) + 1];
+        heap_[j] = heap_[j << 1] + heap_[(j << 1) + 1];
       }
     }
   }
@@ -78,10 +67,10 @@ class ArrayHeap {
    * Remove term from index (this costs O(log m) steps)
    */
   void Delete(size_t index) {
-    size_t i = index + limit;
-    float w = heap[i];
-    for (int j = bit_len; j >= 0; --j) {
-      heap[i] -= w;
+    size_t i = index + limit_;
+    float w = heap_[i];
+    for (int j = bit_len_; j >= 0; --j) {
+      heap_[i] -= w;
       i = i >> 1;
     }
   }
@@ -90,9 +79,9 @@ class ArrayHeap {
    * Add value w to index (this costs O(log m) steps)
    */
   void Add(size_t index, float w) {
-    size_t i = index + limit;
-    for (int j = bit_len; j >= 0; --j) {
-      heap[i] += w;
+    size_t i = index + limit_;
+    for (int j = bit_len_; j >= 0; --j) {
+      heap_[i] += w;
       i = i >> 1;
     }
   }
@@ -101,16 +90,17 @@ class ArrayHeap {
    * Sample from arrayHeap
    */
   size_t Sample() {
-    float xi = heap[1] * (rand_r(&seed)%100/101.0);
+    unsigned int seed = 123;
+    float xi = heap_[1] * (rand_r(&seed)%100/101.0);
     int i = 1;
-    while (i < limit) {
+    while (i < limit_) {
       i = i << 1;
-      if (xi >= heap[i]) {
-        xi -= heap[i];
+      if (xi >= heap_[i]) {
+        xi -= heap_[i];
         i += 1;
       }
     }
-    return i - limit;
+    return i - limit_;
   }
 
   /*
@@ -125,10 +115,10 @@ class ArrayHeap {
   }
 
  private:
-  int vec_size;  // sample size
-  int bit_len;   // bit size
-  int limit;
-  std::vector<float> heap;
+  int vec_size_;  // sample size
+  int bit_len_;   // bit size
+  int limit_;
+  std::vector<float> heap_;
 };
 
 struct NeighborSampleParam : public dmlc::Parameter<NeighborSampleParam> {
@@ -445,6 +435,7 @@ static void GetSrcList(const dgl_id_t* val_list,
 static void RandomSample(size_t set_size,
                          size_t num,
                          std::vector<size_t>* out) {
+  unsigned int seed = 123;
   std::unordered_set<size_t> sampled_idxs;
   while (sampled_idxs.size() < num) {
     sampled_idxs.insert(rand_r(&seed) % set_size);
@@ -549,7 +540,17 @@ static void GetNonUniformSample(const float* probability,
     out_ver->at(i) = ver_list[idx];
     out_edge->at(i) = edge_list[idx];
   }
+  sort(out_ver->begin(), out_ver->end());
+  sort(out_edge->begin(), out_edge->end());
 }
+
+/*
+ * This is used for BFS traversal
+ */
+struct ver_node {
+  dgl_id_t vertex_id;
+  int level;
+};
 
 /*
  * Used for subgraph sampling
@@ -584,10 +585,11 @@ static void SampleSubgraph(const NDArray &csr,
   const dgl_id_t* seed = seed_arr.data().dptr<dgl_id_t>();
   dgl_id_t* out = sampled_ids.data().dptr<dgl_id_t>();
   dgl_id_t* out_layer = sub_layer.data().dptr<dgl_id_t>();
+
   // BFS traverse the graph and sample vertices
   dgl_id_t sub_vertices_count = 0;
-  std::unordered_set<dgl_id_t> sub_ver_mp;
-  std::unordered_map<dgl_id_t, int> layer;
+  // <vertex_id, layer_id>
+  std::unordered_map<dgl_id_t, int> sub_ver_mp;
   std::queue<ver_node> node_queue;
   // add seed vertices
   for (size_t i = 0; i < num_seeds; ++i) {
@@ -595,9 +597,6 @@ static void SampleSubgraph(const NDArray &csr,
     node.vertex_id = seed[i];
     node.level = 0;
     node_queue.push(node);
-    sub_ver_mp.insert(node.vertex_id);
-    layer[node.vertex_id] = node.level;
-    sub_vertices_count++;
   }
   std::vector<dgl_id_t> tmp_src_list;
   std::vector<dgl_id_t> tmp_edge_list;
@@ -605,10 +604,16 @@ static void SampleSubgraph(const NDArray &csr,
   std::vector<dgl_id_t> tmp_sampled_edge_list;
   std::unordered_map<dgl_id_t, neigh_list> neigh_mp;
   size_t num_edges = 0;
-  while (!node_queue.empty()) {
+  while (!node_queue.empty() &&
+    sub_vertices_count <= max_num_vertices ) {
     ver_node& cur_node = node_queue.front();
+    dgl_id_t dst_id = cur_node.vertex_id;
     if (cur_node.level < num_hops) {
-      dgl_id_t dst_id = cur_node.vertex_id;
+      auto ret = sub_ver_mp.find(dst_id);
+      if (ret != sub_ver_mp.end()) {
+        node_queue.pop();
+        continue;
+      }
       tmp_src_list.clear();
       tmp_edge_list.clear();
       tmp_sampled_src_list.clear();
@@ -620,7 +625,6 @@ static void SampleSubgraph(const NDArray &csr,
                  &tmp_src_list,
                  &tmp_edge_list);
       if (probability == nullptr) {  // uniform-sample
-        // Here we can also use GetUniformSampleShuffle() API
         GetUniformSample(tmp_src_list,
                        tmp_edge_list,
                        num_neighbor,
@@ -635,38 +639,40 @@ static void SampleSubgraph(const NDArray &csr,
                        &tmp_sampled_edge_list);
       }
       neigh_mp.insert(std::pair<dgl_id_t, neigh_list>(dst_id,
-        neigh_list(tmp_sampled_src_list, tmp_sampled_edge_list)));
+        neigh_list(tmp_sampled_src_list,
+                   tmp_sampled_edge_list)));
       num_edges += tmp_sampled_src_list.size();
-      bool exit = false;
+      sub_ver_mp[cur_node.vertex_id] = cur_node.level;
       for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
-        auto ret = sub_ver_mp.insert(tmp_sampled_src_list[i]);
-        if (ret.second) {
-          sub_vertices_count++;
+        auto ret = sub_ver_mp.find(tmp_sampled_src_list[i]);
+        if (ret == sub_ver_mp.end()) {
           ver_node new_node;
           new_node.vertex_id = tmp_sampled_src_list[i];
           new_node.level = cur_node.level + 1;
-          if (layer.find(tmp_sampled_src_list[i]) == layer.end()) {
-            layer[tmp_sampled_src_list[i]] = new_node.level;
-          }
-          if (new_node.level < num_hops) {
-            node_queue.push(new_node);
-          }
-          if (sub_vertices_count == max_num_vertices) {
-            exit = true;
-            break;
-          }
+          node_queue.push(new_node);
         }
       }
-      if (exit) {
-        break;
+    } else {  // vertex without any neighbor
+      auto ret = sub_ver_mp.find(dst_id);
+      if (ret != sub_ver_mp.end()) {
+        node_queue.pop();
+        continue;
       }
+      tmp_sampled_src_list.clear();
+      tmp_sampled_edge_list.clear();
+      neigh_mp.insert(std::pair<dgl_id_t, neigh_list>(dst_id,
+        neigh_list(tmp_sampled_src_list,      // empty vector
+                   tmp_sampled_edge_list)));  // empty vector
+      sub_ver_mp[cur_node.vertex_id] = cur_node.level;
     }
+    sub_vertices_count++;
     node_queue.pop();
   }
+
   // Copy sub_ver_mp to output[0]
   size_t idx = 0;
   for (auto& data : sub_ver_mp) {
-    *(out+idx) = data;
+    *(out+idx) = data.first;
     idx++;
   }
   size_t num_vertices = sub_ver_mp.size();
@@ -693,7 +699,7 @@ static void SampleSubgraph(const NDArray &csr,
   for (dgl_id_t i = 0; i < max_num_vertices; ++i) {
     dgl_id_t idx = out[i];
     if (idx != -1) {
-      out_layer[i] = layer[idx];
+      out_layer[i] = sub_ver_mp[idx];
     } else {
       out_layer[i] = -1;
     }
@@ -709,28 +715,24 @@ static void SampleSubgraph(const NDArray &csr,
   dgl_id_t* val_list_out = sub_csr.data().dptr<dgl_id_t>();
   dgl_id_t* col_list_out = sub_csr.aux_data(1).dptr<dgl_id_t>();
   dgl_id_t* indptr_out = sub_csr.aux_data(0).dptr<dgl_id_t>();
-
+  indptr_out[0] = 0;
   size_t collected_nedges = 0;
-  for (size_t i = 0, index = 1; i < num_vertices; i++) {
+  for (size_t i = 0; i < num_vertices; i++) {
     dgl_id_t dst_id = *(out + i);
     auto it = neigh_mp.find(dst_id);
-    if (it != neigh_mp.end()) {
-      const auto &edges = it->second.edges;
-      const auto &neighs = it->second.neighs;
-      CHECK_EQ(edges.size(), neighs.size());
+    const auto &edges = it->second.edges;
+    const auto &neighs = it->second.neighs;
+    CHECK_EQ(edges.size(), neighs.size());
+    if (!edges.empty()) {
       std::copy(edges.begin(), edges.end(), val_list_out + collected_nedges);
       std::copy(neighs.begin(), neighs.end(), col_list_out + collected_nedges);
       collected_nedges += edges.size();
-      indptr_out[index] = indptr_out[index-1] + edges.size();
-    } else {
-      indptr_out[index] = indptr_out[index-1];
     }
-    index++;
+    indptr_out[i+1] = indptr_out[i] + edges.size();
   }
   for (dgl_id_t i = num_vertices+1; i <= max_num_vertices; ++i) {
     indptr_out[i] = indptr_out[i-1];
   }
-  CHECK_EQ(collected_nedges, num_edges);
 }
 
 /*
@@ -765,7 +767,7 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(_contrib_csr_neighbor_uniform_sample)
 .describe(R"code(This operator samples sub-graph from a csr graph via an
 uniform probability. 
-For example:
+For example::
 shape = (5, 5)
 data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
 indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
@@ -831,7 +833,7 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
 NNVM_REGISTER_OP(_contrib_csr_neighbor_non_uniform_sample)
 .describe(R"code(This operator samples sub-graph from a csr graph via an
 uniform probability. 
-For example:
+For example::
 shape = (5, 5)
 prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
 data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
