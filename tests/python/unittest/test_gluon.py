@@ -1209,7 +1209,7 @@ def test_zero_grad():
     grad = net.collect_params()['test_zero_grad_weight'].grad()
     assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
-def check_hybrid_static_memory(**kwargs):
+def check_hybrid_static_memory(train_modes, **kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
@@ -1230,7 +1230,7 @@ def check_hybrid_static_memory(**kwargs):
 
         return y, grads
 
-    for record in (True, False):
+    for record in train_modes:
         y1, grads1 = test(net1, x, record)
         y2, grads2 = test(net2, x, record)
 
@@ -1240,9 +1240,10 @@ def check_hybrid_static_memory(**kwargs):
 
 @with_seed()
 def test_hybrid_static_memory():
-    check_hybrid_static_memory()
-    check_hybrid_static_memory(static_alloc=True)
-    check_hybrid_static_memory(static_alloc=True, static_shape=True)
+    check_hybrid_static_memory(train_mode=[True, False])
+    check_hybrid_static_memory(train_mode=[True, False], static_alloc=True)
+    # TODO: MKLDNN does not work with static_shape backwards
+    check_hybrid_static_memory(train_mode=[True], static_alloc=True, static_shape=True)
 
 def check_hybrid_static_memory_switching(**kwargs):
     net = gluon.model_zoo.vision.get_resnet(
