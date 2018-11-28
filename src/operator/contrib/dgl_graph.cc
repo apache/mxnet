@@ -523,5 +523,6 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", DGLAdjacencyForwardEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray");
 
+
 }  // namespace op
 }  // namespace mxnet
