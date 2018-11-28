@@ -465,7 +465,7 @@ void train(const std::string file, int batch_size, int max_epoch, int start_epoc
 
   mx_float learning_rate = 0.0002;
   mx_float weight_decay = 0.000002;
-  Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay);
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)

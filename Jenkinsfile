@@ -143,12 +143,12 @@ def deploy_docs() {
   }
 }
 
-node('mxnetlinux-cpu') {
+node('utility') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
 }
-utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
+utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
@@ -428,16 +428,16 @@ core_logic: {
         }
       }
     },
-    'NVidia Jetson / ARMv8':{
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-jetson-armv8') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('jetson', 'build_jetson', false)
-          }
-        }
-      }
-    },
+    //'NVidia Jetson / ARMv8':{
+    //  node(NODE_LINUX_CPU) {
+    //    ws('workspace/build-jetson-armv8') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        utils.init_git()
+    //        utils.docker_run('jetson', 'build_jetson', false)
+    //      }
+    //    }
+    //  }
+    //},
     'ARMv7':{
       node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv7') {
