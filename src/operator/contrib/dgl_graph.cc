@@ -1473,9 +1473,9 @@ static void SubgraphCompactComputeExCPU(const nnvm::NodeAttrs& attrs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
   const SubgraphCompactParam& params = nnvm::get<SubgraphCompactParam>(attrs.parsed);
-  size_t num_g = get_num_graphs(params);
+  int num_g = get_num_graphs(params);
 #pragma omp parallel for
-  for (size_t i = 0; i < num_g; i++) {
+  for (int i = 0; i < num_g; i++) {
     CompactSubgraph(inputs[i], inputs[i + num_g], outputs[i], params.graph_sizes[i]);
   }
 }
