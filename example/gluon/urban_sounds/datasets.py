@@ -175,4 +175,4 @@ class AudioFolderDataset(Dataset):
             The transformed dataset.
 
         """
-        return super(AudioFolderDataset, self).transform_first(fn, lazy=False)
+        return super(AudioFolderDataset, self).transform_first(fn, lazy=lazy)
