@@ -14,7 +14,7 @@ The following installation instructions are for installing MXNet on computers ru
     * [R](#install-the-mxnet-package-for-r)
     * [Julia](#install-the-mxnet-package-for-julia)
     * [Scala](#install-the-mxnet-package-for-scala)
-    * [Java](#install-the-mxnet-package-for-java)    
+    * [Java](#install-the-mxnet-package-for-java)
     * [Perl](#install-the-mxnet-package-for-perl)
   * [Contributions](#contributions)
   * [Next Steps](#next-steps)
@@ -92,7 +92,7 @@ The following table presents the pip packages that are recommended for each vers
 | mxnet | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
 -->
 
-![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png)
+![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
 
 To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
 
