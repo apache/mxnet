@@ -60,6 +60,9 @@ struct ForwardKernel<gpu> {
 };
 
 
+
+auto lalala = &ForwardKernel<gpu, float, float>::Map;
+
 NNVM_REGISTER_OP(digitize)
 .set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward<gpu>);
 

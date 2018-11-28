@@ -31,7 +31,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include <mxnet/base.h>
+
 
 
 namespace mxnet {
@@ -172,7 +172,8 @@ inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
 
 template<typename xpu, typename DType, typename BType>
 struct ForwardKernel {
-  static void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu, 1, BType>
+  static MSHADOW_XINLINE void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu,
+      1, BType>
   &bins, const bool right);
 };
 
