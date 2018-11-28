@@ -31,6 +31,8 @@
 namespace mxnet {
 namespace op {
 
+static const size_t kUint8Range = 255;
+static const size_t kInt8Range = 127;
 
 template<typename T>
 MSHADOW_XINLINE int Sign(T val) {
