@@ -27,7 +27,8 @@ $ pip install requests jupyter
 The following code downloads the MNIST dataset to the default location (`.mxnet/datasets/mnist/` in your home directory) and creates `Dataset` objects `train_data` and `val_data` for training and validation, respectively.
 These objects can later be used to get one image or a batch of images at a time, together with their corresponding labels.
 
-We also add a `transform` function that rescales the images from `[0, 255]` to `[0, 1]`.
+We also immediately apply the `transform_first()` method and supply a function that moves the channel axis of the images to the beginning (`(28, 28, 1) -> (1, 28, 28)`), casts them to `float32` and rescales them from `[0, 255]` to `[0, 1]`.
+The name `transform_first` reflects the fact that these datasets contain images and labels, and that the transform should only be applied to the first of each `(image, label)` pair.
 
 ```python
 import mxnet as mx
@@ -35,22 +36,20 @@ import mxnet as mx
 # Select a fixed random seed for reproducibility
 mx.random.seed(42)
 
-train_data = mx.gluon.data.vision.MNIST(
-    train=True,
-    transform=lambda data, label: (data.astype("float32") / 255, label),
-)
-val_data = mx.gluon.data.vision.MNIST(
-    train=False,
-    transform=lambda data, label: (data.astype("float32") / 255, label),
-)
+def data_xform(data):
+    """Move channel axis to the beginning, cast to float32, and normalize to [0, 1]."""
+    return nd.moveaxis(data, 2, 0).astype('float32') / 255
+
+train_data = mx.gluon.data.vision.MNIST(train=True).transform_first(data_xform)
+val_data = mx.gluon.data.vision.MNIST(train=False).transform_first(data_xform)
 ```
 
-Since the MNIST dataset is relatively small, this class loads it into memory all at once, but for larger datasets like ImageNet, this would no longer be possible.
+Since the MNIST dataset is relatively small, the `MNIST` class loads it into memory all at once, but for larger datasets like ImageNet, this would no longer be possible.
 The Gluon `Dataset` class from which `MNIST` derives supports both cases.
-In general, `Dataset` and `DataLoader` (which we'll see in a second) are the machinery in MXNet that provides a stream of input data to be consumed by a training algorithm, typically in batches of multiple data entities at once for better efficiency.
+In general, `Dataset` and `DataLoader` (which we will encounter next) are the machinery in MXNet that provides a stream of input data to be consumed by a training algorithm, typically in batches of multiple data entities at once for better efficiency.
 In this tutorial, we will configure the data loader to feed examples in batches of 100.
 
-An image batch is commonly represented by a 4-D array with shape `(batch_size, num_channels, height, width)`.
+An image batch is commonly represented as a 4-D array with shape `(batch_size, num_channels, height, width)`.
 This convention is denoted by "BCHW", and it is the default in MXNet.
 For the MNIST dataset, each image has a size of 28x28 pixels and one color channel (grayscale), hence the shape of an input batch will be `(batch_size, 1, 28, 28)`.
 
@@ -69,12 +68,12 @@ val_loader = mx.gluon.data.DataLoader(val_data, shuffle=False, batch_size=batch_
 
 ## Approaches
 
-We will cover a couple of approaches for performing the hand-written digit recognition task.
-In our first attempt, we will make use of a traditional deep neural network architecture called Multilayer Perceptron (MLP).
-Although this architecture gets us up to about 95.5 % accuracy on the validation set, we will recognize and discuss some of its drawbacks and use them as a motivation for using a different network.
-In that second attempt, we introduce the more advanced and very widely used Convolutional Neural Network (CNN) architecture that has proven to work very well for image classification tasks.
+We will cover two approaches for performing the hand-written digit recognition task.
+In our first attempt, we will make use of a traditional neural network architecture called [Multilayer Perceptron (MLP)](https://en.wikipedia.org/wiki/Multilayer_perceptron).
+Although this architecture lets us achieve about 95.5 % accuracy on the validation set, we will recognize and discuss some of its drawbacks and use them as a motivation for using a different network.
+In the subsequent second attempt, we introduce the more advanced and very widely used [Convolutional Neural Network (CNN)](https://en.wikipedia.org/wiki/Convolutional_neural_network) architecture that has proven to work very well for image classification tasks.
 
-As a first step, we do some convenience imports of frequently used modules.
+As a first step, we run some convenience imports of frequently used modules.
 
 ```python
 from __future__ import print_function  # only relevant for Python 2
@@ -83,7 +82,7 @@ from mxnet import nd, gluon, autograd
 from mxnet.gluon import nn
 ```
 
-### Define a network: Multilayer Perceptron
+### Defining a network: Multilayer Perceptron
 
 MLPs consist of several fully connected layers.
 In a fully connected (short: FC) layer, each neuron is connected to every neuron in its preceding layer.
@@ -96,24 +95,31 @@ This step is crucial since it gives neural networks the ability to classify inpu
 Common choices for activation functions are [sigmoid](https://en.wikipedia.org/wiki/Sigmoid_function), [hyperbolic tangent ("tanh")](https://en.wikipedia.org/wiki/Hyperbolic_function#Definitions), and [rectified linear unit (ReLU)](https://en.wikipedia.org/wiki/Rectifier_(neural_networks)).
 In this example, we'll use the ReLU activation function since it has several nice properties that make it a good default choice.
 
-The following code declares three fully connected (or *dense*) layers with 128, 64 and 10 neurons each, where the last number of neurons matches the number of output classes in our dataset.
+The following code snippet declares three fully connected (or *dense*) layers with 128, 64 and 10 neurons each, where the last number of neurons matches the number of output classes in our dataset.
+Note that the last layer uses no activation function since the [softmax](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.softmax) activation will be implicitly applied by the loss function later on.
 To build the neural network, we use a [`Sequential` layer](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential), which is a convenience class to build a linear stack of layers, often called a *feed-forward neural net*.
 
+**Note**: using the `name_scope()` context manager is optional.
+It is, however, good practice since it uses a common prefix for the names of all layers generated in that scope, which can be very helpful during debugging.
+
 ```python
-net = nn.Sequential()
+net = nn.Sequential('MLP')
 with net.name_scope():
-    net.add(nn.Dense(128, activation='relu'))
-    net.add(nn.Dense(64, activation='relu'))
-    net.add(nn.Dense(10))
+    net.add(
+        nn.Flatten(),
+        nn.Dense(128, activation='relu'),
+        nn.Dense(64, activation='relu'),
+        nn.Dense(10, activation='relu')
+    )
 ```
 
-#### Initialize parameters and optimizer
+#### Initializing parameters and optimizer
 
-Before the network can be used, its parameters (weight and bias) need to be set to initial values that are sufficiently random while keeping the magnitude of gradients limited.
+Before the network can be used, its parameters (weights and biases) need to be set to initial values that are sufficiently random while keeping the magnitude of gradients limited.
 The [Xavier](https://mxnet.incubator.apache.org/api/python/optimization/optimization.html#mxnet.initializer.Xavier) initializer is usually a good default choice.
 
 Since the `net.initialize()` method creates arrays for its parameters, it needs to know where to store the values: in CPU or GPU memory.
-Like many other functions and classes that deal with memory management in one way or another, it takes an optional `ctx` (short for *context*) argument, where the return value of either `mx.cpu()` or `mx.gpu()` can be provided.
+Like many other functions and classes that deal with memory management in one way or another, the `initialize()` method takes an optional `ctx` (short for *context*) argument, where the return value of either `mx.cpu()` or `mx.gpu()` can be provided.
 
 ```python
 ctx = mx.gpu(0) if mx.context.num_gpus() > 0 else mx.cpu(0)
@@ -125,8 +131,9 @@ More specifically, we use mini-batch SGD in contrast to the classical SGD that p
 (Recall that we set the batch size to 100 in the ["Loading Data"](#loading-data) part.)
 
 Besides the batch size, the SGD algorithm has one important *hyperparameter*: the *learning rate*.
-It determines the size of steps that the algorithm takes in search of parameters that allow the network to optimally fit the training data, and as such it has great influence on both the course of the training process and its final outcome.
-In general, hyperparameters refer to *non-learnable* values that need to be chosen before training and that have an effect on the outcome.
+It determines the size of steps that the algorithm takes in search of parameters that allow the network to optimally fit the training data.
+Therefore, this value has great influence on both the course of the training process and its final outcome.
+In general, hyperparameters refer to *non-learnable* values that need to be chosen before training and that have a potential effect on the outcome.
 In this example, further hyperparameters are the number of layers in the network, the number of neurons of the first two layers, the activation function and (later) the loss function.
 
 The SGD optimization method can be accessed in MXNet Gluon through the [`Trainer`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#trainer) class.
@@ -140,31 +147,32 @@ trainer = gluon.Trainer(
 )
 ```
 
-#### Train the network
+#### Training
 
-Training the network requires a way to tell how well the network currently fits the training data, or how badly, expressed as a "loss" value, as it is customary in optimization.
-Ideally, in a classification task, we would use the prediction inaccuracy, i.e., the fraction of incorrectly classified samples, to guide the training to a lower value.
+Training the network requires a way to tell how well the network currently fits the training data.
+Following common practice in optimization, this quality of fit is expressed through a *loss value* (also referred to as badness-of-fit or data discrepancy), which the algorithm then tries to minimize by adjusting the weights of the model.
+
+Ideally, in a classification task, we would like to use the prediction inaccuracy, i.e., the fraction of incorrectly classified samples, to guide the training to a lower value.
 Unfortunately, inaccuracy is a poor choice for training since it contains almost no information that can be used to update the network parameters (its gradient is zero almost everywhere).
-
 As a better behaved proxy for inaccuracy, the [softmax cross-entropy loss](https://mxnet.incubator.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss) is a popular choice.
 It has the essential property of being minimal for the correct prediction, but at the same time, it is everywhere differentiable with nonzero gradient.
-
-We only use [accuracy](https://mxnet.incubator.apache.org/api/python/metric/metric.html#mxnet.metric.Accuracy) to monitor the training progress, since it is more intuitively interpretable.
+The [accuracy](https://mxnet.incubator.apache.org/api/python/metric/metric.html#mxnet.metric.Accuracy) metric is still useful for monitoring the training progress, since it is more intuitively interpretable than a loss value.
 
 ```python
 metric = mx.metric.Accuracy()
 loss_function = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
-Typically, the training is run until convergence, which means that further iterations will not improve the result any more, and that the network has probably learned a good set of model parameters from the train data.
-For the purpose of this tutorial, we only loop 10 times over the entire dataset; one such pass over the data is usually called an *epoch*.
+Typically, the training is run until convergence, which means that further iterations will no longer lead to improvements of the loss function, and that the network has probably learned a good set of model parameters from the train data.
+For the purpose of this tutorial, we only loop 10 times over the entire dataset.
+One such pass over the data is usually called an *epoch*.
 
 The following steps are taken in each `epoch`:
 
 - Get a minibatch of `inputs` and `labels` from the `train_loader`.
 - Feed the `inputs` to the network, producing `outputs`.
-- Compute the minibatch loss value by comparing `outputs` to `labels`.
-- Backpropagate the gradients to update the network parameters.
+- Compute the minibatch `loss` value by comparing `outputs` to `labels`.
+- Backpropagate the gradients to update the network parameters by calling `loss.backward()`.
 - Print the current accuracy over the training data, i.e., the fraction of correctly classified training examples.
 
 ```python
@@ -198,10 +206,16 @@ for epoch in range(num_epochs):
     metric.reset()
 ```
 
-#### Prediction
+#### Validation
 
-When the above training has completed, we can evaluate the trained model by running predictions on validation dataset.
-Since the dataset also has labels for all test images, we can compute the accuracy metric over validation data as follows:
+When the above training has completed, we can evaluate the trained model by comparing predictions from the validation dataset with their respective correct labels.
+It is important to notice that the validation data was not used during training, i.e., the network has not seen the images and their true labels yet.
+Keeping a part of the data aside for validation is crucial for detecting *overfitting* of a network: If a neural network has enough parameters, it can simply memorize the training data and look up the true label for a given training image.
+While this results in 100 % training accuracy, such an overfit model would perform very poorly on new data.
+In other words, an overfit model does not generalize to a broader class of inputs than the training set, and such an outcome is almost always undesirable.
+Therefore, having a subset of "unseen" data for validation is an important part of good practice in machine learning.
+
+To validate our model on the validation data, we can run the following snippet of code:
 
 ```python
 metric = mx.metric.Accuracy()
@@ -234,7 +248,7 @@ def get_mislabeled(loader):
         for i, p, l in zip(inputs, preds, labels):
             if p != l:
                 mislabeled.append(
-                    (i.asnumpy(), int(p.asnumpy()), int(l.asnumpy()))
+                    (i.asnumpy(), int(p.asscalar()), int(l.asscalar()))
                 )
     return mislabeled
 ```
@@ -273,146 +287,148 @@ for ax, (img, pred, lbl) in zip(axs, wrong_val_sample):
 ![png](./wrong_train.png)
 ![png](./wrong_val.png)
 
-In this case, it is rather obvious that our MLP network is either too simple or not trained long enough to perform really great on this dataset, as can be seen from the fact that some of the mislabeled examples are rather "easy" and should not be a challenge for our neural net.
+In this case, it is rather obvious that our MLP network is either too simple or has not been trained long enough to perform really great on this dataset, as can be seen from the fact that some of the mislabeled examples are rather "easy" and should not be a challenge for our neural net.
 As it turns out, moving to the CNN architecture presented in the following section will give a big performance boost.
 
 ### Convolutional Neural Network
 
-Earlier, we briefly touched on a drawback of MLP when we said we need to discard the input image's original shape and flatten it as a vector before we can feed it as input to the MLP's first fully connected layer. Turns out this is an important issue because we don't take advantage of the fact that pixels in the image have natural spatial correlation along the horizontal and vertical axes. A convolutional neural network (CNN) aims to address this problem by using a more structured weight representation. Instead of flattening the image and doing a simple matrix-matrix multiplication, it employs one or more convolutional layers that each performs a 2-D convolution on the input image.
+A fundamental issue with the MLP network is that it requires the inputs to be flattened (in the non-batch axes) before they can be processed by the dense layers.
+This means in particular that the spatial structure of an image is largely discarded, and that the values describing it are just treated as a long vector.
+The network then has to figure out the neighborhood relations of pixels from scratch by adjusting its weights accordingly, which seems very wasteful.
 
-A single convolution layer consists of one or more filters that each play the role of a feature detector. During training, a CNN learns appropriate representations (parameters) for these filters. Similar to MLP, the output from the convolutional layer is transformed by applying a non-linearity. Besides the convolutional layer, another key aspect of a CNN is the pooling layer. A pooling layer serves to make the CNN translation invariant: a digit remains the same even when it is shifted left/right/up/down by a few pixels. A pooling layer reduces a *n x m* patch into a single value to make the network less sensitive to the spatial location. Pooling layer is always included after each conv (+ activation) layer in the CNN.
+A convolutional neural network (CNN) aims to address this problem by using a more structured weight representation.
+Instead of connecting all inputs to all outputs, the characteristic [convolution layer](https://mxnet.incubator.apache.org/api/python/gluon/nn.html#mxnet.gluon.nn.Conv2D) only considers a small neighborhood of a pixel to compute the value of the corresponding output pixel.
+In particular, the spatial structure of the image is preserved, i.e., one can speak of input and output pixels in the first place.
+Only the size of the image may change through convolutions.
+[This article](http://deeplearning.net/software/theano/tutorial/conv_arithmetic.html) gives a good and intuitive explanation of convolutions in the context of deep learning.
 
-The following source code defines a convolutional neural network architecture called LeNet. LeNet is a popular network known to work well on digit classification tasks. We will use a slightly different version from the original LeNet implementation, replacing the sigmoid activations with tanh activations for the neurons.
-
-A typical way to write your network is creating a new class inherited from `gluon.Block`
-class. We can define the network by composing and inheriting Block class as follows:
+The size of the neighborhood that a convolution layer considers for each pixel is usually referred to as *filter size* or *kernel size*.
+The array of weights -- which does not depend on the output pixel location, only on the position within such a neighborhood -- is called *filter* or *kernel*.
+Typical filter sizes range from *3 x 3* to *13 x 13*, which implies that a convolution layer has *far* fewer parameters than a dense layer.
 
 ```python
-import mxnet.ndarray as F
-
-class Net(gluon.Block):
-    def __init__(self, **kwargs):
-        super(Net, self).__init__(**kwargs)
-        with self.name_scope():
-            # layers created in name_scope will inherit name space
-            # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(10)
-
-    def forward(self, x):
-        x = self.pool1(F.tanh(self.conv1(x)))
-        x = self.pool2(F.tanh(self.conv2(x)))
-        # 0 means copy over size from corresponding dimension.
-        # -1 means infer size from the rest of dimensions.
-        x = x.reshape((0, -1))
-        x = F.tanh(self.fc1(x))
-        x = F.tanh(self.fc2(x))
-        return x
+conv_layer = nn.Conv2D(kernel_size=(3, 3), channels=32, in_channels=16, activation='relu')
+print(conv_layer.params)
+# Output:
+# conv0_ (
+#   Parameter conv0_weight (shape=(32, 16, 3, 3), dtype=<class 'numpy.float32'>)
+#   Parameter conv0_bias (shape=(32,), dtype=<class 'numpy.float32'>)
+# )
 ```
 
-We just defined the forward function here, and the backward function to compute gradients
-is automatically defined for you using autograd.
-We also imported `mxnet.ndarray` package to use activation functions from `ndarray` API.
+Filters can be thought of as little feature detectors: in early layers, they learn to detect small local structures like edges, whereas later layers become sensitive to more and more global structures.
+Since images often contain a rich set of such features, it is customary to have each convolution layer employ and learn many different filters in parallel, so as to detect many different image features on their respective scales.
+This stacking of filters, which directly translates to a stacking of output images, is referred to as output *channels* of the convolution layer.
+Likewise, the input can already have multiple channels.
+In the above example, the convolution layer takes an input image with 16 channels and maps it to an image with 32 channels by convolving each of the input channels with a different set of 32 filters and then summing over the 16 input channels.
+Therefore, the total number of filter parameters in the convolution layer is `channels * in_channels * prod(kernel_size)`, which amounts to 4608 in the above example.
 
-Now, We will create the network as follows:
+Another characteristic feature of CNNs is the usage of *pooling*, i.e., summarizing patches to a single number, to shrink the size of an image as it travels through the layers.
+This step lowers the computational burden of training the network, but the main motivation for pooling is the assumption that it makes the network less sensitive to small translations, rotations or deformations of the image.
+Popular pooling strategies are max-pooling and average-pooling, and they are usually performed after convolution.
+
+The following code defines a CNN architecture called *LeNet*.
+The LeNet architecture is a popular network known to work well on digit classification tasks.
+We will use a version that differs slightly from the original in the usage of `tanh` activations instead of `sigmoid`.
 
 ```python
-net = Net()
+lenet = nn.Sequential('LeNet')
+lenet.add(
+    nn.Conv2D(channels=20, kernel_size=(5, 5), activation='tanh'),
+    nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+    nn.Conv2D(channels=50, kernel_size=(5, 5), activation='tanh'),
+    nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+    nn.Flatten(),
+    nn.Dense(500, activation='tanh'),
+    nn.Dense(10, activation='tanh'),
+)
+```
+
+To get an overview of all intermediate sizes of arrays and the number of parameters in each layer, the `summary()` method can be a great help.
+It requires the network parameters to be initialized, and an input array to infer the sizes.
+
+```python
+lenet.initialize(mx.init.Xavier(), ctx=ctx)
+lenet.summary(nd.zeros((1, 1, 28, 28), ctx=ctx))
+# Output:
+#
+# --------------------------------------------------------------------------------
+#         Layer (type)                                Output Shape         Param #
+# ================================================================================
+#                Input                              (1, 1, 28, 28)               0
+#         Activation-1                     <Symbol conv1_tanh_fwd>               0
+#         Activation-2                             (1, 20, 24, 24)               0
+#             Conv2D-3                             (1, 20, 24, 24)             520
+#          MaxPool2D-4                             (1, 20, 12, 12)               0
+#         Activation-5                     <Symbol conv2_tanh_fwd>               0
+#         Activation-6                               (1, 50, 8, 8)               0
+#             Conv2D-7                               (1, 50, 8, 8)           25050
+#          MaxPool2D-8                               (1, 50, 4, 4)               0
+#            Flatten-9                                    (1, 800)               0
+#        Activation-10                    <Symbol dense1_tanh_fwd>               0
+#        Activation-11                                    (1, 500)               0
+#             Dense-12                                    (1, 500)          400500
+#        Activation-13                    <Symbol dense2_tanh_fwd>               0
+#        Activation-14                                     (1, 10)               0
+#             Dense-15                                     (1, 10)            5010
+# ================================================================================
+# Parameters in forward computation graph, duplicate included
+#    Total params: 431080
+#    Trainable params: 431080
+#    Non-trainable params: 0
+# Shared params in forward computation graph: 0
+# Unique parameters in model: 431080
+# --------------------------------------------------------------------------------
 ```
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png)
 
 **Figure 3:** First conv + pooling layer in LeNet.
 
-Now we train LeNet with similar hyper-parameters as before. Note that, if a GPU is available, we recommend using it. This greatly speeds up computation given that LeNet is more complex and compute-intensive than the previous multilayer perceptron. To do so, we only need to change `mx.cpu()` to `mx.gpu()` and MXNet takes care of the rest. Just like before, we'll stop training after 10 epochs.
-
-Training and prediction can be done in the similar way as we did for MLP.
-
-#### Initialize parameters and optimizer
-
-We will initialize the network parameters as follows:
+Now we train LeNet with similar hyperparameters and procedure as before.
+Note that it is advisable to use a GPU if possible, since this model is significantly more computationally demanding to evaluate and train than the previous MLP.
 
 ```python
-# set the context on GPU is available otherwise CPU
-ctx = [mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()]
-net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx)
-trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.03})
-```
-
-#### Training
-
-```python
-# Use Accuracy as the evaluation metric.
+trainer = gluon.Trainer(
+    params=lenet.collect_params(),
+    optimizer='sgd',
+    optimizer_params={'learning_rate': 0.02},
+)
 metric = mx.metric.Accuracy()
-softmax_cross_entropy_loss = gluon.loss.SoftmaxCrossEntropyLoss()
+num_epochs = 10
 
-for i in range(num_epochs):
-    # Reset the train data iterator.
-    train_data.reset()
-    # Loop over the train data iterator.
-    for batch in train_data:
-        # Splits train data into multiple slices along batch_axis
-        # and copy each slice into a context.
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-        # Splits train labels into multiple slices along batch_axis
-        # and copy each slice into a context.
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
-        outputs = []
-        # Inside training scope
-        with ag.record():
-            for x, y in zip(data, label):
-                z = net(x)
-                # Computes softmax cross entropy loss.
-                loss = softmax_cross_entropy_loss(z, y)
-                # Backpropogate the error for one iteration.
-                loss.backward()
-                outputs.append(z)
-        # Updates internal evaluation
-        metric.update(label, outputs)
-        # Make one step of parameter update. Trainer needs to know the
-        # batch size of data to normalize the gradient by 1/batch_size.
-        trainer.step(batch.data[0].shape[0])
-    # Gets the evaluation result.
+for epoch in range(num_epochs):
+    for inputs, labels in train_loader:
+        inputs = inputs.as_in_context(ctx)
+        labels = labels.as_in_context(ctx)
+
+        with autograd.record():
+            outputs = lenet(inputs)
+            loss = loss_function(outputs, labels)
+
+        loss.backward()
+        metric.update(labels, outputs)
+
+        trainer.step(batch_size=inputs.shape[0])
+
     name, acc = metric.get()
-    # Reset evaluation result to initial state.
+    print('After epoch {}: {} = {}'.format(epoch + 1, name, acc))
     metric.reset()
-    print('training acc at epoch %d: %s=%f'%(i, name, acc))
+
+for inputs, labels in val_loader:
+    inputs = inputs.as_in_context(ctx)
+    labels = labels.as_in_context(ctx)
+    metric.update(labels, lenet(inputs))
+print('Validaton: {} = {}'.format(*metric.get()))
+assert metric.get()[1] > 0.975
 ```
 
-#### Prediction
-
-Finally, we'll use the trained LeNet model to generate predictions for the test data.
-
-```python
-# Use Accuracy as the evaluation metric.
-metric = mx.metric.Accuracy()
-# Reset the validation data iterator.
-val_data.reset()
-# Loop over the validation data iterator.
-for batch in val_data:
-    # Splits validation data into multiple slices along batch_axis
-    # and copy each slice into a context.
-    data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx, batch_axis=0)
-    # Splits validation label into multiple slices along batch_axis
-    # and copy each slice into a context.
-    label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx, batch_axis=0)
-    outputs = []
-    for x in data:
-        outputs.append(net(x))
-    # Updates internal evaluation
-    metric.update(label, outputs)
-print('validation acc: %s=%f'%metric.get())
-assert metric.get()[1] > 0.98
-```
-
-If all went well, we should see a higher accuracy metric for predictions made using LeNet. With CNN we should be able to correctly predict around 98% of all test images.
+If all went well, we should see a higher accuracy metric for predictions made using LeNet.
+With this CNN we should be able to correctly predict around 98% of all test images.
 
 ## Summary
 
-In this tutorial, we have learned how to use MXNet to solve a standard computer vision problem: classifying images of hand-written digits. You have seen how to quickly and easily build, train and evaluate models such as MLP and CNN with MXNet Gluon package.
+In this tutorial, we demonstrated how to use MXNet to solve a standard computer vision problem: classifying images of hand-written digits.
+We showed how to quickly build, train and evaluate models such as MLPs and CNNs with the MXNet Gluon package.
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
