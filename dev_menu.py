@@ -103,6 +103,11 @@ COMMANDS = OrderedDict([
         "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
+    ('[Docker] Python3 CPU Intel MKLDNN unittests',
+    [
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn",
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_python3_cpu",
+    ]),
     ('[Docker] Python3 ARMv7 unittests (QEMU)',
     [
         "ci/build.py -p armv7",
