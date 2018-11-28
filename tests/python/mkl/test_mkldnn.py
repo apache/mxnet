@@ -398,7 +398,6 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
-@with_seed(12345)
 def test_deconvolution_inference():
     num_filter = 256
     num_group = 1
