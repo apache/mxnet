@@ -94,7 +94,6 @@ def test_clip():
     assert np.sum(res[-1].asnumpy() == 1000) == b.shape[1]
 
 def test_take():
-    # Test take
     a = nd.ones(shape=(LARGE_X, SMALL_Y))
     idx = nd.arange(LARGE_X-1000, LARGE_X)
     res = nd.take(a, idx)
@@ -126,6 +125,15 @@ def test_broadcast_div():
     b = nd.ones(shape=(LARGE_X, 1)) * 2
     res = a / b
     assert np.sum(res[-1].asnumpy() == 0.5) == a.shape[1]
+
+def test_Dense(ctx=mx.cpu(0)):
+    data = mx.nd.ones(shape=(50*1000*1000, 100))
+    linear = gluon.nn.Dense(100)
+    linear.initialize(ctx=ctx)
+    res = linear(data)
+    res.wait_to_read()
+    assert res.shape == (50000000, 100)
+
 
 if __name__ == '__main__':
     import nose
