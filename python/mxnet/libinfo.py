@@ -101,7 +101,7 @@ def find_include_path():
         # include path if build from source
         return incl_path
     else:
-        incl_path = os.path.join(curr_path, '../include/') 
+        incl_path = os.path.join(curr_path, '../include/')
         if os.path.isdir(incl_path):
             # include path in pip package
             return incl_path
