@@ -12,8 +12,9 @@ For instance, when using pretrained neural networks it is often necessary to adj
 ```python
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import mxnet as mx
+from mxnet import gluon
 import numpy as np
-
 ```
 
 
@@ -75,7 +76,7 @@ As shown in the diagram, the axes have been flipped: pixel values that were in t
 In this chapter we discuss when transpose and reshape is used in MXNet. 
 #### Channel first for images
 Images are usually stored in the format height, wight, channel. When working with [convolutional](https://mxnet.incubator.apache.org/api/python/gluon/nn.html#mxnet.gluon.nn.Conv1D) layers, MXNet expects the layout to be `NCHW` (batch, channel, height, width). This is in contrast to Tensorflow, where image tensors are in the form `NHWC`. MXNet uses `NCHW` layout because of performance reasons on the GPU. When preprocessing the input images, you may have a function like the following:
-``` 
+```python
 def transform(data, label): 
      return data.astype(np.float32).transpose((2,0,1))/255.0, np.float32(label)
 ```
@@ -84,7 +85,7 @@ Images may also be stored as 1 dimensional vector for example in byte packed dat
 
 #### TNC layout for RNN
 When working with [LSTM](https://mxnet.incubator.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.LSTM) or [GRU](https://mxnet.incubator.apache.org/api/python/gluon/rnn.html#mxnet.gluon.rnn.GRU) layers, the default layout for input and ouput tensors has to be `TNC` (sequence length, batch size, and feature dimensions). For instance in the following network the input goes into a 1 dimensional convolution layer and whose output goes into a GRU cell. Here the tensors would mismatch, because `Conv1D` takes data as `NCT`, but GRU  expects it to be `NTC`. To ensure that the forward pass does not crash, we need to do a tensor transpose. We can do this by defining a ```HybridLambda```.
-```
+```python
 network = gluon.nn.HybridSequential()
 with network.name_scope():
        network.add(gluon.nn.Conv1D(196, kernel_size=2, strides=1))
@@ -101,7 +102,7 @@ print (output.shape)
 (1, 999, 128) <!--notebook-skip-line-->
 #### Advanced reshaping with MXNet ndarrays
 It is sometimes useful to automatically infer the shape of tensors. Especially when you deal with very deep neural networks, it may not always be clear what the shape of a tensor is after a specific layer. For instance you may want the tensor to be two-dimensional where one dimension is the known batch_size. With ```mx.nd.array(-1, batch_size)``` the first dimension will be automatically inferred. Here is a simplified example:
-```
+```python
 batch_size = 100
 input_data = mx.random.uniform(shape=(batch_size, 20,100))
 reshaped = input_data.reshape(batch_size, -1)
@@ -110,13 +111,13 @@ print (input_data.shape, reshaped.shape)
 (100L, 20L, 100L), (100L, 2000L) <!--notebook-skip-line-->
 
 The reshape function of [MXNet's NDArray API](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html?highlight=reshape#mxnet.ndarray.NDArray.reshape) allows even more advanced transformations: For instance:0 copies the dimension from the input to the output shape,  -2 copies all/remainder of the input dimensions to the output shape. With -3 reshape uses the product of two consecutive dimensions of the input shape as the output dim.  With -4 reshape splits one dimension of the input into two dimensions passed subsequent to -4. Here an example:
-```
+```python
 x = mx.nd.random.uniform(shape=(1, 3, 4, 64, 64))
 
 ```
 Assume ```x```  with the shape ```[batch_size, channel, upscale, width, height]``` is the output of a model for image superresolution. Now we want to apply the upscale on width and height, to increase the 64x64 to an 128x128 image.
 To do so, we can use advanced reshaping, where we have to split the third dimension (upscale) and multiply it with width and height. We can do 
-```
+```python
 x = x.reshape(1, 3, -4, 2, 2, 0, 0)
 print x.shape
 ```
@@ -124,7 +125,7 @@ print x.shape
 (1L, 3L, 2L, 2L, 64L, 64L) <!--notebook-skip-line-->
 
 This splits up the third dimension into ```[2,2]```, so (1L, 3L, **4L** , 64L, 64L) becomes (1L, 3L, **2L** , **2L** , 64L, 64L)  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
-```
+```python
 x = x.transpose((0, 1, 4, 2, 5, 3))
 print x.shape
 x = x.reshape(0, 0, -3, -3)
@@ -166,7 +167,8 @@ This happens when you your data does not have the shape ```[batch_size, channel,
 ##### Backward Pass
 In other cases the forward pass may not fail, but the shape of the network output is not as expected. For instance in our previous RNN example, nothing is preventing us to skip the transpose. 
 
-```network = gluon.nn.HybridSequential()
+```python
+network = gluon.nn.HybridSequential()
 with network.name_scope():
        network.add(gluon.nn.Conv1D(196, kernel_size=2, strides=1))
        #network.add(gluon.nn.HybridLambda(lambda F, x: F.transpose(x, (0, 2, 1))))
