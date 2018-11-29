@@ -264,7 +264,8 @@ def _elu(attrs, inputs, proto_obj):
 def _prelu(attrs, inputs, proto_obj):
     """PRelu function"""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
-    return 'LeakyReLU', new_attrs, inputs
+    new_gamma = symbol.squeeze(inputs[1])
+    return 'LeakyReLU', new_attrs, [inputs[0], new_gamma]
 
 def _selu(attrs, inputs, proto_obj):
     """Selu function"""

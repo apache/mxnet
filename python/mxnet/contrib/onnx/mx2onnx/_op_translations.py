@@ -647,6 +647,7 @@ def convert_leakyrelu(node, **kwargs):
     based on the input node's attributes and return the created node.
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    initializer = kwargs["initializer"]
 
     act_type = attrs.get("act_type", "leaky")
     alpha = float(attrs.get("slope", 0.25))
@@ -654,12 +655,43 @@ def convert_leakyrelu(node, **kwargs):
     act_name = {"elu": "Elu", "leaky": "LeakyRelu", "prelu": "PRelu",
                 "selu": "Selu"}
 
+    reshape_val_name = 'reshape' + str(kwargs["idx"])
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
+
+    reshape_value = np.array([1, -1, 1, 1], dtype='int64')
+    dims = np.shape(reshape_value)
+
+    shape_node = onnx.helper.make_tensor_value_info(reshape_val_name, input_type, dims)
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=reshape_val_name,
+            data_type=input_type,
+            dims=dims,
+            vals=reshape_value,
+            raw=False,
+        )
+    )
+
+    slope_op_name = 'slope' + str(kwargs["idx"])
+
+    lr_node = []
     if act_type == "prelu" or act_type == "selu":
+        reshape_slope_node = onnx.helper.make_node(
+            'Reshape',
+            inputs=[input_nodes[1], reshape_val_name],
+            outputs=[slope_op_name],
+            name=slope_op_name
+        )
+
         node = onnx.helper.make_node(
             act_name[act_type],
-            inputs=input_nodes,
+            inputs=[input_nodes[0], slope_op_name],
             outputs=[name],
             name=name)
+
+        lr_node.append(shape_node)
+        lr_node.append(reshape_slope_node)
+        lr_node.append(node)
     else:
         node = onnx.helper.make_node(
             act_name[act_type],
@@ -667,8 +699,8 @@ def convert_leakyrelu(node, **kwargs):
             outputs=[name],
             name=name,
             alpha=alpha)
-
-    return [node]
+        lr_node.append(node)
+    return lr_node
 
 
 @mx_op.register("softmax")
