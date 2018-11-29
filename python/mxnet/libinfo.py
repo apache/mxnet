@@ -96,14 +96,14 @@ def find_include_path():
             logging.warning("MXNET_INCLUDE_PATH '%s' doesn't exist", incl_from_env)
 
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    incl_path = os.path.join(curr_path, '../../include/')
+    # include path in pip package
+    incl_path = os.path.join(curr_path, './include/')
     if os.path.isdir(incl_path):
-        # include path if build from source
         return incl_path
     else:
-        incl_path = os.path.join(curr_path, '../include/')
+        # include path if build from source
+        incl_path = os.path.join(curr_path, '../../include/')
         if os.path.isdir(incl_path):
-            # include path in pip package
             return incl_path
         else:
             raise RuntimeError('Cannot find the MXNet include path: ' + incl_path + '\n')
