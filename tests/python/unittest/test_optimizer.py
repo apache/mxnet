@@ -16,6 +16,7 @@
 # under the License.
 
 import numpy as np
+import itertools
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
 from mxnet import gluon
@@ -677,21 +678,13 @@ def test_adamax():
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
     mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
     for dtype in [np.float16, np.float32, np.float64]:
-        for cg_option in cg_options:
-            for rg_option in rg_options:
-                for wd_option in wd_options:
-                    for mp_option in mp_options:
-                        kwarg = {}
-                        kwarg.update(cg_option)
-                        kwarg.update(rg_option)
-                        kwarg.update(wd_option)
-                        kwarg.update(mp_option)
-                        if (dtype == np.float16 and
-                                ('multi_precision' not in kwarg or
-                                    not kwarg['multi_precision'])):
-                            continue
-                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
-                                          rtol=1e-4, atol=2e-5)
+        for params in itertools.product(cg_options, rg_options, wd_options, mp_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if (dtype == np.float16 and
+                    ('multi_precision' not in kwarg or
+                    not kwarg['multi_precision'])):
+                continue
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 
 # Signum
