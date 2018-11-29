@@ -35,7 +35,7 @@
 #include <vector>
 #include "mxnet-cpp/MxNetCpp.h"
 #include <opencv2/opencv.hpp>
-using namespace std;
+
 using namespace mxnet::cpp;
 
 
@@ -69,15 +69,15 @@ class Predictor {
         return (stat(name.c_str(), &buffer) == 0);
     }
     NDArray mean_img;
-    map<string, NDArray> args_map;
-    map<string, NDArray> aux_map;
+    std::map<std::string, NDArray> args_map;
+    std::map<std::string, NDArray> aux_map;
     std::vector<std::string> output_labels;
     Symbol net;
     Executor *executor;
     Shape input_shape;
     NDArray mean_image_data;
     Context global_ctx = Context::cpu();
-    string mean_image_file;
+    std::string mean_image_file;
 };
 
 
@@ -130,8 +130,8 @@ Predictor::Predictor(const std::string& model_json,
 
   // Create an executor after binding the model to input parameters.
   args_map["data"] = NDArray(input_shape, global_ctx, false);
-  executor = net.SimpleBind(global_ctx, args_map, map<string, NDArray>(),
-                              map<string, OpReqType>(), aux_map);
+  executor = net.SimpleBind(global_ctx, args_map, std::map<std::string, NDArray>(),
+                              std::map<std::string, OpReqType>(), aux_map);
 }
 
 /*
@@ -156,7 +156,7 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
     throw std::runtime_error("Model parameters does not exist");
   }
   LG << "Loading the model parameters from " << model_parameters_file << std::endl;
-  map<string, NDArray> paramters;
+  std::map<std::string, NDArray> paramters;
   NDArray::Load(model_parameters_file, 0, &paramters);
   for (const auto &k : paramters) {
     if (k.first.substr(0, 4) == "aux:") {
@@ -177,7 +177,7 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
  * The following function loads the synset file.
  * This information will be used later to report the label of input image.
  */
-void Predictor::LoadSynset(const string& synset_file) {
+void Predictor::LoadSynset(const std::string& synset_file) {
   if (!FileExists(synset_file)) {
     LG << "Synset file " << synset_file << " does not exist";
     throw std::runtime_error("Synset file does not exist");
@@ -223,7 +223,7 @@ NDArray Predictor::LoadInputImage(const std::string& image_file) {
     throw std::runtime_error("Image file does not exist");
   }
   LG << "Loading the image " << image_file << std::endl;
-  vector<float> array;
+  std::vector<float> array;
   cv::Mat mat = cv::imread(image_file);
   /*resize pictures to (224, 224) according to the pretrained model*/
   int height = input_shape[2];
@@ -310,11 +310,11 @@ Predictor::~Predictor() {
  */
 std::vector<index_t> getShapeDimensions(const std::string& hidden_units_string) {
     std::vector<index_t> dimensions;
-    char *pNext;
-    int num_unit = strtol(hidden_units_string.c_str(), &pNext, 10);
+    char *p_next;
+    int num_unit = strtol(hidden_units_string.c_str(), &p_next, 10);
     dimensions.push_back(num_unit);
-    while (*pNext) {
-        num_unit = strtol(pNext, &pNext, 10);
+    while (*p_next) {
+        num_unit = strtol(p_next, &p_next, 10);
         dimensions.push_back(num_unit);
     }
     return dimensions;
@@ -324,20 +324,20 @@ void printUsage() {
     std::cout << "Usage:" << std::endl;
     std::cout << "inception_inference --symbol <model symbol file in json format>  "
               << "--params <model params file> "
-              << "--image <path to the image used for prediction "
-              << "--synset file containing labels for prediction "
-              << "[--input_shape <dimensions of input image e.g \"3 224 224\"]"
-              << "[--mean file containing mean image for normalizing the input image "
-              << "[--gpu]  Specify this option if workflow needs to be run in gpu context "
+              << "--image <path to the image used for prediction> "
+              << "--synset <file containing labels for prediction> "
+              << "[--input_shape <dimensions of input image e.g \"3 224 224\">] "
+              << "[--mean <file containing mean image for normalizing the input image>] "
+              << "[--gpu  <Specify this option if workflow needs to be run in gpu context>]"
               << std::endl;
 }
 
 int main(int argc, char** argv) {
-  string model_file_json;
-  string model_file_params;
-  string synset_file = "";
-  string mean_image = "";
-  string input_image = "";
+  std::string model_file_json;
+  std::string model_file_params;
+  std::string synset_file = "";
+  std::string mean_image = "";
+  std::string input_image = "";
   bool gpu_context_type = false;
 
   std::string input_shape = "3 224 224";
@@ -345,22 +345,22 @@ int main(int argc, char** argv) {
     while (index < argc) {
         if (strcmp("--symbol", argv[index]) == 0) {
             index++;
-            model_file_json = argv[index];
+            model_file_json = (index < argc ? argv[index]:"");
         } else if (strcmp("--params", argv[index]) == 0) {
             index++;
-            model_file_params = argv[index];
+            model_file_params = (index < argc ? argv[index]:"");
         } else if (strcmp("--synset", argv[index]) == 0) {
             index++;
-            synset_file = argv[index];
+            synset_file = (index < argc ? argv[index]:"");
         } else if (strcmp("--mean", argv[index]) == 0) {
             index++;
-            mean_image = argv[index];
+            mean_image = (index < argc ? argv[index]:"");
         } else if (strcmp("--image", argv[index]) == 0) {
             index++;
-            input_image = argv[index];
+            input_image = (index < argc ? argv[index]:"");
         } else if (strcmp("--input_shape", argv[index]) == 0) {
             index++;
-            input_shape = argv[index];
+            input_shape = (index < argc ? argv[index]:input_shape);
         } else if (strcmp("--gpu", argv[index]) == 0) {
             gpu_context_type = true;
         } else if (strcmp("--help", argv[index]) == 0) {
