@@ -39,32 +39,34 @@ clean_repo() {
 build_ccache_wrappers() {
     set -ex
 
-    rm -f cc
-    rm -f cxx
+    # Recommended by CCache: https://ccache.samba.org/manual.html#_run_modes
+    # Add to the beginning of path to ensure this redirection is picked up instead
+    # of the original ones. Especially CUDA/NVCC appends itself to the beginning of the
+    # path and thus this redirect is ignored. This change fixes this problem
+    # This hacky approach with symbolic links is required because underlying build
+    # systems of our submodules ignore our CMake settings. If they use Makefile,
+    # we can't influence them at all in general and NVCC also prefers to hardcode their
+    # compiler instead of respecting the settings. Thus, we take this brutal approach
+    # and just redirect everything of this installer has been called.
+    # In future, we could do these links during image build time of the container.
+    # But in the beginning, we'll make this opt-in. In future, loads of processes like
+    # the scala make step or numpy compilation and other pip package generations
+    # could be heavily sped up by using ccache as well.
+    export PATH=/usr/local/bin:$PATH
+    ln -s ccache /usr/local/bin/gcc
+    ln -s ccache /usr/local/bin/g++
+    ln -s ccache /usr/local/bin/g++-8
+    ln -s ccache /usr/local/bin/gcc-8
+    ln -s ccache /usr/local/bin/nvcc
+    ln -s ccache /usr/local/bin/clang++-3.9
+    ln -s ccache /usr/local/bin/clang-3.9
+    ln -s ccache /usr/local/bin/clang++-5.0
+    ln -s ccache /usr/local/bin/clang-5.0
+    ln -s ccache /usr/local/bin/clang++-6.0
+    ln -s ccache /usr/local/bin/clang-6.0
 
-    touch cc
-    touch cxx
-
-    if [ -z ${CC+x} ]; then
-        echo "No \$CC set, defaulting to gcc";
-        export CC=gcc
-    fi
-
-    if [ -z ${CXX+x} ]; then
-       echo "No \$CXX set, defaulting to g++";
-       export CXX=g++
-    fi
-
-    # this function is nessesary for cuda enabled make based builds, since nvcc needs just an executable for -ccbin
-
-    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
-    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CXX} \"\$@\"\n" >> cxx
-
-    chmod +x cc
-    chmod +x cxx
-
-    export CC=`pwd`/cc
-    export CXX=`pwd`/cxx
+    # TODO: Remove
+    export CCACHE_LOGFILE=/work/mxnet/ccache-log
 }
 
 build_wheel() {
