@@ -86,9 +86,10 @@ build_ccache_wrappers() {
     ln -s ccache /usr/local/bin/clang++-6.0
     ln -s ccache /usr/local/bin/clang-6.0
 
-    # TODO: Remove
-    export CCACHE_LOGFILE=/work/mxnet/ccache-log
-    export CCACHE_DEBUG=1
+    # Uncomment if you would like to debug CCache hit rates.
+    # You can monitor using tail -f ccache-log
+    # export CCACHE_LOGFILE=/work/mxnet/ccache-log
+    # export CCACHE_DEBUG=1
 }
 
 build_wheel() {
@@ -130,6 +131,8 @@ build_jetson() {
     set -ex
     pushd .
 
+    build_ccache_wrappers
+
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
@@ -153,6 +156,7 @@ build_armv6() {
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
+    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -183,6 +187,7 @@ build_armv7() {
     # file tries to add -llapack. Lapack functionality though, requires -lgfortran
     # to be linked additionally.
 
+    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CROSSCOMPILING=ON \
@@ -205,6 +210,7 @@ build_armv7() {
 }
 
 build_armv8() {
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -229,6 +235,7 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -249,6 +256,7 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -268,7 +276,7 @@ build_centos7_cpu() {
     cd /work/mxnet
     export CC="ccache gcc"
     export CXX="ccache g++"
-
+    build_ccache_wrappers
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -281,6 +289,7 @@ build_centos7_cpu() {
 
 build_amzn_linux_cpu() {
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -303,7 +312,7 @@ build_centos7_mkldnn() {
     cd /work/mxnet
     export CC="ccache gcc"
     export CXX="ccache g++"
-
+    build_ccache_wrappers
     make \
         DEV=1 \
         ENABLE_TESTCOVERAGE=1 \
@@ -318,7 +327,7 @@ build_centos7_gpu() {
     set -ex
     cd /work/mxnet
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    # build_ccache_wrappers
+    build_ccache_wrappers
     make \
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
@@ -339,8 +348,9 @@ build_ubuntu_cpu() {
 
 build_ubuntu_cpu_openblas() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
+    export CC="gcc"
+    export CXX="g++"
+    build_ccache_wrappers
     make \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
@@ -354,6 +364,7 @@ build_ubuntu_cpu_cmake_debug() {
     set -ex
     pushd .
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -375,11 +386,12 @@ build_ubuntu_cpu_cmake_asan() {
 
     pushd .
     cd /work/build
+    export CXX=g++-8
+    export CC=g++-8
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER=/usr/bin/g++-8 \
-        -DCMAKE_C_COMPILER=/usr/bin/gcc-8 \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
@@ -401,10 +413,10 @@ build_ubuntu_cpu_cmake_asan() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
-     export CXX=clang++-3.9
+    export CXX=clang++-3.9
     export CC=clang-3.9
-     build_ccache_wrappers
-     make \
+    build_ccache_wrappers
+    make \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -439,6 +451,7 @@ build_ubuntu_cpu_clang_tidy() {
 
     pushd .
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -522,6 +535,8 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
@@ -536,7 +551,10 @@ build_ubuntu_gpu_tensorrt() {
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake ..
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
@@ -619,6 +637,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
+    build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
@@ -628,6 +647,7 @@ build_ubuntu_amalgamation() {
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
+    build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
@@ -638,9 +658,11 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
