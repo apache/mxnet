@@ -128,7 +128,7 @@ class FashionMNIST(MNIST):
 class CIFAR10(dataset._DownloadedDataset):
     """CIFAR10 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
-    Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
+    Each sample is an image (in 3D NDArray) with shape (32, 32, 3).
 
     Parameters
     ----------
@@ -190,7 +190,7 @@ class CIFAR10(dataset._DownloadedDataset):
 class CIFAR100(CIFAR10):
     """CIFAR100 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
-    Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
+    Each sample is an image (in 3D NDArray) with shape (32, 32, 3).
 
     Parameters
     ----------

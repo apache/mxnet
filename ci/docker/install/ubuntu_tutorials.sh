@@ -23,5 +23,5 @@
 set -ex
 apt-get update || true
 apt-get install graphviz python-opencv
-pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm
-pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm
+pip2 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm mxboard
+pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz tqdm mxboard
