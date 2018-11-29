@@ -29,11 +29,9 @@ In the example above, we have two ResourceScopes stacked together. In the inner 
 returns `r4` from its code-block, it will only deallocate `r3` and will remove `r4` from its list of objects to be deallocated. All other objects are automatically released by calling the C++ backend to free the native memory.
 
 **Note:**
-You should consider nesting ResourceScopes when you have layers of functionality in your application code or create a lot of MXNet objects such as NDArrays. 
-Holding onto all the memory that is created for an entire training loop can result in running out of memory, especially when training on GPUs which might only have 8 to 16 GB. 
-For example, if you were writing training code in MXNet Scala, it is recommended not to use a single ResourceScope block which spans the entire training code. 
-You should instead stack multiple scopes: an innermost scope where you run forward-backward passes on each batch, 
-a middle scope for each epoch, and an outer scope that runs the entire training script. This is demonstrated in the example below:
+You should consider nesting ResourceScopes when you have layers of functionality in your application code or create a lot of MXNet objects such as NDArrays.  
+For example, Holding onto all the memory that is created for an entire training loop can result in running out of memory, especially when training on GPUs which might only have 8 to 16 GB.  
+It is recommended not to use a single ResourceScope block which spans the entire training code. You should instead nest multiple scopes: an innermost scope where you run forward-backward passes on each batch, a middle scope for each epoch, and an outer scope that runs the entire training script. This is demonstrated in the example below:
 ```scala
 ResourceScope.using() {
  val m = Module()
@@ -115,5 +113,5 @@ the end of the try block. This is also true of the objects that are returned e.g
 If you use the object outside of the try block, the process might crash due to illegal memory access.
 
 To retain certain objects created within try blocks, you should explicitly remove them from the scope by calling `scope.moveToOuterScope`.
-It is highly recommended to use a stack of try-with-resource ResourceScopes so you do not have to explicitly manage the lifecycle of the Native objects.
+It is highly recommended to nest multiple try-with-resource ResourceScopes so you do not have to explicitly manage the lifecycle of the Native objects.
 
