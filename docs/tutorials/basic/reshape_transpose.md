@@ -18,26 +18,26 @@ plt.axis("off")
 print (img_array.shape)
 ```
 
-(210, 200, 3) <!--notebook-skip-line-->
+(157, 210, 3) <!--notebook-skip-line-->
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/cat.png) <!--notebook-skip-line-->
 
 
 The color image has the following properties:
 * width: 210 pixels
-* height: 200 pixels
+* height: 157 pixels
 * colors: 3 (RGB)
 
 Now lets reshape the image in order to exchange width and height dimensions.
 
 
 ```python
-reshaped = img_array.reshape((200,210,3))
+reshaped = img_array.reshape((210,157,3))
 print (reshaped.shape)
 plt.imshow(reshaped)
 plt.axis("off")
 ```
-(200, 210, 3)<!--notebook-skip-line-->
+(210,157,3)<!--notebook-skip-line-->
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/basic/transpose_reshape/reshaped_image.png) <!--notebook-skip-line-->
 
