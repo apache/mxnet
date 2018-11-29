@@ -1,5 +1,5 @@
 # JVM Memory Management
-The Scala and Java bindings of Apache MXNet use native memory (memory from the C++ heap in either RAM or GPU memory) for most of the MXNet Scala objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.
+The Scala and Java bindings of Apache MXNet use native memory (memory from the C++ heap in either RAM or GPU memory) for most of the MXNet objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.
 The associated Scala classes act only as wrappers. The operations done on these wrapper objects are then directed to the high performance MXNet C++ backend via the Java Native Interface (JNI). Therefore, the bytes are stored in the C++ native heap which allows for fast access.
 
 However, the JVM Garbage Collector only manages objects allocated in the JVM Heap and is not aware of the memory footprint of these objects in the native memory. Hence, the allocation/deallocation of native memory must be managed by MXNet Scala.
@@ -74,7 +74,7 @@ This approach could be suitable for some use cases such as inference on CPUs whe
 Calling GC too frequently can also cause your application to perform poorly. This approach might not be suitable 
 for use cases which quickly allocate a large number of large NDArrays such as when training a GAN model.
 
-### Using dispose Pattern (least Recommended)
+### 3. Using dispose Pattern (least Recommended)
  
 There might be situations where you want to manually manage the lifecycle of Apache MXNet objects. For such use-cases, we have provided the `dispose()` method which will manually deallocate the associated native memory when called. We have also
 made all MXNet objects [AutoCloseable](https://docs.oracle.com/javase/8/docs/api/java/lang/AutoCloseable.html). If you are using Java8 and above you can use it with try-with-resources or call close() in the finally block.
@@ -89,7 +89,7 @@ def showDispose(): Unit = {
 }
 ```
 
-## 3. Memory Management in Java
+## Memory Management in Java
 Memory Management in MXNet Java is similar to Scala. We recommend you use [ResourceScope](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L32) in a `try-with-resources` block or in a `try-finally` block.
 The [try-with-resource](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) tracks the resources declared in the try block and automatically closes them upon exiting (supported from Java 7 onwards). 
 The ResourceScope discussed above implements AutoCloseable and tracks all MXNet Objects created at a Thread Local scope level. 
