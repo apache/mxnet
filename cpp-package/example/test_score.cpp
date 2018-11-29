@@ -19,6 +19,11 @@
 
 /*!
  * Xin Li yakumolx@gmail.com
+ * The file is used for testing if the score(accurary) we get
+ * is better than the threshold we set using mlp model.
+ * By running: build/test_score 0.75
+ * 0.75 here means the threshold score
+ * It return 0 if we can achieve higher score than threshold, otherwise 1
  */
 #include <chrono>
 #include "utils.h"

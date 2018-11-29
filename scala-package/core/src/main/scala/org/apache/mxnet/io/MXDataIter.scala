@@ -158,11 +158,11 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
   }
 
   // The name and shape of data provided by this iterator
-  @deprecated
+  @deprecated("Please use provideDataDesc instead", "1.3.0")
   override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  @deprecated
+  @deprecated("Please use provideLabelDesc instead", "1.3.0")
   override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   // Provide type:DataDesc of the data

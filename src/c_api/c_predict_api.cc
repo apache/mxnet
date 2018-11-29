@@ -139,11 +139,11 @@ int _CreatePartialOut(const char* symbol_json_str,
     std::unordered_set<std::string> arg_names, aux_names;
     std::vector<std::string> arg_names_vec = sym.ListInputNames(Symbol::kReadOnlyArgs);
     std::vector<std::string> aux_names_vec = sym.ListInputNames(Symbol::kAuxiliaryStates);
-    for (size_t i = 0; i < arg_names_vec.size(); ++i) {
-      arg_names.insert(arg_names_vec[i]);
+    for (const auto &arg_name : arg_names_vec) {
+      arg_names.insert(arg_name);
     }
-    for (size_t i = 0; i < aux_names_vec.size(); ++i) {
-      aux_names.insert(aux_names_vec[i]);
+    for (const auto &aux_name : aux_names_vec) {
+      aux_names.insert(aux_name);
     }
     std::vector<NDArray> data;
     std::vector<std::string> names;
@@ -508,13 +508,13 @@ int MXNDListCreate(const char* nd_file_bytes,
     ret->keys.resize(arrays.size());
   }
   ret->indptr.push_back(0);
-  for (size_t i = 0; i < arrays.size(); ++i) {
-    TShape shape = arrays[i].shape();
+  for (auto &array : arrays) {
+    TShape shape = array.shape();
     size_t begin = ret->data.size();
     size_t size = shape.Size();
     ret->shapes.push_back(shape);
     ret->data.resize(begin + size);
-    arrays[i].SyncCopyToCPU(dmlc::BeginPtr(ret->data) + begin, size);
+    array.SyncCopyToCPU(dmlc::BeginPtr(ret->data) + begin, size);
     ret->indptr.push_back(begin + size);
   }
   *out = ret;

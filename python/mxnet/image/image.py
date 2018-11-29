@@ -140,10 +140,6 @@ def imdecode(buf, *args, **kwargs):
                              'if you would like to input type str, please convert to bytes')
         buf = nd.array(np.frombuffer(buf, dtype=np.uint8), dtype=np.uint8)
 
-    if len(buf) == 0:
-        # empty buf causes OpenCV crash.
-        raise ValueError("input buf cannot be empty.")
-
     return _internal._cvimdecode(buf, *args, **kwargs)
 
 
@@ -1326,8 +1322,8 @@ class ImageIter(io.DataIter):
 
     def read_image(self, fname):
         """Reads an input image `fname` and returns the decoded raw bytes.
-        Example usage:
-        ----------
+        Examples
+        --------
         >>> dataIter.read_image('Face.jpg') # returns decoded raw bytes.
         """
         with open(os.path.join(self.path_root, fname), 'rb') as fin:

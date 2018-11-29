@@ -27,7 +27,7 @@ import scala.util.Try
 import scala.util.control.{ControlThrowable, NonFatal}
 
 /**
-  * This class manages automatically releasing of [[NativeResource]]s
+  * This class manages automatically releasing of `org.apache.mxnet.NativeResource`s
   */
 class ResourceScope extends AutoCloseable {
 
@@ -43,8 +43,8 @@ class ResourceScope extends AutoCloseable {
   ResourceScope.addToThreadLocal(this)
 
   /**
-    * Releases all the [[NativeResource]] by calling
-    * the associated [[NativeResource.close()]] method
+    * Releases all the `org.apache.mxnet.NativeResource` by calling
+    * the associated`'org.apache.mxnet.NativeResource.close()` method
     */
   override def close(): Unit = {
     ResourceScope.removeFromThreadLocal(this)

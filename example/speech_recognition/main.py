@@ -38,6 +38,8 @@ sys.path.insert(0, "../../python")
 os.environ['MXNET_ENGINE_TYPE'] = "ThreadedEnginePerDevice"
 os.environ['MXNET_ENABLE_GPU_P2P'] = "0"
 
+logUtil = LogUtil.getInstance()
+
 class WHCS:
     width = 0
     height = 0
@@ -91,7 +93,7 @@ def load_data(args):
     max_duration = args.config.getfloat('data', 'max_duration')
     language = args.config.get('data', 'language')
 
-    log = LogUtil().getlogger()
+    log = logUtil.getlogger()
     labelUtil = LabelUtil.getInstance()
     if mode == "train" or mode == "load":
         data_json = args.config.get('data', 'train_json')
@@ -276,7 +278,7 @@ if __name__ == '__main__':
         mx.random.seed(hash(datetime.now()))
     # set log file name
     log_filename = args.config.get('common', 'log_filename')
-    log = LogUtil(filename=log_filename).getlogger()
+    log = logUtil.getlogger(filename=log_filename)
 
     # set parameters from data section(common)
     mode = args.config.get('common', 'mode')

@@ -1,6 +1,8 @@
 # mx-DDPG
 MXNet Implementation of DDPG
 
+## /!\ This example depends on RLLAB which is deprecated /!\
+
 # Introduction
 
 This is the MXNet implementation of [DDPG](https://arxiv.org/abs/1509.02971). It is tested in the rllab cart pole environment against rllab's native implementation and achieves comparably similar results. You can substitute with this anywhere you use rllab's DDPG with minor modifications.

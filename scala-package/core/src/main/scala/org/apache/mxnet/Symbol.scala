@@ -22,6 +22,7 @@ import org.apache.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.implicitConversions
 
 /**
  * Symbolic configuration API of mxnet. <br />

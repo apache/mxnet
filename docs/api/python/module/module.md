@@ -176,7 +176,7 @@ additional functionality. We summarize them in this section.
 .. autosummary::
     :nosignatures:
 
-    BucketModule.switch_bucket
+    BucketingModule.switch_bucket
 ```
 
 ### Class `SequentialModule`

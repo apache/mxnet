@@ -20,8 +20,38 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
+
+/***
+ *      _____  _                          
+ *     |  __ \| |                         
+ *     | |__) | | ___  __ _ ___  ___      
+ *     |  ___/| |/ _ \/ _` / __|/ _ \     
+ *     | | | || |  __/ (_| \__ \  __/     
+ *     |_|_| ||_|\___|\__,_|___/\___|     
+ *      / _` |/ _ \                       
+ *     | (_| | (_) |_                     
+ *      \__,_|\___/| |                    
+ *      _ __   ___ | |_                   
+ *     | '_ \ / _ \| __|    _ _  __       
+ *     | | | | (_) | |_    | (_)/ _|      
+ *     |_|_|_|\___/_\__| __| |_| |_ _   _ 
+ *     | '_ ` _ \ / _ \ / _` | |  _| | | |
+ *     | | | | | | (_) | (_| | | | | |_| |
+ *     |_| |_| |_|\___/ \__,_|_|_|  \__, |
+ *                                   __/ |
+ *                                  |___/ 
+ *
+ * This file is about to be deprecated! See https://github.com/apache/incubator-mxnet/pull/13344
+ * for more details
+ */
+
+
 // mxnet libraries
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+
+// Python wheels
+mx_pip = 'build/*.whl'
+
 // for scala build, need to pass extra libs when run with dist_kvstore
 mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
@@ -113,12 +143,12 @@ def deploy_docs() {
   }
 }
 
-node('mxnetlinux-cpu') {
+node('utility') {
   // Loading the utilities requires a node context unfortunately
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
 }
-utils.assign_node_labels(linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
+utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
 core_logic: {
@@ -148,7 +178,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_lib, true)
+            utils.pack_lib('centos7_cpu', mx_dist_lib, true)
           }
         }
       }
@@ -398,22 +428,23 @@ core_logic: {
         }
       }
     },
-    'NVidia Jetson / ARMv8':{
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-jetson-armv8') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('jetson', 'build_jetson', false)
-          }
-        }
-      }
-    },
+    //'NVidia Jetson / ARMv8':{
+    //  node(NODE_LINUX_CPU) {
+    //    ws('workspace/build-jetson-armv8') {
+    //      timeout(time: max_time, unit: 'MINUTES') {
+    //        utils.init_git()
+    //        utils.docker_run('jetson', 'build_jetson', false)
+    //      }
+    //    }
+    //  }
+    //},
     'ARMv7':{
       node(NODE_LINUX_CPU) {
         ws('workspace/build-ARMv7') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv7', 'build_armv7', false)
+            utils.pack_lib('armv7', mx_pip)
           }
         }
       }
@@ -693,6 +724,17 @@ core_logic: {
         }
       }
     },
+    'Scala: CentOS CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-scala-centos7-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('centos7_cpu', mx_dist_lib, true)
+            utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    },
     'Clojure: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-clojure-cpu') {
@@ -938,6 +980,16 @@ core_logic: {
             utils.unpack_and_init('gpu', mx_dist_lib, true)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_scala', true)
             utils.publish_test_coverage()
+          }
+        }
+      }
+    },
+    'ARMv7 QEMU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-armv7-qemu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('armv7', mx_pip)
+            sh "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu"
           }
         }
       }

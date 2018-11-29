@@ -36,9 +36,9 @@ private[mxnet] abstract class GeneratorBase {
 
   case class Func(name: String, desc: String, listOfArgs: List[Arg], returnType: String)
 
-  // filter the operators to generate (in the non type-safe apis)
-  protected def functionsToGenerate(isSymbol: Boolean, isContrib: Boolean): List[Func] = {
-    val l = getBackEndFunctions(isSymbol)
+  def functionsToGenerate(isSymbol: Boolean, isContrib: Boolean,
+                          isJava: Boolean = false): List[Func] = {
+    val l = getBackEndFunctions(isSymbol, isJava)
     if (isContrib) {
       l.filter(func => func.name.startsWith("_contrib_") || !func.name.startsWith("_"))
     } else {
@@ -60,17 +60,18 @@ private[mxnet] abstract class GeneratorBase {
     res.filterNot(ele => notGenerated.contains(ele.name))
   }
 
-  protected def getBackEndFunctions(isSymbol: Boolean): List[Func] = {
+  protected def getBackEndFunctions(isSymbol: Boolean, isJava: Boolean = false): List[Func] = {
     val opNames = ListBuffer.empty[String]
     _LIB.mxListAllOpNames(opNames)
     opNames.map(opName => {
       val opHandle = new RefLong
       _LIB.nnGetOpHandle(opName, opHandle)
-      makeAtomicFunction(opHandle.value, opName, isSymbol)
+      makeAtomicFunction(opHandle.value, opName, isSymbol, isJava)
     }).toList
   }
 
-  private def makeAtomicFunction(handle: Handle, aliasName: String, isSymbol: Boolean): Func = {
+  private def makeAtomicFunction(handle: Handle, aliasName: String,
+                                 isSymbol: Boolean, isJava: Boolean): Func = {
     val name = new RefString
     val desc = new RefString
     val keyVarNumArgs = new RefString
@@ -91,13 +92,17 @@ private[mxnet] abstract class GeneratorBase {
     val docStr = s"$aliasName $realName\n${desc.value}\n\n$paramStr\n$extraDoc\n"
 
     val argList = argNames zip argTypes zip argDescs map { case ((argName, argType), argDesc) =>
-      val family = if (isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArray"
+      val family = if (isJava) "org.apache.mxnet.javaapi.NDArray"
+      else if (isSymbol) "org.apache.mxnet.Symbol"
+      else "org.apache.mxnet.NDArray"
       val typeAndOption =
         CToScalaUtils.argumentCleaner(argName, argType, family)
       Arg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     val returnType =
-      if (isSymbol) "org.apache.mxnet.Symbol" else "org.apache.mxnet.NDArrayFuncReturn"
+      if (isJava) "Array[org.apache.mxnet.javaapi.NDArray]"
+      else if (isSymbol) "org.apache.mxnet.Symbol"
+      else "org.apache.mxnet.NDArrayFuncReturn"
     Func(aliasName, desc.value, argList.toList, returnType)
   }
 
