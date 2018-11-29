@@ -39,6 +39,15 @@ clean_repo() {
 build_ccache_wrappers() {
     set -ex
 
+    if [ -z ${CC+x} ]; then
+        echo "No \$CC set, defaulting to gcc";
+        export CC=gcc
+    fi
+     if [ -z ${CXX+x} ]; then
+       echo "No \$CXX set, defaulting to g++";
+       export CXX=g++
+    fi
+
     # Recommended by CCache: https://ccache.samba.org/manual.html#_run_modes
     # Add to the beginning of path to ensure this redirection is picked up instead
     # of the original ones. Especially CUDA/NVCC appends itself to the beginning of the
@@ -52,7 +61,19 @@ build_ccache_wrappers() {
     # But in the beginning, we'll make this opt-in. In future, loads of processes like
     # the scala make step or numpy compilation and other pip package generations
     # could be heavily sped up by using ccache as well.
-    export PATH=/usr/local/bin:$PATH
+    mkdir /tmp/ccache-redirects
+    export PATH=/tmp/ccache-redirects:$PATH
+    ln -s ccache /tmp/ccache-redirects/gcc
+    ln -s ccache /tmp/ccache-redirects/g++
+    ln -s ccache /tmp/ccache-redirects/g++-8
+    ln -s ccache /tmp/ccache-redirects/gcc-8
+    ln -s ccache /tmp/ccache-redirects/nvcc
+    ln -s ccache /tmp/ccache-redirects/clang++-3.9
+    ln -s ccache /tmp/ccache-redirects/clang-3.9
+    ln -s ccache /tmp/ccache-redirects/clang++-5.0
+    ln -s ccache /tmp/ccache-redirects/clang-5.0
+    ln -s ccache /tmp/ccache-redirects/clang++-6.0
+    ln -s ccache /tmp/ccache-redirects/clang-6.0
     ln -s ccache /usr/local/bin/gcc
     ln -s ccache /usr/local/bin/g++
     ln -s ccache /usr/local/bin/g++-8
