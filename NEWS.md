@@ -1,5 +1,102 @@
 MXNet Change Log
 ================
+
+## 1.3.1
+
+### Bug fixes
+
+* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)  
+Simple bugfix addressing an out-of-bounds memory read.
+
+
+* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)  
+This fixes an buffer overflow detected by ASAN.
+
+
+* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)  
+  This PR improves the MXNet's use of cudnnFind() to address a few issues:
+  1. With the gluon imperative style, cudnnFind() is called during forward(), and so might have its timings perturbed by other GPU activity (including potentially other cudnnFind() calls).
+  2. With some cuda drivers versions, care is needed to ensure that the large I/O and workspace cudaMallocs() performed by cudnnFind() are immediately released and available to MXNet.
+  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.  
+  
+  This PR addresses these issues, providing the following benefits:
+  1. Consistent algo choice for a given convolution type in a model, both for instances in the same GPU and in other GPUs in a multi-GPU training setting.
+  2. Consistent algo choice from run to run, based on eliminating sources of interference of the cudnnFind() timing process.
+  3. Consistent model global memory footprint, both because of the consistent algo choice (algo's can have markedly different workspace requirements) and changes to MXNet's use of cudaMalloc.
+  4. Increased training performance based on being able to consistently run with models that approach the GPU's full global memory footprint.
+  5. Adds a unittest for and solves issue #12662.
+
+* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)  
+  Fix a memleak reported locally by ASAN during a normal inference test.
+
+* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)  
+  Fixes multi_worker data loader when record file is used. The MXRecordIO instance needs to require a new file handler after fork to be safely manipulated simultaneously.
+
+  This fix also safely voids the previous temporary fixes #12093 #11370.
+
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)  
+  This fixes #12783, by assigning all nodes in hybrid_forward a unique name. Some operations were in fact performed without attaching the appropriate (time) prefix to the name, which makes serialized graphs non-deserializable.
+
+* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)  
+  Fixed `__setattr__` method
+
+* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)  
+  Fix #12470. With this change, outs shape can be inferred correctly.
+
+* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)  
+  Fix for the issue - #11849  
+  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,  
+  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.  
+  Added the tests
+
+### Documentation fixes
+
+* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)  
+  Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/incubator-mxnet/pull/12992)
+
+* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)  
+  This PR fixes broken links on the website.
+
+* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)  
+  Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/incubator-mxnet/issues/12854)
+
+  This PR manually specifies members of the IO module so that the docs will render as expected. This is workaround in the docs to deal with a bug introduced in the Python code/structure since v1.3.0. See the comments for more info.
+
+  This PR also fixes another issue that may or may not be related. Cross references to same-named entities like name, shape, or type are confusing Sphinx and it seems to just link to whatever it last dealt with that has the same name, and not the current module. To fix this you have to be very specific. Don't use type, use np.type if that's what you want. Otherwise you might end up with mxnet.kvstore.KVStore.type. This is a known Sphinx issue, so it might be something we have to deal with for the time being.
+
+  This is important for any future modules - that they recognize this issue and make efforts to map the params and other elements.
+
+* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)  
+  This PR adds or updates the docs for the infer_range feature.
+
+  Clarifies the param in the C op docs
+  Clarifies the param in the the Scala symbol docs
+  Adds the param for the the Scala ndarray docs
+  Adds the param for the Python symbol docs
+  Adds the param for the Python ndarray docs
+
+### Other Improvements
+
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)  
+  Some of the CUDNN convolution algorithms are non-deterministic (see issue #11341). This PR adds an env variable to enforce determinism in the convolution operators. If set to true, only deterministic CUDNN algorithms will be used. If no deterministic algorithm is available, MXNet will error out.
+
+
+### Submodule updates
+
+* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)  
+  Update mshadow for omp acceleration when nvcc is not present
+
+### Known issues
+
+The test test_operator.test_dropout has issues and has been disabled on the branch:
+
+* Disable flaky test test_operator.test_dropout (v1.3.x) / [#13200](https://github.com/apache/incubator-mxnet/pull/13200)
+
+
+
+For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/x/eZGzBQ)
+
+
 ## 1.3.0
 
 ### New Features - Gluon RNN layers are now HybridBlocks
@@ -211,7 +308,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Added support for distributed mixed precision training with FP16. It supports storing of master copy of weights in float32 with the multi_precision mode of optimizers (#10183). Improved speed of float16 operations on x86 CPU by 8 times through F16C instruction set. Added support for more operators to work with FP16 inputs (#10125, #10078, #10169). Added a tutorial on using mixed precision with FP16 (#10391).
 
 ### New Features - Added Profiling Enhancements
-- Enhanced built-in profiler to support native Intel:registered: VTune:tm: Amplifier objects such as Task, Frame, Event, Counter and Marker from both C++ and Python -- which is also visible in the Chrome tracing view(#8972). Added Runtime tracking of symbolic and imperative operators as well as memory and API calls. Added Tracking and dumping of aggregate profiling data. Profiler also no longer affects runtime performance when not in use. 
+- Enhanced built-in profiler to support native Intel:registered: VTune:tm: Amplifier objects such as Task, Frame, Event, Counter and Marker from both C++ and Python -- which is also visible in the Chrome tracing view(#8972). Added Runtime tracking of symbolic and imperative operators as well as memory and API calls. Added Tracking and dumping of aggregate profiling data. Profiler also no longer affects runtime performance when not in use.
 
 ### Breaking Changes
 - Changed Namespace for MXNet scala from `ml.dmlc.mxnet` to `org.apache.mxnet` (#10284).
@@ -242,7 +339,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Fixed a bug that was causing training metrics to be printed as NaN sometimes (#10437).
 - Fixed a crash with non positive reps for tile ops (#10417).
 
-### Performance Improvements 
+### Performance Improvements
 - On average, after the MKL-DNN change, the inference speed of MXNet + MKLDNN outperforms MXNet + OpenBLAS by a factor of 32, outperforms MXNet + MKLML by 82% and outperforms MXNet + MKLML with the experimental flag by 8%. The experiments were run for the image classifcation example, for different networks and different batch sizes.
 - Improved sparse SGD, sparse AdaGrad and sparse Adam optimizer speed on GPU by 30x (#9561, #10312, #10293, #10062).
 - Improved `sparse.retain` performance on CPU by 2.5x (#9722)
@@ -347,7 +444,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - Added `axis` argument to `SequenceLast`, `SequenceMask` and `SequenceReverse` operators (#9306)
 - Added `lazy_update` option for standard `SGD` & `Adam` optimizer with `row_sparse` gradients (#9468, #9189)
 - Added `select` option in `Block.collect_params` to support regex (#9348)
-- Added support for (one-to-one and sequence-to-one) inference on explicit unrolled RNN models in R (#9022) 
+- Added support for (one-to-one and sequence-to-one) inference on explicit unrolled RNN models in R (#9022)
 ### Deprecations
 - The Scala API name space is still called `ml.dmlc`. The name space is likely be changed in a future release to `org.apache` and might brake existing applications and scripts (#9579, #9324)
 ### Performance Improvements
@@ -393,10 +490,10 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - MXNet now compiles and runs on NVIDIA Jetson TX2 boards with GPU acceleration.
   - You can install the python MXNet package on a Jetson board by running - `$ pip install mxnet-jetson-tx2`.
 ### New Features - Sparse Tensor Support [General Availability]
-  - Added more sparse operators: `contrib.SparseEmbedding`, `sparse.sum` and `sparse.mean`. 
+  - Added more sparse operators: `contrib.SparseEmbedding`, `sparse.sum` and `sparse.mean`.
   - Added `asscipy()` for easier conversion to scipy.
   - Added `check_format()` for sparse ndarrays to check if the array format is valid.
-### Bug-fixes  
+### Bug-fixes
   - Fixed a[-1] indexing doesn't work on `NDArray`.
   - Fixed `expand_dims` if axis < 0.
   - Fixed a bug that causes topk to produce incorrect result on large arrays.
@@ -408,9 +505,9 @@ For more information and examples, see [full release notes](https://cwiki.apache
 ### Doc Updates
   - Added a security best practices document under FAQ section.
   - Fixed License Headers including restoring copyright attributions.
-  - Documentation updates. 
+  - Documentation updates.
   - Links for viewing source.
- 
+
  For more information and examples, see [full release notes](https://cwiki.apache.org/confluence/display/MXNET/Apache+MXNet+%28incubating%29+1.0+Release+Notes)
 
 
@@ -418,15 +515,15 @@ For more information and examples, see [full release notes](https://cwiki.apache
 ### Bug-fixes
   - Added GPU support for the `syevd` operator which ensures that there is GPU support for all linalg-operators.
   - Bugfix for `syevd` on CPU such that it works for `float32`.
-  - Fixed API call when `OMP_NUM_THREADS` environment variable is set. 
+  - Fixed API call when `OMP_NUM_THREADS` environment variable is set.
   - Fixed `MakeNonlossGradNode` bug.
-  - Fixed bug related to passing `dtype` to `array()`. 
+  - Fixed bug related to passing `dtype` to `array()`.
   - Fixed some minor bugs for sparse distributed training.
-  - Fixed a bug on `Slice` accessing uninitialized memory in `param.begin` in the file `matrix_op-inl.h`. 
+  - Fixed a bug on `Slice` accessing uninitialized memory in `param.begin` in the file `matrix_op-inl.h`.
   - Fixed `gluon.data.RecordFileDataset`.
   - Fixed a bug that caused `autograd` to crash on some networks.
-  
-  
+
+
 ## 0.12.0
 ### Performance
   - Added full support for NVIDIA Volta GPU Architecture and CUDA 9. Training CNNs is up to 3.5x faster than Pascal when using float16 precision.
@@ -434,7 +531,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - Improved ImageRecordIO image loading performance and added indexed RecordIO support.
   - Added better openmp thread management to improve CPU performance.
 ### New Features - Gluon
-  - Added enhancements to the Gluon package, a high-level interface designed to be easy to use while keeping most of the flexibility of low level API. Gluon supports both imperative and symbolic programming, making it easy to train complex models imperatively with minimal impact on performance. Neural networks (and other machine learning models) can be defined and trained with `gluon.nn` and `gluon.rnn` packages. 
+  - Added enhancements to the Gluon package, a high-level interface designed to be easy to use while keeping most of the flexibility of low level API. Gluon supports both imperative and symbolic programming, making it easy to train complex models imperatively with minimal impact on performance. Neural networks (and other machine learning models) can be defined and trained with `gluon.nn` and `gluon.rnn` packages.
   - Added new loss functions - `SigmoidBinaryCrossEntropyLoss`, `CTCLoss`, `HuberLoss`, `HingeLoss`, `SquaredHingeLoss`, `LogisticLoss`, `TripletLoss`.
   - `gluon.Trainer` now allows reading and setting learning rate with `trainer.learning_rate` property.
   - Added API `HybridBlock.export` for exporting gluon models to MXNet format.
@@ -447,7 +544,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - Added `mx.autograd.grad` and experimental second order gradient support (most operators don't support second order gradient yet).
   - Autograd now supports cross-device graphs. Use `x.copyto(mx.gpu(i))` and `x.copyto(mx.cpu())` to do computation on multiple devices.
 ### New Features - Sparse Tensor Support
-  - Added support for sparse matrices. 
+  - Added support for sparse matrices.
   - Added limited cpu support for two sparse formats in `Symbol` and `NDArray` - `CSRNDArray` and `RowSparseNDArray`.
   - Added a sparse dot product operator and many element-wise sparse operators.
   - Added a data iterator for sparse data input - `LibSVMIter`.
@@ -457,7 +554,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
   - Added limited support for fancy indexing, which allows you to very quickly access and modify complicated subsets of an array's values. `x[idx_arr0, idx_arr1, ..., idx_arrn]` is now supported. Features such as combining and slicing are planned for the next release. Checkout master to get a preview.
   - Random number generators in `mx.nd.random.*` and `mx.sym.random.*` now support both CPU and GPU.
   - `NDArray` and `Symbol` now supports "fluent" methods. You can now use `x.exp()` etc instead of `mx.nd.exp(x)` or `mx.sym.exp(x)`.
-  - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python. 
+  - Added `mx.rtc.CudaModule` for writing and running CUDA kernels from python.
   - Added `multi_precision` option to optimizer for easier float16 training.
   - Better support for IDE auto-completion. IDEs like PyCharm can now correctly parse mxnet operators.
 ### API Changes
@@ -505,14 +602,14 @@ For more information and examples, see [full release notes](https://cwiki.apache
 
 
 ## 0.10.0
-- Overhauled documentation for commonly used Python APIs, Installation instructions, Tutorials, HowTos and MXNet Architecture.  
-- Updated mxnet.io for improved readability.  
-- Pad operator now support reflection padding.  
-- Fixed a memory corruption error in threadedengine.  
-- Added CTC loss layer to contrib package. See mx.contrib.sym.ctc_loss.  
-- Added new sampling operators for several distributions (normal,uniform,gamma,exponential,negative binomial).  
+- Overhauled documentation for commonly used Python APIs, Installation instructions, Tutorials, HowTos and MXNet Architecture.
+- Updated mxnet.io for improved readability.
+- Pad operator now support reflection padding.
+- Fixed a memory corruption error in threadedengine.
+- Added CTC loss layer to contrib package. See mx.contrib.sym.ctc_loss.
+- Added new sampling operators for several distributions (normal,uniform,gamma,exponential,negative binomial).
 - Added documentation for experimental RNN APIs.
- 
+
 ## 0.9.3
 - Move symbolic API to NNVM @tqchen
   - Most front-end C API are backward  compatible

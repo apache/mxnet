@@ -20,7 +20,7 @@
 /*!
  * \file quad_function-inl.h
  * \brief Operator implementing quadratic function.
- * For using as an exmaple in the tutorial of adding operators
+ * For using as an example in the tutorial of adding operators
  * in MXNet backend.
  */
 #ifndef MXNET_OPERATOR_CONTRIB_QUADRATIC_OP_INL_H_
