@@ -22,10 +22,10 @@
 Indicate your preferred configuration. Then, follow the customized commands to install MXNet.
 
 <div class="dropdown">
-  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.3.0
+  <button class="btn current-version btn-primary dropdown-toggle" type="button" data-toggle="dropdown">v1.3.1
   <span class="caret"></span></button>
   <ul class="dropdown-menu opt-group">
-    <li class="opt active versions"><a href="#">v1.3.0</a></li>
+    <li class="opt active versions"><a href="#">v1.3.1</a></li>
     <li class="opt versions"><a href="#">v1.2.1</a></li>
     <li class="opt versions"><a href="#">v1.1.0</a></li>
     <li class="opt versions"><a href="#">v1.0.0</a></li>
@@ -100,13 +100,13 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-3-0">
+<div class="v1-3-1">
 
 ```
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-3-0 -->
+</div> <!-- End of v1-3-1 -->
 <div class="v1-2-1">
 
 ```
@@ -165,7 +165,7 @@ $ pip install mxnet --pre
 MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
 
 **NOTES:**
 
@@ -234,13 +234,13 @@ To build from source, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu inst
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-3-0">
+<div class="v1-3-1">
 
 ```
 $ pip install mxnet-cu92
 ```
 
-</div> <!-- End of v1-3-0-->
+</div> <!-- End of v1-3-1-->
 <div class="v1-2-1">
 
 ```
@@ -292,7 +292,7 @@ $ pip install mxnet-cu92 --pre
 MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
 
 **NOTES:**
 
@@ -546,13 +546,13 @@ For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ub
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-3-0">
+<div class="v1-3-1">
 
 ```
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-3-0 -->
+</div> <!-- End of v1-3-1 -->
 <div class="v1-2-1">
 
 ```
@@ -607,7 +607,7 @@ $ pip install mxnet --pre
 MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
 
 **NOTES:**
 
@@ -856,13 +856,13 @@ For more installation options, refer to the <a href="osx_setup.html">MXNet macOS
 <div class="python">
 <div class="cpu">
 <div class="pip">
-<div class="v1-3-0">
+<div class="v1-3-1">
 
 ```
 $ pip install mxnet
 ```
 
-</div> <!-- End of v1-3-0 -->
+</div> <!-- End of v1-3-1 -->
 <div class="v1-2-1">
 
 ```
@@ -914,7 +914,7 @@ $ pip install mxnet --pre
 MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
 
 **NOTES:**
 
@@ -980,13 +980,13 @@ Refer to the <a href="windows_setup.html">MXNet Windows installation guide</a>
 
 <div class="gpu">
 <div class="pip">
-<div class="v1-3-0">
+<div class="v1-3-1">
 
 ```
 $ pip install mxnet-cu92
 ```
 
-</div> <!-- End of v1-3-0 -->
+</div> <!-- End of v1-3-1 -->
 <div class="v1-2-1">
 
 ```
@@ -1038,7 +1038,7 @@ $ pip install mxnet-cu92 --pre
 MXNet offers MKL pip packages that will be much faster when running on Intel hardware.
 Check the chart below for other options, refer to <a href="https://pypi.org/project/mxnet/">PyPI for other MXNet pip packages</a>, or <a href="validate_mxnet.html">validate your MXNet installation</a>.
 
-<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.3.0.png" alt="pip packages"/>
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png" alt="pip packages"/>
 
 **NOTES:**
 
