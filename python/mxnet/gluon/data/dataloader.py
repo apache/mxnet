@@ -390,9 +390,9 @@ def _worker_fn(samples, batchify_fn):
     # preserving dataset as global variable can save tons of overhead and is safe in new process
     global _worker_dataset
     batch = batchify_fn([_worker_dataset[i] for i in samples])
-    batch = [batch] if not isinstance(batch, (list, tuple)) else batch
-    ret = [reduce_ndarray(x)[1] for x in batch]  # reduce_ndarray(x)[0] is the rebuild function
-    return ret
+    buf = io.BytesIO()
+    ForkingPickler(buf, pickle.HIGHEST_PROTOCOL).dump(batch)
+    return buf.getvalue()
 
 class _MultiWorkerIter(object):
     """Internal multi-worker iterator for DataLoader."""
@@ -432,8 +432,7 @@ class _MultiWorkerIter(object):
         assert self._rcvd_idx < self._sent_idx, "rcvd_idx must be smaller than sent_idx"
         assert self._rcvd_idx in self._data_buffer, "fatal error with _push_next, rcvd_idx missing"
         ret = self._data_buffer.pop(self._rcvd_idx)
-        shared_batch = ret.get()
-        batch = tuple([rebuild_ndarray(*x) for x in shared_batch])
+        batch = pickle.loads(ret.get())
         if self._pin_memory:
             batch = _as_in_context(batch, context.cpu_pinned())
         batch = batch[0] if len(batch) == 1 else batch
