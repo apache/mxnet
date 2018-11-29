@@ -535,7 +535,6 @@ Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
 <hr>
-For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 </div> <!-- END - Linux -->
 
