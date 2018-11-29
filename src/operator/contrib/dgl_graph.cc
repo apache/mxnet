@@ -768,6 +768,7 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_uniform_sample)
 .describe(R"code(This operator samples sub-graph from a csr graph via an
 uniform probability. 
+
 Example::
 shape = (5, 5)
 data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
@@ -851,6 +852,7 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
 NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_non_uniform_sample)
 .describe(R"code(This operator samples sub-graph from a csr graph via an
 uniform probability. 
+
 Example::
 shape = (5, 5)
 prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
