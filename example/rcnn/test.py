@@ -35,7 +35,7 @@ def test_net(sym, imdb, args):
     logger.info('called with args\n{}'.format(pprint.pformat(vars(args))))
 
     # setup context
-    ctx = mx.cpu() if args.gpu == None else mx.gpu(args.gpu)
+    ctx = mx.cpu() if not args.gpu else mx.gpu(args.gpu)
 
     # load testing data
     test_data = TestLoader(imdb.roidb, batch_size=1, short=args.img_short_side, max_size=args.img_long_side,
