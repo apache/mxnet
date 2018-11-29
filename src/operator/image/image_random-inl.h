@@ -185,7 +185,7 @@ inline std::tuple<int, int> GetHeightAndWidth(const int data_h,
       }
     }
   } else if (param.size.ndim() == 2) {
-    resized_h = param.size[0];
+    resized_h = param.size[1];
     resized_w = param.size[0];
   } else {
     LOG(FATAL) << "The dimension of the size is not correct!";
@@ -244,7 +244,7 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   auto t = GetHeightAndWidth(inputs[0].shape_[0], inputs[0].shape_[1], param);
-  _Resize(inputs, outputs, std::get<1>(t), std::get<0>(t), param.interp);
+  _Resize(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp);
 }
 
 template<typename DType>
