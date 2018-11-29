@@ -97,16 +97,17 @@ def find_include_path():
 
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     # include path in pip package
-    incl_path = os.path.join(curr_path, './include/')
-    if os.path.isdir(incl_path):
-        return incl_path
+    pip_incl_path = os.path.join(curr_path, 'include/')
+    if os.path.isdir(pip_incl_path):
+        return pip_incl_path
     else:
         # include path if build from source
-        incl_path = os.path.join(curr_path, '../../include/')
-        if os.path.isdir(incl_path):
-            return incl_path
+        src_incl_path = os.path.join(curr_path, '../../include/')
+        if os.path.isdir(src_incl_path):
+            return src_incl_path
         else:
-            raise RuntimeError('Cannot find the MXNet include path: ' + incl_path + '\n')
+            raise RuntimeError('Cannot find the MXNet include path in either ' + pip_incl_path +
+                               ' or ' + src_incl_path + '\n')
 
 
 # current version
