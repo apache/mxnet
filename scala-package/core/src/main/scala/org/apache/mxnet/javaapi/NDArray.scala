@@ -20,6 +20,7 @@ package org.apache.mxnet.javaapi
 import org.apache.mxnet.javaapi.DType.DType
 
 import collection.JavaConverters._
+import scala.language.implicitConversions
 
 @AddJNDArrayAPIs(false)
 object NDArray extends NDArrayBase {

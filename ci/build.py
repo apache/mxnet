@@ -326,6 +326,10 @@ def container_run(platform: str,
                 wait_result = container.wait(timeout=container_wait_s)
                 logging.info("Container exit status: %s", wait_result)
                 ret = wait_result.get('StatusCode', 200)
+                if ret != 0:
+                    logging.error("Container exited with an error 😞")
+                else:
+                    logging.info("Container exited with success 👍")
             except Exception as e:
                 logging.exception(e)
                 ret = 150
@@ -384,11 +388,15 @@ def script_name() -> str:
     """:returns: script name with leading paths removed"""
     return os.path.split(sys.argv[0])[1]
 
-
-def main() -> int:
+def config_logging():
+    import time
     logging.getLogger().setLevel(logging.INFO)
     logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
+    logging.basicConfig(format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
+    logging.Formatter.converter = time.gmtime
+
+def main() -> int:
+    config_logging()
 
     logging.info("MXNet container based build tool.")
     log_environment()

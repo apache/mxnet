@@ -32,9 +32,9 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
     - [Perl](../api/perl/index.html)
     - [R](../api/r/index.html)
     - [Scala](../api/scala/index.html)
+    - [Java](../api/java/index.html)
 
 <hr>
-
 ## Build Instructions by Operating System
 
 Detailed instructions are provided per operating system. Each of these guides also covers how to install the specific [Language Bindings](#installing-mxnet-language-bindings) you require.
@@ -284,3 +284,4 @@ The following table provides links to each language binding by operating system:
 | Perl | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-perl) | n/a |
 | R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
 | Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
+| Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |

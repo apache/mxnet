@@ -1027,7 +1027,7 @@ inline void ComputeTreesFromRoot(std::vector<T>* W,
 
   bool success = true;
   if (reset == 1) {
-    // LOG(INFO) << "No valid binary tree found from root " << root << ", try backtracking";
+    LOG(INFO) << "No valid binary tree found from root " << root << ", try backtracking";
     success = BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
     *topo = topo_temp;
@@ -1078,8 +1078,8 @@ inline void ComputeTrees(const std::vector<T>& W,
       int from = std::min((*topo)[row][col], (*topo)[row][col+1]);
       int dest = std::max((*topo)[row][col], (*topo)[row][col+1]);
       if (from != dest) {
-        adj[from*num_elements+dest] += 1;
-        adj[dest*num_elements+from] += 1;
+        adj.at(from*num_elements+dest) += 1;
+        adj.at(dest*num_elements+from) += 1;
       }
     }
   }
