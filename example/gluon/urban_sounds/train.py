@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     try:
         import argparse
-        parser = argparse.ArgumentParser(description="Urban Sounds clsssification example - MXNet Gluon")
+        parser = argparse.ArgumentParser(description="Urban Sounds classification example - MXNet Gluon")
         parser.add_argument('--train', '-t', help="Enter the folder path that contains your audio files", type=str)
         parser.add_argument('--csv', '-c', help="Enter the filename of the csv that contains filename\
         to label mapping", type=str)

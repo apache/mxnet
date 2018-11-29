@@ -1,4 +1,4 @@
-# Urban Sounds classification in MXNet
+# Urban Sounds Classification in MXNet Gluon
 
 This example provides an end-to-end pipeline for a common datahack competition - Urban Sounds Classification Example.
 Below is the link to the competition:
