@@ -30,7 +30,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def main():
-    ctx = mx.cpu() if args.gpu == None else mx.gpu(0)
+    ctx = mx.cpu() if not args.gpu else mx.gpu(0)
     fcnxs = symbol_fcnxs.get_fcn32s_symbol(numclass=21, workspace_default=1536)
     fcnxs_model_prefix = "model_pascal/FCN32s_VGG16"
     if args.model == "fcn16s":
