@@ -241,6 +241,32 @@ def test_square():
 
     npt.assert_almost_equal(result, numpy_op)
 
+@with_seed()
+def test_comparison_ops():
+    """Test greater, lesser, equal"""
+    def test_ops(op_name, inputs, input_tensors, numpy_op):
+        outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=np.shape(inputs[0]))]
+        nodes = [helper.make_node(op_name, ["input"+str(i+1) for i in range(len(inputs))], ["output"])]
+        graph = helper.make_graph(nodes,
+                                  op_name + "_test",
+                                  input_tensors,
+                                  outputs)
+        model = helper.make_model(graph)
+        bkd_rep = backend.prepare(model)
+        output = bkd_rep.run(inputs)
+        npt.assert_almost_equal(output[0], numpy_op)
+    input_data = [np.random.rand(1, 3, 4, 5).astype("float32"),
+                  np.random.rand(1, 5).astype("float32")]
+    input_tensor = []
+    for idx, ip in enumerate(input_data):
+        input_tensor.append(helper.make_tensor_value_info("input" + str(idx + 1),
+                                                          TensorProto.FLOAT, shape=np.shape(ip)))
+    test_ops("Greater", input_data, input_tensor,
+             np.greater(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Less", input_data, input_tensor,
+             np.less(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Equal", input_data, input_tensor,
+             np.equal(input_data[0], input_data[1]).astype(np.float32))
 
 def _assert_sym_equal(lhs, rhs):
     assert lhs.list_inputs() == rhs.list_inputs()  # input names must be identical
