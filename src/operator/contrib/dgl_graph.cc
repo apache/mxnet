@@ -770,30 +770,29 @@ NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_uniform_sample)
 uniform probability. 
 
 Example::
-shape = (5, 5)
-data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
-indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
-indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
-a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
-a.asnumpy()
-seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
-out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
 
-out[0]
+  shape = (5, 5)
+  data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
+  indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
+  indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
+  a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
+  a.asnumpy()
+  seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
+  out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
 
-[0 1 2 3 4 5]
-<NDArray 6 @cpu(0)>
+  out[0]
+  [0 1 2 3 4 5]
+  <NDArray 6 @cpu(0)>
 
-out[1].asnumpy()
-array([[ 0,  1,  0,  3,  0],
-       [ 5,  0,  0,  7,  0],
-       [ 9,  0,  0, 11,  0],
-       [13,  0, 15,  0,  0],
-       [17,  0, 19,  0,  0]])
+  out[1].asnumpy()
+  array([[ 0,  1,  0,  3,  0],
+         [ 5,  0,  0,  7,  0],
+         [ 9,  0,  0, 11,  0],
+         [13,  0, 15,  0,  0],
+         [17,  0, 19,  0,  0]])
 
-out[2]
-
-[0 0 0 0 0]
+  out[2]
+  [0 0 0 0 0]
 <NDArray 5 @cpu(0)>
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<NeighborSampleParam>)
@@ -854,36 +853,34 @@ NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_non_uniform_sample)
 uniform probability. 
 
 Example::
-shape = (5, 5)
-prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
-data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
-indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
-indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
-a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
-seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
-out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
 
-out[0]
+  shape = (5, 5)
+  prob = mx.nd.array([0.9, 0.8, 0.2, 0.4, 0.1], dtype=np.float32)
+  data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
+  indices_np = np.array([1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3], dtype=np.int64)
+  indptr_np = np.array([0,4,8,12,16,20], dtype=np.int64)
+  a = mx.nd.sparse.csr_matrix((data_np, indices_np, indptr_np), shape=shape)
+  seed = mx.nd.array([0,1,2,3,4], dtype=np.int64)
+  out = mx.nd.contrib.dgl_csr_neighbor_non_uniform_sample(a, prob, seed, num_args=3, num_hops=1, num_neighbor=2, max_num_vertices=5)
 
-[0 1 2 3 4 5]
-<NDArray 6 @cpu(0)>
+  out[0]
+  [0 1 2 3 4 5]
+  <NDArray 6 @cpu(0)>
 
-out[1].asnumpy()
-array([[ 0,  1,  2,  0,  0],
-       [ 5,  0,  6,  0,  0],
-       [ 9, 10,  0,  0,  0],
-       [13, 14,  0,  0,  0],
-       [ 0, 18, 19,  0,  0]])
+  out[1].asnumpy()
+  array([[ 0,  1,  2,  0,  0],
+         [ 5,  0,  6,  0,  0],
+         [ 9, 10,  0,  0,  0],
+         [13, 14,  0,  0,  0],
+         [ 0, 18, 19,  0,  0]])
 
-out[2]
+  out[2]
+  [0.9 0.8 0.2 0.4 0.1]
+  <NDArray 5 @cpu(0)>
 
-[0.9 0.8 0.2 0.4 0.1]
-<NDArray 5 @cpu(0)>
-
-out[3]
-
-[0 0 0 0 0]
-<NDArray 5 @cpu(0)>
+  out[3]
+  [0 0 0 0 0]
+  <NDArray 5 @cpu(0)>
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<NeighborSampleParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
