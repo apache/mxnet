@@ -418,13 +418,12 @@ def get_fp32_residual():
 
 def get_fp32_sym_with_multiple_outputs(length=1):
     data = mx.sym.Variable('data')
-    inputs = list(mx.sym.split(data, axis=0, num_outputs=length, squeeze_axis=1))
-
+    inputs = list(mx.sym.split(data, axis=0, num_outputs=length, squeeze_axis=1, name='split'))
     _conv_outs = []
     for i in range(length):
         _conv_outs.append(mx.sym.Convolution(data=inputs[i], kernel=(1, 1), num_filter=16, name='conv_{0}'.format(i)))
     conv_out = [mx.sym.expand_dims(i, axis=0) for i in _conv_outs]
-    conv_out = mx.sym.Concat(*conv_out, dim=0)
+    conv_out = mx.sym.Concat(*conv_out, dim=0, name='concat')
     reshape_out = mx.sym.reshape(data=conv_out, shape=((length, -1)), name='reshape')
     fc_out = mx.sym.FullyConnected(reshape_out, num_hidden=10, flatten=True, name='fc')
     sym= mx.sym.SoftmaxOutput(fc_out, grad_scale=1, ignore_label=-1, multi_output=False,
@@ -577,6 +576,7 @@ def test_quantize_model_with_forward():
             excluded_sym_names = []
             if mx.current_context() == mx.cpu():
                excluded_sym_names += ['fc']
+            excluded_sym_names += ['concat']
             qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
                                                                              arg_params=arg_params,
                                                                              aux_params=aux_params,
