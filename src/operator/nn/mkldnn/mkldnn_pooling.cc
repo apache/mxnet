@@ -269,7 +269,7 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
 void MKLDNNPoolingCompute(const OpContext &ctx, const PoolingParam &param,
                           const NDArray &in_data, const OpReqType req,
                           const NDArray &out_data, const NDArray *workspace) {
-  auto &fwd = GetPoolingFwd(param, ctx.is_train, in_data, out_data);
+  auto &fwd = GetPoolingFwd(param, ctx.need_grad, in_data, out_data);
   fwd.SetNewMem(in_data, out_data, req, workspace);
   fwd.Execute(out_data);
 }

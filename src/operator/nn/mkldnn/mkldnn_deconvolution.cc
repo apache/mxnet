@@ -251,7 +251,7 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
   auto data_mem = in_data.GetMKLDNNDataReorder(
       fwd_pd.diff_dst_primitive_desc());
   const mkldnn::memory *weight_mem;
-  if (ctx.is_train) {
+  if (ctx.need_grad) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
     // to the default format for now.
     if (weight.IsMKLDNNData())
