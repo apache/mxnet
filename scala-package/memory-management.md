@@ -30,8 +30,9 @@ returns `r4` from its code-block, it will only deallocate `r3` and will remove `
 
 **Note:**
 You should consider nesting ResourceScopes when you have layers of functionality in your application code or create a lot of MXNet objects such as NDArrays.  
-For example, Holding onto all the memory that is created for an entire training loop can result in running out of memory, especially when training on GPUs which might only have 8 to 16 GB.  
+For example, holding onto all the memory that is created for an entire training loop can result in running out of memory, especially when training on GPUs which might only have 8 to 16 GB.  
 It is recommended not to use a single ResourceScope block which spans the entire training code. You should instead nest multiple scopes: an innermost scope where you run forward-backward passes on each batch, a middle scope for each epoch, and an outer scope that runs the entire training script. This is demonstrated in the example below:
+
 ```scala
 ResourceScope.using() {
  val m = Module()
