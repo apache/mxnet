@@ -17,29 +17,13 @@
  * under the License.
  */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_
-#if MXNET_USE_MKLDNN == 1
-
-#include <utility>
-#include <vector>
-#include <string>
-#include "../../nn/convolution-inl.h"
-#include "../../nn/batch_norm-inl.h"
-#include "../../nn/mkldnn/mkldnn_convolution-inl.h"
+#include "dgl_graph-inl.h"
 
 namespace mxnet {
 namespace op {
 
-struct MKLDNNConvFusionParam {
-  MKLDNNConvFullParam full_conv_param;
-  std::shared_ptr<BatchNormParam> bn_param;
-};
-
-enum MKLDNNConvOpOutputs { kOut, kMin, kMax };
+NNVM_REGISTER_OP(_contrib_dgl_adjacency)
+.set_attr<FComputeEx>("FComputeEx<gpu>", DGLAdjacencyForwardEx<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
-
-#endif  // MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_INL_H_

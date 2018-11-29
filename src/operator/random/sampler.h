@@ -94,6 +94,38 @@ struct UniformSampler {
 };
 
 template<typename xpu>
+struct SampleRandIntKernel {
+  template<typename IType, typename OType>
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> gen,
+                                  const int N, const int step,
+                                  index_t nParm, index_t nSample,
+                                  const IType *lower, const IType *upper, OType *out) {
+    RNG_KERNEL_LOOP(xpu, OType, id, gen, N, step, {
+      index_t nBatch(1 + (nSample - 1) / nParm);
+      if (sizeof(IType) == sizeof(int64_t))
+        out[i] = OType(lower[i / nBatch] +
+                     genImpl.rand_int64() % (upper[i / nBatch] - lower[i / nBatch]));
+      else
+        out[i] = OType(lower[i / nBatch] +
+                     genImpl.rand() % (upper[i / nBatch] - lower[i / nBatch]));
+    });
+  }
+};
+
+template<typename xpu>
+struct RandIntSampler {
+  template<typename IType, typename OType>
+  MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lower,
+                                   const Tensor<xpu, 1, IType>& upper,
+                                   const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
+                                   Stream<xpu> *s) {
+    LaunchRNG<SampleRandIntKernel<xpu>, xpu>(s, pgen, out.size(0), lower.size(0), out.size(0),
+                                             lower.dptr_, upper.dptr_, out.dptr_);
+  }
+};
+
+template<typename xpu>
 struct SampleNormalKernel {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t id, RandGenerator<xpu, OType> gen,

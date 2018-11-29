@@ -14,7 +14,17 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#!/bin/bash
-CURR_DIR=$(cd $(dirname $0)/../; pwd)
-CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/target/classes/lib/*
-java -Xmx8G  -cp $CLASSPATH mxnet.HelloWorld
+
+import os
+import mxnet as mx
+from mxnet import libinfo
+
+def test_include_path():
+    incl_path = libinfo.find_include_path()
+    assert os.path.exists(incl_path)
+    assert os.path.isdir(incl_path)
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
