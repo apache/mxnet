@@ -86,9 +86,8 @@ class ArrayHeap {
   /*
    * Sample from arrayHeap
    */
-  size_t Sample() {
-    unsigned int seed = 123;
-    float xi = heap_[1] * (rand_r(&seed)%100/101.0);
+  size_t Sample(unsigned int* seed) {
+    float xi = heap_[1] * (rand_r(seed)%100/101.0);
     int i = 1;
     while (i < limit_) {
       i = i << 1;
@@ -103,10 +102,10 @@ class ArrayHeap {
   /*
    * Sample a vector by given the size n
    */
-  void SampleWithoutReplacement(size_t n, std::vector<size_t>* samples) {
+  void SampleWithoutReplacement(size_t n, std::vector<size_t>* samples, unsigned int* seed) {
     // sample n elements
     for (size_t i = 0; i < n; ++i) {
-      samples->at(i) = this->Sample();
+      samples->at(i) = this->Sample(seed);
       this->Delete(samples->at(i));
     }
   }
@@ -431,11 +430,11 @@ static void GetSrcList(const dgl_id_t* val_list,
 
 static void RandomSample(size_t set_size,
                          size_t num,
-                         std::vector<size_t>* out) {
-  unsigned int seed = 123;
+                         std::vector<size_t>* out,
+                         unsigned int* seed) {
   std::unordered_set<size_t> sampled_idxs;
   while (sampled_idxs.size() < num) {
-    sampled_idxs.insert(rand_r(&seed) % set_size);
+    sampled_idxs.insert(rand_r(seed) % set_size);
   }
   out->clear();
   for (auto it = sampled_idxs.begin(); it != sampled_idxs.end(); it++) {
@@ -469,7 +468,8 @@ static void GetUniformSample(const std::vector<dgl_id_t>& ver_list,
                              const std::vector<dgl_id_t>& edge_list,
                              const size_t max_num_neighbor,
                              std::vector<dgl_id_t>* out_ver,
-                             std::vector<dgl_id_t>* out_edge) {
+                             std::vector<dgl_id_t>* out_edge,
+                             unsigned int* seed) {
   CHECK_EQ(ver_list.size(), edge_list.size());
   // Copy ver_list to output
   if (ver_list.size() <= max_num_neighbor) {
@@ -483,13 +483,13 @@ static void GetUniformSample(const std::vector<dgl_id_t>& ver_list,
   std::vector<size_t> sorted_idxs;
   if (ver_list.size() > max_num_neighbor * 2) {
     sorted_idxs.reserve(max_num_neighbor);
-    RandomSample(ver_list.size(), max_num_neighbor, &sorted_idxs);
+    RandomSample(ver_list.size(), max_num_neighbor, &sorted_idxs, seed);
     std::sort(sorted_idxs.begin(), sorted_idxs.end());
   } else {
     std::vector<size_t> negate;
     negate.reserve(ver_list.size() - max_num_neighbor);
     RandomSample(ver_list.size(), ver_list.size() - max_num_neighbor,
-                 &negate);
+                 &negate, seed);
     std::sort(negate.begin(), negate.end());
     NegateSet(negate, ver_list.size(), &sorted_idxs);
   }
@@ -512,7 +512,8 @@ static void GetNonUniformSample(const float* probability,
                                 const std::vector<dgl_id_t>& edge_list,
                                 const size_t max_num_neighbor,
                                 std::vector<dgl_id_t>* out_ver,
-                                std::vector<dgl_id_t>* out_edge) {
+                                std::vector<dgl_id_t>* out_edge,
+                                unsigned int* seed) {
   CHECK_EQ(ver_list.size(), edge_list.size());
   // Copy ver_list to output
   if (ver_list.size() <= max_num_neighbor) {
@@ -529,7 +530,7 @@ static void GetNonUniformSample(const float* probability,
     sp_prob[i] = probability[ver_list[i]];
   }
   ArrayHeap arrayHeap(sp_prob);
-  arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index);
+  arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index, seed);
   out_ver->resize(max_num_neighbor);
   out_edge->resize(max_num_neighbor);
   for (size_t i = 0; i < max_num_neighbor; ++i) {
@@ -573,6 +574,7 @@ static void SampleSubgraph(const NDArray &csr,
                            dgl_id_t num_hops,
                            dgl_id_t num_neighbor,
                            dgl_id_t max_num_vertices) {
+  unsigned int time_seed = time(0);
   size_t num_seeds = seed_arr.shape().Size();
   CHECK_GE(max_num_vertices, num_seeds);
 
@@ -626,14 +628,16 @@ static void SampleSubgraph(const NDArray &csr,
                        tmp_edge_list,
                        num_neighbor,
                        &tmp_sampled_src_list,
-                       &tmp_sampled_edge_list);
+                       &tmp_sampled_edge_list,
+                       &time_seed);
       } else {  // non-uniform-sample
         GetNonUniformSample(probability,
                        tmp_src_list,
                        tmp_edge_list,
                        num_neighbor,
                        &tmp_sampled_src_list,
-                       &tmp_sampled_edge_list);
+                       &tmp_sampled_edge_list,
+                       &time_seed);
       }
       neigh_mp.insert(std::pair<dgl_id_t, neigh_list>(dst_id,
         neigh_list(tmp_sampled_src_list,
