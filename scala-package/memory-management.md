@@ -9,7 +9,7 @@ MXNet Scala provides a few easy modes of operation which are explained in detail
 ## Memory Management in Scala 
 ### 1.  [ResourceScope.using](https://github.com/apache/incubator-mxnet/blob/master/scala-package/core/src/main/scala/org/apache/mxnet/ResourceScope.scala#L106) (Recommended)
 `ResourceScope.using` provides the familiar Java try-with-resources primitive in Scala and will automatically manage the memory of all the MXNet objects created in the associated code block (`body`). It works by tracking the allocations performed inside the code block deallocating when exiting the block. 
-Passing MXNet objects out of a using block can be easily accomplished by simply returning an object or an interable containing multiple MXNet objects. If you have nested using blocks, then the returned objects will be moved into the parent scope as well.
+Passing MXNet objects out of a using block can be easily accomplished by simply returning an object or an iterable containing multiple MXNet objects. If you have nested using blocks, then the returned objects will be moved into the parent scope as well.
 
 **Usage** 
 ```scala
