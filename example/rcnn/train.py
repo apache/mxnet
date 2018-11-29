@@ -33,7 +33,7 @@ def train_net(sym, roidb, args):
     logger.info('called with args\n{}'.format(pprint.pformat(vars(args))))
 
     # setup multi-gpu
-    ctx = [mx.cpu()] if args.gpus == None else [mx.gpu(int(i)) for i in args.gpus.split(',')]
+    ctx = [mx.cpu()] if not args.gpus else [mx.gpu(int(i)) for i in args.gpus.split(',')]
     batch_size = args.rcnn_batch_size * len(ctx)
 
     # load training data
