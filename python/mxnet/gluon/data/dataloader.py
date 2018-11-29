@@ -376,6 +376,14 @@ class DataLoaderV1(object):
         return len(self._batch_sampler)
 
 _worker_dataset = None
+def _worker_initializer(dataset):
+    """Initialier for processing pool."""
+    # global dataset is per-process based and only available in worker processes
+    # this is only necessary to handle MXIndexedRecordIO because otherwise dataset
+    # can be passed as argument
+    global _worker_dataset
+    _worker_dataset = dataset
+
 def _worker_fn(samples, batchify_fn):
     """Function for processing data in worker process."""
     # it is required that each worker process has to fork a new MXIndexedRecordIO handle
@@ -522,12 +530,8 @@ class DataLoader(object):
         self._worker_pool = None
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if self._num_workers > 0:
-            def worker_initializer(data):
-                global _worker_dataset
-                _worker_dataset = data
-
             self._worker_pool = multiprocessing.Pool(
-                self._num_workers, initializer=worker_initializer, initargs=[self._dataset])
+                self._num_workers, initializer=_worker_initializer, initargs=[self._dataset])
         if batchify_fn is None:
             if num_workers > 0:
                 self._batchify_fn = default_mp_batchify_fn
