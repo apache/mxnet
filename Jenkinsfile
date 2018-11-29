@@ -152,6 +152,25 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 
 utils.main_wrapper(
 core_logic: {
+  stage('Sanity Check') {
+    parallel 'Lint': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/sanity-lint') {
+          utils.init_git()
+          utils.docker_run('ubuntu_cpu', 'sanity_check', false)
+        }
+      }
+    },
+    'RAT License': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/sanity-rat') {
+          utils.init_git()
+          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+        }
+      }
+    }
+  }
+
   stage('Build') {
     parallel 'CPU: CentOS 7': {
       node(NODE_LINUX_CPU) {
