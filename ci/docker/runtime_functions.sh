@@ -86,6 +86,8 @@ build_ccache_wrappers() {
     ln -s ccache /usr/local/bin/clang++-6.0
     ln -s ccache /usr/local/bin/clang-6.0
 
+    export NVCC=ccache
+
     # Uncomment if you would like to debug CCache hit rates.
     # You can monitor using tail -f ccache-log
     # export CCACHE_LOGFILE=/work/mxnet/ccache-log
