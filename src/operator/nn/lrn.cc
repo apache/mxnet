@@ -133,7 +133,7 @@ void LRNGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   const NDArray &in_data = inputs[1];
   const NDArray &in_grad = outputs[0];
 
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNN(inputs[0]) && ctx.need_grad) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNLRNBackward(ctx, param, out_grad, in_data, req[0], in_grad);
     MKLDNN_OPCHECK_RUN(LRNGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
