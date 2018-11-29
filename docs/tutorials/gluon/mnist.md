@@ -50,12 +50,12 @@ In general, `Dataset` and `DataLoader` (which we will encounter next) are the ma
 In this tutorial, we will configure the data loader to feed examples in batches of 100.
 
 An image batch is commonly represented as a 4-D array with shape `(batch_size, num_channels, height, width)`.
-This convention is denoted by "BCHW", and it is the default in MXNet.
+This convention is denoted by "NCHW", and it is the default in MXNet.
 For the MNIST dataset, each image has a size of 28x28 pixels and one color channel (grayscale), hence the shape of an input batch will be `(batch_size, 1, 28, 28)`.
 
 Another important consideration is the order of input samples.
-When feeding training examples, it is critical not feed samples with the same label in succession since doing so can slow down training.
-Data iterators take care of this issue by randomly shuffling the inputs.
+When feeding training examples, it is critical not feed samples with the same label in succession since doing so can slow down training progress.
+Data iterators, i.e., instances of [`DataLoader`](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.DataLoader), take care of this issue by randomly shuffling the inputs.
 Note that we only need to shuffle the training data -- for validation data, the order does not matter.
 
 The following code initializes the data iterators for the MNIST dataset.
@@ -82,7 +82,7 @@ from mxnet import nd, gluon, autograd
 from mxnet.gluon import nn
 ```
 
-### Defining a network: Multilayer Perceptron
+### Defining a network: Multilayer Perceptron (MLP)
 
 MLPs consist of several fully connected layers.
 In a fully connected (short: FC) layer, each neuron is connected to every neuron in its preceding layer.
@@ -97,13 +97,15 @@ In this example, we'll use the ReLU activation function since it has several nic
 
 The following code snippet declares three fully connected (or *dense*) layers with 128, 64 and 10 neurons each, where the last number of neurons matches the number of output classes in our dataset.
 Note that the last layer uses no activation function since the [softmax](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.softmax) activation will be implicitly applied by the loss function later on.
-To build the neural network, we use a [`Sequential` layer](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential), which is a convenience class to build a linear stack of layers, often called a *feed-forward neural net*.
+To build the neural network, we use a [`HybridSequential`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.HybridSequential) layer, which is a convenience class to build a linear stack of layers, often called a *feed-forward neural net*.
 
-**Note**: using the `name_scope()` context manager is optional.
-It is, however, good practice since it uses a common prefix for the names of all layers generated in that scope, which can be very helpful during debugging.
+The "Hybrid" part of name `HybridSequential` refers to the fact that such a layer can be used with both the Gluon API and the Symbol API.
+Using hybrid blocks over dynamic-only blocks (e.g. [`Sequential`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.Sequential)) has several advantages apart from being compatible with a wider range of existing code: for instance, the computation graph of the network can be visualized with `mxnet.viz.plot_network()` and inspected for errors.
+Unless a network requires non-static runtime elements like loops, conditionals or random layer selection in its forward pass, it is generally a good idea to err on the side of hybrid blocks.
+For details on the differences, see the documentation on [`Block`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block) and [`HybridBlock`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock).
 
 ```python
-net = nn.Sequential('MLP')
+net = nn.HybridSequential('MLP')
 with net.name_scope():
     net.add(
         nn.Flatten(),
@@ -112,6 +114,9 @@ with net.name_scope():
         nn.Dense(10, activation='relu')
     )
 ```
+
+**Note**: using the `name_scope()` context manager is optional.
+It is, however, good practice since it uses a common prefix for the names of all layers generated in that scope, which can be very helpful during debugging.
 
 #### Initializing parameters and optimizer
 
@@ -172,7 +177,8 @@ The following steps are taken in each `epoch`:
 - Get a minibatch of `inputs` and `labels` from the `train_loader`.
 - Feed the `inputs` to the network, producing `outputs`.
 - Compute the minibatch `loss` value by comparing `outputs` to `labels`.
-- Backpropagate the gradients to update the network parameters by calling `loss.backward()`.
+- Use backpropagation to compute the gradients of the loss with respect to each of the network parameters by calling `loss.backward()`.
+- Update the parameters of the network according to the optimizer rule with `trainer.step(batch_size=inputs.shape[0])`.
 - Print the current accuracy over the training data, i.e., the fraction of correctly classified training examples.
 
 ```python
@@ -185,8 +191,9 @@ for epoch in range(num_epochs):
         labels = labels.as_in_context(ctx)
 
         # The forward pass and the loss computation need to be wrapped
-        # in a `record()` scope to indicate that the results will
-        # be needed in the backward pass (gradient computation).
+        # in a `record()` scope to make sure the computational graph is
+        # recorded in order to automatically compute the gradients
+        # during the backward pass.
         with autograd.record():
             outputs = net(inputs)
             loss = loss_function(outputs, labels)
@@ -284,19 +291,19 @@ for ax, (img, pred, lbl) in zip(axs, wrong_val_sample):
     ax.xaxis.set_visible(False)
     ax.yaxis.set_visible(False)
 ```
-![png](./wrong_train.png)
-![png](./wrong_val.png)
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/mnist_wrong_preds_train.png) <!--notebook-skip-line-->
+![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/mnist_wrong_preds_val.png) <!--notebook-skip-line-->
 
 In this case, it is rather obvious that our MLP network is either too simple or has not been trained long enough to perform really great on this dataset, as can be seen from the fact that some of the mislabeled examples are rather "easy" and should not be a challenge for our neural net.
 As it turns out, moving to the CNN architecture presented in the following section will give a big performance boost.
 
-### Convolutional Neural Network
+### Convolutional Neural Network (CNN)
 
 A fundamental issue with the MLP network is that it requires the inputs to be flattened (in the non-batch axes) before they can be processed by the dense layers.
 This means in particular that the spatial structure of an image is largely discarded, and that the values describing it are just treated as a long vector.
 The network then has to figure out the neighborhood relations of pixels from scratch by adjusting its weights accordingly, which seems very wasteful.
 
-A convolutional neural network (CNN) aims to address this problem by using a more structured weight representation.
+A CNN aims to address this problem by using a more structured weight representation.
 Instead of connecting all inputs to all outputs, the characteristic [convolution layer](https://mxnet.incubator.apache.org/api/python/gluon/nn.html#mxnet.gluon.nn.Conv2D) only considers a small neighborhood of a pixel to compute the value of the corresponding output pixel.
 In particular, the spatial structure of the image is preserved, i.e., one can speak of input and output pixels in the first place.
 Only the size of the image may change through convolutions.
@@ -309,12 +316,11 @@ Typical filter sizes range from *3 x 3* to *13 x 13*, which implies that a convo
 ```python
 conv_layer = nn.Conv2D(kernel_size=(3, 3), channels=32, in_channels=16, activation='relu')
 print(conv_layer.params)
-# Output:
-# conv0_ (
-#   Parameter conv0_weight (shape=(32, 16, 3, 3), dtype=<class 'numpy.float32'>)
-#   Parameter conv0_bias (shape=(32,), dtype=<class 'numpy.float32'>)
-# )
 ```
+
+`Parameter conv0_weight (shape=(32, 16, 3, 3), dtype=<class 'numpy.float32'>)` <!--notebook-skip-line-->
+
+`Parameter conv0_bias (shape=(32,), dtype=<class 'numpy.float32'>)` <!--notebook-skip-line-->
 
 Filters can be thought of as little feature detectors: in early layers, they learn to detect small local structures like edges, whereas later layers become sensitive to more and more global structures.
 Since images often contain a rich set of such features, it is customary to have each convolution layer employ and learn many different filters in parallel, so as to detect many different image features on their respective scales.
@@ -332,7 +338,7 @@ The LeNet architecture is a popular network known to work well on digit classifi
 We will use a version that differs slightly from the original in the usage of `tanh` activations instead of `sigmoid`.
 
 ```python
-lenet = nn.Sequential('LeNet')
+lenet = nn.HybridSequential('LeNet')
 lenet.add(
     nn.Conv2D(channels=20, kernel_size=(5, 5), activation='tanh'),
     nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
@@ -350,35 +356,38 @@ It requires the network parameters to be initialized, and an input array to infe
 ```python
 lenet.initialize(mx.init.Xavier(), ctx=ctx)
 lenet.summary(nd.zeros((1, 1, 28, 28), ctx=ctx))
-# Output:
-#
-# --------------------------------------------------------------------------------
-#         Layer (type)                                Output Shape         Param #
-# ================================================================================
-#                Input                              (1, 1, 28, 28)               0
-#         Activation-1                     <Symbol conv1_tanh_fwd>               0
-#         Activation-2                             (1, 20, 24, 24)               0
-#             Conv2D-3                             (1, 20, 24, 24)             520
-#          MaxPool2D-4                             (1, 20, 12, 12)               0
-#         Activation-5                     <Symbol conv2_tanh_fwd>               0
-#         Activation-6                               (1, 50, 8, 8)               0
-#             Conv2D-7                               (1, 50, 8, 8)           25050
-#          MaxPool2D-8                               (1, 50, 4, 4)               0
-#            Flatten-9                                    (1, 800)               0
-#        Activation-10                    <Symbol dense1_tanh_fwd>               0
-#        Activation-11                                    (1, 500)               0
-#             Dense-12                                    (1, 500)          400500
-#        Activation-13                    <Symbol dense2_tanh_fwd>               0
-#        Activation-14                                     (1, 10)               0
-#             Dense-15                                     (1, 10)            5010
-# ================================================================================
-# Parameters in forward computation graph, duplicate included
-#    Total params: 431080
-#    Trainable params: 431080
-#    Non-trainable params: 0
-# Shared params in forward computation graph: 0
-# Unique parameters in model: 431080
-# --------------------------------------------------------------------------------
+```
+
+```
+Output:
+
+--------------------------------------------------------------------------------
+        Layer (type)                                Output Shape         Param #
+================================================================================
+               Input                              (1, 1, 28, 28)               0
+        Activation-1                     <Symbol conv1_tanh_fwd>               0
+        Activation-2                             (1, 20, 24, 24)               0
+            Conv2D-3                             (1, 20, 24, 24)             520
+         MaxPool2D-4                             (1, 20, 12, 12)               0
+        Activation-5                     <Symbol conv2_tanh_fwd>               0
+        Activation-6                               (1, 50, 8, 8)               0
+            Conv2D-7                               (1, 50, 8, 8)           25050
+         MaxPool2D-8                               (1, 50, 4, 4)               0
+           Flatten-9                                    (1, 800)               0
+       Activation-10                    <Symbol dense1_tanh_fwd>               0
+       Activation-11                                    (1, 500)               0
+            Dense-12                                    (1, 500)          400500
+       Activation-13                    <Symbol dense2_tanh_fwd>               0
+       Activation-14                                     (1, 10)               0
+            Dense-15                                     (1, 10)            5010
+================================================================================
+Parameters in forward computation graph, duplicate included
+   Total params: 431080
+   Trainable params: 431080
+   Non-trainable params: 0
+Shared params in forward computation graph: 0
+Unique parameters in model: 431080
+--------------------------------------------------------------------------------
 ```
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/image/conv_mnist.png)
