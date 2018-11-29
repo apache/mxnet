@@ -191,7 +191,6 @@ build_armv8() {
         -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
-        -DUSE_MKLDNN=0FF \
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
