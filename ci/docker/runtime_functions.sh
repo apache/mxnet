@@ -88,6 +88,7 @@ build_ccache_wrappers() {
 
     # TODO: Remove
     export CCACHE_LOGFILE=/work/mxnet/ccache-log
+    export CCACHE_DEBUG=1
 }
 
 build_wheel() {
@@ -660,9 +661,11 @@ build_ubuntu_gpu_cmake_mkldnn() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
