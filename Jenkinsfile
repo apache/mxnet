@@ -372,7 +372,7 @@ core_logic: {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_gpu', 'build_ubuntu_gpu_cmake', false)
-            utils.pack_lib('cmake_gpu', mx_cmake_lib, true)
+            utils.pack_lib('cmake_gpu', mx_cmake_mkldnn_lib, true)
           }
         }
       }
@@ -772,7 +772,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cmake_gpu', mx_cmake_lib, true)
+            utils.unpack_and_init('cmake_gpu', mx_cmake_mkldnn_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
             utils.publish_test_coverage()
           }
