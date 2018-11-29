@@ -65,7 +65,6 @@ build_ccache_wrappers() {
     export PATH=/tmp/ccache-redirects:$PATH
     ln -s ccache /tmp/ccache-redirects/gcc
     ln -s ccache /tmp/ccache-redirects/g++
-    ln -s ccache /tmp/ccache-redirects/g++-8
     ln -s ccache /tmp/ccache-redirects/gcc-8
     ln -s ccache /tmp/ccache-redirects/nvcc
     ln -s ccache /tmp/ccache-redirects/clang++-3.9
@@ -76,7 +75,6 @@ build_ccache_wrappers() {
     ln -s ccache /tmp/ccache-redirects/clang-6.0
     ln -s ccache /usr/local/bin/gcc
     ln -s ccache /usr/local/bin/g++
-    ln -s ccache /usr/local/bin/g++-8
     ln -s ccache /usr/local/bin/gcc-8
     ln -s ccache /usr/local/bin/nvcc
     ln -s ccache /usr/local/bin/clang++-3.9
@@ -388,7 +386,7 @@ build_ubuntu_cpu_cmake_asan() {
     cd /work/build
     export CXX=g++-8
     export CC=g++-8
-    
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
