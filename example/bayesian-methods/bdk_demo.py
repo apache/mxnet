@@ -157,13 +157,10 @@ def get_toy_sym(teacher=True, teacher_noise_precision=None):
 
 
 def dev(xpu):
-    if xpu == None:
-        return mx.cpu()
-    else:
-        return mx.gpu(xpu)
+    return mx.gpu(xpu) if xpu else mx.cpu()
 
 
-def run_mnist_SGD(training_num=50000):
+def run_mnist_SGD(training_num=50000, xpu=None):
     X, Y, X_test, Y_test = load_mnist(training_num)
     minibatch_size = 100
     net = get_mnist_sym()
@@ -178,7 +175,7 @@ def run_mnist_SGD(training_num=50000):
                              lr=5E-6, prior_precision=1.0, minibatch_size=100)
 
 
-def run_mnist_SGLD(training_num=50000):
+def run_mnist_SGLD(training_num=50000, xpu=None):
     X, Y, X_test, Y_test = load_mnist(training_num)
     minibatch_size = 100
     net = get_mnist_sym()
