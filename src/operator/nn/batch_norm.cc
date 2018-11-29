@@ -112,7 +112,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
   AccReal *mean = meanVector.dptr<AccReal>();
   AccReal  *var = varianceVector.dptr<AccReal>();
 
-  const bool is_train_and_not_global_stats = ctx.need_grad && !param_.use_global_stats;
+  const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
   const size_t channelCount = inputData.ChannelCount();
   const size_t itemCountPerChannel = inputData.Size() / channelCount;
 
@@ -226,7 +226,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
   AccReal *gradWeightData = gradWeight.dptr<AccReal>();
   AccReal *gradBiasData = gradBias.dptr<AccReal>();
 
-  const bool is_train_and_not_global_stats = ctx.need_grad && !param_.use_global_stats;
+  const bool is_train_and_not_global_stats = ctx.is_train && !param_.use_global_stats;
 
   #pragma omp parallel for
   for (int channel = 0; channel < static_cast<int>(channelCount); ++channel) {

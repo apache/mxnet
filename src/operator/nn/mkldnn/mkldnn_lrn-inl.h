@@ -180,7 +180,7 @@ static MKLDNNLRNFwd &GetLRNFwd(const LRNParam& param,
                                             OpHash> lrn_fwds;
 #endif
   auto kind_ =
-      ctx.need_grad ? prop_kind::forward_training : prop_kind::forward_scoring;
+      ctx.is_train ? prop_kind::forward_training : prop_kind::forward_scoring;
 
   MKLDNNLRNSignature key(param);
   key.AddSign(kind_);
