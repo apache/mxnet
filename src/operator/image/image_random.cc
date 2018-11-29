@@ -57,7 +57,7 @@ NNVM_REGISTER_OP(_image_normalize)
 .set_attr<nnvm::FInferShape>("FInferShape", NormalizeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
+  [](const NodeAttrs& attrs){ 
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
 .set_attr<FCompute>("FCompute<cpu>", Normalize)
