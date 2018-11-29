@@ -498,9 +498,9 @@ struct Kernel<OP, cpu> {
    * \brief Launch a generic CPU kernel.
    * When using this for a new kernel op, add declaration and tuning objects to
    * operator_tune.cc
-   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
    * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \param args Varargs to eventually pass to the OP::Map() function
    */
   template<typename ...Args>
   inline static bool Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
@@ -525,15 +525,46 @@ struct Kernel<OP, cpu> {
   }
 
   /*!
+   * \brief Launch a generic CPU kernel with dynamic schedule. This is recommended
+   * for irregular workloads such as spmv.
+   * When using this for a new kernel op, add declaration and tuning objects to
+   * operator_tune.cc
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() function
+   */
+  template<typename ...Args>
+  inline static bool LaunchDynamic(mshadow::Stream<cpu> *, const int64_t N, Args... args) {
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount(false);
+    if (omp_threads < 2) {
+      for (int64_t i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_threads) schedule(dynamic)
+      for (int64_t i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    }
+#else
+    for (int64_t i = 0; i < N; ++i) {
+      OP::Map(i, args...);
+    }
+#endif
+    return true;
+  }
+
+  /*!
    * \brief Launch CPU kernel which has OMP tuning data available.
    * When using this for a new kernel op, add declaration and tuning objects to
    * operator_tune.cc
    * \tparam PRIMITIVE_OP The primitive operation to use for tuning
    * \tparam DType Data type
-   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
    * \param N Number of iterations
    * \param dest Destination pointer (used to infer DType)
-   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \param args Varargs to eventually pass to the OP::Map() function
    */
   template<typename PRIMITIVE_OP, typename DType, typename ...Args>
   static void LaunchTuned(mshadow::Stream<cpu> *, const int N, Args... args) {
@@ -560,7 +591,7 @@ struct Kernel<OP, cpu> {
   /*!
    * \brief Launch custom-tuned kernel where each thread is set to
    *        operate on a contiguous partition
-   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
    * \param N Number of iterations
    * \param args Varargs to eventually pass to the UseOMP() and OP::Map() functions
    */
@@ -586,10 +617,10 @@ struct Kernel<OP, cpu> {
    * \brief Launch a tunable OP with implicitly-supplied data type
    * \tparam DType Data type
    * \tparam T OP type
-   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
    * \param s Stream (usually null for CPU)
    * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \param args Varargs to eventually pass to the OP::Map() function
    * \return Always true
    */
   template<typename DType, typename T = OP, typename ...Args>
@@ -604,10 +635,10 @@ struct Kernel<OP, cpu> {
    * \brief Launch a tunable OP wrapper with explicitly-supplied data type (ie op_with_req)
    * \tparam DType Data type
    * \tparam T Wrapper type
-   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \tparam Args Varargs type to eventually pass to the OP::Map() function
    * \param s Stream (usually null for CPU)
    * \param N Number of iterations
-   * \param args Varargs to eventually pass to the OP::Map() functoion
+   * \param args Varargs to eventually pass to the OP::Map() function
    * \return Always true
    */
   template<typename DType, typename T = OP, typename ...Args>

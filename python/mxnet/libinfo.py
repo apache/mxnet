@@ -76,6 +76,31 @@ def find_lib_path():
         os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(lib_path[0])
     return lib_path
 
+def find_include_path():
+    """Find MXNet included header files.
+
+    Returns
+    -------
+    incl_path : string
+        Path to the header files.
+    """
+    incl_from_env = os.environ.get('MXNET_INCLUDE_PATH')
+    if incl_from_env:
+        if os.path.isdir(incl_from_env):
+            if not os.path.isabs(incl_from_env):
+                logging.warning("MXNET_INCLUDE_PATH should be an absolute path, instead of: %s",
+                                incl_from_env)
+            else:
+                return incl_from_env
+        else:
+            logging.warning("MXNET_INCLUDE_PATH '%s' doesn't exist", incl_from_env)
+
+    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+    incl_path = os.path.join(curr_path, '../../include/')
+    if not os.path.isdir(incl_path):
+        raise RuntimeError('Cannot find the MXNet include path.\n')
+    return incl_path
+
 
 # current version
-__version__ = "1.3.1"
+__version__ = "1.4.0"

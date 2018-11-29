@@ -61,6 +61,7 @@ In the rest of this document, we list routines provided by the `ndarray.contrib`
     index_copy
     getnnz
     hardmax
+    edge_id
 ```
 
 ## API Reference

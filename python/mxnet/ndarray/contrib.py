@@ -140,9 +140,9 @@ def foreach(body, data, init_states):
     NDArrays.
 
     body takes two arguments as input and outputs a tuple of two elements,
-    as illustrated below:
+    as illustrated below::
 
-    out, states = body(data1, states)
+        out, states = body(data1, states)
 
     data1 can be either an NDArray or a list of NDArrays. If data is an NDArray,
     data1 is an NDArray. Otherwise, data1 is a list of NDArrays and has the same
@@ -152,15 +152,15 @@ def foreach(body, data, init_states):
     are the second output of foreach.
 
     The computation done by this operator is equivalent to the pseudo code below
-    when the input data is NDArray:
+    when the input data is NDArray::
 
-    states = init_states
-    outs = []
-    for i in data.shape[0]:
-        s = data[i]
-        out, states = body(s, states)
-        outs.append(out)
-    outs = stack(*outs)
+        states = init_states
+        outs = []
+        for i in data.shape[0]:
+            s = data[i]
+            out, states = body(s, states)
+            outs.append(out)
+        outs = stack(*outs)
 
 
     Parameters
@@ -437,8 +437,8 @@ def cond(pred, then_func, else_func):
     --------
     >>> a, b = mx.nd.array([1]), mx.nd.array([2])
     >>> pred = a * b < 5
-    >>> then_func = lambda a, b: (a + 5) * (b + 5)
-    >>> else_func = lambda a, b: (a - 5) * (b - 5)
+    >>> then_func = lambda: (a + 5) * (b + 5)
+    >>> else_func = lambda: (a - 5) * (b - 5)
     >>> outputs = mx.nd.contrib.cond(pred, then_func, else_func)
     >>> outputs[0]
     [42.]

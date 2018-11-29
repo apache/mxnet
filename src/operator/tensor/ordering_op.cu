@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2015 by Contributors
  * \file ordering_op.cu
- * \brief GPU Implementation of matrix operations
+ * \brief GPU Implementation of ordering operations
  */
 // this will be invoked by gcc and compile GPU version
 #include "./ordering_op-inl.h"

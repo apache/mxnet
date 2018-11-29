@@ -8,9 +8,9 @@ The following contents assume that the working directory is `/path/to/mxnet/cpp-
 
 Load Data
 --------
-Before going into codes, we need to fetch MNIST data. You can either use the script `get_mnist.sh`,
+Before going into codes, we need to fetch MNIST data. You can either use the script `/path/to/mxnet/cpp-package/example/get_data.sh`,
 or download mnist data by yourself from Lecun's [website](http://yann.lecun.com/exdb/mnist/)
-and decompress them into `mnist_data` folder.
+and decompress them into `data/mnist_data` folder.
 
 Except linking the MXNet shared library, the C++ package itself is a header-only package,
 which means all you need to do is to include the header files. Among the header files,
@@ -36,14 +36,14 @@ The digits in MNIST are 2-dimension arrays, so we should set `flat` to true to f
 
 ```cpp
 auto train_iter = MXDataIter("MNISTIter")
-    .SetParam("image", "./mnist_data/train-images-idx3-ubyte")
-    .SetParam("label", "./mnist_data/train-labels-idx1-ubyte")
+    .SetParam("image", "./data/mnist_data/train-images-idx3-ubyte")
+    .SetParam("label", "./data/mnist_data/train-labels-idx1-ubyte")
     .SetParam("batch_size", batch_size)
     .SetParam("flat", 1)
     .CreateDataIter();
 auto val_iter = MXDataIter("MNISTIter")
-    .SetParam("image", "./mnist_data/t10k-images-idx3-ubyte")
-    .SetParam("label", "./mnist_data/t10k-labels-idx1-ubyte")
+    .SetParam("image", "./data/mnist_data/t10k-images-idx3-ubyte")
+    .SetParam("label", "./data/mnist_data/t10k-labels-idx1-ubyte")
     .SetParam("batch_size", batch_size)
     .SetParam("flat", 1)
     .CreateDataIter();

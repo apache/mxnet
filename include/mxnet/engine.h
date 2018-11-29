@@ -25,7 +25,6 @@
 #ifndef MXNET_ENGINE_H_
 #define MXNET_ENGINE_H_
 
-#include <dmlc/base.h>
 #if DMLC_USE_CXX11
 #include <algorithm>
 #include <memory>
