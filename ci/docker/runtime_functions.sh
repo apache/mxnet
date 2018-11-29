@@ -388,7 +388,7 @@ build_ubuntu_cpu_cmake_asan() {
     cd /work/build
     export CXX=g++-8
     export CC=g++-8
-    build_ccache_wrappers
+    
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
