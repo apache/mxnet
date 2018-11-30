@@ -131,7 +131,13 @@ ifeq ($(USE_MKLDNN), 1)
 		CFLAGS += -I$(MKLROOT)/include
 		LDFLAGS += -L$(MKLROOT)/lib
 	endif
-	LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
+
+	ifneq ($(UNAME_S), Windows)
+	    LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
+    else
+        CFLAGS += -I$(MKLDNNROOT)/include
+        LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+    endif
 endif
 
 # setup opencv
