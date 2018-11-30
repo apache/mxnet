@@ -604,7 +604,7 @@ static void SampleSubgraph(const NDArray &csr,
   std::unordered_map<dgl_id_t, neigh_list> neigh_mp;
   size_t num_edges = 0;
   while (!node_queue.empty() &&
-    sub_vertices_count <= max_num_vertices ) {
+    sub_vertices_count < max_num_vertices ) {
     ver_node& cur_node = node_queue.front();
     dgl_id_t dst_id = cur_node.vertex_id;
     if (cur_node.level < num_hops) {
