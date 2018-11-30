@@ -263,7 +263,9 @@ def main_wrapper(args) {
     node(NODE_UTILITY) {
       // Call failure handler
       args['failure_handler']()
-      
+
+      wsCleanup()
+
       // Remember to rethrow so the build is marked as failing
       if (err) {
         throw err
