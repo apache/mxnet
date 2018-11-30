@@ -349,19 +349,19 @@ class ImageDetLabel {
     if (!valid) return false;
     // transform ground-truth labels
     std::vector<ImageDetObject> new_objects;
-    for (auto iter = objects_.begin(); iter != objects_.end(); ++iter) {
+    for (auto& object : objects_) {
       if (image_det_aug_default_enum::kCenter == crop_emit_mode) {
-        float center_x = (iter->left + iter->right) * 0.5f;
-        float center_y = (iter->top + iter->bottom) * 0.5f;
+        float center_x = (object.left + object.right) * 0.5f;
+        float center_y = (object.top + object.bottom) * 0.5f;
         if (!crop_box.contains(cv::Point2f(center_x, center_y))) {
           continue;
         }
-        new_objects.push_back(iter->Project(crop_box));
+        new_objects.push_back(object.Project(crop_box));
       } else if (image_det_aug_default_enum::kOverlap == crop_emit_mode) {
-        Rect gt_box = iter->ToRect();
+        Rect gt_box = object.ToRect();
         float overlap = (crop_box & gt_box).area() / gt_box.area();
         if (overlap > emit_overlap_thresh) {
-          new_objects.push_back(iter->Project(crop_box));
+          new_objects.push_back(object.Project(crop_box));
         }
       }
     }
@@ -375,8 +375,8 @@ class ImageDetLabel {
    */
   bool TryPad(const Rect pad_box) {
     // update all objects inplace
-    for (auto it = objects_.begin(); it != objects_.end(); ++it) {
-      *it = it->Project(pad_box);
+    for (auto& object : objects_) {
+      object = object.Project(pad_box);
     }
     return true;
   }
@@ -384,8 +384,8 @@ class ImageDetLabel {
   /*! \brief flip image and object coordinates horizontally */
   bool TryMirror() {
     // flip all objects horizontally
-    for (auto it = objects_.begin(); it != objects_.end(); ++it) {
-      *it = it->HorizontalFlip();
+    for (auto& object : objects_) {
+      object = object.HorizontalFlip();
     }
     return true;
   }

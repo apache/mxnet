@@ -683,11 +683,11 @@ def test_deconvolution_options():
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
     # 2D deconvolution
-    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
-                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}},
-                {'ctx': mx.gpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float16}},
-                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float64}},
-                {'ctx': mx.cpu(0), 'deconv_data': (2, 2, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
+    ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float32}},
+                {'ctx': mx.gpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float16}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float64}},
+                {'ctx': mx.cpu(0), 'deconv_data': (2, 8, 10, 10), 'type_dict': {'deconv_data': np.float32}}]
     # Pad > 0
     sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), pad=(1,1), name='deconv')
     sym_no_cudnn = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), pad=(1,1), cudnn_off=True, name='deconv')
@@ -994,6 +994,35 @@ def test_pooling_versions():
     test_3d_pooling('lp', p_value=1)
     test_3d_pooling('lp', p_value=2)
     test_3d_pooling('lp', p_value=3)
+
+
+@with_seed()
+def test_pooling_full_2d():
+    def test_pooling_full_2d_type(pool_type):
+        data = (2, 2, 10, 10)
+        kernel = (4, 5)
+        pad = (1, 2)
+        stride = (3, 4)
+
+        convention = 'full'
+        ctx_list = []
+        sym_list = []
+
+        # o_h = ceil((10 + 1 + 1 - 4) / 3) + 1 = 4
+        # o_w = ceil((10 + 2 + 2 - 5) / 4) + 1 = 4
+        ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=convention, global_pool=False, name='pool'))
+
+        ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
+        sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
+                                       pooling_convention=convention, global_pool=False, name='pool'))
+
+        check_consistency(sym_list, ctx_list)
+
+    test_pooling_full_2d_type('max')
+    test_pooling_full_2d_type('avg')
+    test_pooling_full_2d_type('sum')
 
 
 @with_seed()

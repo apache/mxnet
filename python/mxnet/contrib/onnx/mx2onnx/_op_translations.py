@@ -955,7 +955,7 @@ def convert_argmax(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis"))
-    keepdims = int(attrs.get("keepdims")) if "keepdims" in attrs  else 1
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     node = onnx.helper.make_node(
         'ArgMax',
@@ -975,7 +975,7 @@ def convert_argmin(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     axis = int(attrs.get("axis"))
-    keepdims = int(attrs.get("keepdims")) if "keepdims" in attrs  else 1
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     node = onnx.helper.make_node(
         'ArgMin',
@@ -1012,7 +1012,7 @@ def convert_min(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1047,7 +1047,7 @@ def convert_max(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1082,7 +1082,7 @@ def convert_mean(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1117,7 +1117,7 @@ def convert_prod(node, **kwargs):
     mx_axis = attrs.get("axis", None)
     axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
 
-    keepdims = int(attrs.get("keepdims", 0))
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
 
     if axes is not None:
         node = onnx.helper.make_node(
@@ -1545,3 +1545,45 @@ def convert_sum(node, **kwargs):
             name=name
         )
     return [node]
+
+@mx_op.register("hard_sigmoid")
+def convert_hardsigmoid(node, **kwargs):
+    """Map MXNet's hard_sigmoid operator attributes to onnx's HardSigmoid operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to float32
+    alpha = float(attrs.get("alpha", 0.2))
+    beta = float(attrs.get("beta", 0.5))
+
+    node = onnx.helper.make_node(
+        'HardSigmoid',
+        input_nodes,
+        [name],
+        alpha=alpha,
+        beta=beta,
+        name=name
+    )
+    return [node]
+
+@mx_op.register("broadcast_lesser")
+def convert_broadcast_lesser(node, **kwargs):
+    """Map MXNet's broadcast_lesser operator attributes to onnx's Less operator
+    and return the created node.
+    """
+    return create_basic_op_node('Less', node, kwargs)
+
+@mx_op.register("broadcast_greater")
+def convert_broadcast_greater(node, **kwargs):
+    """Map MXNet's broadcast_greater operator attributes to onnx's Greater operator
+    and return the created node.
+    """
+    return create_basic_op_node('Greater', node, kwargs)
+
+@mx_op.register("broadcast_equal")
+def convert_broadcast_equal(node, **kwargs):
+    """Map MXNet's broadcast_equal operator attributes to onnx's Equal operator
+    and return the created node.
+    """
+    return create_basic_op_node('Equal', node, kwargs)
