@@ -41,7 +41,7 @@ namespace mxnet {
 namespace op {
 namespace image {
 
-bool ToTensorShape(const nnvm::NodeAttrs& attrs,
+inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -54,7 +54,7 @@ bool ToTensorShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-bool ToTensorType(const nnvm::NodeAttrs& attrs,
+inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -97,7 +97,7 @@ struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   }
 };
 
-bool NormalizeShape(const nnvm::NodeAttrs& attrs,
+inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
@@ -249,16 +249,16 @@ void Resize(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename DType>
-DType saturate_cast(const float& src) {
+inline DType saturate_cast(const float& src) {
   return static_cast<DType>(src);
 }
 
 template<>
-uint8_t saturate_cast(const float& src) {
+inline uint8_t saturate_cast(const float& src) {
   return std::min(std::max(src, 0.f), 255.f);
 }
 
-bool ImageShape(const nnvm::NodeAttrs& attrs,
+inline bool ImageShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
                        std::vector<TShape> *out_attrs) {
   TShape& dshape = (*in_attrs)[0];
@@ -370,7 +370,7 @@ struct RandomEnhanceParam : public dmlc::Parameter<RandomEnhanceParam> {
   }
 };
 
-void AdjustBrightnessImpl(const float& alpha_b,
+inline void AdjustBrightnessImpl(const float& alpha_b,
                                  const OpContext &ctx,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<OpReqType> &req,
@@ -405,7 +405,7 @@ void RandomBrightness(const nnvm::NodeAttrs &attrs,
   AdjustBrightnessImpl(alpha_b, ctx, inputs, req, outputs);
 }
 
-void AdjustContrastImpl(const float& alpha_c,
+inline void AdjustContrastImpl(const float& alpha_c,
                                const OpContext &ctx,
                                const std::vector<TBlob> &inputs,
                                const std::vector<OpReqType> &req,
@@ -438,7 +438,7 @@ void AdjustContrastImpl(const float& alpha_c,
   });
 }
 
-void RandomContrast(const nnvm::NodeAttrs &attrs,
+inline void RandomContrast(const nnvm::NodeAttrs &attrs,
                            const OpContext &ctx,
                            const std::vector<TBlob> &inputs,
                            const std::vector<OpReqType> &req,
@@ -455,7 +455,7 @@ void RandomContrast(const nnvm::NodeAttrs &attrs,
   AdjustContrastImpl(alpha_c, ctx, inputs, req, outputs);
 }
 
-void AdjustSaturationImpl(const float& alpha_s,
+inline void AdjustSaturationImpl(const float& alpha_s,
                                  const OpContext &ctx,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<OpReqType> &req,
@@ -490,7 +490,7 @@ void AdjustSaturationImpl(const float& alpha_s,
   });
 }
 
-void RandomSaturation(const nnvm::NodeAttrs &attrs,
+inline void RandomSaturation(const nnvm::NodeAttrs &attrs,
                              const OpContext &ctx,
                              const std::vector<TBlob> &inputs,
                              const std::vector<OpReqType> &req,
