@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import itertools
 import numpy as np
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
@@ -1047,7 +1048,8 @@ class PyAdaDelta(mx.optimizer.Optimizer):
         acc_grad, acc_delta = state
 
         acc_grad[:] = self.rho * acc_grad + (1. - self.rho) * grad ** 2
-        current_delta = mx.nd.sqrt(acc_delta + self.epsilon) / mx.nd.sqrt(acc_grad + self.epsilon) * grad
+        current_delta = (mx.nd.sqrt(acc_delta + self.epsilon) /
+                         mx.nd.sqrt(acc_grad + self.epsilon)) * grad
         acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta ** 2
 
         # update weight
@@ -1064,20 +1066,12 @@ def test_adadelta():
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.0}]
     for dtype in [np.float16, np.float32]:
-        for eps_option in eps_options:
-            for cg_option in cg_options:
-                for rg_option in rg_options:
-                    for wd_option in wd_options:
-                        for rho_option in rho_options:
-                            kwarg = {}
-                            kwarg.update(rho_option)
-                            kwarg.update(eps_option)
-                            kwarg.update(cg_option)
-                            kwarg.update(rg_option)
-                            kwarg.update(wd_option)
-                            if dtype is np.float16:
-                                kwarg.update({'multi_precision': True})
-                            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+        for params in itertools.product(rho_options, eps_options, cg_options,
+                                        rg_options, wd_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if dtype is np.float16:
+                kwarg.update({'multi_precision': True})
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 
 def test_factor_scheduler():
