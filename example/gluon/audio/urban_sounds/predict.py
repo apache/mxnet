@@ -17,16 +17,17 @@
 """ Prediction module for Urban Sounds Classification"""
 from __future__ import print_function
 import os
+import sys
 import warnings
 import mxnet as mx
 from mxnet import nd
-from transforms import MFCC
 from model import get_net
 try:
     import librosa
 except ImportError:
     raise ImportError("Librosa is not installed! please run the following command:\
      `pip install librosa`")
+sys.path.append('../')
 
 def predict(prediction_dir='./Test'):
     """The function is used to run predictions on the audio files in the directory `pred_directory`.
@@ -64,6 +65,7 @@ def predict(prediction_dir='./Test'):
     net.load_parameters("./net.params")
     file_names = os.listdir(prediction_dir)
     full_file_names = [os.path.join(prediction_dir, item) for item in file_names]
+    from transforms import MFCC
     mfcc = MFCC()
     print("\nStarting predictions for audio files in ", prediction_dir, " ....\n")
     for filename in full_file_names:

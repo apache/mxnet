@@ -34,7 +34,7 @@ To be able to run this example:
     The main dependency that is required is: Librosa. 
     The version used to test the example is: `0.6.2`
     For more details, refer here:
-*https://librosa.github.io/librosa/install.html*
+https://librosa.github.io/librosa/install.html
 
 2. Download the dataset(train.zip, test.zip) required for this example from the location:
 https://drive.google.com/drive/folders/0By0bAi7hOBAFUHVXd1JCN3MwTEU
@@ -49,17 +49,16 @@ https://drive.google.com/drive/folders/0By0bAi7hOBAFUHVXd1JCN3MwTEU
                     - Train
                         - 0.wav, 1.wav ...
                     - train.csv
-                    - datasets.py
                     - train.py
                     - predict.py ...
     ```
 
-4. Apache MXNet is installed on the machine. For instructions, go to the link: **https://mxnet.incubator.apache.org/install/**
+4. Apache MXNet is installed on the machine. For instructions, go to the link: https://mxnet.incubator.apache.org/install/
 
 
 
 For information on the current design of how the AudioFolderDataset is implemented, refer below:
-**https://cwiki.apache.org/confluence/display/MXNET/Gluon+-+Audio**
+https://cwiki.apache.org/confluence/display/MXNET/Gluon+-+Audio
 
 ### Usage 
 
@@ -97,5 +96,5 @@ or
 
 ###### To pass command-line arguments for test data directory, use :
 ```
-python train.py --pred ./Test
+python predict.py --pred ./Test
 ```

@@ -16,15 +16,15 @@
 # under the License.
 """The module to run training on the Urban sounds dataset"""
 from __future__ import print_function
+import sys
 import os
 import time
 import warnings
 import mxnet as mx
 from mxnet import gluon, nd, autograd
 from datasets import AudioFolderDataset
-from transforms import MFCC
 import model
-
+sys.path.append('../')
 
 def evaluate_accuracy(data_iterator, net):
     """Function to evaluate accuracy of any data iterator passed to it as an argument"""
@@ -73,6 +73,7 @@ def train(train_dir=None, train_csv=None, epochs=30, batch_size=32):
     print("Loading the dataset to the Gluon's OOTB Dataloader...")
 
     #Getting the data loader out of the AudioDataset and passing the transform
+    from transforms import MFCC
     aud_transform = MFCC()
     tick = time.time()
 
