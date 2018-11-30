@@ -225,11 +225,12 @@ endif()
 
 if(USE_MKLDNN)
   include(cmake/DownloadMKLML.cmake)
-  set(MKLDNN_LIBRARY_TYPE "STATIC" CACHE INTERNAL "" FORCE)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
+    set(MKLDNN_LIBRARY_TYPE "STATIC")
     set(ARCH_OPT_FLAGS "-mtune=generic")
   else()
+    set(MKLDNN_LIBRARY_TYPE "SHARED")
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
   endif()
