@@ -67,6 +67,8 @@ private[mxnet] object Base {
           "Consider installing the library somewhere in the path " +
           "(for Windows: PATH, for Linux: LD_LIBRARY_PATH), " +
           "or specifying by Java cmd option -Djava.library.path=[lib path].")
+        logger.warn("LD_LIBRARY_PATH=" + System.getenv("LD_LIBRARY_PATH"))
+        logger.warn("java.library.path=" + System.getProperty("java.library.path"))
         NativeLibraryLoader.loadLibrary("mxnet-scala")
     }
   } catch {

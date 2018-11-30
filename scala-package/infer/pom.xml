@@ -4,56 +4,17 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <artifactId>mxnet-parent_2.11</artifactId>
+        <artifactId>mxnet-parent</artifactId>
         <groupId>org.apache.mxnet</groupId>
         <version>1.5.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>mxnet-infer_2.11</artifactId>
+    <artifactId>mxnet-infer</artifactId>
     <name>MXNet Scala Package - Inference</name>
-
-    <properties>
-        <skipTests>true</skipTests>
-        <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
-    </properties>
-
-    <profiles>
-        <profile>
-            <id>unittest</id>
-            <properties>
-                <skipTests>false</skipTests>
-            </properties>
-        </profile>
-        <profile>
-            <id>osx-x86_64-cpu</id>
-            <properties>
-                <platform>osx-x86_64-cpu</platform>
-            </properties>
-        </profile>
-        <profile>
-            <id>linux-x86_64-cpu</id>
-            <properties>
-                <platform>linux-x86_64-cpu</platform>
-            </properties>
-        </profile>
-        <profile>
-            <id>linux-x86_64-gpu</id>
-            <properties>
-                <platform>linux-x86_64-gpu</platform>
-            </properties>
-        </profile>
-    </profiles>
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <configuration>
-                    <skip>true</skip>
-                </configuration>
-            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -73,14 +34,10 @@
                 <groupId>org.scalatest</groupId>
                 <artifactId>scalatest-maven-plugin</artifactId>
                 <configuration>
-                    <skipTests>${skipTests}</skipTests>
                     <argLine>
-                        -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
+                        -Djava.library.path=${project.parent.basedir}/native/target \
                         -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
                     </argLine>
-                    <environmentVariables>
-                        <LD_LIBRARY_PATH>${MXNET_DIR}/lib</LD_LIBRARY_PATH>
-                    </environmentVariables>
                 </configuration>
             </plugin>
             <plugin>
@@ -92,7 +49,7 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.mxnet</groupId>
-            <artifactId>mxnet-core_${scala.binary.version}</artifactId>
+            <artifactId>mxnet-core</artifactId>
             <version>1.5.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
