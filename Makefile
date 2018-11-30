@@ -60,7 +60,7 @@ endif
 # use customized config file
 include $(config)
 
-ifneq ($(USE_MKLDNN), 0)
+ifndef $(USE_MKLDNN)
     USE_MKLDNN = 1
 endif
 
