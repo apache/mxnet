@@ -142,9 +142,10 @@ include("base.jl")
 
 include("context.jl")
 include("util.jl")
-include("broadcast.jl")
 
 include("ndarray.jl")
+include("broadcast.jl")
+
 include("random.jl")
 include("autograd.jl")
 
