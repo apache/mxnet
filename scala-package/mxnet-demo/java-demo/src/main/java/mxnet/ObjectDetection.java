@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sample;
+package mxnet;
 import org.apache.mxnet.infer.javaapi.ObjectDetectorOutput;
 import org.apache.mxnet.javaapi.*;
 import org.apache.mxnet.infer.javaapi.ObjectDetector;
@@ -46,7 +46,7 @@ public class ObjectDetection {
         imagePath = tempDirPath + "/inputImages/resnetssd/dog-ssd.jpg";
         String imgURL = "https://s3.amazonaws.com/model-server/inputs/dog-ssd.jpg";
         downloadUrl(imgURL, imagePath);
-        modelPath = tempDirPath + "resnetssd/resnet50_ssd_model";
+        modelPath = tempDirPath + "/resnetssd/resnet50_ssd_model";
         System.out.println("Download model files, this can take a while...");
         String modelURL = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/";
         downloadUrl(modelURL + "resnet50_ssd_model-symbol.json",

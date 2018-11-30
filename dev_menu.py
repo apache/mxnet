@@ -103,6 +103,16 @@ COMMANDS = OrderedDict([
         "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
+    ('[Docker] Python3 CPU Intel MKLDNN unittests',
+    [
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn",
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_python3_cpu",
+    ]),
+    ('[Docker] Python3 ARMv7 unittests (QEMU)',
+    [
+        "ci/build.py -p armv7",
+        "ci/build.py -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu"
+    ]),
     ('[Local] CMake build (using cmake/cmake_options.yaml)',
         CMake()),
     ('Clean (RESET HARD) repository (Warning! erases local changes / DATA LOSS)',

@@ -71,7 +71,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_sin',
     'test_tan',
     'test_shape',
-    'test_hardsigmoid_',
+    'test_hardsigmoid',
     'test_averagepool_1d',
     'test_averagepool_2d_pads_count_include_pad',
     'test_averagepool_2d_precomputed_pads_count_include_pad',
