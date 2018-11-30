@@ -90,11 +90,8 @@ class EvalMetric(object):
         self.name = str(name)
         self.output_names = output_names
         self.label_names = label_names
+        self._has_global_stats = kwargs.pop("has_global_stats", False)
         self._kwargs = kwargs
-        if "has_global_stats" in kwargs:
-            self._has_global_stats = kwargs["has_global_stats"]
-        else:
-            self._has_global_stats = False
         self.reset()
 
     def __str__(self):
@@ -764,10 +761,8 @@ class F1(EvalMetric):
             self.global_num_inst += 1
             self.metrics.reset_stats()
         else:
-            self.sum_metric = fscore * self.metrics.total_examples
-            self.global_sum_metric = fscore * self.metrics.total_examples
-            self.num_inst = self.metrics.total_examples
-            self.global_num_inst = self.metrics.total_examples
+            self.sum_metric = self.global_sum_metric = fscore * self.metrics.total_examples
+            self.num_inst = self.global_num_inst = self.metrics.total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
@@ -873,10 +868,8 @@ class MCC(EvalMetric):
             self.global_num_inst += 1
             self._metrics.reset_stats()
         else:
-            self.sum_metric = matthewscc * self._metrics.total_examples
-            self.global_sum_metric = matthewscc * self._metrics.total_examples
-            self.num_inst = self._metrics.total_examples
-            self.global_num_inst = self._metrics.total_examples
+            self.sum_metric = self.global_sum_metric = matthewscc * self._metrics.total_examples
+            self.num_inst = self.global_num_inst = self._metrics.total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
