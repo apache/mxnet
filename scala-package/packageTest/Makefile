@@ -17,7 +17,7 @@
 
 SCALA_VERSION_PROFILE := 2.11
 SCALA_VERSION := 2.11.8
-MXNET_VERSION := 1.3.1-SNAPSHOT
+MXNET_VERSION := "[1.3.0-SNAPSHOT,)"
 
 MXNET_REPO = https://repository.apache.org/content/repositories/snapshots
 
@@ -43,35 +43,45 @@ else
 	endif
 endif
 
-scalapkg:
-	(mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
-		-Dscala.version=$(SCALA_VERSION))
+PROFILES := -Ptest
+ifeq ($(UNIT), 1)
+  PROFILES := "$(PROFILES),unittest"
+endif
+ifeq ($(INTEGRATION), 1)
+  PROFILES := "$(PROFILES),integrationtest"
+endif
 
-scalaclean:
+ifneq ($(UNIT), 1)
+	ifneq ($(INTEGRATION), 1)
+		PROFILES := "$(PROFILES),unittest,integrationtest"
+	endif
+endif
+
+
+clean:
 	(mvn clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
 
-scalaintegrationtest:
+testinstall:
 	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-    -PwithExamples \
+    $(PROFILES) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
 
-scalaintegrationtestsnapshot:
+testlocal:
 	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-    -PfromSnapshots \
+    $(PROFILES),fromLocal \
+		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
+		-Dmxnet.version=$(MXNET_VERSION) \
+		-Dscala.version=$(SCALA_VERSION))
+
+testsnapshot:
+	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+    $(PROFILES),fromSnapshots \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.repo=$(MXNET_REPO) \
-		-Dmxnet.version=$(MXNET_VERSION) \
-		-Dscala.version=$(SCALA_VERSION))
-
-scalaintegrationtestwithoutexamples:
-	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))

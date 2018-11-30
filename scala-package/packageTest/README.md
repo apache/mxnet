@@ -1,22 +1,40 @@
 # MXNet Scala Package Test
 
-This is an project created to run the test suite on a fully packaged mxnet jar.
+This is an project created to run the test suite on a fully packaged mxnet jar. The test suite is found locally but mxnet is from the target jarfile.
 
-## Setup
+## General Setup
 
-### Install Package
+To setup the packageTest, you must first build your tests. To build the tests, follow these steps from the mxnet main directory:
 
-To run the test suite, first install the package.  This can be done either by installing directly from a jar with `mvn install:install-file -Dfile=<path-to-file>` or by running `make scalainstall` in the main mxnet folder.  Note that if you use `mvn install:install-file`, you will be unable to run the example tests unless you also install the mxnetexamples jar. You can run all tests except for those examples with `make scalaintegrationtestwithoutexamples`.
+1. Build MXNet and the scala package from source following the directions [here](https://mxnet.incubator.apache.org/install/scala_setup.html#source)
+2. Build the tests by running `make scalatestcompile`.
+3. Follow setup instructions below for your testing goal
 
-### Build
+## Running
 
-Build the mxnet tests by running `make scalapkg` and then `make scalatestcompile` from the main mxnet directory.  This is needed for test discovery.
+There are three different modes of operation for testing based on the location of the jar and where it is coming from:
 
-## Run
+### Test Installed Jars
 
-To run, ensure the versions are correct in the `Makefile`.  Then, just run `make scalaintegrationtest` to execute the test suite
+If you have a jar file, you can install it to your maven cache repository(`~/.m2/repository`) using `mvn install:install-file -Dfile=<path-to-file>`.  This might be useful if you acquire the .jar file from elsewhere. You can also run `make scalainstall` to install from a local build. Then, run `make testinstall` in the package test directory to run the tests.  Note that unless you also install an additional mxnetexamples jar, you can only run the unit tests.
 
-## Clean
+### Test Local Deployment
+
+To test the jars that would be produced by a deployment, you can run `make scaladeploylocal` from the main mxnet directory. This produces a local snapshot located at `scala-package/local-snapshot`. To test this local snapshot, run `make testlocal`.
+
+### Remote Repository Snapshot
+
+This mode is to test a jar located in a remote repository. The default repository is the apache snapshot repisotory located at `https://repository.apache.org/content/repositories/snapshots`. Note that the actual jar in a repisotory should be located at `$repoUrl/org/apache/mxnet/mxnet-full_$scalaVersion-$osMode/$version/*.jar`.
+
+Test the snapshot repo using `make testsnapshot` or a different repo using `make testsnapshot MXNET_REPO=$NEW_REPO_URL`.
+
+### Options
+
+You are able to run unit tests, integration tests, or both using this utility. To run the unit tests, add the flag `UNIT=1` to make (e.g. `make testsnapshot UNIT=1`). Use `INTEGRATION=1` for integration tests. The default behavior is to run both the unit and integration tests. However, the integration tests require that the mxnet examples be installed in addition to the full mxnet package (see test mode instructions above).
+
+An additional option, you can specify the mxnet version with `MXNET_VERSION=1.3.1-SNAPSHOT`.
+
+## Cleaning Up
 
 You can clean temporary files and target artifacts by running `make scalaclean`.
 
@@ -47,4 +65,4 @@ and stacktrace begins with the following,
   java.lang.NoClassDefFoundError: org/apache/mxnetexamples/Util$
 ```
 
-you are missing the mxnetexamples package.  See the "Install Package" section for details.
+you are missing the mxnetexamples package.  See your test mode installation section for details.

@@ -16,7 +16,10 @@
 
     <profiles>
       <profile>
-        <id>withExamples</id>
+        <id>test</id>
+      </profile>
+      <profile>
+        <id>integrationtest</id>
         <modules>
           <module>examples</module>
         </modules>
@@ -34,7 +37,23 @@
           </repository>
         </repositories>
       </profile>
+      <profile>
+        <id>fromLocal</id>
+        <repositories>
+          <repository>
+            <id>local-snapshot</id>
+            <url>file://${basedir}/../local-snapshot</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+        </repositories>
+      </profile>
     </profiles>
+
+    <properties>
+      <skipTests>true</skipTests>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -119,7 +138,6 @@
                         <phase>package</phase>
                         <goals>
                             <goal>jar</goal>
-                            <goal>test-jar</goal>
                         </goals>
                         <configuration>
                             <includes>

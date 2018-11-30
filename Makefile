@@ -663,6 +663,15 @@ scaladeploy:
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
+scaladeploylocal:
+	(cd $(ROOTDIR)/scala-package; \
+		mvn deploy -Papache-release,deployLocal,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
+		  -DaltDeploymentRepository=snapshot-repo::default::file:local-snapshot \
+		  -Dgpg.skip \
+		  -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+
 jnilint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
 
