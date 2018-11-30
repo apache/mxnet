@@ -1118,19 +1118,24 @@ sets of vertices as input. For each set of vertices, it returns a pair
 of CSR matrices if return_mapping is True: the first matrix contains edges
 with new edge Ids, the second matrix contains edges with the original
 edge Ids.
-Example::
-  x=[[1, 0, 0, 2],
-     [3, 0, 4, 0],
-     [0, 5, 0, 0],
-     [0, 6, 7, 0]]
-  v = [0, 1, 2]
-  dgl_subgraph(x, v, return_mapping=True) =
-    [[1, 0, 0],
-     [2, 0, 3],
-     [0, 4, 0]],
-    [[1, 0, 0],
-     [3, 0, 4],
-     [0, 5, 0]]
+
+Example:
+
+   .. code:: python
+
+     x=[[1, 0, 0, 2],
+       [3, 0, 4, 0],
+       [0, 5, 0, 0],
+       [0, 6, 7, 0]]
+     v = [0, 1, 2]
+     dgl_subgraph(x, v, return_mapping=True) =
+       [[1, 0, 0],
+        [2, 0, 3],
+        [0, 4, 0]],
+       [[1, 0, 0],
+        [3, 0, 4],
+        [0, 5, 0]]
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<DGLSubgraphParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -1296,13 +1301,17 @@ NNVM_REGISTER_OP(_contrib_edge_id)
 stored in a CSR matrix (the value of the CSR stores the edge Id of the graph).
 output[i] = input[u[i], v[i]] if there is an edge between u[i] and v[i]],
 otherwise output[i] will be -1. Both u and v should be 1D vectors.
-Example::
-  x = [[ 1, 0, 0 ],
-       [ 0, 2, 0 ],
-       [ 0, 0, 3 ]]
-  u = [ 0, 0, 1, 1, 2, 2 ]
-  v = [ 0, 1, 1, 2, 0, 2 ]
-  edge_id(x, u, v) = [ 1, -1, 2, -1, -1, 3 ]
+
+Example:
+
+   .. code:: python
+
+      x = [[ 1, 0, 0 ],
+           [ 0, 2, 0 ],
+           [ 0, 0, 3 ]]
+      u = [ 0, 0, 1, 1, 2, 2 ]
+      v = [ 0, 1, 1, 2, 0, 2 ]
+      edge_id(x, u, v) = [ 1, -1, 2, -1, -1, 3 ]
 
 The storage type of ``edge_id`` output depends on storage types of inputs
   - edge_id(csr, default, default) = default
@@ -1367,7 +1376,8 @@ NNVM_REGISTER_OP(_contrib_dgl_adjacency)
 .describe(R"code(This operator converts a CSR matrix whose values are edge Ids
 to an adjacency matrix whose values are ones. The output CSR matrix always has
 the data value of float32.
-Example::
+
+Example:
 
   x = [[ 1, 0, 0 ],
        [ 0, 2, 0 ],
