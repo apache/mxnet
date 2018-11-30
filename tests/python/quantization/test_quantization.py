@@ -419,6 +419,7 @@ def get_fp32_residual():
 def get_fp32_sym_with_multiple_outputs(length=1):
     data = mx.sym.Variable('data')
     inputs = list(mx.sym.split(data, axis=0, num_outputs=length, squeeze_axis=1, name='split'))
+
     _conv_outs = []
     for i in range(length):
         _conv_outs.append(mx.sym.Convolution(data=inputs[i], kernel=(1, 1), num_filter=16, name='conv_{0}'.format(i)))
