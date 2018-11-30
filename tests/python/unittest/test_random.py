@@ -860,6 +860,7 @@ def test_randint_extremes():
     assert a>=50000000 and a<=50000010
 
 @with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/13446")
 def test_randint_generator():
     ctx = mx.context.current_context()
     for dtype in ['int32', 'int64']:
