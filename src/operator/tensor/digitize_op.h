@@ -105,6 +105,8 @@ inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
+  // Verify Have bins & data share the same type to simplify templating
+  CHECK_EQ(data_type, bins_type);
 
 template<typename xpu>
 struct ForwardKernel {
@@ -118,6 +120,7 @@ struct ForwardKernel {
                                   bool right);
 };
 
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, OType);
 
 template<>
 struct ForwardKernel<cpu> {
@@ -215,5 +218,6 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
 
 #endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_H_
