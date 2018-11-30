@@ -31,51 +31,35 @@
 namespace mxnet {
 namespace op {
 
-//
-//template<typename DType, typename BType>
-//struct ForwardKernel<gpu, DType, BType> {
-//    MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data,
-//        mshadow::Tensor<gpu, 1, BType> &bins, const bool right) {
-//
-//      const auto data = in_data[i];
-//      auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-//                        : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
-//
-//      out_data[i] = thrust::distance(bins.dptr_, elem);
-//    }
-//};
 
-//template <>
-//void DigitizeOp::ForwardKernel::Map<gpu>(int i,
-//                                         const OpContext &ctx,
-//                                         const TBlob &input_data,
-//                                         const TBlob &bins,
-//                                         TBlob &out_data,
-//                                         const bool right) {
-//  using namespace mshadow;
-//
-//  auto s = ctx.get_stream<gpu>();
-//
-//  MSHADOW_TYPE_SWITCH(bins.type_flag_, BType, {
-//    const Tensor<gpu, 1, BType> bins_tensor = bins.FlatTo1D<gpu, BType>(s);
-//
-//    MSHADOW_TYPE_SWITCH(input_data.type_flag_, OType, {
-//        const auto *data = input_data.FlatTo1D<gpu, OType>(s).dptr_;
-//
-//        auto elem = right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i])
-//                          : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i]);
-//        // TODO: check this
-//        out_data[i] = thrust::distance(bins.dptr_, elem);
-//    });
-//  });
-//
-//}
+template<typename DType, typename BType>
+struct ForwardKernel<gpu, DType, BType> {
+  static MSHADOW_XINLINE void Map(int i,
+                                  DType *in_data,
+                                  OType *out_data,
+                                  DType *bins,
+                                  size_t batch_size,
+                                  size_t bins_length,
+                                  bool right) {
 
+    const auto data = in_data[i];
+    const auto batch = i / batch_size;
 
-auto lalala = &ForwardKernel<gpu, float, float>::Map;
+    auto
+        elem = right ? thrust::lower_bound(bins + bins_length * batch,
+                                        bins + bins_length * (batch + 1),
+                                        data)
+                     : thrust::upper_bound(bins + bins_length * batch,
+                                        bins + bins_length * (batch + 1),
+                                        data);
+
+    out_data[i] = thrust::distance(bins, elem);
+  }
+};
+
 
 NNVM_REGISTER_OP(digitize)
-.set_attr<FCompute>("FCompute<gpu>", Forward < gpu > );
+.set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
