@@ -119,7 +119,7 @@ Assume ```x```  with the shape ```[batch_size, channel, upscale, width, height]`
 To do so, we can use advanced reshaping, where we have to split the third dimension (upscale) and multiply it with width and height. We can do 
 ```python
 x = x.reshape(1, 3, -4, 2, 2, 0, 0)
-print x.shape
+print (x.shape)
 ```
 
 (1L, 3L, 2L, 2L, 64L, 64L) <!--notebook-skip-line-->
@@ -127,9 +127,9 @@ print x.shape
 This splits up the third dimension into ```[2,2]```, so (1L, 3L, **4L** , 64L, 64L) becomes (1L, 3L, **2L** , **2L** , 64L, 64L)  The other dimensions remain unchanged. In order to multiply the new dimensions with width and height, we can do a transpose and then use reshape with -3.
 ```python
 x = x.transpose((0, 1, 4, 2, 5, 3))
-print x.shape
+print (x.shape)
 x = x.reshape(0, 0, -3, -3)
-print x.shape
+print (x.shape)
 ```
 
 (1L, 3L, 64L, 2L, 64L, 2L) <!--notebook-skip-line-->
