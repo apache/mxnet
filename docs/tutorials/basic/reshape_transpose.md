@@ -129,6 +129,7 @@ This splits up the third dimension into ```[2,2]```, so (1L, 3L, **4L** , 64L, 6
 x = x.transpose((0, 1, 4, 2, 5, 3))
 print x.shape
 x = x.reshape(0, 0, -3, -3)
+print x.shape
 ```
 
 (1L, 3L, 64L, 2L, 64L, 2L) <!--notebook-skip-line-->
