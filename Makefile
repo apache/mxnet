@@ -133,10 +133,10 @@ ifeq ($(USE_MKLDNN), 1)
 	endif
 
 	ifneq ($(UNAME_S), Windows)
-	    LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
-    else
-        CFLAGS += -I$(MKLDNNROOT)/include
-        LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+		LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
+	else
+		CFLAGS += -I$(MKLDNNROOT)/include
+		LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
     endif
 endif
 
