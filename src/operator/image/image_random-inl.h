@@ -35,8 +35,9 @@
 #include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-
-#include "opencv2/opencv.hpp"
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace op {
