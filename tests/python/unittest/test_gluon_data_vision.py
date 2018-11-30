@@ -44,10 +44,6 @@ def test_normalize():
     data_expected[:][:][2] = data_expected[:][:][2] - 2.0
     assert_almost_equal(data_expected, out_nd.asnumpy())
 
-@with_seed()
-def test_resize():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    data_in = transforms.Resize(size=300)(nd.array(data_in, dtype='uint8'))
 
 @with_seed()
 def test_flip_left_right():
