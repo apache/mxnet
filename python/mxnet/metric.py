@@ -1265,9 +1265,9 @@ class CrossEntropy(EvalMetric):
             assert label.shape[0] == pred.shape[0]
 
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
-            ce = (-numpy.log(prob + self.eps)).sum()
-            self.sum_metric += ce
-            self.global_sum_metric += ce
+            cross_entropy = (-numpy.log(prob + self.eps)).sum()
+            self.sum_metric += cross_entropy
+            self.global_sum_metric += cross_entropy
             self.num_inst += label.shape[0]
             self.global_num_inst += label.shape[0]
 

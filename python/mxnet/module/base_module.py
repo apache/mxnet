@@ -22,7 +22,6 @@
 import time
 import logging
 import warnings
-import copy
 import numpy as np
 
 from .. import metric
