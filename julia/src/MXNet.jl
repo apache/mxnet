@@ -24,19 +24,20 @@ using Reexport
 export mx
 module mx
 
-import Base.Iterators: filter
-
-using Formatting
+using Base.Broadcast: Broadcasted, DefaultArrayStyle
 using Libdl
-using MacroTools
+using LinearAlgebra
 using Markdown
 using Printf
-using Base.Broadcast: Broadcasted, DefaultArrayStyle
-import Base.Broadcast: broadcasted
+using Statistics
+using Random
+
+using Formatting
+using MacroTools
 
 # Functions from base that we can safely extend and that are defined by libmxnet.
-import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm,
-             transpose
+import Base.Broadcast: broadcasted
+import Base.Iterators: filter
 
 ###############################################################################
 #  exports
