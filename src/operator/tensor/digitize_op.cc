@@ -34,47 +34,30 @@ namespace mxnet {
 namespace op {
 
 
-//template<typename DType, typename BType>
-//struct ForwardKernel<cpu, DType, BType> {
-//  static void Map(int i, const DType *in_data, DType *out_data,
-//                  mshadow::Tensor<cpu, 1, BType> &bins, const bool right) {
-//
-//    const auto data = in_data[i];
-//    auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-//                      : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
-//
-//    out_data[i] = std::distance(bins.dptr_, elem);
-//  }
-//};
+template<typename DType, typename OType>
+struct ForwardKernel<cpu, DType, OType> {
+  static MSHADOW_XINLINE void Map(int i,
+                                  DType *in_data,
+                                  OType *out_data,
+                                  DType *bins,
+                                  size_t batch_size,
+                                  size_t bins_length,
+                                  bool right) {
 
+    const auto data = in_data[i];
+    const auto batch = i / batch_size;
 
+    auto
+        elem = right ? std::lower_bound(bins + bins_length * batch,
+                                        bins + bins_length * (batch + 1),
+                                        data)
+                     : std::upper_bound(bins + bins_length * batch,
+                                        bins + bins_length * (batch + 1),
+                                        data);
 
-//// TODO: How to use templated pointers instead of TBlobs here?
-//template<typename DType, typename BType>
-//void DigitizeOp::ForwardKernel::Map<cpu, DType, BType>(int i,
-//                                         const OpContext &ctx,
-//                                         const TBlob &input_data,
-//                                         const TBlob &bins,
-//                                         TBlob &out_data,
-//                                         const bool right){
-//  using namespace mshadow;
-//
-//  auto s = ctx.get_stream<cpu>();
-//
-//  MSHADOW_TYPE_SWITCH(bins.type_flag_, BType, {
-//    const Tensor<cpu, 1, BType> bins_tensor = bins.FlatTo1D<cpu, BType>(s);
-//
-//    MSHADOW_TYPE_SWITCH(input_data.type_flag_, OType, {
-//      const auto *data = input_data.FlatTo1D<cpu, OType>(s).dptr_;
-//
-//      auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i])
-//                        : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data[i]);
-//
-//      out_data[i] = std::distance(bins.dptr_, elem);
-//    });
-//  });
-//
-//}
+    out_data[i] = std::distance(bins, elem);
+  }
+};
 
 
 DMLC_REGISTER_PARAMETER(DigitizeParam);
@@ -93,32 +76,46 @@ is closed, resulting in bins[i-1] <= x < bins[i].
 .. Input:
   - X: data tensor to be quantized. Can have any arbitrary shape. If quantizing in batch mode,
 the first dimension should correspond to the batch axis.
-  - bins: 1 or 2 dimensional tensor containing the bin edges. In the 2D case, the first dimension
+  - bins: tensor containing the bin edges. In the 2D case, the first dimension
  should correspond to the batch axis: each batch in X will be quantized using a different set of
 bins. Within each batch, bins must be strictly monotonically increasing.
 
 .. Output:
   - Tensor of the same shape as the input X containing the indices.
 
-.. Examples:
+.. Example usage:
+  >>> import mxnet as mx
+  >>> x = [-2, 17.3, 5, 0.5]
+  >>> bins = [0, 5, 10]
+  >>> mx.nd.tensor.digitize([mx.nd.array(x), bins], right=True)
+  [0, 3, 1, 1]
+
+  >>> import mxnet as mx
+  >>> x = [[-2, 17.3, 5, 0.5],
+           [10, 30.1, 2, 1.3]]
+  >>> bins = [[0, 5, 10],
+              [-10, 0, 10]]
+  >>> mx.nd.tensor.digitize([mx.nd.array(x), bins])
+  [[0, 3, 2, 1],
+   [3, 3, 2, 2]]
 
 )code" ADD_FILELINE)
     .set_attr_parser(ParamParser<DigitizeParam>)
-    .set_num_inputs(1)
+    .set_num_inputs(2)
     .set_num_outputs(1)
+        // List input names
     .set_attr<nnvm::FListInputNames>("FListInputNames",
                                      [](const NodeAttrs &attrs) {
-                                       return std::vector<std::string>{ "data" };
+                                       return std::vector<std::string>{ "data", "bins" };
                                      })
     .set_attr<nnvm::FInferShape>("FInferShape", InferShape)
     .set_attr<nnvm::FInferType>("FInferType", DigitizeOpType)
-    .set_attr<FCompute>("FCompute", Forward<cpu>)
-    .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                    [](const NodeAttrs &attrs) {
-                                      return std::vector<std::pair<int, int>>{{ 0, 0 }};
-                                    })
+    .set_attr<FCompute>("FCompute", DigitizeOpForward<cpu>)
     .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_argument("bins", "NDArray-or-Symbol", "Bins ndarray")
     .add_arguments(DigitizeParam::__FIELDS__());
+// TODO: Option to specify there's no backward pass?
+
 
 }  // namespace op
 }  // namespace mxnet

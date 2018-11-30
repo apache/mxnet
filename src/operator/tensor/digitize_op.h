@@ -38,11 +38,19 @@ namespace op {
 
 struct DigitizeParam : public dmlc::Parameter<DigitizeParam> {
   bool right;
-
+  int otype;
+  // TODO: param to define output type (See ops in random/)
   DMLC_DECLARE_PARAMETER(DigitizeParam) {
     DMLC_DECLARE_FIELD(right)
         .set_default(false)
         .describe("Whether the intervals include the right or the left bin edge.");
+    DMLC_DECLARE_FIELD(otype)
+        .add_enum("uint8", mshadow::kUint8)
+        .add_enum("int32", mshadow::kInt32)
+        .add_enum("int64", mshadow::kInt64)
+        .add_enum("int8", mshadow::kInt8)
+        .set_default(mshadow::kInt32)
+        .describe("DType of the output.");
   }
 };
 
@@ -54,25 +62,21 @@ bool InferShape(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(in_attrs->size(), 2); // Size 2: data and bins
   CHECK_EQ(out_attrs->size(), 1); // Only one output tensor
 
-  const auto &bin_size = in_attrs->at(1).Size();
-  CHECK_LE(bin_size, 2); // Size <= 2 for bins
+  auto &data_shape = (*in_attrs)[0];
+  auto &bin_shape = (*in_attrs)[1];
 
-  auto &input_shape = (*in_attrs)[0];
-  auto &output_shape = (*out_attrs)[0];
+  // Only continue if both inputs are defined (ndim > 0), otherwise return 0
+  CHECK_GT(data_shape.ndim(), 0) << "Data shape undefined";
+  CHECK_GT(bin_shape.ndim(), 0) << "Bin shape undefined";
 
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, input_shape); // First arg is a shape array
-  SHAPE_ASSIGN_CHECK(*in_attrs, 0, output_shape);
+  CHECK_LE(bin_shape, data_shape) << "Bins tensor cannot have a higher dimension than input data";
 
-  // If bins has two dimensions, the first one corresponds to the batch axis, so we need to verify
-  // # batches in X = # batches in bins
-  if (bin_size == 2) {
-    auto &input_batches = (*in_attrs)[0][0];
-    auto &bin_batches = (*in_attrs)[1][0];
+  // Check if the first n-1 dims of data & bins are the same
+  auto bin_shape_last = (bin_shape.end() - 1); // TODO: Type
+  CHECK(std::equal(bin_shape.begin(), bin_shape_last, data_shape.begin()))
+    << "First N-1 dimensions of the input data and bins tensors should be the same (N = bins.ndim)";
 
-    CHECK_EQ(input_batches, bin_batches)
-      << "If bins has 2 dimensions, the first one should be the same as that of the input data";
-    //TODO: Reword the message above
-  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, data_shape); // First arg is a shape array
 
   return true;
 }
@@ -81,181 +85,84 @@ bool InferShape(const nnvm::NodeAttrs &attrs,
 inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
                            std::vector<int> *in_attrs,
                            std::vector<int> *out_attrs) {
-  auto &input_type = (*in_attrs)[0];
-  auto &output_type = (*out_attrs)[0];
+  auto &data_type = (*in_attrs)[0];
+  auto &bins_type = (*in_attrs)[1];
 
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, input_type);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, output_type);
-  return out_attrs->at(0) != -1;
+  CHECK_NE(data_type, -1) << "Input data type undefined";
+  CHECK_NE(bins_type, -1) << "Bins type undefined";
+
+  // Verify Have bins & data share the same type to simplify templating
+  CHECK_EQ(data_type, bins_type);
+
+  // Assign output_type the param
+  const int OType = nnvm::get<DigitizeParam>(attrs.parsed).otype;
+  if (OType == -1) { return false; }
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, OType);
+
+  return true;
 }
 
 
-template<typename xpu, typename DType, typename BType>
+template<typename xpu, typename DType, typename OType>
 struct ForwardKernel {
-  static MSHADOW_XINLINE void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu,
-      1, BType>
-  &bins, const bool right);
-};
-
-
-template<typename DType, typename BType>
-struct ForwardKernel<cpu, DType, BType> {
-  static MSHADOW_XINLINE void Map(int i, const DType *in_data, DType *out_data,
-                  mshadow::Tensor<cpu, 1, BType> &bins, const bool right) {
-
-    const auto data = in_data[i];
-    auto elem = right ? std::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data)
-                      : std::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data);
-
-    out_data[i] = std::distance(bins.dptr_, elem);
-  }
+  static MSHADOW_XINLINE void Map(int i,
+                                  DType *in_data,
+                                  OType *out_data,
+                                  DType *bins,
+                                  size_t batch_size,
+                                  size_t bins_length,
+                                  bool right);
 };
 
 
 template<typename DType>
-void CheckMonotonic(DType *begin, DType *end) {
-  // adjacent_find here returns the first element that's >= than the next one or the last element
-  CHECK_EQ(std::adjacent_find(begin, end, std::greater_equal<DType>()), end)
-    << "Bins vector must be strictly monotonically increasing";
-}
-//
-//
-//template<typename xpu>
-//void Forward(const nnvm::NodeAttrs &attrs,
-//             const OpContext &ctx,
-//             const std::vector<TBlob> &inputs,
-//             const std::vector<OpReqType> &req,
-//             const std::vector<TBlob> &outputs) {
-//  using namespace mshadow;
-//
-//  auto s = ctx.get_stream<xpu>();
-//  const bool right = nnvm::get<DigitizeParam>(attrs.parsed).right;
-//
-//  // Verify bins is strictly monotonic
-//  MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, BType, {
-//    const auto &bins = inputs[1];
-//    const auto bin_dims = bins.shape_.Size();
-//
-//    if (bin_dims == 1) {
-//      const Tensor<xpu, 1, BType> bins_tensor = bins.FlatTo1D<xpu, BType>(s);
-//      const auto *data = bins_tensor.dptr_;
-//      CheckMonotonic(data, data + bins_tensor.size(0));
-//
-//      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-//          mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s,
-//              inputs[0].dptr<DType>(), outputs[0].dptr<DType>(), bins_tensor, right);
-//      });
-//
-//    } else {
-//      const Tensor<xpu, 2, BType> bins_tensor = bins.FlatTo2D<xpu, BType>(s);
-//
-//      for (auto i = 0; i < bins_tensor.size(0); ++i) {
-//        const auto *data = bins_tensor[i].dptr_;
-//        CheckMonotonic(data, data + bins_tensor[i].size(0));
-//
-//        MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-//            mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s, inputs[0].dptr_,
-//                                                                            outputs[0].dptr_,
-//                                                                            bins_tensor[i],
-//                                                                            right);
-//        });
-//      }
-//    }
-//
-//  });
-//}
-
-
-}  // namespace op
-}  // namespace mxnet
-
-#ifdef __CUDACC__
-
-#include <thrust/binary_search.h>
-#include <thrust/distance.h>
-
-
-namespace mxnet {
-namespace op {
-
-template<typename DType, typename BType>
-struct ForwardKernel<gpu, DType, BType> {
-  MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data,
-                                  mshadow::Tensor<gpu, 1, BType> &bins, const bool right) {
-
-    const auto data = in_data[i];
-    auto
-        elem =
-        right ? thrust::lower_bound(bins.dptr_, bins.dptr_ + bins.size(0), data,
-                                    thrust::less<BType>())
-              : thrust::upper_bound(bins.dptr_, bins.dptr_ + bins.size(0), data,
-                                    thrust::less<BType>());
-
-    out_data[i] = thrust::distance(bins.dptr_, elem);
+struct CheckMonotonic {
+  // k = # of elements per bin vector
+  static MSHADOW_XINLINE void Map(int i, int k, DType *bins) {
+    if ((i + 1) % k != 0) {
+      CHECK_LT(bins[i], bins[i + 1]) << "Bins vector is not strictly monotonic and increasing";
+    } // TODO: Make sure the next element in bins is actually bins[i+1]
   }
 };
 
-}  // namespace op
-}  // namespace mxnet
-
-#endif
-
-
-namespace mxnet {
-namespace op {
-
 
 template<typename xpu>
-void Forward(const nnvm::NodeAttrs &attrs,
-             const OpContext &ctx,
-             const std::vector<TBlob> &inputs,
-             const std::vector<OpReqType> &req,
-             const std::vector<TBlob> &outputs) {
+void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
   using namespace mshadow;
 
   auto s = ctx.get_stream<xpu>();
   const bool right = nnvm::get<DigitizeParam>(attrs.parsed).right;
+  const auto &data = inputs[0];
+  const auto &bins = inputs[1];
 
-  // Verify bins is strictly monotonic
-  MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, BType, {
-    const auto &bins = inputs[1];
-    const auto bin_dims = bins.shape_.Size();
+  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
 
-    if (bin_dims == 1) {
-      const Tensor<xpu, 1, BType> bins_tensor = bins.FlatTo1D<xpu, BType>(s);
-      const auto *data = bins_tensor.dptr_;
-      CheckMonotonic(data, data + bins_tensor.size(0));
+    // Verify bins is strictly monotonic
+    auto bins_length = bins.shape_[bins.ndim()-1];
+    mxnet_op::Kernel<CheckMonotonic<DType>, xpu>::LaunchEx(s, bins.Size(), bins_length, &bins);
 
-      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-          mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s,
-                                                                          outputs[0].Size(),
-                                                                          inputs[0].dptr<DType>(),
-                                                                          outputs[0].dptr<DType>(),
-                                                                          bins_tensor, right);
-      });
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      auto batch_size = data.shape_.ProdShape(bins.ndim() - 1, data.ndim());
 
-    } else {
-      const Tensor<xpu, 2, BType> bins_tensor = bins.FlatTo2D<xpu, BType>(s);
-
-      for (auto i = 0; i < bins_tensor.size(0); ++i) {
-        const auto *data = bins_tensor[i].dptr_;
-        CheckMonotonic(data, data + bins_tensor[i].size(0));
-
-        MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-            mxnet_op::Kernel<ForwardKernel<xpu, DType, BType>, xpu>::Launch(s,
-                                                                            outputs[0].Size(),
-                                                                            inputs[0].dptr<DType>(),
-                                                                            outputs[0].dptr<DType>(),
-                                                                            bins_tensor[i],
-                                                                            right);
-        });
-      }
-    }
-
+      mxnet_op::Kernel<ForwardKernel<xpu, DType, OType>, xpu>::LaunchEx(s,
+                                                                        outputs[0].Size(),
+                                                                        data.dptr<DType>(),
+                                                                        outputs[0].dptr<OType>(),
+                                                                        bins.dptr<DType>(),
+                                                                        batch_size,
+                                                                        bins_length,
+                                                                        right);
+    });
   });
 }
 
 }  // namespace op
 }  // namespace mxnet
+
 
 #endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_H_
