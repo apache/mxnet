@@ -26,9 +26,9 @@ ifeq ($(UNAME_S), Darwin)
 	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.a
 else ifeq ($(UNAME_S), Windows)
 	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.so
-    MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
-    MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so
-    MKLDNN_LIBRARY_TYPE=SHARED
+	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so
+	MKLDNN_LIBRARY_TYPE=SHARED
 else
 	OMP_LIBFILE = $(MKLDNNROOT)/lib/libiomp5.so
 	MKLML_LIBFILE = $(MKLDNNROOT)/lib/libmklml_intel.so
