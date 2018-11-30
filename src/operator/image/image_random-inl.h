@@ -41,7 +41,7 @@ namespace mxnet {
 namespace op {
 namespace image {
 
-inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
+bool ToTensorShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -54,7 +54,7 @@ inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
+bool ToTensorType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -97,7 +97,7 @@ struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   }
 };
 
-inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
+bool NormalizeShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
@@ -155,7 +155,7 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
   DMLC_DECLARE_PARAMETER(ResizeParam) {
     DMLC_DECLARE_FIELD(size)
     .set_default(nnvm::Tuple<int>())
-    .describe("Size of new image. Could be (height, width) or (size)");
+    .describe("Size of new image. Could be (width, height) or (size)");
     DMLC_DECLARE_FIELD(keep_ratio)
     .describe("Whether to resize the short edge or both edges to `size`, "
       "if size is give as an integer.");
@@ -169,6 +169,9 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
 inline std::tuple<int, int> GetHeightAndWidth(const int data_h,
                                               const int data_w,
                                               const ResizeParam& param) {
+  CHECK_LE(param.size.ndim(), 2)
+      << "Input size dimension must be 1 or 2, but got "
+      << param.size.ndim();
   int resized_h;
   int resized_w;
   if (param.size.ndim() == 1) {
@@ -184,16 +187,14 @@ inline std::tuple<int, int> GetHeightAndWidth(const int data_h,
         resized_w = static_cast<int>(data_w * resized_h / data_h);
       }
     }
-  } else if (param.size.ndim() == 2) {
+  } else {
     resized_h = param.size[1];
     resized_w = param.size[0];
-  } else {
-    LOG(FATAL) << "The dimension of the size is not correct!";
   }
   return std::make_tuple(resized_h, resized_w);
 }
 
-inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
+bool ResizeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const auto& ishape = (*in_attrs)[0];
@@ -205,7 +206,7 @@ inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline bool ResizeType(const nnvm::NodeAttrs& attrs,
+bool ResizeType(const nnvm::NodeAttrs& attrs,
                          std::vector<int> *in_attrs,
                          std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
@@ -216,13 +217,13 @@ inline bool ResizeType(const nnvm::NodeAttrs& attrs,
   return (*out_attrs)[0] != -1;
 }
 
-inline void _Resize(const std::vector<TBlob> &inputs,
+void ResizeImpl(const std::vector<TBlob> &inputs,
                       const std::vector<TBlob> &outputs,
                       const int height,
                       const int width,
                       const int interp) {
 #if MXNET_USE_OPENCV
-  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "imresize doesn't support fp16";
+  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "image resize doesn't support fp16";
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
   cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
@@ -231,11 +232,11 @@ inline void _Resize(const std::vector<TBlob> &inputs,
   CHECK(!dst.empty());
   CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
 #else
-  LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
+  LOG(FATAL) << "Build with USE_OPENCV=1 for image resize operator.";
 #endif  // MXNET_USE_OPENCV
 }
 
-inline void Resize(const nnvm::NodeAttrs &attrs,
+void Resize(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -244,20 +245,20 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   auto t = GetHeightAndWidth(inputs[0].shape_[0], inputs[0].shape_[1], param);
-  _Resize(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp);
+  ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp);
 }
 
 template<typename DType>
-inline DType saturate_cast(const float& src) {
+DType saturate_cast(const float& src) {
   return static_cast<DType>(src);
 }
 
 template<>
-inline uint8_t saturate_cast(const float& src) {
+uint8_t saturate_cast(const float& src) {
   return std::min(std::max(src, 0.f), 255.f);
 }
 
-inline bool ImageShape(const nnvm::NodeAttrs& attrs,
+bool ImageShape(const nnvm::NodeAttrs& attrs,
                        std::vector<TShape> *in_attrs,
                        std::vector<TShape> *out_attrs) {
   TShape& dshape = (*in_attrs)[0];
@@ -369,7 +370,7 @@ struct RandomEnhanceParam : public dmlc::Parameter<RandomEnhanceParam> {
   }
 };
 
-inline void AdjustBrightnessImpl(const float& alpha_b,
+void AdjustBrightnessImpl(const float& alpha_b,
                                  const OpContext &ctx,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<OpReqType> &req,
@@ -404,7 +405,7 @@ void RandomBrightness(const nnvm::NodeAttrs &attrs,
   AdjustBrightnessImpl(alpha_b, ctx, inputs, req, outputs);
 }
 
-inline void AdjustContrastImpl(const float& alpha_c,
+void AdjustContrastImpl(const float& alpha_c,
                                const OpContext &ctx,
                                const std::vector<TBlob> &inputs,
                                const std::vector<OpReqType> &req,
@@ -437,7 +438,7 @@ inline void AdjustContrastImpl(const float& alpha_c,
   });
 }
 
-inline void RandomContrast(const nnvm::NodeAttrs &attrs,
+void RandomContrast(const nnvm::NodeAttrs &attrs,
                            const OpContext &ctx,
                            const std::vector<TBlob> &inputs,
                            const std::vector<OpReqType> &req,
@@ -454,7 +455,7 @@ inline void RandomContrast(const nnvm::NodeAttrs &attrs,
   AdjustContrastImpl(alpha_c, ctx, inputs, req, outputs);
 }
 
-inline void AdjustSaturationImpl(const float& alpha_s,
+void AdjustSaturationImpl(const float& alpha_s,
                                  const OpContext &ctx,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<OpReqType> &req,
@@ -489,7 +490,7 @@ inline void AdjustSaturationImpl(const float& alpha_s,
   });
 }
 
-inline void RandomSaturation(const nnvm::NodeAttrs &attrs,
+void RandomSaturation(const nnvm::NodeAttrs &attrs,
                              const OpContext &ctx,
                              const std::vector<TBlob> &inputs,
                              const std::vector<OpReqType> &req,
