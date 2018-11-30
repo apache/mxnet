@@ -26,15 +26,16 @@
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
 
-#include <mxnet/base.h>
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <limits>
-#include <algorithm>
+#include <tuple>
 #include <utility>
+#include <vector>
+#include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+
 #include "opencv2/opencv.hpp"
 
 namespace mxnet {
@@ -202,7 +203,7 @@ bool ResizeShape(const nnvm::NodeAttrs& attrs,
   auto t = GetHeightAndWidth(ishape[0], ishape[1], param);
   out_attrs->clear();
   out_attrs->push_back(mshadow::Shape3(std::get<0>(t), std::get<1>(t), ishape[2]));
-  
+
   return true;
 }
 
@@ -241,7 +242,6 @@ void Resize(const nnvm::NodeAttrs &attrs,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
                    const std::vector<TBlob> &outputs) {
-
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   auto t = GetHeightAndWidth(inputs[0].shape_[0], inputs[0].shape_[1], param);
