@@ -73,14 +73,18 @@ void OpenMP::set_reserve_cores(int cores) {
   CHECK_GE(cores, 0);
   reserve_cores_ = cores;
 #ifdef _OPENMP
-  omp_thread_max_ = std::max(omp_thread_max_ - reserve_cores_, 1);
+  if (reserve_cores_ >= omp_thread_max_) {
+    omp_set_num_threads(1);
+  } else {
+    omp_set_num_threads(omp_thread_max_ - reserve_cores_);
+  }
 #endif
 }
 
 int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
 #ifdef _OPENMP
   if (omp_num_threads_set_in_environment_) {
-    return omp_thread_max_;
+    return omp_get_max_threads();
   }
   if (enabled_) {
     int thread_count = omp_get_max_threads();
@@ -97,8 +101,10 @@ int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
     }
     return omp_thread_max_;
   }
-#endif
   return 1;
+#else
+  return 1;
+#endif
 }
 
 OpenMP *__init_omp__ = OpenMP::Get();
