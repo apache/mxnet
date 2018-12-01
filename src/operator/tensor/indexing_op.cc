@@ -36,7 +36,7 @@ struct TakeCPU {
   // K is the number of rows of in_data
   // i is the index of out_data
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                   const IType* idx, const size_t M, const int64_t K) {
     int64_t j = static_cast<int64_t>(idx[i]);
     if (clip) {
@@ -420,19 +420,19 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
-GatherNDBackwardImpl(int N, int M, int K,
+GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                      const mshadow::Shape<10> strides,
                      DType* out,
                      const DType* data,
                      const IType* indices,
                      mshadow::Stream<cpu> *s) {
 #pragma omp parallel for
-  for (int i = 0; i < N; i++) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+  for (index_t i = 0; i < N; i++) {
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<index_t>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
 #pragma omp atomic
       out[offset + j] += data[i * K + j];
     }
@@ -441,18 +441,18 @@ GatherNDBackwardImpl(int N, int M, int K,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
-GatherNDBackwardImpl(int N, int M, int K,
+GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                      const mshadow::Shape<10> strides,
                      DType* out,
                      const DType* data,
                      const IType* indices,
                      mshadow::Stream<cpu> *s) {
-  for (int i = 0; i < N; i++) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+  for (index_t i = 0; i < N; i++) {
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<index_t>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       out[offset + j] += data[i * K + j];
     }
   }
