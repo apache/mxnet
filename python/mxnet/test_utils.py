@@ -1854,7 +1854,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
 
     Usually the user is required to specify the probs parameter.
 
-    After obtatining the p value, we could further use the standard p > 0.05 (alpha) threshold to get \
+    After obtaining the p value, we could further use the standard p > 0.05 (alpha) threshold to get \
     the final result.
 
     Examples::
