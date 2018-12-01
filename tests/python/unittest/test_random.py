@@ -871,13 +871,13 @@ def test_randint_generator():
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
             generator_mx = lambda x: mx.nd.random.randint(low, high, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, alpha=0.01)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100, alpha=0.01)
             # Scipy uses alpha = 0.01 for testing discrete distribution generator
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.randint(low, high, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                         for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100, alpha=0.01)
 
 @with_seed()
 def test_randint_without_dtype():
