@@ -623,6 +623,23 @@ def convert_identity(node, **kwargs):
     """
     return create_basic_op_node('Identity', node, kwargs)
 
+@mx_op.register("InstanceNorm")
+def convert_instancenorm(node, **kwargs):
+    """Map MXNet's InstanceNorm operator attributes to onnx's InstanceNormalization operator
+    based on the input node's attributes and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    eps = float(attrs.get("eps", 0.001))
+
+    node = onnx.helper.make_node(
+        'InstanceNormalization',
+        inputs=input_nodes,
+        outputs=[name],
+        name=name,
+        epsilon=eps)
+
+    return [node]
 
 @mx_op.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
@@ -1545,6 +1562,15 @@ def convert_sum(node, **kwargs):
             name=name
         )
     return [node]
+
+
+@mx_op.register("shape_array")
+def convert_shape(node, **kwargs):
+    """Map MXNet's shape_array operator attributes to onnx's Shape operator
+    and return the created node.
+    """
+    return create_basic_op_node('Shape', node, kwargs)
+
 
 @mx_op.register("hard_sigmoid")
 def convert_hardsigmoid(node, **kwargs):
