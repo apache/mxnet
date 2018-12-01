@@ -38,6 +38,19 @@ def random_normal(attrs, inputs, proto_obj):
     new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
     return 'random_uniform', new_attr, inputs
 
+def sample_multinomial(attrs, inputs, proto_obj):
+    """Draw random samples from a multinomial distribution."""
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
+    new_attrs = translation_utils._remove_attributes(attrs, ['seed'])
+    new_attrs = translation_utils._fix_attribute_names(new_attrs, {'sample_size': 'shape'})
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs['dtype'])]
+    return 'sample_multinomial', new_attrs, inputs
+
+
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
