@@ -873,6 +873,7 @@ def test_randint_generator():
             generator_mx = lambda x: mx.nd.random.randint(low, high, shape=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100, alpha=0.01)
             # Scipy uses alpha = 0.01 for testing discrete distribution generator
+            # Refer - https://github.com/scipy/scipy/blob/9f12af697763fb5f9767d5cb1280ce62456a3974/scipy/stats/tests/test_discrete_basic.py#L45
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.randint(low, high, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()

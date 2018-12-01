@@ -1849,7 +1849,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
 
     If the generator is continuous, the buckets should contain tuples of (range_min, range_max) \
     and the probs should be the corresponding ideal probability within the specific ranges. \
-    Otherwise, the buckets should be the possible output of the discrete distribution and the \
+    Otherwise, the buckets should contain all the possible values generated over the discrete distribution and the \
     probs should be groud-truth probability.
 
     Usually the user is required to specify the probs parameter.
@@ -1906,7 +1906,6 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
             buckets_npy[i * 2 + 1] = buckets[i][1]
     else:
         continuous_dist = False
-        buckets_npy = np.array(buckets)
     expected_freq = (nsamples * np.array(probs, dtype=np.float32)).astype(np.int32)
     if continuous_dist:
         sample_bucket_ids = np.searchsorted(buckets_npy, samples, side='right')
