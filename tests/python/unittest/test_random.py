@@ -859,8 +859,8 @@ def test_randint_extremes():
     a = mx.nd.random.randint(dtype='int64', low=50000000, high=50000010, ctx=mx.context.current_context())
     assert a>=50000000 and a<=50000010
 
-@with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/13446")
+# Seed set because the test is not robust enough to operate on random data
+@with_seed(1234)
 def test_randint_generator():
     ctx = mx.context.current_context()
     for dtype in ['int32', 'int64']:
@@ -871,14 +871,15 @@ def test_randint_generator():
             buckets = np.array(buckets, dtype=dtype).tolist()
             probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
             generator_mx = lambda x: mx.nd.random.randint(low, high, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, alpha=0.01)
+            # Scipy uses alpha = 0.01 for testing discrete distribution generator
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.randint(low, high, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                         for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
-with_seed()
+@with_seed()
 def test_randint_without_dtype():
     a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
     assert(a.dtype, 'int32')

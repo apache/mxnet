@@ -1854,7 +1854,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
 
     Usually the user is required to specify the probs parameter.
 
-    After obtatining the p value, we could further use the standard p > 0.05 threshold to get \
+    After obtatining the p value, we could further use the standard p > 0.05 (alpha) threshold to get \
     the final result.
 
     Examples::
@@ -1920,7 +1920,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
-def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.15):
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25, alpha=0.05):
     """Verify whether the generator is correct using chi-square testing.
 
     The test is repeated for "nrepeat" times and we check if the success rate is
@@ -1943,6 +1943,8 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         The times to repeat the test
     success_rate: float
         The desired success rate
+    alpha: float
+        The desired threshold for type-I error i.e. when a true null hypothesis is rejected
 
     Returns
     -------
@@ -1958,7 +1960,7 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         cs_ret_l.append(cs_ret)
         obs_freq_l.append(obs_freq)
         expected_freq_l.append(expected_freq)
-    success_num = (np.array(cs_ret_l) > 0.05).sum()
+    success_num = (np.array(cs_ret_l) > alpha).sum()
     if success_num < nrepeat * success_rate:
         raise AssertionError("Generator test fails, Chi-square p=%s, obs_freq=%s, expected_freq=%s."
                              "\nbuckets=%s, probs=%s"
