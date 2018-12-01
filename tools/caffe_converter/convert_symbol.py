@@ -153,7 +153,7 @@ def _parse_proto(prototxt_fname):
             else:
                 _output_name[layer.bottom[k]] = {'count':0}
         for k in range(len(layer.top)):
-            if layer.top[k] in _output_name:
+            if layer.top[k] in _output_name and layer.top[k] not in layer.bottom:
                 _output_name[layer.top[k]]['count'] = _output_name[layer.top[k]]['count']+1
             else:
                 _output_name[layer.top[k]] = {'count':0, 'name':name}
