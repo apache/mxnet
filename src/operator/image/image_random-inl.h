@@ -208,16 +208,16 @@ bool ResizeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-bool ResizeType(const nnvm::NodeAttrs& attrs,
-                         std::vector<int> *in_attrs,
-                         std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
+// bool ResizeType(const nnvm::NodeAttrs& attrs,
+//                          std::vector<int> *in_attrs,
+//                          std::vector<int> *out_attrs) {
+//   CHECK_EQ(in_attrs->size(), 1U);
+//   CHECK_EQ(out_attrs->size(), 1U);
 
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-  return (*out_attrs)[0] != -1;
-}
+//   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+//   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+//   return (*out_attrs)[0] != -1;
+// }
 
 void ResizeImpl(const std::vector<TBlob> &inputs,
                       const std::vector<TBlob> &outputs,
@@ -247,6 +247,90 @@ void Resize(const nnvm::NodeAttrs &attrs,
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   auto t = GetHeightAndWidth(inputs[0].shape_[0], inputs[0].shape_[1], param);
   ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp);
+}
+
+struct CenterCropParam : public dmlc::Parameter<CenterCropParam> {
+  nnvm::Tuple<int> size;
+  int interp;
+  DMLC_DECLARE_PARAMETER(CenterCropParam) {
+    DMLC_DECLARE_FIELD(size)
+    .set_default(nnvm::Tuple<int>())
+    .describe("Size of output image. Could be (width, height) or (size)");
+    DMLC_DECLARE_FIELD(interp)
+    .set_default(1)
+    .describe("Interpolation method for resizing. By default uses bilinear"
+        "interpolation. See OpenCV's resize function for available choices.");
+  }
+};
+
+// inline std::tuple ScaleDown(const std::tuple src,
+//                             const std::tuple size) {
+//   const auto src_w = std::get<0>(src);
+//   const auto src_h = std::get<1>(src);
+//   auto dst_w = std::get<0>(size);
+//   auto dst_h = std::get<1>(size);
+
+//   if (src_h < dst_h) {
+//     dst_w = static_cast<int>((dst_w * src_h) / dst_h);
+//   }
+//   if (src_w < dst_w) {
+//     dst_h = static_cast<int>((dst_h * src_w) / dst_w);
+//   }
+//   return std::make_tuple(dst_w, dst_h);
+// }
+
+bool CenterCropShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  const auto& ishape = (*in_attrs)[0];
+  const CenterCropParam& param = nnvm::get<CenterCropParam>(attrs.parsed);
+  int dst_h;
+  int dst_w;
+  if (param.size.ndim() == 1) {
+    dst_h = param.size[0];
+    dst_w = param.size[0];
+  } else {
+    dst_h = param.size[1];
+    dst_w = param.size[0];
+  }
+  out_attrs->clear();
+  out_attrs->push_back(mshadow::Shape3(dst_h, dst_w, ishape[2]));
+
+  return true;
+}
+
+void Crop(const int x,
+          const int y,
+          const int width,
+          const int height,
+          const std::vector<TBlob> &inputs,
+          const std::vector<TBlob> &outputs) {
+#if MXNET_USE_OPENCV
+  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "image resize doesn't support fp16";
+  const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
+  int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
+  cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
+  cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
+  cv::Rect roi(x, y, width, height);
+  buf(roi).copyTo(dst);
+  CHECK(!dst.empty());
+  CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
+#else
+  LOG(FATAL) << "Build with USE_OPENCV=1 for image resize operator.";
+#endif  // MXNET_USE_OPENCV
+}
+
+void CenterCrop(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  const CenterCropParam& param = nnvm::get<CenterCropParam>(attrs.parsed);
+  auto h = inputs[0].shape_[0];
+  auto w = inputs[0].shape_[1];
+  auto x0 = static_cast<int>((w - param.size[0]) / 2);
+  auto y0 = static_cast<int>((h - param.size[1]) / 2);
+  Crop(x0, y0, param.size[0], param.size[1], inputs, outputs);
 }
 
 template<typename DType>
