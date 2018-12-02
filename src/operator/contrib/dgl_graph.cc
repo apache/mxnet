@@ -629,7 +629,7 @@ static void SampleSubgraph(const NDArray &csr,
                        &tmp_sampled_edge_list,
                        &time_seed);
       }
-      CHECK_EQ(tmp_sampled_src_list.size(), 
+      CHECK_EQ(tmp_sampled_src_list.size(),
                tmp_sampled_edge_list.size());
       size_t pos = neighbor_list.size();
       neigh_pos[dst_id] = pos;
@@ -722,11 +722,11 @@ static void SampleSubgraph(const NDArray &csr,
     size_t pos = neigh_pos[dst_id];
     size_t edge_size = neighbor_list[pos];
     if (edge_size != 0) {
-      std::copy_n(neighbor_list.begin() + pos + 1, 
-                  edge_size, 
+      std::copy_n(neighbor_list.begin() + pos + 1,
+                  edge_size,
                   col_list_out + collected_nedges);
-      std::copy_n(neighbor_list.begin() + pos + edge_size + 1, 
-                  edge_size, 
+      std::copy_n(neighbor_list.begin() + pos + edge_size + 1,
+                  edge_size,
                   val_list_out + collected_nedges);
       collected_nedges += edge_size;
     }
