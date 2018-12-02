@@ -4,7 +4,7 @@ Title: MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneou
 Version: 1.5.0
 Date: 2017-06-27
 Author: Tianqi Chen, Qiang Kou, Tong He
-Maintainer: Qiang Kou <qkou@qkou.info>
+Maintainer: Qiang Kou <qkou@qkou.info>, anirudhacharya <https://github.com/anirudhacharya>
 Repository: Apache
 Description: MXNet is a deep learning framework designed for both efficiency
     and flexibility. It allows you to mix the flavours of deep learning programs
