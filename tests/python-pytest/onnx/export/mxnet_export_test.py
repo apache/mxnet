@@ -268,6 +268,45 @@ def test_comparison_ops():
     test_ops("Equal", input_data, input_tensor,
              np.equal(input_data[0], input_data[1]).astype(np.float32))
 
+
+def get_int_inputs(interval, shape):
+    """Helper to get integer input of given shape and range"""
+    assert len(interval) == len(shape)
+    inputs = []
+    input_tensors = []
+    for idx in range(len(interval)):
+        low, high = interval[idx]
+        inputs.append(np.random.randint(low, high, size=shape[idx]).astype("float32"))
+        input_tensors.append(helper.make_tensor_value_info("input"+str(idx+1),
+                                                        TensorProto.FLOAT, shape=shape[idx]))
+    return inputs, input_tensors
+
+
+@with_seed()
+def test_logical_ops():
+    """Test for logical and, or, not, xor operators"""
+    def test_ops(op_name, inputs, input_tensors, numpy_op):
+        outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=np.shape(inputs[0]))]
+        nodes = [helper.make_node(op_name, ["input"+str(i+1) for i in range(len(inputs))], ["output"])]
+        graph = helper.make_graph(nodes,
+                                  op_name + "_test",
+                                  input_tensors,
+                                  outputs)
+        model = helper.make_model(graph)
+        bkd_rep = backend.prepare(model)
+        output = bkd_rep.run(inputs)
+        npt.assert_almost_equal(output[0], numpy_op)
+    input_data, input_tensor = get_int_inputs([(0, 2), (0, 2)], [(3, 4, 5), (3, 4, 5)])
+    test_ops("And", input_data, input_tensor,
+             np.logical_and(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Or", input_data, input_tensor,
+             np.logical_or(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Xor", input_data, input_tensor,
+             np.logical_xor(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Not", [input_data[0]], [input_tensor[0]],
+             np.logical_not(input_data[0]).astype(np.float32))
+
+
 def _assert_sym_equal(lhs, rhs):
     assert lhs.list_inputs() == rhs.list_inputs()  # input names must be identical
     assert len(lhs.list_outputs()) == len(rhs.list_outputs())  # number of outputs must be identical
@@ -286,18 +325,19 @@ def _optional_group(symbols, group=False):
         return symbols
 
 
-def _check_onnx_export(net, group_outputs=False):
+def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params={}):
     net.initialize()
     data = nd.random.uniform(0, 1, (1, 1024))
     output = _force_list(net(data))  # initialize weights
     net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
     net_params = {name:param._reduce() for name, param in net.collect_params().items()}
+    net_params.update(extra_params)
     with tempfile.TemporaryDirectory() as tmpdirname:
         onnx_file_path = os.path.join(tmpdirname, 'net.onnx')
         export_path = onnx_mxnet.export_model(
             sym=net_sym,
             params=net_params,
-            input_shape=[data.shape],
+            input_shape=[shape_type(data.shape)],
             onnx_file_path=onnx_file_path)
         assert export_path == onnx_file_path
         # Try importing the model to symbol
@@ -338,6 +378,22 @@ def test_onnx_export_multi_output():
     net = MultiOutputBlock()
     assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
     _check_onnx_export(net, group_outputs=True)
+
+
+@with_seed()
+def test_onnx_export_list_shape():
+    net = nn.HybridSequential(prefix='list_shape_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net, shape_type=list)
+
+
+@with_seed()
+def test_onnx_export_extra_params():
+    net = nn.HybridSequential(prefix='extra_params_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
 
 
 if __name__ == '__main__':

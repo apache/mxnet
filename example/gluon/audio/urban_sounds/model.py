@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,33 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+"""This module builds a model an MLP with a configurable output layer( number of units in the last layer).
+Users can pass any number of units in the last layer. SInce this dataset has 10 labels,
+the default value of num_labels = 10
+"""
+import mxnet as mx
+from mxnet import gluon
 
-hw_type=cpu
-if [[ $1 = gpu ]]
-then
-    hw_type=gpu
-fi
-
-platform=linux-x86_64
-
-if [[ $OSTYPE = [darwin]* ]]
-then
-    platform=osx-x86_64
-    hw_type=cpu
-fi
-
-MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
-echo $MXNET_ROOT
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
-
-# model dir
-DATA_PATH=$2
-
-java -XX:+PrintGC -Dmxnet.traceLeakedObjects=false -cp $CLASS_PATH \
-        org.apache.mxnetexamples.imclassification.TrainModel \
-        --data-dir $MXNET_ROOT/scala-package/examples/mnist/ \
-        --network mlp \
-        --num-layers 50 \
-        --num-epochs 10000000 \
-        --batch-size 1024
+# Defining a neural network with number of labels
+def get_net(num_labels=10):
+    net = gluon.nn.Sequential()
+    with net.name_scope():
+        net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
+        net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer ( 256 nodes )
+        net.add(gluon.nn.Dense(num_labels))
+    net.collect_params().initialize(mx.init.Xavier())
+    return net

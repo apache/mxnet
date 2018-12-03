@@ -314,7 +314,8 @@ struct Take {
    * \param axis        axis id
    */
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data, const IType* idx,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const IType* idx,
                                   const mshadow::Shape<10> in_stride,
                                   const mshadow::Shape<10> out_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
@@ -361,7 +362,7 @@ struct TakeRspKernel {
    * \param nnr         number of non-zero rows
    */
   template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   const IType* data,
                                   DType* out,
                                   const RType* weight_idx,
@@ -1395,15 +1396,15 @@ inline bool ScatterNDType(const nnvm::NodeAttrs& attrs,
 
 struct scatter_nd {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, OpReqType req, int N, int M, int K,
+  MSHADOW_XINLINE static void Map(index_t i, OpReqType req, index_t N, index_t M, index_t K,
                                   const mshadow::Shape<10> strides,
                                   DType* out, const DType* data,
                                   const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<index_t>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       KERNEL_ASSIGN(out[offset+j], req, data[i*K + j]);
     }
   }
@@ -1416,17 +1417,18 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using nnvm::dim_t;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TShape& oshape = outputs[0].shape_;
   const TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = oshape.ProdShape(M, oshape.ndim());
+  dim_t M = ishape[0];
+  dim_t N = ishape.Size() / M;
+  dim_t K = oshape.ProdShape(M, oshape.ndim());
   mshadow::Shape<10> strides;
-  for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  for (dim_t i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
@@ -1441,7 +1443,7 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
-GatherNDBackwardImpl(int N, int M, int K,
+GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                      const mshadow::Shape<10> strides,
                      DType* out,
                      const DType* data,
@@ -1450,7 +1452,7 @@ GatherNDBackwardImpl(int N, int M, int K,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
-GatherNDBackwardImpl(int N, int M, int K,
+GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                      const mshadow::Shape<10> strides,
                      DType* out,
                      const DType* data,
@@ -1458,7 +1460,7 @@ GatherNDBackwardImpl(int N, int M, int K,
                      mshadow::Stream<cpu> *s);
 
 template<typename DType, typename IType>
-inline void GatherNDBackwardImpl(int N, int M, int K,
+inline void GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                                  const mshadow::Shape<10> strides,
                                  DType* out,
                                  const DType* data,
@@ -1472,17 +1474,18 @@ void GatherNDBackward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using nnvm::dim_t;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TShape& oshape = outputs[0].shape_;
   const TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = oshape.ProdShape(M, oshape.ndim());
+  dim_t M = ishape[0];
+  dim_t N = ishape.Size() / M;
+  dim_t K = oshape.ProdShape(M, oshape.ndim());
   mshadow::Shape<10> strides;
-  for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  for (dim_t i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
