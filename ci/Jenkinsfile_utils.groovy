@@ -264,7 +264,7 @@ def main_wrapper(args) {
       // Call failure handler
       args['failure_handler']()
 
-      wsCleanup()
+      cleanWs()
 
       // Remember to rethrow so the build is marked as failing
       if (err) {
