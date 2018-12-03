@@ -741,7 +741,7 @@ class MaxPool1D(_Pooling):
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
                  ceil_mode=False, **kwargs):
-        assert layout == 'NCW' or layout == 'NWC',\
+        assert layout in ('NCW', 'NWC'),\
             "Only NCW and NWC layouts are valid for 1D"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
@@ -791,7 +791,7 @@ class MaxPool2D(_Pooling):
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0, layout='NCHW',
                  ceil_mode=False, **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC',\
+        assert layout in ('NCHW', 'NHWC'),\
             "Only NCHW and NHWC layouts are valid for 2D"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
@@ -843,7 +843,7 @@ class MaxPool3D(_Pooling):
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC',\
+        assert layout in ('NCDHW', 'NDHWC'),\
             "Only NCDHW and NDHWC layouts are valid for 3D"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
@@ -891,7 +891,7 @@ class AvgPool1D(_Pooling):
     """
     def __init__(self, pool_size=2, strides=None, padding=0, layout='NCW',
                  ceil_mode=False, count_include_pad=True, **kwargs):
-        assert layout == 'NCW' or layout == 'NWC',\
+        assert layout in ('NCW', 'NWC'),\
             "Only NCW and NWC layouts are valid for 1D"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)
@@ -943,7 +943,7 @@ class AvgPool2D(_Pooling):
     """
     def __init__(self, pool_size=(2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCHW', count_include_pad=True, **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC',\
+        assert layout in ('NCHW', 'NHWC'),\
             "Only NCHW and NHWC layouts are valid for 2D"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*2
@@ -996,7 +996,7 @@ class AvgPool3D(_Pooling):
     """
     def __init__(self, pool_size=(2, 2, 2), strides=None, padding=0,
                  ceil_mode=False, layout='NCDHW', count_include_pad=True, **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC',\
+        assert layout in ('NCDHW', 'NDHWC'),\
             "Only NCDHW and NDHWC layouts are valid for 3D"
         if isinstance(pool_size, numeric_types):
             pool_size = (pool_size,)*3
@@ -1028,7 +1028,7 @@ class GlobalMaxPool1D(_Pooling):
           when `layout` is `NCW`.
     """
     def __init__(self, layout='NCW', **kwargs):
-        assert layout == 'NCW' or layout == 'NWC',\
+        assert layout in ('NCW', 'NWC'),\
             "Only NCW and NWC layouts are valid for 1D"
         super(GlobalMaxPool1D, self).__init__(
             (1,), None, 0, True, True, 'max', layout, **kwargs)
@@ -1057,7 +1057,7 @@ class GlobalMaxPool2D(_Pooling):
           `(batch_size, channels, 1, 1)` when `layout` is `NCHW`.
     """
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC',\
+        assert layout in ('NCHW', 'NHWC'),\
             "Only NCHW and NHWC layouts are valid for 2D"
         super(GlobalMaxPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'max', layout, **kwargs)
@@ -1087,7 +1087,7 @@ class GlobalMaxPool3D(_Pooling):
           `(batch_size, channels, 1, 1, 1)` when `layout` is `NCDHW`.
     """
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC',\
+        assert layout in ('NCDHW', 'NDHWC'),\
             "Only NCDHW and NDHWC layouts are valid for 3D"
         super(GlobalMaxPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'max', layout, **kwargs)
@@ -1113,7 +1113,7 @@ class GlobalAvgPool1D(_Pooling):
         - **out**: 3D output tensor with shape `(batch_size, channels, 1)`.
     """
     def __init__(self, layout='NCW', **kwargs):
-        assert layout == 'NCW' or layout == 'NWC',\
+        assert layout in ('NCW', 'NWC'),\
             "Only NCW and NWC layouts are valid for 1D"
         super(GlobalAvgPool1D, self).__init__(
             (1,), None, 0, True, True, 'avg', layout, **kwargs)
@@ -1141,7 +1141,7 @@ class GlobalAvgPool2D(_Pooling):
           `(batch_size, channels, 1, 1)` when `layout` is `NCHW`.
     """
     def __init__(self, layout='NCHW', **kwargs):
-        assert layout == 'NCHW' or layout == 'NHWC',\
+        assert layout in ('NCHW', 'NHWC'),\
             "Only NCHW and NHWC layouts are valid for 2D"
         super(GlobalAvgPool2D, self).__init__(
             (1, 1), None, 0, True, True, 'avg', layout, **kwargs)
@@ -1169,7 +1169,7 @@ class GlobalAvgPool3D(_Pooling):
           `(batch_size, channels, 1, 1, 1)` when `layout` is `NCDHW`.
     """
     def __init__(self, layout='NCDHW', **kwargs):
-        assert layout == 'NCDHW' or layout == 'NDHWC',\
+        assert layout in ('NCDHW', 'NDHWC'),\
             "Only NCDHW and NDHWC layouts are valid for 3D"
         super(GlobalAvgPool3D, self).__init__(
             (1, 1, 1), None, 0, True, True, 'avg', layout, **kwargs)
