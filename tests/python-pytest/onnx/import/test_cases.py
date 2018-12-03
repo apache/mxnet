@@ -85,7 +85,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_maxpool',
     'test_operator_params',
     'test_operator_permute2',
-    'test_depthtospace'
+    'test_depthtospace',
+    'test_size'
     ]
 
 BASIC_MODEL_TESTS = [
