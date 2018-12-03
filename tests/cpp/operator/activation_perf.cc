@@ -53,6 +53,12 @@ TEST(ACTIVATION_PERF, ExecuteBidirectional) {
     runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
             activation_args, "Activation", "_backward_Activation"), 1);
   }
+  for (const string& activation : activations) {
+    kwargs_t activation_args = {{"act_type", activation}};
+    test::op::CoreOperatorRunner<float> runner;
+    runner.RunBidirectional(true, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
+            activation_args, "Activation", "_backward_Activation"), 1);
+  }
 }
 
 /*!
