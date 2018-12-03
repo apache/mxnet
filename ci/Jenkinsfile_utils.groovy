@@ -264,6 +264,7 @@ def main_wrapper(args) {
       // Call failure handler
       args['failure_handler']()
 
+      // Clean workspace to reduce space requirements
       cleanWs()
 
       // Remember to rethrow so the build is marked as failing
