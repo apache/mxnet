@@ -86,6 +86,19 @@ Example::
 
    z[0].shape = (1, 2, 1)
 
+   w = split(x, axis=0, indices=(1,)) // a list of 2 arrays with shape [(1, 2, 1), (2, 2, 1)]
+   w = [[[ 1.]
+         [ 2.]]]
+
+       [[[3.]
+         [4.]]
+
+        [[5.]
+         [6.]]]
+
+  w[0].shape = (1, 2, 1)
+  w[1].shape = (2, 2, 1)
+
 `squeeze_axis=1` removes the axis with length 1 from the shapes of the output arrays.
 **Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
 along the `axis` which it is split.

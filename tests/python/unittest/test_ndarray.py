@@ -1093,6 +1093,7 @@ def test_ndarray_fluent():
     check_fluent_regular('repeat', {'repeats': 3})
     check_fluent_regular('transpose', {'axes': (1,0,2)})
     check_fluent_regular('split', {'axis': 2, 'num_outputs': 3}, shape=(5, 17, 6))
+    check_fluent_regular('split', {'axis': 2, 'indices': (1, 3, 5)}, shape=(5, 17, 6))
     check_fluent_regular('slice', {'begin': (2, 5, 1), 'end': (4, 7, 6)}, shape=(5, 17, 6))
     check_fluent_regular('slice_axis', {'axis': 1, 'begin': 5, 'end': 7})
     check_fluent_regular('slice_like', {'axes': (0, -2), 'shape_like': mx.nd.zeros((3, 3))})

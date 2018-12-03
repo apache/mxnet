@@ -69,7 +69,7 @@ LSTMState LSTM(int num_hidden, const Symbol& indata, const LSTMState& prev_state
   auto h2h = FullyConnected(prefix + "_h2h", prev_state.h, param.h2h_weight, param.h2h_bias,
       num_hidden * 4);
   auto gates = i2h + h2h;
-  auto slice_gates = SliceChannel(prefix + "_slice", gates, 4);
+  auto slice_gates = SliceChannel(prefix + "_slice", gates, dmlc::optional<int>(4));
   auto in_gate = Activation(slice_gates[0], ActivationActType::kSigmoid);
   auto in_transform = Activation(slice_gates[1], ActivationActType::kTanh);
   auto forget_gate = Activation(slice_gates[2], ActivationActType::kSigmoid);
@@ -89,7 +89,11 @@ Symbol LSTMUnroll(int num_lstm_layer, int sequence_length, int input_dim,
     data = transpose(data);
   auto embed_weight = Symbol::Variable("embed_weight");
   auto embed = Embedding("embed", data, embed_weight, input_dim, num_embed);
-  auto wordvec = isTrain? SliceChannel(embed, sequence_length, TIME_MAJOR? 0 : 1, true) : embed;
+  auto wordvec =
+    isTrain?
+    SliceChannel(embed, dmlc::optional<int>(sequence_length),
+                 dmlc::optional<mxnet::cpp::Shape>(), TIME_MAJOR? 0 : 1, true) :
+    embed;
 
   std::vector<LSTMState> last_states;
   std::vector<LSTMParam> param_cells;
