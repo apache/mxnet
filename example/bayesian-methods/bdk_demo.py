@@ -156,7 +156,7 @@ def get_toy_sym(teacher=True, teacher_noise_precision=None):
     return net
 
 
-def dev(xpu=None):
+def dev(xpu = None):
     return mx.gpu(xpu) if xpu else mx.cpu()
 
 
