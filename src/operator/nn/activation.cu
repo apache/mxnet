@@ -85,20 +85,20 @@ void ActivationGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   // both SoftReLU and SoftSign not supported by CUDNN yet
   if (act_type == activation::kSoftReLU) {
     ActivationBackward<gpu, mshadow_op::softrelu, mshadow_op::softrelu_grad>(
-      ctx, inputs[0], inputs[1], req[0], outputs[0]);
+      ctx, inputs.at(0), inputs.at(1), req[0], outputs[0]);
   } else if (act_type == activation::kSoftSign) {
     ActivationBackward<gpu, mshadow_op::softsign, mshadow_op::softsign_grad>(
-      ctx, inputs[0], inputs[2], req[0], outputs[0]);
+      ctx, inputs.at(0), inputs.at(2), req[0], outputs[0]);
   } else if (act_type == activation::kReLU) {
-    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(inputs.at(0).type_flag_, DType, {
       // XXX: for y = relu(x), y is passed as "in_data" to Backward()
-      get_cudnn_op<DType>(param).Backward(ctx, inputs[0], inputs[1],
-                                          inputs[1], req[0], outputs[0]);
+      get_cudnn_op<DType>(param).Backward(ctx, inputs.at(0), inputs.at(1),
+                                          inputs.at(1), req[0], outputs[0]);
     });
   } else {
-    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      get_cudnn_op<DType>(param).Backward(ctx, inputs[0], inputs[2],
-                                          inputs[1], req[0], outputs[0]);
+    MSHADOW_REAL_TYPE_SWITCH(inputs.at(0).type_flag_, DType, {
+      get_cudnn_op<DType>(param).Backward(ctx, inputs.at(0), inputs.at(2),
+                                          inputs.at(1), req[0], outputs[0]);
     });
   }
 }
