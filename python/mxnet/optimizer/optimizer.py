@@ -541,7 +541,7 @@ class SGD(Optimizer):
         super(SGD, self).__init__(**kwargs)
         self.momentum = momentum
         self.lazy_update = lazy_update
-        self.aggregate_num = int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', 4))
+        self.aggregate_num = int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "4"))
 
     def create_state_multi_precision(self, index, weight):
         weight_master_copy = None

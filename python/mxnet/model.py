@@ -87,14 +87,14 @@ def _create_kvstore(kvstore, num_device, arg_params):
     arg_params : dict of str to `NDArray`.
         Model parameter, dict of name to `NDArray` of net's weights.
     """
-    update_on_kvstore = bool(int(os.getenv('MXNET_UPDATE_ON_KVSTORE', 1)))
+    update_on_kvstore = bool(int(os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")))
     if kvstore is None:
         kv = None
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
         # create kvstore using the string type
-        if num_device is 1 and 'dist' not in kvstore:
+        if num_device == 1 and 'dist' not in kvstore:
             # no need to use kv for single device and single machine
             kv = None
         else:
