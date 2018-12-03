@@ -1613,3 +1613,35 @@ def convert_broadcast_equal(node, **kwargs):
     and return the created node.
     """
     return create_basic_op_node('Equal', node, kwargs)
+
+
+@mx_op.register("broadcast_logical_and")
+def convert_broadcast_logical_and(node, **kwargs):
+    """Map MXNet's broadcast logical and operator attributes to onnx's Add operator
+    and return the created node.
+    """
+    return create_basic_op_node('And', node, kwargs)
+
+
+@mx_op.register("broadcast_logical_or")
+def convert_broadcast_logical_or(node, **kwargs):
+    """Map MXNet's broadcast logical or operator attributes to onnx's Or operator
+    and return the created node.
+    """
+    return create_basic_op_node('Or', node, kwargs)
+
+
+@mx_op.register("broadcast_logical_xor")
+def convert_broadcast_logical_xor(node, **kwargs):
+    """Map MXNet's broadcast logical xor operator attributes to onnx's Xor operator
+    and return the created node.
+    """
+    return create_basic_op_node('Xor', node, kwargs)
+
+
+@mx_op.register("logical_not")
+def convert_logical_not(node, **kwargs):
+    """Map MXNet's logical not operator attributes to onnx's Not operator
+    and return the created node.
+    """
+    return create_basic_op_node('Not', node, kwargs)

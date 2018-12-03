@@ -268,6 +268,45 @@ def test_comparison_ops():
     test_ops("Equal", input_data, input_tensor,
              np.equal(input_data[0], input_data[1]).astype(np.float32))
 
+
+def get_int_inputs(interval, shape):
+    """Helper to get integer input of given shape and range"""
+    assert len(interval) == len(shape)
+    inputs = []
+    input_tensors = []
+    for idx in range(len(interval)):
+        low, high = interval[idx]
+        inputs.append(np.random.randint(low, high, size=shape[idx]).astype("float32"))
+        input_tensors.append(helper.make_tensor_value_info("input"+str(idx+1),
+                                                        TensorProto.FLOAT, shape=shape[idx]))
+    return inputs, input_tensors
+
+
+@with_seed()
+def test_logical_ops():
+    """Test for logical and, or, not, xor operators"""
+    def test_ops(op_name, inputs, input_tensors, numpy_op):
+        outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=np.shape(inputs[0]))]
+        nodes = [helper.make_node(op_name, ["input"+str(i+1) for i in range(len(inputs))], ["output"])]
+        graph = helper.make_graph(nodes,
+                                  op_name + "_test",
+                                  input_tensors,
+                                  outputs)
+        model = helper.make_model(graph)
+        bkd_rep = backend.prepare(model)
+        output = bkd_rep.run(inputs)
+        npt.assert_almost_equal(output[0], numpy_op)
+    input_data, input_tensor = get_int_inputs([(0, 2), (0, 2)], [(3, 4, 5), (3, 4, 5)])
+    test_ops("And", input_data, input_tensor,
+             np.logical_and(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Or", input_data, input_tensor,
+             np.logical_or(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Xor", input_data, input_tensor,
+             np.logical_xor(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Not", [input_data[0]], [input_tensor[0]],
+             np.logical_not(input_data[0]).astype(np.float32))
+
+
 def _assert_sym_equal(lhs, rhs):
     assert lhs.list_inputs() == rhs.list_inputs()  # input names must be identical
     assert len(lhs.list_outputs()) == len(rhs.list_outputs())  # number of outputs must be identical
