@@ -17,7 +17,7 @@ The examples are driven by notebook files.
 ### Negative Sampling
 
 * A previous version of this example had an example of negative sampling. For example of negative sampling, please refer to:
-    [Gluon NLP Sampled Block](https://github.com/dmlc/gluon-nlp/blob/master/gluonnlp/model/sampled_block.py)
+    [Gluon NLP Sampled Block](https://github.com/dmlc/gluon-nlp/blob/master/src/gluonnlp/model/sampled_block.py)
     
 
 ## Acknowledgements

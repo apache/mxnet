@@ -156,7 +156,7 @@ The build generates a new jar file in the `target` folder called `javaMXNet-1.0-
 
 To run the ObjectDetectionTutorial.java use the following command from the project's root folder.
 ```bash
-java -cp target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/* mxnet.ObjectDetectionTutorial
+java -cp "target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/*" mxnet.ObjectDetectionTutorial
 ```
     
 You should see a similar output being generated for the dog image that we used:
