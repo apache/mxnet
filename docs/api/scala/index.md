@@ -19,6 +19,7 @@ See the [MXNet Scala API Documentation](docs/index.html#org.apache.mxnet.package
    symbol.md
 ```
 
+
 ## Image Classification with the Scala Infer API
 The Infer API can be used for single and batch image classification. More information can be found at the following locations:
 
