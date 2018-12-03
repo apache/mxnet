@@ -139,6 +139,8 @@ class Arg:
                 self.defaultString = 'Shape(' + self.defaultString[1:-1] + ")"
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
+            elif self.type == 'dmlc::optional<bool>':
+                self.defaultString = self.type + '(' + self.defaultString + ')'
             elif typeString.startswith('caffe-layer-parameter'):
                 self.defaultString = 'textToCaffeLayerParameter(' + self.MakeCString(self.defaultString) + ')'
                 hasCaffe = True
