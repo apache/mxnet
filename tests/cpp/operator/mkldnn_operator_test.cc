@@ -680,6 +680,8 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 // compares output of fcompute with fcomputex
 void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
+  // need second copy of temp fix as batch norm cpu modifies input. will remove when BN CPU fixed
+  std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -707,8 +709,11 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
       }
 
-      for (int i = 0; i < forward_attrs.num_inputs; i++)
+      for (int i = 0; i < forward_attrs.num_inputs; i++) {
         inputs[i] = &in_arr.arr;
+        inputs2[i] = &in_arr.arr;
+      }
+
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
@@ -723,7 +728,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             Context(), forward_attrs.attrs, inputs, outputs, req,
             DispatchMode::kFCompute, mxnet::OpStatePtr());
         Imperative::Get()->InvokeOp(
-            Context(), forward_attrs.attrs, inputs, ex_outputs, req,
+            Context(), forward_attrs.attrs, inputs2, ex_outputs, req,
             DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs);
