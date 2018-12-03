@@ -135,7 +135,7 @@ The last line of the above code snippet is a tuple of three lists returned
 by `d.infer_shape()`. The first list contains all the argument shapes
 of `a`, `b`, and `c`. The second contains the output shape of `d`. The
 third one represents the shapes of auxiliary states, which is not used
-in this case, and thus is empty. 
+in this case, and thus is empty.
 In this example, we only specified values for variable `a`'s first dimension
 and `c`'s second dimension. The `0` in shape `(2, 0)` indicates that the size
 of the second dimension is unknown, same meaning for shape `(0, 3)`.
@@ -437,10 +437,13 @@ NNVM_REGISTER_OP(quadratic)                                                     
 where :math:`x` is an input tensor and all operations
 in the function are element-wise.
 
-Example::
-  x = [[1, 2], [3, 4]]
-  y = quadratic(data=x, a=1, b=2, c=3)
-  y = [[6, 11], [18, 27]]
+Example:
+
+  .. code-block:: python
+     :emphasize-lines: 1,3
+     x = [[1, 2], [3, 4]]
+     y = quadratic(data=x, a=1, b=2, c=3)
+     y = [[6, 11], [18, 27]]
 
 )code" ADD_FILELINE)                                                               // 4
 .set_attr_parser(ParamParser<QuadraticParam>)                                      // 5
@@ -474,8 +477,11 @@ NNVM_REGISTER_OP(_backward_quadratic)                                           
 of `Op` type and save it in the operator manager and return a reference
 of the just created operator object.
 - Lines 3-4: Add description as an operator attribute
-including examples of the operator. The documentation engine would extract
+including examples of the operator. The documentation engine will extract
 this description and display it on the documentation web page.
+`emphasize-lines` is optional.
+For more examples and troubleshooting with doc strings, refer to the [MXNet
+developer wiki's Documentation Guide](https://cwiki.apache.org/confluence/display/MXNET/Documentation+Guide).
 - Line 5: Set parameter struct parser for the operator. It is used for parsing
 the parameters `a`, `b`, and `c` input from frontend.
 - Line 6: Set the number of inputs for the operator.
@@ -630,7 +636,7 @@ python tools/flakiness_checker.py test_operator.test_quadratic_function
 
 Please note that for `check_symbolic_forward` and `check_symbolic_backward` we pass
 both the operator symbols and expected results for comparison, for
-`check_numeric_gradient` we only pass the operator symbol, as the 
+`check_numeric_gradient` we only pass the operator symbol, as the
 `check_numeric_gradient` computes the expected value using finite difference
 method. Which is why it is highly recommended to add `check_numeric_gradient`
 test for every operator with backward function implemented as it eliminates
