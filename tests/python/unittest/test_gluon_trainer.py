@@ -194,8 +194,10 @@ def test_trainer_reset_kv():
         # load would reset kvstore
         mx.nd.waitall()
         params.load('test_trainer_reset_kv.params')
-        assert trainer._kvstore is None
-        assert trainer._kv_initialized is False
+        if trainer._update_on_kvstore:
+            # drop kvstore state if new parameters are loaded
+            assert trainer._kvstore is None
+            assert trainer._kv_initialized is False
         with mx.autograd.record():
             for w in x.list_data():
                 y = w + 1
