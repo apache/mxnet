@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package sample;
+package mxnet;
 
 import org.apache.mxnet.javaapi.*;
 import java.util.Arrays;

@@ -16,16 +16,17 @@
 # under the License.
 
 # coding: utf-8
-"""backend rep for onnx test infrastructure"""
+"""MXNet backend rep for onnx test infrastructure"""
 try:
     from onnx.backend.base import BackendRep
 except ImportError:
-    raise ImportError("Onnx and protobuf need to be installed")
+    raise ImportError("Onnx and protobuf need to be installed. Instructions to"
+                      + " install - https://github.com/onnx/onnx#installation")
 import mxnet as mx
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
-# https://github.com/onnx/onnx/blob/master/docs/Implementing%20an%20ONNX%20backend.md
+# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
 # MXNetBackendRep object will be returned by MXNetBackend's prepare method which is used to
 # execute a model repeatedly.
 # Inputs will be passed to the run method of MXNetBackendRep class, it will perform computation and
@@ -54,9 +55,6 @@ class MXNetBackendRep(BackendRep):
         params : numpy array
             result obtained after running the inference on mxnet
         """
-        data_forward = []
-        for val in inputs:
-            data_forward.append(mx.nd.array(val))
         # create module, passing cpu context
         if self.device == 'CPU':
             ctx = mx.cpu()
@@ -68,17 +66,19 @@ class MXNetBackendRep(BackendRep):
         data_names = [graph_input for graph_input in self.symbol.list_inputs()
                       if graph_input not in self.arg_params and graph_input not in self.aux_params]
 
-        data_shapes = []
+        data_forward = []
         for idx, input_name in enumerate(data_names):
-            data_shapes.append((input_name, inputs[idx].shape))
+            val = inputs[idx]
+            data_forward.append(mx.nd.array(val))
 
-        mod = mx.mod.Module(symbol=self.symbol, data_names=data_names, context=ctx,
-                            label_names=None)
-        mod.bind(for_training=False, data_shapes=data_shapes,
-                 label_shapes=None)
-        mod.set_params(arg_params=self.arg_params, aux_params=self.aux_params)
+        if self.arg_params:
+            for idx, input_name in enumerate(self.arg_params):
+                val = self.arg_params[input_name]
+                data_names.append(input_name)
+                data_forward.append(mx.nd.array(val))
 
-        # run inference
-        mod.forward(mx.io.DataBatch(data_forward))
-        result = mod.get_outputs()[0].asnumpy()
+        args = dict(zip(data_names, data_forward))
+        exe = self.symbol.bind(ctx, args=args, aux_states=self.aux_params)
+        exe.forward(is_train=False)
+        result = exe.outputs[0].asnumpy()
         return [result]

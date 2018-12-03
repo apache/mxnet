@@ -31,6 +31,7 @@
 
 #if MXNET_USE_CUDA
 #include <curand_kernel.h>
+#include <math.h>
 #endif  // MXNET_USE_CUDA
 
 namespace mxnet {
@@ -54,7 +55,6 @@ class RandGenerator<cpu, DType> {
    public:
     typedef typename std::conditional<std::is_floating_point<DType>::value,
                                       DType, double>::type FType;
-
     explicit Impl(RandGenerator<cpu, DType> *gen, int state_idx)
         : engine_(gen->states_ + state_idx) {}
 
@@ -62,6 +62,10 @@ class RandGenerator<cpu, DType> {
     Impl &operator=(const Impl &) = delete;
 
     MSHADOW_XINLINE int rand() { return engine_->operator()(); }
+
+    MSHADOW_XINLINE int64_t rand_int64() {
+      return static_cast<int64_t>(engine_->operator()() << 31) + engine_->operator()();
+    }
 
     MSHADOW_XINLINE FType uniform() {
       typedef typename std::conditional<std::is_integral<DType>::value,
@@ -78,7 +82,7 @@ class RandGenerator<cpu, DType> {
 
    private:
     std::mt19937 *engine_;
-  };
+  };  // class RandGenerator<cpu, DType>::Impl
 
   static void AllocState(RandGenerator<cpu, DType> *inst) {
     inst->states_ = new std::mt19937[kNumRandomStates];
@@ -137,6 +141,10 @@ class RandGenerator<gpu, DType> {
       return curand(&state_);
     }
 
+    MSHADOW_FORCE_INLINE __device__ int64_t rand_int64() {
+      return static_cast<int64_t>(curand(&state_) << 31) + curand(&state_);
+    }
+
     MSHADOW_FORCE_INLINE __device__ float uniform() {
       return static_cast<float>(1.0) - curand_uniform(&state_);
     }
@@ -187,6 +195,10 @@ class RandGenerator<gpu, double> {
 
     MSHADOW_FORCE_INLINE __device__ int rand() {
       return curand(&state_);
+    }
+
+    MSHADOW_FORCE_INLINE __device__ int64_t rand_int64() {
+      return static_cast<int64_t>(curand(&state_) << 31) + curand(&state_);
     }
 
     MSHADOW_FORCE_INLINE __device__ double uniform() {

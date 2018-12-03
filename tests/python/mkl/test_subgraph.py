@@ -66,7 +66,7 @@ def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
     output.wait_to_read()
   return mod.get_outputs()
 
-def check_quantize(sym, data_shape):
+def check_quantize(sym, data_shape, check_conv=True):
   fc = mx.sym.FullyConnected(data=sym, num_hidden=10, flatten=True, name='fc')
   sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
   sym_sg = sym.get_backend_symbol("MKLDNN")
@@ -106,7 +106,8 @@ def check_quantize(sym, data_shape):
                                                                    calib_quantize_op=True,
                                                                    num_calib_examples=5)
   qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
-  check_qsym_calibrated(qsym)
+  if check_conv:
+    check_qsym_calibrated(qsym)
   quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
   for i in range(len(ref_out)):
     assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
@@ -228,6 +229,15 @@ def conv_bn_sum_relu(no_bias, data_shape):
   sum1 = bn1 + conv1
   relu = mx.symbol.Activation(data=sum1, name='relu', act_type="relu")
   return relu, conv_bn_add_relu_attr
+
+# single concat case
+def single_concat(data_shape, input_num, dim):
+  data, weight = head_symbol(data_shape)
+  inputs = []
+  for i in range(input_num):
+    inputs.append(data)
+  concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
+  return concat
 
 def tail_neg_symbol(sym1, sym2):
   fc1 = mx.sym.FullyConnected(data=sym1, num_hidden=10, flatten=True, name='fc1')
@@ -462,6 +472,15 @@ def test_pos_conv_bn_sum_relu():
     check_fusion(net, data_shape, attrs)
     net, attrs = conv_bn_sum_relu(True, data_shape)
     check_fusion(net, data_shape, attrs)
+
+def test_pos_single_concat():
+  for data_shape in DATA_SHAPE:
+    net = single_concat(data_shape, 2, 1)
+    check_quantize(net, data_shape, False)
+    net = single_concat(data_shape, 4, 2)
+    check_quantize(net, data_shape, False)
+    net = single_concat(data_shape, 4, 3)
+    check_quantize(net, data_shape, False)
 
 @with_seed()
 def test_neg_conv_bn():
