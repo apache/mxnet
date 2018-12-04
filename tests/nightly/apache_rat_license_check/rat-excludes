@@ -58,7 +58,4 @@ moderngpu/*
 deformable_im2col.cuh
 deformable_im2col.h
 REQUIRE
-include/dlpack/*
-include/dmlc/*
-include/mshadow/*
-include/nnvm/*
+include/*
