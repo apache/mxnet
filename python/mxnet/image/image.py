@@ -1145,7 +1145,7 @@ class ImageIter(io.DataIter):
         self.shuffle = shuffle
         if self.imgrec is None:
             self.seq = imgkeys
-        elif shuffle or num_parts > 1:
+        elif shuffle or num_parts > 1 or path_imgidx:
             assert self.imgidx is not None
             self.seq = self.imgidx
         else:
@@ -1261,7 +1261,7 @@ class ImageIter(io.DataIter):
             i = self._cache_idx
             # clear the cache data
         else:
-            batch_data = nd.empty((batch_size, c, h, w))
+            batch_data = nd.zeros((batch_size, c, h, w))
             batch_label = nd.empty(self.provide_label[0][1])
             i = self._batchify(batch_data, batch_label)
         # calculate the padding
@@ -1285,6 +1285,7 @@ class ImageIter(io.DataIter):
                     self._cache_data = None
                     self._cache_label = None
                     self._cache_idx = None
+
         return io.DataBatch([batch_data], [batch_label], pad=pad)
 
     def check_data_shape(self, data_shape):
