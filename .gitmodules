@@ -31,4 +31,4 @@
 	url = https://github.com/onnx/onnx-tensorrt.git
 [submodule "example/bmxnet-examples"]
 	path = example/bmxnet-examples
-	url = git@gitlab.hpi.de:joseph.bethge/bmxnet-examples.git
+	url = https://github.com/hpi-xnor/BMXNet-v2-examples
