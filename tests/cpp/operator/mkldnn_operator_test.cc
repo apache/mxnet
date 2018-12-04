@@ -696,6 +696,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   if (forward_attrs.requests.find(OpReqType::kWriteTo) != forward_attrs.requests.end()) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
+      auto in_arr2 = in_arrs2[i1];
 
       CHECK_NE(forward_attrs.accept_dims.size(), 0);
       if (forward_attrs.accept_dims.find(in_arr.arr.shape().ndim()) ==
@@ -713,8 +714,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
         NDArray copy;
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs[i] = &in_arr.arr;
-          inputs2[i] = &in_arr2.arr;
+          inputs[i] = CopyMKLDNNArray(in_arr.arr);
+          inputs2[i] = CopyMKLDNNArray(in_arr2.arr);
         }
 
 
