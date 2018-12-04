@@ -745,9 +745,11 @@ class ImageDetIter(ImageIter):
         if data_shape is not None:
             self.check_data_shape(data_shape)
             self.provide_data = [(self.provide_data[0][0], (self.batch_size,) + data_shape)]
+            self.data_shape = data_shape
         if label_shape is not None:
             self.check_label_shape(label_shape)
             self.provide_label = [(self.provide_label[0][0], (self.batch_size,) + label_shape)]
+            self.label_shape = label_shape
 
     def next(self):
         """Override the function for returning next batch."""
