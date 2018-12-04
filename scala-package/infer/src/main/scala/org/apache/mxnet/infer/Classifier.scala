@@ -110,16 +110,17 @@ class Classifier(modelPathPrefix: String,
   : IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     // considering only the first output
-    val predictResultND: NDArray = predictor.predictWithNDArray(input)(0)
+    val predictResultND: NDArray =
+      predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
 
     val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
 
     // iterating over the individual items(batch size is in axis 0)
-    for (i <- 0 until predictResultND.shape(0)) {
+    (0 until predictResultND.shape(0)).toVector.par.foreach( i => {
       val r = predictResultND.at(i)
       predictResult += r.toArray
       r.dispose()
-    }
+    })
 
     var result: ListBuffer[IndexedSeq[(String, Float)]] =
       ListBuffer.empty[IndexedSeq[(String, Float)]]
