@@ -90,8 +90,6 @@ bin edges. Within this last dimension, bins must be strictly monotonically incre
     .add_argument("data", "NDArray-or-Symbol", "Input data ndarray")
     .add_argument("bins", "NDArray-or-Symbol", "Bins ndarray")
     .add_arguments(DigitizeParam::__FIELDS__());
-// TODO: Option to specify there's no backward pass?
-
 
 }  // namespace op
 }  // namespace mxnet
