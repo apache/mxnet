@@ -216,14 +216,24 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
   auto &fwd = GetBNForward<DType>(param, ctx, data, flags);
   const NDArray &out  = out_data[batchnorm::kOut];
 
+  auto gamma_buffer = in_data[batchnorm::kGamma];
+  if (gamma_buffer.IsMKLDNNData()) {
+    gamma_buffer = gamma_buffer.Reorder2Default();
+  }
+
+  auto beta_buffer = in_data[batchnorm::kBeta];
+  if (beta_buffer.IsMKLDNNData()) {
+    beta_buffer = beta_buffer.Reorder2Default();
+  }
+
   // for output memory
   auto out_mem = const_cast<NDArray &>(out).CreateMKLDNNData(fwd.GetPd().dst_primitive_desc());
 
   // mxnet will always use scale shift.
   // But if fix_gamma is true, then all scale elements will be set to 1.0f
   if (flags & use_scale_shift) {
-    const NDArray &gamma    = in_data[batchnorm::kGamma];
-    const NDArray &beta     = in_data[batchnorm::kBeta];
+    const NDArray &gamma    = gamma_buffer;
+    const NDArray &beta     = beta_buffer;
     CHECK_EQ(gamma.storage_type(), mxnet::kDefaultStorage);
     CHECK_EQ(beta.storage_type(), mxnet::kDefaultStorage);
 
