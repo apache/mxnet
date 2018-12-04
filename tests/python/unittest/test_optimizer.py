@@ -618,7 +618,7 @@ def test_adam():
 class PyAdamax(mx.optimizer.Optimizer):
     """The python reference of AdaMax optimizer.
 
-    This class implements the AdaMax optimizer, a variant of Adam based on the infinity norm,
+    This class implements the AdaMax optimizer, one variant of Adam based on the infinity norm,
     available at http://arxiv.org/abs/1412.6980 Section 7.
 
     The optimizer updates the weight by::
