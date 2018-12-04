@@ -714,8 +714,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
         NDArray copy;
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs[i] = CopyMKLDNNArray(in_arr.arr);
-          inputs2[i] = CopyMKLDNNArray(in_arr2.arr);
+          inputs[i] = &in_arr.arr;
+          inputs2[i] = &in_arr2.arr;
         }
 
 
