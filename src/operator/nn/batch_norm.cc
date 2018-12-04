@@ -392,7 +392,7 @@ static inline bool SupportMKLDNNBN(const std::vector<NDArray> &inputs, const Bat
       inputs_valid = false;
     }
   }
-  return  params_valid && inputs_valid
+  return  params_valid && inputs_valid;
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
