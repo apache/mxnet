@@ -149,6 +149,33 @@ struct ForwardKernel<cpu> {
 };
 
 
+template<>
+struct ForwardKernel<cpu> {
+  template<typename DType, typename OType>
+  static MSHADOW_XINLINE void Map(int i,
+                                  DType *in_data,
+                                  OType *out_data,
+                                  DType *bins,
+                                  size_t batch_size,
+                                  size_t bins_length,
+                                  bool right) {
+
+    const auto data = in_data[i];
+    const auto batch = i / batch_size;
+
+    auto elem = right ? std::lower_bound(bins + bins_length * batch,
+                                         bins + bins_length * (batch + 1),
+                                         data)
+                      : std::upper_bound(bins + bins_length * batch,
+                                         bins + bins_length * (batch + 1),
+                                         data);
+
+    auto index = std::distance(bins, elem);
+    out_data[i] = OType(index);
+  }
+};
+
+
 template<typename DType>
 struct CheckMonotonic {
   static MSHADOW_XINLINE void Map(int i, int bins_length, DType *bins) {
@@ -218,6 +245,5 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
 
 }  // namespace op
 }  // namespace mxnet
-
 
 #endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_H_
