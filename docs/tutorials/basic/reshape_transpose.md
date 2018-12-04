@@ -1,7 +1,6 @@
 ## Difference between reshape and transpose operators
 
 What does it mean if MXNet gives you an error like the this?
-
 ```
 Check failed: shape_.Size() == shape.Size() (127872 vs. 25088) NDArray.Reshape: target shape must have the same size as current shape when recording with autograd.
 ```
