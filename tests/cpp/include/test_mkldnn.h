@@ -85,11 +85,11 @@ inline static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive
   arr->WaitToRead();
 }
 
-inline static NDArray* CopyMKLDNNArray(const NDArray& arr) {
+inline static NDArray CopyMKLDNNArray(const NDArray& arr) {
   auto ret = arr.Copy(Context());
   auto mem = arr.GetMKLDNNData();
   ret.CopyFrom(*mem);
-  return &ret;
+  return ret;
 
 }
 
