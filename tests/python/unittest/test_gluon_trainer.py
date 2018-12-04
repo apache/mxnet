@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import unittest
+import os
 import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
