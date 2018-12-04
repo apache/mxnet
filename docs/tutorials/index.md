@@ -3,12 +3,13 @@
 ```eval_rst
 .. toctree::
    :hidden:
-   
+
    basic/index.md
    c++/index.md
    control_flow/index.md
    embedded/index.md
    gluon/index.md
+   java/index.md
    nlp/index.md
    onnx/index.md
    python/index.md
