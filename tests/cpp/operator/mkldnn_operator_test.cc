@@ -680,7 +680,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 // compares output of fcompute with fcomputex
 void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
-  // need second copy of temp fix as batch norm cpu modifies input. will remove when BN CPU fixed
+  std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -689,6 +689,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
+  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -712,8 +713,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
         NDArray copy;
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          copy = CopyMKLDNNArray(in_arr.arr);
-          inputs[i] = &copy;
+          inputs[i] = &in_arr.arr;
+          inputs2[i] = &in_arr2.arr;
         }
 
 
@@ -729,7 +730,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             Context(), forward_attrs.attrs, inputs, outputs, req,
             DispatchMode::kFCompute, mxnet::OpStatePtr());
         Imperative::Get()->InvokeOp(
-            Context(), forward_attrs.attrs, inputs, ex_outputs, req,
+            Context(), forward_attrs.attrs, inputs2, ex_outputs, req,
             DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs);
