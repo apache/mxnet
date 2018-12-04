@@ -593,4 +593,10 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(rnd.shape === Shape(1, 2, 3, 4))
     assert(rnd2.shape === Shape(3, 4))
   }
+
+  test("Generated api") {
+    val arr = NDArray.ones(Shape(1, 2), dtype = DType.Float64)
+    NDArray.api.norm(arr, Some(0), out = arr)
+    val result = NDArray.api.dot(arr, arr)
+  }
 }
