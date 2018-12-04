@@ -144,7 +144,7 @@ void MLP() {
                                grad_req_type, aux_states);
 
   std::cout << "Training" << std::endl;
-  int max_iters = 20000;
+  int max_iters = 10;
   mx_float learning_rate = 0.0001;
   for (int iter = 0; iter < max_iters; ++iter) {
     exe->Forward(true);
