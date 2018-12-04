@@ -193,7 +193,7 @@
         ;;;train
 
         ;;initialize with random noise
-        img (ndarray/- (random/uniform 0 255 content-np-shape dev) 128)
+        img (ndarray/- (random/uniform 0 255 content-np-shape {:ctx dev}) 128)
         ;;; img (random/uniform -0.1 0.1 content-np-shape dev)
         ;; img content-np
         lr-sched (lr-scheduler/factor-scheduler 10 0.9)
