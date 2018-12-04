@@ -74,7 +74,7 @@ livehtml:
 html:
 	export BUILD_VER=$(BUILD_VER)
 	@echo "Env var set for BUILD_VER: $(BUILD_VER)"
-	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	$(SPHINXBUILD) -W -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
