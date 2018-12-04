@@ -99,7 +99,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
   const TBlob &bias            = in_data[batchnorm::kBeta];
-
+  
   // Aux (Moving)
   const TBlob &runningMean     = aux_states[batchnorm::kMovingMean];
   const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
@@ -380,12 +380,19 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
-static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
-  TShape shape = input.shape();
-  return SupportMKLDNN(input) && shape.ndim() == 4
+static inline bool SupportMKLDNNBN(const std::vector<NDArray> &inputs, const BatchNormParam &param) {
+  TShape shape = inputs[0].shape();
+  bool params_valid = shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
       && shape[param.axis] % 8 == 0
       && !mxnet::op::batchnorm::disable_mkl;
+  bool inputs_valid = SupportMKLDNN(inputs[0]);
+  for (size_t i = 1; i < inputs.size(); i++) {
+    if (inputs[i].IsMKLDNNData()) {
+      inputs_valid = false;
+    }
+  }
+  return  params_valid && inputs_valid
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
@@ -396,7 +403,7 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
-  if (SupportMKLDNNBN(inputs[0], param) && inputs[0].IsMKLDNNData()) {
+  if (SupportMKLDNNBN(inputs, param) && inputs[0].IsMKLDNNData()) {
     std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
     std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
 
@@ -420,7 +427,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
 
   TShape shape = inputs[0].shape();
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
-  if (SupportMKLDNNBN(inputs[0], param)
+  if (SupportMKLDNNBN(inputs, param)
       && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
     std::vector<NDArray> out_grad(1);
     std::vector<NDArray> out_data(3);
