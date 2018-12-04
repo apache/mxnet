@@ -162,7 +162,7 @@ bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
-}
+}  // namespace op
 
 static int GetTypeSize(int dtype) {
   int size = -1;
