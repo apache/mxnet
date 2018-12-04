@@ -158,6 +158,7 @@ struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
+bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
@@ -236,14 +237,23 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
   if (num_groups == 1) {
     return GetMemDesc(arr);
   } else {
-    CHECK_EQ(arr.shape().ndim(), 4U);
-    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
-      static_cast<int>(arr.shape()[0] / num_groups),
-      static_cast<int>(arr.shape()[1]),
-      static_cast<int>(arr.shape()[2]),
-      static_cast<int>(arr.shape()[3])};
-    return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-                                mkldnn::memory::format::any};
+    CHECK((arr.shape().ndim() == 3) || (arr.shape().ndim() == 4));
+    if (arr.shape().ndim() == 3) {
+      mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
+        static_cast<int>(arr.shape()[0] / num_groups),
+        static_cast<int>(arr.shape()[1]),
+        static_cast<int>(arr.shape()[2])};
+      return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
+                                  mkldnn::memory::format::any};
+    } else {
+      mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
+        static_cast<int>(arr.shape()[0] / num_groups),
+        static_cast<int>(arr.shape()[1]),
+        static_cast<int>(arr.shape()[2]),
+        static_cast<int>(arr.shape()[3])};
+      return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
+                                  mkldnn::memory::format::any};
+    }
   }
 }
 

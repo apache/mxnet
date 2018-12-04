@@ -49,6 +49,17 @@ bool SupportMKLDNNAct(const ActivationParam& param) {
       || param.act_type == activation::kTanh;
 }
 
+bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
+  if ((input.shape().ndim() < 1) ||
+      (input.shape().ndim() > 4) ||
+      (input.dtype() != mshadow::kFloat32))
+    return false;
+  return param.act_type == activation::kReLU
+      || param.act_type == activation::kSigmoid
+      || param.act_type == activation::kSoftReLU
+      || param.act_type == activation::kTanh;
+}
+
 static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   switch (param.act_type) {
     case activation::kReLU:
