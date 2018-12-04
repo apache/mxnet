@@ -292,6 +292,6 @@ def test_binary_layer_config_qconv(bits, weight_quantization, input_shape=(1, 3,
 
 def test_binary_layer_config_scaling():
     assert isinstance(nn.activated_conv(3), nn.BinaryConvolution)
-    with nn.set_binary_layer_config(scaling="xnor"):
+    with nn.set_binary_layer_config(approximation="xnor"):
         assert isinstance(nn.activated_conv(3), nn.ScaledBinaryConv)
     assert isinstance(nn.activated_conv(3), nn.BinaryConvolution)
