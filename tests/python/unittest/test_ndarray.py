@@ -1550,10 +1550,12 @@ def test_ndarray_is_nan():
 
 @with_seed()
 def test_ndarray_hardmax():
-    data = mx.nd.array([[[2,3,4],[1,2,3]],[[1,1,1],[1,2,3]]])
+    data = mxnet.test_utils.rand_ndarray([2,3,4],'default')
     output = mx.nd.contrib.hardmax(data)
-    expected_output = np.asarray([[[0,0,1],[0,0,1]],[[1,0,0],[0,0,1]]])
-    np.testing.assert_equal(output.asnumpy(), expected_output)    
+    xn_r = mx.nd.reshape(data, shape=(6,4))
+    xn_e = mx.nd.eye(xn_r.shape[1], dtype=data.dtype)[mx.nd.argmax(xn_r, axis=1)]
+    expected_output = mx.nd.reshape(xn_e, shape=data.shape)
+    np.testing.assert_equal(output.asnumpy(), expected_output.asnumpy())
 
 if __name__ == '__main__':
     import nose

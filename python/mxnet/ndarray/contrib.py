@@ -558,5 +558,15 @@ def hardmax(data):
     -------
     output: NDArray
         The output NDarray, is a batched one-hot tensor.
+
+
+    Examples
+    --------
+    >>> data = mx.nd.array([[1, 2, 3],[4, 5, 0]])
+    >>> output = mx.nd.contrib.hardmax(data)
+    >>> output
+    [[0. 0. 1.]
+    [0. 1. 0.]]
+    <NDArray 2x3 @cpu(0)>
     """
     return data.argmax(-1).one_hot(data.shape[-1])
