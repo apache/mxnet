@@ -637,6 +637,8 @@ class FTML(Optimizer):
         z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
         weight = - z / d_t
 
+    For details of the update algorithm, see :class:`~mxnet.ndarray.ftml_update`.
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
