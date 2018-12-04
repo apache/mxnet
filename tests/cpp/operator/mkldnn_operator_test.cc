@@ -708,12 +708,11 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
       }
 
-      for (int i = 0; i < forward_attrs.num_inputs; i++) {
-        inputs[i] = CopyMKLDNNArray(in_arr.arr);
-      }
-
-
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+
+        for (int i = 0; i < forward_attrs.num_inputs; i++)
+          inputs[i] = CopyMKLDNNArray(in_arr.arr);
+
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
