@@ -596,6 +596,7 @@ The `ndarray` package provides several classes:
     mxnet.ndarray.random.generalized_negative_binomial
     mxnet.ndarray.random.multinomial
     mxnet.ndarray.random.shuffle
+    mxnet.ndarray.random.randint
     mxnet.random.seed
 ```
 

@@ -37,6 +37,7 @@ In the rest of this document, we list routines provided by the `ndarray.random` 
     uniform
     multinomial
     shuffle
+    randint
     mxnet.random.seed
 ```
 
