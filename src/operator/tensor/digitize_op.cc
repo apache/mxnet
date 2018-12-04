@@ -33,33 +33,6 @@
 namespace mxnet {
 namespace op {
 
-
-template<typename DType, typename OType>
-struct ForwardKernel<cpu, DType, OType> {
-  static MSHADOW_XINLINE void Map(int i,
-                                  DType *in_data,
-                                  OType *out_data,
-                                  DType *bins,
-                                  size_t batch_size,
-                                  size_t bins_length,
-                                  bool right) {
-
-    const auto data = in_data[i];
-    const auto batch = i / batch_size;
-
-    auto
-        elem = right ? std::lower_bound(bins + bins_length * batch,
-                                        bins + bins_length * (batch + 1),
-                                        data)
-                     : std::upper_bound(bins + bins_length * batch,
-                                        bins + bins_length * (batch + 1),
-                                        data);
-
-    out_data[i] = std::distance(bins, elem);
-  }
-};
-
-
 DMLC_REGISTER_PARAMETER(DigitizeParam);
 
 NNVM_REGISTER_OP(digitize)
@@ -72,13 +45,16 @@ is closed, resulting in bins[i-1] <= x < bins[i].
 
 .. Parameters:
   - right: whether the right edges of bins should be included in the interval.
+  - otype: type of the output tensor (must be an integer type).
 
 .. Input:
-  - X: data tensor to be quantized. Can have any arbitrary shape. If quantizing in batch mode,
-the first dimension should correspond to the batch axis.
-  - bins: tensor containing the bin edges. In the 2D case, the first dimension
- should correspond to the batch axis: each batch in X will be quantized using a different set of
-bins. Within each batch, bins must be strictly monotonically increasing.
+  - X: K-dimensional data tensor to be quantized. Can have any arbitrary shape.
+  - bins: N-dimensional tensor containing the bin edges. The first N-1 dimensions must be the
+same as those of the input data X. The last dimension corresponds to the vectors containing the
+bin edges. Within this last dimension, bins must be strictly monotonically increasing.
+
+.. Requirements:
+ - (1 <= N <= K)
 
 .. Output:
   - Tensor of the same shape as the input X containing the indices.
@@ -111,11 +87,9 @@ bins. Within each batch, bins must be strictly monotonically increasing.
     .set_attr<nnvm::FInferShape>("FInferShape", InferShape)
     .set_attr<nnvm::FInferType>("FInferType", DigitizeOpType)
     .set_attr<FCompute>("FCompute", DigitizeOpForward<cpu>)
-    .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+    .add_argument("data", "NDArray-or-Symbol", "Input data ndarray")
     .add_argument("bins", "NDArray-or-Symbol", "Bins ndarray")
     .add_arguments(DigitizeParam::__FIELDS__());
-// TODO: Option to specify there's no backward pass?
-
 
 }  // namespace op
 }  // namespace mxnet

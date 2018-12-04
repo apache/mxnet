@@ -32,8 +32,9 @@ namespace mxnet {
 namespace op {
 
 
-template<typename DType, typename BType>
-struct ForwardKernel<gpu, DType, BType> {
+template<>
+struct ForwardKernel<gpu> {
+  template<typename DType, typename BType>
   static MSHADOW_XINLINE void Map(int i,
                                   DType *in_data,
                                   OType *out_data,
@@ -53,7 +54,8 @@ struct ForwardKernel<gpu, DType, BType> {
                                         bins + bins_length * (batch + 1),
                                         data);
 
-    out_data[i] = thrust::distance(bins, elem);
+    auto index = thrust::distance(bins, elem);
+    out_data[i] = OType(index);
   }
 };
 

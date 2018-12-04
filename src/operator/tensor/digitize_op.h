@@ -39,7 +39,7 @@ namespace op {
 struct DigitizeParam : public dmlc::Parameter<DigitizeParam> {
   bool right;
   int otype;
-  // TODO: param to define output type (See ops in random/)
+
   DMLC_DECLARE_PARAMETER(DigitizeParam) {
     DMLC_DECLARE_FIELD(right)
         .set_default(false)
@@ -69,10 +69,11 @@ bool InferShape(const nnvm::NodeAttrs &attrs,
   CHECK_GT(data_shape.ndim(), 0) << "Data shape undefined";
   CHECK_GT(bin_shape.ndim(), 0) << "Bin shape undefined";
 
-  CHECK_LE(bin_shape, data_shape) << "Bins tensor cannot have a higher dimension than input data";
+  CHECK_LE(bin_shape.ndim(), data_shape.ndim())
+    << "Bins tensor cannot have a higher dimension than input data";
 
   // Check if the first n-1 dims of data & bins are the same
-  auto bin_shape_last = (bin_shape.end() - 1); // TODO: Type
+  nnvm::dim_t *bin_shape_last = (bin_shape.end() - 1);
   CHECK(std::equal(bin_shape.begin(), bin_shape_last, data_shape.begin()))
     << "First N-1 dimensions of the input data and bins tensors should be the same (N = bins.ndim)";
 
@@ -104,8 +105,9 @@ inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
 }
 
 
-template<typename xpu, typename DType, typename OType>
+template<typename xpu>
 struct ForwardKernel {
+  template<typename DType, typename OType>
   static MSHADOW_XINLINE void Map(int i,
                                   DType *in_data,
                                   OType *out_data,
@@ -116,11 +118,37 @@ struct ForwardKernel {
 };
 
 
+template<>
+struct ForwardKernel<cpu> {
+  template<typename DType, typename OType>
+  static MSHADOW_XINLINE void Map(int i,
+                                  DType *in_data,
+                                  OType *out_data,
+                                  DType *bins,
+                                  size_t batch_size,
+                                  size_t bins_length,
+                                  bool right) {
+
+    const auto data = in_data[i];
+    const auto batch = i / batch_size;
+
+    auto elem = right ? std::lower_bound(bins + bins_length * batch,
+                                         bins + bins_length * (batch + 1),
+                                         data)
+                      : std::upper_bound(bins + bins_length * batch,
+                                         bins + bins_length * (batch + 1),
+                                         data);
+
+    auto index = std::distance(bins, elem);
+    out_data[i] = OType(index);
+  }
+};
+
+
 template<typename DType>
 struct CheckMonotonic {
-  // k = # of elements per bin vector
-  static MSHADOW_XINLINE void Map(int i, int k, DType *bins) {
-    if ((i + 1) % k != 0) {
+  static MSHADOW_XINLINE void Map(int i, int bins_length, DType *bins) {
+    if ((i + 1) % bins_length != 0) {
       CHECK_LT(bins[i], bins[i + 1]) << "Bins vector is not strictly monotonic and increasing";
     } // TODO: Make sure the next element in bins is actually bins[i+1]
   }
@@ -143,26 +171,26 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
 
     // Verify bins is strictly monotonic
-    auto bins_length = bins.shape_[bins.ndim()-1];
-    mxnet_op::Kernel<CheckMonotonic<DType>, xpu>::LaunchEx(s, bins.Size(), bins_length, &bins);
+    auto bins_length = bins.shape_[bins.ndim() - 1];
+    mxnet_op::Kernel<CheckMonotonic<DType>, xpu>::Launch(s, bins.Size(), bins_length,
+                                                         bins.dptr<DType>());
 
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      auto batch_size = data.shape_.ProdShape(bins.ndim() - 1, data.ndim());
+        auto batch_size = data.shape_.ProdShape(bins.ndim() - 1, data.ndim());
 
-      mxnet_op::Kernel<ForwardKernel<xpu, DType, OType>, xpu>::LaunchEx(s,
-                                                                        outputs[0].Size(),
-                                                                        data.dptr<DType>(),
-                                                                        outputs[0].dptr<OType>(),
-                                                                        bins.dptr<DType>(),
-                                                                        batch_size,
-                                                                        bins_length,
-                                                                        right);
+        mxnet_op::Kernel<ForwardKernel<xpu>, xpu>::Launch(s,
+        outputs[ 0 ].Size(),
+        data.dptr<DType>(),
+        outputs[ 0 ].dptr<OType>(),
+        bins.dptr<DType>(),
+        batch_size,
+        bins_length,
+        right);
     });
   });
 }
 
 }  // namespace op
 }  // namespace mxnet
-
 
 #endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_H_
