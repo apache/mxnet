@@ -557,7 +557,7 @@ class DataLoader(object):
     def __len__(self):
         return len(self._batch_sampler)
 
-    def __del__():
+    def __del__(self):
         if self._worker_pool:
             # manually terminate due to a bug that pool is not automatically terminated on linux
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
