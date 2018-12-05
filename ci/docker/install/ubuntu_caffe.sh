@@ -18,6 +18,7 @@
 # under the License.
 set -ex
 
+apt-get update || true
 apt-get install -y \
     libgflags-dev \
     libgoogle-glog-dev \

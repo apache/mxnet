@@ -454,9 +454,9 @@ The storage type of ``slice`` output depends on storage types of inputs
 - otherwise, ``slice`` generates output with default storage
 
 .. note:: When input data storage type is csr, it only supports
-step=(), or step=(None,), or step=(1,) to generate a csr output.
-For other step parameter values, it falls back to slicing
-a dense tensor.
+   step=(), or step=(None,), or step=(1,) to generate a csr output.
+   For other step parameter values, it falls back to slicing
+   a dense tensor.
 
 Example::
 

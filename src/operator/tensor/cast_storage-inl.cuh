@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file cast_storage-inl.cuh
- * \brief implementation of cast_storage op on GPU
+ * \brief GPU implementation of cast_storage op
  */
 #ifndef MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_

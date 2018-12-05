@@ -147,7 +147,7 @@ model = mx.mod.Module(
 We can visualize the network we created by plotting it:
 
 ```python
-mx.viz.plot_network(symbol=lro)
+mx.viz.plot_network(symbol=lro, node_attrs={"shape":"oval","fixedsize":"false"})
 ```
 
 ## Training the model

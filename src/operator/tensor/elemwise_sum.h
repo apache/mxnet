@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.h
- * \brief elementwise sum
+ * \brief Function definition of elementwise sum
  * \author Bing Xu
 */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_SUM_H_

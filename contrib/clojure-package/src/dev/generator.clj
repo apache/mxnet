@@ -212,11 +212,11 @@
     (.write w "\n"))))
 
 (def symbol-gen-ns "(ns org.apache.clojure-mxnet.symbol
-    (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
-                              min repeat reverse set sort take to-array empty sin
-                              get apply shuffle])
-    (:require [org.apache.clojure-mxnet.util :as util])
-    (:import (org.apache.mxnet Symbol)))")
+  (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
+                            min repeat reverse set sort take to-array empty sin
+                            get apply shuffle ref])
+  (:require [org.apache.clojure-mxnet.util :as util])
+  (:import (org.apache.mxnet Symbol)))")
 
 
 (defn generate-symbol-file []
@@ -307,7 +307,8 @@
 
 (def ndarray-gen-ns "(ns org.apache.clojure-mxnet.ndarray
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
-                            min repeat reverse set sort take to-array empty shuffle])
+                            min repeat reverse set sort take to-array empty shuffle
+                            ref])
   (:import (org.apache.mxnet NDArray Shape)))")
 
 

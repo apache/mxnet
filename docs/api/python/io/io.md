@@ -154,6 +154,7 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 
 ```eval_rst
 .. automodule:: mxnet.io
+    :noindex:
     :members: NDArrayIter, CSVIter, LibSVMIter, ImageRecordIter, ImageRecordUInt8Iter, MNISTIter
 ```
 
@@ -161,8 +162,8 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 
 ```eval_rst
 .. automodule:: mxnet.io
-   :members: DataBatch, DataDesc, DataIter, MXDataIter, PrefetchingIter, ResizeIter
-
+    :noindex:
+    :members: DataBatch, DataDesc, DataIter, MXDataIter, PrefetchingIter, ResizeIter
 ```
 
 ### mxnet.recordio

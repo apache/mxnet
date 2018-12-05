@@ -78,6 +78,7 @@ def _dataset_transform_fn(x, y):
     return x, y
 
 @with_seed()
+@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/13484")
 def test_recordimage_dataset_with_data_loader_multiworker():
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
