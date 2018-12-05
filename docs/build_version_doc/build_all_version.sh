@@ -43,7 +43,7 @@
 set -e
 set -x
 
-# Set OPT to any Sphinx build options, like -W for "warnings as errors"
+# Set OPTS to any Sphinx build options, like -W for "warnings as errors"
 OPTS=
 
 # $1 is the list of branches/tags to build
