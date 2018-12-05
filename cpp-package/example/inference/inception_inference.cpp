@@ -20,8 +20,8 @@
 /*
  * This example demonstrates image classification workflow with pre-trained models using MXNet C++ API.
  * The example performs following tasks.
- * 1. Load the pre-trained model,
- * 2. Load the parameters of pre-trained model,
+ * 1. Load the pre-trained model.
+ * 2. Load the parameters of pre-trained model.
  * 3. Load the image to be classified  in to NDArray.
  * 4. Normalize the image using the mean of images that were used for training.
  * 5. Run the forward pass and predict the input image.
@@ -38,7 +38,9 @@
 
 using namespace mxnet::cpp;
 
-
+static mx_float DEFAULT_MEAN_R = 123.675;
+static mx_float DEFAULT_MEAN_G = 116.28;
+static mx_float DEFAULT_MEAN_B = 103.53;
 /*
  * class Predictor
  *
@@ -48,8 +50,8 @@ using namespace mxnet::cpp;
 class Predictor {
  public:
     Predictor() {}
-    Predictor(const std::string& model_json,
-              const std::string& model_params,
+    Predictor(const std::string& model_json_file,
+              const std::string& model_params_file,
               const Shape& input_shape,
               bool gpu_context_type = false,
               const std::string& synset_file = "",
@@ -63,6 +65,7 @@ class Predictor {
     void LoadSynset(const std::string& synset_file);
     NDArray LoadInputImage(const std::string& image_file);
     void LoadMeanImageData();
+    void LoadDefaultMeanImageData();
     void NormalizeInput(const std::string& mean_image_file);
     inline bool FileExists(const std::string& name) {
         struct stat buffer;
@@ -76,6 +79,7 @@ class Predictor {
     Executor *executor;
     Shape input_shape;
     NDArray mean_image_data;
+    NDArray std_dev_image_data;
     Context global_ctx = Context::cpu();
     std::string mean_image_file;
 };
@@ -83,8 +87,8 @@ class Predictor {
 
 /*
  * The constructor takes following parameters as input:
- * 1. model_json:  The model in json formatted file.
- * 2. model_params: File containing model parameters
+ * 1. model_json_file:  The model in json formatted file.
+ * 2. model_params_file: File containing model parameters
  * 3. synset_file: File containing the list of image labels
  * 4. input_shape: Shape of input data to the model. Since this class will be running one inference at a time,
  *                 the input shape is required to be in format Shape(1, number_of_channels, height, width)
@@ -96,8 +100,8 @@ class Predictor {
  *
  *  The SimpleBind is expected to be invoked only once.
  */
-Predictor::Predictor(const std::string& model_json,
-                     const std::string& model_params,
+Predictor::Predictor(const std::string& model_json_file,
+                     const std::string& model_params_file,
                      const Shape& input_shape,
                      bool gpu_context_type,
                      const std::string& synset_file,
@@ -108,10 +112,10 @@ Predictor::Predictor(const std::string& model_json,
     global_ctx = Context::gpu();
   }
   // Load the model
-  LoadModel(model_json);
+  LoadModel(model_json_file);
 
   // Load the model parameters.
-  LoadParameters(model_params);
+  LoadParameters(model_params_file);
 
   /*
    * The data will be used to output the exact label that matches highest output of the model.
@@ -125,7 +129,8 @@ Predictor::Predictor(const std::string& model_json,
     LoadMeanImageData();
   } else {
     LG << "Mean image file for normalizing the input is not provide."
-       << " It may affect the accuracy of the prediction.";
+       << " We will use the default mean values for R,G and B channels.";
+    LoadDefaultMeanImageData();
   }
 
   // Create an executor after binding the model to input parameters.
@@ -156,9 +161,9 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
     throw std::runtime_error("Model parameters does not exist");
   }
   LG << "Loading the model parameters from " << model_parameters_file << std::endl;
-  std::map<std::string, NDArray> paramters;
-  NDArray::Load(model_parameters_file, 0, &paramters);
-  for (const auto &k : paramters) {
+  std::map<std::string, NDArray> parameters;
+  NDArray::Load(model_parameters_file, 0, &parameters);
+  for (const auto &k : parameters) {
     if (k.first.substr(0, 4) == "aux:") {
       auto name = k.first.substr(4, k.first.size() - 4);
       aux_map[name] = k.second.Copy(global_ctx);
@@ -186,7 +191,7 @@ void Predictor::LoadSynset(const std::string& synset_file) {
   std::ifstream fi(synset_file.c_str());
   if (!fi.is_open()) {
     std::cerr << "Error opening synset file " << synset_file << std::endl;
-    assert(false);
+    throw std::runtime_error("Error in opening the synset file.");
   }
   std::string synset, lemma;
   while (fi >> synset) {
@@ -201,7 +206,7 @@ void Predictor::LoadSynset(const std::string& synset_file) {
  * The following function loads the mean data from mean image file.
  * This data will be used for normalizing the image before running the forward
  * pass.
- *
+ * The output data has the same shape as that of the input image data.
  */
 void Predictor::LoadMeanImageData() {
   LG << "Load the mean image data that will be used to normalize "
@@ -215,7 +220,36 @@ void Predictor::LoadMeanImageData() {
 
 
 /*
- * The following function loads the input image.
+ * The following function loads the default mean values for
+ * R, G and B channels into NDArray that has the same shape as that of
+ * input image.
+ */
+void Predictor::LoadDefaultMeanImageData() {
+  LG << "Loading the default mean image data";
+  std::vector<float> array;
+  /*resize pictures to (224, 224) according to the pretrained model*/
+  int height = input_shape[2];
+  int width = input_shape[3];
+  int channels = input_shape[1];
+  std::vector<mx_float> default_means;
+  default_means.push_back(DEFAULT_MEAN_R);
+  default_means.push_back(DEFAULT_MEAN_G);
+  default_means.push_back(DEFAULT_MEAN_B);
+  for (int c = 0; c < channels; ++c) {
+    for (int i = 0; i < height; ++i) {
+      for (int j = 0; j < width; ++j) {
+        array.push_back(default_means[c]);
+      }
+    }
+  }
+  mean_image_data = NDArray(input_shape, global_ctx, false);
+  mean_image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
+  NDArray::WaitAll();
+}
+
+
+/*
+ * The following function loads the input image into NDArray.
  */
 NDArray Predictor::LoadInputImage(const std::string& image_file) {
   if (!FileExists(image_file)) {
@@ -254,9 +288,7 @@ void Predictor::PredictImage(const std::string& image_file) {
   NDArray image_data = LoadInputImage(image_file);
 
   // Normalize the image
-  if (!mean_image_file.empty()) {
-    image_data.Slice(0, 1) -= mean_image_data;
-  }
+  image_data.Slice(0, 1) -= mean_image_data;
 
   LG << "Running the forward pass on model to predict the image";
   /*
@@ -276,23 +308,22 @@ void Predictor::PredictImage(const std::string& image_file) {
   auto array = executor->outputs[0].Copy(global_ctx);
   NDArray::WaitAll();
 
-  float best_accuracy = 0.0f;
-  std::size_t best_idx = 0;
+  /*
+   * Find out the maximum accuracy and the index associated with that accuracy.
+   * This is done by using the argmax operator on NDArray.
+   */
+  auto predicted = array.ArgmaxChannel();
+  NDArray::WaitAll();
 
-  // Find out the maximum accuracy and the index associated with that accuracy.
-  for (std::size_t i = 0; i < array.Size(); ++i) {
-    if (array.At(0, i) > best_accuracy) {
-      best_accuracy = array.At(0, i);
-      best_idx = i;
-    }
-  }
+  int best_idx = predicted.At(0, 0);
+  float best_accuracy = array.At(0, best_idx);
 
   if (output_labels.empty()) {
     LG << "The model predicts the highest accuracy of " << best_accuracy << " at index "
        << best_idx;
   } else {
     LG << "The model predicts the input image to be a [" << output_labels[best_idx]
-       << " ] with Accuracy = " << array.At(0, best_idx) << std::endl;
+       << " ] with Accuracy = " << best_accuracy << std::endl;
   }
 }
 
@@ -322,12 +353,13 @@ std::vector<index_t> getShapeDimensions(const std::string& hidden_units_string) 
 
 void printUsage() {
     std::cout << "Usage:" << std::endl;
-    std::cout << "inception_inference --symbol <model symbol file in json format>  "
-              << "--params <model params file> "
-              << "--image <path to the image used for prediction> "
-              << "--synset <file containing labels for prediction> "
-              << "[--input_shape <dimensions of input image e.g \"3 224 224\">] "
+    std::cout << "inception_inference --symbol <model symbol file in json format>  " << std::endl
+              << "--params <model params file> " << std::endl
+              << "--image <path to the image used for prediction> " << std::endl
+              << "--synset <file containing labels for prediction> " << std::endl
+              << "[--input_shape <dimensions of input image e.g \"3 224 224\">] " << std::endl
               << "[--mean <file containing mean image for normalizing the input image>] "
+              << std::endl
               << "[--gpu  <Specify this option if workflow needs to be run in gpu context>]"
               << std::endl;
 }
