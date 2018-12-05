@@ -586,6 +586,7 @@ Composite multiple symbols into a new one by an operator.
 .. autosummary::
     :nosignatures:
 
+    mxnet.symbol.random.randint
     mxnet.symbol.random.uniform
     mxnet.symbol.random.normal
     mxnet.symbol.random.gamma
@@ -595,7 +596,6 @@ Composite multiple symbols into a new one by an operator.
     mxnet.symbol.random.generalized_negative_binomial
     mxnet.symbol.random.multinomial
     mxnet.symbol.random.shuffle
-    mxnet.symbol.random.randint
     mxnet.random.seed
 ```
 

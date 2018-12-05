@@ -34,10 +34,10 @@ In the rest of this document, we list routines provided by the `symbol.random` p
     negative_binomial
     normal
     poisson
+    randint
     uniform
     multinomial
     shuffle
-    randint
     mxnet.random.seed
 ```
 
