@@ -17,6 +17,8 @@
 
 # coding: utf-8
 """Gluon backend wrapper for onnx test infrastructure"""
+import os
+import sys
 from mxnet.contrib.onnx.onnx2mx.import_onnx import GraphProto
 import mxnet as mx
 
@@ -26,7 +28,9 @@ try:
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
-from gluon_backend_rep import GluonBackendRep
+CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
+from backend_rep import GluonBackendRep
 
 # GluonBackend class will take an ONNX model with inputs, perform a computation,
 # and then return the output.
