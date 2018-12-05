@@ -712,10 +712,13 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
 
+        in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
+        in_arrs2 = GetTestInputArrays(forward_attrs.input_types, false);
+
         NDArray copy;
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs[i] = &in_arr.arr;
-          inputs2[i] = &in_arr2.arr;
+          inputs[i] = &in_arrs[i1].arr;
+          inputs2[i] = &in_arrs2[i1].arr;
         }
 
 
