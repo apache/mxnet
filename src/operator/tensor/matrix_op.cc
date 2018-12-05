@@ -120,6 +120,7 @@ void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
     MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*this_mem, temp_mem));
     MKLDNNStream::Get()->Submit();
 
+    // Removing out_data mkl_mem_ and store data in the default format
     const_cast<NDArray &>(out_data).InvalidateMKLDNNData();
   });
 }
@@ -138,8 +139,7 @@ static void ReshapeComputeExCPU(const nnvm::NodeAttrs& attrs,
     MKLDNNReshape(inputs[0], outputs[0]);
     return;
   }
-  FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req,
-                    outputs);
+  FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
 
 inline static bool ReshapeStorageType(const nnvm::NodeAttrs& attrs,
