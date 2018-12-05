@@ -21,13 +21,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
+import sys
 import unittest
 try:
     import onnx.backend.test
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
-
+CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
 import gluon_backend
 import test_cases
 
@@ -36,14 +39,20 @@ pytest_plugins = "onnx.backend.test.report",
 
 BACKEND_TESTS = onnx.backend.test.BackendTest(gluon_backend, __name__)
 
-for op_tests in test_cases.IMPLEMENTED_OPERATORS_TEST:
+implemented_op_tests = test_cases.IMPLEMENTED_OPERATORS_TEST.get('both',[]) + \
+                       test_cases.IMPLEMENTED_OPERATORS_TEST.get('import', [])
+for op_tests in implemented_op_tests:
     BACKEND_TESTS.include(op_tests)
 
-for std_model_test in test_cases.STANDARD_MODEL:
-    BACKEND_TESTS.include(std_model_test)
-
-for basic_model_test in test_cases.BASIC_MODEL_TESTS:
+basic_models = test_cases.BASIC_MODEL_TESTS.get('both', []) + \
+               test_cases.BASIC_MODEL_TESTS.get('import', [])
+for basic_model_test in basic_models:
     BACKEND_TESTS.include(basic_model_test)
+
+standard_models = test_cases.STANDARD_MODEL.get('both', []) + \
+                  test_cases.STANDARD_MODEL.get('import', [])
+for std_model_test in standard_models:
+    BACKEND_TESTS.include(std_model_test)
 
 BACKEND_TESTS.exclude('.*broadcast.*')
 BACKEND_TESTS.exclude('.*bcast.*')

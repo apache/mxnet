@@ -21,123 +21,36 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
+import sys
 import unittest
 try:
     import onnx.backend.test
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
-
+CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
 import backend as mxnet_backend
+import test_cases
 
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 
 BACKEND_TESTS = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
-IMPLEMENTED_OPERATORS_TEST = [
-    'test_random_uniform',
-    'test_random_normal',
-    'test_add',
-    'test_sub',
-    'test_mul',
-    'test_div',
-    'test_neg',
-    'test_abs',
-    'test_sum',
-    'test_tanh',
-    'test_cos',
-    'test_sin',
-    'test_tan',
-    'test_acos',
-    'test_asin',
-    'test_atan'
-    'test_ceil',
-    'test_floor',
-    'test_concat',
-    'test_identity',
-    'test_sigmoid',
-    'test_relu',
-    'test_constant_pad',
-    'test_edge_pad',
-    'test_reflect_pad',
-    'test_reduce_min',
-    'test_reduce_max',
-    'test_reduce_mean',
-    'test_reduce_prod',
-    'test_reduce_sum_d',
-    'test_reduce_sum_keepdims_random',
-    'test_squeeze',
-    'test_softmax_example',
-    'test_softmax_large_number',
-    'test_softmax_axis_2',
-    'test_transpose',
-    'test_globalmaxpool',
-    'test_globalaveragepool',
-    # enabling partial test cases for matmul
-    'test_matmul_3d',
-    'test_matmul_4d',
-    'test_slice_cpu',
-    'test_slice_neg',
-    'test_squeeze_',
-    'test_reciprocal',
-    'test_sqrt',
-    'test_pow',
-    'test_exp_',
-    'test_argmax',
-    'test_argmin',
-    'test_min',
-    'test_max'
-    #pytorch operator tests
-    'test_operator_exp',
-    'test_operator_maxpool',
-    'test_operator_params',
-    'test_operator_permute2',
-    'test_clip'
-    'test_cast',
-    'test_depthtospace',
-    'test_hardsigmoid',
-    'test_instancenorm',
-    'test_shape',
-    'test_size'
-    ]
+implemented_op_tests = test_cases.IMPLEMENTED_OPERATORS_TEST.get('both',[]) + \
+                       test_cases.IMPLEMENTED_OPERATORS_TEST.get('export', [])
+for op_tests in implemented_op_tests:
+    BACKEND_TESTS.include(op_tests)
 
-BASIC_MODEL_TESTS = [
-    'test_AvgPool2D',
-    'test_BatchNorm',
-    'test_ConstantPad2d',
-    'test_Conv2d',
-    'test_ELU',
-    'test_LeakyReLU',
-    'test_MaxPool',
-    'test_PReLU',
-    'test_ReLU',
-    'test_selu_default'
-    'test_Sigmoid',
-    'test_Softmax',
-    'test_softmax_functional',
-    'test_softmax_lastdim',
-    'test_Tanh'
-    ]
-
-STANDARD_MODEL = [
-    'test_bvlc_alexnet',
-    'test_densenet121',
-    # 'test_inception_v1',
-    # 'test_inception_v2',
-    'test_resnet50',
-    # 'test_shufflenet',
-    'test_squeezenet',
-    'test_vgg16',
-    'test_vgg19'
-    ]
-
-for op_test in IMPLEMENTED_OPERATORS_TEST:
-    BACKEND_TESTS.include(op_test)
-
-for basic_model_test in BASIC_MODEL_TESTS:
+basic_models = test_cases.BASIC_MODEL_TESTS.get('both', []) + \
+               test_cases.BASIC_MODEL_TESTS.get('export', [])
+for basic_model_test in basic_models:
     BACKEND_TESTS.include(basic_model_test)
 
-for std_model_test in STANDARD_MODEL:
+standard_models = test_cases.STANDARD_MODEL.get('both', []) + \
+                  test_cases.STANDARD_MODEL.get('export', [])
+for std_model_test in standard_models:
     BACKEND_TESTS.include(std_model_test)
 
 BACKEND_TESTS.exclude('.*broadcast.*')
