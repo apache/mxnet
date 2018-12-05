@@ -2,6 +2,7 @@
 
 This document explains how to build MXNet from source code.
 
+**For Java/Scala/Clojure, please follow [this guide instead](./scala_setup.md)**
 
 ## Overview
 
@@ -27,7 +28,6 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
     - [Python (includes Gluon)](../api/python/index.html)
     - [C++](../api/c++/index.html)
     - [Clojure](../api/clojure/index.html)
-    - Java (coming soon)
     - [Julia](../api/julia/index.html)
     - [Perl](../api/perl/index.html)
     - [R](../api/r/index.html)
@@ -35,6 +35,7 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
     - [Java](../api/java/index.html)
 
 <hr>
+
 ## Build Instructions by Operating System
 
 Detailed instructions are provided per operating system. Each of these guides also covers how to install the specific [Language Bindings](#installing-mxnet-language-bindings) you require.
@@ -160,7 +161,7 @@ More information on turning these features on or off are found in the following 
 ## Build Configurations
 
 There is a configuration file for make,
-[`make/config.mk`](https://github.com/apache/incubator-mxnet/blob/master/make/config.mk), that contains all the compilation options. You can edit it and then run `make` or `cmake`. `cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead.
+[`make/config.mk`](https://github.com/apache/incubator-mxnet/blob/master/make/config.mk), that contains all the compilation options. You can edit it and then run `make` or `cmake`. `cmake` is recommended for building MXNet (and is required to build with MKLDNN), however you may use `make` instead. For building with Java/Scala/Clojure, only `make` is supported.
 
 <hr>
 
@@ -214,7 +215,7 @@ It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when 
 For example, you can specify using all cores on Linux as follows:
 
 ```bash
-cmake -j $(nproc) .
+cmake -j$(nproc)
 ```
 
 
@@ -222,44 +223,28 @@ cmake -j $(nproc) .
 * Build MXNet with `cmake` and install with MKL DNN, GPU, and OpenCV support:
 
 ```bash
-echo "USE_OPENCV = 1" >> ./config.mk
-echo "USE_CUDA = 1" >> ./config.mk
-echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
-echo "USE_CUDNN = 1" >> ./config.mk
-echo "USE_MKLDNN = 1" >> ./config.mk
-cmake -j $(nproc) USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_MKLDNN=1 .
+cmake -j USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_MKLDNN=1
 ```
 
 #### Recommended for Systems with NVIDIA GPUs
 * Build with both OpenBLAS, GPU, and OpenCV support:
 
 ```bash
-echo "USE_BLAS = openblas" >> ./config.mk
-echo "USE_OPENCV = 1" >> ./config.mk
-echo "USE_CUDA = 1" >> ./config.mk
-echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
-echo "USE_CUDNN = 1" >> ./config.mk
-cmake -j $(nproc) BLAS=open USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 .
+cmake -j BLAS=open USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
 ```
 
 #### Recommended for Systems with Intel CPUs
 * Build MXNet with `cmake` and install with MKL DNN, and OpenCV support:
 
 ```bash
-echo "USE_CUDA = 0" >> ./config.mk
-echo "USE_OPENCV = 1" >> ./config.mk
-echo "USE_MKLDNN = 1" >> ./config.mk
-cmake -j $(nproc) USE_CUDA=0 USE_MKLDNN=1 .
+cmake -j USE_CUDA=0 USE_MKLDNN=1
 ```
 
 #### Recommended for Systems with non-Intel CPUs
 * Build MXNet with `cmake` and install with OpenBLAS and OpenCV support:
 
 ```bash
-echo "USE_BLAS = openblas" >> ./config.mk
-echo "USE_OPENCV = 1" >> ./config.mk
-echo "USE_CUDA = 0" >> ./config.mk
-cmake -j $(nproc) USE_CUDA=0 BLAS=open .
+cmake -j USE_CUDA=0 BLAS=open
 ```
 
 #### Other Examples
@@ -267,26 +252,20 @@ cmake -j $(nproc) USE_CUDA=0 BLAS=open .
 * Build without using OpenCV:
 
 ```bash
-echo "USE_OPENCV = 0" >> ./config.mk
-cmake -j $(nproc) USE_OPENCV=0 .
+cmake USE_OPENCV=0
 ```
 
 * Build on **macOS** with the default BLAS library (Apple Accelerate) and Clang installed with `xcode` (OPENMP is disabled because it is not supported by the Apple version of Clang):
 
 ```bash
-echo "USE_BLAS = openblas" >> ./config.mk
-echo "USE_OPENCV = 0" >> ./config.mk
-echo "USE_OPENMP = 0" >> ./config.mk
-cmake -j $(sysctl -n hw.ncpu) BLAS=apple USE_OPENCV=0 USE_OPENMP=0 .
+cmake -j BLAS=apple USE_OPENCV=0 USE_OPENMP=0
 ```
 
 * To use OpenMP on **macOS** you need to install the Clang compiler, `llvm` (the one provided by Apple does not support OpenMP):
 
 ```bash
 brew install llvm
-echo "USE_BLAS = openblas" >> ./config.mk
-echo "USE_OPENMP = 1" >> ./config.mk
-cmake -j $(sysctl -n hw.ncpu) BLAS=apple USE_OPENMP=1 .
+cmake -j BLAS=apple USE_OPENMP=1
 ```
 
 <hr>
