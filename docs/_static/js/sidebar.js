@@ -1,5 +1,5 @@
 /*Preprocess*/
-var LANG = ['python', 'c++', 'clojure', 'julia', 'perl', 'r', 'scala'];
+var LANG = ['python', 'c++', 'clojure', 'julia', 'perl', 'r', 'scala', 'java'];
 var TITLE_WITH_LANG = ['/get_started/', '/tutorials/', '/faq/', '/architecture/', '/community/'];
 for(var i = 0; i < LANG.length; ++i) {
     TITLE_WITH_LANG.push('/api/' + LANG[i] + '/');

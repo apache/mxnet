@@ -165,7 +165,7 @@ def get_repo_url() {
 }
 
 def update_github_commit_status(state, message) {
-  node(NODE_LINUX_CPU) {
+  node(NODE_UTILITY) {
     // NOTE: https://issues.jenkins-ci.org/browse/JENKINS-39482
     //The GitHubCommitStatusSetter requires that the Git Server is defined under 
     //*Manage Jenkins > Configure System > GitHub > GitHub Servers*. 
@@ -233,6 +233,7 @@ def assign_node_labels(args) {
   NODE_LINUX_GPU_P3 = args.linux_gpu_p3
   NODE_WINDOWS_CPU = args.windows_cpu
   NODE_WINDOWS_GPU = args.windows_gpu
+  NODE_UTILITY = args.utility
 }
 
 def main_wrapper(args) {
@@ -252,14 +253,14 @@ def main_wrapper(args) {
     currentBuild.result = "SUCCESS"
     update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
-    node(NODE_LINUX_CPU) {
+    node(NODE_UTILITY) {
       sh "echo caught ${caughtError}"
       err = caughtError
       currentBuild.result = "FAILURE"
       update_github_commit_status('FAILURE', 'Job failed')
     }
   } finally {
-    node(NODE_LINUX_CPU) {
+    node(NODE_UTILITY) {
       // Call failure handler
       args['failure_handler']()
       

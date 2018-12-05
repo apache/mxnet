@@ -50,3 +50,5 @@ cp ../../build/cpp-package/example/mlp_gpu .
 
 cp ../../build/cpp-package/example/test_score .
 ./test_score 0.93
+
+sh unittests/unit_test_mlp_csv.sh

@@ -159,14 +159,14 @@ class TestImage(unittest.TestCase):
             with open(fname, 'w') as f:
                 for line in file_list:
                     f.write(line + '\n')
-            
+
             test_list = ['imglist', 'path_imglist']
 
             for test in test_list:
                 imglist = im_list if test == 'imglist' else None
                 path_imglist = fname if test == 'path_imglist' else None
-                
-                test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist, 
+
+                test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist,
                     path_imglist=path_imglist, path_root='', dtype=dtype)
                 # test batch data shape
                 for _ in range(3):
@@ -181,7 +181,7 @@ class TestImage(unittest.TestCase):
                     i += 1
                 assert i == 5
                 # test last_batch_handle(pad)
-                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
+                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
                     path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
                 i = 0
                 for batch in test_iter:
@@ -265,6 +265,8 @@ class TestImage(unittest.TestCase):
 
         val_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='')
         det_iter = val_iter.sync_label_shape(det_iter)
+        assert det_iter.data_shape == val_iter.data_shape
+        assert det_iter.label_shape == val_iter.label_shape
 
         # test file list
         fname = './data/test_imagedetiter.lst'

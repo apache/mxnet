@@ -25,6 +25,7 @@ import org.apache.mxnet.javaapi.{Context, DataDesc, NDArray, Shape}
 
 import scala.collection.JavaConverters
 import scala.collection.JavaConverters._
+import scala.language.implicitConversions
 
 /**
   * The ObjectDetector class helps to run ObjectDetection tasks where the goal
