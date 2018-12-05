@@ -111,9 +111,10 @@ class Classifier(modelPathPrefix: String,
   : IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     // considering only the first output
+    // Copy NDArray to CPU to avoid frequent GPU to CPU copying
     val predictResultND: NDArray =
       predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
-
+    // Parallel Execution with ParArray for better performance
     val predictResultPar: ParArray[Array[Float]] =
       new ParArray[Array[Float]](predictResultND.shape(0))
 

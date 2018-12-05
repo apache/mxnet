@@ -96,7 +96,9 @@ class ObjectDetector(modelPathPrefix: String,
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
+    // Copy NDArray to CPU to avoid frequent GPU to CPU copying
     val predictResult = predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
+    // Parallel Execution with ParArray for better performance
     var batchResult = new ParArray[IndexedSeq[(String, Array[Float])]](predictResult.shape(0))
     (0 until predictResult.shape(0)).toArray.par.foreach( i => {
       val r = predictResult.at(i)
