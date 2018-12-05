@@ -681,6 +681,8 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
   std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
+  std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
+  std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -689,14 +691,12 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
   std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
-  std::vector<NDArrayAttrs> in_arrs2 = GetTestInputArrays(forward_attrs.input_types, false);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
   if (forward_attrs.requests.find(OpReqType::kWriteTo) != forward_attrs.requests.end()) {
     for (int i1 = 0; i1 < in_arrs.size(); i1++) {
       auto in_arr = in_arrs[i1];
-      auto in_arr2 = in_arrs2[i1];
 
       CHECK_NE(forward_attrs.accept_dims.size(), 0);
       if (forward_attrs.accept_dims.find(in_arr.arr.shape().ndim()) ==
@@ -715,10 +715,11 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
         in_arrs2 = GetTestInputArrays(forward_attrs.input_types, false);
 
-        NDArray copy;
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs[i] = &in_arrs[i1].arr;
-          inputs2[i] = &in_arrs2[i1].arr;
+          inputs_buffer[i] = CopyMKLDNNArray(in_arr.arr);
+          inputs2_buffer[i] = CopyMKLDNNArray(in_arr.arr);
+          inputs[i] = &inputs_buffer[i];
+          inputs2[i] = &inputs2_buffer[i];
         }
 
 
