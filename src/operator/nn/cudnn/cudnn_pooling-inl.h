@@ -63,7 +63,7 @@ class CuDNNPoolingOp {
         }
         break;
       default:
-        LOG(FATAL) << "Not implmented";
+        LOG(FATAL) << "Not implemented";
     }
   }
 
@@ -215,6 +215,8 @@ class CuDNNPoolingOp {
       int window_height = param_.global_pool ? dshape_nchw[2] : param_.kernel[0];
       int window_width = param_.global_pool ? dshape_nchw[3] : param_.kernel[1];
       // CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
+      // For reference see Fixed Issues section in
+      // https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_721.html#rel_721
       #if CUDNN_VERSION == 7104
       is_supported = window_height <= 8 && window_width <= 8;
       #endif
