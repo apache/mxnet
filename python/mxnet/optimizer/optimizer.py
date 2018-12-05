@@ -637,6 +637,8 @@ class FTML(Optimizer):
         z = beta1 * z + (1 - beta1) * rescaled_grad - (d_t - beta1 * d_(t-1)) * weight
         weight = - z / d_t
 
+    For details of the update algorithm, see :class:`~mxnet.ndarray.ftml_update`.
+
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
 
@@ -686,8 +688,11 @@ class LBSGD(Optimizer):
         state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
         weight = weight - state
 
-    For details of the update algorithm see :class:`~mxnet.ndarray.lbsgd_update` and
-    :class:`~mxnet.ndarray.lbsgd_mom_update`.
+    For details of the update algorithm see :class:`~mxnet.ndarray.sgd_update`
+    and :class:`~mxnet.ndarray.sgd_mom_update`.
+    In addition to the SGD updates the LBSGD optimizer uses the LARS, Layer-wise
+    Adaptive Rate Scaling, algorithm to have a separate learning rate for each
+    layer of the network, which leads to better stability over large batch sizes.
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
