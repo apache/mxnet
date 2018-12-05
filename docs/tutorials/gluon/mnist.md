@@ -70,7 +70,7 @@ val_loader = mx.gluon.data.DataLoader(val_data, shuffle=False, batch_size=batch_
 
 We will cover two approaches for performing the hand-written digit recognition task.
 In our first attempt, we will make use of a traditional neural network architecture called [Multilayer Perceptron (MLP)](https://en.wikipedia.org/wiki/Multilayer_perceptron).
-Although this architecture lets us achieve about 95.5 % accuracy on the validation set, we will recognize and discuss some of its drawbacks and use them as a motivation for using a different network.
+Although this architecture lets us achieve over 90 % accuracy on the validation set, we will recognize and discuss some of its drawbacks and use them as a motivation for using a different network.
 In the subsequent second attempt, we introduce the more advanced and very widely used [Convolutional Neural Network (CNN)](https://en.wikipedia.org/wiki/Convolutional_neural_network) architecture that has proven to work very well for image classification tasks.
 
 As a first step, we run some convenience imports of frequently used modules.
@@ -105,13 +105,13 @@ Unless a network requires non-static runtime elements like loops, conditionals o
 For details on the differences, see the documentation on [`Block`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block) and [`HybridBlock`](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.HybridBlock).
 
 ```python
-net = nn.HybridSequential('MLP')
+net = nn.HybridSequential(prefix='MLP_')
 with net.name_scope():
     net.add(
         nn.Flatten(),
         nn.Dense(128, activation='relu'),
         nn.Dense(64, activation='relu'),
-        nn.Dense(10, activation='relu')
+        nn.Dense(10, activation='sigmoid')
     )
 ```
 
@@ -148,7 +148,7 @@ Internally, it makes use of the [`SGD`](https://mxnet.incubator.apache.org/api/p
 trainer = gluon.Trainer(
     params=net.collect_params(),
     optimizer='sgd',
-    optimizer_params={'learning_rate': 0.02},
+    optimizer_params={'learning_rate': 0.04},
 )
 ```
 
@@ -232,10 +232,10 @@ for inputs, labels in val_loader:
     labels = labels.as_in_context(ctx)
     metric.update(labels, net(inputs))
 print('Validaton: {} = {}'.format(*metric.get()))
-assert metric.get()[1] > 0.94
+assert metric.get()[1] > 0.92
 ```
 
-If everything went well, we should see an accuracy value that is around 0.954, which means that we are able to accurately predict the digit in 95.5 % of test images.
+If everything went well, we should see an accuracy value that is around 0.925, which means that we are able to accurately predict the digit in 92.5 % of test images.
 This is a pretty good result, but as we will see in the next part of this tutorial, we can do a lot better than that.
 
 That said, a single number only conveys very limited information on the performance of our neural network.
@@ -253,10 +253,9 @@ def get_mislabeled(loader):
         # Predicted label is the index is where the output is maximal
         preds = nd.argmax(outputs, axis=1)
         for i, p, l in zip(inputs, preds, labels):
+            p, l = int(p.asscalar()), int(l.asscalar())
             if p != l:
-                mislabeled.append(
-                    (i.asnumpy(), int(p.asscalar()), int(l.asscalar()))
-                )
+                mislabeled.append((i.asnumpy(), p, l))
     return mislabeled
 ```
 
@@ -338,16 +337,17 @@ The LeNet architecture is a popular network known to work well on digit classifi
 We will use a version that differs slightly from the original in the usage of `tanh` activations instead of `sigmoid`.
 
 ```python
-lenet = nn.HybridSequential('LeNet')
-lenet.add(
-    nn.Conv2D(channels=20, kernel_size=(5, 5), activation='tanh'),
-    nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-    nn.Conv2D(channels=50, kernel_size=(5, 5), activation='tanh'),
-    nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
-    nn.Flatten(),
-    nn.Dense(500, activation='tanh'),
-    nn.Dense(10, activation='tanh'),
-)
+lenet = nn.HybridSequential(prefix='LeNet_')
+with lenet.name_scope():
+    lenet.add(
+        nn.Conv2D(channels=20, kernel_size=(5, 5), activation='tanh'),
+        nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+        nn.Conv2D(channels=50, kernel_size=(5, 5), activation='tanh'),
+        nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
+        nn.Flatten(),
+        nn.Dense(500, activation='tanh'),
+        nn.Dense(10, activation='sigmoid'),
+    )
 ```
 
 To get an overview of all intermediate sizes of arrays and the number of parameters in each layer, the `summary()` method can be a great help.
@@ -365,19 +365,19 @@ Output:
         Layer (type)                                Output Shape         Param #
 ================================================================================
                Input                              (1, 1, 28, 28)               0
-        Activation-1                     <Symbol conv1_tanh_fwd>               0
+        Activation-1                <Symbol eNet_conv0_tanh_fwd>               0
         Activation-2                             (1, 20, 24, 24)               0
             Conv2D-3                             (1, 20, 24, 24)             520
          MaxPool2D-4                             (1, 20, 12, 12)               0
-        Activation-5                     <Symbol conv2_tanh_fwd>               0
+        Activation-5                <Symbol eNet_conv1_tanh_fwd>               0
         Activation-6                               (1, 50, 8, 8)               0
             Conv2D-7                               (1, 50, 8, 8)           25050
          MaxPool2D-8                               (1, 50, 4, 4)               0
            Flatten-9                                    (1, 800)               0
-       Activation-10                    <Symbol dense1_tanh_fwd>               0
+       Activation-10               <Symbol eNet_dense0_tanh_fwd>               0
        Activation-11                                    (1, 500)               0
             Dense-12                                    (1, 500)          400500
-       Activation-13                    <Symbol dense2_tanh_fwd>               0
+       Activation-13            <Symbol eNet_dense1_sigmoid_fwd>               0
        Activation-14                                     (1, 10)               0
             Dense-15                                     (1, 10)            5010
 ================================================================================
@@ -401,7 +401,7 @@ Note that it is advisable to use a GPU if possible, since this model is signific
 trainer = gluon.Trainer(
     params=lenet.collect_params(),
     optimizer='sgd',
-    optimizer_params={'learning_rate': 0.02},
+    optimizer_params={'learning_rate': 0.04},
 )
 metric = mx.metric.Accuracy()
 num_epochs = 10
@@ -429,7 +429,7 @@ for inputs, labels in val_loader:
     labels = labels.as_in_context(ctx)
     metric.update(labels, lenet(inputs))
 print('Validaton: {} = {}'.format(*metric.get()))
-assert metric.get()[1] > 0.975
+assert metric.get()[1] > 0.965
 ```
 
 If all went well, we should see a higher accuracy metric for predictions made using LeNet.
