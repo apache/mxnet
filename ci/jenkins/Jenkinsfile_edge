@@ -34,7 +34,7 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-//    custom_steps.compile_armv8_jetson_gpu(),
+    custom_steps.compile_armv8_jetson_gpu(),
     custom_steps.compile_armv7_cpu(),
     custom_steps.compile_armv6_cpu(),
     custom_steps.compile_armv8_cpu(),
