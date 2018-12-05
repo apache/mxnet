@@ -7249,7 +7249,7 @@ def test_corner_pooling():
     dirs = ['left','right','bottom','right']
     for corner_type in dirs:
         test = mx.sym.CornerPooling(data=data, corner_pooling_type=corner_type)
-        x = np.random.rand(3,2,4,5)
+        x = np.random.rand(3,3,3,5)
         check_numeric_gradient(sym=test, location=[x],
                                grad_nodes={'data':'write'},
                                numeric_eps=1e-5, rtol=1e-1, atol=1e-4) 
