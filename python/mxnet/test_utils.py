@@ -1916,7 +1916,7 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
         sample_bucket_ids = sample_bucket_ids // 2
     obs_freq = np.zeros(shape=len(buckets), dtype=np.int)
     for i in range(len(buckets)):
-        obs_freq[i] = (sample_bucket_ids == i).sum()
+        obs_freq[i] = (sample_bucket_ids == buckets[i]).sum()
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
