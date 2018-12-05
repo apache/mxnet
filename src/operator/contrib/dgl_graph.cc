@@ -795,7 +795,8 @@ Example:
 
   out[2]
   [0 0 0 0 0]
-<NDArray 5 @cpu(0)>
+  <NDArray 5 @cpu(0)>
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<NeighborSampleParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -885,6 +886,7 @@ Example:
   out[3]
   [0 0 0 0 0]
   <NDArray 5 @cpu(0)>
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<NeighborSampleParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
