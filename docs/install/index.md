@@ -473,15 +473,15 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
     <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>1.4.0</version>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.4.0-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 
@@ -492,15 +492,15 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
     <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>1.4.0</version>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>
@@ -776,15 +776,15 @@ Not available at this time. <br>
 </br>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
     <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>1.4.0</version>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>
