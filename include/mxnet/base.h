@@ -25,17 +25,17 @@
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
 
-#include "mxfeatures.h"
-#include <dmlc/base.h>
-#include <dmlc/io.h>
-#include <dmlc/type_traits.h>
-#include <dmlc/parameter.h>
-#include <mshadow/tensor.h>
+#include "dmlc/base.h"
+#include "dmlc/io.h"
+#include "dmlc/type_traits.h"
+#include "dmlc/parameter.h"
+#include "mshadow/tensor.h"
 // nnvm headers for symbolic construction.
-#include <nnvm/op.h>
-#include <nnvm/tuple.h>
-#include <nnvm/symbolic.h>
+#include "nnvm/op.h"
+#include "nnvm/tuple.h"
+#include "nnvm/symbolic.h"
 #include <string>
+#include "mxfeatures.h"
 
 
 /*!

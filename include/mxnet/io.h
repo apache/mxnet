@@ -25,8 +25,8 @@
 #ifndef MXNET_IO_H_
 #define MXNET_IO_H_
 
-#include <dmlc/data.h>
-#include <dmlc/registry.h>
+#include "dmlc/data.h"
+#include "dmlc/registry.h"
 #include <vector>
 #include <string>
 #include <utility>

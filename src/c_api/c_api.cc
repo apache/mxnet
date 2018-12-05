@@ -22,20 +22,20 @@
  * \file c_api.cc
  * \brief C API of mxnet
  */
-#include <dmlc/base.h>
-#include <dmlc/logging.h>
-#include <dmlc/io.h>
-#include <dmlc/memory_io.h>
-#include <dmlc/recordio.h>
-#include <dmlc/omp.h>
-#include <mxnet/base.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/operator.h>
-#include <mxnet/io.h>
-#include <mxnet/c_api.h>
-#include <mxnet/kvstore.h>
-#include <mxnet/rtc.h>
-#include <mxnet/storage.h>
+#include "dmlc/base.h"
+#include "dmlc/logging.h"
+#include "dmlc/io.h"
+#include "dmlc/memory_io.h"
+#include "dmlc/recordio.h"
+#include "dmlc/omp.h"
+#include "mxnet/base.h"
+#include "mxnet/ndarray.h"
+#include "mxnet/operator.h"
+#include "mxnet/io.h"
+#include "mxnet/c_api.h"
+#include "mxnet/kvstore.h"
+#include "mxnet/rtc.h"
+#include "mxnet/storage.h"
 #include <vector>
 #include <sstream>
 #include <string>
