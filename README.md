@@ -25,7 +25,8 @@ Adjust settings in cmake (build-type ``Release`` or ``Debug``, configure CUDA, O
 Further, we recommend [Ninja](https://ninja-build.org/) as a build system for faster builds (Ubuntu: `sudo apt-get install ninja-build`).
 
 ```bash
-git clone --recursive git@gitlab.hpi.de:joseph.bethge/bmxnet.git # remember to include the --recursive
+git clone --recursive https://github.com/hpi-xnor/BMXNet-v2.git # remember to include the --recursive
+cd BMXNet-v2
 mkdir build && cd build
 cmake .. -G Ninja # if any error occurs, apply ccmake or cmake-gui to adjust the cmake config.
 ccmake . # or GUI cmake
@@ -58,14 +59,14 @@ $ export PYTHONPATH=<mxnet-root>/python
 
 ## Training
 
-Make sure that you have a new version of our example submodule [example/bmxnet-examples](example/bmxnet-examples):
+Make sure that you have a new version of our example submodule [example/bmxnet-examples](https://github.com/hpi-xnor/BMXNet-v2-examples/):
 ```bash
 cd example/bmxnet-examples
 git checkout master
 git pull
 ```
 
-Examples for hyperparameters are documented in the [Wiki](https://github.com/hpi-xnor/BMXNet-v2/wikis/hyperparameters).
+Examples for hyperparameters are documented in the [Wiki](https://github.com/hpi-xnor/BMXNet-v2-wiki/blob/master/hyperparameters.md).
 
 ## Tests
 
