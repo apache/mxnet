@@ -587,16 +587,16 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
-    mxnet.ndarray.random.randint
-    mxnet.ndarray.random.uniform
-    mxnet.ndarray.random.normal
-    mxnet.ndarray.random.gamma
-    mxnet.ndarray.random.exponential
-    mxnet.ndarray.random.poisson
-    mxnet.ndarray.random.negative_binomial
-    mxnet.ndarray.random.generalized_negative_binomial
-    mxnet.ndarray.random.multinomial
-    mxnet.ndarray.random.shuffle
+    random.exponential
+    random.gamma
+    random.generalized_negative_binomial
+    random.negative_binomial
+    random.normal
+    random.poisson
+    random.randint
+    random.uniform
+    random.multinomial
+    random.shuffle
     mxnet.random.seed
 ```
 
