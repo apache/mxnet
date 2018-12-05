@@ -70,7 +70,7 @@ val_loader = mx.gluon.data.DataLoader(val_data, shuffle=False, batch_size=batch_
 
 We will cover two approaches for performing the hand-written digit recognition task.
 In our first attempt, we will make use of a traditional neural network architecture called [Multilayer Perceptron (MLP)](https://en.wikipedia.org/wiki/Multilayer_perceptron).
-Although this architecture lets us achieve over 90 % accuracy on the validation set, we will recognize and discuss some of its drawbacks and use them as a motivation for using a different network.
+Although this architecture lets us achieve over 95 % accuracy on the validation set, we will recognize and discuss some of its drawbacks and use them as a motivation for using a different network.
 In the subsequent second attempt, we introduce the more advanced and very widely used [Convolutional Neural Network (CNN)](https://en.wikipedia.org/wiki/Convolutional_neural_network) architecture that has proven to work very well for image classification tasks.
 
 As a first step, we run some convenience imports of frequently used modules.
@@ -111,7 +111,7 @@ with net.name_scope():
         nn.Flatten(),
         nn.Dense(128, activation='relu'),
         nn.Dense(64, activation='relu'),
-        nn.Dense(10, activation='sigmoid')
+        nn.Dense(10, activation=None)  # loss function includes softmax already, see below
     )
 ```
 
@@ -162,6 +162,8 @@ Unfortunately, inaccuracy is a poor choice for training since it contains almost
 As a better behaved proxy for inaccuracy, the [softmax cross-entropy loss](https://mxnet.incubator.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SoftmaxCrossEntropyLoss) is a popular choice.
 It has the essential property of being minimal for the correct prediction, but at the same time, it is everywhere differentiable with nonzero gradient.
 The [accuracy](https://mxnet.incubator.apache.org/api/python/metric/metric.html#mxnet.metric.Accuracy) metric is still useful for monitoring the training progress, since it is more intuitively interpretable than a loss value.
+
+**Note:** `SoftmaxCrossEntropyLoss` combines the softmax activation and the cross entropy loss function in one layer, therefore the last layer in our network has no activation function.
 
 ```python
 metric = mx.metric.Accuracy()
@@ -232,10 +234,10 @@ for inputs, labels in val_loader:
     labels = labels.as_in_context(ctx)
     metric.update(labels, net(inputs))
 print('Validaton: {} = {}'.format(*metric.get()))
-assert metric.get()[1] > 0.92
+assert metric.get()[1] > 0.96
 ```
 
-If everything went well, we should see an accuracy value that is around 0.925, which means that we are able to accurately predict the digit in 92.5 % of test images.
+If everything went well, we should see an accuracy value that is around 0.968, which means that we are able to accurately predict the digit in 97 % of test images.
 This is a pretty good result, but as we will see in the next part of this tutorial, we can do a lot better than that.
 
 That said, a single number only conveys very limited information on the performance of our neural network.
@@ -346,7 +348,7 @@ with lenet.name_scope():
         nn.MaxPool2D(pool_size=(2, 2), strides=(2, 2)),
         nn.Flatten(),
         nn.Dense(500, activation='tanh'),
-        nn.Dense(10, activation='sigmoid'),
+        nn.Dense(10, activation=None),
     )
 ```
 
@@ -377,9 +379,7 @@ Output:
        Activation-10               <Symbol eNet_dense0_tanh_fwd>               0
        Activation-11                                    (1, 500)               0
             Dense-12                                    (1, 500)          400500
-       Activation-13            <Symbol eNet_dense1_sigmoid_fwd>               0
-       Activation-14                                     (1, 10)               0
-            Dense-15                                     (1, 10)            5010
+            Dense-13                                     (1, 10)            5010
 ================================================================================
 Parameters in forward computation graph, duplicate included
    Total params: 431080
@@ -429,11 +429,11 @@ for inputs, labels in val_loader:
     labels = labels.as_in_context(ctx)
     metric.update(labels, lenet(inputs))
 print('Validaton: {} = {}'.format(*metric.get()))
-assert metric.get()[1] > 0.965
+assert metric.get()[1] > 0.985
 ```
 
 If all went well, we should see a higher accuracy metric for predictions made using LeNet.
-With this CNN we should be able to correctly predict around 98% of all test images.
+With this CNN we should be able to correctly predict around 99% of all validation images.
 
 ## Summary
 
