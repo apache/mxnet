@@ -6844,7 +6844,6 @@ def test_context_num_gpus():
 
 
 @with_seed()
-@unittest.skip("Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/11064")
 def test_op_roi_align():
     # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_roi_align_op.py
     def bilinear_interpolate(bottom, height, width, y, x):
