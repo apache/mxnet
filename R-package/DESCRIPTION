@@ -11,7 +11,7 @@ Description: MXNet is a deep learning framework designed for both efficiency
     together to maximize the efficiency and your productivity.
 License: Apache License (== 2.0)
 URL: https://github.com/apache/incubator-mxnet/tree/master/R-package
-BugReports: https://github.com/dmlc/mxnet/issues
+BugReports: https://github.com/apache/incubator-mxnet/issues
 Imports:
     methods,
     Rcpp (>= 0.12.1),
