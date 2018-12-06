@@ -1218,7 +1218,7 @@ deploy_docs() {
     set -ex
     pushd .
 
-    make docs -W
+    make docs SPHINXOPTS=-W
 
     popd
 }
