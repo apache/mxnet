@@ -24,11 +24,11 @@
    (org.apache.mxnet.optimizer SGD DCASGD NAG AdaDelta RMSProp AdaGrad Adam SGLD)
    (org.apache.mxnet FactorScheduler)))
 
-(s/def ::learning-rate float?)
-(s/def ::momentum float?)
-(s/def ::wd float?)
-(s/def ::clip-gradient float?)
-(s/def ::lr-scheduler #(instance? FactorScheduler))
+(s/def ::learning-rate number?)
+(s/def ::momentum number?)
+(s/def ::wd number?)
+(s/def ::clip-gradient number?)
+(s/def ::lr-scheduler #(instance? FactorScheduler %))
 (s/def ::sgd-opts (s/keys :opt-un [::learning-rate ::momentum ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn sgd
@@ -43,7 +43,7 @@
   ([]
    (sgd {})))
 
-(s/def ::lambda float?)
+(s/def ::lambda number?)
 (s/def ::dcasgd-opts (s/keys :opt-un [::learning-rate ::momentum ::lambda ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn dcasgd
@@ -77,9 +77,9 @@
   ([]
    (nag {})))
 
-(s/def ::rho float?)
-(s/def ::rescale-gradient float?)
-(s/def ::epsilon float?)
+(s/def ::rho number?)
+(s/def ::rescale-gradient number?)
+(s/def ::epsilon number?)
 (s/def ::ada-delta-opts (s/keys :opt-un [::rho ::rescale-gradient ::epsilon ::wd ::clip-gradient]))
 
 (defn ada-delta
@@ -96,8 +96,8 @@
   ([]
    (ada-delta {})))
 
-(s/def gamma1 float?)
-(s/def gamma2 float?)
+(s/def gamma1 number?)
+(s/def gamma2 number?)
 (s/def ::rms-prop-opts (s/keys :opt-un [::learning-rate ::rescale-gradient ::gamma1 ::gamma2 ::wd ::clip-gradient]))
 
 (defn rms-prop
@@ -144,8 +144,8 @@
   ([]
    (ada-grad {})))
 
-(s/def ::beta1 float?)
-(s/def ::beta2 float?)
+(s/def ::beta1 number?)
+(s/def ::beta2 number?)
 (s/def ::adam-opts (s/keys :opt-un [::learning-rate ::beta1 ::beta2 ::epsilon ::decay-factor ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn adam
