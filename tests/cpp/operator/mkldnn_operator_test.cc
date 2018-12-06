@@ -705,8 +705,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
   std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
   std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
-  std::vector<mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
-  std::vector<mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
+  std::vector<const mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
+  std::vector<const mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
