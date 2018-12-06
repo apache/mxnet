@@ -99,9 +99,9 @@ The rest of our code resides in the following folders/files:
 
 For more details see the [Changelog](CHANGELOG.md).
 
-### Citing BMXNet
+### Citing BMXNet-v2
 
-Please cite our paper about BMXNet v2 in your publications if it helps your research work:
+Please cite [our paper](https://arxiv.org/abs/1812.01965) about BMXNet-v2 in your publications if it helps your research work:
 
 ```text
 @article{bmxnetv2,
