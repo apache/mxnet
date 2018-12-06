@@ -362,9 +362,7 @@ OpAttrs GetBNOp() {
       ArrayTypes::NormalReshaped |
       ArrayTypes::MKLDNNReshaped;
   attrs.output_types = ArrayTypes::Normal |
-      ArrayTypes::MKLDNN |
-      ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped;
+      ArrayTypes::MKLDNN;
   return attrs;
 }
 
@@ -705,9 +703,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
       }
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
