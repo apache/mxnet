@@ -710,13 +710,13 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
 
+        inputs_buffer.clear();
+        inputs2_buffer.clear();
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs_buffer[i] = in_arr.arr.Copy(Context());
-          inputs_buffer[i].CopyFrom(*in_arr.arr.GetMKLDNNData());
-          inputs2_buffer[i] = in_arr.arr.Copy(Context());
-          inputs2_buffer[i].CopyFrom(*in_arr.arr.GetMKLDNNData());
-          inputs_buffer[i].WaitToRead();
-          inputs2_buffer[i].WaitToRead();
+          inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
+          inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
+          inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
+          inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
           inputs[i] = &inputs_buffer[i];
           inputs2[i] = &inputs2_buffer[i];
         }
