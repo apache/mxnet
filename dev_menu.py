@@ -151,9 +151,7 @@ def clip(x, mini, maxi):
 
 @retry((ValueError, RuntimeError), 3, delay_s = 0)
 def show_menu(items: List[str], header=None) -> int:
-    print()
-    print('-- MXNet dev menu --')
-    print()
+    print('\n-- MXNet dev menu --\n')
     def hr():
         print(''.join(['-']*30))
     if header:
