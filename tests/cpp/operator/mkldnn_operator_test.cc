@@ -715,6 +715,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           inputs_buffer[i].CopyFrom(*in_arr.arr.GetMKLDNNData());
           inputs2_buffer[i] = in_arr.arr.Copy(Context());
           inputs2_buffer[i].CopyFrom(*in_arr.arr.GetMKLDNNData());
+          inputs_buffer[i].WaitToRead();
+          inputs2_buffer[i].WaitToRead();
           inputs[i] = &inputs_buffer[i];
           inputs2[i] = &inputs2_buffer[i];
         }
