@@ -1620,5 +1620,133 @@ Example:
 .add_argument("graph_data", "NDArray-or-Symbol[]", "Input graphs and input vertex Ids.")
 .add_arguments(SubgraphCompactParam::__FIELDS__());
 
+///////////////////////// Layer vid ///////////////////////////
+
+struct LayerVidParam : public dmlc::Parameter<LayerVidParam> {
+  int num_args;
+  nnvm::Tuple<nnvm::dim_t> num_layers;
+  DMLC_DECLARE_PARAMETER(LayerVidParam) {
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of input arrays.");
+    DMLC_DECLARE_FIELD(num_layers)
+    .describe("The number of layers we want to get.");
+  }
+};  // struct LayerVidParam
+
+DMLC_REGISTER_PARAMETER(LayerVidParam);
+
+static void ComputeLayerVid(const TBlob &layer_ids, const TBlob &out,
+                            const TBlob &layer_sizes, size_t num_layers) {
+    CHECK_EQ(out.shape_[0], num_layers);
+    CHECK_EQ(layer_sizes.shape_[0], num_layers);
+    const int64_t *data = layer_ids.dptr<int64_t>();
+    int64_t *out_data = out.dptr<int64_t>();
+    int64_t *num_vs = layer_sizes.dptr<int64_t>();
+    for (size_t i = 0; i < num_layers; i++)
+      num_vs[i] = 0;
+
+    size_t max_size = out.shape_[1];
+    size_t size = layer_ids.shape_.Size();
+    for (size_t i = 0; i < size; i++) {
+      size_t layer = data[i];
+      // We only look for the vertices within a certain layer.
+      if (layer >= num_layers)
+        continue;
+      int64_t &num = num_vs[layer];
+      out_data[layer * max_size + num] = i;
+      num++;
+    }
+}
+
+static void LayerVidComputeCPU(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+  const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
+  int num_arrs = inputs.size();
+#pragma omp parallel for
+  for (int i = 0; i < num_arrs; i++) {
+    ComputeLayerVid(inputs[i], outputs[i], outputs[i + num_arrs],
+                    params.num_layers[i]);
+  }
+}
+
+static bool LayerVidStorageType(const nnvm::NodeAttrs& attrs,
+                                const int dev_mask,
+                                DispatchMode* dispatch_mode,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  for (size_t i = 0; i < in_attrs->size(); i++) {
+    CHECK_EQ(in_attrs->at(i), kDefaultStorage);
+  }
+  bool success = true;
+  *dispatch_mode = DispatchMode::kFCompute;
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    if (!type_assign(&(*out_attrs)[i], mxnet::kDefaultStorage))
+      success = false;
+  }
+
+  return success;
+}
+
+static bool LayerVidShape(const nnvm::NodeAttrs& attrs,
+                          std::vector<TShape> *in_attrs,
+                          std::vector<TShape> *out_attrs) {
+  const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
+  CHECK_EQ(params.num_layers.ndim(), in_attrs->size());
+  CHECK_EQ(params.num_layers.ndim(), out_attrs->size() * 2);
+  size_t num_arrs = in_attrs->size();
+  for (size_t i = 0; i < num_arrs; i++) {
+    CHECK_EQ(in_attrs->at(i).ndim(), 1U);
+  }
+
+  for (size_t i = 0; i < num_arrs; i++) {
+    TShape shape(2);
+    shape[0] = params.num_layers[i];
+    shape[1] = in_attrs->at(i)[0];
+    out_attrs->at(i) = shape;
+    TShape shape2(1);
+    shape2[0] = params.num_layers[i];
+    out_attrs->at(i + num_arrs) = shape2;
+  }
+  return true;
+}
+
+static bool LayerVidType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int> *in_attrs,
+                         std::vector<int> *out_attrs) {
+  for (size_t i = 0; i < in_attrs->size(); i++) {
+    CHECK_EQ(in_attrs->at(i), mshadow::kInt64);
+  }
+  for (size_t i = 0; i < out_attrs->size(); i++) {
+    out_attrs->at(i) = mshadow::kInt64;
+  }
+  return true;
+}
+
+NNVM_REGISTER_OP(_contrib_dgl_layer_vid)
+.describe(R"code()code" ADD_FILELINE)
+.set_attr_parser(ParamParser<LayerVidParam>)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
+  return params.num_args * 2;
+})
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data"};
+})
+.set_attr<FInferStorageType>("FInferStorageType", LayerVidStorageType)
+.set_attr<nnvm::FInferShape>("FInferShape", LayerVidShape)
+.set_attr<nnvm::FInferType>("FInferType", LayerVidType)
+.set_attr<FCompute>("FCompute<cpu>", LayerVidComputeCPU)
+.set_attr<std::string>("key_var_num_args", "num_args")
+.add_argument("data", "NDArray-or-Symbol[]", "Arrays of vertex Ids.")
+.add_arguments(LayerVidParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
