@@ -369,7 +369,7 @@ OpAttrs GetBNOp() {
 OpAttrs GetBNBackwardOp() {
   OpAttrs attrs;
   attrs.attrs.op = Op::Get("_backward_BatchNorm");
-  attrs.num_inputs = 3;
+  attrs.num_inputs = 8;
   attrs.num_outputs = 3;
   attrs.dispatches.resize(2);
   attrs.attrs.op->attr_parser(&attrs.attrs);
