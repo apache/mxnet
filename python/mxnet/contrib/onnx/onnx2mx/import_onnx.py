@@ -19,11 +19,11 @@
 # pylint: disable=invalid-name,too-many-locals,no-self-use
 """ Support import export formats."""
 from __future__ import absolute_import as _abs
+import numpy as np
 from .... import symbol
 from .... import ndarray as nd
 from ....base import string_types
 from ._import_helper import _convert_map as convert_map
-import numpy as np
 
 class GraphProto(object): # pylint: disable=too-few-public-methods
     """A helper class for handling mxnet symbol copying from pb2.GraphProto.
