@@ -655,7 +655,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
   if (req == kWriteTo) {
     // backwards test performed same time since output needed
 
-    if (forward_attrs.attrs.op->name.compare("BatchNorm")) {
+    if (forward_attrs.attrs.op->name.compare("BatchNorm") == 0) {
       backwards_input[0] = outputs[0];  // output grad
       backwards_input[1] = outputs[1]; // mean
       backwards_input[2] = outputs[2];  // var
