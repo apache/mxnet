@@ -59,7 +59,7 @@ Also, add the dependency which corresponds to your platform to the `dependencies
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version>1.3.1-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -68,7 +68,7 @@ Also, add the dependency which corresponds to your platform to the `dependencies
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version>1.3.1-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -77,7 +77,7 @@ Also, add the dependency which corresponds to your platform to the `dependencies
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.3.1-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
 </dependency>
 ```
 

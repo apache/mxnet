@@ -755,7 +755,7 @@ class ParameterDict(object):
 
         Returns
         -------
-        Constant
+        :py:class:`.Constant`
             The created or retrieved :py:class:`.Constant`.
         """
         name = self.prefix + name

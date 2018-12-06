@@ -27,7 +27,6 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
-import test_mkldnn_install as install
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
@@ -441,7 +440,4 @@ def test_non_mkldnn_fcomputeex():
     custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
     exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
-
-
-if __name__ == '__main__':
-    install.test_mkldnn_install()
+    

@@ -46,8 +46,12 @@ class Confirm(object):
                 resp = input("Please answer yes or no: ")
 
 class CMake(object):
-    def __init__(self, cmake_options_yaml='cmake/cmake_options.yml'):
-        self.cmake_options_yaml = cmake_options_yaml
+    def __init__(self, cmake_options_yaml='cmake_options.yml', cmake_options_yaml_default='cmake/cmake_options.yml'):
+        if os.path.exists(cmake_options_yaml):
+            self.cmake_options_yaml = cmake_options_yaml
+        else:
+            self.cmake_options_yaml = cmake_options_yaml_default
+        logging.info('Using {} for CMake configuration'.format(self.cmake_options_yaml))
         self.cmake_options = None
         self.read_config()
 
@@ -58,13 +62,8 @@ class CMake(object):
 
     def _cmdlineflags(self):
         res = []
-        def _bool_ON_OFF(x):
-            if x:
-                return 'ON'
-            else:
-                return 'OFF'
         for opt,v in self.cmake_options.items():
-            res.append('-D{}={}'.format(opt,_bool_ON_OFF(v)))
+            res.append('-D{}={}'.format(opt,v))
         return res
 
     def cmake_command(self) -> str:
@@ -101,6 +100,11 @@ COMMANDS = OrderedDict([
     ('[Docker] Python3 GPU unittests',
     [
         "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
+        "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
+    ]),
+    ('[Docker] Python3 GPU+MKLDNN unittests',
+    [
+        "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
     ('[Docker] Python3 CPU Intel MKLDNN unittests',

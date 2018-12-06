@@ -79,18 +79,6 @@ Alternatively, you can use the table below to select the package that suits your
 #### pip Package Availability
 
 The following table presents the pip packages that are recommended for each version of MXNet.
-<!-- Table does not render - using a picture alternative
-| Package / MXNet Version | 1.3.0 | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
-|-|:-:|:-:|:-:|:-:|:-:|:-:|
-| mxnet-cu92mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu92 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu90mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu90 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu80mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet-cu80 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet-mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
--->
 
 ![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
 
@@ -404,7 +392,7 @@ If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on
 
 To use the MXNet-Java package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Java Setup Instructions](java.html).
+Further information is in the [MXNet-Java Setup Instructions](java_setup.html).
 
 If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.html) instead.
 <hr>
