@@ -328,10 +328,52 @@ void CenterCrop(const nnvm::NodeAttrs &attrs,
   const auto h = inputs[0].shape_[0];
   const auto w = inputs[0].shape_[1];
   const auto t = ScaleDown(std::make_tuple(h, w), GetHeightAndWidthFromSize(param));
-  auto x0 = static_cast<int>((w - std::get<1>(t)) / 2);
-  auto y0 = static_cast<int>((h - std::get<0>(t)) / 2);
+  const auto x0 = static_cast<int>((w - std::get<1>(t)) / 2);
+  const auto y0 = static_cast<int>((h - std::get<0>(t)) / 2);
   Crop(x0, y0, std::get<1>(t), std::get<0>(t), inputs, outputs);
 }
+
+// struct RandomResizeCropParam : public dmlc::Parameter<RandomResizeCropParam> {
+//   nnvm::Tuple<int> size;
+//   nnvm::Tuple<int> area;
+//   nnvm::Tuple<int> ratio;
+//   int interp;
+//   DMLC_DECLARE_PARAMETER(RandomResizeCropParam) {
+//     DMLC_DECLARE_FIELD(size)
+//     .set_default(nnvm::Tuple<int>())
+//     .describe("size : tuple of (int, int)
+//       Size of the crop formatted as (width, height)");
+//     DMLC_DECLARE_FIELD(area)
+//     .set_default(nnvm::Tuple<int>())
+//     .describe("float in (0, 1] or tuple of (float, float)
+//       If tuple, minimum area and maximum area to be maintained after cropping
+//       If float, minimum area to be maintained after cropping, maximum area is set to 1.0");
+//     DMLC_DECLARE_FIELD(ratio)
+//     .set_default(nnvm::Tuple<int>())
+//     .describe("tuple of (float, float)
+//       Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)");
+//     DMLC_DECLARE_FIELD(interp)
+//     .set_default(2)
+//     .describe("ratio : tuple of (float, float)
+//       Aspect ratio range as (min_aspect_ratio, max_aspect_ratio)
+//       interp: int, optional, default=2
+//       Interpolation method. See resize_short for details.");
+//   }
+// };
+
+// void RandomResizeCropShape(const nnvm::NodeAttrs& attrs,
+//                              std::vector<TShape> *in_attrs,
+//                              std::vector<TShape> *out_attrs) {
+                    
+// }
+
+// void RandomResizeCrop(const nnvm::NodeAttrs &attrs,
+//                       const OpContext &ctx,
+//                       const std::vector<TBlob> &inputs,
+//                       const std::vector<OpReqType> &req,
+//                       const std::vector<TBlob> &outputs) {
+
+// }
 
 template<typename DType>
 inline DType saturate_cast(const float& src) {
