@@ -105,10 +105,12 @@ Please cite our paper about BMXNet v2 in your publications if it helps your rese
 
 ```text
 @article{bmxnetv2,
-  title={...},
-  author={...},
-  journal={...},
-  year={...}
+  title = {Training Competitive Binary Neural Networks from Scratch},
+  author = {Joseph Bethge and Marvin Bornstein and Adrian Loy and Haojin Yang and Christoph Meinel},
+  journal = {ArXiv e-prints},
+  archivePrefix = "arXiv",
+  eprint = {1812.01965},
+  Year = {2018}
 }
 ```
 
