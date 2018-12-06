@@ -93,7 +93,7 @@ struct where_batch {
   // CType is the condition data type
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y, int M) {
+                                  const DType* x, const DType* y, index_t M) {
     KERNEL_ASSIGN(out[i], req, (0 != cond[i/M]? x[i] : y[i]));
   }
 };
@@ -163,7 +163,7 @@ struct where_batch_backward {
   template<typename DType, typename CType>
   MSHADOW_XINLINE static void Map(index_t i, DType* grad_out,
                                   const DType* grad_in,
-                                  const CType* cond, int M) {
+                                  const CType* cond, index_t M) {
     KERNEL_ASSIGN(grad_out[i], req,
       ((0 == cond[i/M])^negate)? grad_in[i] : static_cast<DType>(0));
   }
