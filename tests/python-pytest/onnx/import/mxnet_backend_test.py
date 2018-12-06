@@ -54,7 +54,6 @@ standard_models = test_cases.STANDARD_MODEL.get('both', []) + \
 for std_model_test in standard_models:
     BACKEND_TESTS.include(std_model_test)
 
-BACKEND_TESTS.exclude('.*broadcast.*')
 BACKEND_TESTS.exclude('.*bcast.*')
 
 # import all test cases at global scope to make them visible to python.unittest
