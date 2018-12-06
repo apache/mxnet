@@ -204,18 +204,17 @@ It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when 
 
 ### Build MXNet with C++
 
-* To enable C++ package, just add `USE_CPP_PACKAGE=1` when you run `make` or `cmake`.
+* To enable C++ package, just add `USE_CPP_PACKAGE=1` when you run `make` or `cmake` (see examples).
 
 <hr>
 
 ### Usage Examples
 
-* `-j` runs multiple jobs against multi-core CPUs.
-
 For example, you can specify using all cores on Linux as follows:
 
 ```bash
-cmake -j$(nproc)
+cmake -GNinja .
+ninja -v
 ```
 
 
@@ -223,28 +222,32 @@ cmake -j$(nproc)
 * Build MXNet with `cmake` and install with MKL DNN, GPU, and OpenCV support:
 
 ```bash
-cmake -j USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_MKLDNN=1
+cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja .
+ninja -v
 ```
 
 #### Recommended for Systems with NVIDIA GPUs
 * Build with both OpenBLAS, GPU, and OpenCV support:
 
 ```bash
-cmake -j BLAS=open USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja .
+ninja -v
 ```
 
 #### Recommended for Systems with Intel CPUs
 * Build MXNet with `cmake` and install with MKL DNN, and OpenCV support:
 
 ```bash
-cmake -j USE_CUDA=0 USE_MKLDNN=1
+cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja .
+ninja -v
 ```
 
 #### Recommended for Systems with non-Intel CPUs
 * Build MXNet with `cmake` and install with OpenBLAS and OpenCV support:
 
 ```bash
-cmake -j USE_CUDA=0 BLAS=open
+cmake -DUSE_CUDA=0 -DBLAS=open -GNinja .
+ninja -v
 ```
 
 #### Other Examples
@@ -252,20 +255,23 @@ cmake -j USE_CUDA=0 BLAS=open
 * Build without using OpenCV:
 
 ```bash
-cmake USE_OPENCV=0
+cmake -DUSE_OPENCV=0 -GNinja .
+ninja -v
 ```
 
 * Build on **macOS** with the default BLAS library (Apple Accelerate) and Clang installed with `xcode` (OPENMP is disabled because it is not supported by the Apple version of Clang):
 
 ```bash
-cmake -j BLAS=apple USE_OPENCV=0 USE_OPENMP=0
+cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja .
+ninja -v
 ```
 
 * To use OpenMP on **macOS** you need to install the Clang compiler, `llvm` (the one provided by Apple does not support OpenMP):
 
 ```bash
 brew install llvm
-cmake -j BLAS=apple USE_OPENMP=1
+cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja .
+ninja -v
 ```
 
 <hr>
