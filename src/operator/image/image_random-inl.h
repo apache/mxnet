@@ -208,17 +208,6 @@ bool ResizeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// bool ResizeType(const nnvm::NodeAttrs& attrs,
-//                          std::vector<int> *in_attrs,
-//                          std::vector<int> *out_attrs) {
-//   CHECK_EQ(in_attrs->size(), 1U);
-//   CHECK_EQ(out_attrs->size(), 1U);
-
-//   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
-//   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-//   return (*out_attrs)[0] != -1;
-// }
-
 void ResizeImpl(const std::vector<TBlob> &inputs,
                       const std::vector<TBlob> &outputs,
                       const int height,
@@ -263,38 +252,48 @@ struct CenterCropParam : public dmlc::Parameter<CenterCropParam> {
   }
 };
 
-// inline std::tuple ScaleDown(const std::tuple src,
-//                             const std::tuple size) {
-//   const auto src_w = std::get<0>(src);
-//   const auto src_h = std::get<1>(src);
-//   auto dst_w = std::get<0>(size);
-//   auto dst_h = std::get<1>(size);
+template<typename T>
+inline std::tuple<int, int> GetHeightAndWidthFromSize(const T& param) {
+  int h,w;
+  if (param.size.ndim() == 1) {
+    h = param.size[0];
+    w = param.size[0];
+  } else {
+    // size should be (w, h) instead of (h, w)
+    h = param.size[1];
+    w = param.size[0];
+  }
+  return std::make_tuple(h, w);
+}
 
-//   if (src_h < dst_h) {
-//     dst_w = static_cast<int>((dst_w * src_h) / dst_h);
-//   }
-//   if (src_w < dst_w) {
-//     dst_h = static_cast<int>((dst_h * src_w) / dst_w);
-//   }
-//   return std::make_tuple(dst_w, dst_h);
-// }
+// Scales down crop size if it's larger than image size.
+inline std::tuple<int, int> ScaleDown(const std::tuple<int, int> src,
+                            const std::tuple<int, int> size) {
+  const auto src_h = std::get<0>(src);
+  const auto src_w = std::get<1>(src);
+  auto dst_h = std::get<0>(size);
+  auto dst_w = std::get<1>(size);
+
+  if (src_h < dst_h) {
+    dst_w = static_cast<int>((dst_w * src_h) / dst_h);
+    dst_h = src_h;
+  }
+  if (src_w < dst_w) {
+    dst_h = static_cast<int>((dst_h * src_w) / dst_w);
+    dst_w = src_w;
+  }
+  return std::make_tuple(dst_h, dst_w);
+}
 
 bool CenterCropShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   const auto& ishape = (*in_attrs)[0];
   const CenterCropParam& param = nnvm::get<CenterCropParam>(attrs.parsed);
-  int dst_h;
-  int dst_w;
-  if (param.size.ndim() == 1) {
-    dst_h = param.size[0];
-    dst_w = param.size[0];
-  } else {
-    dst_h = param.size[1];
-    dst_w = param.size[0];
-  }
+  auto t = GetHeightAndWidthFromSize(param);
+  t = ScaleDown(std::make_tuple(ishape[0], ishape[1]), t);
   out_attrs->clear();
-  out_attrs->push_back(mshadow::Shape3(dst_h, dst_w, ishape[2]));
+  out_attrs->push_back(mshadow::Shape3(std::get<0>(t), std::get<1>(t), ishape[2]));
 
   return true;
 }
@@ -316,7 +315,7 @@ void Crop(const int x,
   CHECK(!dst.empty());
   CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
 #else
-  LOG(FATAL) << "Build with USE_OPENCV=1 for image resize operator.";
+  LOG(FATAL) << "Build with USE_OPENCV=1 for image crop operator.";
 #endif  // MXNET_USE_OPENCV
 }
 
@@ -326,11 +325,12 @@ void CenterCrop(const nnvm::NodeAttrs &attrs,
                    const std::vector<OpReqType> &req,
                    const std::vector<TBlob> &outputs) {
   const CenterCropParam& param = nnvm::get<CenterCropParam>(attrs.parsed);
-  auto h = inputs[0].shape_[0];
-  auto w = inputs[0].shape_[1];
-  auto x0 = static_cast<int>((w - param.size[0]) / 2);
-  auto y0 = static_cast<int>((h - param.size[1]) / 2);
-  Crop(x0, y0, param.size[0], param.size[1], inputs, outputs);
+  const auto h = inputs[0].shape_[0];
+  const auto w = inputs[0].shape_[1];
+  const auto t = ScaleDown(std::make_tuple(h, w), GetHeightAndWidthFromSize(param));
+  auto x0 = static_cast<int>((w - std::get<1>(t)) / 2);
+  auto y0 = static_cast<int>((h - std::get<0>(t)) / 2);
+  Crop(x0, y0, std::get<1>(t), std::get<0>(t), inputs, outputs);
 }
 
 template<typename DType>
