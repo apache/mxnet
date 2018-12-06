@@ -201,7 +201,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
         else:
             np_array = np.array([to_array(tensor_proto)])
-            return nd.array(np_array)
+        return nd.array(np_array)
 
     def _parse_attr(self, attr_proto):
         """Convert a list of AttributeProto to a dict, with names as keys."""
