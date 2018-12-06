@@ -21,9 +21,12 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import gluon_backend
+import backend_test
 import os
 import sys
 import unittest
+
 try:
     import onnx.backend.test
 except ImportError:
@@ -31,30 +34,11 @@ except ImportError:
                       + " install - https://github.com/onnx/onnx#installation")
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(CURR_PATH, '../'))
-import gluon_backend
-import test_cases
 
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 
-BACKEND_TESTS = onnx.backend.test.BackendTest(gluon_backend, __name__)
-
-implemented_op_tests = test_cases.IMPLEMENTED_OPERATORS_TEST.get('both',[]) + \
-                       test_cases.IMPLEMENTED_OPERATORS_TEST.get('import', [])
-for op_tests in implemented_op_tests:
-    BACKEND_TESTS.include(op_tests)
-
-basic_models = test_cases.BASIC_MODEL_TESTS.get('both', []) + \
-               test_cases.BASIC_MODEL_TESTS.get('import', [])
-for basic_model_test in basic_models:
-    BACKEND_TESTS.include(basic_model_test)
-
-standard_models = test_cases.STANDARD_MODEL.get('both', []) + \
-                  test_cases.STANDARD_MODEL.get('import', [])
-for std_model_test in standard_models:
-    BACKEND_TESTS.include(std_model_test)
-
-BACKEND_TESTS.exclude('.*bcast.*')
+BACKEND_TESTS = backend_test.prepare_tests(gluon_backend, 'import')
 
 # import all test cases at global scope to make them visible to python.unittest
 globals().update(BACKEND_TESTS.enable_report().test_cases)
