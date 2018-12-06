@@ -144,11 +144,11 @@ void MLP() {
                                grad_req_type, aux_states);
 
   std::cout << "Training" << std::endl;
-  int max_iters = 10;
+  int max_epoch = 20000;
   mx_float learning_rate = 0.0001;
-  for (int iter = 0; iter < max_iters; ++iter) {
+  for (int iter = 0; iter < max_epoch; ++iter) {
     exe->Forward(true);
-
+    // print accuracy every 100 epoch
     if (iter % 100 == 0) {
       std::cout << "epoch " << iter << std::endl;
       std::vector<NDArray>& out = exe->outputs;
