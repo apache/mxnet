@@ -355,14 +355,14 @@ OpAttrs GetBNOp() {
   attrs.dispatches.resize(2);
   attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
-  attrs.requests.insert(OpReqType::kWriteInplace);
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
       ArrayTypes::MKLDNNReshaped;
   attrs.output_types = ArrayTypes::Normal |
-      ArrayTypes::MKLDNN;
+      ArrayTypes::MKLDNN |
+      ArrayTypes::NormalReshaped;
   return attrs;
 }
 
