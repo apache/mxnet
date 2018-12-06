@@ -644,6 +644,10 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
                       const NDArrayAttrs &in_arr,
                       const NDArrayAttrs &out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+
+  std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
+  std::vector<NDArray> backwards_buffer2(backwards_attrs.num_outputs);
+
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
@@ -666,10 +670,17 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
       backwards_input[2] = outputs[1];  // out norm
     }
 
+    for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
+      auto tmp_output = in_arr.arr;
+      backwards_buffer.emplace_back(tmp_output.Copy(Context()));
+      backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
+      backwards_buffer.back().CopyFrom(*tmp_output.GetMKLDNNData());
+      backwards_buffer2.back().CopyFrom(*tmp_output.GetMKLDNNData());
+      backwards_outputs[i] = &tmp_output;
+      backwards_ex_outputs[i] = &tmp_output;
 
-    auto tmp_output = in_arr.arr;
-    backwards_outputs[0] = &tmp_output;
-    backwards_ex_outputs[0] = &tmp_output;
+    }
+
 
     for (int i = 0; i < backwards_attrs.num_outputs; i++)
       back_req[i] = kWriteTo;
