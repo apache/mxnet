@@ -705,6 +705,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
   std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
   std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
+  std::vector<NDArray> inputs_mem(forward_attrs.num_inputs);
+  std::vector<NDArray> inputs2_mem(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -736,13 +738,13 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
         inputs_buffer.clear();
         inputs2_buffer.clear();
+
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
           inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
           inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs2_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
-          inputs_buffer.back().WaitToRead();
-          inputs2_buffer.back().WaitToRead();
+          Engine::Get()->WaitForAll();
           inputs[i] = &inputs_buffer[i];
           inputs2[i] = &inputs2_buffer[i];
         }
