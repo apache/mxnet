@@ -650,9 +650,22 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 
   if (req == kWriteTo) {
     // backwards test performed same time since output needed
-    backwards_input[0] = outputs[0];  // output grad
-    backwards_input[1] = inputs[0];  // input
-    backwards_input[2] = outputs[1];  // out norm
+
+    if (forward_attrs.attrs.op->name.compare("BatchNorm")) {
+      backwards_input[0] = outputs[0];  // output grad
+      backwards_input[1] = outputs[1]; // mean
+      backwards_input[2] = outputs[2];  // var
+      backwards_input[3] = inputs[0]; // data
+      backwards_input[4] = inputs[1]; // gamma
+      backwards_input[5] = inputs[2]; // beta
+      backwards_input[6] = inputs[3]; // moving mean
+      backwards_input[7] = inputs[4]; // moving var
+    } else {
+      backwards_input[0] = outputs[0];  // output grad
+      backwards_input[1] = inputs[0];  // input
+      backwards_input[2] = outputs[1];  // out norm
+    }
+
 
     auto tmp_output = in_arr.arr;
     backwards_outputs[0] = &tmp_output;
