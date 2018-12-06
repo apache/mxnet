@@ -745,12 +745,12 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
 
-          inputs_mem.emplace_back(in_arr.arr.GetMKLDNNData());
-          inputs2_mem.emplace_back(in_arr.arr.GetMKLDNNData());
-
-
-          inputs_buffer.back().CopyFrom(*inputs_mem.back());
-          inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
+          if (in_arr.arr.IsMKLDNNData()) {
+            inputs_mem.emplace_back(in_arr.arr.GetMKLDNNData());
+            inputs2_mem.emplace_back(in_arr.arr.GetMKLDNNData());
+            inputs_buffer.back().CopyFrom(*inputs_mem.back());
+            inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
+          }
           Engine::Get()->WaitForAll();
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
