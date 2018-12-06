@@ -662,20 +662,20 @@ def convert_leakyrelu(node, **kwargs):
     dims = np.shape(reshape_value)
 
     shape_node = onnx.helper.make_tensor_value_info(reshape_val_name, input_type, dims)
-    initializer.append(
-        onnx.helper.make_tensor(
-            name=reshape_val_name,
-            data_type=input_type,
-            dims=dims,
-            vals=reshape_value,
-            raw=False,
-        )
-    )
 
     slope_op_name = 'slope' + str(kwargs["idx"])
 
     lr_node = []
-    if act_type == "prelu" or act_type == "selu":
+    if act_type == "prelu":
+        initializer.append(
+            onnx.helper.make_tensor(
+                name=reshape_val_name,
+                data_type=input_type,
+                dims=dims,
+                vals=reshape_value,
+                raw=False,
+            )
+        )
         reshape_slope_node = onnx.helper.make_node(
             'Reshape',
             inputs=[input_nodes[1], reshape_val_name],
@@ -691,6 +691,13 @@ def convert_leakyrelu(node, **kwargs):
 
         lr_node.append(shape_node)
         lr_node.append(reshape_slope_node)
+        lr_node.append(node)
+    elif act_type == "selu":
+        node = onnx.helper.make_node(
+            act_name[act_type],
+            inputs=input_nodes,
+            outputs=[name],
+            name=name)
         lr_node.append(node)
     else:
         node = onnx.helper.make_node(

@@ -264,8 +264,13 @@ def _elu(attrs, inputs, proto_obj):
 def _prelu(attrs, inputs, proto_obj):
     """PRelu function"""
     new_attrs = translation_utils._add_extra_attributes(attrs, {'act_type': 'prelu'})
-    new_gamma = symbol.squeeze(inputs[1])
-    return 'LeakyReLU', new_attrs, [inputs[0], new_gamma]
+    gamma_shape = proto_obj._params[inputs[1].name].shape
+    gamma = inputs[1]
+    # Gamma should be either a vector of size 1, or the same size
+    # as the second dimension of data.
+    if gamma_shape != (1,):
+        gamma = symbol.squeeze(gamma, axis=(0, 2, 3))
+    return 'LeakyReLU', new_attrs, [inputs[0], gamma]
 
 def _selu(attrs, inputs, proto_obj):
     """Selu function"""
