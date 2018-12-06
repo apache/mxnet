@@ -169,7 +169,7 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   }
   CHECK_EQ(static_cast<void*>(dst.ptr()), out->data().dptr_);
   if (to_rgb && flag != 0) {
-    cv::cvtColor(dst, dst, CV_BGR2RGB);
+    cv::cvtColor(dst, dst, cv::COLOR_BGR2RGB);
   }
 }
 #endif  // MXNET_USE_OPENCV

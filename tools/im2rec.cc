@@ -85,9 +85,9 @@ int main(int argc, char *argv[]) {
   int partid = 0;
   int center_crop = 0;
   int quality = 95;
-  int color_mode = CV_LOAD_IMAGE_COLOR;
+  int color_mode = cv::IMREAD_COLOR;
   int unchanged = 0;
-  int inter_method = CV_INTER_LINEAR;
+  int inter_method = cv::INTER_LINEAR;
   std::string encoding(".jpg");
   for (int i = 4; i < argc; ++i) {
     char key[128], val[128];
@@ -192,11 +192,11 @@ int main(int argc, char *argv[]) {
   std::vector<unsigned char> encode_buf;
   std::vector<int> encode_params;
   if (encoding == std::string(".png")) {
-      encode_params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+      encode_params.push_back(cv::IMWRITE_PNG_COMPRESSION);
       encode_params.push_back(quality);
       LOG(INFO) << "PNG encoding compression: " << quality;
   } else {
-      encode_params.push_back(CV_IMWRITE_JPEG_QUALITY);
+      encode_params.push_back(cv::IMWRITE_JPEG_QUALITY);
       encode_params.push_back(quality);
       LOG(INFO) << "JPEG encoding quality: " << quality;
   }

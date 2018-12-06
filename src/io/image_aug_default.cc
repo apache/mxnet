@@ -479,14 +479,14 @@ class DefaultImageAugmenter : public ImageAugmenter {
         }
         if (i == 1) {
           // contrast
-          cvtColor(res, temp_, CV_RGB2GRAY);
+          cvtColor(res, temp_, cv::COLOR_RGB2GRAY);
           float gray_mean = cv::mean(temp_)[0];
           res.convertTo(res, -1, alpha_c, (1 - alpha_c) * gray_mean);
         }
         if (i == 2) {
           // saturation
-          cvtColor(res, temp_, CV_RGB2GRAY);
-          cvtColor(temp_, temp_, CV_GRAY2BGR);
+          cvtColor(res, temp_, cv::COLOR_RGB2GRAY);
+          cvtColor(temp_, temp_, cv::COLOR_GRAY2BGR);
           cv::addWeighted(res, alpha_s, temp_, 1 - alpha_s, 0.0, res);
         }
       }
@@ -495,7 +495,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
     // color space augmentation
     if (param_.random_h != 0 || param_.random_s != 0 || param_.random_l != 0) {
       std::uniform_real_distribution<float> rand_uniform(0, 1);
-      cvtColor(res, res, CV_BGR2HLS);
+      cvtColor(res, res, cv::COLOR_BGR2HLS);
       // use an approximation of gaussian distribution to reduce extreme value
       float rh = rand_uniform(*prnd); rh += 4 * rand_uniform(*prnd); rh = rh / 5;
       float rs = rand_uniform(*prnd); rs += 4 * rand_uniform(*prnd); rs = rs / 5;
@@ -515,7 +515,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
           }
         }
       }
-      cvtColor(res, res, CV_HLS2BGR);
+      cvtColor(res, res, cv::COLOR_HLS2BGR);
     }
 
     // pca noise

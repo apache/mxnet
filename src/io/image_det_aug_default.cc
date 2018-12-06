@@ -547,7 +547,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
       if (h != 0 || s != 0 || l != 0) {
         int temp[3] = {h, l, s};
         int limit[3] = {180, 255, 255};
-        cv::cvtColor(res, res, CV_BGR2HLS);
+        cv::cvtColor(res, res, cv::COLOR_BGR2HLS);
         for (int i = 0; i < res.rows; ++i) {
           for (int j = 0; j < res.cols; ++j) {
             for (int k = 0; k < 3; ++k) {
@@ -558,7 +558,7 @@ class DefaultImageDetAugmenter : public ImageAugmenter {
             }
           }
         }
-        cv::cvtColor(res, res, CV_HLS2BGR);
+        cv::cvtColor(res, res, cv::COLOR_HLS2BGR);
       }
       if (std::fabs(c) > 1e-3) {
         cv::Mat tmp = res;
