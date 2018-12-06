@@ -972,7 +972,7 @@ NNVM_REGISTER_OP(depth_to_space)
 .describe(R"code(Rearranges(permutes) data from depth into blocks of spatial data.
 Similar to ONNX DepthToSpace operator:
 https://github.com/onnx/onnx/blob/master/docs/Operators.md#DepthToSpace.
-The output is a new tensor where the values from depth dimension are moved in spatial blocks
+The output is a new tensor where the values from depth dimension are moved in spatial blocks 
 to height and width dimension. The reverse of this operation is ``space_to_depth``.
 
 .. math::
@@ -983,7 +983,7 @@ to height and width dimension. The reverse of this operation is ``space_to_depth
     y = reshape(x \prime \prime, [N, C / (block\_size ^ 2), H * block\_size, W * block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
 and :math:`y` is the output tensor of layout :math:`[N, C / (block\_size ^ 2), H * block\_size, W * block\_size]`
 
 Example::
@@ -1023,9 +1023,9 @@ Example::
 NNVM_REGISTER_OP(space_to_depth)
 .describe(R"code(Rearranges(permutes) blocks of spatial data into depth.
 Similar to ONNX SpaceToDepth operator:
-https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth
+https://github.com/onnx/onnx/blob/master/docs/Operators.md#SpaceToDepth 
 
-The output is a new tensor where the values from height and width dimension are
+The output is a new tensor where the values from height and width dimension are 
 moved to the depth dimension. The reverse of this operation is ``depth_to_space``.
 
 .. math::
@@ -1036,7 +1036,7 @@ moved to the depth dimension. The reverse of this operation is ``depth_to_space`
     y = reshape(x \prime \prime, [N, C * (block\_size ^ 2), H / block\_size, W / block\_size])
     \end{gather*}
 
-where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width]
+where :math:`x` is an input tensor with default layout as :math:`[N, C, H, W]`: [batch, channels, height, width] 
 and :math:`y` is the output tensor of layout :math:`[N, C * (block\_size ^ 2), H / block\_size, W / block\_size]`
 
 Example::
@@ -1045,8 +1045,8 @@ Example::
          [12, 18, 13, 19, 14, 20],
          [3, 9, 4, 10, 5, 11],
          [15, 21, 16, 22, 17, 23]]]]
-
-
+  
+  
   space_to_depth(x, 2) = [[[[0, 1, 2],
                             [3, 4, 5]],
                            [[6, 7, 8],
