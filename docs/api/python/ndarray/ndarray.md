@@ -590,13 +590,14 @@ The `ndarray` package provides several classes:
     random.exponential
     random.gamma
     random.generalized_negative_binomial
+    random.multinomial
     random.negative_binomial
     random.normal
     random.poisson
     random.randint
-    random.uniform
-    random.multinomial
+    random.randn
     random.shuffle
+    random.uniform
     mxnet.random.seed
 ```
 

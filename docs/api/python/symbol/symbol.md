@@ -589,13 +589,13 @@ Composite multiple symbols into a new one by an operator.
     random.exponential
     random.gamma
     random.generalized_negative_binomial
+    random.multinomial
     random.negative_binomial
     random.normal
     random.poisson
     random.randint
-    random.uniform
-    random.multinomial
     random.shuffle
+    random.uniform
     mxnet.random.seed
 ```
 
