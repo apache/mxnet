@@ -50,14 +50,12 @@ bool SupportMKLDNNAct(const ActivationParam& param) {
 }
 
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
+  // MKL-DNN Activation supports 1d, 2d, 3d, 4d data layout
   if ((input.shape().ndim() < 1) ||
       (input.shape().ndim() > 4) ||
       (input.dtype() != mshadow::kFloat32))
     return false;
-  return param.act_type == activation::kReLU
-      || param.act_type == activation::kSigmoid
-      || param.act_type == activation::kSoftReLU
-      || param.act_type == activation::kTanh;
+  return SupportMKLDNNAct(param);
 }
 
 static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
