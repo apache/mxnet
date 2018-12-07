@@ -646,13 +646,10 @@ static void SampleSubgraph(const NDArray &csr,
         if (new_node.level < num_hops) {
           node_queue.push(new_node);
         } else {
-          auto ret = sub_ver_mp.find(new_node.vertex_id);
-          if (ret == sub_ver_mp.end()) {
-            size_t pos = neighbor_list.size();
-            neigh_pos[new_node.vertex_id] = pos;
-            neighbor_list.push_back(0);
-            sub_ver_mp[new_node.vertex_id] = new_node.level;
-          }
+          size_t pos = neighbor_list.size();
+          neigh_pos[new_node.vertex_id] = pos;
+          neighbor_list.push_back(0);
+          sub_ver_mp[new_node.vertex_id] = new_node.level;
         }
       }
     }
