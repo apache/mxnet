@@ -1,7 +1,6 @@
 <img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> Deep Learning for Scala/Java
 =====
 
-[![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and state-of-art deep learning to JVM.
