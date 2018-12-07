@@ -157,11 +157,11 @@ def waitall():
     """Wait for all async operations to finish in MXNet.
 
     This function is used for benchmarking only.
-    Rethrowing exceptions as part of mx.nd.waitall is not supported.
-    If your code has exceptions, waitall can cause silent failures.
-    Avoid waitall in your code/precede it with wait_to_read for the outputs
-    unless you are confident about your code not throwing an exception in
-    any scenario.
+    .. warning::
+    If your code has exceptions, `waitall` can cause silent failures.
+    For this reason you should avoid `waitall` in your code.
+    Use it only if you are confident that your code is error free.
+    Then make sure you call `wait_to_read` on all outputs after `waitall`.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
