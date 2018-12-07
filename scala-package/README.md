@@ -52,6 +52,7 @@ The ```<latest-mxnet-version>``` is a placeholder corresponding to the current M
 
 Apart from these, the nightly builds representing the bleeding edge development  on Scala/Java packages are also available on the [MXNet Maven Nexus Package Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~). 
 Currently we provide nightly packages for Linux (CPU and GPU) and MacOS (CPU only). Support for Windows will come soon. 
+
 Add the following ```repository``` to your project's ```pom.xml``` file : 
 
 ````html
