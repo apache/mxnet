@@ -286,18 +286,19 @@ def _optional_group(symbols, group=False):
         return symbols
 
 
-def _check_onnx_export(net, group_outputs=False):
+def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params={}):
     net.initialize()
     data = nd.random.uniform(0, 1, (1, 1024))
     output = _force_list(net(data))  # initialize weights
     net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
     net_params = {name:param._reduce() for name, param in net.collect_params().items()}
+    net_params.update(extra_params)
     with tempfile.TemporaryDirectory() as tmpdirname:
         onnx_file_path = os.path.join(tmpdirname, 'net.onnx')
         export_path = onnx_mxnet.export_model(
             sym=net_sym,
             params=net_params,
-            input_shape=[data.shape],
+            input_shape=[shape_type(data.shape)],
             onnx_file_path=onnx_file_path)
         assert export_path == onnx_file_path
         # Try importing the model to symbol
@@ -338,6 +339,22 @@ def test_onnx_export_multi_output():
     net = MultiOutputBlock()
     assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
     _check_onnx_export(net, group_outputs=True)
+
+
+@with_seed()
+def test_onnx_export_list_shape():
+    net = nn.HybridSequential(prefix='list_shape_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net, shape_type=list)
+
+
+@with_seed()
+def test_onnx_export_extra_params():
+    net = nn.HybridSequential(prefix='extra_params_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
 
 
 if __name__ == '__main__':
