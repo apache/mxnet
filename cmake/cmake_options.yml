@@ -26,7 +26,7 @@ USE_SSE: "ON" # Build with x86 SSE instruction support IF NOT ARM
 USE_F16C: "ON" # Build with x86 F16C instruction support) # autodetects support if "ON"
 USE_LAPACK: "ON" # Build with lapack support
 USE_MKL_IF_AVAILABLE: "ON" # Use MKL if found
-USE_MKLML_MKL: "ON" # Use MKLDNN variant of MKL (if MKL found) IF USE_MKL_IF_AVAILABLE AND (NOT APPLE)
+USE_MKLML: "ON" # Use MKLDNN variant of MKL (if MKL found) IF USE_MKL_IF_AVAILABLE AND (NOT APPLE)
 USE_MKLDNN: "ON" # Use MKLDNN variant of MKL (if MKL found) IF USE_MKL_IF_AVAILABLE AND (NOT APPLE)
 USE_OPERATOR_TUNING: "ON" # Enable auto-tuning of operators IF NOT MSVC
 USE_GPERFTOOLS: "ON" # Build with GPerfTools support (if found)

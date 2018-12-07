@@ -717,7 +717,8 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
-        -DUSE_MKLML_MKL=1                       \
+        -DUSE_MKLML=1                           \
+        -DUSE_MKLDNN=1                          \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
@@ -740,12 +741,12 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DENABLE_TESTCOVERAGE=ON                \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
+        -DUSE_CUDA=1                            \
+        -DUSE_CUDNN=1                           \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
+        -DUSE_MKLML=0                           \
+        -DUSE_MKLDNN=0                          \
+        -DUSE_DIST_KVSTORE=1                    \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
