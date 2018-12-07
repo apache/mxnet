@@ -705,7 +705,7 @@ def convert_softmax_output(node, **kwargs):
 
     softmax_node = onnx.helper.make_node(
         "Softmax",
-        [input1.output[0]],
+        [input1.name],
         [name],
         axis=1,
         name=name
