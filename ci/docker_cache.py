@@ -180,6 +180,10 @@ def load_docker_cache(registry, docker_tag) -> None:
 
             # Linear backoff
             time.sleep(DOCKERHUB_RETRY_SECONDS * (i + 1))
+    else:
+        logging.error('Could not download docker cache after %d retries, aborting',
+                      DOCKER_CACHE_NUM_RETRIES)
+        raise Exception('Unable to download docker cache')
 
 
 def delete_local_docker_cache(docker_tag):
