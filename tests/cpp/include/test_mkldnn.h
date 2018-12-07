@@ -85,14 +85,6 @@ inline static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::primitive
   arr->WaitToRead();
 }
 
-inline static NDArray CopyMKLDNNArray(const NDArray& arr) {
-  auto ret = arr.Copy(Context());
-  auto mem = arr.GetMKLDNNData();
-  ret.CopyFrom(*mem);
-  return ret;
-
-}
-
 inline static bool IsSameShape(mkldnn::memory::primitive_desc pd, TShape shape) {
   if (pd.desc().data.ndims != shape.ndim()) return false;
   for (size_t i = 0; i < shape.ndim(); i++)

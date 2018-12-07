@@ -352,7 +352,6 @@ OpAttrs GetBNOp() {
   attrs.attrs.op = Op::Get("BatchNorm");
   attrs.num_inputs = 5;
   attrs.num_outputs = 3;
-  attrs.dispatches.resize(2);
   attrs.accept_dims.insert(4);
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.attrs.op->attr_parser(&attrs.attrs);
@@ -368,7 +367,6 @@ OpAttrs GetBNBackwardOp() {
   attrs.attrs.op = Op::Get("_backward_BatchNorm");
   attrs.num_inputs = 8;
   attrs.num_outputs = 3;
-  attrs.dispatches.resize(2);
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.requests.insert(OpReqType::kWriteTo);
   return attrs;
