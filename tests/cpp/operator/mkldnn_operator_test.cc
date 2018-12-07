@@ -362,7 +362,8 @@ OpAttrs GetBNOp() {
       ArrayTypes::MKLDNNReshaped;
   attrs.output_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
-      ArrayTypes::NormalReshaped;
+      ArrayTypes::NormalReshaped |
+      ArrayTypes::MKLDNNReshaped;
   return attrs;
 }
 
