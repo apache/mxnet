@@ -241,6 +241,28 @@ def test_square():
 
     npt.assert_almost_equal(result, numpy_op)
 
+
+def test_softmax():
+    input1 = np.random.rand(1000, 1000).astype("float32")
+    label1 = np.random.rand(1000)
+    input_nd = mx.nd.array(input1)
+    label_nd = mx.nd.array(label1)
+
+    ipsym = mx.sym.Variable("ipsym")
+    label = mx.sym.Variable('label')
+    sym = mx.sym.SoftmaxOutput(data=ipsym, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=mx.cpu(0), args={'ipsym': input_nd, 'label': label_nd})
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+
+    converted_model = onnx_mxnet.export_model(sym, {}, [(1000, 1000), (1000,)], np.float32, "softmaxop.onnx")
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+    result = forward_pass(sym, arg_params, aux_params, ['ipsym'], input1)
+
+    # Comparing result of forward pass before using onnx export, import
+    npt.assert_almost_equal(result, softmax_out)
+
 @with_seed()
 def test_comparison_ops():
     """Test greater, lesser, equal"""

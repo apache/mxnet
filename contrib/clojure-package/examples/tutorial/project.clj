@@ -20,6 +20,6 @@
   :plugins [[lein-cljfmt "0.5.7"]]
   :dependencies [[org.clojure/clojure "1.9.0"]
                  ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.5.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.5.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.5.0"]])
+                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
+                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
+                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
