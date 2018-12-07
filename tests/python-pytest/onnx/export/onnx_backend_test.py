@@ -21,19 +21,24 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import backend as mxnet_backend
-import backend_test
+
 import os
 import sys
+
+CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
+
 import unittest
+import backend as mxnet_backend
+import backend_test
 
 try:
     import onnx.backend.test
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
-CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../'))
 
+
+mxnet_backend.MXNetBackend.set_params('mxnet', 'export')
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 

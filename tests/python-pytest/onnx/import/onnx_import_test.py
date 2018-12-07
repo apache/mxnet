@@ -40,8 +40,9 @@ from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(CURR_PATH, '../../../python/unittest'))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
 from common import with_seed
-import mxnet_backend
+import backend as mxnet_backend
 
 
 URLS = {

@@ -41,6 +41,7 @@ from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(CURR_PATH, '../../../python/unittest'))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
 import backend
 from common import with_seed
 
@@ -222,7 +223,7 @@ def test_spacetodepth():
 
     spacetodepth_model = helper.make_model(graph)
 
-    bkd_rep = backend.prepare(spacetodepth_model)
+    bkd_rep = backend.prepare(spacetodepth_model, operation='export')
     output = bkd_rep.run([input1])
 
     tmp = np.reshape(input1, [n, c,
@@ -338,7 +339,7 @@ def test_comparison_ops():
                                   input_tensors,
                                   outputs)
         model = helper.make_model(graph)
-        bkd_rep = backend.prepare(model)
+        bkd_rep = backend.prepare(model, operation='export')
         output = bkd_rep.run(inputs)
         npt.assert_almost_equal(output[0], numpy_op)
     input_data = [np.random.rand(1, 3, 4, 5).astype("float32"),
@@ -379,7 +380,7 @@ def test_logical_ops():
                                   input_tensors,
                                   outputs)
         model = helper.make_model(graph)
-        bkd_rep = backend.prepare(model)
+        bkd_rep = backend.prepare(model, operation='export')
         output = bkd_rep.run(inputs)
         npt.assert_almost_equal(output[0], numpy_op)
     input_data, input_tensor = get_int_inputs([(0, 2), (0, 2)], [(3, 4, 5), (3, 4, 5)])
