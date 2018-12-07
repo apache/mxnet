@@ -134,7 +134,7 @@ def _login_dockerhub():
             logging.error(p.stderr)
 
             # Linear backoff
-            time.sleep(1000 * DOCKERHUB_RETRY_SECONDS * (i + 1))
+            time.sleep(DOCKERHUB_RETRY_SECONDS * (i + 1))
         else:
             logging.info('Successfully logged in to DockerHub')
             break
@@ -179,7 +179,7 @@ def load_docker_cache(registry, docker_tag) -> None:
             logging.info(str(e))
 
             # Linear backoff
-            time.sleep(1000 * DOCKERHUB_RETRY_SECONDS * (i + 1))
+            time.sleep(DOCKERHUB_RETRY_SECONDS * (i + 1))
 
 
 def delete_local_docker_cache(docker_tag):
