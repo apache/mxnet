@@ -357,11 +357,7 @@ OpAttrs GetBNOp() {
   attrs.requests.insert(OpReqType::kWriteTo);
   attrs.attrs.op->attr_parser(&attrs.attrs);
   attrs.input_types = ArrayTypes::Normal |
-      ArrayTypes::MKLDNN |
-      ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped |
-      ArrayTypes::MKLDNNReused |
-      ArrayTypes::NormalReshapedReused;
+      ArrayTypes::MKLDNN;
   attrs.output_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
