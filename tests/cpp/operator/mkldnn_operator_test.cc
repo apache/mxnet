@@ -359,7 +359,9 @@ OpAttrs GetBNOp() {
   attrs.input_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
-      ArrayTypes::MKLDNNReshaped;
+      ArrayTypes::MKLDNNReshaped |
+      ArrayTypes::MKLDNNReused |
+      ArrayTypes::NormalReshapedReused;
   attrs.output_types = ArrayTypes::Normal |
       ArrayTypes::MKLDNN |
       ArrayTypes::NormalReshaped |
