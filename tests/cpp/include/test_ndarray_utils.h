@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <string>
 #include <map>
+#incldue <random>
 #include "test_util.h"
 #include "test_op.h"
 
@@ -54,9 +55,11 @@ inline unsigned gen_rand_seed() {
 }
 
 inline float RandFloat() {
-  static unsigned seed = gen_rand_seed();
-  double v = rand_r(&seed) * 1.0 / RAND_MAX;
-  return static_cast<float>(v);
+  static thread_local std::random_device device;
+  static thread_local std::default_random_engine generator(device());
+  static thread_local std::uniform_real_distribution<float> distribution;
+  static thread_local auto dice = std::bind(distribution, generator);
+  return dice();
 }
 
 // Get an NDArray with provided indices, prepared for a RowSparse NDArray.
