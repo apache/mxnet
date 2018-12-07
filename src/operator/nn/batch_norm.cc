@@ -380,7 +380,8 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
-static inline bool SupportMKLDNNBN(const std::vector<NDArray> &inputs, const BatchNormParam &param) {
+static inline bool SupportMKLDNNBN(const std::vector<NDArray> &inputs,
+    const BatchNormParam &param) {
   TShape shape = inputs[0].shape();
   bool params_valid = shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
