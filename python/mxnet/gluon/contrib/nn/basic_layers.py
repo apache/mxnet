@@ -269,11 +269,9 @@ class PixelShuffle1D(HybridBlock):
     def hybrid_forward(self, F, x):
         """Perform pixel-shuffling on the input."""
         f = self._factor
-        # fmt: off
                                              # (N, f*C, W)
         x = F.reshape(x, (0, -4, -1, f, 0))  # (N, C, f, W)
         x = F.reshape(x, (0, 0, -3))         # (N, C, f*W)
-        # fmt: on
         return x
 
     def __repr__(self):
@@ -315,13 +313,11 @@ class PixelShuffle2D(HybridBlock):
     def hybrid_forward(self, F, x):
         """Perform pixel-shuffling on the input."""
         f1, f2 = self._factors
-        # fmt: off
                                                       # (N, f1*f2*C, H, W)
         x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
         x = F.reshape(x, (0, 0, -3, 0))               # (N, C, f1*f2*H, W)
         x = F.reshape(x, (0, 0, -4, -1, f2, 0))       # (N, C, f1*H, f2, W)
         x = F.reshape(x, (0, 0, 0, -3))               # (N, C, f1*H, f2*W)
-        # fmt: on
         return x
 
     def __repr__(self):
@@ -363,7 +359,6 @@ class PixelShuffle3D(HybridBlock):
     def hybrid_forward(self, F, x):
         """Perform pixel-shuffling on the input."""
         f1, f2, f3 = self._factors
-        # fmt: off
                                                               # (N, f1*f2*f3*C, D, H, W)
         x = F.reshape(x, (0, -4, -1, f1 * f2 * f3, 0, 0, 0))  # (N, C, f1*f2*f3, D, H, W)
         x = F.reshape(x, (0, 0, -3, 0, 0))                    # (N, C, f1*f2*f3*D, H, W)
@@ -371,7 +366,6 @@ class PixelShuffle3D(HybridBlock):
         x = F.reshape(x, (0, 0, 0, -3, 0))                    # (N, C, f1*D, f2*f3*H, W)
         x = F.reshape(x, (0, 0, 0, -4, -1, f3, 0))            # (N, C, f1*D, f2*H, f3, W)
         x = F.reshape(x, (0, 0, 0, 0, -3))                    # (N, C, f1*D, f2*H, f3*W)
-        # fmt: on
         return x
 
     def __repr__(self):
