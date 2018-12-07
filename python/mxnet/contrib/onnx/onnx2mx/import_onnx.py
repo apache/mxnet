@@ -200,6 +200,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         if len(tuple(tensor_proto.dims)) > 0:
             np_array = to_array(tensor_proto).reshape(tuple(tensor_proto.dims))
         else:
+            # If onnx's params are scalar values without dims mentioned.
             np_array = np.array([to_array(tensor_proto)])
         return nd.array(np_array)
 
