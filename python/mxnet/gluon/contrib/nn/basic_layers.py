@@ -263,7 +263,7 @@ class PixelShuffle1D(HybridBlock):
         >>> pxshuf(x).shape
         (1, 4, 6)
         """
-        super().__init__()
+        super(PixelShuffle1D, self).__init__()
         self._factor = int(factor)
 
     def hybrid_forward(self, F, x):
@@ -303,7 +303,7 @@ class PixelShuffle2D(HybridBlock):
         >>> pxshuf(x).shape
         (1, 2, 6, 15)
         """
-        super().__init__()
+        super(PixelShuffle2D, self).__init__()
         try:
             self._factors = (int(factor),) * 2
         except TypeError:
@@ -349,7 +349,7 @@ class PixelShuffle3D(HybridBlock):
         >>> pxshuf(x).shape
         (1, 2, 6, 15, 28)
         """
-        super().__init__()
+        super(PixelShuffle3D, self).__init__()
         try:
             self._factors = (int(factor),) * 3
         except TypeError:
