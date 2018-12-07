@@ -73,8 +73,7 @@ class CuDNNPoolingOp {
     CUDNN_CALL(cudnnDestroyPoolingDescriptor(pooling_desc_));
   }
 
-  // Return boolean saying whether pooling configuration is supported.
-  bool Forward(const OpContext &ctx, const TBlob &in_data,
+  void Forward(const OpContext &ctx, const TBlob &in_data,
       const OpReqType &req, const TBlob &out_data) {
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -83,7 +82,7 @@ class CuDNNPoolingOp {
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     if (!this->Init(s, in_data, out_data))
-      return false;
+      LOG(FATAL) << "CuDNN Pooling invoked with unsupported parameters.";
     if (param_.kernel.ndim() == 2) {
       // 2d pool
       Tensor<gpu, 4, DType> data = in_data.get<gpu, 4, DType>(s);
@@ -115,11 +114,9 @@ class CuDNNPoolingOp {
     } else {
       LOG(FATAL) << "Only support 2D or 3D pooling";
     }
-    return true;
   }
 
-  // Return boolean saying whether pooling configuration is supported
-  bool Backward(const OpContext &ctx, const TBlob &out_grad,
+  void Backward(const OpContext &ctx, const TBlob &out_grad,
       const TBlob &in_data, const TBlob &out_data,
       const OpReqType &req, const TBlob &in_grad) {
     using namespace mshadow;
@@ -130,7 +127,7 @@ class CuDNNPoolingOp {
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     if (!this->Init(s, in_data, out_data))
-      return false;
+      LOG(FATAL) << "CuDNN Pooling invoked with unsupported parameters.";
     if (param_.kernel.ndim() == 2) {
       // 2d pool
       Tensor<gpu, 4, DType> m_out_grad = out_grad.get<gpu, 4, DType>(s);
@@ -170,6 +167,65 @@ class CuDNNPoolingOp {
     } else {
       LOG(FATAL) << "Only support 2D or 3D pooling";
     }
+  }
+
+/*!
+ * \brief Returns whether the cuDNN library version supports the pooling operation
+ * described by `param`: cuDNN v5 and earlier does not support 3D pooling for example.
+ * CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
+ */
+  static bool Supports(const PoolingParam &param, const TBlob& input) {
+    using namespace mshadow;
+    static bool sum_pooling_warning_issued = false;
+    static bool lp_pooling_warning_issued = false;
+
+    switch (param.pool_type) {
+      case pool_enum::kMaxPooling:
+      case pool_enum::kAvgPooling:
+        break;
+      case pool_enum::kSumPooling:
+        if (!sum_pooling_warning_issued) {
+          sum_pooling_warning_issued = true;
+          LOG(WARNING) << "Sum pooling is not supported by cudnn, MXNet sum pooling is applied.";
+        }
+        return false;
+      case pool_enum::kLpPooling:
+        if (!lp_pooling_warning_issued) {
+          lp_pooling_warning_issued = true;
+          LOG(WARNING) << "Lp pooling is not supported by cudnn, MXNet Lp pooling is applied.";
+        }
+        return false;
+      default:
+        return false;
+    }
+
+    if (param.kernel.ndim() == 2) {
+      // 2d conv
+      if (param.layout.value() != mshadow::kNCHW && param.layout.value() != mshadow::kNHWC)
+        return false;
+#if CUDNN_VERSION == 7104
+      // CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
+      // Perform shape calculations in a standard (NCHW) layout space
+      mshadow::Shape<4> input_shape = input.shape_.get<4>();
+      mshadow::Shape<4> dshape_nchw = (param.layout.value() == mshadow::kNHWC) ?
+                                      ConvertLayout(input_shape, mshadow::kNHWC, mshadow::kNCHW) :
+                                      input_shape;
+      int window_height = param.global_pool ? dshape_nchw[2] : param.kernel[0];
+      int window_width = param.global_pool ? dshape_nchw[3] : param.kernel[1];
+      if (window_height > 8 || window_width > 8)
+        return false;
+#endif
+    } else if (param.kernel.ndim() == 3) {
+#if CUDNN_MAJOR < 5
+      return false;
+#endif
+      if (param.layout.value() != mshadow::kNCDHW)
+        return false;
+    } else {
+      // Unsupported kernel dim
+      return false;
+    }
+
     return true;
   }
 
