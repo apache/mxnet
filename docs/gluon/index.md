@@ -82,7 +82,6 @@ def forward(self, F, inputs, tree):
                         for child in tree.children]
     #Recursively builds the neural network based on each input sentence’s
     #syntactic structure during the model definition and training process
-    …
 ```
 <br/>
 **__High Performance__**
