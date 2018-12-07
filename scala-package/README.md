@@ -4,13 +4,13 @@
 [![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
-Here you find the MXNet Scala/Java Package!
-It brings flexible and efficient GPU/CPU computing and state-of-art deep learning to JVM.
+The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and state-of-art deep learning to JVM.
 
 - It enables you to write seamless tensor/matrix computation with multiple GPUs
   in Scala, Java and other languages built on JVM.
 - It also enables you to construct and customize the state-of-art deep learning models in JVM languages,
   and apply them to tasks such as image classification and data science challenges.
+- The Scala/Java Inferece APIs provides an easy out of the box solution for loading pre-trained MXNet models and running inference on them.
   
 Install
 ------------
