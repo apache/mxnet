@@ -22,6 +22,11 @@
 #if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
 #elif MXNET_USE_LAPACK
 #else
+  // use pragma message instead of warning
+  #pragma message("Warning: lapack usage not enabled, linalg-operators will not be available." \
+     " Ensure that lapack library is installed and build with USE_LAPACK=1 to get lapack" \
+     " functionalities.")
+
   // Define compilable stubs.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
   int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda) { \

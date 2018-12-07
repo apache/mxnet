@@ -324,12 +324,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 
 #else
 
-  // use pragma message instead of warning
-  /*
-  #pragma message("Warning: lapack usage not enabled, linalg-operators will not be available." \
-     " Ensure that lapack library is installed and build with USE_LAPACK=1 to get lapack" \
-     " functionalities.")
-     */
+
 
   #define MXNET_LAPACK_ROW_MAJOR 101
   #define MXNET_LAPACK_COL_MAJOR 102
