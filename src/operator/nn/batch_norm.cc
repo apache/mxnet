@@ -99,7 +99,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
   batchnorm::BNTensor3<DType> inputData(in_data[batchnorm::kData], param_.axis);
   const TBlob &weights         = in_data[batchnorm::kGamma];
   const TBlob &bias            = in_data[batchnorm::kBeta];
-  
+
   // Aux (Moving)
   const TBlob &runningMean     = aux_states[batchnorm::kMovingMean];
   const TBlob &runningVariance = aux_states[batchnorm::kMovingVar];
