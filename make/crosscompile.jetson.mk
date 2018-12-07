@@ -57,7 +57,7 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS = -L${CROSS_ROOT}/lib
+ADD_LDFLAGS = -L${CROSS_ROOT}/lib -L/usr/lib/aarch64-linux-gnu/
 
 # the additional compile flags you want to add
 ADD_CFLAGS = -I${CROSS_ROOT}/include
