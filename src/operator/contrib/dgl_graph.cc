@@ -556,9 +556,9 @@ static void SampleSubgraph(const NDArray &csr,
                            float* sub_prob,
                            const NDArray &sub_layer,
                            const float* probability,
-                           dgl_id_t num_hops,
-                           dgl_id_t num_neighbor,
-                           dgl_id_t max_num_vertices) {
+                           int num_hops,
+                           size_t num_neighbor,
+                           size_t max_num_vertices) {
   unsigned int time_seed = time(nullptr);
   size_t num_seeds = seed_arr.shape().Size();
   CHECK_GE(max_num_vertices, num_seeds);
@@ -571,7 +571,7 @@ static void SampleSubgraph(const NDArray &csr,
   dgl_id_t* out_layer = sub_layer.data().dptr<dgl_id_t>();
 
   // BFS traverse the graph and sample vertices
-  dgl_id_t sub_vertices_count = 0;
+  size_t sub_vertices_count = 0;
   // <vertex_id, layer_id>
   std::unordered_map<dgl_id_t, int> sub_ver_mp;
   std::queue<ver_node> node_queue;
@@ -652,38 +652,36 @@ static void SampleSubgraph(const NDArray &csr,
   }
 
   // Copy sub_ver_mp to output[0]
-  size_t idx = 0;
-  for (auto& data : sub_ver_mp) {
-    *(out+idx) = data.first;
-    idx++;
-  }
+  // Copy layer
+  std::vector<std::pair<dgl_id_t, dgl_id_t> > order_map;
+  order_map.reserve(sub_ver_mp.size());
+  for (auto& data : sub_ver_mp)
+    order_map.push_back(std::pair<dgl_id_t, dgl_id_t>(data.first, data.second));
   size_t num_vertices = sub_ver_mp.size();
-  std::sort(out, out + num_vertices);
-  // The rest data will be set to -1
-  for (dgl_id_t i = idx; i < max_num_vertices; ++i) {
-    *(out+i) = -1;
+  std::sort(order_map.begin(), order_map.end(), [](const std::pair<dgl_id_t, dgl_id_t> &a1, std::pair<dgl_id_t, dgl_id_t> &a2) {
+    return a1.first < a2.second;
+  });
+  for (size_t i = 0; i < order_map.size(); i++) {
+    out[i] = order_map[i].first;
+    out_layer[i] = order_map[i].second;
+  }
+  for (size_t i = order_map.size(); i < max_num_vertices; i++) {
+    out[i] = -1;
+    out_layer[i] = -1;
   }
   // The last element stores the actual
   // number of vertices in the subgraph.
   out[max_num_vertices] = sub_ver_mp.size();
+
   // Copy sub_probability
   if (sub_prob != nullptr) {
-    for (dgl_id_t i = 0; i < max_num_vertices; ++i) {
+    for (size_t i = 0; i < max_num_vertices; ++i) {
       dgl_id_t idx = out[i];
       if (idx != -1) {
         sub_prob[i] = probability[idx];
       } else {
         sub_prob[i] = -1;
       }
-    }
-  }
-  // Copy layer
-  for (dgl_id_t i = 0; i < max_num_vertices; ++i) {
-    dgl_id_t idx = out[i];
-    if (idx != -1) {
-      out_layer[i] = sub_ver_mp[idx];
-    } else {
-      out_layer[i] = -1;
     }
   }
   // Construct sub_csr_graph
@@ -721,7 +719,7 @@ static void SampleSubgraph(const NDArray &csr,
     }
     indptr_out[i+1] = indptr_out[i] + edge_size;
   }
-  for (dgl_id_t i = num_vertices+1; i <= max_num_vertices; ++i) {
+  for (size_t i = num_vertices+1; i <= max_num_vertices; ++i) {
     indptr_out[i] = indptr_out[i-1];
   }
 }
