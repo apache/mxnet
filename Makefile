@@ -580,6 +580,8 @@ rpkg:
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
+	rm R-package/inst/include/dmlc
+	rm R-package/inst/include/nnvm
 	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
 	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
@@ -587,12 +589,9 @@ rpkg:
 	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2') < '5.0.1'){\
-	    devtools::install_version('roxygen2',version='5.0.1',\
-	    repos='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
 	rm R-package/NAMESPACE
-	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package'); warnings()"
+	Rscript -e "devtools::document('R-package'); warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
