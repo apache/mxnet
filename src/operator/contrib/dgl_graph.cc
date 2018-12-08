@@ -643,9 +643,9 @@ static void SampleSubgraph(const NDArray &csr,
         if (new_node.level < num_hops) {
           node_queue.push(new_node);
         } else {
-          size_t pos = neighbor_list.size();
-          neigh_pos[new_node.vertex_id] = pos;
-          neighbor_list.push_back(0);
+          // This vertex is in the last level. It doesn't have edges.
+          // If a vertex doesn't contain an edge, we don't need to add the vertex
+          // in neigh_pos or neighbor_list.
           sub_ver_mp[new_node.vertex_id] = new_node.level;
         }
       }
@@ -704,11 +704,16 @@ static void SampleSubgraph(const NDArray &csr,
   size_t collected_nedges = 0;
   for (size_t i = 0; i < num_vertices; i++) {
     dgl_id_t dst_id = *(out + i);
-    size_t pos = neigh_pos[dst_id];
-    CHECK_LT(pos, neighbor_list.size());
-    size_t edge_size = neighbor_list[pos];
-    CHECK_LE(pos + edge_size * 2 + 1, neighbor_list.size());
-    if (edge_size != 0) {
+    // If a vertex is in sub_ver_mp but not in neigh_pos, this vertex must not
+    // have edges.
+    size_t edge_size = 0;
+    auto it = neigh_pos.find(dst_id);
+    if (it != neigh_pos.end()) {
+      size_t pos = it->second;
+      CHECK_LT(pos, neighbor_list.size());
+      edge_size = neighbor_list[pos];
+      CHECK_LE(pos + edge_size * 2 + 1, neighbor_list.size());
+
       std::copy_n(neighbor_list.begin() + pos + 1,
                   edge_size,
                   col_list_out + collected_nedges);
