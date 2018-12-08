@@ -659,7 +659,7 @@ static void SampleSubgraph(const NDArray &csr,
     order_map.push_back(std::pair<dgl_id_t, dgl_id_t>(data.first, data.second));
   size_t num_vertices = sub_ver_mp.size();
   std::sort(order_map.begin(), order_map.end(), [](const std::pair<dgl_id_t, dgl_id_t> &a1, std::pair<dgl_id_t, dgl_id_t> &a2) {
-    return a1.first < a2.second;
+    return a1.first < a2.first;
   });
   for (size_t i = 0; i < order_map.size(); i++) {
     out[i] = order_map[i].first;
