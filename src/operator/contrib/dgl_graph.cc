@@ -451,24 +451,20 @@ static void NegateSet(const std::vector<size_t> &idxs,
  */
 static void GetUniformSample(const dgl_id_t* val_list,
                              const dgl_id_t* col_list,
-                             const dgl_id_t* indptr,
-                             const dgl_id_t dst_id,
+                             const size_t ver_len,
                              const size_t max_num_neighbor,
                              std::vector<dgl_id_t>* out_ver,
                              std::vector<dgl_id_t>* out_edge,
                              unsigned int* seed) {
-  size_t ver_len = *(indptr+dst_id+1) - *(indptr+dst_id);
   // Copy ver_list to output
   if (ver_len <= max_num_neighbor) {
-    for (dgl_id_t i = *(indptr+dst_id); i < *(indptr+dst_id+1); ++i) {
+    for (size_t i = 0; i < ver_len; ++i) {
       out_ver->push_back(col_list[i]);
       out_edge->push_back(val_list[i]);
     }
     return;
   }
   // If we just sample a small number of elements from a large neighbor list.
-  const dgl_id_t* col_ptr = col_list + *(indptr + dst_id);
-  const dgl_id_t* val_ptr = val_list + *(indptr + dst_id);
   std::vector<size_t> sorted_idxs;
   if (ver_len > max_num_neighbor * 2) {
     sorted_idxs.reserve(max_num_neighbor);
@@ -488,8 +484,8 @@ static void GetUniformSample(const dgl_id_t* val_list,
     CHECK_GT(sorted_idxs[i], sorted_idxs[i - 1]);
   }
   for (auto idx : sorted_idxs) {
-    out_ver->push_back(col_ptr[idx]);
-    out_edge->push_back(val_ptr[idx]);
+    out_ver->push_back(col_list[idx]);
+    out_edge->push_back(val_list[idx]);
   }
 }
 
@@ -499,28 +495,24 @@ static void GetUniformSample(const dgl_id_t* val_list,
 static void GetNonUniformSample(const float* probability,
                                 const dgl_id_t* val_list,
                                 const dgl_id_t* col_list,
-                                const dgl_id_t* indptr,
-                                const dgl_id_t dst_id,
+                                const size_t ver_len,
                                 const size_t max_num_neighbor,
                                 std::vector<dgl_id_t>* out_ver,
                                 std::vector<dgl_id_t>* out_edge,
                                 unsigned int* seed) {
-  size_t ver_len = *(indptr+dst_id+1) - *(indptr+dst_id);
   // Copy ver_list to output
   if (ver_len <= max_num_neighbor) {
-    for (dgl_id_t i = *(indptr+dst_id); i < *(indptr+dst_id+1); ++i) {
+    for (size_t i = 0; i < ver_len; ++i) {
       out_ver->push_back(col_list[i]);
       out_edge->push_back(val_list[i]);
     }
     return;
   }
   // Make sample
-  const dgl_id_t* col_ptr = col_list + *(indptr + dst_id);
-  const dgl_id_t* val_ptr = val_list + *(indptr + dst_id);
   std::vector<size_t> sp_index(max_num_neighbor);
   std::vector<float> sp_prob(ver_len);
   for (size_t i = 0; i < ver_len; ++i) {
-    sp_prob[i] = probability[col_ptr[i]];
+    sp_prob[i] = probability[col_list[i]];
   }
   ArrayHeap arrayHeap(sp_prob);
   arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index, seed);
@@ -528,8 +520,8 @@ static void GetNonUniformSample(const float* probability,
   out_edge->resize(max_num_neighbor);
   for (size_t i = 0; i < max_num_neighbor; ++i) {
     size_t idx = sp_index[i];
-    out_ver->at(i) = col_ptr[idx];
-    out_edge->at(i) = val_ptr[idx];
+    out_ver->at(i) = col_list[idx];
+    out_edge->at(i) = val_list[idx];
   }
   sort(out_ver->begin(), out_ver->end());
   sort(out_edge->begin(), out_edge->end());
@@ -609,21 +601,20 @@ static void SampleSubgraph(const NDArray &csr,
       }
       tmp_sampled_src_list.clear();
       tmp_sampled_edge_list.clear();
+      dgl_id_t ver_len = *(indptr+dst_id+1) - *(indptr+dst_id);
       if (probability == nullptr) {  // uniform-sample
-        GetUniformSample(val_list,
-                       col_list,
-                       indptr,
-                       dst_id,
+        GetUniformSample(val_list + *(indptr + dst_id),
+                       col_list + *(indptr + dst_id),
+                       ver_len,
                        num_neighbor,
                        &tmp_sampled_src_list,
                        &tmp_sampled_edge_list,
                        &time_seed);
       } else {  // non-uniform-sample
         GetNonUniformSample(probability,
-                       val_list,
-                       col_list,
-                       indptr,
-                       dst_id,
+                       val_list + *(indptr + dst_id),
+                       col_list + *(indptr + dst_id),
+                       ver_len,
                        num_neighbor,
                        &tmp_sampled_src_list,
                        &tmp_sampled_edge_list,
