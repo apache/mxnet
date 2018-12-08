@@ -1647,3 +1647,11 @@ def convert_logical_not(node, **kwargs):
     and return the created node.
     """
     return create_basic_op_node('Not', node, kwargs)
+
+
+@mx_op.register("size_array")
+def convert_size(node, **kwargs):
+    """Map MXNet's size_array operator attributes to onnx's Size operator
+    and return the created node.
+    """
+    return create_basic_op_node('Size', node, kwargs)
