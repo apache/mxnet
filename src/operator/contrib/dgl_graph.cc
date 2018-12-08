@@ -571,7 +571,6 @@ static void SampleSubgraph(const NDArray &csr,
   dgl_id_t* out_layer = sub_layer.data().dptr<dgl_id_t>();
 
   // BFS traverse the graph and sample vertices
-  size_t sub_vertices_count = 0;
   // <vertex_id, layer_id>
   std::unordered_map<dgl_id_t, int> sub_ver_mp;
   std::queue<ver_node> node_queue;
@@ -591,7 +590,7 @@ static void SampleSubgraph(const NDArray &csr,
   size_t num_edges = 0;
 
   while (!node_queue.empty() &&
-    sub_vertices_count < max_num_vertices) {
+    sub_ver_mp.size() < max_num_vertices) {
     ver_node& cur_node = node_queue.front();
     dgl_id_t dst_id = cur_node.vertex_id;
     tmp_sampled_src_list.clear();
@@ -638,6 +637,9 @@ static void SampleSubgraph(const NDArray &csr,
         if (new_node.level < num_hops) {
           node_queue.push(new_node);
         }
+        // If we have sampled the max number of vertices, we have to stop.
+        if (sub_ver_mp.size() >= max_num_vertices)
+          break;
         // We need to add the neighbor in the hashtable here. This ensures that
         // the vertex in the queue is unique. If we see a vertex before, we don't
         // need to add it to the queue again.
@@ -647,9 +649,10 @@ static void SampleSubgraph(const NDArray &csr,
         // in neigh_pos or neighbor_list.
       }
     }
-    sub_vertices_count++;
     node_queue.pop();
   }
+  if (!node_queue.empty())
+    LOG(WARNING) << "The sampling is truncated because we have reached the max number of vertices";
 
   // Copy sub_ver_mp to output[0]
   // Copy layer

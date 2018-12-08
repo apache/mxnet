@@ -101,9 +101,9 @@ def test_uniform_sample():
     check_compact(out[1], out[0], num_nodes)
 
     seed = mx.nd.array([0], dtype=np.int64)
-    out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=1, max_num_vertices=4)
+    out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=1, max_num_vertices=3)
     assert (len(out) == 3)
-    check_uniform(out, num_hops=2, max_num_vertices=4)
+    check_uniform(out, num_hops=2, max_num_vertices=3)
     num_nodes = out[0][-1].asnumpy()
     assert num_nodes > 0
     assert num_nodes < len(out[0])
