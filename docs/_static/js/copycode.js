@@ -61,6 +61,7 @@ $(document).ready(function(){
 
         e.clearSelection();
 
+        
         for(var i = 0; i < lines.length; ++i) {
             for(var lang in LANG_GP) {
                 if(lines[i].indexOf(LANG_GP[lang]) != -1) {
