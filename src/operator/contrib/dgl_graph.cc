@@ -697,14 +697,28 @@ static void SampleSubgraph(const NDArray &csr,
   dgl_id_t* indptr_out = sub_csr.aux_data(0).dptr<dgl_id_t>();
   indptr_out[0] = 0;
   size_t collected_nedges = 0;
+
+  // This might look weird. However, it should be able to reduce hashtable
+  // lookup by a lot (depends on how many neighbors we sample).
+  // By putting vertices with neighbors in a sorted array, we can easily
+  // find which vertices have neighbors.
+  std::vector<std::pair<dgl_id_t, dgl_id_t> > order_map_with_neighs;
+  order_map_with_neighs.reserve(neigh_pos.size());
+  for (auto& data : neigh_pos)
+    order_map_with_neighs.push_back(std::pair<dgl_id_t, dgl_id_t>(data.first, data.second));
+  std::sort(order_map_with_neighs.begin(), order_map_with_neighs.end(), [](const std::pair<dgl_id_t, dgl_id_t> &a1, std::pair<dgl_id_t, dgl_id_t> &a2) {
+    return a1.first < a2.first;
+  });
+
+  size_t idx_with_neigh = 0;
   for (size_t i = 0; i < num_vertices; i++) {
     dgl_id_t dst_id = *(out + i);
     // If a vertex is in sub_ver_mp but not in neigh_pos, this vertex must not
     // have edges.
     size_t edge_size = 0;
-    auto it = neigh_pos.find(dst_id);
-    if (it != neigh_pos.end()) {
-      size_t pos = it->second;
+    if (idx_with_neigh < order_map_with_neighs.size()
+        && dst_id == order_map_with_neighs[idx_with_neigh].first) {
+      size_t pos = order_map_with_neighs[idx_with_neigh].second;
       CHECK_LT(pos, neighbor_list.size());
       edge_size = neighbor_list[pos];
       CHECK_LE(pos + edge_size * 2 + 1, neighbor_list.size());
@@ -716,6 +730,7 @@ static void SampleSubgraph(const NDArray &csr,
                   edge_size,
                   val_list_out + collected_nedges);
       collected_nedges += edge_size;
+      idx_with_neigh++;
     }
     indptr_out[i+1] = indptr_out[i] + edge_size;
   }
