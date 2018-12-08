@@ -664,7 +664,7 @@ static void SampleSubgraph(const NDArray &csr,
     order_map.push_back(std::pair<dgl_id_t, dgl_id_t>(data.first, data.second));
   size_t num_vertices = sub_ver_mp.size();
   std::sort(order_map.begin(), order_map.end(),
-            [](const std::pair<dgl_id_t, dgl_id_t> &a1, std::pair<dgl_id_t, dgl_id_t> &a2) {
+            [](const std::pair<dgl_id_t, dgl_id_t> &a1, const std::pair<dgl_id_t, dgl_id_t> &a2) {
     return a1.first < a2.first;
   });
   for (size_t i = 0; i < order_map.size(); i++) {
@@ -713,7 +713,7 @@ static void SampleSubgraph(const NDArray &csr,
   for (auto& data : neigh_pos)
     order_map_with_neighs.push_back(std::pair<dgl_id_t, dgl_id_t>(data.first, data.second));
   std::sort(order_map_with_neighs.begin(), order_map_with_neighs.end(),
-            [](const std::pair<dgl_id_t, dgl_id_t> &a1, std::pair<dgl_id_t, dgl_id_t> &a2) {
+            [](const std::pair<dgl_id_t, dgl_id_t> &a1, const std::pair<dgl_id_t, dgl_id_t> &a2) {
     return a1.first < a2.first;
   });
 
