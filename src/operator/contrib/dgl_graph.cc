@@ -581,6 +581,7 @@ static void SampleSubgraph(const NDArray &csr,
     node.vertex_id = seed[i];
     node.level = 0;
     node_queue.push(node);
+    sub_ver_mp[seed[i]] = 0;
   }
   std::vector<dgl_id_t> tmp_sampled_src_list;
   std::vector<dgl_id_t> tmp_sampled_edge_list;
@@ -593,11 +594,6 @@ static void SampleSubgraph(const NDArray &csr,
     sub_vertices_count < max_num_vertices) {
     ver_node& cur_node = node_queue.front();
     dgl_id_t dst_id = cur_node.vertex_id;
-    auto ret = sub_ver_mp.find(dst_id);
-    if (ret != sub_ver_mp.end()) {
-      node_queue.pop();
-      continue;
-    }
     tmp_sampled_src_list.clear();
     tmp_sampled_edge_list.clear();
     dgl_id_t ver_len = *(indptr+dst_id+1) - *(indptr+dst_id);
@@ -633,7 +629,6 @@ static void SampleSubgraph(const NDArray &csr,
       neighbor_list.push_back(tmp_sampled_edge_list[i]);
     }
     num_edges += tmp_sampled_src_list.size();
-    sub_ver_mp[cur_node.vertex_id] = cur_node.level;
     for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
       auto ret = sub_ver_mp.find(tmp_sampled_src_list[i]);
       if (ret == sub_ver_mp.end()) {
@@ -642,12 +637,14 @@ static void SampleSubgraph(const NDArray &csr,
         new_node.level = cur_node.level + 1;
         if (new_node.level < num_hops) {
           node_queue.push(new_node);
-        } else {
-          // This vertex is in the last level. It doesn't have edges.
-          // If a vertex doesn't contain an edge, we don't need to add the vertex
-          // in neigh_pos or neighbor_list.
-          sub_ver_mp[new_node.vertex_id] = new_node.level;
         }
+        // We need to add the neighbor in the hashtable here. This ensures that
+        // the vertex in the queue is unique. If we see a vertex before, we don't
+        // need to add it to the queue again.
+        sub_ver_mp[new_node.vertex_id] = new_node.level;
+        // This vertex is in the last level. It doesn't have edges.
+        // If a vertex doesn't contain an edge, we don't need to add the vertex
+        // in neigh_pos or neighbor_list.
       }
     }
     sub_vertices_count++;
