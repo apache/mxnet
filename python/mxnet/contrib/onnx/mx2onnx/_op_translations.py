@@ -442,6 +442,8 @@ def convert_dot(node, **kwargs):
     MatMul and Transpose operators based on the values set for
     transpose_a, transpose_b attributes."""
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_node_a = input_nodes[0]
+    input_node_b = input_nodes[1]
 
     trans_a_node = None
     trans_b_node = None
