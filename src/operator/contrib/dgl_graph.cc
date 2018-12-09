@@ -578,7 +578,8 @@ static void SampleSubgraph(const NDArray &csr,
   std::vector<dgl_id_t> tmp_sampled_src_list;
   std::vector<dgl_id_t> tmp_sampled_edge_list;
   // ver_id, position
-  std::unordered_map<dgl_id_t, size_t> neigh_pos;
+  std::vector<std::pair<dgl_id_t, size_t> > neigh_pos;
+  neigh_pos.reserve(num_seeds);
   std::vector<dgl_id_t> neighbor_list;
   size_t num_edges = 0;
 
@@ -620,7 +621,7 @@ static void SampleSubgraph(const NDArray &csr,
     }
     CHECK_EQ(tmp_sampled_src_list.size(), tmp_sampled_edge_list.size());
     size_t pos = neighbor_list.size();
-    neigh_pos[dst_id] = pos;
+    neigh_pos.emplace_back(dst_id, pos);
     // First we push the size of neighbor vector
     neighbor_list.push_back(tmp_sampled_edge_list.size());
     // Then push the vertices
@@ -698,28 +699,20 @@ static void SampleSubgraph(const NDArray &csr,
   indptr_out[0] = 0;
   size_t collected_nedges = 0;
 
-  // This might look weird. However, it should be able to reduce hashtable
-  // lookup by a lot (depends on how many neighbors we sample).
-  // By putting vertices with neighbors in a sorted array, we can easily
-  // find which vertices have neighbors.
-  std::vector<std::pair<dgl_id_t, dgl_id_t> > order_map_with_neighs;
-  order_map_with_neighs.reserve(neigh_pos.size());
-  for (auto& data : neigh_pos)
-    order_map_with_neighs.emplace_back(data.first, data.second);
-  std::sort(order_map_with_neighs.begin(), order_map_with_neighs.end(),
-            [](const std::pair<dgl_id_t, dgl_id_t> &a1, const std::pair<dgl_id_t, dgl_id_t> &a2) {
+  // Both the out array and neigh_pos are sorted. By scanning the two arrays, we can see
+  // which vertices have neighbors and which don't.
+  std::sort(neigh_pos.begin(), neigh_pos.end(),
+            [](const std::pair<dgl_id_t, size_t> &a1, const std::pair<dgl_id_t, size_t> &a2) {
     return a1.first < a2.first;
   });
-
   size_t idx_with_neigh = 0;
   for (size_t i = 0; i < num_vertices; i++) {
     dgl_id_t dst_id = *(out + i);
     // If a vertex is in sub_ver_mp but not in neigh_pos, this vertex must not
     // have edges.
     size_t edge_size = 0;
-    if (idx_with_neigh < order_map_with_neighs.size()
-        && dst_id == order_map_with_neighs[idx_with_neigh].first) {
-      size_t pos = order_map_with_neighs[idx_with_neigh].second;
+    if (idx_with_neigh < neigh_pos.size() && dst_id == neigh_pos[idx_with_neigh].first) {
+      size_t pos = neigh_pos[idx_with_neigh].second;
       CHECK_LT(pos, neighbor_list.size());
       edge_size = neighbor_list[pos];
       CHECK_LE(pos + edge_size * 2 + 1, neighbor_list.size());
