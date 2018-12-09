@@ -649,7 +649,8 @@ static void SampleSubgraph(const NDArray &csr,
   // Let's check if there is a vertex that we haven't sampled its neighbors.
   for (; idx < sub_vers.size(); idx++) {
     if (sub_vers[idx].second < num_hops) {
-      LOG(WARNING) << "The sampling is truncated because we have reached the max number of vertices\n"
+      LOG(WARNING)
+        << "The sampling is truncated because we have reached the max number of vertices\n"
         << "Please use a smaller number of seeds or a small neighborhood";
       break;
     }
