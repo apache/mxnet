@@ -667,23 +667,15 @@ static void SampleSubgraph(const NDArray &csr,
     out[i] = sub_vers[i].first;
     out_layer[i] = sub_vers[i].second;
   }
-  for (size_t i = sub_vers.size(); i < max_num_vertices; i++) {
-    out[i] = -1;
-    out_layer[i] = -1;
-  }
   // The last element stores the actual
   // number of vertices in the subgraph.
   out[max_num_vertices] = sub_ver_mp.size();
 
   // Copy sub_probability
   if (sub_prob != nullptr) {
-    for (size_t i = 0; i < max_num_vertices; ++i) {
+    for (size_t i = 0; i < sub_ver_mp.size(); ++i) {
       dgl_id_t idx = out[i];
-      if (idx != -1) {
-        sub_prob[i] = probability[idx];
-      } else {
-        sub_prob[i] = -1;
-      }
+      sub_prob[i] = probability[idx];
     }
   }
   // Construct sub_csr_graph
