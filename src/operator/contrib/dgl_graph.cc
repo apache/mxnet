@@ -572,15 +572,21 @@ static void SampleSubgraph(const NDArray &csr,
 
   // BFS traverse the graph and sample vertices
   // <vertex_id, layer_id>
-  std::unordered_map<dgl_id_t, int> sub_ver_mp;
+  std::unordered_set<dgl_id_t> sub_ver_mp;
+  std::vector<std::pair<dgl_id_t, dgl_id_t> > sub_vers;
+  sub_vers.reserve(num_seeds * 10);
   std::queue<ver_node> node_queue;
   // add seed vertices
   for (size_t i = 0; i < num_seeds; ++i) {
-    ver_node node;
-    node.vertex_id = seed[i];
-    node.level = 0;
-    node_queue.push(node);
-    sub_ver_mp[seed[i]] = 0;
+    auto ret = sub_ver_mp.insert(seed[i]);
+    // If the vertex is inserted successfully.
+    if (ret.second) {
+      ver_node node;
+      node.vertex_id = seed[i];
+      node.level = 0;
+      node_queue.push(node);
+      sub_vers.emplace_back(seed[i], 0);
+    }
   }
   std::vector<dgl_id_t> tmp_sampled_src_list;
   std::vector<dgl_id_t> tmp_sampled_edge_list;
@@ -629,21 +635,22 @@ static void SampleSubgraph(const NDArray &csr,
     }
     num_edges += tmp_sampled_src_list.size();
     for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
-      auto ret = sub_ver_mp.find(tmp_sampled_src_list[i]);
-      if (ret == sub_ver_mp.end()) {
+      // If we have sampled the max number of vertices, we have to stop.
+      if (sub_ver_mp.size() >= max_num_vertices)
+        break;
+      // We need to add the neighbor in the hashtable here. This ensures that
+      // the vertex in the queue is unique. If we see a vertex before, we don't
+      // need to add it to the queue again.
+      auto ret = sub_ver_mp.insert(tmp_sampled_src_list[i]);
+      // If the sampled neighbor is inserted to the map successfully.
+      if (ret.second) {
         ver_node new_node;
         new_node.vertex_id = tmp_sampled_src_list[i];
         new_node.level = cur_node.level + 1;
         if (new_node.level < num_hops) {
           node_queue.push(new_node);
         }
-        // If we have sampled the max number of vertices, we have to stop.
-        if (sub_ver_mp.size() >= max_num_vertices)
-          break;
-        // We need to add the neighbor in the hashtable here. This ensures that
-        // the vertex in the queue is unique. If we see a vertex before, we don't
-        // need to add it to the queue again.
-        sub_ver_mp[new_node.vertex_id] = new_node.level;
+        sub_vers.emplace_back(new_node.vertex_id, new_node.level);
         // This vertex is in the last level. It doesn't have edges.
         // If a vertex doesn't contain an edge, we don't need to add the vertex
         // in neigh_pos or neighbor_list.
@@ -658,20 +665,16 @@ static void SampleSubgraph(const NDArray &csr,
 
   // Copy sub_ver_mp to output[0]
   // Copy layer
-  std::vector<std::pair<dgl_id_t, dgl_id_t> > order_map;
-  order_map.reserve(sub_ver_mp.size());
-  for (auto& data : sub_ver_mp)
-    order_map.emplace_back(data.first, data.second);
   size_t num_vertices = sub_ver_mp.size();
-  std::sort(order_map.begin(), order_map.end(),
+  std::sort(sub_vers.begin(), sub_vers.end(),
             [](const std::pair<dgl_id_t, dgl_id_t> &a1, const std::pair<dgl_id_t, dgl_id_t> &a2) {
     return a1.first < a2.first;
   });
-  for (size_t i = 0; i < order_map.size(); i++) {
-    out[i] = order_map[i].first;
-    out_layer[i] = order_map[i].second;
+  for (size_t i = 0; i < sub_vers.size(); i++) {
+    out[i] = sub_vers[i].first;
+    out_layer[i] = sub_vers[i].second;
   }
-  for (size_t i = order_map.size(); i < max_num_vertices; i++) {
+  for (size_t i = sub_vers.size(); i < max_num_vertices; i++) {
     out[i] = -1;
     out_layer[i] = -1;
   }
