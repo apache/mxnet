@@ -1644,6 +1644,9 @@ static void ComputeLayerVid(const TBlob &layer_ids, const TBlob &out,
     int64_t *num_vs = layer_sizes.dptr<int64_t>();
     for (size_t i = 0; i < num_layers; i++)
       num_vs[i] = 0;
+    // Initialize output data.
+    for (size_t i = 0; i < out.shape_.Size(); i++)
+      out_data[i] = -1;
 
     size_t max_size = out.shape_[1];
     size_t size = layer_ids.shape_.Size();
@@ -1695,7 +1698,7 @@ static bool LayerVidShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *out_attrs) {
   const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
   CHECK_EQ(params.num_layers.ndim(), in_attrs->size());
-  CHECK_EQ(params.num_layers.ndim(), out_attrs->size() * 2);
+  CHECK_EQ(params.num_layers.ndim() * 2, out_attrs->size());
   size_t num_arrs = in_attrs->size();
   for (size_t i = 0; i < num_arrs; i++) {
     CHECK_EQ(in_attrs->at(i).ndim(), 1U);

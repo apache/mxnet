@@ -75,6 +75,17 @@ def check_compact(csr, id_arr, num_nodes):
         sub_id = sub_indices[i]
         assert id_arr[sub_id] == indices[i]
 
+def check_layers(layers, num_layers):
+    out = mx.nd.contrib.dgl_layer_vid(layers, num_layers=(num_layers))
+    layers = layers.asnumpy()
+    print(layers)
+    print(num_layers)
+    for i in range(num_layers):
+        ids = np.where(layers == i)[0]
+        num_ids = out[1][i].asnumpy()[0]
+        assert num_ids == len(ids)
+        assert np.all(ids == out[0][i][0:num_ids].asnumpy())
+
 def test_uniform_sample():
     shape = (5, 5)
     data_np = np.array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], dtype=np.int64)
@@ -90,6 +101,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 1)
 
     seed = mx.nd.array([0], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=1, max_num_vertices=4)
@@ -99,6 +111,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 1)
 
     seed = mx.nd.array([0], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=1, max_num_vertices=4)
@@ -108,6 +121,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 2)
 
     seed = mx.nd.array([0,2,4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
@@ -117,6 +131,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 1)
 
     seed = mx.nd.array([0,4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
@@ -126,6 +141,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 1)
 
     seed = mx.nd.array([0,4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=2, max_num_vertices=5)
@@ -135,6 +151,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 2)
 
     seed = mx.nd.array([0,4], dtype=np.int64)
     out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=1, num_neighbor=2, max_num_vertices=5)
@@ -144,6 +161,7 @@ def test_uniform_sample():
     assert num_nodes > 0
     assert num_nodes < len(out[0])
     check_compact(out[1], out[0], num_nodes)
+    check_layers(out[2], 1)
 
 def test_non_uniform_sample():
     shape = (5, 5)
