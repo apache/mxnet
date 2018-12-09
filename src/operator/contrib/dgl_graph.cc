@@ -528,14 +528,6 @@ static void GetNonUniformSample(const float* probability,
 }
 
 /*
- * This is used for BFS traversal
- */
-struct ver_node {
-  dgl_id_t vertex_id;
-  int level;
-};
-
-/*
  * Used for subgraph sampling
  */
 struct neigh_list {
@@ -575,16 +567,11 @@ static void SampleSubgraph(const NDArray &csr,
   std::unordered_set<dgl_id_t> sub_ver_mp;
   std::vector<std::pair<dgl_id_t, dgl_id_t> > sub_vers;
   sub_vers.reserve(num_seeds * 10);
-  std::queue<ver_node> node_queue;
   // add seed vertices
   for (size_t i = 0; i < num_seeds; ++i) {
     auto ret = sub_ver_mp.insert(seed[i]);
     // If the vertex is inserted successfully.
     if (ret.second) {
-      ver_node node;
-      node.vertex_id = seed[i];
-      node.level = 0;
-      node_queue.push(node);
       sub_vers.emplace_back(seed[i], 0);
     }
   }
@@ -595,10 +582,21 @@ static void SampleSubgraph(const NDArray &csr,
   std::vector<dgl_id_t> neighbor_list;
   size_t num_edges = 0;
 
-  while (!node_queue.empty() &&
+  // sub_vers is used both as a node collection and a queue.
+  // In the while loop, we iterate over sub_vers and new nodes are added to the vector.
+  // A vertex in the vector only needs to be accessed once. If there is a vertex behind idx
+  // isn't in the last level, we will sample its neighbors. If not, the while loop terminates.
+  size_t idx = 0;
+  while (idx < sub_vers.size() &&
     sub_ver_mp.size() < max_num_vertices) {
-    ver_node& cur_node = node_queue.front();
-    dgl_id_t dst_id = cur_node.vertex_id;
+    dgl_id_t dst_id = sub_vers[idx].first;
+    int cur_node_level = sub_vers[idx].second;
+    idx++;
+    // If the node is in the last level, we don't need to sample neighbors
+    // from this node.
+    if (cur_node_level >= num_hops)
+      continue;
+
     tmp_sampled_src_list.clear();
     tmp_sampled_edge_list.clear();
     dgl_id_t ver_len = *(indptr+dst_id+1) - *(indptr+dst_id);
@@ -643,24 +641,17 @@ static void SampleSubgraph(const NDArray &csr,
       // need to add it to the queue again.
       auto ret = sub_ver_mp.insert(tmp_sampled_src_list[i]);
       // If the sampled neighbor is inserted to the map successfully.
-      if (ret.second) {
-        ver_node new_node;
-        new_node.vertex_id = tmp_sampled_src_list[i];
-        new_node.level = cur_node.level + 1;
-        if (new_node.level < num_hops) {
-          node_queue.push(new_node);
-        }
-        sub_vers.emplace_back(new_node.vertex_id, new_node.level);
-        // This vertex is in the last level. It doesn't have edges.
-        // If a vertex doesn't contain an edge, we don't need to add the vertex
-        // in neigh_pos or neighbor_list.
-      }
+      if (ret.second)
+        sub_vers.emplace_back(tmp_sampled_src_list[i], cur_node_level + 1);
     }
-    node_queue.pop();
   }
-  if (!node_queue.empty()) {
-    LOG(WARNING) << "The sampling is truncated because we have reached the max number of vertices\n"
-      << "Please use a smaller number of seeds or a small neighborhood";
+  // Let's check if there is a vertex that we haven't sampled its neighbors.
+  for (; idx < sub_vers.size(); idx++) {
+    if (sub_vers[idx].second < num_hops) {
+      LOG(WARNING) << "The sampling is truncated because we have reached the max number of vertices\n"
+        << "Please use a smaller number of seeds or a small neighborhood";
+      break;
+    }
   }
 
   // Copy sub_ver_mp to output[0]
