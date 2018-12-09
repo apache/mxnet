@@ -711,7 +711,7 @@ static void SampleSubgraph(const NDArray &csr,
   std::vector<std::pair<dgl_id_t, dgl_id_t> > order_map_with_neighs;
   order_map_with_neighs.reserve(neigh_pos.size());
   for (auto& data : neigh_pos)
-    order_map_with_neighs.push_back(data.first, data.second);
+    order_map_with_neighs.emplace_back(data.first, data.second);
   std::sort(order_map_with_neighs.begin(), order_map_with_neighs.end(),
             [](const std::pair<dgl_id_t, dgl_id_t> &a1, const std::pair<dgl_id_t, dgl_id_t> &a2) {
     return a1.first < a2.first;
