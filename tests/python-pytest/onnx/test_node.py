@@ -155,7 +155,9 @@ test_cases = [
     ("test_spacetodepth", mx.sym.space_to_depth, "SpaceToDepth", [get_rnd((1, 1, 4, 6))],
      {'block_size': 2}, False),
     ("test_softmax", mx.sym.SoftmaxOutput, "Softmax", [get_rnd((1000, 1000)), get_rnd(1000)],
-     {'ignore_label': 0, 'use_ignore': False}, True)
+     {'ignore_label': 0, 'use_ignore': False}, True),
+    ("test_fullyconnected", mx.sym.FullyConnected, "Gemm", [get_rnd((4,3)), get_rnd((4, 3)), get_rnd(4)],
+     {'num_hidden': 4, 'name': 'FC'}, True)
 ]
 
 if __name__ == '__main__':
