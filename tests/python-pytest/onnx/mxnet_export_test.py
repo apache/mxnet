@@ -23,7 +23,6 @@ those PRs merged, this file will get EOL'ed.
 """
 # pylint: disable=too-many-locals,wrong-import-position,import-error
 from __future__ import absolute_import
-import sys
 import os
 import unittest
 import logging
@@ -32,10 +31,6 @@ from mxnet import nd, sym
 from mxnet.gluon import nn
 from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
-
-CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../../../python/unittest'))
-from common import with_seed
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)

@@ -21,13 +21,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-
-import os
-import sys
-
-CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../'))
-
 import unittest
 import backend as mxnet_backend
 import backend_test
@@ -37,15 +30,16 @@ try:
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
 
-
-mxnet_backend.MXNetBackend.set_params('mxnet', 'export')
+operations = ['import']  # Gluon->ONNX exprot is not supported yet
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 
-BACKEND_TESTS = backend_test.prepare_tests(mxnet_backend, 'export')
 
-# import all test cases at global scope to make them visible to python.unittest
-globals().update(BACKEND_TESTS.enable_report().test_cases)
+for operation in operations:
+    mxnet_backend.MXNetBackend.set_params('gluon', operation)
+    BACKEND_TESTS = backend_test.prepare_tests(mxnet_backend, operation)
+    # import all test cases at global scope to make them visible to python.unittest
+    globals().update(BACKEND_TESTS.enable_report().test_cases)
 
 if __name__ == '__main__':
     unittest.main()
