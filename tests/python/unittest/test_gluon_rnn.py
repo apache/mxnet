@@ -258,7 +258,7 @@ def test_bidirectional_unroll_valid_length():
 
         def hybrid_forward(self, F, inputs, valid_len):
             outputs, states = self.bi_lstm.unroll(self.time_step, inputs, valid_length=valid_len,
-                                                  layout='TNC', merge_outputs='True')
+                                                  layout='TNC', merge_outputs=True)
             return outputs, states
 
     rnn_size, time_step = 100, 3
