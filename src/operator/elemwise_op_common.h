@@ -128,29 +128,33 @@ inline bool ElemwiseAttr(const nnvm::NodeAttrs& attrs,
   if (n_out != -1)
     out_size = static_cast<size_t>(n_out);
 
-  auto deduce = [&](std::vector<AttrType> *vec, size_t size, const char *name) {
+  CHECK_LE(in_size, in_attrs->size());
+  CHECK_LE(out_size, out_attrs->size());
+  auto deduce = [&](const std::vector<AttrType>& vec, size_t size, const char *name) {
       for (size_t i = 0; i < size; ++i) {
-        CHECK(assign(&dattr, (*vec)[i]))
+        CHECK(assign(&dattr, vec.at(i)))
           << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
           << name << ": " << "expected " << attr_string(dattr)
-          << ", got " << attr_string((*vec)[i]);
+          << ", got " << attr_string(vec.at(i));
       }
     };
-  deduce(in_attrs, in_size, "input");
-  if (reverse_infer) deduce(out_attrs, out_size, "output");
+  deduce(*in_attrs, in_size, "input");
+  if (reverse_infer)
+      deduce(*out_attrs, out_size, "output");
 
   auto write = [&](std::vector<AttrType> *vec, size_t size, const char *name) {
       for (size_t i = 0; i < size; ++i) {
-        CHECK(assign(&(*vec)[i], dattr))
+        CHECK(assign(&(vec->at(i)), dattr))
           << "Incompatible attr in node " << attrs.name << " at " << i << "-th "
           << name << ": " << "expected " << attr_string(dattr)
-          << ", got " << attr_string((*vec)[i]);
+          << ", got " << attr_string(vec->at(i));
       }
     };
   write(in_attrs, in_size, "input");
   write(out_attrs, out_size, "output");
 
-  if (is_none(dattr)) return false;
+  if (is_none(dattr))
+      return false;
   return true;
 }
 
