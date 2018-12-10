@@ -642,6 +642,10 @@ def shape(attrs, inputs, proto_obj):
     """Returns shape of input array."""
     return 'shape_array', attrs, inputs
 
+def size(attrs, inputs, proto_obj):
+    """Returns array containing size of data."""
+    return "size_array", attrs, inputs
+
 def reduce_l2(attrs, inputs, proto_obj):
     """Reduce input tensor by l2 normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
