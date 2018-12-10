@@ -2321,6 +2321,7 @@ def test_reshape_backward_fallback():
         - or, we can have out_y = sym.dot(sparse_y, w), then grad(w) will be inferred as sparse
     reshape backward (from w_x to w) needs to understand how to handle sparse inputs.
     """
+    ctx = default_context()
     w_shape = (12, 4)
     w_x_shape = (1, 48)
     x_nd = rand_ndarray((4, 1), 'csr')
@@ -2340,7 +2341,7 @@ def test_reshape_backward_fallback():
     out = mx.sym.sparse.dot(x, w_x, name='out_x')
 
     grad_w_nd = rand_ndarray(w_shape, 'row_sparse')
-    executor = out.bind(ctx=mx.cpu(0), args={"x": x_nd, "w": w_nd},
+    executor = out.bind(ctx=ctx, args={"x": x_nd, "w": w_nd},
                         args_grad={"w": grad_w_nd})
     executor.forward(is_train=True)
     executor.backward(out_x_nd)
