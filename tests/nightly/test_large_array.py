@@ -141,6 +141,10 @@ def test_where():
     res = nd.where(b > 100, a, b)
     assert np.sum(res[-1].asnumpy() == 1) == b.shape[1]
 
+    csr_cond = nd.sparse.cast_storage(b < 10, 'csr')
+    res = nd.sparse.where(csr_cond, a, b)
+    assert np.sum(res[0].asnumpy() == 1) == b.shape[1]
+
 
 if __name__ == '__main__':
     import nose
