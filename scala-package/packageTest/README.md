@@ -16,7 +16,11 @@ There are three different modes of operation for testing based on the location o
 
 ### Test Installed Jars
 
-If you have a jar file, you can install it to your maven cache repository(`~/.m2/repository`) using `mvn install:install-file -Dfile=<path-to-file>`.  This might be useful if you acquire the .jar file from elsewhere. You can also run `make scalainstall` to install from a local build. Then, run `make testinstall` in the package test directory to run the tests.  Note that unless you also install an additional mxnetexamples jar, you can only run the unit tests.
+If you have a jar file, you can install it to your maven cache repository(`~/.m2/repository`). This might be useful if you acquire the .jar file from elsewhere. To install, it is easiest to use `mvn install:install-file -Dfile=<path-to-file> -DpomFile=<path-to-pomfile>`. If the pom file is not available, you can also run `mvn install:install-file -Dfile=<path-to-file> -DgroupId=<group-id> -DartifactId=<artifact-id> -Dversion=<version> -Dpackaging=<packaging>`. With the full mxnet jar, this might look like `mvn install:install-file -Dfile=<path-to-file> -DgroupId=org.apache.mxnet -DartifactId=mxnet-full_2.11-linux-x86_64-cpu -Dversion=1.3.0 -Dpackaging=jar`.
+
+You can also run `make scalainstall` to install from a local build.
+
+After installing, run `make testinstall` in the package test directory to run the tests.  Note that unless you also install an additional mxnetexamples jar, you can only run the unit tests.
 
 ### Test Local Deployment
 
