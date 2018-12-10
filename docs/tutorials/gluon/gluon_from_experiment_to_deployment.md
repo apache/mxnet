@@ -7,9 +7,9 @@ MXNet Gluon API comes with a lot of great features and it can provide you everyt
 Let's say you need to build a service that provides flower species recognition. A common use case is, you don't have enough data to train a good model. In such cases we use a technique called Transfer Learning.
 In Transfer Learning we make use of a pre-trained model that solves a related task but is trained on a very large standard dataset such as ImageNet from a different domain, we utilize the knowledge in this pre-trained model to perform a new task at hand. 
 
-Gluon provides State of the Art models for many of the standard tasks such as Classifcation, Object Detection, Segmentation, etc. In this tutorial we will use the pre-trained model [ResNet50 V2](https://arxiv.org/abs/1603.05027) trained on ImageNet dataset, this model achieves 77.11% top-1 accuracy on ImageNet, we seek to transfer as much knowledge as possible for our task of recognizing different species of Flowers.
+Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In this tutorial we will use the pre-trained model [ResNet50 V2](https://arxiv.org/abs/1603.05027) trained on ImageNet dataset, this model achieves 77.11% top-1 accuracy on ImageNet, we seek to transfer as much knowledge as possible for our task of recognizing different species of Flowers.
 
-In this tutorial we will show you the steps to load pre-trained model from Gluon, tweak the model according to your neeed, fine-tune the model on your small dataset, and finally deploy the trained model to integrate with your service.
+In this tutorial we will show you the steps to load pre-trained model from Gluon, tweak the model according to your need, fine-tune the model on your small dataset, and finally deploy the trained model to integrate with your service.
 
 
 
@@ -65,7 +65,7 @@ data
 
 ## Training using Gluon
 
-### Define Hyper-paramerters
+### Define Hyper-parameters
 
 Now let's first import necessary packages:
 
@@ -386,7 +386,7 @@ Following is the training result:
 [Epoch 40] Train-acc: 0.945, loss: 0.354 | Val-acc: 0.955 | learning-rate: 4.219E-04 | time: 17.8
 [Finished] Test-acc: 0.952
 ```
-We trained the model using a [AWS P3.8XLarge instance](https://aws.amazon.com/ec2/instance-types/p3/) with 4 Tesla V100	GPUs. We were able to reach a test accuracy of 95.2% with 40 epochs in around 12 minutes. This was really fast because our model was pre-trained on a much larget dataset, ImageNet, with around 1.3 million images. It worked really well to capture features on our small dataset.
+We trained the model using a [AWS P3.8XLarge instance](https://aws.amazon.com/ec2/instance-types/p3/) with 4 Tesla V100	GPUs. We were able to reach a test accuracy of 95.2% with 40 epochs in around 12 minutes. This was really fast because our model was pre-trained on a much larger dataset, ImageNet, with around 1.3 million images. It worked really well to capture features on our small dataset.
 
 
 ### Save fine-tuned model
@@ -462,7 +462,7 @@ class Predictor {
 
 ### Load network symbol and parameters
 
-In the Predictor constructor, you need a few information including paths to saved json and param files. After that add the following two methods to load the netowrk and its parameters.
+In the Predictor constructor, you need a few information including paths to saved json and param files. After that add the following two methods to load the network and its parameters.
 
 ```cpp
 /*
@@ -537,7 +537,7 @@ NDArray Predictor::LoadInputImage(const std::string& image_file) {
 
 ### Run inference
 
-Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe, calling it in multi-threaded enviroments was not tested. To utilize mult-threaded prediction, you need to use the C predict API, please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
+Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe, calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API, please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
 
 ```cpp
 void Predictor::PredictImage(const std::string& image_file) {
