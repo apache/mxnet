@@ -624,3 +624,5 @@ You can find more ways to run inference and examples here:
 1. https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html
 2. https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/
 3. https://gluon-crash-course.mxnet.io/
+
+<!-- INSERT SOURCE DOWNLOAD BUTTONS -->
