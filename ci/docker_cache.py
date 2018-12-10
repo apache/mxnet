@@ -33,6 +33,7 @@ import json
 import time
 from typing import *
 import build as build_util
+from ci.util import retry
 
 DOCKERHUB_LOGIN_NUM_RETRIES = 5
 DOCKERHUB_RETRY_SECONDS = 5
@@ -153,6 +154,7 @@ def _logout_dockerhub():
     logging.info('Successfully logged out of DockerHub')
 
 
+@retry(subprocess.TimeoutExpired, tries=DOCKER_CACHE_NUM_RETRIES, delay_s=DOCKERHUB_RETRY_SECONDS)
 def load_docker_cache(registry, docker_tag) -> None:
     """
     Load the precompiled docker cache from the registry
@@ -168,22 +170,9 @@ def load_docker_cache(registry, docker_tag) -> None:
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
 
-    for i in range(DOCKER_CACHE_NUM_RETRIES):
-        try:
-            # Don't throw an error if the image does not exist
-            subprocess.call(pull_cmd, timeout=DOCKER_CACHE_TIMEOUT_MINS*60)
-            logging.info('Successfully pulled docker cache')
-            return
-
-        except subprocess.TimeoutExpired as e:
-            logging.info(str(e))
-
-            # Linear backoff
-            time.sleep(DOCKERHUB_RETRY_SECONDS * (i + 1))
-    else:
-        logging.error('Could not download docker cache after %d retries, aborting',
-                      DOCKER_CACHE_NUM_RETRIES)
-        raise Exception('Unable to download docker cache')
+    # Don't throw an error if the image does not exist
+    subprocess.call(pull_cmd, timeout=DOCKER_CACHE_TIMEOUT_MINS*60)
+    logging.info('Successfully pulled docker cache')
 
 
 def delete_local_docker_cache(docker_tag):
