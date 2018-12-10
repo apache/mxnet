@@ -190,7 +190,7 @@ function _getdocdefine(name::String)
   op = _get_libmx_op_handle(name)
   str = _get_libmx_op_description(name, op)[1]
   lines = split(str, '\n')
-  for m ∈ match.(r"^Defined in .*$", lines)
+  for m ∈ match.(Ref(r"^Defined in .*$"), lines)
     m != nothing && return m.match
   end
   ""
@@ -252,3 +252,20 @@ function _firstarg(sig::Expr)
 end
 
 _firstarg(s::Symbol) = s
+
+const _import_map = Dict{Symbol,Union{Missing,Module}}(
+  :diag    => LinearAlgebra,
+  :dot     => LinearAlgebra,
+  :norm    => LinearAlgebra,
+
+  :shuffle => Random,
+
+  :mean    => Statistics,
+
+  :gamma   => missing,
+)
+
+function _import_expr(func_name::Symbol)
+  mod = get(_import_map, func_name, Base)
+  isdefined(mod, func_name) ? :(import $(Symbol(mod)): $func_name) : :()
+end

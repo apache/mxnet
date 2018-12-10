@@ -1724,13 +1724,6 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_hypot",
 ]
 
-const _import_map = Dict{Symbol,Union{Missing,Module}}(
-  :shuffle => Random,
-  :norm    => LinearAlgebra,
-  :diag    => LinearAlgebra,
-  :gamma   => missing,
-)
-
 macro _import_ndarray_functions()
   names = filter(n -> ∉(lowercase(n), _op_import_bl), _get_libmx_op_names())
 
@@ -1742,11 +1735,10 @@ macro _import_ndarray_functions()
 
     func_name = Symbol(name)
 
-    mod = get(_import_map, func_name, Base)
-    import_exrp = isdefined(mod, func_name) ? :(import $(Symbol(mod)): $func_name) : :()
+    import_expr = _import_expr(func_name)
 
     quote
-      $import_exrp
+      $import_expr
       $func_def
       @doc $desc
       $func_def2
