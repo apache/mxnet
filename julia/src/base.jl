@@ -111,16 +111,15 @@ end
 ################################################################################
 # Handle types
 ################################################################################
-macro mx_define_handle_t(name, destructor)
-  name = esc(name)
-  quote
+function mx_define_handle_t(name, destructor)
+  @eval begin
     mutable struct $name
-      value :: MX_handle
+      value::MX_handle
 
       function $name(value = C_NULL)
         hdr = new(value)
 
-        $(if destructor != :nop
+        $(if destructor != nothing
           :(finalizer(delete!, hdr))
         end)
 
@@ -128,7 +127,7 @@ macro mx_define_handle_t(name, destructor)
       end
     end
 
-    $(if finalizer != :nop
+    $(if finalizer != nothing
       quote
         function delete!(h :: $name)
           if h.value != C_NULL
@@ -144,17 +143,18 @@ macro mx_define_handle_t(name, destructor)
     end
     Base.convert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
     Base.cconvert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
+    Base.isnull(obj::$name) = (obj.value == C_NULL)
 
-    function Base.isnull(obj::$name) obj.value == C_NULL end
+    MX_handle(x::$name) = Base.convert(MX_handle, x)
   end
 end
 
-@mx_define_handle_t MX_NDArrayHandle   MXNDArrayFree
-@mx_define_handle_t MX_OpHandle        nop
-@mx_define_handle_t MX_SymbolHandle    MXSymbolFree
-@mx_define_handle_t MX_ExecutorHandle  MXExecutorFree
-@mx_define_handle_t MX_DataIterHandle  MXDataIterFree
-@mx_define_handle_t MX_KVStoreHandle   MXKVStoreFree
+mx_define_handle_t(:MX_NDArrayHandle,  :MXNDArrayFree)
+mx_define_handle_t(:MX_OpHandle,       nothing)
+mx_define_handle_t(:MX_SymbolHandle,   :MXSymbolFree)
+mx_define_handle_t(:MX_ExecutorHandle, :MXExecutorFree)
+mx_define_handle_t(:MX_DataIterHandle, :MXDataIterFree)
+mx_define_handle_t(:MX_KVStoreHandle,  :MXKVStoreFree)
 
 ################################################################################
 # MXNet Params
