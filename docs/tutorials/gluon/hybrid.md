@@ -137,4 +137,94 @@ to gluon with `SymbolBlock`:
 net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.params')
 ```
 
+## Operators that does not work with hybridize
+
+While most APIs are the same in NDArray and Symbol, there are some differences. Writting `F.operator` and call `hybridize` may not work all the time.
+Here we list all the APIs that do not work and provide you the work arounds.
+
+### Element-wise Operators
+
+The following arithmetic and comparison APIs are automatically broadcasted if the input NDArrays have different shapes.
+However, that's not the case in Symbol API, it's not automatically broadcasted and you have to manually specify whether to use element-wise operator or broadcast operators.
+
+
+| NDArray APIs  | Description  |
+|---|---|
+| [*NDArray.__add__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__add__) | x.__add__(y) <=> x+y <=> mx.nd.add(x, y)  |
+| [*NDArray.__sub__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__sub__) | x.__sub__(y) <=> x-y <=> mx.nd.subtract(x, y)  |
+| [*NDArray.__mul__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mul__) | x.__mul__(y) <=> x*y <=> mx.nd.multiply(x, y)  |
+| [*NDArray.__div__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__div__) | x.__div__(y) <=> x/y <=> mx.nd.divide(x, y)  |
+| [*NDArray.__mod__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mod__) | x.__mod__(y) <=> x%y <=> mx.nd.modulo(x, y)  |
+| [*NDArray.__lt__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__lt__) |  x.__lt__(y) <=> x mx.nd.lesser(x, y) |
+| [*NDArray.__le__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__le__) |  x.__le__(y) <=> x<=y <=> mx.nd.less_equal(x, y) |
+| [*NDArray.__gt__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__gt__) |  x.__gt__(y) <=> x>y <=> mx.nd.greater(x, y) |
+| [*NDArray.__ge__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ge__) |  x.__ge__(y) <=> x>=y <=> mx.nd.greater_equal(x, y)|
+| [*NDArray.__eq__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__eq__) |  x.__eq__(y) <=> x==y <=> mx.nd.equal(x, y) |
+| [*NDArray.__ne__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ne__) |  x.__ne__(y) <=> x!=y <=> mx.nd.not_equal(x, y) |
+
+The current workaround is to use corecponding broadcast operators for arithmetic and comparison to avoid potential hybridization failure when input shapes are different.
+
+| Symbol APIs  | Description  |
+|---|---|
+|[*broadcast_add*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_add) | Returns element-wise sum of the input arrays with broadcasting. |
+|[*broadcast_sub*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_sub) | Returns element-wise difference of the input arrays with broadcasting. |
+|[*broadcast_mul*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_mul) | Returns element-wise product of the input arrays with broadcasting. |
+|[*broadcast_div*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_div) | Returns element-wise division of the input arrays with broadcasting. |
+|[*broadcast_mod*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_mod) | Returns element-wise modulo of the input arrays with broadcasting. |
+|[*broadcast_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_equal) | Returns the result of element-wise *equal to* (==) comparison operation with broadcasting. |
+|[*broadcast_not_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_not_equal) | Returns the result of element-wise *not equal to* (!=) comparison operation with broadcasting. |
+|[*broadcast_greater*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_greater) | Returns the result of element-wise *greater than* (>) comparison operation with broadcasting. |
+|[*broadcast_greater_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_greater_equal) | Returns the result of element-wise *greater than or equal to* (>=) comparison operation with broadcasting. |
+|[*broadcast_lesser*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser) |	Returns the result of element-wise *lesser than* (<) comparison operation with broadcasting. |
+|[*broadcast_lesser_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser_equal) | Returns the result of element-wise *lesser than or equal to* (<=) comparison operation with broadcasting. |
+
+For example, if you wan to add a NDarray to your input x, use `broadcast_add` instead of `+`:
+
+```python
+def hybrid_forward(self, F, x):
+    # avoid writting: return x + F.ones((1, 1))
+    return F.broadcast_add(x, F.ones((1, 1)))
+```
+
+### Shape
+
+Gluon's imperative interface is very flexible and allows you to print shape of the NDArray. However, Symbol does not have shape attributes. As a result, you need to avoid printing shapes in `hybrid_forward`.
+Otherwise, you will get the following error:
+```bash
+AttributeError: 'Symbol' object has no attribute 'shape'
+```
+
+### Slice
+[] in NDArray is to get a slice from the array. [] in Symbol is to get an output from a grouped symbol.
+For example, you will get different result for the following method before and after hybridization.
+
+```python
+def hybrid_forward(self, F, x):
+    return x[0]
+```
+
+The current workaround is explicitly call [`slice`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.slice) operators in `hybrid_forwar`d.
+
+
+### Not implemented operators
+
+Some of the often used operators in NDArray  are not implemented in Symbol, and will cause hybridization failure
+
+#### Array API
+
+mx.nd.array() is used a lot but Symbol does not have the array API. The current workaround is to use F.ones/ F.zeros/ F.full which exists in both NDArrays and Symbols.
+
+#### In-Place Arithmetic Operators
+
+In place arithmetic operators are also used a lot in Gluon imperative mode. You need to avoid that and write the operations explicitly in `hybrid_forward`.
+For example, avoid `x += y` and use `x  = x + y`, other wise you will get `NotImplementedError`.
+
+| NDArray in-place arithmetic operators | Description |
+|---|---|
+|[*NDArray.__iadd__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__iadd__) |	x.__iadd__(y) <=> x+=y |
+|[*NDArray.__isub__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__isub__) |	x.__isub__(y) <=> x-=y |
+|[*NDArray.__imul__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imul__) |	x.__imul__(y) <=> x*=y |
+|[*NDArray.__idiv__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__idiv__) |	x.__rdiv__(y) <=> x/=y |
+|[*NDArray.__imod__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imod__) |	x.__rmod__(y) <=> x%=y |
+
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
