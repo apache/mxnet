@@ -353,13 +353,13 @@ class UnaryOp : public OpBase {
   }
 
 #if MSHADOW_USE_MKL == 1
-#define MKLLOG(fname, DType) \
-static void MKLLog(size_t size, const DType* pIn, DType* pOut) { \
-  fname(size, pIn, pOut); \
+static inline void MKL_Log(int size, const float* pIn, float* pOut) {
+  vsLn(size, pIn, pOut);
 }
 
-MKLLOG(vsLn, float)
-MKLLOG(vdLn, double)
+static inline void MKL_Log(int size, const double* pIn, double* pOut) {
+  vdLn(size, pIn, pOut);
+}
 #endif
 
   template<typename xpu, typename OP>
@@ -376,7 +376,7 @@ MKLLOG(vdLn, double)
     if (req[0] == kWriteTo && (type_flag == mshadow::kFloat32
           || type_flag == mshadow::kFloat64)) {
       MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
-        MKLLog(inputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+        MKL_Log(inputs[0].Size(), inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
       })
     } else {
       Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
