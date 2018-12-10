@@ -2316,8 +2316,8 @@ def test_reshape_backward_fallback():
     in which x is a sparse tensor.
     Due to sparse gradient optimization in sym.dot, grad(w_x) is sparse.
     Though sym.reshape itself does not have sparse version,
-    if we somehow make grad(w) sparse as well,
-        - here by setting args_grad;
+    if we somehow make grad(w) sparse as well, e.g.,
+        - by setting args_grad in symbol.bind
         - or, we can have out_y = sym.dot(sparse_y, w), then grad(w) will be inferred as sparse
     reshape backward (from w_x to w) needs to understand how to handle sparse inputs.
     """
