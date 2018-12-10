@@ -106,8 +106,8 @@ def multiply(attrs, inputs, proto_obj):
                 op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
                                                             broadcast_axis, proto_obj)
                 return op_value, new_attr, inputs
-        else:
-            return 'broadcast_mul', attrs, inputs
+            else:
+                return 'broadcast_mul', attrs, inputs
     return 'broadcast_mul', new_attr, inputs
 
 def divide(attrs, inputs, proto_obj):
