@@ -31,9 +31,8 @@ We will use the [Oxford 102 Category Flower Dateset](http://www.robots.ox.ac.uk/
 
 ```python
 data_util_file = "oxford_102_flower_dataset.py" 
-# TODO change base_url to apache/incubator-mxnet, used fork url for testing in CI
-base_url = "https://raw.githubusercontent.com/roywei/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
-#mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
+base_url = "https://raw.githubusercontent.com/roywei/incubator-mxnet/gluon_tutorial/docs/tutorial_utils/data/{}?raw=true"
+mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
 import oxford_102_flower_dataset
 
 # download and move data to train, test, valid folders
