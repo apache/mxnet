@@ -15,13 +15,12 @@
 ;; limitations under the License.
 ;;
 
-(defproject tutorial "0.1.0-SNAPSHOT"
-  :description "MXNET tutorials"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+(ns rnn.core_test
+ (:require 
+ 	[rnn.test-char-rnn :as rnn]
+ 	[clojure.test :refer :all]))
 
-                 ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
+(deftest check-trained-network
+	(is (= 
+		"The joke that we can start by the challenges of the American people. The American people have been talking about how to compete with the streets of San Antonio who the courage to come together as one "
+	 (rnn/rnn-test "data/obama" 75 200 false))))

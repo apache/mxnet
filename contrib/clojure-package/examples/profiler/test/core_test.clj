@@ -15,13 +15,17 @@
 ;; limitations under the License.
 ;;
 
-(defproject tutorial "0.1.0-SNAPSHOT"
-  :description "MXNET tutorials"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+(ns core_test
+ (:require 
+ 	[profiler.core :as profiler]
+ 	[clojure.java.io :as io]
+ 	[clojure.test :refer :all]))
 
-                 ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
+(defn count-lines[file]
+	(count (line-seq (io/reader (io/as-file file)))))
+
+(deftest run-profiler
+	(profiler/run)
+	(let [new-file (clojure.java.io/as-file profiler/profiler-name)]
+		(is (.exists new-file))
+		(is (> 10000 (- (System/currentTimeMillis) (.lastModified new-file))))))

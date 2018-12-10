@@ -14,14 +14,16 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 ;;
+(ns mnist-mlp-test
+	(:require 
+		[mnist-mlp :refer :all]
+		[org.apache.clojure-mxnet.context :as context]
+		[clojure.test :refer :all]))
 
-(defproject tutorial "0.1.0-SNAPSHOT"
-  :description "MXNET tutorials"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
-
-                 ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
+(deftest run-those-tests
+	(let [devs [(context/cpu)]]
+	  (run-intermediate-level-api :devs devs)
+	  (run-intermediate-level-api :devs devs :load-model-epoch (dec num-epoch))
+	  (run-high-level-api devs)
+	  (run-prediction-iterator-api devs)
+	  (run-predication-and-calc-accuracy-manually devs)))
