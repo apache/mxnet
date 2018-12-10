@@ -213,6 +213,7 @@ It is recommended to set environment variable NCCL_LAUNCH_MODE to PARALLEL when 
 For example, you can specify using all cores on Linux as follows:
 
 ```bash
+mkdir build && cd build
 cmake -GNinja .
 ninja -v
 ```
@@ -222,6 +223,7 @@ ninja -v
 * Build MXNet with `cmake` and install with MKL DNN, GPU, and OpenCV support:
 
 ```bash
+mkdir build && cd build
 cmake -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -DUSE_MKLDNN=1 -GNinja .
 ninja -v
 ```
@@ -230,6 +232,7 @@ ninja -v
 * Build with both OpenBLAS, GPU, and OpenCV support:
 
 ```bash
+mkdir build && cd build
 cmake -DBLAS=open -DUSE_CUDA=1 -DUSE_CUDA_PATH=/usr/local/cuda -DUSE_CUDNN=1 -GNinja .
 ninja -v
 ```
@@ -238,6 +241,7 @@ ninja -v
 * Build MXNet with `cmake` and install with MKL DNN, and OpenCV support:
 
 ```bash
+mkdir build && cd build
 cmake -DUSE_CUDA=0 -DUSE_MKLDNN=1 -GNinja .
 ninja -v
 ```
@@ -246,6 +250,7 @@ ninja -v
 * Build MXNet with `cmake` and install with OpenBLAS and OpenCV support:
 
 ```bash
+mkdir build && cd build
 cmake -DUSE_CUDA=0 -DBLAS=open -GNinja .
 ninja -v
 ```
@@ -255,6 +260,7 @@ ninja -v
 * Build without using OpenCV:
 
 ```bash
+mkdir build && cd build
 cmake -DUSE_OPENCV=0 -GNinja .
 ninja -v
 ```
@@ -262,6 +268,7 @@ ninja -v
 * Build on **macOS** with the default BLAS library (Apple Accelerate) and Clang installed with `xcode` (OPENMP is disabled because it is not supported by the Apple version of Clang):
 
 ```bash
+mkdir build && cd build
 cmake -DBLAS=apple -DUSE_OPENCV=0 -DUSE_OPENMP=0 -GNinja .
 ninja -v
 ```
@@ -270,6 +277,7 @@ ninja -v
 
 ```bash
 brew install llvm
+mkdir build && cd build
 cmake -DBLAS=apple -DUSE_OPENMP=1 -GNinja .
 ninja -v
 ```
