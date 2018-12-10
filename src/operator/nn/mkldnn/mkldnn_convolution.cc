@@ -71,7 +71,8 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
     padding[0] = param.conv_param.pad[0];
     padding[1] = param.conv_param.pad[1];
   } else {
-    LOG(FATAL) << "MKL-DNN currently supports 1d and 2d convolution";
+    LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size "
+               << param.conv_param.kernel.ndim() << ", supporting only 1 or 2.";
   }
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
@@ -133,7 +134,9 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
       dilates[0] = param.conv_param.dilate[0] - 1;
       dilates[1] = param.conv_param.dilate[1] - 1;
     } else {
-      LOG(FATAL) << "MKL-DNN currently supports 1d and 2d convolution";
+      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
+                 << param.conv_param.dilate.ndim()
+                 << ", supporting only 1 or 2.";
     }
     if (bias == nullptr) {
       mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct,
@@ -187,7 +190,8 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
   } else {
-    LOG(FATAL) << "MKL-DNN currently supports 1d and 2d convolution";
+    LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size " << param.kernel.ndim()
+               << ", supporting only 1 or 2.";
   }
 
   // MKL-DNN introduced padded formats since 0.15 which require more memory
@@ -213,7 +217,8 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
       dilates[0] = param.dilate[0] - 1;
       dilates[1] = param.dilate[1] - 1;
     } else {
-      LOG(FATAL) << "MKL-DNN currently supports 1d and 2d convolution";
+      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
+                 << param.dilate.ndim() << ", supporting only 1 or 2.";
     }
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, dilates, padding, padding,
@@ -253,7 +258,8 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
   } else {
-    LOG(FATAL) << "MKL-DNN currently supports 1d and 2d convolution";
+    LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size " << param.kernel.ndim()
+               << ", supporting only 1 or 2.";
   }
 
   // MKL-DNN introduced padded formats since 0.15 which require more memory
@@ -291,7 +297,8 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
       dilates[0] = param.dilate[0] - 1;
       dilates[1] = param.dilate[1] - 1;
     } else {
-      LOG(FATAL) << "MKL-DNN currently supports 1d and 2d convolution";
+      LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
+                 << param.dilate.ndim() << ", supporting only 1 or 2.";
     }
     if (bias == nullptr) {
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,

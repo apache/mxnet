@@ -241,34 +241,35 @@ const mkldnn::memory *GetWeights(const NDArray &arr,
   mkldnn::memory::dims tz = mkldnn::memory::dims{0};
   mkldnn::memory::format format = mkldnn::memory::format::format_undef;
   auto engine = CpuEngine::Get()->get_engine();
+  const int O = 0, I = 1, H = 2, W = 3;
   if (arr.shape().ndim() == 2) {
-    tz = mkldnn::memory::dims{static_cast<int>(arr.shape()[0]),
-                              static_cast<int>(arr.shape()[1])};
+    tz = mkldnn::memory::dims{static_cast<int>(arr.shape()[O]),
+                              static_cast<int>(arr.shape()[I])};
     format = mkldnn::memory::format::oi;
   } else if (arr.shape().ndim() == 3) {
     tz = num_groups > 1
              ? mkldnn::memory::dims{num_groups,
-                                    static_cast<int>(arr.shape()[0] /
+                                    static_cast<int>(arr.shape()[O] /
                                                      num_groups),
-                                    static_cast<int>(arr.shape()[1]),
-                                    static_cast<int>(arr.shape()[2])}
-             : mkldnn::memory::dims{static_cast<int>(arr.shape()[0]),
-                                    static_cast<int>(arr.shape()[1]),
-                                    static_cast<int>(arr.shape()[2])};
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H])}
+             : mkldnn::memory::dims{static_cast<int>(arr.shape()[O]),
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H])};
     format = num_groups > 1 ? mkldnn::memory::format::goiw
                             : mkldnn::memory::format::oiw;
   } else if (arr.shape().ndim() == 4) {
     tz = num_groups > 1
              ? mkldnn::memory::dims{num_groups,
-                                    static_cast<int>(arr.shape()[0] /
+                                    static_cast<int>(arr.shape()[O] /
                                                      num_groups),
-                                    static_cast<int>(arr.shape()[1]),
-                                    static_cast<int>(arr.shape()[2]),
-                                    static_cast<int>(arr.shape()[3])}
-             : mkldnn::memory::dims{static_cast<int>(arr.shape()[0]),
-                                    static_cast<int>(arr.shape()[1]),
-                                    static_cast<int>(arr.shape()[2]),
-                                    static_cast<int>(arr.shape()[3])};
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H]),
+                                    static_cast<int>(arr.shape()[W])}
+             : mkldnn::memory::dims{static_cast<int>(arr.shape()[O]),
+                                    static_cast<int>(arr.shape()[I]),
+                                    static_cast<int>(arr.shape()[H]),
+                                    static_cast<int>(arr.shape()[W])};
     format = num_groups > 1 ? mkldnn::memory::format::goihw
                             : mkldnn::memory::format::oihw;
   } else {
