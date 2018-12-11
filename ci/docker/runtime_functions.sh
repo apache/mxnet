@@ -677,7 +677,7 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
-        -DBUILD_CYTHON_MODULES                  \
+        -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
 
