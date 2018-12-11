@@ -645,7 +645,6 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 
   if (req == kWriteTo) {
     // backwards test performed same time since output needed
-
     backwards_input[0] = outputs[0];  // output grad
     backwards_input[1] = inputs[0];  // input
     backwards_input[2] = outputs[1];  // out norm
@@ -896,7 +895,7 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       // If the array is a view, we shouldn't write data to it.
       if (in_arr.arr.IsView())
-        continue;
+          continue;
 
       NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -920,8 +919,6 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     }
   }
 }
-
-
 
 // Computes second dimension of FC weight matrix based on input shape
 uint32_t GetFCWeightDim2(const nnvm::TShape arr) {
