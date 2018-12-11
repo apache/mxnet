@@ -670,14 +670,15 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 
     for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
       auto tmp_output = in_arr.arr;
+      if (tmp_output.IsMKLDNNData() && tmp_output.IsView()) {
+        tmp_output = tmp_output.Reorder2Default();
+      }
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
-      if (in_arr.arr.IsMKLDNNData() && !in_arr.arr.IsView()) {
-        backwards_mem.emplace_back(backwards_buffer.back().GetMKLDNNData());
-        backwards2_mem.emplace_back(backwards_buffer2.back().GetMKLDNNData());
-        backwards_buffer.back().CopyFrom(*backwards_mem.back());
-        backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
-      }
+      backwards_mem.emplace_back(backwards_buffer.back().GetMKLDNNData());
+      backwards2_mem.emplace_back(backwards_buffer2.back().GetMKLDNNData());
+      backwards_buffer.back().CopyFrom(*backwards_mem.back());
+      backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
       backwards_outputs[i] = &backwards_buffer.back();
       backwards_ex_outputs[i] = &backwards_buffer2.back();
     }
@@ -742,14 +743,16 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         inputs2_mem.clear();
 
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
-          inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
-          if (in_arr.arr.IsMKLDNNData() && !in_arr.arr.IsView()) {
-            inputs_mem.emplace_back(in_arr.arr.GetMKLDNNData());
-            inputs2_mem.emplace_back(in_arr.arr.GetMKLDNNData());
-            inputs_buffer.back().CopyFrom(*inputs_mem.back());
-            inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
+          auto tmp = in_arr.arr;
+          if (tmp.IsMKLDNNData() && tmp.IsView()) {
+            tmp = tmp.Reorder2Default();
           }
+          inputs_buffer.emplace_back(tmp.Copy(Context()));
+          inputs2_buffer.emplace_back(tmp.Copy(Context()));
+          inputs_mem.emplace_back(tmp.GetMKLDNNData());
+          inputs2_mem.emplace_back(tmp.GetMKLDNNData());
+          inputs_buffer.back().CopyFrom(*inputs_mem.back());
+          inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
         }
