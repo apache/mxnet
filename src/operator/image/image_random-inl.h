@@ -102,7 +102,7 @@ void ToTensor(const nnvm::NodeAttrs &attrs,
     const int batch_size = inputs[0].shape_[0];
     const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
     const int channel = inputs[0].shape_[3];
-    const int step = channel*length;
+    const int step = channel * length;
 
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {

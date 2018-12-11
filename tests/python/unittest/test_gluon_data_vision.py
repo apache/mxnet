@@ -40,7 +40,7 @@ def test_to_tensor():
         data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
     
     # Invalid Input
-    invalid_data_in = nd.array(np.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8))
+    invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)
     transformer = transforms.ToTensor()
     assertRaises(MXNetError, transformer, invalid_data_in)
 
@@ -71,12 +71,12 @@ def test_normalize():
     assert_almost_equal(data_expected_4d, out_nd_4d.asnumpy())
 
     # Invalid Input - Neither 3D or 4D input
-    invalid_data_in = nd.array(np.random.uniform(0, 1, (5, 5, 3, 300, 300)).astype(dtype=np.float32))
+    invalid_data_in = nd.random.uniform(0, 1, (5, 5, 3, 300, 300)).astype(dtype=np.float32)
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
     # Invalid Input - Channel neither 1 or 3
-    invalid_data_in = nd.array(np.random.uniform(0, 1, (5, 4, 300, 300)).astype(dtype=np.float32))
+    invalid_data_in = nd.random.uniform(0, 1, (5, 4, 300, 300)).astype(dtype=np.float32)
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
