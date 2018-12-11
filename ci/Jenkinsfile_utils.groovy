@@ -173,9 +173,17 @@ def update_github_commit_status(state, message) {
     //properly and you would see an empty list of repos:
     //[Set GitHub commit status (universal)] PENDING on repos [] (sha:xxxxxxx) with context:test/mycontext
     //See https://cwiki.apache.org/confluence/display/MXNET/Troubleshooting#Troubleshooting-GitHubcommit/PRstatusdoesnotgetpublished
+
+    echo "Publishing commit status..."
+
     repoUrl = get_repo_url()
+    echo "repoUrl=${repoUrl}"
+
     commitSha = get_git_commit_hash()
+    echo "commitSha=${commitSha}"
+    
     context = get_github_context()
+    echo "context=${context}"
 
     step([
       $class: 'GitHubCommitStatusSetter',
@@ -189,6 +197,9 @@ def update_github_commit_status(state, message) {
         results: [[$class: "AnyBuildResult", message: message, state: state]]
       ]
     ])
+
+    echo "Publishing commit status done."
+
   }
 }
 
