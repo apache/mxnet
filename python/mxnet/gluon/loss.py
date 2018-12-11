@@ -242,13 +242,13 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
             # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
-            if pos_weight == None:
+            if pos_weight is None:
                 loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
             else:
                 log_weight = 1 + (pos_weight - 1) * label
                 loss = pred - pred*label + log_weight*(F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
         else:
-            if pos_weight == None:
+            if pos_weight is None:
                 loss = -(F.log(pred+1e-12)*label + F.log(1.-pred+1e-12)*(1.-label))
             else:
                 loss = -(F.log(pred+1e-12)*label*pos_weight + F.log(1.-pred+1e-12)*(1.-label))
