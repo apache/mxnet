@@ -21,7 +21,7 @@
 from ._op_translations import identity, random_uniform, random_normal
 from ._op_translations import add, subtract, multiply, divide, absolute, negative, add_n
 from ._op_translations import tanh, arccos, arcsin, arctan, _cos, _sin, _tan
-from ._op_translations import softplus, shape, gather, lp_pooling
+from ._op_translations import softplus, shape, gather, lp_pooling, size
 from ._op_translations import ceil, floor, hardsigmoid, global_lppooling
 from ._op_translations import concat
 from ._op_translations import leaky_relu, _elu, _prelu, _selu, softmax, fully_connected
@@ -139,6 +139,7 @@ _convert_map = {
     'Softplus'          : softplus,
     'Tan'               : _tan,
     'Shape'             : shape,
+    'Size'              : size,
     'Gather'            : gather,
     'HardSigmoid'       : hardsigmoid,
     'LpPool'            : lp_pooling,
