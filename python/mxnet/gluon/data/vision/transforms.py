@@ -244,7 +244,7 @@ class CenterCrop(Block):
 
 
 class Resize(HybridBlock):
-    """Resize an image to the given size.
+    """Resize an image or a batch of image NDArray to the given size.
     Should be applied before `mxnet.gluon.data.vision.transforms.ToTensor`.
 
     Parameters
@@ -260,10 +260,10 @@ class Resize(HybridBlock):
 
 
     Inputs:
-        - **data**: input tensor with (Hi x Wi x C) shape.
+        - **data**: input tensor with (Hi x Wi x C) or (N x H x W x C) shape.
 
     Outputs:
-        - **out**: output tensor with (H x W x C) shape.
+        - **out**: output tensor with (H x W x C) or (N x H x W x C) shape.
 
     Examples
     --------

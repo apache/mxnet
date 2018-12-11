@@ -163,15 +163,19 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
       "if size is give as an integer.");
     DMLC_DECLARE_FIELD(interp)
     .set_default(1)
-    .describe("Interpolation method for resizing. By default uses bilinear"
-        "interpolation. See OpenCV's resize function for available choices.");
+    .describe("Interpolation method for resizing. By default uses bilinear interpolation"
+        "Options are INTER_NEAREST - a nearest-neighbor interpolation"
+        "INTER_LINEAR - a bilinear interpolation"
+        "INTER_AREA - resampling using pixel area relation"
+        "INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood"
+        "INTER_LANCZOS4 - a Lanczos interpolation over 8x8 pixel neighborhood");
   }
 };
 
 inline std::tuple<int, int> GetHeightAndWidth(int data_h,
                                               int data_w,
                                               const ResizeParam& param) {
-  CHECK_LE(param.size.ndim(), 2)
+  CHECK((param.size.ndim() == 1) || (param.size.ndim() == 2))
       << "Input size dimension must be 1 or 2, but got "
       << param.size.ndim();
   int resized_h;
@@ -194,11 +198,11 @@ inline std::tuple<int, int> GetHeightAndWidth(int data_h,
     }
   } else {
     CHECK_GT(param.size[0], 0)
-      << "Input width should greater than 0, but got "
-      << param.size[0];
+        << "Input width should greater than 0, but got "
+        << param.size[0];
     CHECK_GT(param.size[1], 0)
-      << "Input height should greater than 0, but got "
-      << param.size[1];
+        << "Input height should greater than 0, but got "
+        << param.size[1];
     resized_h = param.size[1];
     resized_w = param.size[0];
   }
@@ -236,6 +240,7 @@ void ResizeImpl(const std::vector<TBlob> &inputs,
                       const int output_index = 0) {
 #if MXNET_USE_OPENCV
   CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "image resize doesn't support fp16";
+  // mapping to opencv matrix element type according to channel
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
