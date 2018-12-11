@@ -1,37 +1,63 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 /*!
- * \file quadratic_op.cu
- * \brief GPU Implementation of quadratic op
- */
-#include "./gradient_cancel-inl.h"
+ * Copyright (c) 2016 by Contributors
+ * \file q_fully_connected.cu
+ * \brief Quantized FC operator
+ * \author HPI-DeepLearning
+*/
+#include "./q_fully_connected-inl.h"
+#include <mshadow/tensor.h>
+
+namespace mshadow {
+
+  inline void QFullyConnectedForward(int m, int n, int k,
+                                     const Tensor<gpu, 2, float> &data,
+                                     Tensor<gpu, 1, float> &workspace,
+                                     mxnet::op::xnor_cpu::BINARY_WORD* wmat_binarized,
+                                     Tensor<gpu, 2, float> &out) {
+    CHECK(false) << "cuda with pre-binarized weights not implemented";
+  }
+
+  inline void QFullyConnectedForward(int m, int n, int k,
+                                     const Tensor<gpu, 2, float> &data,
+                                     Tensor<gpu, 1, float> &workspace,
+                                     const Tensor<gpu, 2, float> &wmat,
+                                     Tensor<gpu, 2, float> &out) {
+    // !deprecated! will be removed later
+    //cuda::QFullyConnectedForward(data, wmat, out);
+  }
+
+  template<typename DType>
+  inline void QFullyConnectedForward(int m, int n, int k,
+                                     const Tensor<gpu, 2, DType> &data,
+                                     Tensor<gpu, 1, DType> &workspace,
+                                     mxnet::op::xnor_cpu::BINARY_WORD* wmat_binarized,
+                                     Tensor<gpu, 2, DType> &out) {
+    CHECK(false) << "only float supported";
+  }
+
+  template<typename DType>
+  inline void QFullyConnectedForward(int m, int n, int k,
+                                     const Tensor<gpu, 2, DType> &data,
+                                     Tensor<gpu, 1, DType> &workspace,
+                                     const Tensor<gpu, 2, DType> &wmat,
+                                     Tensor<gpu, 2, DType> &out) {
+    CHECK(false) << "only float supported";
+  }
+} // namespace mshadow
+
 
 namespace mxnet {
 namespace op {
-
-NNVM_REGISTER_OP(_contrib_gradcancel)
-.set_attr<FComputeEx>("FComputeEx<gpu>", GradCancelOpForwardEx<gpu>)
-.set_attr<FCompute>("FCompute<gpu>", GradCancelOpForward<gpu>);
-
-NNVM_REGISTER_OP(_contrib_backward_gradcancel)
-.set_attr<FCompute>("FCompute<gpu>", GradCancelOpBackward<gpu>);
-
+template<>
+Operator* CreateOp<gpu>(QFullyConnectedParam param, int dtype,
+                        std::vector<TShape> *in_shape,
+                        std::vector<TShape> *out_shape,
+                        Context ctx) {
+  Operator *op = NULL;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new QFullyConnectedOp<gpu, DType>(param);
+  })
+  return op;
+}
 }  // namespace op
 }  // namespace mxnet
