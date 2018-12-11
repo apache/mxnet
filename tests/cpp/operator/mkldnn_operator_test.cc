@@ -643,6 +643,9 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
   std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
   std::vector<NDArray> backwards_buffer2(backwards_attrs.num_outputs);
 
+  std::vector<const mkldnn::memory*> backwards_mem(backwards_attrs.num_outputs);
+  std::vector<const mkldnn::memory*> backwards2_mem(backwards_attrs.num_outputs);
+
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
@@ -669,8 +672,12 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
       auto tmp_output = in_arr.arr;
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
-      backwards_buffer.back().CopyFrom(*tmp_output.GetMKLDNNData());
-      backwards_buffer2.back().CopyFrom(*tmp_output.GetMKLDNNData());
+      if (in_arr.arr.IsMKLDNNData()) {
+        backwards_mem.emplace_back(tmp_output.GetMKLDNNData());
+        backwards2_mem.emplace_back(tmp_output.GetMKLDNNData());
+        backwards_buffer.back().CopyFrom(*backwards_mem.back());
+        backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
+      }
       backwards_outputs[i] = &backwards_buffer.back();
       backwards_ex_outputs[i] = &backwards_buffer.back();
     }
