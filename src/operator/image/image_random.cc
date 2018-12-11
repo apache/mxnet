@@ -33,6 +33,7 @@ namespace op {
 namespace image {
 
 DMLC_REGISTER_PARAMETER(NormalizeParam);
+DMLC_REGISTER_PARAMETER(ResizeParam);
 DMLC_REGISTER_PARAMETER(RandomEnhanceParam);
 DMLC_REGISTER_PARAMETER(AdjustLightingParam);
 DMLC_REGISTER_PARAMETER(RandomLightingParam);

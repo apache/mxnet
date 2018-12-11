@@ -26,14 +26,21 @@
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
 
-#include <mxnet/base.h>
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <limits>
+<<<<<<< HEAD
+=======
+#include <tuple>
+>>>>>>> add image resize operator and unit test
 #include <utility>
+#include <vector>
+#include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace op {
@@ -291,6 +298,140 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {
       NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req, param, length, channel, n*step);
+    }
+  }
+}
+
+struct ResizeParam : public dmlc::Parameter<ResizeParam> {
+  nnvm::Tuple<int> size;
+  bool keep_ratio;
+  int interp;
+  DMLC_DECLARE_PARAMETER(ResizeParam) {
+    DMLC_DECLARE_FIELD(size)
+    .set_default(nnvm::Tuple<int>())
+    .describe("Size of new image. Could be (width, height) or (size)");
+    DMLC_DECLARE_FIELD(keep_ratio)
+    .describe("Whether to resize the short edge or both edges to `size`, "
+      "if size is give as an integer.");
+    DMLC_DECLARE_FIELD(interp)
+    .set_default(1)
+    .describe("Interpolation method for resizing. By default uses bilinear"
+        "interpolation. See OpenCV's resize function for available choices.");
+  }
+};
+
+inline std::tuple<int, int> GetHeightAndWidth(int data_h,
+                                              int data_w,
+                                              const ResizeParam& param) {
+  CHECK_LE(param.size.ndim(), 2)
+      << "Input size dimension must be 1 or 2, but got "
+      << param.size.ndim();
+  int resized_h;
+  int resized_w;
+  if (param.size.ndim() == 1) {
+    CHECK_GT(param.size[0], 0)
+      << "Input size should greater than 0, but got "
+      << param.size[0];
+    if (!param.keep_ratio) {
+      resized_h = param.size[0];
+      resized_w = param.size[0];
+    } else {
+      if (data_h > data_w) {
+        resized_w = param.size[0];
+        resized_h = static_cast<int>(data_h * resized_w / data_w);
+      } else {
+        resized_h = param.size[0];
+        resized_w = static_cast<int>(data_w * resized_h / data_h);
+      }
+    }
+  } else {
+    CHECK_GT(param.size[0], 0)
+      << "Input width should greater than 0, but got "
+      << param.size[0];
+    CHECK_GT(param.size[1], 0)
+      << "Input height should greater than 0, but got "
+      << param.size[1];
+    resized_h = param.size[1];
+    resized_w = param.size[0];
+  }
+
+  return std::make_tuple(resized_h, resized_w);
+}
+
+bool ResizeShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  // the input attrs should only be (h, w, c) or (n, h, w, c)                             
+  CHECK_LE(in_attrs->at(0).ndim(), 4U);
+  CHECK_GE(in_attrs->at(0).ndim(), 3U);
+  const auto& ishape = (*in_attrs)[0];
+  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+  std::tuple<int, int> t;
+  if (ishape.ndim() == 3) {
+    t = GetHeightAndWidth(ishape[0], ishape[1], param);
+    out_attrs->clear();
+    out_attrs->push_back(mshadow::Shape3(std::get<0>(t), std::get<1>(t), ishape[2]));
+  } else {
+    t = GetHeightAndWidth(ishape[1], ishape[2], param);
+    out_attrs->clear();
+    out_attrs->push_back(mshadow::Shape4(ishape[0], std::get<0>(t), std::get<1>(t), ishape[3]));
+  }
+  return true;
+}
+
+void ResizeImpl(const std::vector<TBlob> &inputs,
+                      const std::vector<TBlob> &outputs,
+                      const int height,
+                      const int width,
+                      const int interp,
+                      const int input_index = 0,
+                      const int output_index = 0) {
+#if MXNET_USE_OPENCV
+  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "image resize doesn't support fp16";
+  const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
+  if (inputs[0].ndim() == 3) {
+    int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
+    cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
+    cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
+    cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
+    CHECK(!dst.empty());
+    CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
+  } else {
+    int length = inputs[0].shape_[0] * inputs[0].shape_[1] *inputs[0].shape_[2] * inputs[0].shape_[3];
+    auto input = inputs[0].dptr<float>();
+    int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      cv::Mat buf(inputs[0].shape_[1], inputs[0].shape_[2], cv_type, inputs[0].dptr<DType>() + input_index);
+      cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type, outputs[0].dptr<DType>() + output_index);
+      cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
+      CHECK(!dst.empty());
+      CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr<DType>() + output_index);
+    });
+  }
+#else
+  LOG(FATAL) << "Build with USE_OPENCV=1 for image resize operator.";
+#endif  // MXNET_USE_OPENCV
+}
+
+void Resize(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  CHECK_EQ(outputs.size(), 1U);
+  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+  std::tuple<int, int> t;
+  if (inputs[0].ndim() == 3) {
+    t = GetHeightAndWidth(inputs[0].shape_[0], inputs[0].shape_[1], param);
+    ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp);
+  } else {
+    t = GetHeightAndWidth(inputs[0].shape_[1], inputs[0].shape_[2], param);
+    const auto batch_size = inputs[0].shape_[0];
+    const auto input_step = inputs[0].shape_[1] * inputs[0].shape_[2] * inputs[0].shape_[3];
+    const auto output_step = std::get<0>(t) * std::get<1>(t) * inputs[0].shape_[3];
+    #pragma omp parallel for
+    for (auto i = 0;i < batch_size; ++i) {
+      ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp, i * input_step, i * output_step);
     }
   }
 }
