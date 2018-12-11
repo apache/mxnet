@@ -480,6 +480,20 @@ build_ubuntu_cpu_mkldnn() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkldnn_mkl() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
+        USE_MKLDNN=1                  \
+        -j$(nproc)
+}
+
 build_ubuntu_gpu() {
     build_ubuntu_gpu_cuda91_cudnn7
 }

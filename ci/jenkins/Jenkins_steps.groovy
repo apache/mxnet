@@ -135,6 +135,20 @@ def compile_unix_mkldnn_cpu() {
     }]
 }
 
+def compile_unix_mkldnn_mkl_cpu() {
+    return ['CPU: MKLDNN_MKL': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-mkldnn-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
+            utils.pack_lib('mkldnn_mkl_cpu', mx_mkldnn_lib, true)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_mkldnn_gpu() {
     return ['GPU: MKLDNN': {
       node(NODE_LINUX_CPU) {
@@ -654,6 +668,41 @@ def test_unix_python3_mkldnn_cpu() {
         ws('workspace/ut-python3-mkldnn-cpu') {
           try {
             utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
+            python3_ut_mkldnn('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
+            utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python2_mkldnn_mkl_cpu() {
+    return ['Python2: MKLDNN-MKL-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python2-mkldnn-mkl-cpu') {
+          try {
+            utils.unpack_and_init('mkldnn_mkl_cpu', mx_mkldnn_lib, true)
+            python2_ut('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
+            utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
+            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_mkldnn_cpu_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_mkldnn_mkl_cpu() {
+    return ['Python3: MKLDNN-MKL-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-mkldnn-mkl-cpu') {
+          try {
+            utils.unpack_and_init('mkldnn_mkl_cpu', mx_mkldnn_lib, true)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
