@@ -595,8 +595,9 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   }
 
   test("Generated api") {
+    import org.apache.mxnet.util.SomeConversion._
     val arr = NDArray.ones(Shape(1, 2), dtype = DType.Float64)
-    NDArray.api.norm(arr, Some(0), out = arr)
+    NDArray.api.norm(arr, ord = 0, out = arr)
     val result = NDArray.api.dot(arr, arr)
   }
 }
