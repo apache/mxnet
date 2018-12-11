@@ -96,17 +96,20 @@ class Cast(HybridBlock):
 
 
 class ToTensor(HybridBlock):
-    """Converts an image NDArray to a tensor NDArray.
+    """Converts an image NDArray or batch of image NDArray to a tensor NDArray.
 
     Converts an image NDArray of shape (H x W x C) in the range
     [0, 255] to a float32 tensor NDArray of shape (C x H x W) in
     the range [0, 1).
 
+    If batch input, converts a batch image NDArray of shape (N x H x W x C) in the 
+    range [0, 255] to a float32 tensor NDArray of shape (N x C x H x W).
+
     Inputs:
-        - **data**: input tensor with (H x W x C) shape and uint8 type.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
 
     Examples
     --------
@@ -135,7 +138,7 @@ class ToTensor(HybridBlock):
 
 
 class Normalize(HybridBlock):
-    """Normalize an tensor of shape (C x H x W) with mean and
+    """Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
     standard deviation.
 
     Given mean `(m1, ..., mn)` and std `(s1, ..., sn)` for `n` channels,
@@ -154,10 +157,29 @@ class Normalize(HybridBlock):
 
 
     Inputs:
-        - **data**: input tensor with (C x H x W) shape.
+        - **data**: input tensor with (C x H x W) or (N x C x H x W) shape.
 
     Outputs:
         - **out**: output tensor with the shape as `data`.
+    
+    Examples
+    --------
+    >>> transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
+    >>> image = mx.nd.random.uniform(0, 1, (3, 4, 2))
+    >>> transformer(image)
+    [[[ 0.18293785  0.19761486]
+      [ 0.23839645  0.28142193]
+      [ 0.20092112  0.28598186]
+      [ 0.18162774  0.28241724]]
+     [[-0.2881726  -0.18821815]
+      [-0.17705294 -0.30780914]
+      [-0.2812064  -0.3512327 ]
+      [-0.05411351 -0.4716435 ]]
+     [[-1.0363373  -1.7273437 ]
+      [-1.6165586  -1.5223348 ]
+      [-1.208275   -1.1878313 ]
+      [-1.4711051  -1.5200229 ]]]
+    <NDArray 3x4x2 @cpu(0)>
     """
     def __init__(self, mean, std):
         super(Normalize, self).__init__()
