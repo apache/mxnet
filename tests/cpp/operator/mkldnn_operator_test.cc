@@ -675,8 +675,8 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
     for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
-      backwards_mem.emplace_back(backwards_buffer.back().GetMKLDNNData());
-      backwards2_mem.emplace_back(backwards_buffer2.back().GetMKLDNNData());
+      backwards_mem.emplace_back(tmp_output.GetMKLDNNData());
+      backwards2_mem.emplace_back(tmp_output.GetMKLDNNData());
       backwards_buffer.back().CopyFrom(*backwards_mem.back());
       backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
       backwards_outputs[i] = &backwards_buffer.back();
