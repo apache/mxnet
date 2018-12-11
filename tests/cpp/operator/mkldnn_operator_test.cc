@@ -675,10 +675,8 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
     for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
-      backwards_mem.emplace_back(tmp_output.GetMKLDNNData());
-      backwards2_mem.emplace_back(tmp_output.GetMKLDNNData());
-      backwards_buffer.back().CopyFrom(*backwards_mem.back());
-      backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
+      backwards_buffer.back().CopyFrom(*tmp_output.GetMKLDNNData());
+      backwards_buffer2.back().CopyFrom(*tmp_output.GetMKLDNNData());
       backwards_outputs[i] = &backwards_buffer.back();
       backwards_ex_outputs[i] = &backwards_buffer2.back();
       Engine::Get()->WaitForAll();
@@ -750,10 +748,8 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
           inputs_buffer.emplace_back(tmp.Copy(Context()));
           inputs2_buffer.emplace_back(tmp.Copy(Context()));
-          inputs_mem.emplace_back(tmp.GetMKLDNNData());
-          inputs2_mem.emplace_back(tmp.GetMKLDNNData());
-          inputs_buffer.back().CopyFrom(*inputs_mem.back());
-          inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
+          inputs_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
+          inputs2_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
           Engine::Get()->WaitForAll();
