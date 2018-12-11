@@ -773,8 +773,8 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
   std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
   std::vector<NDArray> backwards_buffer2(backwards_attrs.num_outputs);
 
-  std::vector<const mkldnn::memory*> backwards_mem(backwards_attrs.num_outputs);
-  std::vector<const mkldnn::memory*> backwards2_mem(backwards_attrs.num_outputs);
+//  std::vector<const mkldnn::memory*> backwards_mem(backwards_attrs.num_outputs);
+//  std::vector<const mkldnn::memory*> backwards2_mem(backwards_attrs.num_outputs);
 
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
@@ -790,8 +790,9 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
     backwards_input[6] = inputs[3];  // moving mean
     backwards_input[7] = inputs[4];  // moving var
 
-    auto tmp_output = in_arr.arr;
+
     for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
+      auto tmp_output = in_arr.arr;
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer.back().CopyFrom(*tmp_output.GetMKLDNNData());
@@ -824,8 +825,8 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
   std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
   std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
-  std::vector<const mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
-  std::vector<const mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
+//  std::vector<const mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
+//  std::vector<const mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -863,8 +864,6 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
           if (in_arr.arr.IsMKLDNNData()) {
-            inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
-            inputs2_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
             inputs_buffer.back().CopyFrom(*inputs_mem.back());
             inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
 
