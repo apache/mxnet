@@ -69,10 +69,17 @@ def test_normalize():
 
 @with_seed()
 def test_resize():
+    # test normal case
     data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype=np.uint8)
     out_nd = transforms.Resize(200)(data_in)
     data_expected = image.imresize(data_in, 200, 200, 1)
     assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    # test 4D input
+    data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype=np.uint8)
+    out_batch_nd = transforms.Resize(200)(data_bath_in)
+    for i in range(len(out_batch_nd)):
+        assert_almost_equal(image.imresize(data_bath_in[i], 200, 200, 1).asnumpy(),
+            out_batch_nd[i].asnumpy())
     # test interp = 2
     out_nd = transforms.Resize(200, interpolation=2)(data_in)
     data_expected = image.imresize(data_in, 200, 200, 2)
