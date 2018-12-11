@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+      <groupId>PackageTest</groupId>
+      <artifactId>mxnet-scala-packagetest_2.11</artifactId>
+      <version>1.0-SNAPSHOT</version>
+      <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>mxnet-scala-packagetest-core_2.11</artifactId>
+    <name>MXNet Scala Package Test</name>
+    <packaging>pom</packaging>
+
+    <profiles>
+      <profile>
+        <id>unittest</id>
+        <properties>
+          <skipTests>false</skipTests>
+        </properties>
+      </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.scalatest</groupId>
+                <artifactId>scalatest-maven-plugin</artifactId>
+                <version>1.0</version>
+                <configuration>
+                    <runpath>${project.build.outputDirectory},${project.build.testOutputDirectory},../../core/target/test-classes</runpath>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
