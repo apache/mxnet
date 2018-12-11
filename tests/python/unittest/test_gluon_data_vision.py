@@ -47,14 +47,38 @@ def test_to_tensor():
 
 @with_seed()
 def test_normalize():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    data_in = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
-    out_nd = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in)
-    data_expected = data_in.asnumpy()
-    data_expected[:][:][0] = data_expected[:][:][0] / 3.0
-    data_expected[:][:][1] = (data_expected[:][:][1] - 1.0) / 2.0
-    data_expected[:][:][2] = data_expected[:][:][2] - 2.0
-    assert_almost_equal(data_expected, out_nd.asnumpy())
+    # 3D Input
+    data_in_3d = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    data_in_3d = transforms.ToTensor()(nd.array(data_in_3d, dtype='uint8'))
+    out_nd_3d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_3d)
+    data_expected_3d = data_in_3d.asnumpy()
+    data_expected_3d[:][:][0] = data_expected_3d[:][:][0] / 3.0
+    data_expected_3d[:][:][1] = (data_expected_3d[:][:][1] - 1.0) / 2.0
+    data_expected_3d[:][:][2] = data_expected_3d[:][:][2] - 2.0
+    assert_almost_equal(data_expected_3d, out_nd_3d.asnumpy())
+
+    # 4D Input
+    data_in_4d = np.random.uniform(0, 255, (2, 300, 300, 3)).astype(dtype=np.uint8)
+    data_in_4d = transforms.ToTensor()(nd.array(data_in_4d, dtype='uint8'))
+    out_nd_4d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_4d)
+    data_expected_4d = data_in_4d.asnumpy()
+    data_expected_4d[0][:][:][0] = data_expected_4d[0][:][:][0] / 3.0
+    data_expected_4d[0][:][:][1] = (data_expected_4d[0][:][:][1] - 1.0) / 2.0
+    data_expected_4d[0][:][:][2] = data_expected_4d[0][:][:][2] - 2.0
+    data_expected_4d[1][:][:][0] = data_expected_4d[1][:][:][0] / 3.0
+    data_expected_4d[1][:][:][1] = (data_expected_4d[1][:][:][1] - 1.0) / 2.0
+    data_expected_4d[1][:][:][2] = data_expected_4d[1][:][:][2] - 2.0
+    assert_almost_equal(data_expected_4d, out_nd_4d.asnumpy())
+
+    # Invalid Input - Neither 3D or 4D input
+    invalid_data_in = nd.array(np.random.uniform(0, 1, (5, 5, 3, 300, 300)).astype(dtype=np.float32))
+    normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
+    assertRaises(MXNetError, normalize_transformer, invalid_data_in)
+
+    # Invalid Input - Channel neither 1 or 3
+    invalid_data_in = nd.array(np.random.uniform(0, 1, (5, 4, 300, 300)).astype(dtype=np.float32))
+    normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
+    assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
 
 @with_seed()

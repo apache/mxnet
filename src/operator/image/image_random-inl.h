@@ -76,7 +76,6 @@ void ToTensorImpl(const std::vector<TBlob> &inputs,
       float* output = outputs[0].dptr<float>();
       DType* input = inputs[0].dptr<DType>();
 
-      #pragma omp parallel for collapse(2)
       for (int l = 0; l < length; ++l) {
         for (int c = 0; c < channel; ++c) {
           output[step + c*length + l] = static_cast<float>(input[step + l*channel + c]) / 255.0f;
@@ -130,14 +129,24 @@ inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
   const auto& dshape = (*in_attrs)[0];
   if (!dshape.ndim()) return false;
 
-  CHECK_EQ(dshape.ndim(), 3)
-      << "Input tensor must have shape (channels, height, width), but got "
-      << dshape;
-  auto nchannels = dshape[0];
-  CHECK(nchannels == 3 || nchannels == 1)
+  CHECK((dshape.ndim() == 3) || (dshape.ndim() == 4))
+      << "Input tensor must have shape (channels, height, width), or "
+      << "(N, channels, height, width), but got " << dshape;
+
+  uint32_t nchannels;
+  if (dshape.ndim() == 3) {
+    nchannels = dshape[0];
+    CHECK(nchannels == 3 || nchannels == 1)
       << "The first dimension of input tensor must be the channel dimension with "
       << "either 1 or 3 elements, but got input with shape " << dshape;
-  CHECK(param.mean.ndim() == 1 || param.mean.ndim() == nchannels)
+  } else if (dshape.ndim() == 4) {
+    nchannels = dshape[1];
+    CHECK(nchannels == 3 || nchannels == 1)
+      << "The second dimension of input tensor must be the channel dimension with "
+      << "either 1 or 3 elements, but got input with shape " << dshape;
+  }
+
+  CHECK((param.mean.ndim() == 1) || (param.mean.ndim() == nchannels))
       << "Invalid mean for input with shape " << dshape
       << ". mean must have either 1 or " << nchannels
       << " elements, but got " << param.mean;
@@ -150,6 +159,26 @@ inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+void NormalizeImpl(const std::vector<TBlob> &inputs,
+                          const std::vector<TBlob> &outputs,
+                          const NormalizeParam &param,
+                          const int length,
+                          const int channel,
+                          const int step = 0) {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      DType* input = inputs[0].dptr<DType>();
+      DType* output = outputs[0].dptr<DType>();
+
+      for (int i = 0; i < channel; ++i) {
+        DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
+        DType std_dev = param.std[param.std.ndim() > 1 ? i : 0];
+        for (int j = 0; j < length; ++j) {
+          output[step + i*length + j] = (input[step + i*length + j] - mean) / std_dev;
+        }
+      }
+    });
+}
+
 void Normalize(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
@@ -157,21 +186,23 @@ void Normalize(const nnvm::NodeAttrs &attrs,
                       const std::vector<TBlob> &outputs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
 
-  int nchannels = inputs[0].shape_[0];
-  int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+  // 3D input (c, h, w)
+  if (inputs[0].ndim() == 3) {
+    const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+    const int channel = inputs[0].shape_[0];
+    NormalizeImpl(inputs, outputs, param, length, channel);
+  } else if (inputs[0].ndim() == 4) {
+    // 4D input (n, c, h, w)
+    const int batch_size = inputs[0].shape_[0];
+    const int length = inputs[0].shape_[2] * inputs[0].shape_[3];
+    const int channel = inputs[0].shape_[1];
+    const int step = channel*length;
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    DType* input = inputs[0].dptr<DType>();
-    DType* output = outputs[0].dptr<DType>();
-
-    for (int i = 0; i < nchannels; ++i) {
-      DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
-      DType std = param.std[param.std.ndim() > 1 ? i : 0];
-      for (int j = 0; j < length; ++j) {
-        output[i*length + j] = (input[i*length + j] - mean) / std;
-      }
+    #pragma omp parallel for
+    for (auto n = 0; n < batch_size; ++n) {
+      NormalizeImpl(inputs, outputs, param, length, channel, n*step);
     }
-  });
+  }
 }
 
 template<typename DType>
