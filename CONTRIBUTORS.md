@@ -186,3 +186,4 @@ List of Contributors
 * [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [LuckyPigeon](https://github.com/LuckyPigeon)
 * [Anton Chernov](https://github.com/lebeg)
+* [Ming Yang](http://ufoym.com)
