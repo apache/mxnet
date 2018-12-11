@@ -644,14 +644,14 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
 
   if (req == kWriteTo) {
-
-    auto tmp_output = in_arr.arr;
-    backwards_outputs[0] = &tmp_output;
-    backwards_ex_outputs[0] = &tmp_output;
     // backwards test performed same time since output needed
     backwards_input[0] = outputs[0];  // output grad
     backwards_input[1] = inputs[0];  // input
     backwards_input[2] = outputs[1];  // out norm
+
+    auto tmp_output = in_arr.arr;
+    backwards_outputs[0] = &tmp_output;
+    backwards_ex_outputs[0] = &tmp_output;
 
     for (int i = 0; i < backwards_attrs.num_outputs; i++)
       back_req[i] = kWriteTo;
@@ -680,7 +680,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
@@ -695,10 +695,13 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, forward_attrs.output_types);
       }
+
+      for (int i = 0; i < forward_attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
@@ -732,7 +735,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       // If the array is a view, we shouldn't write data to it.
       if (in_arr.arr.IsView())
-          continue;
+        continue;
 
       NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
       for (int i = 0; i < forward_attrs.num_inputs; i++)
