@@ -668,11 +668,11 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
       backwards_input[2] = outputs[1];  // out norm
     }
 
+    auto tmp_output = in_arr.arr;
+    if (tmp_output.IsMKLDNNData() && tmp_output.IsView()) {
+      tmp_output = tmp_output.Reorder2Default();
+    }
     for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
-      auto tmp_output = in_arr.arr;
-      if (tmp_output.IsMKLDNNData() && tmp_output.IsView()) {
-        tmp_output = tmp_output.Reorder2Default();
-      }
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
       backwards_mem.emplace_back(backwards_buffer.back().GetMKLDNNData());
@@ -743,11 +743,11 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         inputs_mem.clear();
         inputs2_mem.clear();
 
+        auto tmp = in_arr.arr;
+        if (tmp.IsMKLDNNData() && tmp.IsView()) {
+          tmp = tmp.Reorder2Default();
+        }
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          auto tmp = in_arr.arr;
-          if (tmp.IsMKLDNNData() && tmp.IsView()) {
-            tmp = tmp.Reorder2Default();
-          }
           inputs_buffer.emplace_back(tmp.Copy(Context()));
           inputs2_buffer.emplace_back(tmp.Copy(Context()));
           inputs_mem.emplace_back(tmp.GetMKLDNNData());
