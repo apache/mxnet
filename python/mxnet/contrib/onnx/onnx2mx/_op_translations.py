@@ -395,6 +395,7 @@ def global_lppooling(attrs, inputs, proto_obj):
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'lp',
                                                                 'p_value': p_value})
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
     return 'Pooling', new_attrs, inputs
 
 def linalg_gemm(attrs, inputs, proto_obj):
@@ -684,11 +685,12 @@ def lp_pooling(attrs, inputs, proto_obj):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
                                                         'strides': 'stride',
-                                                        'pads': 'pad',
-                                                        'p_value': p_value
+                                                        'pads': 'pad'
                                                        })
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid',
+                                                         'p_value': p_value
                                                         })
     new_op = translation_utils._fix_pooling('lp', inputs, new_attrs)
     return new_op, new_attrs, inputs

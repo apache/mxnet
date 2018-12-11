@@ -586,6 +586,7 @@ def convert_pooling(node, **kwargs):
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
     global_pool = get_boolean_attribute_value(attrs, "global_pool")
+    p_value = int(attrs.get('p_value', '2'))
 
     pooling_convention = attrs.get('pooling_convention', 'valid')
 
@@ -598,26 +599,48 @@ def convert_pooling(node, **kwargs):
 
     pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
     pad_dims = pad_dims + pad_dims
-    pool_types = {"max": "MaxPool", "avg": "AveragePool"}
-    global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool"}
+    pool_types = {"max": "MaxPool", "avg": "AveragePool", "lp": "LpPool"}
+    global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool",
+                         "lp": "GlobalLpPool"}
 
     if global_pool:
-        node = onnx.helper.make_node(
-            global_pool_types[pool_type],
-            input_nodes,  # input
-            [name],
-            name=name
-        )
+        if pool_type == 'lp':
+            node = onnx.helper.make_node(
+                global_pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                p=p_value,
+                name=name
+            )
+        else:
+            node = onnx.helper.make_node(
+                global_pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                name=name
+            )
     else:
-        node = onnx.helper.make_node(
-            pool_types[pool_type],
-            input_nodes,  # input
-            [name],
-            kernel_shape=kernel,
-            pads=pad_dims,
-            strides=stride,
-            name=name
-        )
+        if pool_type == 'lp':
+            node = onnx.helper.make_node(
+                pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                p=p_value,
+                kernel_shape=kernel,
+                pads=pad_dims,
+                strides=stride,
+                name=name
+            )
+        else:
+            node = onnx.helper.make_node(
+                pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                kernel_shape=kernel,
+                pads=pad_dims,
+                strides=stride,
+                name=name
+            )
 
     return [node]
 
