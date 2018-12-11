@@ -679,7 +679,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
         backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
       }
       backwards_outputs[i] = &backwards_buffer.back();
-      backwards_ex_outputs[i] = &backwards_buffer.back();
+      backwards_ex_outputs[i] = &backwards_buffer2.back();
     }
 
 
@@ -744,14 +744,12 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
           inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
-
           if (in_arr.arr.IsMKLDNNData() && !in_arr.arr.IsView()) {
             inputs_mem.emplace_back(in_arr.arr.GetMKLDNNData());
             inputs2_mem.emplace_back(in_arr.arr.GetMKLDNNData());
             inputs_buffer.back().CopyFrom(*inputs_mem.back());
             inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
           }
-          Engine::Get()->WaitForAll();
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
         }
