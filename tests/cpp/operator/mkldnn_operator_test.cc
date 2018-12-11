@@ -773,9 +773,6 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
   std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
   std::vector<NDArray> backwards_buffer2(backwards_attrs.num_outputs);
 
-//  std::vector<const mkldnn::memory*> backwards_mem(backwards_attrs.num_outputs);
-//  std::vector<const mkldnn::memory*> backwards2_mem(backwards_attrs.num_outputs);
-
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
@@ -825,8 +822,6 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
   std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
   std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
-//  std::vector<const mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
-//  std::vector<const mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -857,15 +852,13 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         inputs_buffer.clear();
         inputs2_buffer.clear();
-        inputs_mem.clear();
-        inputs2_mem.clear();
 
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
           inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
           if (in_arr.arr.IsMKLDNNData()) {
-            inputs_buffer.back().CopyFrom(*inputs_mem.back());
-            inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
+            inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
+            inputs2_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
 
           }
           Engine::Get()->WaitForAll();
@@ -892,7 +885,7 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         AssertEqual(outputs, ex_outputs);
 
         if (!backwards_attrs.requests.empty()) {
-          TestOpExBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo,
+          TestOpExBNBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo,
                            inputs, outputs, in_arr, out_arrs[0][output_i]);
         }
       }
