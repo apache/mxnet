@@ -87,22 +87,6 @@ build_ccache_wrappers() {
     export CXX=`pwd`/cxx
 }
 
-build_cython() {
-    set -ex
-    pushd .
-
-    PYTHON_DIR=${1:-/work/mxnet/python}
-    BUILD_DIR=${2:-/work/build}
-
-    export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
-
-    cd ${PYTHON_DIR}
-    python2 setup.py build_ext --inplace --with-cython
-    python3 setup.py build_ext --inplace --with-cython
-
-    popd
-}
-
 build_wheel() {
 
     set -ex
@@ -693,11 +677,11 @@ build_ubuntu_gpu_cmake() {
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DBUILD_CYTHON_MODULES                  \
         -G Ninja                                \
         /work/mxnet
 
     ninja -v
-    build_cython
 }
 
 build_ubuntu_blc() {

@@ -600,6 +600,12 @@ def test_unix_python3_gpu() {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-python3-gpu') {
           try {
+            /*
+             * CMake build with llvm openmp causes a segmentation fault.
+             * We can restore this if the issue is addressed (#12160).
+             *
+             * utils.unpack_and_init('cmake_gpu', mx_cmake_lib_cython, true)
+             */
             utils.unpack_and_init('gpu', mx_lib_cython, true)
             python3_gpu_ut_cython('ubuntu_gpu')
             utils.publish_test_coverage()
