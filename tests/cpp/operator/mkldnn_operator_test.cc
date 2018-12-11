@@ -639,13 +639,6 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
                       const NDArrayAttrs &in_arr,
                       const NDArrayAttrs &out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
-
-  std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
-  std::vector<NDArray> backwards_buffer2(backwards_attrs.num_outputs);
-
-  std::vector<const mkldnn::memory*> backwards_mem(backwards_attrs.num_outputs);
-  std::vector<const mkldnn::memory*> backwards2_mem(backwards_attrs.num_outputs);
-
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
@@ -653,35 +646,9 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
   if (req == kWriteTo) {
     // backwards test performed same time since output needed
 
-    if (forward_attrs.attrs.op->name.compare("BatchNorm") == 0) {
-      backwards_input[0] = outputs[0];  // output grad
-      backwards_input[1] = outputs[1];  // mean
-      backwards_input[2] = outputs[2];  // var
-      backwards_input[3] = inputs[0];  // data
-      backwards_input[4] = inputs[1];  // gamma
-      backwards_input[5] = inputs[2];  // beta
-      backwards_input[6] = inputs[3];  // moving mean
-      backwards_input[7] = inputs[4];  // moving var
-    } else {
-      backwards_input[0] = outputs[0];  // output grad
-      backwards_input[1] = inputs[0];  // input
-      backwards_input[2] = outputs[1];  // out norm
-    }
-
-    auto tmp_output = in_arr.arr;
-    if (tmp_output.IsMKLDNNData() && tmp_output.IsView()) {
-      tmp_output = tmp_output.Reorder2Default();
-    }
-    for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
-      backwards_buffer.emplace_back(tmp_output.Copy(Context()));
-      backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
-      backwards_buffer.back().CopyFrom(*tmp_output.GetMKLDNNData());
-      backwards_buffer2.back().CopyFrom(*tmp_output.GetMKLDNNData());
-      backwards_outputs[i] = &backwards_buffer.back();
-      backwards_ex_outputs[i] = &backwards_buffer2.back();
-      Engine::Get()->WaitForAll();
-    }
-
+    backwards_input[0] = outputs[0];  // output grad
+    backwards_input[1] = inputs[0];  // input
+    backwards_input[2] = outputs[1];  // out norm
 
     for (int i = 0; i < backwards_attrs.num_outputs; i++)
       back_req[i] = kWriteTo;
@@ -703,11 +670,6 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
 // compares output of fcompute with fcomputex
 void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
   std::vector<NDArray*> inputs(forward_attrs.num_inputs);
-  std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
-  std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
-  std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
-  std::vector<const mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
-  std::vector<const mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
   std::vector<NDArray*> outputs(forward_attrs.num_outputs);
   std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
   std::vector<OpReqType> req(forward_attrs.num_outputs);
@@ -736,26 +698,6 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       }
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
-        inputs_buffer.clear();
-        inputs2_buffer.clear();
-        inputs_mem.clear();
-        inputs2_mem.clear();
-
-        auto tmp = in_arr.arr;
-        if (tmp.IsMKLDNNData() && tmp.IsView()) {
-          tmp = tmp.Reorder2Default();
-        }
-        for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs_buffer.emplace_back(tmp.Copy(Context()));
-          inputs2_buffer.emplace_back(tmp.Copy(Context()));
-          inputs_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
-          inputs2_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
-          inputs[i] = &inputs_buffer.back();
-          inputs2[i] = &inputs2_buffer.back();
-          Engine::Get()->WaitForAll();
-        }
-
-
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
@@ -768,7 +710,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
             Context(), forward_attrs.attrs, inputs, outputs, req,
             DispatchMode::kFCompute, mxnet::OpStatePtr());
         Imperative::Get()->InvokeOp(
-            Context(), forward_attrs.attrs, inputs2, ex_outputs, req,
+            Context(), forward_attrs.attrs, inputs, ex_outputs, req,
             DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
         AssertEqual(outputs, ex_outputs);
@@ -811,6 +753,175 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
     }
   }
 }
+
+
+void TestOpExBNBackward(const OpAttrs &forward_attrs,
+                      const OpAttrs &backwards_attrs,
+                      const OpReqType &req,
+                      const std::vector<NDArray*> &inputs,
+                      const std::vector<NDArray*> &outputs,
+                      const NDArrayAttrs &in_arr,
+                      const NDArrayAttrs &out_arr) {
+  std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
+
+  std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
+  std::vector<NDArray> backwards_buffer2(backwards_attrs.num_outputs);
+
+  std::vector<const mkldnn::memory*> backwards_mem(backwards_attrs.num_outputs);
+  std::vector<const mkldnn::memory*> backwards2_mem(backwards_attrs.num_outputs);
+
+  std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
+  std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
+  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
+
+  if (req == kWriteTo) {
+    backwards_input[0] = outputs[0];  // output grad
+    backwards_input[1] = outputs[1];  // mean
+    backwards_input[2] = outputs[2];  // var
+    backwards_input[3] = inputs[0];  // data
+    backwards_input[4] = inputs[1];  // gamma
+    backwards_input[5] = inputs[2];  // beta
+    backwards_input[6] = inputs[3];  // moving mean
+    backwards_input[7] = inputs[4];  // moving var
+
+    auto tmp_output = in_arr.arr;
+    for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
+      backwards_buffer.emplace_back(tmp_output.Copy(Context()));
+      backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
+      backwards_buffer.back().CopyFrom(*tmp_output.GetMKLDNNData());
+      backwards_buffer2.back().CopyFrom(*tmp_output.GetMKLDNNData());
+      backwards_outputs[i] = &backwards_buffer.back();
+      backwards_ex_outputs[i] = &backwards_buffer2.back();
+      Engine::Get()->WaitForAll();
+    }
+
+
+    for (int i = 0; i < backwards_attrs.num_outputs; i++)
+      back_req[i] = kWriteTo;
+
+    std::cout << "Backwards: ";
+    PrintVerifyMsg(out_arr, in_arr);
+    Imperative::Get()->InvokeOp(
+        Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
+        back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+    Imperative::Get()->InvokeOp(
+        Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
+        back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+    Engine::Get()->WaitForAll();
+    AssertEqual(backwards_outputs, backwards_ex_outputs);
+  }
+}
+
+// compares output of fcompute with fcomputex
+void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
+  std::vector<NDArray*> inputs(forward_attrs.num_inputs);
+  std::vector<NDArray*> inputs2(forward_attrs.num_inputs);
+  std::vector<NDArray> inputs_buffer(forward_attrs.num_inputs);
+  std::vector<NDArray> inputs2_buffer(forward_attrs.num_inputs);
+  std::vector<const mkldnn::memory*> inputs_mem(forward_attrs.num_inputs);
+  std::vector<const mkldnn::memory*> inputs2_mem(forward_attrs.num_inputs);
+  std::vector<NDArray*> outputs(forward_attrs.num_outputs);
+  std::vector<NDArray*> ex_outputs(forward_attrs.num_outputs);
+  std::vector<OpReqType> req(forward_attrs.num_outputs);
+
+  TestArrayShapes tas = GetTestArrayShapes();
+  std::vector<mkldnn::memory::primitive_desc> pds = tas.pds;
+
+  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, false);
+  std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
+  std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
+
+  if (forward_attrs.requests.find(OpReqType::kWriteTo) != forward_attrs.requests.end()) {
+    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+      auto in_arr = in_arrs[i1];
+
+      CHECK_NE(forward_attrs.accept_dims.size(), 0);
+      if (forward_attrs.accept_dims.find(in_arr.arr.shape().ndim()) ==
+          forward_attrs.accept_dims.end())
+        continue;
+
+      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+        out_arrs[i] =
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
+        ex_out_arrs[i] =
+            GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
+      }
+
+      for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
+        inputs_buffer.clear();
+        inputs2_buffer.clear();
+        inputs_mem.clear();
+        inputs2_mem.clear();
+
+        auto tmp = in_arr.arr;
+        for (int i = 0; i < forward_attrs.num_inputs; i++) {
+          inputs_buffer.emplace_back(tmp.Copy(Context()));
+          inputs2_buffer.emplace_back(tmp.Copy(Context()));
+          inputs_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
+          inputs2_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
+          inputs[i] = &inputs_buffer.back();
+          inputs2[i] = &inputs2_buffer.back();
+          Engine::Get()->WaitForAll();
+        }
+
+
+        for (int i = 0; i < forward_attrs.num_outputs; i++) {
+          req[i] = kWriteTo;
+          outputs[i] = &out_arrs[i][output_i].arr;
+          ex_outputs[i] = &ex_out_arrs[i][output_i].arr;
+        }
+        Imperative::Get()->set_is_training(true);
+
+        PrintVerifyMsg(in_arr, out_arrs[0][output_i]);
+        Imperative::Get()->InvokeOp(
+            Context(), forward_attrs.attrs, inputs, outputs, req,
+            DispatchMode::kFCompute, mxnet::OpStatePtr());
+        Imperative::Get()->InvokeOp(
+            Context(), forward_attrs.attrs, inputs2, ex_outputs, req,
+            DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        Engine::Get()->WaitForAll();
+        AssertEqual(outputs, ex_outputs);
+
+        if (!backwards_attrs.requests.empty()) {
+          TestOpExBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo,
+                           inputs, outputs, in_arr, out_arrs[0][output_i]);
+        }
+      }
+    }
+  }
+
+  if (forward_attrs.requests.find(OpReqType::kWriteInplace) != forward_attrs.requests.end()) {
+    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
+      auto in_arr = in_arrs[i1];
+
+      // If the array is a view, we shouldn't write data to it.
+      if (in_arr.arr.IsView())
+        continue;
+
+      NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
+      for (int i = 0; i < forward_attrs.num_inputs; i++)
+        inputs[i] = &in_arr.arr;
+
+      for (int i = 0; i < forward_attrs.num_outputs; i++) {
+        req[i] = kWriteInplace;
+        outputs[i] = &in_arr.arr;
+        ex_outputs[i] = &in_arr.arr;
+      }
+      Imperative::Get()->set_is_training(true);
+      PrintVerifyMsg(orig, in_arr);
+      Imperative::Get()->InvokeOp(
+          Context(), forward_attrs.attrs, inputs, outputs, req,
+          DispatchMode::kFCompute, mxnet::OpStatePtr());
+      Imperative::Get()->InvokeOp(
+          Context(), forward_attrs.attrs, inputs, ex_outputs, req,
+          DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+      Engine::Get()->WaitForAll();
+      AssertEqual(outputs, ex_outputs);
+    }
+  }
+}
+
+
 
 // Computes second dimension of FC weight matrix based on input shape
 uint32_t GetFCWeightDim2(const nnvm::TShape arr) {
@@ -1284,7 +1395,7 @@ TEST(IMPERATIVE, DeconvOp) {
 TEST(IMPERATIVE, BNOp) {
   OpAttrs forward_attrs = GetBNOp();
   OpAttrs backwards_attrs = GetBNBackwardOp();
-  TestOpEx(forward_attrs, backwards_attrs);
+  TestOpExBN(forward_attrs, backwards_attrs);
 }
 
 #endif
