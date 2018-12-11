@@ -96,22 +96,20 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   if (dev_mask == mshadow::cpu::kDevMask) {
     *dispatch_mode = DispatchMode::kFComputeEx;
   }
-  std::vector<int>::iterator out_attr;
-  for (out_attr = out_attrs->begin(); out_attr != out_attrs->end(); out_attr++) {
-    *out_attr = kDefaultStorage;
-    if (common::stype_string(*out_attr).compare("unknown") == 0) {
+
+  for (auto &v : *out_attrs) {
+    v = kDefaultStorage;
+    if (common::stype_string(v).compare("unknown") == 0) {
       return false;
     }
   }
 
-  std::vector<int>::iterator in_attr;
-  for (in_attr = in_attrs->begin(); in_attr != in_attrs->end(); in_attr++) {
-    *in_attr = kDefaultStorage;
-    if (common::stype_string(*in_attr).compare("unknown") == 0) {
+  for (auto &v : *in_attrs) {
+    v = kDefaultStorage;
+    if (common::stype_string(v).compare("unknown") == 0) {
       return false;
     }
   }
-
   return true;
 }
 
