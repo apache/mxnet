@@ -672,7 +672,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
       auto tmp_output = in_arr.arr;
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
-      if (in_arr.arr.IsMKLDNNData()) {
+      if (in_arr.arr.IsMKLDNNData() && !in_arr.arr.IsView()) {
         backwards_mem.emplace_back(backwards_buffer.back().GetMKLDNNData());
         backwards2_mem.emplace_back(backwards_buffer2.back().GetMKLDNNData());
         backwards_buffer.back().CopyFrom(*backwards_mem.back());
@@ -745,7 +745,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
           inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
 
-          if (in_arr.arr.IsMKLDNNData()) {
+          if (in_arr.arr.IsMKLDNNData() && !in_arr.arr.IsView()) {
             inputs_mem.emplace_back(in_arr.arr.GetMKLDNNData());
             inputs2_mem.emplace_back(in_arr.arr.GetMKLDNNData());
             inputs_buffer.back().CopyFrom(*inputs_mem.back());
