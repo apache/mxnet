@@ -859,15 +859,19 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
         inputs_mem.clear();
         inputs2_mem.clear();
 
-        auto tmp = in_arr.arr;
         for (int i = 0; i < forward_attrs.num_inputs; i++) {
-          inputs_buffer.emplace_back(tmp.Copy(Context()));
-          inputs2_buffer.emplace_back(tmp.Copy(Context()));
-          inputs_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
-          inputs2_buffer.back().CopyFrom(*tmp.GetMKLDNNData());
+          inputs_buffer.emplace_back(in_arr.arr.Copy(Context()));
+          inputs2_buffer.emplace_back(in_arr.arr.Copy(Context()));
+          if (in_arr.arr.IsMKLDNNData()) {
+            inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
+            inputs2_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
+            inputs_buffer.back().CopyFrom(*inputs_mem.back());
+            inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
+
+          }
+          Engine::Get()->WaitForAll();
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
-          Engine::Get()->WaitForAll();
         }
 
 
