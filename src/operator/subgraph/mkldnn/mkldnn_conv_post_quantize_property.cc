@@ -50,8 +50,6 @@ class SgMKLDNNConvPostQuantizeSelector : public SubgraphSelector {
     if ((!disable_all) && n.op() && n.op()->name == "_sg_mkldnn_conv") {
       auto const &param = nnvm::get<MKLDNNConvFusionParam>(n.attrs.parsed);
       if (param.full_conv_param.mkldnn_param.quantized) {
-        CHECK_GE(param.full_conv_param.conv_param.kernel.ndim(), 2U)
-            << "Unexpected MKL-DNN Quantized Conv kernel size.";
         status = kStart;
         matched_list.clear();
         matched_list.push_back(&n);

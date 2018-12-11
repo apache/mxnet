@@ -626,8 +626,13 @@ std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
 }
 
 nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
+  auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   nnvm::NodePtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
+  // TODO(XINYU): Auto skip the conv1d.
+  // MKL-DNN supports quantized conv2d.
+  CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
+      << "MKL-DNN only supports quantized conv2d.";
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
   node->attrs.dict["quantized"] = "true";

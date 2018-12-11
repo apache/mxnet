@@ -488,9 +488,6 @@ def quantize_model(sym, arg_params, aux_params,
         A tuple of quantized symbol, quantized arg_params, and aux_params.
     -------
     """
-    if ctx == cpu(0) and len(calib_data.provide_data[0].shape) != 3:
-        raise ValueError('MKL-DNN quantized OPs temporary support 4d layout.')
-
     if excluded_sym_names is None:
         excluded_sym_names = []
     if not isinstance(excluded_sym_names, list):
