@@ -6845,30 +6845,32 @@ def test_context_num_gpus():
 
 @with_seed()
 def test_op_roi_align():
-    # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_roi_align_op.py
+    # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_op/test_roi_align_op.py
+    T = np.float32
+
     def bilinear_interpolate(bottom, height, width, y, x):
         if y < -1.0 or y > height or x < -1.0 or x > width:
-            return 0.0, []
-        x = max(0.0, x)
-        y = max(0.0, y)
+            return T(0.0), []
+        x = T(max(0.0, x))
+        y = T(max(0.0, y))
         x_low = int(x)
         y_low = int(y)
         if x_low >= width - 1:
             x_low = x_high = width - 1
-            x = x_low
+            x = T(x_low)
         else:
             x_high = x_low + 1
 
         if y_low >= height - 1:
             y_low = y_high = height - 1
-            y = y_low
+            y = T(y_low)
         else:
             y_high = y_low + 1
 
-        ly = y - y_low
-        lx = x - x_low
-        hy = 1.0 - ly
-        hx = 1.0 - lx
+        ly = y - T(y_low)
+        lx = x - T(x_low)
+        hy = T(1.0) - ly
+        hx = T(1.0) - lx
 
         v1 = bottom[y_low, x_low]
         v2 = bottom[y_low, x_high]
@@ -6882,6 +6884,7 @@ def test_op_roi_align():
         |hx ly | lx ly
         V
         y
+
         v1|v2
         --+--
         v3|v4
@@ -6891,11 +6894,18 @@ def test_op_roi_align():
         w3 = ly * hx
         w4 = ly * lx
 
+        assert w1.dtype == T
+        assert w2.dtype == T
+        assert w3.dtype == T
+        assert w4.dtype == T
+
         val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
+        assert val.dtype == T
         grad = [(y_low, x_low, w1), (y_low, x_high, w2),
                 (y_high, x_low, w3), (y_high, x_high, w4)
-               ]
+                ]
         return val, grad
+
 
     def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio, dy):
         N, C, H, W = data.shape
@@ -6903,41 +6913,50 @@ def test_op_roi_align():
         PH, PW = pooled_size
         assert len(rois.shape) == 2
         assert rois.shape[1] == 5
+        assert data.dtype == T
+        assert rois.dtype == T
 
-        out = np.zeros((R, C, PH, PW))
+        out = np.zeros((R, C, PH, PW), dtype=T)
         dx = np.zeros_like(data)
         drois = np.zeros_like(rois)
 
         for r in range(R):
             batch_ind = int(rois[r, 0])
-            sw, sh, ew, eh = rois[r, 1:5] * spatial_scale
-            roi_w = max(ew - sw, 1.0)
-            roi_h = max(eh - sh, 1.0)
-            bin_h = roi_h * 1.0 / PH
-            bin_w = roi_w * 1.0 / PW
+            sw, sh, ew, eh = rois[r, 1:5] * T(spatial_scale)
+            roi_w = T(max(ew - sw, 1.0))
+            roi_h = T(max(eh - sh, 1.0))
+            bin_h = roi_h / T(PH)
+            bin_w = roi_w / T(PW)
             bdata = data[batch_ind]
             if sampling_ratio > 0:
                 roi_bin_grid_h = roi_bin_grid_w = sampling_ratio
             else:
-                roi_bin_grid_h = int(np.ceil(roi_h * 1.0 / PH))
-                roi_bin_grid_w = int(np.ceil(roi_w * 1.0 / PW))
-            count = roi_bin_grid_h * roi_bin_grid_w
+                roi_bin_grid_h = int(np.ceil(roi_h / T(PH)))
+                roi_bin_grid_w = int(np.ceil(roi_w / T(PW)))
+            count = T(roi_bin_grid_h * roi_bin_grid_w)
             for c in range(C):
                 for ph in range(PH):
                     for pw in range(PW):
-                        val = 0.0
+                        val = T(0.0)
                         for iy in range(roi_bin_grid_h):
-                            y = sh + ph * bin_h + (iy + 0.5) * bin_h / roi_bin_grid_h
+                            y = sh + T(ph) * bin_h + (T(iy) + T(0.5)) * \
+                                bin_h / T(roi_bin_grid_h)
                             for ix in range(roi_bin_grid_w):
-                                x = sw + pw * bin_w + (ix + 0.5) * bin_w / roi_bin_grid_w
+                                x = sw + T(pw) * bin_w + (T(ix) + T(0.5)) * \
+                                    bin_w / T(roi_bin_grid_w)
                                 v, g = bilinear_interpolate(bdata[c], H, W, y, x)
+                                assert v.dtype == T
                                 val += v
                                 # compute grad
                                 for qy, qx, qw in g:
-                                    dx[batch_ind, c, qy, qx] += dy[r, c, ph, pw] * qw * 1.0 / count
+                                    assert qw.dtype == T
+                                    dx[batch_ind, c, qy, qx] += dy[r,
+                                                                   c, ph, pw] * qw / count
 
-                        out[r, c, ph, pw] = val * 1.0 / count
+                        out[r, c, ph, pw] = val / count
+        assert out.dtype == T, out.dtype
         return out, [dx, drois]
+
 
     def test_roi_align_value(sampling_ratio=0):
         ctx=default_context()
@@ -6967,10 +6986,10 @@ def test_op_roi_align():
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
                                                              spatial_scale, sampling_ratio, dy.asnumpy())
-        assert np.allclose(output.asnumpy(), real_output)
+        assert_almost_equal(output.asnumpy(), real_output, atol = 1e-5)
         # It seems that the precision between Cfloat and Pyfloat is different.
-        assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-5), np.abs(data.grad.asnumpy() - dx).max()
-        assert np.allclose(rois.grad.asnumpy(), drois)
+        assert_almost_equal(data.grad.asnumpy(), dx, atol = 1e-5)
+        assert_almost_equal(rois.grad.asnumpy(), drois, atol = 1e-5)
 
     # modified from test_roipooling()
     def test_roi_align_autograd(sampling_ratio=0):
@@ -6994,6 +7013,7 @@ def test_op_roi_align():
     test_roi_align_value()
     test_roi_align_value(2)
     test_roi_align_autograd()
+
 
 @with_seed()
 def test_diag():
