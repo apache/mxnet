@@ -106,11 +106,11 @@ brew install opencv
 - Edit your `project.clj` and add one of the following entries to `:dependencies`, based on your system and the compute device you want to use:
 
 
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "latest-version"]`
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "latest-version"]`
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "latest-version]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu <latest-version>]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu <latest-version>]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu <latest-version>]`
 
-You can find the latest version out on [maven central](https://search.maven.org/search?q=clojure-mxnet)
+You can find the latest version out on [maven central- clojure-mxnet latest](https://search.maven.org/search?q=clojure-mxnet)
 
 After making this change and running `lein deps`, you should be able to run example code like this [NDArray Tutorial](https://github.com/apache/incubator-mxnet/blob/master/contrib/clojure-package/examples/tutorial/src/tutorial/ndarray.clj).
 
@@ -127,7 +127,7 @@ With this option, you will install a Git revision of the Clojure package source 
   cd ~/mxnet
   git tag --list  # Find the tag that matches the Scala package version
 
-  git checkout tags/version -b my_mxnet
+  git checkout tags/<version> -b my_mxnet
   git submodule update --init --recursive
   cd contrib/clojure
   ```
@@ -135,7 +135,7 @@ With this option, you will install a Git revision of the Clojure package source 
 - Edit `project.clj` to include the desired Scala jar from Maven:
 
 
-      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "latest-version”]
+      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu <latest-version>]
 
 - Run `lein test`. All the tests should run without error.
 - At this point you can run `lein install` to build and install the Clojure jar locally.
@@ -143,29 +143,20 @@ With this option, you will install a Git revision of the Clojure package source 
 To run examples, you can now use `lein run` in any of the example directories, e.g., `examples/imclassification`. You can also specify the compute device, e.g., `lein run :cpu 2` (for 2 CPUs) or `lein run :gpu` (for 1 GPU).
 
 #### Experimental: Using Scala Snapshot Jars
-**Note:** Instead of a release tag, you can also use a development version of the Clojure package, e.g., Git `master`, together with the prebuilt Scala jar. There is a snapshot repo available for the Scala jars on a nightly basis. You can use them in your project with adding a repository:
+**Note:** Instead of a release tag, you can also use a development version of the Clojure package, e.g., Git `master`, together with the prebuilt Scala jar. There is a repo of nightly built snapshots of Scala jars. You can use them in your `project.clj` by adding a repository:
 
 ```
 ["snapshots" {:url "https://repository.apache.org/content/repositories/snapshots"
-                              ;; If a repository contains releases only setting
-                              ;; :snapshots to false will speed up dependencies.
                               :snapshots true
-                              ;; Disable signing releases deployed to this repo.
-                              ;; (Not recommended.)
                               :sign-releases false
-                              ;; You can also set the policies for how to handle
-                              ;; :checksum failures to :fail, :warn, or :ignore.
                               :checksum :fail
-                              ;; How often should this repository be checked for
-                              ;; snapshot updates? (:daily, :always, or :never)
                               :update :always
-                              ;; You can also apply them to releases only:
                               :releases {:checksum :fail :update :always}}]
 ```
 
 Then you should be able to run with your dependency:
 
-`[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "latest-version-SNAPSHOT"]`
+    [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "latest-version-SNAPSHOT"]
 
 
 In that case, however, breakage can happen at any point, for instance when the Scala development version adds, changes or removes an interface and the Clojure development version moves along. If you really need the most recent version, you should consider [installation option 3](#option-3-everything-from-source).
