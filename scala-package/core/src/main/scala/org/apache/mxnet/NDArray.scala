@@ -35,7 +35,6 @@ import scala.ref.WeakReference
 @AddNDArrayFunctions(false)
 object NDArray extends NDArrayBase {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
-  implicit def someWrapper[A](noSome : A) : Option[A] = Option(noSome)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
 
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()

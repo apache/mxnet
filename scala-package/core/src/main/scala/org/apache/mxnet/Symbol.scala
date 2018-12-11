@@ -841,7 +841,6 @@ object Symbol extends SymbolBase {
   private val functions: Map[String, SymbolFunction] = initSymbolModule()
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
 
-  implicit def someWrapper[A](noSome : A) : Option[A] = Option(noSome)
   val api = SymbolAPI
   val random = SymbolRandomAPI
 
