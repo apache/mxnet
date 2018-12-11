@@ -134,6 +134,17 @@ def test_Dense(ctx=mx.cpu(0)):
     res.wait_to_read()
     assert res.shape == (50000000, 100)
 
+def test_where():
+    a = nd.ones(shape=(LARGE_X, SMALL_Y))
+    b = nd.arange(0, LARGE_X).reshape(LARGE_X, 1)
+    b = nd.broadcast_to(b, shape=(b.shape[0], SMALL_Y))
+    res = nd.where(b > 100, a, b)
+    assert np.sum(res[-1].asnumpy() == 1) == b.shape[1]
+
+    csr_cond = nd.sparse.cast_storage(b < 10, 'csr')
+    res = nd.sparse.where(csr_cond, a, b)
+    assert np.sum(res[0].asnumpy() == 1) == b.shape[1]
+
 
 if __name__ == '__main__':
     import nose

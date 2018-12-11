@@ -105,6 +105,7 @@ brew install opencv
 - Create a new project with `lein new my-mxnet`
 - Edit your `project.clj` and add one of the following entries to `:dependencies`, based on your system and the compute device you want to use:
 
+
   - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "latest-version"]`
   - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "latest-version"]`
   - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "latest-version]`
@@ -118,6 +119,7 @@ After making this change and running `lein deps`, you should be able to run exam
 With this option, you will install a Git revision of the Clojure package source and a [Scala package jar from Maven](https://search.maven.org/search?q=g:org.apache.mxnet) with native dependencies baked in.
 
 - Install additional dependencies as described in [the corresponding section for Option 1](#installing-additional-dependencies),
+
 - Recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
 
   ```bash
@@ -131,6 +133,7 @@ With this option, you will install a Git revision of the Clojure package source 
   ```
 
 - Edit `project.clj` to include the desired Scala jar from Maven:
+
 
       [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "latest-version”]
 

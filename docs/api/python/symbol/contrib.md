@@ -55,9 +55,6 @@ In the rest of this document, we list routines provided by the `symbol.contrib` 
     foreach
     while_loop
     cond
-    isinf
-    isfinite
-    isnan
     index_copy
     getnnz
     edge_id

@@ -244,6 +244,17 @@ def test_multi_worker_forked_data_loader():
         for i, data in enumerate(loader):
             pass
 
+@with_seed()
+def test_multi_worker_dataloader_release_pool():
+    # will trigger too many open file if pool is not released properly
+    for _ in range(100):
+        A = np.random.rand(999, 2000)
+        D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)
+        the_iter = iter(D)
+        next(the_iter)
+        del the_iter
+        del D
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
