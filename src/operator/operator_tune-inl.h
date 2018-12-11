@@ -358,7 +358,6 @@ class OperatorTune : public OperatorTuneByType<DType> {
     // so take an average across all core counts
     const auto max_cores_default = static_cast<size_t>(omp_get_num_procs()) >> 1;
     const auto max_cores = dmlc::GetEnv("MXNET_USE_NUM_CORES_OPERATOR_TUNING", max_cores_default);
-    LOG(INFO) << "max_cores for tuning:" << max_cores;
     if (max_cores >= 2) {
       std::vector<duration_t> core_times;
       // Take care of any OMP lazy-init with a throwaway call
@@ -380,7 +379,7 @@ class OperatorTune : public OperatorTuneByType<DType> {
     }
     return INT_MAX;  // If only one core, then never use OMP (say the overhead is huge)
   }
-  
+
   /*!
    * \brief Some string utility functions that aren't specific to tuning
    */
