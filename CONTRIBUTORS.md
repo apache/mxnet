@@ -58,6 +58,7 @@ who are willing to help maintaining and leading the project. Committers come fro
 
 New committers will be proposed by current committers, with support from more than two of current committers.
 
+
 List of Contributors
 --------------------
 * [Full List of Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
@@ -186,4 +187,22 @@ List of Contributors
 * [Chaitanya Bapat](https://github.com/ChaiBapchya)
 * [LuckyPigeon](https://github.com/LuckyPigeon)
 * [Anton Chernov](https://github.com/lebeg)
+* [Denisa Roberts](https://github.com/D-Roberts)
+* [Dick Carter](https://github.com/DickJC123)
+* [Rahul Padmanabhan](https://github.com/rahul3)
+* [Yuxi Hu](https://github.com/yuxihu)
+* [Harsh Patel](https://github.com/harshp8l)
 * [Ming Yang](http://ufoym.com)
+
+Label Bot
+---------
+* [mxnet-label-bot](https://github.com/mxnet-label-bot)
+  - mxnet-label-bot provides users with the functionality to manage labels for Issues/Pull Requests on the repository
+  - To use me, comment:
+    - @mxnet-label-bot add [specify comma separated labels here]
+    - @mxnet-label-bot remove [specify comma separated labels here]
+    - @mxnet-label-bot update [specify comma separated labels here]  
+      (i.e. @mxnet-label-bot update [Bug, Python])
+  
+  - Available label names which are supported: [Labels](https://github.com/apache/incubator-mxnet/labels)
+  - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)

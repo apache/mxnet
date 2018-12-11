@@ -38,13 +38,27 @@ const kwargs_t basic_activation_args = { };
  * \brief Generic bidirectional sanity test
  */
 TEST(ACTIVATION_PERF, ExecuteBidirectional) {
+  using namespace std;
   TShape shape({5, 5});
-  kwargs_t kwargs = basic_activation_args;
-  kwargs.push_back({"act_type", "tanh"});
-
-  test::op::CoreOperatorRunner<float> runner;
-  runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
-          kwargs, "Activation", "_backward_Activation"), 1);
+  vector<string> activations = {
+    "relu",
+    "sigmoid",
+    "tanh",
+    "softrelu",
+    "softsign"
+  };
+  for (const string& activation : activations) {
+    kwargs_t activation_args = {{"act_type", activation}};
+    test::op::CoreOperatorRunner<float> runner;
+    runner.RunBidirectional(false, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
+            activation_args, "Activation", "_backward_Activation"), 1);
+  }
+  for (const string& activation : activations) {
+    kwargs_t activation_args = {{"act_type", activation}};
+    test::op::CoreOperatorRunner<float> runner;
+    runner.RunBidirectional(true, { shape }, test::op::CoreOpExecutor<float>::ArgsWithOpName(
+            activation_args, "Activation", "_backward_Activation"), 1);
+  }
 }
 
 /*!

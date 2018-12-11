@@ -23,7 +23,8 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from common import setup_module, with_seed, assertRaises, teardown, assert_raises_cudnn_disabled
+from common import (setup_module, with_seed, assertRaises, teardown,
+                    assert_raises_cudnn_not_satisfied)
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -339,7 +340,7 @@ def test_symbol_block():
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
-    # Test case to verify if initializing the SymbolBlock from a model with params 
+    # Test case to verify if initializing the SymbolBlock from a model with params
     # other than fp32 param dtype.
 
     # 1. Load a resnet model, cast it to fp64 and export
@@ -1320,7 +1321,7 @@ def test_apply():
 
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_summary():
     net = gluon.model_zoo.vision.resnet50_v1()
     net.initialize()
@@ -1931,7 +1932,6 @@ def test_reshape_batchnorm():
 
 
 @with_seed()
-@unittest.skip('Test failing, tracked by https://github.com/apache/incubator-mxnet/issues/12715')
 def test_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2411,7 +2411,7 @@ def test_reshape_activation():
             x_reshape = x.reshape(self.reshape)
             out = self.act(x_reshape)
             return out
-    acts = ["relu", "sigmoid", "tanh", "softrelu"]
+    acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for act in acts:
         x = mx.nd.random.uniform(-1, 1, shape=(4, 16, 32, 32))
         shape = (4, 32, 32, -1)
@@ -2433,7 +2433,7 @@ def test_slice_activation():
             out = self.act(x_slice)
             return out
 
-    acts = ["relu", "sigmoid", "tanh", "softrelu"]
+    acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for act in acts:
         x = mx.nd.random.uniform(-1, 1, shape=(8, 32, 64, 64))
         slice = [(0, 16, 32, 32), (4, 32, 64, 64)]
@@ -2457,7 +2457,7 @@ def test_reshape_activation_reshape_activation():
             y_reshape = y.reshape(self.reshape[1])
             out = self.act1(y_reshape)
             return out
-    acts = ["relu", "sigmoid", "tanh", "softrelu"]
+    acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
@@ -2484,7 +2484,7 @@ def test_slice_activation_slice_activation():
             y_slice = y.slice(begin=self.slice[1][0], end=self.slice[1][1])
             out = self.act1(y_slice)
             return out
-    acts = ["relu", "sigmoid", "tanh", "softrelu"]
+    acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
@@ -2512,7 +2512,7 @@ def test_reshape_activation_slice_activation():
             y_slice = y.slice(begin=self.slice[0], end=self.slice[1])
             out = self.act1(y_slice)
             return out
-    acts = ["relu", "sigmoid", "tanh", "softrelu"]
+    acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:
@@ -2541,7 +2541,7 @@ def test_slice_activation_reshape_activation():
             y_reshape = y.reshape(self.reshape)
             out = self.act1(y_reshape)
             return out
-    acts = ["relu", "sigmoid", "tanh", "softrelu"]
+    acts = ["relu", "sigmoid", "tanh", "softrelu", "softsign"]
     for idx0, act0 in enumerate(acts):
         for idx1, act1 in enumerate(acts):
             if idx1 == idx0:

@@ -27,8 +27,9 @@ from distutils.version import LooseVersion
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_disabled, assertRaises
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
 import unittest
+import os
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
     dshape = (N, T, I)
@@ -72,7 +73,7 @@ def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e
 
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
@@ -86,7 +87,7 @@ def test_lstm_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_bidirectional():
     T, N, I, H = 5, 20, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
@@ -107,7 +108,7 @@ def test_lstm_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_gru_sym():
     T, N, I, H = 5, 32, 800, 800
     fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
@@ -121,7 +122,7 @@ def test_gru_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_gru_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -144,7 +145,7 @@ def test_gru_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnntanh_sym():
     T, N, I, H = 5, 32, 800, 800
 
@@ -159,7 +160,7 @@ def test_rnntanh_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnntanh_bidirectional():
     T, N, I, H = 5, 20, 800, 800
 
@@ -181,7 +182,7 @@ def test_rnntanh_bidirectional():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnnrelu_sym():
     T, N, I, H = 5, 32, 200, 200
 
@@ -196,7 +197,7 @@ def test_rnnrelu_sym():
     check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
-@assert_raises_cudnn_disabled()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnnrelu_bidirectional():
     T, N, I, H = 5, 20, 200, 200
 
@@ -768,6 +769,7 @@ def test_leaky_relu():
 # NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
 # the analytical checks are still performed on each and every data type to verify the correctness.
 @with_seed()
+@unittest.skip("Flaky test tracked by https://github.com/apache/incubator-mxnet/issues/12885")
 def test_prelu():
     def fprelu(x, gamma):
         pos_indices = x > 0
@@ -3495,6 +3497,10 @@ def test_special_functions_using_scipy():
     mathematical_core("gammaln", lambda x: mx.sym.gammaln(x), lambda x: scipy_special.gammaln(x),
                      lambda x: scipy_special.psi(x), 0.5, 0.5)
 
+    # erf
+    mathematical_core("erf", lambda x: mx.sym.erf(x), lambda x: scipy_special.erf(x),
+                     lambda x: 2.0 / math.sqrt(math.pi) * math.exp(-(x ** 2)), 0.5, 0.5)
+
 
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
     data = mx.symbol.Variable('data')
@@ -3617,6 +3623,7 @@ def test_special_functions_using_scipy():
 
 
 @with_seed()
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/12901")
 def test_clip():
     data = mx.symbol.Variable('data')
     shape = (30, 30)
@@ -4443,6 +4450,20 @@ def test_log_softmax():
             check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
             check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
 
+def test_softmax_with_large_inputs():
+    def softmax_forward(input_data, true_output):
+        data = mx.sym.Variable('data')
+        out1 = data.softmax(axis=1)
+        exec1 = out1.bind(default_context(), args={'data': input_data})
+        exec1.forward()[0].wait_to_read()
+        ndarr = exec1.outputs[0][0][0][0]
+        nparr = ndarr.asnumpy()
+        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
+
+    softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
 def test_pick():
@@ -4762,6 +4783,48 @@ def test_quantization_op():
     assert same(qa.asnumpy(), qa_real.asnumpy())
     assert same(a_.asnumpy(),  a_real.asnumpy())
 
+@with_seed()
+def test_index_copy():
+    x = mx.nd.zeros((5,3))
+    t = mx.nd.array([[1,2,3],[4,5,6],[7,8,9]])
+    index = mx.nd.array([0,4,2], dtype=np.int64)
+    tensor = mx.nd.array([[1,2,3],[0,0,0],[7,8,9],[0,0,0],[4,5,6]])
+    x_grad = mx.nd.array([[0,0,0],[1,1,1],[0,0,0],[1,1,1],[0,0,0]])
+    t_grad = mx.nd.array([[1,1,1],[1,1,1],[1,1,1]])
+
+    t.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.index_copy(x, index, t)
+    out.backward()
+    assert same(out.asnumpy(), tensor.asnumpy())
+    assert same(t.grad.asnumpy(), t_grad.asnumpy())
+
+    x.attach_grad()
+    t.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.index_copy(x, index, t)
+    out.backward()
+    assert same(out.asnumpy(), tensor.asnumpy())
+    assert same(x.grad.asnumpy(), x_grad.asnumpy())
+    assert same(t.grad.asnumpy(), t_grad.asnumpy())
+
+
+@with_seed()
+def test_boolean_mask():
+    if default_context().device_type != 'cpu':
+        return
+    data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
+    index = mx.nd.array([0, 1, 0])
+    data.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.contrib.boolean_mask(data, index)
+    out.backward()
+    data.grad.wait_to_read()
+    expected = np.array([[4, 5, 6]])
+    expected_grad = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]])
+    assert same(out.asnumpy(), expected)
+    assert same(data.grad.asnumpy(), expected_grad)
+
 
 @with_seed()
 def test_div_sqrt_dim():
@@ -5037,10 +5100,33 @@ def test_psroipooling():
                                                      group_size=num_group, pooled_size=num_group,
                                                      output_dim=num_classes, name='test_op')
                     rtol, atol = 1e-2, 1e-3
-                    # By now we only have gpu implementation
-                    if default_context().device_type == 'gpu':
-                        check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
-                                               grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                    check_numeric_gradient(op, [im_data, rois_data], rtol=rtol, atol=atol,
+                                           grad_nodes=grad_nodes)
+
+
+@with_seed()
+def test_psroipooling_with_type():
+    arg_params = {
+        'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
+
+    # plain psroipooling
+    sym = mx.sym.contrib.PSROIPooling(spatial_scale=0.0625, output_dim=2, pooled_size=3, name='psroipool')
+    ctx_list = [{'ctx': mx.cpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float64, 'psroipool_rois': np.float64}},
+                {'ctx': mx.cpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float32, 'psroipool_rois': np.float32}},
+                {'ctx': mx.cpu(0),
+                 'psroipool_data': (1, 18, 14, 14),
+                 'psroipool_rois': (2, 5),
+                 'type_dict': {'psroipool_data': np.float16, 'psroipool_rois': np.float16}},
+                ]
+
+    check_consistency(sym, ctx_list, grad_req={'psroipool_data': 'write',
+                                               'psroipool_rois': 'null'}, arg_params=arg_params)
 
 
 @with_seed()
@@ -5171,43 +5257,10 @@ def test_deformable_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-# Helper functions for test_laop
-
-def _make_symm_symbol(a, ndims):
-    assert ndims >= 2
-    tr_shape = list(range(ndims))
-    tr_shape[-1] = ndims-2
-    tr_shape[-2] = ndims-1
-    tr_shape = tuple(tr_shape)
-    return 0.5 * (a + mx.sym.transpose(a, axes=tr_shape))
-
-def _make_lower_triangle_symm(a, ndims, m, dtype=np.float32):
-    assert ndims >= 2
-    # The last two dimensions must both be m
-    # Create mask for lower triangle and diagonal
-    index = mx.sym.arange(start=0, stop=m, step=1, dtype=np.int32)
-    lt_mask = mx.sym.one_hot(index, depth=m, dtype=dtype)
-    for j in range(1, m):
-        part1 = mx.sym.zeros(shape=(j, m), dtype=dtype)
-        index = mx.sym.arange(start=0, stop=m-j, step=1, dtype=np.int32)
-        part2 = mx.sym.one_hot(index, depth=m, dtype=dtype)
-        lt_mask = lt_mask + mx.sym.concat(*[part1, part2], dim=0)
-    shp = tuple([1]*(ndims-2) + [m, m])
-    lt_mask = mx.sym.reshape(lt_mask, shape=shp)
-    return mx.sym.broadcast_mul(a, lt_mask)
-
-# @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
-# tracked at https://github.com/apache/incubator-mxnet/issues/11718
-@with_seed()
-def test_laop():
-    dtype = np.float64
-    rtol_fw = 1e-7
-    atol_fw = 1e-9
+def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
     num_eps = 1e-6
     rtol_bw = 1e-5
     atol_bw = 1e-6
-    # enable numerical checking of gradients
-    grad_check = 1
 
     data1 = mx.symbol.Variable('data1')
     data2 = mx.symbol.Variable('data2')
@@ -5222,15 +5275,14 @@ def test_laop():
     rep_3x = lambda a, m, n :\
         np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
 
-    # Test gemm separately from other la-operators.
     shape1 = (2, 3)
     shape2 = (3, 2)
     shape3 = (3, 3)
     shape4 = (2, 2)
-    data_in1 = np.random.uniform(1, 10, shape1)
-    data_in2 = np.random.uniform(1, 10, shape2)
-    data_in3 = np.random.uniform(1, 10, shape3)
-    data_in4 = np.random.uniform(1, 10, shape4)
+    data_in1 = np.random.uniform(1, 10, shape1).astype(dtype)
+    data_in2 = np.random.uniform(1, 10, shape2).astype(dtype)
+    data_in3 = np.random.uniform(1, 10, shape3).astype(dtype)
+    data_in4 = np.random.uniform(1, 10, shape4).astype(dtype)
     # Check all transpositions of gemm operator.
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
@@ -5332,142 +5384,212 @@ def test_laop():
     if grad_check == 1:
         check_grad(test_gemm, [a2, b2])
 
-    # Now test all the other operators.
+# Test gemm separately from other la-operators.
+@with_seed()
+def test_gemm():
+    _gemm_test_helper(np.float64, True)
+    os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
+    _gemm_test_helper(np.float32, False, rtol_fw = 1e-5, atol_fw = 1e-7)
+    if default_context().device_type == 'gpu':
+        os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "1"
+        _gemm_test_helper(np.float32, False, rtol_fw = 2e-5, atol_fw = 2e-7)
+        os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
 
-    # Tests with trivial 1x1 matrices.
-    shape = (4, 4, 1, 1)
-    data_in = np.random.uniform(1, 10, shape)
-    # test potrf
-    # Note: Have to symmetrize input, for gradient test to work
-    res_potrf = np.sqrt(data_in)
-    test_potrf = mx.sym.linalg.potrf(data1)
-    check_fw(test_potrf, [data_in], [res_potrf])
-    if grad_check == 1:
-        check_grad(test_potrf, [data_in])
-    # test potri
-    ones = mx.nd.ones(shape).asnumpy()
-    res_potri = np.divide(ones, data_in * data_in)
-    test_potri = mx.sym.linalg.potri(data1)
-    check_fw(test_potri, [data_in], [res_potri])
-    if grad_check == 1:
-        check_grad(test_potri, [data_in])
-    # test trsm
-    trian_in = data_in * 7.
-    test_trsm = mx.sym.linalg.trsm(data1, data2, alpha=7.)
-    check_fw(test_trsm, [trian_in, data_in], [ones])
-    if grad_check == 1:
-        check_grad(test_trsm, [trian_in,data_in])
-    # test trmm
-    trian_in = np.divide(ones, trian_in)
-    test_trmm = mx.sym.linalg.trmm(data1, data2, alpha=7., transpose=True,
-                                   rightside=True)
-    check_fw(test_trmm, [trian_in, data_in], [ones])
-    if grad_check == 1:
-        check_grad(test_trmm, [trian_in, data_in])
-    # test sumlogdiag
-    res_sumlogdiag = np.reshape(np.log(data_in), (4, 4))
-    test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
-    check_fw(test_sumlogdiag, [data_in], [res_sumlogdiag])
-    if grad_check == 1:
-        check_grad(test_sumlogdiag, [data_in])
+# Helper functions for test_laop
 
-    # more elaborate example of Cholesky factorization
-    matrix = np.array([[9., 3., -6., 12.],
-                       [3., 26., -7., -11.],
-                       [-6., -7., 9., 7.],
-                       [12., -11., 7., 65.]])
-    trian  = np.array([[3., 0., 0., 0.],
-                       [1., 5., 0., 0.],
-                       [-2., -1., 2., 0.],
-                       [4., -3., 6., 2.]])
-    pow    = np.array([[2., 1., 1., 1.],
-                       [1., 4., 1., 1.],
-                       [1., 1., 8., 1.],
-                       [1., 1., 1., 16.]])
-    inv    = np.array([[8.95/3., 0.05/3., 2.65, -2.5/3.],
-                       [0.05/3., 0.05, 0.05, 0.],
-                       [2.65, 0.05, 2.5, -0.75],
-                       [-2.5/3., 0., -0.75, 0.25]])
-    ident  = np.eye(4)
+def _make_symm_symbol(a, ndims):
+    assert ndims >= 2
+    tr_shape = list(range(ndims))
+    tr_shape[-1] = ndims-2
+    tr_shape[-2] = ndims-1
+    tr_shape = tuple(tr_shape)
+    return 0.5 * (a + mx.sym.transpose(a, axes=tr_shape))
 
-    # test potrf
-    test_potrf = mx.sym.linalg.potrf(_make_symm_symbol(data1, ndims=4))
-    a = rep_3x(matrix, 4, 4)
-    r = rep_3x(trian, 4, 4)
-    check_fw(test_potrf, [a], [r])
-    if grad_check == 1:
-        check_grad(test_potrf, [a])
+def _make_triangle_symm(a, ndims, m, lower, dtype=np.float32):
+    assert ndims >= 2
+    # The last two dimensions must both be m
+    # Create mask for lower triangle and diagonal
+    index = mx.sym.arange(start=0, stop=m, step=1, dtype=np.int32)
+    lt_mask = mx.sym.one_hot(index, depth=m, dtype=dtype)
+    for j in range(1, m):
+        part1 = mx.sym.zeros(shape=(j, m), dtype=dtype)
+        index = mx.sym.arange(start=0, stop=m-j, step=1, dtype=np.int32)
+        part2 = mx.sym.one_hot(index, depth=m, dtype=dtype)
+        lt_mask = lt_mask + mx.sym.concat(*[part1, part2], dim=0)
+    if not lower:
+        lt_mask = mx.sym.reshape(lt_mask, shape=(m, m))
+        lt_mask = mx.sym.transpose(lt_mask, axes=(1, 0))
+    shp = tuple([1]*(ndims-2) + [m, m])
+    lt_mask = mx.sym.reshape(lt_mask, shape=shp)
+    return mx.sym.broadcast_mul(a, lt_mask)
 
-    #test potri
-    data1_ltri = _make_lower_triangle_symm(
-        data1, ndims=4, m=4, dtype=dtype)
-    test_potri = mx.sym.linalg.potri(data1_ltri)
-    a = rep_3x(trian, 4, 4)
-    r = rep_3x(inv, 4, 4)
-    check_fw(test_potri, [a], [r])
-    if grad_check == 1:
-        check_grad(test_potri, [a])
+# @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
+# tracked at https://github.com/apache/incubator-mxnet/issues/11718
+@with_seed()
+def test_laop():
+    dtype = np.float64
+    rtol_fw = 1e-7
+    atol_fw = 1e-9
+    num_eps = 1e-6
+    rtol_bw = 1e-5
+    atol_bw = 1e-6
+    # enable numerical checking of gradients
+    grad_check = 1
 
-    # test trsm
-    test_trsm = mx.sym.linalg.trsm(data1_ltri, data2, alpha=7.)
-    a = rep_3x(trian, 4, 4)
-    b = rep_3x(matrix, 4, 4)
-    r = rep_3x(7. * np.transpose(trian), 4, 4)
-    check_fw(test_trsm, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trsm, [a, b])
+    data1 = mx.symbol.Variable('data1')
+    data2 = mx.symbol.Variable('data2')
+    data3 = mx.symbol.Variable('data3')
 
-    test_trsm2 = mx.sym.linalg.trsm(
-        data1_ltri, data2, alpha=-2., rightside=True, transpose=True)
-    r = rep_3x(-2. * trian, 4, 4)
-    check_fw(test_trsm2, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trsm2, [a, b])
+    check_fw = lambda sym, location, expected :\
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+    check_grad = lambda sym, location:\
+        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                               atol=atol_bw, dtype=dtype)
+    rep_3x = lambda a, m, n :\
+        np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
 
-    test_trsm3 = mx.sym.linalg.trsm(
-        data1_ltri, data2, alpha=0.5, transpose=True)
-    b = rep_3x(np.transpose(trian), 4, 4)
-    r = rep_3x(0.5 * ident, 4, 4)
-    check_fw(test_trsm3, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trsm3, [a, b])
+    for lower in [True, False]:
+        upper = not lower
 
-    test_trsm4 = mx.sym.linalg.trsm(
-        data1_ltri, data2, alpha=-0.5, rightside=True)
-    b = rep_3x(trian, 4, 4)
-    r = rep_3x(-0.5 * ident, 4, 4)
-    check_fw(test_trsm4, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trsm4, [a, b])
+        # Tests with trivial 1x1 matrices.
+        shape = (4, 4, 1, 1)
+        data_in = np.random.uniform(1, 10, shape)
+        # test potrf
+        # Note: Have to symmetrize input, for gradient test to work
+        res_potrf = np.sqrt(data_in)
+        test_potrf = mx.sym.linalg.potrf(data1, lower=lower)
+        check_fw(test_potrf, [data_in], [res_potrf])
+        if grad_check == 1:
+            check_grad(test_potrf, [data_in])
+        # test potri
+        ones = mx.nd.ones(shape).asnumpy()
+        res_potri = np.divide(ones, data_in * data_in)
+        test_potri = mx.sym.linalg.potri(data1, lower=lower)
+        check_fw(test_potri, [data_in], [res_potri])
+        if grad_check == 1:
+            check_grad(test_potri, [data_in])
+        # test trsm
+        trian_in = data_in * 7.
+        test_trsm = mx.sym.linalg.trsm(data1, data2, alpha=7., lower=lower)
+        check_fw(test_trsm, [trian_in, data_in], [ones])
+        if grad_check == 1:
+            check_grad(test_trsm, [trian_in,data_in])
+        # test trmm
+        trian_in = np.divide(ones, trian_in)
+        test_trmm = mx.sym.linalg.trmm(data1, data2, alpha=7., transpose=True,
+                                       rightside=True, lower=lower)
+        check_fw(test_trmm, [trian_in, data_in], [ones])
+        if grad_check == 1:
+            check_grad(test_trmm, [trian_in, data_in])
+        # test sumlogdiag
+        res_sumlogdiag = np.reshape(np.log(data_in), (4, 4))
+        test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
+        check_fw(test_sumlogdiag, [data_in], [res_sumlogdiag])
+        if grad_check == 1:
+            check_grad(test_sumlogdiag, [data_in])
 
-    # test trmm
-    test_trmm = mx.sym.linalg.trmm(
-        data1_ltri, data2, alpha=7., transpose=True, rightside=True)
-    a = rep_3x(trian, 4, 4)
-    b = rep_3x(matrix, 4, 4)
-    r = rep_3x(7. * np.dot(matrix, trian.T), 4, 4)
-    check_fw(test_trmm, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trmm, [a, b])
+        # more elaborate example of Cholesky factorization
+        matrix = np.array([[9., 3., -6., 12.],
+                           [3., 26., -7., -11.],
+                           [-6., -7., 9., 7.],
+                           [12., -11., 7., 65.]])
+        trian  = np.array([[3., 0., 0., 0.],
+                           [1., 5., 0., 0.],
+                           [-2., -1., 2., 0.],
+                           [4., -3., 6., 2.]])
+        pow    = np.array([[2., 1., 1., 1.],
+                           [1., 4., 1., 1.],
+                           [1., 1., 8., 1.],
+                           [1., 1., 1., 16.]])
+        inv    = np.array([[8.95/3., 0.05/3., 2.65, -2.5/3.],
+                           [0.05/3., 0.05, 0.05, 0.],
+                           [2.65, 0.05, 2.5, -0.75],
+                           [-2.5/3., 0., -0.75, 0.25]])
+        ident  = np.eye(4)
 
-    test_trmm2 = mx.sym.linalg.trmm(data1_ltri, data2, alpha=-2.)
-    r = rep_3x(-2. * np.dot(trian, matrix), 4, 4)
-    check_fw(test_trmm2, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trmm2, [a, b])
+        low_trian = trian
+        if not lower:
+            trian = np.transpose(trian)
 
-    test_trmm3 = mx.sym.linalg.trmm(data1_ltri, data2, rightside=True)
-    r = rep_3x(np.dot(matrix, trian), 4, 4)
-    check_fw(test_trmm3, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trmm3, [a, b])
+        # test potrf
+        test_potrf = mx.sym.linalg.potrf(_make_symm_symbol(data1, ndims=4), lower=lower)
+        a = rep_3x(matrix, 4, 4)
+        r = rep_3x(trian, 4, 4)
+        check_fw(test_potrf, [a], [r])
+        if grad_check == 1:
+            check_grad(test_potrf, [a])
 
-    test_trmm4 = mx.sym.linalg.trmm(
-        data1_ltri, data2, alpha=1.2, transpose=True)
-    r = rep_3x(1.2 * np.dot(trian.T, matrix), 4, 4)
-    check_fw(test_trmm4, [a, b], [r])
-    if grad_check == 1:
-        check_grad(test_trmm4, [a, b])
+        #test potri
+        data1_ltri = _make_triangle_symm(
+            data1, ndims=4, m=4, lower=lower, dtype=dtype)
+        test_potri = mx.sym.linalg.potri(data1_ltri, lower=lower)
+        a = rep_3x(trian, 4, 4)
+        r = rep_3x(inv, 4, 4)
+        check_fw(test_potri, [a], [r])
+        if grad_check == 1:
+            check_grad(test_potri, [a])
+
+        # test trsm
+        test_trsm = mx.sym.linalg.trsm(data1_ltri, data2, alpha=7., transpose=upper, lower=lower)
+        a = rep_3x(trian, 4, 4)
+        b = rep_3x(matrix, 4, 4)
+        r = rep_3x(7. * np.transpose(low_trian), 4, 4)
+        check_fw(test_trsm, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trsm, [a, b])
+
+        test_trsm2 = mx.sym.linalg.trsm(
+            data1_ltri, data2, alpha=-2., rightside=True, transpose=lower, lower=lower)
+        r = rep_3x(-2. * low_trian, 4, 4)
+        check_fw(test_trsm2, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trsm2, [a, b])
+
+        test_trsm3 = mx.sym.linalg.trsm(
+            data1_ltri, data2, alpha=0.5, transpose=lower, lower=lower)
+        b = rep_3x(np.transpose(low_trian), 4, 4)
+        r = rep_3x(0.5 * ident, 4, 4)
+        check_fw(test_trsm3, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trsm3, [a, b])
+
+        test_trsm4 = mx.sym.linalg.trsm(
+            data1_ltri, data2, alpha=-0.5, rightside=True, transpose=upper, lower=lower)
+        b = rep_3x(low_trian, 4, 4)
+        r = rep_3x(-0.5 * ident, 4, 4)
+        check_fw(test_trsm4, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trsm4, [a, b])
+
+        # test trmm
+        test_trmm = mx.sym.linalg.trmm(
+            data1_ltri, data2, alpha=7., transpose=True, rightside=True, lower=lower)
+        a = rep_3x(trian, 4, 4)
+        b = rep_3x(matrix, 4, 4)
+        r = rep_3x(7. * np.dot(matrix, trian.T), 4, 4)
+        check_fw(test_trmm, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trmm, [a, b])
+
+        test_trmm2 = mx.sym.linalg.trmm(data1_ltri, data2, alpha=-2., lower=lower)
+        r = rep_3x(-2. * np.dot(trian, matrix), 4, 4)
+        check_fw(test_trmm2, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trmm2, [a, b])
+
+        test_trmm3 = mx.sym.linalg.trmm(data1_ltri, data2, rightside=True, lower=lower)
+        r = rep_3x(np.dot(matrix, trian), 4, 4)
+        check_fw(test_trmm3, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trmm3, [a, b])
+
+        test_trmm4 = mx.sym.linalg.trmm(
+            data1_ltri, data2, alpha=1.2, transpose=True, lower=lower)
+        r = rep_3x(1.2 * np.dot(trian.T, matrix), 4, 4)
+        check_fw(test_trmm4, [a, b], [r])
+        if grad_check == 1:
+            check_grad(test_trmm4, [a, b])
 
     # test sumlogdiag
     a = rep_3x(pow, 4, 4)
@@ -5746,7 +5868,6 @@ def test_stack():
 
 
 @with_seed()
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12329")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -6541,19 +6662,31 @@ def test_quadratic_function():
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
-    # check forward
-    for ndim in range(1, 6):
-        shape = rand_shape_nd(ndim, 5)
-        data = rand_ndarray(shape=shape, stype='default')
-        data_np = data.asnumpy()
-        expected = f(data_np, a, b, c)
-        output = mx.nd.contrib.quadratic(data, a=a, b=b, c=c)
-        assert_almost_equal(output.asnumpy(), expected, rtol=0.001, atol=0.0001)
+    data = mx.symbol.Variable('data')
+    quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+    for dtype in [np.float16, np.float32, np.float64]:
+        for ndim in range(1, 6):
+            shape = rand_shape_nd(ndim, 5)
+            data_np = np.random.randn(*shape).astype(dtype)
+            expected = f(data_np, a, b, c)
+            backward_expected = 2 * a * data_np + b
 
-        # check backward using finite difference
-        data = mx.sym.Variable('data')
-        quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
-        check_numeric_gradient(quad_sym, [data_np], atol=0.001)
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            assert_almost_equal(output.asnumpy(),expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check forward
+            check_symbolic_forward(quad_sym, [data_np], [expected],
+                                   rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                   atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward
+            check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
+                                    [backward_expected],
+                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward using finite difference
+            check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
 
 @with_seed()

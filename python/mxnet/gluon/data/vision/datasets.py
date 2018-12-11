@@ -45,10 +45,9 @@ class MNIST(dataset._DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'mnist'),
@@ -106,10 +105,9 @@ class FashionMNIST(MNIST):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'fashion-mnist'),
@@ -130,7 +128,7 @@ class FashionMNIST(MNIST):
 class CIFAR10(dataset._DownloadedDataset):
     """CIFAR10 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
-    Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
+    Each sample is an image (in 3D NDArray) with shape (32, 32, 3).
 
     Parameters
     ----------
@@ -139,10 +137,9 @@ class CIFAR10(dataset._DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'cifar10'),
@@ -193,7 +190,7 @@ class CIFAR10(dataset._DownloadedDataset):
 class CIFAR100(CIFAR10):
     """CIFAR100 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
-    Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
+    Each sample is an image (in 3D NDArray) with shape (32, 32, 3).
 
     Parameters
     ----------
@@ -204,10 +201,9 @@ class CIFAR100(CIFAR10):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'cifar100'),
@@ -238,14 +234,12 @@ class ImageRecordDataset(dataset.RecordFileDataset):
     filename : str
         Path to rec file.
     flag : {0, 1}, default 1
-        If 0, always convert images to greyscale.
-
+        If 0, always convert images to greyscale. \
         If 1, always convert images to colored (RGB).
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, filename, flag=1, transform=None):
@@ -262,7 +256,9 @@ class ImageRecordDataset(dataset.RecordFileDataset):
 
 
 class ImageFolderDataset(dataset.Dataset):
-    """A dataset for loading image files stored in a folder structure like::
+    """A dataset for loading image files stored in a folder structure.
+
+    like::
 
         root/car/0001.jpg
         root/car/xxxa.jpg
@@ -279,10 +275,9 @@ class ImageFolderDataset(dataset.Dataset):
         If 0, always convert loaded images to greyscale (1 channel).
         If 1, always convert loaded images to colored (3 channels).
     transform : callable, default None
-        A function that takes data and label and transforms them:
-    ::
+        A function that takes data and label and transforms them::
 
-        transform = lambda data, label: (data.astype(np.float32)/255, label)
+            transform = lambda data, label: (data.astype(np.float32)/255, label)
 
     Attributes
     ----------

@@ -22,7 +22,8 @@
 
 set -ex
 # install libraries for mxnet's python package on ubuntu
-apt-get install -y python-dev python3-dev virtualenv
+apt-get update || true
+apt-get install -y python-dev python3-dev virtualenv wget
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 wget -nv https://bootstrap.pypa.io/get-pip.py

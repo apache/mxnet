@@ -55,7 +55,6 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmax',
     'test_argmin',
     'test_min',
-    'test_logical_',
     # enabling partial test cases for matmul
     'test_matmul_3d',
     'test_matmul_4d',
@@ -71,7 +70,7 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_sin',
     'test_tan',
     'test_shape',
-    'test_hardsigmoid_',
+    'test_hardsigmoid',
     'test_averagepool_1d',
     'test_averagepool_2d_pads_count_include_pad',
     'test_averagepool_2d_precomputed_pads_count_include_pad',
@@ -85,7 +84,9 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_exp',
     'test_operator_maxpool',
     'test_operator_params',
-    'test_operator_permute2'
+    'test_operator_permute2',
+    'test_depthtospace',
+    'test_size'
     ]
 
 BASIC_MODEL_TESTS = [
@@ -98,6 +99,7 @@ BASIC_MODEL_TESTS = [
     'test_MaxPool',
     'test_PReLU',
     'test_ReLU',
+    'test_selu_default',
     'test_Sigmoid',
     'test_Softmax',
     'test_softmax_functional',

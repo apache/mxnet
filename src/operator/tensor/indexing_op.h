@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file indexing_op.h
- * \brief
+ * \brief Function definition of indexing operator
  * \author Bing Xu, Siyi Li, Chi Zhang, Haibin Lin
 */
 #ifndef MXNET_OPERATOR_TENSOR_INDEXING_OP_H_
@@ -301,25 +301,6 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
  */
 template<bool clip = true>
 struct Take {
-  // assume that idx have been flattened to a 1-D tensor (N,)
-  // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
-  // M is the number of columns of in_data and out_data
-  // K is the number of rows of in_data
-  // i is the index of out_data
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const int M, const int K) {
-    int j = static_cast<int>(idx[i/M]);
-    if (clip) {
-      if (j <= 0) j = 0;
-      else if (j >= K) j = K - 1;
-    } else {
-      j = j % K;
-      j += (j < 0) ? K : 0;
-    }
-    out_data[i] = in_data[j * M + i % M];
-  }
-
   /*!
    * \brief Map function for take operator
    * \param i           global thread id
@@ -333,27 +314,28 @@ struct Take {
    * \param axis        axis id
    */
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data, const IType* idx,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const IType* idx,
                                   const mshadow::Shape<10> in_stride,
                                   const mshadow::Shape<10> out_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
                                   const int axis_dim, const int axis) {
     // i is the global flattened index in the output
-    const int out_head_index = (axis == 0) ? 0 : (i / out_stride[axis - 1]);
-    const int out_rest_index = (axis == 0) ? i : (i % out_stride[axis - 1]);
-    const int out_mid_index = out_rest_index / in_stride[axis];
-    const int out_tail_index = (axis == in_ndims - 1) ?
-                               0 : (out_rest_index % in_stride[axis]);
-    int idx_index = static_cast<int>(idx[out_mid_index]);
+    const int64_t out_head_index = (axis == 0) ? 0 : (i / out_stride[axis - 1]);
+    const int64_t out_rest_index = (axis == 0) ? i : (i % out_stride[axis - 1]);
+    const int64_t out_mid_index = out_rest_index / in_stride[axis];
+    const int64_t out_tail_index = (axis == in_ndims - 1) ?
+                                   0 : (out_rest_index % in_stride[axis]);
+    int64_t idx_index = static_cast<int64_t>(idx[out_mid_index]);
     if (clip) {
       idx_index = (idx_index < 0) ? 0 : idx_index;
       idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
     }
     idx_index %= axis_dim;
     idx_index += (idx_index < 0) ? axis_dim : 0;
-    const int in_tail_index = out_tail_index;
-    const int in_head_index = out_head_index;
-    int in_src_index = in_tail_index + idx_index * in_stride[axis];
+    const int64_t in_tail_index = out_tail_index;
+    const int64_t in_head_index = out_head_index;
+    int64_t in_src_index = in_tail_index + idx_index * in_stride[axis];
     in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
     out_data[i] = in_data[in_src_index];
   }
@@ -365,24 +347,7 @@ void EmbeddingOpForwardDnsImpl(mshadow::Stream<xpu>* s,
                                const TBlob& data,
                                const TBlob& weight,
                                const OpReqType req,
-                               const TBlob& output) {
-  using namespace mxnet_op;
-  const TShape& ishape = data.shape_;
-  const TShape& oshape = output.shape_;
-
-  MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
-      Tensor<xpu, 1, IType> idx = data.get_with_shape<xpu, 1, IType>(
-        Shape1(ishape.ProdShape(0, ishape.ndim())), s);
-      Tensor<xpu, 2, DType> wmat = weight.get<xpu, 2, DType>(s);
-      Tensor<xpu, 2, DType> out = output.get_with_shape<xpu, 2, DType>(
-        Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<Take<true>, xpu>::Launch(s, oshape.Size(), out.dptr_, wmat.dptr_,
-                                idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
-    });
-  });
-}
-
+                               const TBlob& output);
 
 template<int req>
 struct TakeRspKernel {
@@ -397,7 +362,7 @@ struct TakeRspKernel {
    * \param nnr         number of non-zero rows
    */
   template<typename DType, typename IType, typename RType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   const IType* data,
                                   DType* out,
                                   const RType* weight_idx,
@@ -755,71 +720,77 @@ inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
+// storage type inference function for take
+inline bool TakeOpForwardStorageType(const nnvm::NodeAttrs& attrs,
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int>* in_attrs,
+                                     std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  const int& idx_stype = in_attrs->at(take_::kIdx);
+  const int& arr_stype = in_attrs->at(take_::kArr);
+  int& out_stype = out_attrs->at(take_::kOut);
+  bool dispatched = false;
+  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
+  if (!dispatched && idx_stype == kDefaultStorage && arr_stype == kDefaultStorage) {
+    // dns, dns -> dns
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && idx_stype == kDefaultStorage && arr_stype == kCSRStorage &&
+      param.axis == 0 && (param.mode == take_::kWrap || param.mode == take_::kClip)) {
+    // take(dns, csr, axis=0) -> csr
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
+}
+
+
+template<typename xpu>
+void TakeOpForwardCsrImpl(const TakeParam& params,
+                          const OpContext& ctx,
+                          const TBlob& idx,
+                          const NDArray& arr,
+                          OpReqType req,
+                          const NDArray& output);
+
+
+template<typename xpu>
+void TakeOpForwardEx(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<NDArray>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<NDArray>& outputs) {
+  CHECK_EQ(req[take_::kOut], kWriteTo);
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  const NDArray& idx = inputs[take_::kIdx];
+  const NDArray& arr = inputs[take_::kArr];
+  const NDArray& out = outputs[take_::kOut];
+  const auto idx_stype = idx.storage_type();
+  const auto arr_stype = arr.storage_type();
+  const auto out_stype = out.storage_type();
+  const auto params = nnvm::get<TakeParam>(attrs.parsed);
+  if (idx_stype == kDefaultStorage && arr_stype == kCSRStorage &&
+      out_stype == kCSRStorage) {
+    // dns, csr -> csr
+    TakeOpForwardCsrImpl<xpu>(params, ctx, idx.data(), arr, req[0], out);
+  } else {
+    LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+  }
+}
+
 template<typename xpu>
 void TakeOpForward(const nnvm::NodeAttrs& attrs,
                    const OpContext& ctx,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
-                   const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  if (req[take_::kOut] == kNullOp) return;
-  const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-
-  const TShape& idxshape = inputs[take_::kIdx].shape_;
-  const TShape& arrshape = inputs[take_::kArr].shape_;
-  const TShape& oshape = outputs[take_::kOut].shape_;
-
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
-
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
-      if (actual_axis == 0) {
-        if (param.mode == take_::kClip) {
-          Kernel<Take<true>, xpu>::Launch(s, oshape.Size(),
-                                          outputs[take_::kOut].dptr<DType>(),
-                                          inputs[take_::kArr].dptr<DType>(),
-                                          inputs[take_::kIdx].dptr<IType>(),
-                                          oshape.Size()/idxshape.Size(), arrshape[0]);
-        } else {
-          Kernel<Take<false>, xpu>::Launch(s, oshape.Size(),
-                                           outputs[take_::kOut].dptr<DType>(),
-                                           inputs[take_::kArr].dptr<DType>(),
-                                           inputs[take_::kIdx].dptr<IType>(),
-                                           oshape.Size()/idxshape.Size(), arrshape[0]);
-        }
-      } else {
-        mshadow::Shape<10> in_strides;
-        int stride = 1;
-        for (int i = arrshape.ndim() - 1; i >= 0; stride *= arrshape[i], --i) {
-          in_strides[i] = stride;
-        }
-        mshadow::Shape<10> out_strides;
-        stride = 1;
-        for (int i = oshape.ndim() - 1; i >= 0; stride *= oshape[i], --i) {
-          out_strides[i] = stride;
-        }
-        if (param.mode == take_::kClip) {
-          Kernel<Take<true>, xpu>::Launch(s, oshape.Size(),
-                                          outputs[take_::kOut].dptr<DType>(),
-                                          inputs[take_::kArr].dptr<DType>(),
-                                          inputs[take_::kIdx].dptr<IType>(),
-                                          in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
-                                          idxshape.ndim(), arrshape[actual_axis], actual_axis);
-        } else if (param.mode == take_::kWrap) {
-          Kernel<Take<false>, xpu>::Launch(s, oshape.Size(),
-                                           outputs[take_::kOut].dptr<DType>(),
-                                           inputs[take_::kArr].dptr<DType>(),
-                                           inputs[take_::kIdx].dptr<IType>(),
-                                           in_strides, out_strides, arrshape.ndim(), oshape.ndim(),
-                                           idxshape.ndim(), arrshape[actual_axis], actual_axis);
-        }
-      }
-    });
-  });
-}
+                   const std::vector<TBlob>& outputs);
 
 struct TakeGradGeneralKernel {
   /*!
@@ -1425,15 +1396,15 @@ inline bool ScatterNDType(const nnvm::NodeAttrs& attrs,
 
 struct scatter_nd {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, OpReqType req, int N, int M, int K,
+  MSHADOW_XINLINE static void Map(index_t i, OpReqType req, index_t N, index_t M, index_t K,
                                   const mshadow::Shape<10> strides,
                                   DType* out, const DType* data,
                                   const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * static_cast<index_t>(indices[j*N + i]);
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       KERNEL_ASSIGN(out[offset+j], req, data[i*K + j]);
     }
   }
@@ -1446,17 +1417,18 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using nnvm::dim_t;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TShape& oshape = outputs[0].shape_;
   const TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = oshape.ProdShape(M, oshape.ndim());
+  dim_t M = ishape[0];
+  dim_t N = ishape.Size() / M;
+  dim_t K = oshape.ProdShape(M, oshape.ndim());
   mshadow::Shape<10> strides;
-  for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  for (dim_t i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
@@ -1471,7 +1443,7 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
-GatherNDBackwardImpl(int N, int M, int K,
+GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                      const mshadow::Shape<10> strides,
                      DType* out,
                      const DType* data,
@@ -1480,7 +1452,7 @@ GatherNDBackwardImpl(int N, int M, int K,
 
 template<typename DType, typename IType>
 inline typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value, void>::type
-GatherNDBackwardImpl(int N, int M, int K,
+GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                      const mshadow::Shape<10> strides,
                      DType* out,
                      const DType* data,
@@ -1488,7 +1460,7 @@ GatherNDBackwardImpl(int N, int M, int K,
                      mshadow::Stream<cpu> *s);
 
 template<typename DType, typename IType>
-inline void GatherNDBackwardImpl(int N, int M, int K,
+inline void GatherNDBackwardImpl(index_t N, index_t M, index_t K,
                                  const mshadow::Shape<10> strides,
                                  DType* out,
                                  const DType* data,
@@ -1502,17 +1474,18 @@ void GatherNDBackward(const nnvm::NodeAttrs& attrs,
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
   using namespace mshadow;
+  using nnvm::dim_t;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   if (req[0] == kNullOp) return;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const TShape& oshape = outputs[0].shape_;
   const TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = oshape.ProdShape(M, oshape.ndim());
+  dim_t M = ishape[0];
+  dim_t N = ishape.Size() / M;
+  dim_t K = oshape.ProdShape(M, oshape.ndim());
   mshadow::Shape<10> strides;
-  for (int i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
+  for (dim_t i = M-1, stride = K; i >= 0; stride *= oshape[i], --i) strides[i] = stride;
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }

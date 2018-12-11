@@ -71,11 +71,11 @@ def _quantize_params(qsym, params, th_dict):
         elif name in params:
             quantized_params[name] = params[name]
         elif name.endswith(('_min')):
-            output = name[: - len('_min')] + "_output"
+            output = name[: - len('_min')]
             if output in th_dict:
                 quantized_params[name] = ndarray.array([th_dict[output][0]])
         elif name.endswith(('_max')):
-            output = name[: - len('_min')] + "_output"
+            output = name[: - len('_min')]
             if output in th_dict:
                 quantized_params[name] = ndarray.array([th_dict[output][1]])
     return quantized_params
@@ -513,8 +513,6 @@ def quantize_model(sym, arg_params, aux_params,
         if not isinstance(calib_data, DataIter):
             raise ValueError('calib_data must be of DataIter type when calib_mode=%s,'
                              ' while received type %s' % (calib_mode, str(type(calib_data))))
-        if calib_layer is None:
-            calib_layer = lambda name: name.endswith('_output')
 
         mod = Module(symbol=sym, data_names=data_names, label_names=label_names, context=ctx)
         if len(calib_data.provide_label) > 0:

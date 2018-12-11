@@ -25,6 +25,7 @@
 
 set -ex
 
+apt-get update || true
 apt-get -y install nodejs
 
 git clone -b 1.38.6 https://github.com/kripken/emscripten.git

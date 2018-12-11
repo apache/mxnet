@@ -19,6 +19,8 @@ package org.apache.mxnet.infer
 
 // scalastyle:off
 import java.awt.image.BufferedImage
+
+import scala.collection.parallel.mutable.ParArray
 // scalastyle:on
 import org.apache.mxnet.NDArray
 import org.apache.mxnet.DataDesc
@@ -72,9 +74,12 @@ class ObjectDetector(modelPathPrefix: String,
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
-    val output = objectDetectWithNDArray(IndexedSeq(pixelsNDArray), topK)
+    val imageShape = inputShape.drop(1)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+    val pixelsNDWithBatch = NDArray.api.expand_dims(pixelsNDArray, 0)
     handler.execute(pixelsNDArray.dispose())
+    val output = objectDetectWithNDArray(IndexedSeq(pixelsNDWithBatch), topK)
+    handler.execute(pixelsNDWithBatch.dispose())
     output
   }
 
@@ -91,39 +96,39 @@ class ObjectDetector(modelPathPrefix: String,
   def objectDetectWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int])
   : IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
-    val predictResult = predictor.predictWithNDArray(input)(0)
-    var batchResult = ListBuffer[IndexedSeq[(String, Array[Float])]]()
-    for (i <- 0 until predictResult.shape(0)) {
+    // Copy NDArray to CPU to avoid frequent GPU to CPU copying
+    val predictResult = predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
+    // Parallel Execution with ParArray for better performance
+    var batchResult = new ParArray[IndexedSeq[(String, Array[Float])]](predictResult.shape(0))
+    (0 until predictResult.shape(0)).toArray.par.foreach( i => {
       val r = predictResult.at(i)
-      batchResult += sortAndReformat(r, topK)
+      batchResult(i) = sortAndReformat(r, topK)
       handler.execute(r.dispose())
-    }
+    })
     handler.execute(predictResult.dispose())
     batchResult.toIndexedSeq
   }
 
   private[infer] def sortAndReformat(predictResultND: NDArray, topK: Option[Int])
   : IndexedSeq[(String, Array[Float])] = {
-    val predictResult: ListBuffer[Array[Float]] = ListBuffer[Array[Float]]()
-    val accuracy: ListBuffer[Float] = ListBuffer[Float]()
-
     // iterating over the all the predictions
     val length = predictResultND.shape(0)
 
-    for (i <- 0 until length) {
+    val predictResult = (0 until length).toArray.par.flatMap( i => {
       val r = predictResultND.at(i)
       val tempArr = r.toArray
-      if (tempArr(0) != -1.0) {
-        predictResult += tempArr
-        accuracy += tempArr(1)
+      val res = if (tempArr(0) != -1.0) {
+        Array[Array[Float]](tempArr)
       } else {
         // Ignore the minus 1 part
+        Array[Array[Float]]()
       }
       handler.execute(r.dispose())
-    }
+      res
+    }).toArray
     var result = IndexedSeq[(String, Array[Float])]()
     if (topK.isDefined) {
-      var sortedIndices = accuracy.zipWithIndex.sortBy(-_._1).map(_._2)
+      var sortedIndices = predictResult.zipWithIndex.sortBy(-_._1(1)).map(_._2)
       sortedIndices = sortedIndices.take(topK.get)
       // takeRight(5) would provide the output as Array[Accuracy, Xmin, Ymin, Xmax, Ymax
       result = sortedIndices.map(idx
@@ -133,7 +138,6 @@ class ObjectDetector(modelPathPrefix: String,
       result = predictResult.map(ele
       => (synset(ele(0).toInt), ele.takeRight(5))).toIndexedSeq
     }
-
     result
   }
 
@@ -147,13 +151,16 @@ class ObjectDetector(modelPathPrefix: String,
   def imageBatchObjectDetect(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
-    val imageBatch = ListBuffer[NDArray]()
-    for (image <- inputBatch) {
-      val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNdarray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
-      imageBatch += pixelsNdarray
-    }
-    val op = NDArray.concatenate(imageBatch)
+    val inputBatchSeq = inputBatch.toIndexedSeq
+    val imageBatch = inputBatchSeq.indices.par.map(idx => {
+      val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
+      val imageShape = inputShape.drop(1)
+      val pixelsND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)
+      val pixelsNDWithBatch = NDArray.api.expand_dims(pixelsND, 0).get
+      handler.execute(pixelsND.dispose())
+      pixelsNDWithBatch
+    })
+    val op = NDArray.concatenate(imageBatch.toList)
 
     val result = objectDetectWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())

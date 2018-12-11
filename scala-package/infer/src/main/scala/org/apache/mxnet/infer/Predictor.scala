@@ -22,7 +22,9 @@ import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
 import org.apache.mxnet.module.Module
 
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 import org.slf4j.LoggerFactory
+
 
 /**
  * Base Trait for MXNet Predictor classes.
@@ -75,6 +77,21 @@ class Predictor(modelPathPrefix: String,
                 extends PredictBase {
 
   private val logger = LoggerFactory.getLogger(classOf[Predictor])
+
+  /*
+    By setting -Dmxnet.disableShapeCheck=true would disable the data Shape
+    Check of the predictor. Some model may allow different lens of the data
+    such as Seq2Seq, however there maybe risk of crashes if the lens beyond
+    the acceptable range of the model
+   */
+  private val traceProperty = "mxnet.disableShapeCheck"
+  private lazy val shapeCheckDisabled = {
+    val value = Try(System.getProperty(traceProperty).toBoolean).getOrElse(false)
+    if (value) {
+      logger.warn("Shape check is disabled (property {} is set)", traceProperty)
+    }
+    value
+  }
 
   require(inputDescriptors.head.layout.size != 0, "layout size should not be zero")
 
@@ -172,17 +189,20 @@ class Predictor(modelPathPrefix: String,
     for((i, d) <- inputBatch.zip(iDescriptors)) {
        require(inputBatch(0).shape(batchIndex) == i.shape(batchIndex),
          "All inputs should be of same batch size")
-      require(i.shape.drop(batchIndex + 1) == d.shape.drop(batchIndex + 1),
-        s"Input Data Shape: ${i.shape} should match the inputDescriptor " +
-          s"shape: ${d.shape} except batchSize")
+      if (!shapeCheckDisabled) {
+        require(i.shape.drop(batchIndex + 1) == d.shape.drop(batchIndex + 1),
+          s"Input Data Shape: ${i.shape} should match the inputDescriptor " +
+            s"shape: ${d.shape} except batchSize")
+      }
     }
 
     val inputBatchSize = inputBatch(0).shape(batchIndex)
 
     // rebind with the new batchSize
     if (batchSize != inputBatchSize) {
-      val desc = iDescriptors.map((f : DataDesc) => new DataDesc(f.name,
-        Shape(f.shape.toVector.patch(batchIndex, Vector(inputBatchSize), 1)), f.dtype, f.layout) )
+      logger.info(s"Latency increased due to batchSize mismatch $batchSize vs $inputBatchSize")
+      val desc = inputBatch.zip(iDescriptors).map(f => new DataDesc(f._2.name,
+        f._1.shape, f._2.dtype, f._2.layout))
       mxNetHandler.execute(mod.bind(desc, forceRebind = true,
         forTraining = false))
     }
@@ -199,7 +219,7 @@ class Predictor(modelPathPrefix: String,
 
   private[infer] def loadModule(): Module = {
     val mod = mxNetHandler.execute(Module.loadCheckpoint(modelPathPrefix, epoch.get,
-      contexts = contexts))
+      contexts = contexts, dataNames = inputDescriptors.map(desc => desc.name)))
     mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false))
     mod
   }

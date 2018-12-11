@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import itertools
 import numpy as np
+import itertools
 import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
 from mxnet import gluon
@@ -70,43 +72,6 @@ def test_lr_wd_mult():
     assert mx.test_utils.almost_equal(args1['fc1_weight'], args2['fc1_weight'], 1e-10)
     assert not mx.test_utils.almost_equal(args1['fc1_bias'], args2['fc1_bias'], 1e-1)
     assert not mx.test_utils.almost_equal(args1['fc2_weight'], args2['fc2_weight'], 1e-1)
-
-def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
-    if t1 is not None and t2 is not None:
-        if isinstance(t1, tuple):
-            for s1, s2 in zip(t1, t2):
-                compare_ndarray_tuple(s1, s2, rtol, atol)
-        else:
-            assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
-
-
-def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
-                      rtol=1e-4, atol=1e-5):
-    if w_stype == 'default':
-        w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        w1 = w2.copyto(default_context())
-    elif w_stype == 'row_sparse' or w_stype == 'csr':
-        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
-        w1 = w2.copyto(default_context()).tostype('default')
-    else:
-        raise Exception("type not supported yet")
-    if g_stype == 'default':
-        g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        g1 = g2.copyto(default_context())
-    elif g_stype == 'row_sparse' or g_stype == 'csr':
-        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
-        g1 = g2.copyto(default_context()).tostype('default')
-    else:
-        raise Exception("type not supported yet")
-
-    state1 = opt1.create_state_multi_precision(0, w1)
-    state2 = opt2.create_state_multi_precision(0, w2)
-    compare_ndarray_tuple(state1, state2)
-
-    opt1.update_multi_precision(0, w1, g1, state1)
-    opt2.update_multi_precision(0, w2, g2, state2)
-    compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
 
 # SGD
 
@@ -538,7 +503,6 @@ def test_ftml():
 
 
 # ADAM
-
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
@@ -649,6 +613,80 @@ def test_adam():
                         compare_optimizer(opt1(lazy_update=False, **kwarg), opt2(lazy_update=False, **kwarg), shape,
                                           dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
+
+
+# AdaMax
+class PyAdamax(mx.optimizer.Optimizer):
+    """The python reference of AdaMax optimizer.
+
+    This class implements the AdaMax optimizer, one variant of Adam based on the infinity norm,
+    available at http://arxiv.org/abs/1412.6980 Section 7.
+
+    The optimizer updates the weight by::
+        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        m = beta1 * m_t + (1 - beta1) * grad
+        u = maximum(beta2 * u, abs(grad))
+        weight -= lr / (1 - beta1**t) * m / u
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    beta1 : float, optional
+        Exponential decay rate for the first moment estimates.
+    beta2 : float, optional
+        Exponential decay rate for the second moment estimates.
+    """
+    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999, **kwargs):
+        super(PyAdamax, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        lr = self._get_lr(index)
+        wd = self._get_wd(index)
+
+        t = self._index_update_count[index]
+        lr /= (1. - self.beta1**t)
+
+        # preprocess grad
+        grad = grad * self.rescale_grad + wd * weight
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        # update m_t and u_t
+        m_t, u_t = state
+        m_t[:] = self.beta1 * m_t + (1. - self.beta1) * grad
+        u_t[:] = mx.nd.maximum(self.beta2 * u_t, mx.nd.abs(grad))
+
+        # update weight
+        weight[:] -= lr * m_t / u_t
+
+
+@with_seed()
+def test_adamax():
+    opt1 = PyAdamax
+    opt2 = mx.optimizer.Adamax
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float16, np.float32, np.float64]:
+        for params in itertools.product(cg_options, rg_options, wd_options, mp_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if (dtype == np.float16 and
+                    ('multi_precision' not in kwarg or
+                    not kwarg['multi_precision'])):
+                continue
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
+
 
 # Signum
 class PySignum(mx.optimizer.Optimizer):
@@ -1013,8 +1051,8 @@ class PyAdaGrad(mx.optimizer.Optimizer):
         div = grad / mx.nd.sqrt(history + self.float_stable_eps)
         weight[:] += (div + weight * wd) * -lr
 
+@with_seed()
 def test_adagrad():
-    mx.random.seed(0)
     opt1 = PyAdaGrad
     opt2 = mx.optimizer.AdaGrad
     shape = (3, 4, 5)
@@ -1038,6 +1076,76 @@ def test_adagrad():
                                               w_stype='row_sparse', g_stype='row_sparse')
                             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype,
                                               g_stype='row_sparse')
+
+# AdaDelta
+class PyAdaDelta(mx.optimizer.Optimizer):
+    """The python reference of AdaDelta optimizer.
+
+    This class implements AdaDelta, an optimizer described in  *ADADELTA: An adaptive
+    learning rate method*, available at https://arxiv.org/abs/1212.5701.
+
+    This optimizer updates each weight by::
+
+        grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
+        acc_grad = rho * acc_grad + (1. - rho) * grad ** 2
+        cur_delta = sqrt(acc_delta + epsilon) / sqrt(acc_grad + epsilon) * grad
+        acc_delta = rho * acc_delta + (1. - rho) * cur_delta ** 2
+        weight -= (cur_delta + wd * weight)
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
+
+    Parameters
+    ----------
+    rho: float
+        Decay rate for both squared gradients and delta.
+    epsilon : float
+        Small value to avoid division by 0.
+    """
+    def __init__(self, rho=0.90, epsilon=1e-5, **kwargs):
+        super(PyAdaDelta, self).__init__(**kwargs)
+        self.rho = rho
+        self.epsilon = epsilon
+
+    def create_state(self, index, weight):
+        return (mx.nd.zeros(weight.shape, weight.context),
+                mx.nd.zeros(weight.shape, weight.context))
+
+    def update(self, index, weight, grad, state):
+        self._update_count(index)
+        wd = self._get_wd(index)
+
+        grad *= self.rescale_grad
+        if self.clip_gradient is not None:
+            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
+
+        acc_grad, acc_delta = state
+
+        acc_grad[:] = self.rho * acc_grad + (1. - self.rho) * grad ** 2
+        current_delta = (mx.nd.sqrt(acc_delta + self.epsilon) /
+                         mx.nd.sqrt(acc_grad + self.epsilon)) * grad
+        acc_delta[:] = self.rho * acc_delta + (1. - self.rho) * current_delta ** 2
+
+        # update weight
+        weight[:] -= current_delta + wd * weight
+
+@with_seed()
+def test_adadelta():
+    opt1 = PyAdaDelta
+    opt2 = mx.optimizer.AdaDelta
+    shape = (3, 4, 5)
+    rho_options = [{'rho': 0.9}]
+    eps_options = [{}, {'epsilon': 1e-8}]
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.0}]
+    for dtype in [np.float16, np.float32]:
+        for params in itertools.product(rho_options, eps_options, cg_options,
+                                        rg_options, wd_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if dtype is np.float16:
+                kwarg.update({'multi_precision': True})
+            compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 
 def test_factor_scheduler():

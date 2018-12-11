@@ -25,18 +25,25 @@ those PRs merged, this file will get EOL'ed.
 from __future__ import absolute_import
 import sys
 import os
+import unittest
 import logging
 import tarfile
+import tempfile
 from collections import namedtuple
 import numpy as np
 import numpy.testing as npt
-from onnx import numpy_helper
+from onnx import numpy_helper, helper
 from onnx import TensorProto
+from mxnet import nd, sym
+from mxnet.gluon import nn
 from mxnet.test_utils import download
 from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(CURR_PATH, '../../python/unittest'))
+sys.path.insert(0, os.path.join(CURR_PATH, '../../../python/unittest'))
+import backend
+from common import with_seed
+
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 URLS = {
@@ -179,6 +186,237 @@ def test_model_accuracy(model_name, input_shape):
         npt.assert_equal(expected.shape, actual.shape)
         npt.assert_almost_equal(expected, actual, decimal=3)
 
+@with_seed()
+def test_spacetodepth():
+    n, c, h, w = shape = (1, 1, 4, 6)
+    input1 = np.random.rand(n, c, h, w).astype("float32")
+    blocksize = 2
+    inputs = [helper.make_tensor_value_info("input1", TensorProto.FLOAT, shape=shape)]
+
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=(1, 4, 2, 3))]
+
+    nodes = [helper.make_node("SpaceToDepth", ["input1"], ["output"], block_size=blocksize)]
+
+    graph = helper.make_graph(nodes,
+                              "spacetodepth_test",
+                              inputs,
+                              outputs)
+
+    spacetodepth_model = helper.make_model(graph)
+
+    bkd_rep = backend.prepare(spacetodepth_model)
+    output = bkd_rep.run([input1])
+
+    tmp = np.reshape(input1, [n, c,
+                    h // blocksize, blocksize,
+                    w // blocksize, blocksize])
+    tmp = np.transpose(tmp, [0, 3, 5, 1, 2, 4])
+    numpy_op = np.reshape(tmp, [n, c * (blocksize**2),
+                    h // blocksize,
+                    w // blocksize])
+
+    npt.assert_almost_equal(output[0], numpy_op)
+
+@with_seed()
+def test_square():
+    input1 = np.random.randint(1, 10, (2, 3)).astype("float32")
+
+    ipsym = mx.sym.Variable("input1")
+    square = mx.sym.square(data=ipsym)
+    model = mx.mod.Module(symbol=square, data_names=['input1'], label_names=None)
+    model.bind(for_training=False, data_shapes=[('input1', np.shape(input1))], label_shapes=None)
+    model.init_params()
+
+    args, auxs = model.get_params()
+    params = {}
+    params.update(args)
+    params.update(auxs)
+
+    converted_model = onnx_mxnet.export_model(square, params, [np.shape(input1)], np.float32, "square.onnx")
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+    result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+
+    numpy_op = np.square(input1)
+
+    npt.assert_almost_equal(result, numpy_op)
+
+
+def test_softmax():
+    input1 = np.random.rand(1000, 1000).astype("float32")
+    label1 = np.random.rand(1000)
+    input_nd = mx.nd.array(input1)
+    label_nd = mx.nd.array(label1)
+
+    ipsym = mx.sym.Variable("ipsym")
+    label = mx.sym.Variable('label')
+    sym = mx.sym.SoftmaxOutput(data=ipsym, label=label, ignore_label=0, use_ignore=False)
+    ex = sym.bind(ctx=mx.cpu(0), args={'ipsym': input_nd, 'label': label_nd})
+    ex.forward(is_train=True)
+    softmax_out = ex.outputs[0].asnumpy()
+
+    converted_model = onnx_mxnet.export_model(sym, {}, [(1000, 1000), (1000,)], np.float32, "softmaxop.onnx")
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+    result = forward_pass(sym, arg_params, aux_params, ['ipsym'], input1)
+
+    # Comparing result of forward pass before using onnx export, import
+    npt.assert_almost_equal(result, softmax_out)
+
+@with_seed()
+def test_comparison_ops():
+    """Test greater, lesser, equal"""
+    def test_ops(op_name, inputs, input_tensors, numpy_op):
+        outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=np.shape(inputs[0]))]
+        nodes = [helper.make_node(op_name, ["input"+str(i+1) for i in range(len(inputs))], ["output"])]
+        graph = helper.make_graph(nodes,
+                                  op_name + "_test",
+                                  input_tensors,
+                                  outputs)
+        model = helper.make_model(graph)
+        bkd_rep = backend.prepare(model)
+        output = bkd_rep.run(inputs)
+        npt.assert_almost_equal(output[0], numpy_op)
+    input_data = [np.random.rand(1, 3, 4, 5).astype("float32"),
+                  np.random.rand(1, 5).astype("float32")]
+    input_tensor = []
+    for idx, ip in enumerate(input_data):
+        input_tensor.append(helper.make_tensor_value_info("input" + str(idx + 1),
+                                                          TensorProto.FLOAT, shape=np.shape(ip)))
+    test_ops("Greater", input_data, input_tensor,
+             np.greater(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Less", input_data, input_tensor,
+             np.less(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Equal", input_data, input_tensor,
+             np.equal(input_data[0], input_data[1]).astype(np.float32))
+
+
+def get_int_inputs(interval, shape):
+    """Helper to get integer input of given shape and range"""
+    assert len(interval) == len(shape)
+    inputs = []
+    input_tensors = []
+    for idx in range(len(interval)):
+        low, high = interval[idx]
+        inputs.append(np.random.randint(low, high, size=shape[idx]).astype("float32"))
+        input_tensors.append(helper.make_tensor_value_info("input"+str(idx+1),
+                                                        TensorProto.FLOAT, shape=shape[idx]))
+    return inputs, input_tensors
+
+
+@with_seed()
+def test_logical_ops():
+    """Test for logical and, or, not, xor operators"""
+    def test_ops(op_name, inputs, input_tensors, numpy_op):
+        outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=np.shape(inputs[0]))]
+        nodes = [helper.make_node(op_name, ["input"+str(i+1) for i in range(len(inputs))], ["output"])]
+        graph = helper.make_graph(nodes,
+                                  op_name + "_test",
+                                  input_tensors,
+                                  outputs)
+        model = helper.make_model(graph)
+        bkd_rep = backend.prepare(model)
+        output = bkd_rep.run(inputs)
+        npt.assert_almost_equal(output[0], numpy_op)
+    input_data, input_tensor = get_int_inputs([(0, 2), (0, 2)], [(3, 4, 5), (3, 4, 5)])
+    test_ops("And", input_data, input_tensor,
+             np.logical_and(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Or", input_data, input_tensor,
+             np.logical_or(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Xor", input_data, input_tensor,
+             np.logical_xor(input_data[0], input_data[1]).astype(np.float32))
+    test_ops("Not", [input_data[0]], [input_tensor[0]],
+             np.logical_not(input_data[0]).astype(np.float32))
+
+
+def _assert_sym_equal(lhs, rhs):
+    assert lhs.list_inputs() == rhs.list_inputs()  # input names must be identical
+    assert len(lhs.list_outputs()) == len(rhs.list_outputs())  # number of outputs must be identical
+
+
+def _force_list(output):
+    if isinstance(output, nd.NDArray):
+        return [output]
+    return list(output)
+
+
+def _optional_group(symbols, group=False):
+    if group:
+        return sym.Group(symbols)
+    else:
+        return symbols
+
+
+def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params={}):
+    net.initialize()
+    data = nd.random.uniform(0, 1, (1, 1024))
+    output = _force_list(net(data))  # initialize weights
+    net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
+    net_params = {name:param._reduce() for name, param in net.collect_params().items()}
+    net_params.update(extra_params)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        onnx_file_path = os.path.join(tmpdirname, 'net.onnx')
+        export_path = onnx_mxnet.export_model(
+            sym=net_sym,
+            params=net_params,
+            input_shape=[shape_type(data.shape)],
+            onnx_file_path=onnx_file_path)
+        assert export_path == onnx_file_path
+        # Try importing the model to symbol
+        _assert_sym_equal(net_sym, onnx_mxnet.import_model(export_path)[0])
+
+        # Try importing the model to gluon
+        imported_net = onnx_mxnet.import_to_gluon(export_path, ctx=None)
+        _assert_sym_equal(net_sym, _optional_group(imported_net(sym.Variable('data')), group_outputs))
+
+        # Confirm network outputs are the same
+        imported_net_output = _force_list(imported_net(data))
+        for out, imp_out in zip(output, imported_net_output):
+            mx.test_utils.assert_almost_equal(out.asnumpy(), imp_out.asnumpy())
+
+
+@with_seed()
+def test_onnx_export_single_output():
+    net = nn.HybridSequential(prefix='single_output_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net)
+
+
+@with_seed()
+def test_onnx_export_multi_output():
+    class MultiOutputBlock(nn.HybridBlock):
+        def __init__(self):
+            super(MultiOutputBlock, self).__init__()
+            with self.name_scope():
+                self.net = nn.HybridSequential()
+                for i in range(10):
+                    self.net.add(nn.Dense(100 + i * 10, activation='relu'))
+
+        def hybrid_forward(self, F, x):
+            out = tuple(block(x) for block in self.net._children.values())
+            return out
+
+    net = MultiOutputBlock()
+    assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
+    _check_onnx_export(net, group_outputs=True)
+
+
+@with_seed()
+def test_onnx_export_list_shape():
+    net = nn.HybridSequential(prefix='list_shape_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net, shape_type=list)
+
+
+@with_seed()
+def test_onnx_export_extra_params():
+    net = nn.HybridSequential(prefix='extra_params_net')
+    with net.name_scope():
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+    _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
+
 
 if __name__ == '__main__':
     test_models("bvlc_googlenet", (1, 3, 224, 224), (1, 1000))
@@ -189,3 +427,5 @@ if __name__ == '__main__':
     # ONNX expected results due to AveragePool issue github issue(#10194)
     test_model_accuracy("inception_v1", (1, 3, 224, 224))
     test_model_accuracy("inception_v2", (1, 3, 224, 224))
+
+    unittest.main()

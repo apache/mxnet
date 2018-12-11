@@ -1,0 +1,8 @@
+.flattened-pom.xml
+core/src/main/scala/org/apache/mxnet/NDArrayAPIBase.scala
+core/src/main/scala/org/apache/mxnet/NDArrayBase.scala
+core/src/main/scala/org/apache/mxnet/javaapi/NDArrayBase.scala
+core/src/main/scala/org/apache/mxnet/SymbolAPIBase.scala
+core/src/main/scala/org/apache/mxnet/SymbolBase.scala
+examples/scripts/infer/images/
+examples/scripts/infer/models/

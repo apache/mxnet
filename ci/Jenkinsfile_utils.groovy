@@ -26,8 +26,11 @@ def init_git() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        sh 'git submodule update --init --recursive'
         sh 'git clean -xdff'
+        sh 'git reset --hard'
+        sh 'git submodule update --init --recursive'
+        sh 'git submodule foreach --recursive git clean -ffxd'
+        sh 'git submodule foreach --recursive git reset --hard'
       }
     } catch (exc) {
       deleteDir()
@@ -45,8 +48,11 @@ def init_git_win() {
       // retries as this will increase the amount of requests and worsen the throttling
       timeout(time: 15, unit: 'MINUTES') {
         checkout scm
-        bat 'git submodule update --init --recursive'
         bat 'git clean -xdff'
+        bat 'git reset --hard'
+        bat 'git submodule update --init --recursive'
+        bat 'git submodule foreach --recursive git clean -ffxd'
+        bat 'git submodule foreach --recursive git reset --hard'
       }
     } catch (exc) {
       deleteDir()
@@ -59,8 +65,10 @@ def init_git_win() {
 // pack libraries for later use
 def pack_lib(name, libs, include_gcov_data = false) {
   sh """
+set +e
 echo "Packing ${libs} into ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+return 0
 """
   stash includes: libs, name: name
 
@@ -76,8 +84,10 @@ def unpack_and_init(name, libs, include_gcov_data = false) {
   init_git()
   unstash name
   sh """
+set +e
 echo "Unpacked ${libs} from ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
+return 0
 """
   if (include_gcov_data) {
     // Restore GCNO files that are required for GCOV to operate during runtime
@@ -85,23 +95,32 @@ echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
   }
 }
 
+def get_jenkins_master_url() {
+    return env.BUILD_URL.split('/')[2].split(':')[0]
+}
+
+def get_git_commit_hash() {
+  lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
+  lastCommitMessage = lastCommitMessage.trim()
+  if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
+      // Merge commit applied by Jenkins, skip that commit
+      git_commit_hash = sh (script: "git rev-parse @~", returnStdout: true)
+  } else {
+      git_commit_hash = sh (script: "git rev-parse @", returnStdout: true)
+  }
+  return git_commit_hash
+}
+
 def publish_test_coverage() {
     // CodeCovs auto detection has trouble with our CIs PR validation due the merging strategy
-    lastCommitMessage = sh (script: "git log -1 --pretty=%B", returnStdout: true)
-    lastCommitMessage = lastCommitMessage.trim()
-    if (lastCommitMessage.startsWith("Merge commit '") && lastCommitMessage.endsWith("' into HEAD")) {
-        // Merge commit applied by Jenkins, skip that commit
-        GIT_COMMIT_HASH = sh (script: "git rev-parse @~", returnStdout: true)
-    } else {
-        GIT_COMMIT_HASH = sh (script: "git rev-parse @", returnStdout: true)
-    }
+    git_commit_hash = get_git_commit_hash()
    
     if (env.CHANGE_ID) {
       // PR execution
-      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${GIT_COMMIT_HASH} -P ${env.CHANGE_ID}"
+      codecovArgs = "-B ${env.CHANGE_TARGET} -C ${git_commit_hash} -P ${env.CHANGE_ID}"
     } else {
       // Branch execution
-      codecovArgs = "-B ${env.BRANCH_NAME} -C ${GIT_COMMIT_HASH}"
+      codecovArgs = "-B ${env.BRANCH_NAME} -C ${git_commit_hash}"
     }
 
     // To make sure we never fail because test coverage reporting is not available
@@ -138,14 +157,83 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
   sh command
 }
 
+// Allow publishing to GitHub with a custom context (the status shown under a PR)
+// Credit to https://plugins.jenkins.io/github
+def get_repo_url() {
+  checkout scm
+  return sh(returnStdout: true, script: "git config --get remote.origin.url").trim()
+}
 
+def update_github_commit_status(state, message) {
+  node(NODE_UTILITY) {
+    // NOTE: https://issues.jenkins-ci.org/browse/JENKINS-39482
+    //The GitHubCommitStatusSetter requires that the Git Server is defined under 
+    //*Manage Jenkins > Configure System > GitHub > GitHub Servers*. 
+    //Otherwise the GitHubCommitStatusSetter is not able to resolve the repository name 
+    //properly and you would see an empty list of repos:
+    //[Set GitHub commit status (universal)] PENDING on repos [] (sha:xxxxxxx) with context:test/mycontext
+    //See https://cwiki.apache.org/confluence/display/MXNET/Troubleshooting#Troubleshooting-GitHubcommit/PRstatusdoesnotgetpublished
+    repoUrl = get_repo_url()
+    commitSha = get_git_commit_hash()
+    context = get_github_context()
+
+    step([
+      $class: 'GitHubCommitStatusSetter',
+      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
+      commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
+      statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
+      errorHandlers: [[$class: 'ShallowAnyErrorHandler']],
+      statusResultSource: [
+        $class: 'ConditionalStatusResultSource',
+        results: [[$class: "AnyBuildResult", message: message, state: state]]
+      ]
+    ])
+  }
+}
+
+def get_github_context() {
+  // Since we use multi-branch pipelines, Jenkins appends the branch name to the job name
+  if (env.BRANCH_NAME) {
+    short_job_name = JOB_NAME.substring(0, JOB_NAME.lastIndexOf('/')) 
+  } else {
+    short_job_name = JOB_NAME
+  }
+  
+  return "ci/jenkins/${short_job_name}"
+}
+
+def parallel_stage(stage_name, steps) {
+    // Allow to pass an array of steps that will be executed in parallel in a stage
+    new_map = [:]
+    
+    for (def step in steps) {
+        new_map = new_map << step
+    }
+    
+    stage(stage_name) {
+      parallel new_map
+    }
+}
 
 def assign_node_labels(args) {
+  // This function allows to assign instance labels to the generalized placeholders. 
+  // This serves two purposes:
+  // 1. Allow generalized placeholders (e.g. NODE_WINDOWS_CPU) in the job definition
+  //    in order to abstract away the underlying node label. This allows to schedule a job
+  //    onto a different node for testing or security reasons. This could be, for example,
+  //    when you want to test a new set of slaves on separate labels or when a job should
+  //    only be run on restricted slaves
+  // 2. Restrict the allowed job types within a Jenkinsfile. For example, a UNIX-CPU-only
+  //    Jenkinsfile should not allowed access to Windows or GPU instances. This prevents
+  //    users from just copy&pasting something into an existing Jenkinsfile without
+  //    knowing about the limitations.
   NODE_LINUX_CPU = args.linux_cpu
   NODE_LINUX_GPU = args.linux_gpu
   NODE_LINUX_GPU_P3 = args.linux_gpu_p3
   NODE_WINDOWS_CPU = args.windows_cpu
   NODE_WINDOWS_GPU = args.windows_gpu
+  NODE_UTILITY = args.utility
 }
 
 def main_wrapper(args) {
@@ -158,21 +246,27 @@ def main_wrapper(args) {
   // assign any caught errors here
   err = null
   try {
+    update_github_commit_status('PENDING', 'Job has been enqueued')
     args['core_logic']()
 
     // set build status to success at the end
     currentBuild.result = "SUCCESS"
+    update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
-    node(NODE_LINUX_CPU) {
+    node(NODE_UTILITY) {
       sh "echo caught ${caughtError}"
       err = caughtError
       currentBuild.result = "FAILURE"
+      update_github_commit_status('FAILURE', 'Job failed')
     }
   } finally {
-    node(NODE_LINUX_CPU) {
+    node(NODE_UTILITY) {
       // Call failure handler
       args['failure_handler']()
-      
+
+      // Clean workspace to reduce space requirements
+      cleanWs()
+
       // Remember to rethrow so the build is marked as failing
       if (err) {
         throw err
