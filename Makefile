@@ -83,11 +83,15 @@ ifeq ($(DEV), 1)
 	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
+ifeq ($(USE_BLAS), mkl)
+	CFLAGS += -DMKL_ILP64
+endif
+
 # CFLAGS for debug
 ifeq ($(DEBUG), 1)
 	CFLAGS += -g -O0
 else
-	CFLAGS += -O3 -DNDEBUG=1 -DMKL_ILP64
+	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
