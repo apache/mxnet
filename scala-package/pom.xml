@@ -39,6 +39,8 @@
     <scala.version>2.11.8</scala.version>
     <scala.binary.version>2.11</scala.binary.version>
     <build.platform />
+    <cxx>g++</cxx>
+    <dollar>$</dollar>
   </properties>
 
   <packaging>pom</packaging>
