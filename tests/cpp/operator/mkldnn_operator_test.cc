@@ -644,6 +644,10 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
   std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
 
   if (req == kWriteTo) {
+
+    auto tmp_output = in_arr.arr;
+    backwards_outputs[0] = &tmp_output;
+    backwards_ex_outputs[0] = &tmp_output;
     // backwards test performed same time since output needed
     backwards_input[0] = outputs[0];  // output grad
     backwards_input[1] = inputs[0];  // input
