@@ -841,14 +841,12 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
       if (forward_attrs.accept_dims.find(in_arr.arr.shape().ndim()) ==
           forward_attrs.accept_dims.end())
         continue;
-
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
             GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
         ex_out_arrs[i] =
             GetTestOutputArrays(in_arr.arr.shape(), pds, {1}, true, forward_attrs.output_types);
       }
-
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
         inputs_buffer.clear();
         inputs2_buffer.clear();
@@ -865,8 +863,6 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
         }
-
-
         for (int i = 0; i < forward_attrs.num_outputs; i++) {
           req[i] = kWriteTo;
           outputs[i] = &out_arrs[i][output_i].arr;
@@ -889,36 +885,6 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
                            inputs, outputs, in_arr, out_arrs[0][output_i]);
         }
       }
-    }
-  }
-
-  if (forward_attrs.requests.find(OpReqType::kWriteInplace) != forward_attrs.requests.end()) {
-    for (int i1 = 0; i1 < in_arrs.size(); i1++) {
-      auto in_arr = in_arrs[i1];
-
-      // If the array is a view, we shouldn't write data to it.
-      if (in_arr.arr.IsView())
-          continue;
-
-      NDArrayAttrs orig(in_arr.arr.Copy(in_arr.arr.ctx()), "InPlace Copy");
-      for (int i = 0; i < forward_attrs.num_inputs; i++)
-        inputs[i] = &in_arr.arr;
-
-      for (int i = 0; i < forward_attrs.num_outputs; i++) {
-        req[i] = kWriteInplace;
-        outputs[i] = &in_arr.arr;
-        ex_outputs[i] = &in_arr.arr;
-      }
-      Imperative::Get()->set_is_training(true);
-      PrintVerifyMsg(orig, in_arr);
-      Imperative::Get()->InvokeOp(
-          Context(), forward_attrs.attrs, inputs, outputs, req,
-          DispatchMode::kFCompute, mxnet::OpStatePtr());
-      Imperative::Get()->InvokeOp(
-          Context(), forward_attrs.attrs, inputs, ex_outputs, req,
-          DispatchMode::kFComputeEx, mxnet::OpStatePtr());
-      Engine::Get()->WaitForAll();
-      AssertEqual(outputs, ex_outputs);
     }
   }
 }
