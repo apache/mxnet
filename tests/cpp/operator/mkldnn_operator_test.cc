@@ -673,8 +673,8 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
       backwards_buffer2.emplace_back(tmp_output.Copy(Context()));
       if (in_arr.arr.IsMKLDNNData()) {
-        backwards_mem.emplace_back(tmp_output.GetMKLDNNData());
-        backwards2_mem.emplace_back(tmp_output.GetMKLDNNData());
+        backwards_mem.emplace_back(backwards_buffer.back().GetMKLDNNData());
+        backwards2_mem.emplace_back(backwards_buffer2.back().GetMKLDNNData());
         backwards_buffer.back().CopyFrom(*backwards_mem.back());
         backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
       }
