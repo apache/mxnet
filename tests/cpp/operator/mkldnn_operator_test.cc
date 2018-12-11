@@ -681,6 +681,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
       backwards_buffer2.back().CopyFrom(*backwards2_mem.back());
       backwards_outputs[i] = &backwards_buffer.back();
       backwards_ex_outputs[i] = &backwards_buffer2.back();
+      Engine::Get()->WaitForAll();
     }
 
 
@@ -755,6 +756,7 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           inputs2_buffer.back().CopyFrom(*inputs2_mem.back());
           inputs[i] = &inputs_buffer.back();
           inputs2[i] = &inputs2_buffer.back();
+          Engine::Get()->WaitForAll();
         }
 
 
