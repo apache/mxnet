@@ -37,6 +37,15 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
+* MXNET_MP_WORKER_NTHREADS
+  - Values: Int ```(default=1)```
+  - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reduce the overall `num_workers` to avoid thread contention (Not available on Windows).
+* MXNET_MP_OMP_NUM_THREADS
+  - Values: Int ```(default=1)```
+  - The number of OpenMP threads limit given to multiprocess workers. OpenMP is disabled in worker process if `MXNET_MP_OMP_NUM_THREADS` <= 1 (default). Enlarge this number may boost operator execution performance of individual workers but please consider reduce the overall `num_workers` to avoid thread contention (Not available on Windows).
+* MXNET_MP_OPENCV_NUM_THREADS
+  - Values: Int ```(default=0)```
+  - The number of OpenCV execution threads given to multiprocess workers. OpenCV multithreading is disabled if `MXNET_MP_OPENCV_NUM_THREADS` < 1 (default). Enlarge this number may boost the performance of individual workers when executing underlying OpenCV functions but please consider reduce the overall `num_workers` to avoid thread contention (Not available on Windows).
 
 ## Memory Options
 
@@ -99,10 +108,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_KVSTORE_REDUCTION_NTHREADS
   - Values: Int ```(default=4)```
   - The number of CPU threads used for summing up big arrays on a single machine
-  - This will also be used for `dist_sync` kvstore to sum up arrays from different contexts on a single machine. 
-  - This does not affect summing up of arrays from different machines on servers. 
+  - This will also be used for `dist_sync` kvstore to sum up arrays from different contexts on a single machine.
+  - This does not affect summing up of arrays from different machines on servers.
   - Summing up of arrays for `dist_sync_device` kvstore is also unaffected as that happens on GPUs.
-  
+
 * MXNET_KVSTORE_BIGARRAY_BOUND
   - Values: Int ```(default=1000000)```
   - The minimum size of a "big array".
@@ -166,7 +175,7 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
   - Values: 0, 1, or 2 ```(default=1)```
-  - The default value of cudnn auto tuning for convolution layers. 
+  - The default value of cudnn auto tuning for convolution layers.
   - Value of 0 means there is no auto tuning to pick the convolution algo
   - Performance tests are run to pick the convolution algo when value is 1 or 2
   - Value of 1 chooses the best algo in a limited workspace
@@ -190,12 +199,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 * MXNET_HOME
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
-  
+
 * MXNET_MKLDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
-  
+
 * MXNET_MKLDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
   - Flag to set num of elements that MKLDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use MKLDNN and different input shape.
