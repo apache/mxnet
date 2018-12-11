@@ -173,6 +173,14 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
         }
       }
 
+
+    // TEMPORARY CODE (diag problem on CI)
+    if(function.listOfArgs.filter(arg => arg.argType == "T").isEmpty) {
+      // scalastyle:off println
+      println(s"Func: ${function.name}, args=[${function.listOfArgs.mkString(",")}]")
+    }
+
+
     // since the API is mixing calls using Symbol or Float through template (see unifyRandom),
     // to determine the target call, we pick the first arg that is using the template type
     val firstArg = function.listOfArgs.filter(arg => arg.argType == "T").head
