@@ -17,6 +17,7 @@
 
 (ns rnn.train-char-rnn
   (:require  [clojure.string :as string]
+             [clojure.java.shell :refer [sh]]
              [rnn.util :as util]
              [rnn.lstm :as lstm]
              [rnn.test-char-rnn :as test-rnn]
@@ -33,6 +34,9 @@
   (:gen-class))
 
 ;;https://github.com/apache/incubator-mxnet/blob/master/example/rnn/old/char-rnn.ipynb
+
+(when-not (.exists (clojure.java.io/file "data"))
+  (do (println "Retrieving data...") (sh "./get_data.sh")))
 
 ;; batch size for training
 (def batch-size 32)

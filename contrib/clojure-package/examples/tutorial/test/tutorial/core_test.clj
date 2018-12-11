@@ -15,13 +15,13 @@
 ;; limitations under the License.
 ;;
 
-(defproject tutorial "0.1.0-SNAPSHOT"
-  :description "MXNET tutorials"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+(ns tutorial.core_test
+ (:require [clojure.test :refer :all])
+ (:require 
+ 	[tutorial.introduction]
+ 	[tutorial.kvstore]
+ 	[tutorial.module]
+ 	[tutorial.ndarray]
+ 	[tutorial.symbol]))
 
-                 ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
+(deftest if-this-goes-here-then-tutorials-have-loaded-properly (is true))

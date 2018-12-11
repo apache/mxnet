@@ -15,13 +15,11 @@
 ;; limitations under the License.
 ;;
 
-(defproject tutorial "0.1.0-SNAPSHOT"
-  :description "MXNET tutorials"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+(ns gan.gan_test
+ (:require 
+ 	[gan.gan-mnist :refer :all]
+ 	[org.apache.clojure-mxnet.context :as context]
+ 	[clojure.test :refer :all]))
 
-                 ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
+(deftest check-pdf 
+	(train [(context/cpu)] 1))

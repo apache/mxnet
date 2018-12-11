@@ -15,13 +15,25 @@
 ;; limitations under the License.
 ;;
 
-(defproject tutorial "0.1.0-SNAPSHOT"
-  :description "MXNET tutorials"
-  :plugins [[lein-cljfmt "0.5.7"]]
-  :dependencies [[org.clojure/clojure "1.9.0"]
-  				 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+(ns imclassification.train-mnist-test
+	(:require 
+		[clojure.test :refer :all]
+		[clojure.java.io :as io]
+		[clojure.string :as s]
+		[org.apache.clojure-mxnet.context :as context]
+		[org.apache.clojure-mxnet.module :as module]
+		[imclassification.train-mnist :as mnist]))
 
-                 ;; Uncomment the one appropriate for your machine & configuration:
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]
-                 #_[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]])
+(defn- file-to-filtered-seq [file]
+	(->>
+		file 
+		(io/file)
+		(io/reader)
+		(line-seq)
+		(filter  #(not (s/includes? % "mxnet_version")))))
+
+(deftest mnist-two-epochs-test
+	(module/save-checkpoint (mnist/start [(context/cpu)] 2) {:prefix "target/test" :epoch 2})
+	(is (= 
+		(file-to-filtered-seq "test/test-symbol.json.ref") 
+		(file-to-filtered-seq "target/test-symbol.json"))))
