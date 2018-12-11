@@ -857,7 +857,6 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
           if (in_arr.arr.IsMKLDNNData()) {
             inputs_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
             inputs2_buffer.back().CopyFrom(*in_arr.arr.GetMKLDNNData());
-
           }
           Engine::Get()->WaitForAll();
           inputs[i] = &inputs_buffer.back();
