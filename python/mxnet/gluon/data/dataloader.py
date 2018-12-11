@@ -505,6 +505,11 @@ class DataLoader(object):
         but will consume more shared_memory. Using smaller number may forfeit the purpose of using
         multiple worker processes, try reduce `num_workers` in this case.
         By default it defaults to `num_workers * 2`.
+    thread_pool : bool, default False
+        If ``True``, use threading pool instead of multiprocessing pool. Using threadpool
+        can avoid shared memory usage. If `DataLoader` is more IO bounded or GIL is not a killing
+        problem, threadpool version may achieve better performance than multiprocessing.
+
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
@@ -572,6 +577,7 @@ class DataLoader(object):
 
     def __del__(self):
         if self._worker_pool:
-            # manually terminate due to a bug that pool is not automatically terminated on linux
+            # manually terminate due to a bug that pool is not automatically terminated
+            # https://bugs.python.org/issue34172
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
