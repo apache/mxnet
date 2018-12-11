@@ -33,6 +33,7 @@ namespace op {
 namespace image {
 
 DMLC_REGISTER_PARAMETER(NormalizeParam);
+DMLC_REGISTER_PARAMETER(ResizeParam);
 DMLC_REGISTER_PARAMETER(RandomEnhanceParam);
 DMLC_REGISTER_PARAMETER(AdjustLightingParam);
 DMLC_REGISTER_PARAMETER(RandomLightingParam);
@@ -63,6 +64,18 @@ NNVM_REGISTER_OP(_image_normalize)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(NormalizeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_image_resize)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ResizeParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ResizeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", Resize)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.add_argument("data", "NDArray-or-Symbol", "The input.")
+.add_arguments(ResizeParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_left_right)
 .describe(R"code()code" ADD_FILELINE)

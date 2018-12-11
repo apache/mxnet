@@ -17,12 +17,15 @@
 from __future__ import print_function
 import mxnet as mx
 import mxnet.ndarray as nd
-import numpy as np
+from mxnet.base import MXNetError
 from mxnet import gluon
+from mxnet import image
 from mxnet.gluon.data.vision import transforms
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
-from common import setup_module, with_seed, teardown
+from common import assertRaises, setup_module, teardown, with_seed
+
+import numpy as np
 
 
 @with_seed()
@@ -43,6 +46,29 @@ def test_normalize():
     data_expected[:][:][1] = (data_expected[:][:][1] - 1.0) / 2.0
     data_expected[:][:][2] = data_expected[:][:][2] - 2.0
     assert_almost_equal(data_expected, out_nd.asnumpy())
+
+@with_seed()
+def test_resize():
+    data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.Resize(200)(data_in)
+    data_expected = image.imresize(data_in, 200, 200, 1)
+    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    # test interp = 2
+    out_nd = transforms.Resize(200, interpolation=2)(data_in)
+    data_expected = image.imresize(data_in, 200, 200, 2)
+    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    # test height not equals to width
+    out_nd = transforms.Resize((200, 100))(data_in)
+    data_expected = image.imresize(data_in, 200, 100, 1)
+    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    # test keep_ratio
+    out_nd = transforms.Resize(150, keep_ratio=True)(data_in)
+    data_expected = image.imresize(data_in, 150, 225, 1)
+    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    def _test_Exception():
+        # test throwing MXNetError
+        out_nd = transforms.Resize(-150, keep_ratio=True)(data_in)
+    assertRaises(MXNetError, _test_Exception)
 
 
 @with_seed()

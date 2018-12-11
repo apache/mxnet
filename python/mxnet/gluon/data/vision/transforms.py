@@ -243,7 +243,7 @@ class CenterCrop(Block):
         return image.center_crop(x, *self._args)[0]
 
 
-class Resize(Block):
+class Resize(HybridBlock):
     """Resize an image to the given size.
     Should be applied before `mxnet.gluon.data.vision.transforms.ToTensor`.
 
@@ -278,23 +278,8 @@ class Resize(Block):
         self._size = size
         self._interpolation = interpolation
 
-    def forward(self, x):
-        if isinstance(self._size, numeric_types):
-            if not self._keep:
-                wsize = self._size
-                hsize = self._size
-            else:
-                h, w, _ = x.shape
-                if h > w:
-                    wsize = self._size
-                    hsize = int(h * wsize / w)
-                else:
-                    hsize = self._size
-                    wsize = int(w * hsize / h)
-        else:
-            wsize, hsize = self._size
-        return image.imresize(x, wsize, hsize, self._interpolation)
-
+    def hybrid_forward(self, F, x):
+        return F.image.resize(x, self._size, self._keep, self._interpolation)
 
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
