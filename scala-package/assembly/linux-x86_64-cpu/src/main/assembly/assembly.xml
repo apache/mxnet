@@ -41,4 +41,10 @@
       </includes>
     </dependencySet>
   </dependencySets>
+  <files>
+    <file>
+      <source>${MXNET_DIR}/lib/libmxnet.so</source>
+      <outputDirectory>lib/native</outputDirectory>
+    </file>
+  </files>
 </assembly>
