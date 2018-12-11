@@ -103,7 +103,7 @@ def create_virtualenv(venv_exe, pyexe, venv) -> None:
     # Activate virtualenv in this interpreter
     exec(open(activate_this_py).read(), dict(__file__=activate_this_py))
     check_call(['pip', 'install', '--upgrade','--force-reinstall', '-e', 'python'])
-    check_call(['pip', 'install', '-r', 'ci/requirements_mxnet_virtualenv.txt'])
+    check_call(['pip', 'install', '-r', 'tests/requirements.txt'])
 
 def create_virtualenv_default():
     create_virtualenv('virtualenv', DEFAULT_PYTHON, DEFAULT_PYENV)

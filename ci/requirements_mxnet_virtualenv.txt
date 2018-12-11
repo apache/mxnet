@@ -1,6 +1,0 @@
-opencv-python
-ipython
-matplotlib
-nose
-nose-timer
-mock
