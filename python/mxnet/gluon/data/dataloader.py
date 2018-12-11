@@ -387,6 +387,7 @@ def _worker_initializer(dataset):
 
 def _worker_fn(samples, batchify_fn, dataset=None):
     """Function for processing data in worker process."""
+    # pylint: disable=unused-argument
     # it is required that each worker process has to fork a new MXIndexedRecordIO handle
     # preserving dataset as global variable can save tons of overhead and is safe in new process
     global _worker_dataset
