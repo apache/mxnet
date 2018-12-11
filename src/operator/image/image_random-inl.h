@@ -209,20 +209,20 @@ inline std::tuple<int, int> GetHeightAndWidth(int data_h,
 bool ResizeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
-  // the input attrs should only be (h, w, c) or (n, h, w, c)                             
-  CHECK_LE(in_attrs->at(0).ndim(), 4U);
-  CHECK_GE(in_attrs->at(0).ndim(), 3U);
+  // input attrs should only be (h, w, c) or (n, h, w, c)
+  CHECK((in_attrs->at(0).ndim() == 3U) || (in_attrs->at(0).ndim() == 4U))
+    << "Input image dimension should be 3 or 4 but got "
+    << in_attrs->at(0).ndim();
   const auto& ishape = (*in_attrs)[0];
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   std::tuple<int, int> t;
   if (ishape.ndim() == 3) {
     t = GetHeightAndWidth(ishape[0], ishape[1], param);
-    out_attrs->clear();
-    out_attrs->push_back(mshadow::Shape3(std::get<0>(t), std::get<1>(t), ishape[2]));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({std::get<0>(t), std::get<1>(t), ishape[2]}));
   } else {
     t = GetHeightAndWidth(ishape[1], ishape[2], param);
-    out_attrs->clear();
-    out_attrs->push_back(mshadow::Shape4(ishape[0], std::get<0>(t), std::get<1>(t), ishape[3]));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+      TShape({ishape[0], std::get<0>(t), std::get<1>(t), ishape[3]}));
   }
   return true;
 }
@@ -238,19 +238,19 @@ void ResizeImpl(const std::vector<TBlob> &inputs,
   CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "image resize doesn't support fp16";
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
-    int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
+    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
     cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
     cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
     cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
     CHECK(!dst.empty());
     CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
   } else {
-    int length = inputs[0].shape_[0] * inputs[0].shape_[1] *inputs[0].shape_[2] * inputs[0].shape_[3];
-    auto input = inputs[0].dptr<float>();
-    int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
+    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      cv::Mat buf(inputs[0].shape_[1], inputs[0].shape_[2], cv_type, inputs[0].dptr<DType>() + input_index);
-      cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type, outputs[0].dptr<DType>() + output_index);
+      cv::Mat buf(inputs[0].shape_[1], inputs[0].shape_[2], cv_type,
+        inputs[0].dptr<DType>() + input_index);
+      cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type,
+        outputs[0].dptr<DType>() + output_index);
       cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
       CHECK(!dst.empty());
       CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr<DType>() + output_index);
@@ -278,8 +278,9 @@ void Resize(const nnvm::NodeAttrs &attrs,
     const auto input_step = inputs[0].shape_[1] * inputs[0].shape_[2] * inputs[0].shape_[3];
     const auto output_step = std::get<0>(t) * std::get<1>(t) * inputs[0].shape_[3];
     #pragma omp parallel for
-    for (auto i = 0;i < batch_size; ++i) {
-      ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp, i * input_step, i * output_step);
+    for (auto i = 0; i < batch_size; ++i) {
+      ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t),
+        param.interp, i * input_step, i * output_step);
     }
   }
 }
