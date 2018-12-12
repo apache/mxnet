@@ -442,6 +442,8 @@ def convert_dot(node, **kwargs):
     MatMul and Transpose operators based on the values set for
     transpose_a, transpose_b attributes."""
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_node_a = input_nodes[0]
+    input_node_b = input_nodes[1]
 
     trans_a_node = None
     trans_b_node = None
@@ -623,6 +625,23 @@ def convert_identity(node, **kwargs):
     """
     return create_basic_op_node('Identity', node, kwargs)
 
+@mx_op.register("InstanceNorm")
+def convert_instancenorm(node, **kwargs):
+    """Map MXNet's InstanceNorm operator attributes to onnx's InstanceNormalization operator
+    based on the input node's attributes and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    eps = float(attrs.get("eps", 0.001))
+
+    node = onnx.helper.make_node(
+        'InstanceNormalization',
+        inputs=input_nodes,
+        outputs=[name],
+        name=name,
+        epsilon=eps)
+
+    return [node]
 
 @mx_op.register("LeakyReLU")
 def convert_leakyrelu(node, **kwargs):
@@ -688,7 +707,7 @@ def convert_softmax_output(node, **kwargs):
 
     softmax_node = onnx.helper.make_node(
         "Softmax",
-        [input1.output[0]],
+        [input1.name],
         [name],
         axis=1,
         name=name
@@ -1546,6 +1565,15 @@ def convert_sum(node, **kwargs):
         )
     return [node]
 
+
+@mx_op.register("shape_array")
+def convert_shape(node, **kwargs):
+    """Map MXNet's shape_array operator attributes to onnx's Shape operator
+    and return the created node.
+    """
+    return create_basic_op_node('Shape', node, kwargs)
+
+
 @mx_op.register("hard_sigmoid")
 def convert_hardsigmoid(node, **kwargs):
     """Map MXNet's hard_sigmoid operator attributes to onnx's HardSigmoid operator
@@ -1587,3 +1615,43 @@ def convert_broadcast_equal(node, **kwargs):
     and return the created node.
     """
     return create_basic_op_node('Equal', node, kwargs)
+
+
+@mx_op.register("broadcast_logical_and")
+def convert_broadcast_logical_and(node, **kwargs):
+    """Map MXNet's broadcast logical and operator attributes to onnx's Add operator
+    and return the created node.
+    """
+    return create_basic_op_node('And', node, kwargs)
+
+
+@mx_op.register("broadcast_logical_or")
+def convert_broadcast_logical_or(node, **kwargs):
+    """Map MXNet's broadcast logical or operator attributes to onnx's Or operator
+    and return the created node.
+    """
+    return create_basic_op_node('Or', node, kwargs)
+
+
+@mx_op.register("broadcast_logical_xor")
+def convert_broadcast_logical_xor(node, **kwargs):
+    """Map MXNet's broadcast logical xor operator attributes to onnx's Xor operator
+    and return the created node.
+    """
+    return create_basic_op_node('Xor', node, kwargs)
+
+
+@mx_op.register("logical_not")
+def convert_logical_not(node, **kwargs):
+    """Map MXNet's logical not operator attributes to onnx's Not operator
+    and return the created node.
+    """
+    return create_basic_op_node('Not', node, kwargs)
+
+
+@mx_op.register("size_array")
+def convert_size(node, **kwargs):
+    """Map MXNet's size_array operator attributes to onnx's Size operator
+    and return the created node.
+    """
+    return create_basic_op_node('Size', node, kwargs)

@@ -106,9 +106,9 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                         "is more efficient than the reverse." +
                         "If you really want to up size, set allowUpSizing = true " +
                         "to enable allocation of new arrays.")
-          newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context))
+          newArgDict = newArgDict + (name -> NDArray.empty(newShape, arr.context, arr.dtype))
           if (dArr != null) {
-            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context))
+            newGradDict = newGradDict + (name -> NDArray.empty(newShape, dArr.context, dArr.dtype))
           }
         } else {
           newArgDict = newArgDict + (name -> arr.reshape(newShape.toArray))

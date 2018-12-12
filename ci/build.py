@@ -200,7 +200,7 @@ def default_ccache_dir() -> str:
         ccache_dir = "/tmp/_mxnet_ccache"
         os.makedirs(ccache_dir, exist_ok=True)
         return ccache_dir
-    return os.path.join(tempfile.gettempdir(), "ci_ccache")
+    return os.path.join(os.path.expanduser("~"), ".ccache")
 
 
 def trim_container_id(cid):

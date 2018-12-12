@@ -134,9 +134,10 @@ class MXNetGraph(object):
         # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
         # by user. Also remove in_label, which is the name of the label symbol that may have been used
         # as the label for loss during training.
-        inputs = {n: s for n, s in zip([n for n in sym.list_inputs() if n not in params and n != in_label], in_shape)}
+        inputs = {n: tuple(s) for n, s in zip([n for n in sym.list_inputs() if n not in params and n != in_label],
+                                              in_shape)}
         # Add params and their shape to list of inputs
-        inputs.update({n: v.shape for n, v in params.items()})
+        inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
         # Provide input data as well as input params to infer_shape()
         _, out_shapes, _ = sym.infer_shape(**inputs)
 

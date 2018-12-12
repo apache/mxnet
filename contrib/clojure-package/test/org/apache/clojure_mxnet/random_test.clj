@@ -26,9 +26,9 @@
     (let [[a b] [-10 10]
           shape [100 100]
           _ (random/seed 128)
-          un1 (random/uniform a b shape {:context ctx})
+          un1 (random/uniform a b shape {:ctx ctx})
           _ (random/seed 128)
-          un2 (random/uniform a b shape {:context ctx})]
+          un2 (random/uniform a b shape {:ctx ctx})]
       (is (= un1 un2))
       (is (<  (Math/abs
                (/ (/ (apply + (ndarray/->vec un1))
@@ -52,3 +52,16 @@
       (is (<  (Math/abs (- mean mu)) 0.1))
       (is (< (Math/abs (- stddev sigma)) 0.1)))))
 
+(defn random-or-normal [fn_]
+  (is (thrown? Exception (fn_ 'a 2 [])))
+  (is (thrown? Exception (fn_ 1 'b [])))
+  (is (thrown? Exception (fn_ 1 2 [-1])))
+  (is (thrown? Exception (fn_ 1 2 [2 3 0])))
+  (is (thrown? Exception (fn_ 1 2 [10 10] {:ctx "a"})))
+  (let [ctx (context/default-context)]
+    (is (not (nil? (fn_ 1 1 [100 100] {:ctx ctx}))))))
+
+(deftest test-random-parameters-specs
+  (random-or-normal random/normal)
+  (random-or-normal random/uniform)
+  (is (thrown? Exception (random/seed "a"))))

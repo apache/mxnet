@@ -1849,12 +1849,12 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
 
     If the generator is continuous, the buckets should contain tuples of (range_min, range_max) \
     and the probs should be the corresponding ideal probability within the specific ranges. \
-    Otherwise, the buckets should be the possible output of the discrete distribution and the \
+    Otherwise, the buckets should contain all the possible values generated over the discrete distribution and the \
     probs should be groud-truth probability.
 
     Usually the user is required to specify the probs parameter.
 
-    After obtatining the p value, we could further use the standard p > 0.05 threshold to get \
+    After obtaining the p value, we could further use the standard p > 0.05 (alpha) threshold to get \
     the final result.
 
     Examples::
@@ -1906,21 +1906,23 @@ def chi_square_check(generator, buckets, probs, nsamples=1000000):
             buckets_npy[i * 2 + 1] = buckets[i][1]
     else:
         continuous_dist = False
-        buckets_npy = np.array(buckets)
     expected_freq = (nsamples * np.array(probs, dtype=np.float32)).astype(np.int32)
     if continuous_dist:
         sample_bucket_ids = np.searchsorted(buckets_npy, samples, side='right')
     else:
-        sample_bucket_ids = samples
+        sample_bucket_ids = np.array(samples)
     if continuous_dist:
         sample_bucket_ids = sample_bucket_ids // 2
     obs_freq = np.zeros(shape=len(buckets), dtype=np.int)
-    for i in range(len(buckets)):
-        obs_freq[i] = (sample_bucket_ids == i).sum()
+    for i, _ in enumerate(buckets):
+        if continuous_dist:
+            obs_freq[i] = (sample_bucket_ids == i).sum()
+        else:
+            obs_freq[i] = (sample_bucket_ids == buckets[i]).sum()
     _, p = ss.chisquare(f_obs=obs_freq, f_exp=expected_freq)
     return p, obs_freq, expected_freq
 
-def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.15):
+def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, success_rate=0.25, alpha=0.05):
     """Verify whether the generator is correct using chi-square testing.
 
     The test is repeated for "nrepeat" times and we check if the success rate is
@@ -1943,6 +1945,8 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         The times to repeat the test
     success_rate: float
         The desired success rate
+    alpha: float
+        The desired threshold for type-I error i.e. when a true null hypothesis is rejected
 
     Returns
     -------
@@ -1958,7 +1962,7 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
         cs_ret_l.append(cs_ret)
         obs_freq_l.append(obs_freq)
         expected_freq_l.append(expected_freq)
-    success_num = (np.array(cs_ret_l) > 0.05).sum()
+    success_num = (np.array(cs_ret_l) > alpha).sum()
     if success_num < nrepeat * success_rate:
         raise AssertionError("Generator test fails, Chi-square p=%s, obs_freq=%s, expected_freq=%s."
                              "\nbuckets=%s, probs=%s"
