@@ -798,7 +798,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
     }
 
     std::cout << "Backwards: ";
-    PrintVerifyMsg(out_arr, in_arr);
+    PrintVerifyMsg(*out_arr, in_arr);
     Imperative::Get()->InvokeOp(
         Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
         backwards_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
