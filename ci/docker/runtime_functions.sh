@@ -253,6 +253,12 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
+    cp lib/libmkldnn.so.0 lib/libmkldnn.so.0.tmp
+    mv lib/libmkldnn.so.0.tmp lib/libmkldnn.so.0
+    cp lib/libmklml_intel.so lib/libmklml_intel.so.tmp
+    mv lib/libmklml_intel.so.tmp lib/libmklml_intel.so
+    cp lib/libiomp5.so lib/libiomp5.so.tmp
+    mv lib/libiomp5.so.tmp lib/libiomp5.so
 }
 
 build_amzn_linux_cpu() {
