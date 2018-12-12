@@ -778,7 +778,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
   std::vector<OpReqType> backwards_req(backwards_attrs.num_outputs);
 
   if (req == kWriteTo) {
-    backwards_input[0] = &out_arr.arr[0];  // output grad
+    backwards_input[0] = &out_arr.arr;  // output grad
     backwards_input[1] = outputs[1];  // mean
     backwards_input[2] = outputs[2];  // var
     backwards_input[3] = inputs[0];  // data
@@ -801,10 +801,10 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
     PrintVerifyMsg(out_arr, in_arr);
     Imperative::Get()->InvokeOp(
         Context(), backwards_attrs.attrs, backwards_input, backwards_outputs,
-        back_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
+        backwards_req, DispatchMode::kFCompute, mxnet::OpStatePtr());
     Imperative::Get()->InvokeOp(
         Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
-        back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
+        backwards_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
     Engine::Get()->WaitForAll();
     AssertEqual(backwards_outputs, backwards_ex_outputs);
   }
