@@ -222,7 +222,7 @@ Graph QuantizeGraph(Graph &&src) {
           // skip non-quantized input
           continue;
         }
-        if (quantized_op_map.count(e.node->op())) {
+        if (NeedQuantize(e.node, excluded_nodes)) {
           // here we calculate the output number (exclude min/max, in order to
           // calculate min/max index from mirror node) based on assumption that
           // there is only 1min and 1max output from mirror node (which is
@@ -314,7 +314,8 @@ Graph QuantizeGraph(Graph &&src) {
 
   std::vector<NodeEntry> outputs;
   for (const auto& e : src.outputs) {
-    if (quantized_op_map.count(e.node->op())) {
+    if (NeedQuantize(e.node, excluded_nodes)) {
+      // Only insert dequantize for those Ops supports quantize and not excluded.
       NodePtr mirror_node = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
       size_t num_inputs = e.node->num_inputs();
