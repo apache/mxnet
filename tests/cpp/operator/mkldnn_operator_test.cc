@@ -762,12 +762,12 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
 
 void TestOpExBNBackward(const OpAttrs &forward_attrs,
-                      const OpAttrs &backwards_attrs,
-                      const OpReqType &req,
-                      const std::vector<NDArray*> &inputs,
-                      const std::vector<NDArray*> &outputs,
-                      const NDArrayAttrs &in_arr,
-                      const NDArrayAttrs &out_arr) {
+                        const OpAttrs &backwards_attrs,
+                        const OpReqType &req,
+                        const std::vector<NDArray*> &inputs,
+                        const std::vector<NDArray*> &outputs,
+                        const NDArrayAttrs &in_arr,
+                        const NDArrayAttrs &out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
 
   std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
@@ -775,7 +775,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
 
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
-  std::vector<OpReqType> back_req(backwards_attrs.num_outputs);
+  std::vector<OpReqType> backwards_req(backwards_attrs.num_outputs);
 
   if (req == kWriteTo) {
     backwards_input[0] = outputs[0];  // output grad
@@ -787,7 +787,6 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
     backwards_input[6] = inputs[3];  // moving mean
     backwards_input[7] = inputs[4];  // moving var
 
-
     for (size_t i = 0; i < backwards_attrs.num_outputs; i++) {
       auto tmp_output = in_arr.arr;
       backwards_buffer.emplace_back(tmp_output.Copy(Context()));
@@ -795,11 +794,8 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
       backwards_outputs[i] = &backwards_buffer.back();
       backwards_ex_outputs[i] = &backwards_buffer2.back();
       Engine::Get()->WaitForAll();
+      backwards_req[i] = kWriteTo;
     }
-
-
-    for (int i = 0; i < backwards_attrs.num_outputs; i++)
-      back_req[i] = kWriteTo;
 
     std::cout << "Backwards: ";
     PrintVerifyMsg(out_arr, in_arr);
