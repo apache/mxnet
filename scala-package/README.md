@@ -1,7 +1,5 @@
-<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> Deep Learning for Scala/Java
+MXNet Package for Scala/Java
 =====
-
-[![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
 
 The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and state-of-art deep learning to JVM.
 
@@ -11,47 +9,59 @@ The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and
   and apply them to tasks such as image classification and data science challenges.
 - The Scala/Java Inferece APIs provides an easy out of the box solution for loading pre-trained MXNet models and running inference on them.
   
-Install
+Pre-Built Maven Packages
 ------------
+
+### Stable ###
 
 The MXNet Scala/Java packages can be easily included in your Maven managed project.
 The stable jar files for the packages are available on the [MXNet Maven Package Repository](https://search.maven.org/search?q=g:org.apache.mxnet)
-Currently we provide packages for Linux (CPU and GPU) and macOS (CPU only). Support for Windows will come soon.
+Currently we provide packages for Linux (Ubuntu 16.04) (CPU and GPU) and macOS (CPU only). Stable packages for Windows and CentOS will come soon. For now, if you have a CentOS machine, follow the ```Build From Source``` section below. 
+
 To add MXNet Scala/Java package to your project, add the dependency as shown below corresponding to your platform, under the ```dependencies``` tag in your project's ```pom.xml``` :
 
 **Linux GPU**
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+
 ```HTML
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version><latest-mxnet-version></version>
+  <version>[1.3.1,)</version>
 </dependency>
 ```
 
 **Linux CPU**
 
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+
 ```HTML
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version><latest-mxnet-version></version>
+  <version>[1.3.1,)</version>
 </dependency>
 ```
 
 **macOS CPU**
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-macOS cpu-green.svg" alt="maven badge"/></a>
+
 ```HTML
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version><latest-mxnet-version></version>
+  <version>[1.3.1,)</version>
 </dependency>
 ```
 
-The ```<latest-mxnet-version>``` is a placeholder corresponding to the current MXNet version. The latest version information will be available on the [MXNet Maven Package Repository](https://search.maven.org/search?q=g:org.apache.mxnet). 
+**Note:** ```<version>[1.3.1,)<\version>``` indicates that we will fetch packages with version 1.3.1 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven.  
 
+### Nightly ###
 
 Apart from these, the nightly builds representing the bleeding edge development  on Scala/Java packages are also available on the [MXNet Maven Nexus Package Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~). 
-Currently we provide nightly packages for Linux (CPU and GPU) and MacOS (CPU only). Support for Windows will come soon. 
+Currently we provide nightly packages for Linux (CPU and GPU) and MacOS (CPU only). The Linux nightly jar files also work on CentOS. Nightly packages for Windows will come soon.
 
 Add the following ```repository``` to your project's ```pom.xml``` file : 
 
@@ -67,34 +77,41 @@ Add the following ```repository``` to your project's ```pom.xml``` file :
 Also, add the dependency which corresponds to your platform to the ```dependencies``` tag :
 
 **Linux GPU**
+
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~mxnet-full_2.11-linux-x86_64-gpu~~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+
 ```HTML
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version><nightly-snapshot-version></version>
+  <version>[1.5.0,)</version>
 </dependency>
 ```
 
 **Linux CPU**
 
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~mxnet-full_2.11-osx-x86_64-cpu~~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+
 ```HTML
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version><nightly-snapshot-version></version>
+  <version>[1.5.0,)</version>
 </dependency>
 ```
 
 **macOS CPU**
+
+<a href="https://mvnrepository.com/artifact/org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-macOS cpu-green.svg" alt="maven badge"/></a>
 ```HTML
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version><nightly-snapshot-version></version>
+  <version>[1.5.0,)</version>
 </dependency>
 ```
 
-The ```<nightly-snapshot-version>``` is a placeholder corresponding to the current MXNet nightly snapshot version for the jars. The latest version information will be available on the [MXNet Maven Nexus Package Repository](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~).
+**Note:** ```<version>[1.5.0,)<\version>``` indicates that we will fetch packages with version 1.5.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
 
 Build From Source
 ------------
