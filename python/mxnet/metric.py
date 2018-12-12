@@ -569,6 +569,10 @@ class TopKAccuracy(EvalMetric):
 
         for label, pred_label in zip(labels, preds):
             assert(len(pred_label.shape) <= 2), 'Predictions should be no more than 2 dims'
+            # Using argpartition here instead of argsort is safe because
+            # we do not care about the order of top k elements. It is
+            # much faster, which is important since that computation is
+            # single-threaded due to Python GIL.
             pred_label = numpy.argpartition(pred_label.asnumpy().astype('float32'), -self.top_k)
             label = label.asnumpy().astype('int32')
             check_label_shapes(label, pred_label)
@@ -600,6 +604,10 @@ class _BinaryClassificationMetrics(object):
         self.false_negatives = 0
         self.false_positives = 0
         self.true_negatives = 0
+        self.global_true_positives = 0
+        self.global_false_negatives = 0
+        self.global_false_positives = 0
+        self.global_true_negatives = 0
 
     def update_binary_stats(self, label, pred):
         """
@@ -627,15 +635,30 @@ class _BinaryClassificationMetrics(object):
         label_true = (label == 1)
         label_false = 1 - label_true
 
-        self.true_positives += (pred_true * label_true).sum()
-        self.false_positives += (pred_true * label_false).sum()
-        self.false_negatives += (pred_false * label_true).sum()
-        self.true_negatives += (pred_false * label_false).sum()
+        tp = (pred_true * label_true).sum()
+        fp = (pred_true * label_false).sum()
+        fn = (pred_false * label_true).sum()
+        tn = (pred_false * label_false).sum()
+        self.true_positives += tp
+        self.global_true_positives += tp
+        self.false_positives += fp
+        self.global_false_positives += fp
+        self.false_negatives += fn
+        self.global_false_negatives += fn
+        self.true_negatives += tn
+        self.global_true_negatives += tn
 
     @property
     def precision(self):
         if self.true_positives + self.false_positives > 0:
             return float(self.true_positives) / (self.true_positives + self.false_positives)
+        else:
+            return 0.
+
+    @property
+    def global_precision(self):
+        if self.global_true_positives + self.global_false_positives > 0:
+            return float(self.global_true_positives) / (self.global_true_positives + self.global_false_positives)
         else:
             return 0.
 
@@ -647,6 +670,13 @@ class _BinaryClassificationMetrics(object):
             return 0.
 
     @property
+    def global_recall(self):
+        if self.global_true_positives + self.global_false_negatives > 0:
+            return float(self.global_true_positives) / (self.global_true_positives + self.global_false_negatives)
+        else:
+            return 0.
+
+    @property
     def fscore(self):
         if self.precision + self.recall > 0:
             return 2 * self.precision * self.recall / (self.precision + self.recall)
@@ -654,17 +684,33 @@ class _BinaryClassificationMetrics(object):
             return 0.
 
     @property
-    def matthewscc(self):
+    def global_fscore(self):
+        if self.global_precision + self.global_recall > 0:
+            return 2 * self.global_precision * self.global_recall / (self.global_precision + self.global_recall)
+        else:
+            return 0.
+
+    def matthewscc(self, use_global=False):
         """
         Calculate the Matthew's Correlation Coefficent
         """
-        if not self.total_examples:
-            return 0.
+        if use_global:
+            if not self.global_total_examples:
+                return 0.
 
-        true_pos = float(self.true_positives)
-        false_pos = float(self.false_positives)
-        false_neg = float(self.false_negatives)
-        true_neg = float(self.true_negatives)
+            true_pos = float(self.global_true_positives)
+            false_pos = float(self.global_false_positives)
+            false_neg = float(self.global_false_negatives)
+            true_neg = float(self.global_true_negatives)
+        else:
+            if not self.total_examples:
+                return 0.
+
+            true_pos = float(self.true_positives)
+            false_pos = float(self.false_positives)
+            false_neg = float(self.false_negatives)
+            true_neg = float(self.true_negatives)
+
         terms = [(true_pos + false_pos),
                  (true_pos + false_neg),
                  (true_neg + false_pos),
@@ -679,11 +725,26 @@ class _BinaryClassificationMetrics(object):
         return self.false_negatives + self.false_positives + \
                self.true_negatives + self.true_positives
 
+    @property
+    def global_total_examples(self):
+        return self.global_false_negatives + self.global_false_positives + \
+               self.global_true_negatives + self.global_true_positives
+
+    def local_reset_stats(self):
+        self.false_positives = 0
+        self.false_negatives = 0
+        self.true_positives = 0
+        self.true_negatives = 0
+
     def reset_stats(self):
         self.false_positives = 0
         self.false_negatives = 0
         self.true_positives = 0
         self.true_negatives = 0
+        self.global_false_positives = 0
+        self.global_false_negatives = 0
+        self.global_true_positives = 0
+        self.global_true_negatives = 0
 
 
 @register
@@ -753,16 +814,17 @@ class F1(EvalMetric):
         for label, pred in zip(labels, preds):
             self.metrics.update_binary_stats(label, pred)
 
-        fscore = self.metrics.fscore
         if self.average == "macro":
-            self.sum_metric += fscore
-            self.global_sum_metric += fscore
+            self.sum_metric += self.metrics.fscore
+            self.global_sum_metric += self.metrics.global_fscore
             self.num_inst += 1
             self.global_num_inst += 1
             self.metrics.reset_stats()
         else:
-            self.sum_metric = self.global_sum_metric = fscore * self.metrics.total_examples
-            self.num_inst = self.global_num_inst = self.metrics.total_examples
+            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+            self.global_sum_metric = self.metrics.global_fscore * self.metrics.global_total_examples
+            self.num_inst = self.metrics.total_examples
+            self.global_num_inst = self.metrics.global_total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
@@ -771,6 +833,12 @@ class F1(EvalMetric):
         self.global_num_inst = 0
         self.global_sum_metric = 0.0
         self.metrics.reset_stats()
+
+    def reset_local(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0
+        self.metrics.local_reset_stats()
 
 
 @register
@@ -860,16 +928,18 @@ class MCC(EvalMetric):
         for label, pred in zip(labels, preds):
             self._metrics.update_binary_stats(label, pred)
 
-        matthewscc = self._metrics.matthewscc
         if self._average == "macro":
-            self.sum_metric += matthewscc
-            self.global_sum_metric += matthewscc
+            self.sum_metric += self._metrics.matthewscc()
+            self.global_sum_metric += self._metrics.matthewscc(use_global=True)
             self.num_inst += 1
             self.global_num_inst += 1
             self._metrics.reset_stats()
         else:
-            self.sum_metric = self.global_sum_metric = matthewscc * self._metrics.total_examples
-            self.num_inst = self.global_num_inst = self._metrics.total_examples
+            self.sum_metric = self._metrics.matthewscc() * self._metrics.total_examples
+            self.global_sum_metric = self._metrics.matthewscc(use_global=True) * \
+                                     self._metrics.global_total_examples
+            self.num_inst = self._metrics.total_examples
+            self.global_num_inst = self._metrics.global_total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
@@ -878,6 +948,12 @@ class MCC(EvalMetric):
         self.global_sum_metric = 0.
         self.global_num_inst = 0.
         self._metrics.reset_stats()
+
+    def reset_local(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0.
+        self._metrics.local_reset_stats()
 
 
 @register
@@ -981,7 +1057,10 @@ class Perplexity(EvalMetric):
         Tuple of (str, float)
             Representing name of the metric and evaluation result.
         """
-        return (self.name, math.exp(self.sum_metric/self.num_inst))
+        if self.num_inst == 0:
+            return (self.name, float('nan'))
+        else:
+            return (self.name, math.exp(self.sum_metric/self.num_inst))
 
     def get_global(self):
         """Returns the current global evaluation result.
@@ -991,8 +1070,10 @@ class Perplexity(EvalMetric):
         Tuple of (str, float)
             Representing name of the metric and evaluation result.
         """
-        num = self.global_num_inst if self.global_num_inst > 0 else float('nan')
-        return (self.name, math.exp(self.global_sum_metric/num))
+        if self.global_num_inst == 0:
+            return (self.name, float('nan'))
+        else:
+            return (self.name, math.exp(self.global_sum_metric/self.global_num_inst))
 
 ####################
 # REGRESSION METRICS
