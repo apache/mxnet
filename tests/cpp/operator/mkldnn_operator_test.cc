@@ -778,7 +778,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
   std::vector<OpReqType> backwards_req(backwards_attrs.num_outputs);
 
   if (req == kWriteTo) {
-    backwards_input[0] = outputs[0];  // output grad
+    backwards_input[0] = &out_arr.arr[0];  // output grad
     backwards_input[1] = outputs[1];  // mean
     backwards_input[2] = outputs[2];  // var
     backwards_input[3] = inputs[0];  // data
