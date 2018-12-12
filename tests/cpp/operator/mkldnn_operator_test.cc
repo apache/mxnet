@@ -637,7 +637,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
                       const std::vector<NDArray*> &inputs,
                       const std::vector<NDArray*> &outputs,
                       const NDArrayAttrs &in_arr,
-                      const NDArrayAttrs &out_arr) {
+                      NDArrayAttrs &out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
