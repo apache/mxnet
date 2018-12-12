@@ -362,7 +362,7 @@ inline std::tuple<int, int> GetHeightAndWidth(int data_h,
   return std::make_tuple(resized_h, resized_w);
 }
 
-bool ResizeShape(const nnvm::NodeAttrs& attrs,
+inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
   // input attrs should only be (h, w, c) or (n, h, w, c)
