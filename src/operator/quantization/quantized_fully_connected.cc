@@ -132,7 +132,7 @@ struct QuantizedSumInitKernelWithBias {
           float_for_one_out_quant;
     } else {
       LOG(INFO) << "float_for_one_out_quant is 0,"
-          << " need to check the why MaxAbs(*min_out, *max_out) of out_data is 0!";
+                << " need to check the why MaxAbs(*min_out, *max_out) of out_data is 0!";
       out[i] = 0;
     }
   }
@@ -226,8 +226,8 @@ void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
                      &oc);
 #else
   LOG(FATAL) << "Quantized fully connected operator relies on cblas_gemm_s8u8s32"
-      << " which is only supported by MKL BLAS."
-      << " Please build MXNet with USE_BLAS=mkl to leverage this operator.";
+             << " which is only supported by MKL BLAS."
+             << " Please build MXNet with USE_BLAS=mkl to leverage this operator.";
 #endif
 }
 
