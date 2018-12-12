@@ -39,7 +39,7 @@ def test_metrics():
     composite = mx.metric.create(['acc', 'f1'])
     check_metric(composite)
 
-def _check_global_metric(metric, *args, shape=(10,10), use_same_shape=False, **kwargs):
+def _check_global_metric(metric, *args, **kwargs):
     def _create_pred_label():
         if use_same_shape:
             pred = mx.nd.random.uniform(0, 1, shape=shape)
@@ -55,6 +55,8 @@ def _check_global_metric(metric, *args, shape=(10,10), use_same_shape=False, **k
             label[:shape[0] // 2] = 0
         return pred, label
 
+    shape = kwargs.pop('shape', (10,10))
+    use_same_shape = kwargs.pop('use_same_shape', False)
     m1 = mx.metric.create(metric, *args, **kwargs)
     m2 = deepcopy(m1)
     # check that global stats are not reset when calling
