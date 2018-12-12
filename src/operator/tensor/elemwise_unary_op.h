@@ -29,6 +29,7 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <climits>
 #include "./cast_storage-inl.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
@@ -37,7 +38,6 @@
 #if MSHADOW_USE_MKL == 1
 #include "mkl.h"
 #endif
-#include<climits>
 
 namespace mxnet {
 namespace op {
@@ -376,11 +376,12 @@ class UnaryOp : public OpBase {
     auto type_flag = inputs[0].type_flag_;
     const size_t MKL_INT_MAX = (sizeof(MKL_INT) == sizeof(int)) ? INT_MAX : LLONG_MAX;
     size_t input_size = inputs[0].Size();
-    if (req[0] == kWriteTo && (type_flag == mshadow::kFloat32
-          || type_flag == mshadow::kFloat64) && input_size <= MKL_INT_MAX) {
+    if (req[0] == kWriteTo &&
+        input_size <= MKL_INT_MAX &&
+        (type_flag == mshadow::kFloat32 || type_flag == mshadow::kFloat64)) {
       MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
         MKLLog(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
-      })
+      });
     } else {
       Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
     }
