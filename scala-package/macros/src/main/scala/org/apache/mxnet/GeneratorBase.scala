@@ -169,9 +169,9 @@ private[mxnet] trait RandomHelpers {
 
   // a generic type spec used in Symbol.random and NDArray.random modules
   protected def randomGenericTypeSpec(isSymbol: Boolean, fullPackageSpec: Boolean): String = {
-    val typeTag = if (fullPackageSpec) "scala.reflect.runtime.universe.TypeTag" else "TypeTag"
-    if (isSymbol) s"[T: SymbolOrValue : $typeTag]"
-    else s"[T: NDArrayOrValue : $typeTag]"
+    val classTag = if (fullPackageSpec) "scala.reflect.ClassTag" else "ClassTag"
+    if (isSymbol) s"[T: SymbolOrScalar : $classTag]"
+    else s"[T: NDArrayOrScalar : $classTag]"
   }
 
   // filter the operators to generate in the type-safe Symbol.random and NDArray.random

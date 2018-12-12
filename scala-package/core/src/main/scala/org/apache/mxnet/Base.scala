@@ -154,18 +154,18 @@ private[mxnet] object Base {
 
 class MXNetError(val err: String) extends Exception(err)
 
-// used in the API Symbol.random for functions accepting multiple input types
-class SymbolOrValue[T]
-object SymbolOrValue {
-  implicit object FSymbolWitness extends SymbolOrValue[Float]
-  implicit object ISymbolWitness extends SymbolOrValue[Int]
-  implicit object SymbolWitness extends SymbolOrValue[Symbol]
+// Some type-classes to ease the work in Symbol.random and NDArray.random modules
+
+class SymbolOrScalar[T](val isScalar: Boolean)
+object SymbolOrScalar {
+  implicit object FloatWitness extends SymbolOrScalar[Float](true)
+  implicit object IntWitness extends SymbolOrScalar[Int](true)
+  implicit object SymbolWitness extends SymbolOrScalar[Symbol](false)
 }
 
-// used in the API NDArray.random for functions accepting multiple input types
-class NDArrayOrValue[T]
-object NDArrayOrValue {
-  implicit object FArrayWitness extends NDArrayOrValue[Float]
-  implicit object IArrayWitness extends NDArrayOrValue[Int]
-  implicit object ArrayWitness extends NDArrayOrValue[NDArray]
+class NDArrayOrScalar[T](val isScalar: Boolean)
+object NDArrayOrScalar {
+  implicit object FloatWitness extends NDArrayOrScalar[Float](true)
+  implicit object IntWitness extends NDArrayOrScalar[Int](true)
+  implicit object NDArrayWitness extends NDArrayOrScalar[NDArray](false)
 }

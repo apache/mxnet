@@ -166,39 +166,28 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
         } else {
           // all go in kwargs
           if (arg.isOptional) {
-            s"""if (!${arg.safeArgName}.isEmpty) map("${arg.argName}") = ${arg.safeArgName}.get"""
+            s"""if (${arg.safeArgName}.isDefined) map("${arg.argName}") = ${arg.safeArgName}.get"""
           } else {
             s"""map("${arg.argName}") = ${arg.safeArgName}"""
           }
         }
       }
 
-
-    // TEMPORARY CODE (diag problem on CI)
-    if(function.listOfArgs.filter(arg => arg.argType == "T").isEmpty) {
-      // scalastyle:off println
-      println(s"Func: ${function.name}, args=[${function.listOfArgs.mkString(",")}]")
-    }
-
-
-    // since the API is mixing calls using Symbol or Float through template (see unifyRandom),
-    // to determine the target call, we pick the first arg that is using the template type
-    val firstArg = function.listOfArgs.filter(arg => arg.argType == "T").head
-
     val impl =
       s"""
          |def ${function.name}${randomGenericTypeSpec(true, true)}
          |  (${argDecl.mkString(",")}): $returnType = {
          |
-         |  import scala.reflect.runtime.universe.typeOf
          |  val map = scala.collection.mutable.Map[String, Any]()
          |  var args = scala.collection.Seq[org.apache.mxnet.Symbol]()
+         |  val isScalar = implicitly[SymbolOrScalar[T]].isScalar
          |
          |  ${backendArgsMapping.mkString("\n")}
          |
-         |  val target = ${firstArg.safeArgName} match {
-         |    case _ if typeOf[T] =:= typeOf[org.apache.mxnet.Symbol] => "sample_${function.name}"
-         |    case _ => "random_${function.name}"
+         |  val target = if(isScalar) {
+         |    "random_${function.name}"
+         |  } else {
+         |    "sample_${function.name}"
          |  }
          |
          |  ${unhackNormalFunc(function)}

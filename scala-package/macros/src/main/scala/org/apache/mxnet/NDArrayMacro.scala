@@ -175,24 +175,25 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
         } else {
           if (arg.argType.equals("T")) {
             if (arg.isOptional) {
-              s"""${arg.safeArgName} match {
-                 |   case None =>
-                 |   case Some(a) if typeOf[T] =:= typeOf[org.apache.mxnet.NDArray] =>
-                 |       args += a.asInstanceOf[org.apache.mxnet.NDArray]
-                 |   case Some(b) => map("${arg.argName}") = b
+              s"""if(${arg.safeArgName}.isDefined) {
+                 |  if(isScalar) {
+                 |    map("${arg.argName}") = ${arg.safeArgName}.get
+                 |  } else {
+                 |    args += ${arg.safeArgName}.get.asInstanceOf[org.apache.mxnet.NDArray]
+                 |  }
                  |}
              """.stripMargin
             } else {
-              s"""${arg.safeArgName} match {
-                 |   case a if typeOf[T] =:= typeOf[org.apache.mxnet.NDArray] =>
-                 |       args += a.asInstanceOf[org.apache.mxnet.NDArray]
-                 |   case b => map("${arg.argName}") = b
+              s"""if(isScalar) {
+                 |  map("${arg.argName}") = ${arg.safeArgName}
+                 |} else {
+                 |  args += ${arg.safeArgName}.asInstanceOf[org.apache.mxnet.NDArray]
                  |}
              """.stripMargin
             }
           } else {
             if (arg.isOptional) {
-              s"""if (!${arg.safeArgName}.isEmpty) map("${arg.argName}") = ${arg.safeArgName}.get"""
+              s"""if (${arg.safeArgName}.isDefined) map("${arg.argName}") = ${arg.safeArgName}.get"""
             } else {
               s"""map("${arg.argName}") = ${arg.safeArgName}"""
             }
@@ -200,26 +201,23 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
         }
       }
 
-    // since the API is mixing calls using NDArrays or Float through template (see unifyRandom),
-    // to determine the target call, we pick the first arg that is using the template type
-    val firstArg = function.listOfArgs.filter(arg => arg.argType == "T").head
-
     val impl =
       s"""
          |def ${function.name}${randomGenericTypeSpec(false, true)}
          |  (${argDecl.mkString(",")}): $returnType = {
          |
-         |  import scala.reflect.runtime.universe.typeOf
          |  val map = scala.collection.mutable.Map[String, Any]()
          |  val args = scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]
+         |  val isScalar = implicitly[NDArrayOrScalar[T]].isScalar
          |
-         |  if (!out.isEmpty) map("out") = out.get
+         |  if(out.isDefined) map("out") = out.get
          |
          |  ${backendArgsMapping.mkString("\n")}
          |
-         |  val target = ${firstArg.safeArgName} match {
-         |    case _ if typeOf[T] =:= typeOf[org.apache.mxnet.NDArray] => "sample_${function.name}"
-         |    case _ => "random_${function.name}"
+         |  val target = if(isScalar) {
+         |    "random_${function.name}"
+         |  } else {
+         |    "sample_${function.name}"
          |  }
          |
          |  ${unhackNormalFunc(function)}

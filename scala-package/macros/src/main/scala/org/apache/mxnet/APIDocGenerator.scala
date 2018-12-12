@@ -79,7 +79,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
       "package org.apache.mxnet",
       if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
       """import org.apache.mxnet.annotation.Experimental
-        |import scala.reflect.runtime.universe.TypeTag""".stripMargin,
+        |import scala.reflect.ClassTag""".stripMargin,
       generated)
   }
 
