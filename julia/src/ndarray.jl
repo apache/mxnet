@@ -494,7 +494,7 @@ Otherwise, create an `NDArray` on the specified context.
 copy
 
 # Create copy: NDArray -> Julia Array
-copy(x::NDArray{T,D}) where{T,D} = copy!(Array{T,D}(size(x)), x)
+copy(x::NDArray{T,D}) where{T,D} = copy!(Array{T,D}(undef, size(x)), x)
 
 # Create copy: NDArray -> NDArray in a given context
 copy(x::NDArray{T,D}, ctx::Context) where {T,D} =
