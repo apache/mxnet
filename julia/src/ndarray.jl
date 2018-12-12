@@ -297,7 +297,7 @@ end
 
 Base.first(x::NDArray) = _first(x)
 
-Base.endof(x::NDArray) = length(x)
+Base.lastindex(x::NDArray) = length(x)
 
 """
     slice(arr :: NDArray, start:stop)
