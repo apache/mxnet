@@ -1,4 +1,4 @@
-FROM mxnet/python:gpu
+FROM mxnet/python
 
 RUN apt-get update && apt-get install -y python-dev && apt-get install -y python3-dev
 
@@ -16,10 +16,8 @@ RUN pip --no-cache-dir install \
     python -m ipykernel.kernelspec
 
 
-# Copy sample notebook
-COPY sample-notebook /sample-notebook
 
-#Start jupyter notebook script
+#Copy jupyter notebook startup script
 COPY run_jupyter_notebook.sh /
 
 # IPython
@@ -27,4 +25,10 @@ EXPOSE 8888
 
 WORKDIR "/sample-notebook"
 
-ENTRYPOINT ["/bin/bash", "-c", "/run_jupyter_notebook.sh --ip=127.0.0.1 --allow-root"]
+#Download a sample notebook
+RUN wget https://mxnet.incubator.apache.org/tutorials/python/mnist.ipynb
+RUN wget https://mxnet.incubator.apache.org/tutorials/python/linear-regression.ipynb
+RUN wget https://mxnet.incubator.apache.org/tutorials/python/predict_image.ipynb
+
+#Start the jupyter notebook
+ENTRYPOINT ["/bin/bash", "-c", "/run_jupyter_notebook.sh --ip=0.0.0.0 --allow-root"]
