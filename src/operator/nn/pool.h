@@ -1036,10 +1036,12 @@ inline void unpool_sum_1d_ncw_cpu(const DType *out_grad, const DType *in_data,
  * Do not call this kernel directly. Use the interface unpool().
  */
 template<typename DType, int p = 1>
-inline void unpool_sum_1d_nwc_cpu(const DType* out_grad, const DType* in_data, const DType* out_data,
-                              const TShape& ishape, const TShape& oshape, const TShape& kernel,
-                              const TShape& pad, const TShape& stride, DType* in_grad,
-                              const bool is_avg = false, const bool count_include_pad = true) {
+inline void unpool_sum_1d_nwc_cpu(const DType* out_grad, const DType* in_data,
+                                  const DType *out_data, const TShape &ishape,
+                                  const TShape &oshape, const TShape &kernel,
+                                  const TShape &pad, const TShape &stride,
+                                  DType *in_grad, const bool is_avg = false,
+                                  const bool count_include_pad = true) {
   const int width = ishape[1];
   const int pooled_width = oshape[1];
   const int kernel_w = kernel[0];
@@ -1080,10 +1082,11 @@ inline void unpool_sum_1d_nwc_cpu(const DType* out_grad, const DType* in_data, c
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_2d_nchw_cpu(const DType *out_grad, const DType *in_data,
-                                   const DType *out_data,
-                                   const TShape &ishape, const TShape &oshape, const TShape &kernel,
-                                   const TShape &pad, const TShape &stride, DType *in_grad,
-                                   const bool is_avg = false, const bool count_include_pad = true) {
+                                   const DType *out_data, const TShape &ishape,
+                                   const TShape &oshape, const TShape &kernel,
+                                   const TShape &pad, const TShape &stride,
+                                   DType *in_grad, const bool is_avg = false,
+                                   const bool count_include_pad = true) {
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -1131,10 +1134,12 @@ inline void unpool_sum_2d_nchw_cpu(const DType *out_grad, const DType *in_data,
  * Do not call this kernel directly. Use the interface unpool().
  */
 template<typename DType, int p = 1>
-inline void unpool_sum_2d_nhwc_cpu(const DType* out_grad, const DType* in_data, const DType* out_data,
-                              const TShape& ishape, const TShape& oshape, const TShape& kernel,
-                              const TShape& pad, const TShape& stride, DType* in_grad,
-                              const bool is_avg = false, const bool count_include_pad = true) {
+inline void unpool_sum_2d_nhwc_cpu(const DType* out_grad, const DType* in_data,
+                                   const DType *out_data, const TShape &ishape,
+                                   const TShape &oshape, const TShape &kernel,
+                                   const TShape &pad, const TShape &stride,
+                                   DType *in_grad, const bool is_avg = false,
+                                   const bool count_include_pad = true) {
   const int height = ishape[1], width = ishape[2];
   const int pooled_height = oshape[1], pooled_width = oshape[2];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -1185,11 +1190,11 @@ inline void unpool_sum_2d_nhwc_cpu(const DType* out_grad, const DType* in_data, 
  */
 template<typename DType, int p = 1>
 inline void unpool_sum_3d_ncdhw_cpu(const DType *out_grad, const DType *in_data,
-                                    const DType *out_data,
-                                    const TShape &ishape, const TShape &oshape,
-                                    const TShape &kernel,
-                                    const TShape &pad, const TShape &stride, DType *in_grad,
-                                    const bool is_avg = false, const bool count_include_pad = true) {
+                                    const DType *out_data, const TShape &ishape,
+                                    const TShape &oshape, const TShape &kernel,
+                                    const TShape &pad, const TShape &stride,
+                                    DType *in_grad, const bool is_avg = false,
+                                    const bool count_include_pad = true) {
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -1245,10 +1250,12 @@ inline void unpool_sum_3d_ncdhw_cpu(const DType *out_grad, const DType *in_data,
  * Do not call this kernel directly. Use the interface unpool().
  */
 template<typename DType, int p = 1>
-inline void unpool_sum_3d_ndhwc_cpu(const DType* out_grad, const DType* in_data, const DType* out_data,
-                              const TShape& ishape, const TShape& oshape, const TShape& kernel,
-                              const TShape& pad, const TShape& stride, DType* in_grad,
-                              const bool is_avg = false, const bool count_include_pad = true) {
+inline void unpool_sum_3d_ndhwc_cpu(const DType* out_grad, const DType* in_data,
+                                    const DType *out_data, const TShape &ishape,
+                                    const TShape &oshape, const TShape &kernel,
+                                    const TShape &pad, const TShape &stride,
+                                    DType *in_grad, const bool is_avg = false,
+                                    const bool count_include_pad = true) {
   const int depth = ishape[1], height = ishape[2], width = ishape[3];
   const int pooled_depth = oshape[1], pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -1448,8 +1455,8 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
         unpool_max_1d_nwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
       } else if (pool_enum::kAvgPooling == pool_type) {
-        unpool_sum_1d_nwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride, in_grad,
-                          true, count_include_pad);
+        unpool_sum_1d_nwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
+                              in_grad, true, count_include_pad);
       } else if (pool_enum::kSumPooling == pool_type) {
         unpool_sum_1d_nwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
@@ -1527,8 +1534,8 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
         unpool_max_3d_ndhwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
       } else if (pool_enum::kAvgPooling == pool_type) {
-        unpool_sum_3d_ndhwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride, in_grad,
-                          true, count_include_pad);
+        unpool_sum_3d_ndhwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
+                                in_grad, true, count_include_pad);
       } else if (pool_enum::kSumPooling == pool_type) {
         unpool_sum_3d_ndhwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
@@ -1560,8 +1567,7 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
     } else {
       LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout.value();
     }
-  }
-  else {
+  } else {
     LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D unpooling";
   }
 }
