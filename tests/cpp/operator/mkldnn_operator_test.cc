@@ -637,7 +637,7 @@ void TestOpExBackward(const OpAttrs &forward_attrs,
                       const std::vector<NDArray*> &inputs,
                       const std::vector<NDArray*> &outputs,
                       const NDArrayAttrs &in_arr,
-                      NDArrayAttrs &out_arr) {
+                      const NDArrayAttrs &out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
   std::vector<NDArray*> backwards_outputs(backwards_attrs.num_outputs);
   std::vector<NDArray*> backwards_ex_outputs(backwards_attrs.num_outputs);
@@ -767,7 +767,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
                         const std::vector<NDArray*> &inputs,
                         const std::vector<NDArray*> &outputs,
                         const NDArrayAttrs &in_arr,
-                        const NDArrayAttrs &out_arr) {
+                        NDArrayAttrs* out_arr) {
   std::vector<NDArray*> backwards_input(backwards_attrs.num_inputs);
 
   std::vector<NDArray> backwards_buffer(backwards_attrs.num_outputs);
@@ -778,7 +778,7 @@ void TestOpExBNBackward(const OpAttrs &forward_attrs,
   std::vector<OpReqType> backwards_req(backwards_attrs.num_outputs);
 
   if (req == kWriteTo) {
-    backwards_input[0] = &out_arr.arr;  // output grad
+    backwards_input[0] = &(out_arr->arr);  // output grad
     backwards_input[1] = outputs[1];  // mean
     backwards_input[2] = outputs[2];  // var
     backwards_input[3] = inputs[0];  // data
@@ -871,7 +871,7 @@ void TestOpExBN(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
         if (!backwards_attrs.requests.empty()) {
           TestOpExBNBackward(forward_attrs, backwards_attrs, OpReqType::kWriteTo,
-                           inputs, outputs, in_arr, out_arrs[0][output_i]);
+                           inputs, outputs, in_arr, &out_arrs[0][output_i]);
         }
       }
     }
