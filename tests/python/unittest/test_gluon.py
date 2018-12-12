@@ -506,50 +506,75 @@ def test_deconv():
 
 @with_seed()
 def test_pool():
-    layers1d = [
-        nn.MaxPool1D(),
-        nn.MaxPool1D(3),
-        nn.MaxPool1D(3, 2),
-        nn.AvgPool1D(),
-        nn.AvgPool1D(count_include_pad=False),
-        nn.GlobalAvgPool1D(),
-        ]
-    for layer in layers1d:
-        check_layer_forward(layer, (1, 2, 10))
+    # transpose shape to bring feature dimension 'c' from 2nd position to last
+    def transpose(shape):
+        return (shape[0],) + shape[2:] + (shape[1],)
+
+    for layout in ['NCW', 'NWC']:
+        shape1d = (1, 2, 10)
+        if layout == 'NWC':
+            shape1d = transpose(shape1d)
+        layers1d = [
+            nn.MaxPool1D(layout=layout),
+            nn.MaxPool1D(3, layout=layout),
+            nn.MaxPool1D(3, 2, layout=layout),
+            nn.AvgPool1D(layout=layout),
+            nn.AvgPool1D(count_include_pad=False, layout=layout),
+            nn.GlobalAvgPool1D(layout=layout),
+            ]
+        for layer in layers1d:
+            check_layer_forward(layer, shape1d)
 
 
-    layers2d = [
-        nn.MaxPool2D(),
-        nn.MaxPool2D((3, 3)),
-        nn.MaxPool2D(3, 2),
-        nn.AvgPool2D(),
-        nn.AvgPool2D(count_include_pad=False),
-        nn.GlobalAvgPool2D(),
-        ]
-    for layer in layers2d:
-        check_layer_forward(layer, (1, 2, 10, 10))
+    for layout in ['NCHW', 'NHWC']:
+        shape2d = (1, 2, 10, 10)
+        if layout == 'NHWC':
+            shape2d = transpose(shape2d)
+        layers2d = [
+            nn.MaxPool2D(layout=layout),
+            nn.MaxPool2D((3, 3), layout=layout),
+            nn.MaxPool2D(3, 2, layout=layout),
+            nn.AvgPool2D(layout=layout),
+            nn.AvgPool2D(count_include_pad=False, layout=layout),
+            nn.GlobalAvgPool2D(layout=layout),
+            ]
+        for layer in layers2d:
+            check_layer_forward(layer, shape2d)
 
-    layers3d = [
-        nn.MaxPool3D(),
-        nn.MaxPool3D((3, 3, 3)),
-        nn.MaxPool3D(3, 2),
-        nn.AvgPool3D(),
-        nn.AvgPool3D(count_include_pad=False),
-        nn.GlobalAvgPool3D(),
-        ]
-    for layer in layers3d:
-        check_layer_forward(layer, (1, 2, 10, 10, 10))
+    for layout in ['NCDHW', 'NDHWC']:
+        shape3d = (1, 2, 10, 10, 10)
+        if layout == 'NDHWC':
+            shape3d = transpose(shape3d)
+        layers3d = [
+            nn.MaxPool3D(layout=layout),
+            nn.MaxPool3D((3, 3, 3), layout=layout),
+            nn.MaxPool3D(3, 2, layout=layout),
+            nn.AvgPool3D(layout=layout),
+            nn.AvgPool3D(count_include_pad=False, layout=layout),
+            nn.GlobalAvgPool3D(layout=layout),
+            ]
+        for layer in layers3d:
+            check_layer_forward(layer, shape3d)
 
     # test ceil_mode
-    x = mx.nd.zeros((2, 2, 10, 10))
+    for layout in ['NCHW', 'NHWC']:
+        xshape = (2, 2, 10, 10)
+        noceil_out_shape = (2, 2, 3, 3)
+        ceil_out_shape = (2, 2, 4, 4)
+        if layout == 'NHWC':
+            xshape = transpose(xshape)
+            noceil_out_shape = transpose(noceil_out_shape)
+            ceil_out_shape = transpose(ceil_out_shape)
 
-    layer = nn.MaxPool2D(3, ceil_mode=False)
-    layer.collect_params().initialize()
-    assert (layer(x).shape==(2, 2, 3, 3))
+        x = mx.nd.zeros(xshape)
 
-    layer = nn.MaxPool2D(3, ceil_mode=True)
-    layer.collect_params().initialize()
-    assert (layer(x).shape==(2, 2, 4, 4))
+        layer = nn.MaxPool2D(3, ceil_mode=False, layout=layout)
+        layer.collect_params().initialize()
+        assert (layer(x).shape==noceil_out_shape)
+
+        layer = nn.MaxPool2D(3, ceil_mode=True, layout=layout)
+        layer.collect_params().initialize()
+        assert (layer(x).shape==ceil_out_shape)
 
 
 @with_seed()
@@ -2091,31 +2116,41 @@ def test_reshape_pooling2d():
 
 @with_seed()
 def test_slice_pooling2d():
-    max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
-    avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
-    global_maxpooling = nn.GlobalMaxPool2D()
-    global_avgpooling = nn.GlobalAvgPool2D()
-    pooling_layers = [max_pooling, avg_pooling, global_maxpooling, global_avgpooling]
-    class Net(gluon.HybridBlock):
-        def __init__(self,
-                     slice,
-                     pooling_layer,
-                     **kwargs):
-            super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.pool0 = pooling_layer
+    # transpose shape to bring feature dimension 'c' from 2nd position to last
+    def transpose(shape):
+        return (shape[0],) + shape[2:] + (shape[1],)
 
-        def hybrid_forward(self, F, x):
-            x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
-            out = self.pool0(x_slice)
-            return out
+    for layout in ['NCHW', 'NHWC']:
+        max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1), layout=layout)
+        avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1), layout=layout)
+        global_maxpooling = nn.GlobalMaxPool2D(layout=layout)
+        global_avgpooling = nn.GlobalAvgPool2D(layout=layout)
+        pooling_layers = [max_pooling, avg_pooling, global_maxpooling, global_avgpooling]
+        class Net(gluon.HybridBlock):
+            def __init__(self,
+                         slice,
+                         pooling_layer,
+                         **kwargs):
+                super(Net, self).__init__(**kwargs)
+                with self.name_scope():
+                    self.slice = slice
+                    self.pool0 = pooling_layer
 
-    x = mx.nd.random.uniform(shape=(16, 128, 256, 256))
-    slice = [(0, 0, 0, 0), (4, 16, 32, 64)]
-    for i in range(len(pooling_layers)):
-        net = Net(slice, pooling_layers[i])
-        check_layer_forward_withinput(net, x)
+            def hybrid_forward(self, F, x):
+                x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
+                out = self.pool0(x_slice)
+                return out
+
+        xshape = (16, 128, 256, 256)
+        slice_shape = (4, 16, 32, 64)
+        if layout == 'NHWC':
+            xshape = transpose(xshape)
+            slice_shape = transpose(slice_shape)
+        x = mx.nd.random.uniform(shape=xshape)
+        slice = [(0, 0, 0, 0), slice_shape]
+        for i in range(len(pooling_layers)):
+            net = Net(slice, pooling_layers[i])
+            check_layer_forward_withinput(net, x)
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')

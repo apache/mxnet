@@ -98,6 +98,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("NCW", mshadow::kNCW)
     .add_enum("NCHW", mshadow::kNCHW)
     .add_enum("NCDHW", mshadow::kNCDHW)
+    .add_enum("NWC", mshadow::kNWC)
     .add_enum("NHWC", mshadow::kNHWC)
     .add_enum("NDHWC", mshadow::kNDHWC)
     .set_default(dmlc::optional<int>())
@@ -162,9 +163,6 @@ class PoolingOp {
   void Forward(const OpContext& ctx, const TBlob& in_data,
                const OpReqType& req, const TBlob& out_data) {
     using namespace mshadow;
-    CHECK(param_.layout.value() == kNCW ||
-          param_.layout.value() == kNCHW ||
-          param_.layout.value() == kNCDHW) << "Need CuDNN for layout support";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
     TShape kernel = param_.kernel;
@@ -189,21 +187,21 @@ class PoolingOp {
           kernel,
           padding,
           stride,
-          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad);
+          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, param_.layout);
         break;
       case 2:
         pool<DType, 2>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
           kernel,
           padding,
           stride,
-          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad);
+          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, param_.layout);
         break;
       case 3:
         pool<DType, 3>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
           kernel,
           padding,
           stride,
-          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad);
+          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, param_.layout);
         break;
       default:
         LOG(FATAL) << "p value of " << p_value << " is not supported yet...";
@@ -214,9 +212,6 @@ class PoolingOp {
                 const TBlob& in_data, const TBlob& out_data,
                 const OpReqType& req, const TBlob& in_grad) {
     using namespace mshadow;
-    CHECK(param_.layout.value() == kNCW ||
-          param_.layout.value() == kNCHW ||
-          param_.layout.value() == kNCDHW) << "Need CuDNN for layout support";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TShape& ishape = in_data.shape_;
     TShape kernel = param_.kernel;
@@ -243,7 +238,7 @@ class PoolingOp {
            kernel,
            padding,
            stride,
-           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad);
+           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, param_.layout);
         break;
       case 2:
         unpool<DType, 2>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
@@ -251,7 +246,7 @@ class PoolingOp {
            kernel,
            padding,
            stride,
-           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad);
+           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, param_.layout);
         break;
       case 3:
         unpool<DType, 3>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
@@ -259,7 +254,7 @@ class PoolingOp {
            kernel,
            padding,
            stride,
-           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad);
+           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, param_.layout);
         break;
       default:
         LOG(FATAL) << "p value of " << p_value << " is not supported yet...";

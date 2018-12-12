@@ -680,8 +680,14 @@ template<typename DType, int p>
 inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& ishape,
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
-                 DType* out_data, const bool count_include_pad) {
+                 DType* out_data, const bool count_include_pad, const dmlc::optional<int> &layout) {
   CHECK_EQ(req_type, kWriteTo) << "Only support req=kWriteTo in pooling operations";
+  CHECK(!layout.has_value() ||
+        layout.value() == mshadow::kNCW ||
+        layout.value() == mshadow::kNCHW ||
+        layout.value() == mshadow::kNCDHW) <<
+    "MXNet CUDA pooling expects layout NCW, NCHW or NCDHW.  Need CuDNN for support of layout " <<
+    layout.value();
   using namespace mxnet_op;
   if (kernel.ndim() == 1) {
     if (pool_enum::kMaxPooling == pool_type) {
@@ -817,11 +823,17 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
                    const DType* out_data, const TShape& ishape, const TShape& oshape,
                    const TShape& kernel, const TShape& pad, const TShape& stride,
                    const int pool_type, OpReqType req_type, DType* in_grad,
-                   const bool count_include_pad) {
+                   const bool count_include_pad, const dmlc::optional<int> &layout) {
   if (mxnet::kNullOp == req_type) return;
   if (mxnet::kAddTo != req_type) {
     mxnet_op::Kernel<mxnet_op::set_zero, gpu>::Launch(s, ishape.Size(), in_grad);
   }
+  CHECK(!layout.has_value() ||
+        layout.value() == mshadow::kNCW ||
+        layout.value() == mshadow::kNCHW ||
+        layout.value() == mshadow::kNCDHW) <<
+     "MXNet CUDA pooling expects layout NCW, NCHW or NCDHW.  Need CuDNN for support of layout " <<
+     layout.value();
   using namespace mxnet_op;
   if (kernel.ndim() == 1) {
     if (pool_enum::kMaxPooling == pool_type) {
