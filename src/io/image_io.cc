@@ -38,6 +38,7 @@
 #include <cstring>
 
 #include "../operator/elemwise_op_common.h"
+#include "../operator/image/resize-inl.h"
 
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
@@ -285,19 +286,8 @@ inline void Imresize(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &outputs) {
-#if MXNET_USE_OPENCV
-  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "imresize doesn't support fp16";
-  const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
-  int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
   const auto& param = nnvm::get<ResizeParam>(attrs.parsed);
-  cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
-  cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
-  cv::resize(buf, dst, cv::Size(param.w, param.h), 0, 0, param.interp);
-  CHECK(!dst.empty());
-  CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
-#else
-  LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
-#endif  // MXNET_USE_OPENCV
+  op::image::ResizeImpl(inputs, outputs, param.h, param.w, param.interp);
 }
 
 
