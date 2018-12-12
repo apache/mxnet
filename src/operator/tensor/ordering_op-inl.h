@@ -81,12 +81,9 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
       .describe("Whether to choose k largest or k smallest elements."
                 " Top K largest elements will be chosen if set to false.");
     DMLC_DECLARE_FIELD(dtype)
-    .add_enum("uint8", mshadow::kUint8)
     .add_enum("int32", mshadow::kInt32)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .set_default(mshadow::kFloat32)
+    .add_enum("int64", mshadow::kInt64)
+    .set_default(mshadow::kInt64)
     .describe("DType of the output indices when ret_typ is \"indices\" or \"both\". "
               "An error will be raised if the selected data type cannot precisely represent the "
               "indices.");
@@ -129,7 +126,7 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
 };
 
 inline void ParseTopKParam(const TShape& src_shape, const TopKParam& param, TShape *target_shape,
-                           int *batch_size, int *element_num, int *axis, int *k,
+                           size_t *batch_size, size_t *element_num, int *axis, size_t *k,
                            bool *do_transpose, bool *is_ascend) {
   *do_transpose = false;
   *k = param.k;
@@ -179,54 +176,54 @@ using namespace mshadow;
 
 struct fill_ind_to_one {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const int* indices, DType* out) {
+  MSHADOW_XINLINE static void Map(index_t i, const index_t* indices, DType* out) {
     out[indices[i]] = static_cast<DType>(1);
   }
 };
 
 struct fill_ind {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const int* indices, const DType* val,
+  MSHADOW_XINLINE static void Map(index_t i, const index_t* indices, const DType* val,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[indices[i]], req, val[i]);
   }
 };
 
-template<typename DType>
+template<typename DType, typename IDType>
 MSHADOW_FORCE_INLINE void TopKSort(const Tensor<cpu, 1, DType>& dat,
-                                   const Tensor<cpu, 1, int>& ind,
+                                   const Tensor<cpu, 1, IDType>& ind,
                                    const Tensor<cpu, 1, char>& work,
-                                   int K, int N, bool is_ascend,
+                                   size_t K, size_t N, bool is_ascend,
                                    Stream<cpu> *s) {
   // Use full sort when K is relatively large.
   const bool full_sort(K*8 > N);
   // Batch size.
-  const int M(work.size(0)/(sizeof(DType)*N));
+  const index_t M(work.size(0)/(sizeof(DType)*N));
   const int omp_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
   #pragma omp parallel for num_threads(omp_threads)
-  for (int i = 0; i < M; ++i) {
+  for (index_t i = 0; i < M; ++i) {
     // Tensor `work` stores the flattened source data, while `dat` stores the sorted result.
     DType *vals = reinterpret_cast<DType*>(work.dptr_);
-    DType *sorted_vals = dat.dptr_+i*N;
-    int *indices = ind.dptr_+i*N;
+    DType *sorted_vals = dat.dptr_ + i * N;
+    IDType *indices = ind.dptr_ + i * N;
     if (is_ascend) {
       if (full_sort) {
-        std::sort(indices, indices+N,
-                  [&](const int& i1, const int& i2){ return vals[i1] < vals[i2]; });
+        std::sort(indices, indices + N,
+                  [&](const IDType& i1, const IDType& i2){ return vals[i1] < vals[i2]; });
       } else {
-        std::partial_sort(indices, indices+K, indices+N,
-                          [&](const int& i1, const int& i2){ return vals[i1] < vals[i2]; });
+        std::partial_sort(indices, indices + K, indices + N,
+                          [&](const IDType& i1, const IDType& i2){ return vals[i1] < vals[i2]; });
       }
     } else {
       if (full_sort) {
-        std::sort(indices, indices+N,
-                  [&](const int& i1, const int& i2){ return vals[i1] > vals[i2]; });
+        std::sort(indices, indices + N,
+                  [&](const IDType& i1, const IDType& i2){ return vals[i1] > vals[i2]; });
       } else {
-        std::partial_sort(indices, indices+K, indices+N,
-                          [&](const int& i1, const int& i2){ return vals[i1] > vals[i2]; });
+        std::partial_sort(indices, indices + K, indices + N,
+                          [&](const IDType& i1, const IDType& i2){ return vals[i1] > vals[i2]; });
       }
     }
-    for (int j = 0; j < K; ++j) {
+    for (index_t j = 0; j < K; ++j) {
       sorted_vals[j] = vals[indices[j]];
     }
   }
@@ -380,13 +377,14 @@ void TopKImpl(const RunContext &ctx,
   Tensor<xpu, 1, char> workspace;
   Tensor<xpu, 1, char> temp_workspace;
   Tensor<xpu, 1, DType> sorted_dat;
-  Tensor<xpu, 1, int> indices, sel_indices;
-  int batch_size, element_num;  // number of batches + the size of each batch
+  Tensor<xpu, 1, IDType> indices, sel_indices;
+  size_t batch_size = 0;
+  size_t element_num = 0;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
   bool is_ascend = false;
-  int k = 0;
-  size_t alignment = std::max(sizeof(DType), sizeof(int));
+  size_t k = 0;
+  size_t alignment = std::max(sizeof(DType), sizeof(IDType));
   TShape target_shape;
   ParseTopKParam(src.shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
@@ -404,27 +402,27 @@ void TopKImpl(const RunContext &ctx,
   temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
-  temp_size += PadBytes(sizeof(int) * src.Size(), alignment);
+  temp_size += PadBytes(sizeof(IDType) * src.Size(), alignment);
   // Temp space for cpu sorts.
   temp_size = std::max(temp_size, static_cast<size_t>(sizeof(DType) * src.Size()));
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
-                                    + PadBytes(sizeof(int) * src.Size(), alignment);
+                                    + PadBytes(sizeof(IDType) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
     workspace_size += PadBytes(sizeof(int) * batch_size * k, alignment);
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
   sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
-                                      Shape1(src.Size()), s);  // contain sorted dat
+                                     Shape1(src.Size()), s);  // contain sorted dat
   workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);
-  indices = Tensor<xpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
-                                Shape1(src.Size()), s);  // indices in the original matrix
-  workspace_curr_ptr += PadBytes(sizeof(int) * src.Size(), alignment);
+  indices = Tensor<xpu, 1, IDType>(reinterpret_cast<IDType*>(workspace_curr_ptr),
+                                   Shape1(src.Size()), s);  // indices in the original matrix
+  workspace_curr_ptr += PadBytes(sizeof(IDType) * src.Size(), alignment);
 
   if (param.ret_typ == topk_enum::kReturnMask) {
-    sel_indices = Tensor<xpu, 1, int>(reinterpret_cast<int*>(workspace_curr_ptr),
+    sel_indices = Tensor<xpu, 1, IDType>(reinterpret_cast<IDType*>(workspace_curr_ptr),
                                       Shape1(batch_size * k), s);
-    workspace_curr_ptr += PadBytes(sizeof(int) * batch_size * k, alignment);
+    workspace_curr_ptr += PadBytes(sizeof(IDType) * batch_size * k, alignment);
     CHECK_EQ(sel_indices.CheckContiguous(), true);
   }
 
@@ -454,7 +452,7 @@ void TopKImpl(const RunContext &ctx,
     workspace_curr_ptr += temp_size;
   }
 
-  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, 0, 1,
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, IDType(0), IDType(1),
     kWriteTo, indices.dptr_);
   CHECK_EQ(indices.CheckContiguous(), true);
 
@@ -545,13 +543,13 @@ void TopK(const nnvm::NodeAttrs& attrs,
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
+      MSHADOW_IDX_TYPE_SWITCH(param.dtype, IDType, {
         TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
       })
     });
   } else {
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      TopKImpl<xpu, DType, int>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
+      TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
     });
   }
 }
@@ -569,7 +567,7 @@ void Sort(const nnvm::NodeAttrs& attrs,
   topk_param.k = 0;
   topk_param.ret_typ = topk_enum::kReturnValue;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    TopKImpl<xpu, DType, int>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, topk_param);
+    TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, topk_param);
   });
 }
 
@@ -587,7 +585,7 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
   topk_param.dtype = param.dtype;
   topk_param.ret_typ = topk_enum::kReturnIndices;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
+    MSHADOW_IDX_TYPE_SWITCH(param.dtype, IDType, {
       TopKImpl<xpu, DType, IDType>(ctx.run_ctx,
                                    ctx.requested[0], req, inputs[0], outputs, topk_param);
     });
@@ -605,11 +603,12 @@ void TopKBackwardImpl(const OpContext &ctx,
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.run_ctx.get_stream<xpu>();
   CHECK(param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth);
-  int batch_size, element_num;  // number of batches + the size of each batch
+  size_t batch_size = 0;
+  size_t element_num = 0;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
   bool is_ascend = false;
-  int k = 0;
+  size_t k = 0;
   TShape target_shape;
   ParseTopKParam(outputs[0].shape_, param,
                  &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
@@ -617,19 +616,19 @@ void TopKBackwardImpl(const OpContext &ctx,
     << "'IDType' does not have a sufficient precision to represent the indices of the input array. "
     << "The total element_num is " << element_num << ", but the selected IDType can only represent "
     << mxnet::common::MaxIntegerValue<IDType>() << " elements";
-  Tensor<xpu, 1, int> workspace =
-    ctx.requested[0].get_space_typed<xpu, 1, int>(Shape1(batch_size * k + batch_size), s);
-  Tensor<xpu, 1, int> sel_indices =
-    Tensor<xpu, 1, int>(workspace.dptr_, Shape1(batch_size * k), s);
-  Tensor<xpu, 1, int> batch_shift =
-    Tensor<xpu, 1, int>(workspace.dptr_ + batch_size * k, Shape1(batch_size), s);
+  Tensor<xpu, 1, IDType> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, IDType>(Shape1(batch_size * k + batch_size), s);
+  Tensor<xpu, 1, IDType> sel_indices =
+    Tensor<xpu, 1, IDType>(workspace.dptr_, Shape1(batch_size * k), s);
+  Tensor<xpu, 1, IDType> batch_shift =
+    Tensor<xpu, 1, IDType>(workspace.dptr_ + batch_size * k, Shape1(batch_size), s);
 
   Tensor<xpu, 2, DType> out_grad =
     inputs[0].get_with_shape<xpu, 2, DType>(Shape2(inputs[0].shape_.Size(), 1), s);
   Tensor<xpu, 2, DType> in_grad =
     outputs[0].get_with_shape<xpu, 2, DType>(Shape2(outputs[0].shape_.Size(), 1), s);
-  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, 0, element_num, kWriteTo,
-                                           batch_shift.dptr_);
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size, 1, IDType(0), IDType(element_num),
+                                           kWriteTo, batch_shift.dptr_);
   if (do_transpose) {
     Tensor<xpu, 1, IDType> indices = inputs[2].FlatTo1D<xpu, IDType>(s);
     TShape src_shape = outputs[0].shape_.FlatTo3D(axis);
@@ -639,13 +638,13 @@ void TopKBackwardImpl(const OpContext &ctx,
                                          TShape(Shape3(src_shape[0], src_shape[2], k))),
                             Shape3(0, 2, 1)),
                           Shape1(batch_size * k));
-    sel_indices += tcast<int>(indices);
+    sel_indices += tcast<IDType>(indices);
     sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
                                     Shape3(0, 2, 1));
   } else {
     Tensor<xpu, 2, IDType> indices =
       inputs[2].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
-    sel_indices = reshape(tcast<int>(indices) +
+    sel_indices = reshape(tcast<IDType>(indices) +
                           broadcast_to(inplace_reshape(batch_shift, Shape2(batch_size, 1)),
                                        TShape(Shape2(batch_size, k))),
                           Shape1(batch_size * k));
@@ -674,13 +673,13 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   if (param.ret_typ == topk_enum::kReturnBoth) {
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      MSHADOW_TYPE_SWITCH(param.dtype, IDType, {
+      MSHADOW_IDX_TYPE_SWITCH(param.dtype, IDType, {
         TopKBackwardImpl<xpu, DType, IDType>(ctx, inputs, req, outputs, param);
       });
     });
   } else if (param.ret_typ == topk_enum::kReturnValue) {
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      TopKBackwardImpl<xpu, DType, int>(ctx, inputs, req, outputs, param);
+      TopKBackwardImpl<xpu, DType, index_t>(ctx, inputs, req, outputs, param);
     });
   } else {
     LOG(FATAL) << "Not Implemented";
@@ -752,11 +751,12 @@ inline bool TopKShapeImpl(const TopKParam& param,
     CHECK_EQ(out_attrs->size(), 2U);
   }
   TShape& in_shape = (*in_attrs)[0];
-  int batch_size, element_num;  // number of batches + the size of each batch
+  size_t batch_size = 0;
+  size_t element_num = 0;  // number of batches + the size of each batch
   int axis = 0;
   bool do_transpose = false;
   bool is_ascend = false;
-  int k = 0;
+  size_t k = 0;
   TShape target_shape;
   ParseTopKParam(in_shape, param,
     &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
