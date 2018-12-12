@@ -180,7 +180,7 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
          |
          |  val map = scala.collection.mutable.Map[String, Any]()
          |  var args = scala.collection.Seq[org.apache.mxnet.Symbol]()
-         |  val isScalar = implicitly[SymbolOrScalar[T]].isScalar
+         |  val isScalar = SymbolOrScalar[T].isScalar
          |
          |  ${backendArgsMapping.mkString("\n")}
          |

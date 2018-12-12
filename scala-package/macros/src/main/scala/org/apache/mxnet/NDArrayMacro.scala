@@ -208,7 +208,7 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
          |
          |  val map = scala.collection.mutable.Map[String, Any]()
          |  val args = scala.collection.mutable.ArrayBuffer.empty[org.apache.mxnet.NDArray]
-         |  val isScalar = implicitly[NDArrayOrScalar[T]].isScalar
+         |  val isScalar = NDArrayOrScalar[T].isScalar
          |
          |  if(out.isDefined) map("out") = out.get
          |
