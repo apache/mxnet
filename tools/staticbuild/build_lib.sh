@@ -18,22 +18,20 @@
 # under the License.
 
 # This script builds the libraries of mxnet.
-make_config=config/pip_${PLATFORM}_${VARIANT}.mk
+make_config=make/${STATIC_BUILD_TARGET}/${STATIC_BUILD_TARGET}_${PLATFORM}_${VARIANT}.mk
 if [[ ! -f $make_config ]]; then
     >&2 echo "Couldn't find make config $make_config for the current settings."
     exit 1
 fi
 
-git clone --recursive https://github.com/apache/incubator-mxnet mxnet-build
-
 >&2 echo "Now building mxnet modules..."
-cp $make_config mxnet-build/config.mk
+cp $make_config config.mk
 
-cd mxnet-build
+git submodule update --init --recursive || true
 
-make DEPS_PATH=$DEPS_PATH DMLCCORE
-make DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
-make DEPS_PATH=$DEPS_PATH PSLITE
+$MAKE DEPS_PATH=$DEPS_PATH DMLCCORE
+$MAKE DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
+$MAKE DEPS_PATH=$DEPS_PATH PSLITE
 
 if [[ $VARIANT == *mkl ]]; then
     MKLDNN_LICENSE='license.txt'
@@ -46,7 +44,11 @@ if [[ $VARIANT == *mkl ]]; then
         MKLML_LIBFILE='libmklml.dylib'
         MKLDNN_LIBFILE='libmkldnn.0.dylib'
     fi
-    make DEPS_PATH=$DEPS_PATH mkldnn
+    $MAKE DEPS_PATH=$DEPS_PATH mkldnn
+    cp 3rdparty/mkldnn/build/install/lib/$IOMP_LIBFILE lib
+    cp 3rdparty/mkldnn/build/install/lib/$MKLML_LIBFILE lib
+    cp 3rdparty/mkldnn/build/install/lib/$MKLDNN_LIBFILE lib
+    cp 3rdparty/mkldnn/build/install/$MKLDNN_LICENSE lib
     cp 3rdparty/mkldnn/LICENSE ./MKLML_LICENSE
 fi
 
@@ -58,7 +60,7 @@ if [[ $VARIANT == *mkl ]]; then
 fi
 
 >&2 echo "Now building mxnet..."
-make DEPS_PATH=$DEPS_PATH || exit 1;
+$MAKE DEPS_PATH=$DEPS_PATH
 
 if [[ $PLATFORM == 'linux' ]]; then
     cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
@@ -77,4 +79,4 @@ else
     >&2 echo "Not available"
 fi
 
-cd ../
+ln -s staticdeps/ deps
