@@ -699,6 +699,9 @@ Matrix/tensor multiplication.
 """
 *(x::NDArray{T}, y::NDArray{T}) where T = x ⋅ y
 
+LinearAlgebra.adjoint(x::NDArray{T,1}) where T = transpose(x)
+LinearAlgebra.adjoint(x::NDArray{T,2}) where T = transpose(x)
+
 """
     div_from!(dst::NDArray, arg::NDArrayOrReal)
 
