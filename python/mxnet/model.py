@@ -435,8 +435,11 @@ def load_checkpoint(prefix, epoch):
     - Symbol will be loaded from ``prefix-symbol.json``.
     - Parameters will be loaded from ``prefix-epoch.params``.
     """
+    print(0)
     symbol = sym.load('%s-symbol.json' % prefix)
+    print(1)
     save_dict = nd.load('%s-%04d.params' % (prefix, epoch))
+    print(3)
     arg_params = {}
     aux_params = {}
     for k, v in save_dict.items():

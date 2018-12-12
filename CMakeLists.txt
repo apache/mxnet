@@ -480,6 +480,39 @@ assign_source_group("Source" ${GROUP_SOURCE})
 assign_source_group("Include" ${GROUP_Include})
 assign_source_group("CUDA" ${GROUP_CUDA})
 
+# add BMXNet to source
+##========== add BMXNet to source ============##
+#FILE(GLOB_RECURSE SMD_HPI_SOURCE "smd_hpi/src/*.cc" "smd_hpi/src/*.h")
+#FILE(GLOB_RECURSE SMD_HPI_CUDA "smd_hpi/src/*.cu")
+#list(APPEND SOURCE ${SMD_HPI_SOURCE})
+#list(APPEND CUDA ${SMD_HPI_CUDA})
+
+# add build_in popcnt
+INCLUDE(FindSSE)
+FindSSE()
+IF(SSE4_2_FOUND)
+  message(STATUS "enabling popcnt...")
+  set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mpopcnt -funroll-loops")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -mpopcnt -funroll-loops")
+else()
+  message(STATUS "will NOT enable popcnt...")
+ENDIF(SSE4_2_FOUND)
+
+# set type of Binary_Word
+set(BINARY_WORD_TYPE "uint64" CACHE STRING "Selected BINARY_WORD_TYPE")
+set_property(CACHE BINARY_WORD_TYPE PROPERTY STRINGS "uint32;uint64")
+if(BINARY_WORD_TYPE STREQUAL "uint32")
+  message(STATUS "Using uint32_t as container for binarized values")
+  add_definitions(-DBINARY_WORD_32=1)
+  add_definitions(-DBINARY_WORD_64=0)  
+elseif(BINARY_WORD_TYPE STREQUAL "uint64")
+  message(STATUS "Using uint64_t as container for binarized values")
+  add_definitions(-DBINARY_WORD_32=0)
+  add_definitions(-DBINARY_WORD_64=1)
+endif()
+##=============================================##
+
+
 if(USE_PLUGINS_WARPCTC)
     set(WARPCTC_INCLUDE  "" CACHE PATH "WARPCTC include")
     set(WARPCTC_LIB_DEBUG  "" CACHE FILEPATH "WARPCTC lib")
