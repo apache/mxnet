@@ -752,7 +752,6 @@ of the same shape.
 /(x::NDArray, y::Real) = _div_scalar(x, scalar = y)
 
 broadcasted(::typeof(/), y::Real, x::NDArray) = _rdiv_scalar(x, scalar = y)
-
 broadcasted(::typeof(/), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _div(x, y)
 broadcasted(::typeof(/), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
@@ -792,6 +791,7 @@ Elementwise modulo for `NDArray`.
 """
 %(x::NDArray, y::Real) = _mod_scalar(x, y)
 
+broadcasted(::typeof(%), y::Real, x::NDArray) = _rmod_scalar(x, y)
 broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _mod(x, y)
 broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
