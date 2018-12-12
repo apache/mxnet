@@ -144,6 +144,23 @@ Examples & Usage
 - To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
 - Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
 
+Scala Training APIs
+-------
+- Module API :
+[The Module API](https://mxnet.incubator.apache.org/api/scala/module.html) provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Modules provide high-level APIs for training, predicting, and evaluating.
+
+- Model API : 
+The Model API can be used to train models for deep learning. You can refer to [Model API](https://mxnet.incubator.apache.org/api/scala/model.html) for example usage to train a model.
+
+- KVStore API : 
+To run training over multiple GPUs and multiple hosts, one can use the [KVStore API](https://mxnet.incubator.apache.org/api/scala/kvstore.html).
+
+- IO/Data Loading : 
+MXNet Scala provides APIs for preparing data to feed as an input to models. Check out [Data Loading API](https://mxnet.incubator.apache.org/api/scala/io.html) for more info.
+ 
+Other available Scala APIs for training can be found [here](https://mxnet.incubator.apache.org/api/scala/index.html).  
+ 
+
 Scala Inference APIs
 -------
 The [Scala Inference APIs](https://mxnet.incubator.apache.org/api/scala/infer.html) provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.infer.package).  
