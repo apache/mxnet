@@ -326,6 +326,20 @@ build_ubuntu_cpu_openblas() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkl() {
+    set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
+        USE_INTEL_PATH=/opt/intel     \
+        USE_DIST_KVSTORE=1            \
+        -j$(nproc)
+}
+
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     pushd .
@@ -476,6 +490,20 @@ build_ubuntu_cpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=1                  \
+        -j$(nproc)
+}
+
+build_ubuntu_cpu_mkldnn_mkl() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
         USE_MKLDNN=1                  \
         -j$(nproc)
 }
