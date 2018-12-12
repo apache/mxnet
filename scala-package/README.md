@@ -149,9 +149,6 @@ Scala Training APIs
 - Module API :
 [The Module API](https://mxnet.incubator.apache.org/api/scala/module.html) provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Modules provide high-level APIs for training, predicting, and evaluating.
 
-- Model API : 
-The Model API can be used to train models for deep learning. You can refer to [Model API](https://mxnet.incubator.apache.org/api/scala/model.html) for example usage to train a model.
-
 - KVStore API : 
 To run training over multiple GPUs and multiple hosts, one can use the [KVStore API](https://mxnet.incubator.apache.org/api/scala/kvstore.html).
 
