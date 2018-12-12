@@ -26,6 +26,7 @@ from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
 import unittest
+import operator
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -270,8 +271,15 @@ def test_quantized_pooling():
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if mx.current_context().device_type != 'gpu':
-            print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
-            return
+            hasMKL = False;
+            for key in os.environ.keys():
+                if operator.eq(key, "BUILD_TAG"):
+                    if os.environ['BUILD_TAG'].find("MKL") != -1:
+                        hasMKL = True
+                    break
+            if hasMKL == False:
+                print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
+                return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return
