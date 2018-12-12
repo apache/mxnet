@@ -635,18 +635,18 @@ class _BinaryClassificationMetrics(object):
         label_true = (label == 1)
         label_false = 1 - label_true
 
-        tp = (pred_true * label_true).sum()
-        fp = (pred_true * label_false).sum()
-        fn = (pred_false * label_true).sum()
-        tn = (pred_false * label_false).sum()
-        self.true_positives += tp
-        self.global_true_positives += tp
-        self.false_positives += fp
-        self.global_false_positives += fp
-        self.false_negatives += fn
-        self.global_false_negatives += fn
-        self.true_negatives += tn
-        self.global_true_negatives += tn
+        true_pos = (pred_true * label_true).sum()
+        false_pos = (pred_true * label_false).sum()
+        false_neg = (pred_false * label_true).sum()
+        true_neg = (pred_false * label_false).sum()
+        self.true_positives += true_pos
+        self.global_true_positives += true_pos
+        self.false_positives += false_pos
+        self.global_false_positives += false_pos
+        self.false_negatives += false_neg
+        self.global_false_negatives += false_neg
+        self.true_negatives += true_neg
+        self.global_true_negatives += true_neg
 
     @property
     def precision(self):
