@@ -797,12 +797,11 @@ broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
 broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_mod(x, y)
 
-import Base: ^
-
 # document of `.^` is merged into SymbolicNode's
 
-broadcasted(::typeof(^), x::NDArray, s::Real)    = _power_scalar(x, scalar = s)
-broadcasted(::typeof(^), s::Real, x::NDArray)    = _rpower_scalar(x, scalar = s)
+broadcasted(::typeof(Base.literal_pow), ::typeof(^), x::NDArray, ::Val{s}) where {s} =
+  _power_scalar(x,  scalar = s)
+broadcasted(::typeof(^), s::Real, x::NDArray) = _rpower_scalar(x, scalar = s)
 
 broadcasted(::typeof(^), ::Irrational{:e}, x::NDArray) = exp(x)
 broadcasted(::typeof(^), x::NDArray, s::Irrational)    = _power_scalar(x, scalar = s)
