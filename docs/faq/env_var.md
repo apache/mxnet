@@ -67,6 +67,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
   - Values: Int ```(default=24)```
   - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
+  - The default was chosen to minimize global memory fragmentation within the GPU driver.  Set this to 1 to disable.
 
 ## Engine Type
 
@@ -191,6 +195,22 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
+  
+* MXNET_MKLDNN_CACHE_NUM
+  - Values: Int ```(default=-1)```
+  - Flag to set num of elements that MKLDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use MKLDNN and different input shape.
+
+* MXNET_ENFORCE_DETERMINISM
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If set to true, MXNet will only use deterministic algorithms in forward and backward computation.
+  If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
+  of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
+
+* MXNET_CPU_PARALLEL_COPY_SIZE
+  - Values: Int ```(default=200000)```
+  - The minimum size to call parallel copy by OpenMP in CPU2CPU mode.
+  - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
+  - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
 
 Settings for Minimum Memory Usage
 ---------------------------------

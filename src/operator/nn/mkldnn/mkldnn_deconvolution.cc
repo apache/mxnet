@@ -52,17 +52,34 @@ static mkldnn::convolution_forward::primitive_desc GetDeconvBwd_(
     bool has_bias, const mkldnn::memory::desc &out_md,
     const mkldnn::engine &engine, const mkldnn::memory::dims &strides,
     const mkldnn::memory::dims &padding, const mkldnn::memory::dims &dilates) {
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // for computation compared with the actual tensor size. Currently, MKL-DNN
+  // operators are still reusing those memory from memory planning and the
+  // memory size may smaller than what MKL-DNN kernels require. So here we need
+  // select suboptimal kernel for computation according to tensor sizes.
   if (!has_bias) {
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
         mkldnn::algorithm::convolution_direct, out_md, weights_md, data_md, strides,
         dilates, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, engine);
+    auto deconv_pd =  mkldnn::convolution_forward::primitive_desc(desc, engine);
+    while (deconv_pd.dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weights_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   } else {
     auto bias_md = GetBiasDesc(data_md);
     mkldnn::convolution_forward::desc desc(mkldnn::prop_kind::forward_training,
         mkldnn::algorithm::convolution_direct, out_md, weights_md, bias_md,
         data_md, strides, dilates, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, engine);
+    auto deconv_pd =  mkldnn::convolution_forward::primitive_desc(desc, engine);
+    while (deconv_pd.dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weights_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   }
 }
 
@@ -90,7 +107,18 @@ static mkldnn::convolution_backward_data::primitive_desc GetDeconvFwdImpl(
   mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
       out_md, weight_md, data_md, strides, dilate, padding, padding,
       mkldnn::padding_kind::zero);
-  return mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
+  auto deconv_pd = mkldnn::convolution_backward_data::primitive_desc(desc, engine, bwd_pd);
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // for computation compared with the actual tensor size. Currently, MKL-DNN
+  // operators are still reusing those memory from memory planning and the
+  // memory size may smaller than what MKL-DNN kernels require. So here we need
+  // select suboptimal kernel for computation according to tensor sizes.
+  while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+         deconv_pd.diff_src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+         deconv_pd.weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+    CHECK(deconv_pd.next_impl()) << "No implementation";
+  }
+  return deconv_pd;
 }
 
 static mkldnn::convolution_forward::primitive_desc GetDeconvBwdDataImpl(
@@ -137,16 +165,34 @@ GetDeconvBwdWeightsImpl(
   mkldnn::memory::dims dilate{0, 0};
   dilate[0] = param.dilate[0] - 1;
   dilate[1] = param.dilate[1] - 1;
+
+  // MKL-DNN introduced padded formats since 0.15 which require more memory
+  // for computation compared with the actual tensor size. Currently, MKL-DNN
+  // operators are still reusing those memory from memory planning and the
+  // memory size may smaller than what MKL-DNN kernels require. So here we need
+  // select suboptimal kernel for computation according to tensor sizes.
   if (!has_bias) {
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, data_md, strides, dilate, padding, padding, mkldnn::padding_kind::zero);
-    return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    auto deconv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.diff_weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   } else {
     auto bias_md = GetBiasDesc(data_md);
     mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
         out_md, weight_md, bias_md, data_md, strides, dilate, padding, padding,
         mkldnn::padding_kind::zero);
-    return mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    auto deconv_pd = mkldnn::convolution_backward_weights::primitive_desc(desc, engine, fwd_pd);
+    while (deconv_pd.diff_dst_primitive_desc().get_size() != GetMemDescSize(data_md) ||
+           deconv_pd.src_primitive_desc().get_size() != GetMemDescSize(out_md) ||
+           deconv_pd.diff_weights_primitive_desc().get_size() != GetMemDescSize(weight_md)) {
+      CHECK(deconv_pd.next_impl()) << "No implementation";
+    }
+    return deconv_pd;
   }
 }
 
@@ -166,7 +212,8 @@ class MKLDNNDeconvForward {
                       const NDArray &output);
   void SetDataHandle(const DeconvolutionParam& param,
                      const OpContext &ctx,
-                     const std::vector<NDArray> &in_data,
+                     const NDArray &in_data,
+                     const NDArray &weight,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
 
@@ -197,19 +244,19 @@ MKLDNNDeconvForward::MKLDNNDeconvForward(const DeconvolutionParam& param,
 
 void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
                                         const OpContext &ctx,
-                                        const std::vector<NDArray> &in_data,
+                                        const NDArray &in_data,
+                                        const NDArray &weight,
                                         const std::vector<OpReqType> &req,
                                         const std::vector<NDArray> &out_data) {
-  auto data_mem = in_data[deconv::kData].GetMKLDNNDataReorder(
+  auto data_mem = in_data.GetMKLDNNDataReorder(
       fwd_pd.diff_dst_primitive_desc());
-  NDArray weight = in_data[deconv::kWeight];
   const mkldnn::memory *weight_mem;
   if (ctx.is_train) {
     // TODO(zhengda) kvstore doesn't handle MKLDNN correctly. Let's reorder it
     // to the default format for now.
     if (weight.IsMKLDNNData())
       // This asks the engine to reorder data after the weight array is used.
-      weight.Reorder2DefaultAsync();
+      const_cast<NDArray&>(weight).Reorder2DefaultAsync();
     weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
   } else {
     // For inference, we want to reorder the weight array so we don't need to
@@ -218,7 +265,7 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
       weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
-      weight.MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+      const_cast<NDArray&>(weight).MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
     } else {
       weight_mem = weight.GetMKLDNNData();
       CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
@@ -241,19 +288,19 @@ void MKLDNNDeconvForward::Execute(const std::vector<NDArray> &out_data) {
 
 static void MKLDNNDeconvFwdBiasPostProcess(const DeconvolutionParam& param,
                                            const OpContext &ctx,
-                                           const std::vector<NDArray> &in_data,
+                                           const NDArray &bias,
                                            const std::vector<NDArray> &out_data) {
   // add bias, broadcast bias to dim 1: channel
   if (!param.no_bias) {
     // MKLDNN only supports float right now.
     typedef float DType;
     Stream<cpu> *s = ctx.get_stream<cpu>();
-    Tensor<cpu, 1, DType> bias = in_data[deconv::kBias].data().get<cpu, 1, DType>(s);
+    Tensor<cpu, 1, DType> b = bias.data().get<cpu, 1, DType>(s);
     // If the output data is stored in a special MKLDNN format, data()
     // automatically converts its format to the default format.
     // Unfortunately, MKLDNN doesn't support broadcast.
     Tensor<cpu, 4, DType> out_cpu = out_data[deconv::kOut].data().get<cpu, 4, DType>(s);
-    out_cpu += mshadow::expr::broadcast<1>(bias, out_cpu.shape_);
+    out_cpu += mshadow::expr::broadcast<1>(b, out_cpu.shape_);
   }
 }
 
@@ -283,10 +330,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
   if (it == fwds.end()) {
     bool has_bias = (bias != nullptr);
     MKLDNNDeconvForward fwd(param, data, weights, has_bias, output);
-    auto ins_ret = fwds.insert(
-        std::pair<DeconvSignature, MKLDNNDeconvForward>(key, fwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
@@ -298,15 +342,24 @@ void MKLDNNDeconvolutionForward(const nnvm::NodeAttrs& attrs, const OpContext &c
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const DeconvolutionParam& param = nnvm::get<DeconvolutionParam>(attrs.parsed);
 
-  MKLDNNDeconvForward &deconvFwd = GetDeconvFwd(
-      attrs, in_data[deconv::kData], in_data[deconv::kWeight],
-      param.no_bias ? nullptr : &in_data[deconv::kBias], out_data[deconv::kOut]);
+  auto data = in_data[deconv::kData];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
 
-  deconvFwd.SetDataHandle(param, ctx, in_data, req, out_data);
+  auto weight = in_data[deconv::kWeight];
+  if (weight.IsView() && weight.IsMKLDNNData())
+    weight = weight.Reorder2Default();
+
+  const NDArray* bias = param.no_bias ? nullptr : &in_data[deconv::kBias];
+
+  MKLDNNDeconvForward &deconvFwd = GetDeconvFwd(
+      attrs, data, weight, bias, out_data[deconv::kOut]);
+
+  deconvFwd.SetDataHandle(param, ctx, data, weight, req, out_data);
 
   deconvFwd.Execute(out_data);
 
-  MKLDNNDeconvFwdBiasPostProcess(param, ctx, in_data, out_data);
+  MKLDNNDeconvFwdBiasPostProcess(param, ctx, *bias, out_data);
 }
 
 class MKLDNNDeconvBackwardData {
@@ -371,10 +424,7 @@ static inline MKLDNNDeconvBackwardData &GetDeconvBwdData(
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNDeconvBackwardData bwd(param, data, weights, output);
-    auto ins_ret = bwds.insert(
-        std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardData>(key, bwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }
@@ -460,17 +510,24 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
   TmpMemMgr::Get()->Init(ctx.requested[deconv::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const DeconvolutionParam &param = nnvm::get<DeconvolutionParam>(attrs.parsed);
+
+  auto data = inputs[deconv::kData + 1];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+
+  auto weight = inputs[deconv::kWeight + 1];
+  if (weight.IsView() && weight.IsMKLDNNData())
+    weight = weight.Reorder2Default();
+
   CHECK_NE(req[deconv::kWeight], kWriteInplace)
       << "cannot write weight inplace";
   MKLDNNDeconvBackwardData &bwd_data =
-      GetDeconvBwdData(param, inputs[deconv::kData + 1],
-                       inputs[deconv::kWeight + 1], inputs[deconv::kOut]);
+      GetDeconvBwdData(param, data, weight, inputs[deconv::kOut]);
   auto out_grad_mem = inputs[deconv::kOut].GetMKLDNNDataReorder(
       bwd_data.pd.src_primitive_desc());
   if (req[deconv::kData]) {
     auto weight_mem =
-        GetWeights(inputs[deconv::kWeight + 1],
-                   bwd_data.pd.weights_primitive_desc(), param.num_group);
+        GetWeights(weight, bwd_data.pd.weights_primitive_desc(), param.num_group);
     auto in_grad_mem =
         CreateMKLDNNMem(in_grad[deconv::kData],
                         bwd_data.pd.dst_primitive_desc(), req[deconv::kData]);
@@ -480,12 +537,12 @@ void MKLDNNDeconvolutionBackward(const nnvm::NodeAttrs &attrs,
   }
   if (req[deconv::kWeight]) {
     MKLDNNDeconvBackwardWeights &bwd_weights = GetDeconvBwdWeights(
-        param, inputs[deconv::kData + 1], inputs[deconv::kWeight + 1],
+        param, data, weight,
         inputs[deconv::kOut], bwd_data.pd);
     if (bwd_data.pd.src_primitive_desc() != bwd_weights.pd.src_primitive_desc())
       out_grad_mem = inputs[deconv::kOut].GetMKLDNNDataReorder(
           bwd_weights.pd.src_primitive_desc());
-    auto data_mem = inputs[deconv::kData + 1].GetMKLDNNDataReorder(
+    auto data_mem = data.GetMKLDNNDataReorder(
         bwd_weights.pd.diff_dst_primitive_desc());
     auto in_grad_weight = CreateMKLDNNWeightGrad(
         in_grad[deconv::kWeight], bwd_weights.pd.diff_weights_primitive_desc(),

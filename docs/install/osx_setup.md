@@ -96,7 +96,14 @@ The file called ```osx.mk``` has the configuration required for building MXNet o
 To build with MKLDNN
 
 ```bash
-LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew --prefix llvm)/bin/clang++ CXX=$(brew --prefix llvm)/bin/clang++ USE_OPENCV=1 USE_OPENMP=1 USE_MKLDNN=1 USE_BLAS=apple USE_PROFILER=1
+echo "CC=$(brew --prefix llvm)/bin/clang++" >> ./config.mk
+echo "CXX=$(brew --prefix llvm)/bin/clang++" >> ./config.mk
+echo "USE_OPENCV=1" >> ./config.mk
+echo "USE_OPENMP=1" >> ./config.mk
+echo "USE_MKLDNN=1" >> ./config.mk
+echo "USE_BLAS=apple" >> ./config.mk
+echo "USE_PROFILER=1" >> ./config.mk
+LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu)
 ```
 
 If building with ```GPU``` support, add the following configuration to config.mk and build:

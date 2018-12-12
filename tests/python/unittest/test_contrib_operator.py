@@ -261,6 +261,7 @@ def test_multibox_target_op():
     assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

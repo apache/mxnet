@@ -102,8 +102,8 @@ class DataDesc(namedtuple('DataDesc', ['name', 'shape'])):
 
         Parameters
         ----------
-        shapes : a tuple of (name, shape)
-        types : a tuple of  (name, type)
+        shapes : a tuple of (name_, shape_)
+        types : a tuple of  (name_, np.dtype)
         """
         if types is not None:
             type_dict = dict(types)
@@ -490,8 +490,8 @@ class NDArrayIter(DataIter):
     """Returns an iterator for ``mx.nd.NDArray``, ``numpy.ndarray``, ``h5py.Dataset``
     ``mx.nd.sparse.CSRNDArray`` or ``scipy.sparse.csr_matrix``.
 
-    Example usage:
-    ----------
+    Examples
+    --------
     >>> data = np.arange(40).reshape((10,2,2))
     >>> labels = np.ones([10, 1])
     >>> dataiter = mx.io.NDArrayIter(data, labels, 3, True, last_batch_handle='discard')

@@ -368,7 +368,7 @@ class RNNCell(BaseRNNCell):
         Number of units in output symbol.
     activation : str or Symbol, default 'tanh'
         Type of activation function. Options are 'relu' and 'tanh'.
-    prefix : str, default 'rnn_'
+    prefix : str, default ``'rnn_'``
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -412,7 +412,7 @@ class LSTMCell(BaseRNNCell):
     ----------
     num_hidden : int
         Number of units in output symbol.
-    prefix : str, default 'lstm_'
+    prefix : str, default ``'lstm_'``
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -475,7 +475,7 @@ class GRUCell(BaseRNNCell):
     ----------
     num_hidden : int
         Number of units in output symbol.
-    prefix : str, default 'gru_'
+    prefix : str, default ``'gru_'``
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -554,7 +554,7 @@ class FusedRNNCell(BaseRNNCell):
         Whether to return the states that can be used as starting states next time.
     forget_bias : bias added to forget gate, default 1.0.
         Jozefowicz et al. 2015 recommends setting this to 1.0
-    prefix : str, default '$mode_' such as 'lstm_'
+    prefix : str, default ``'$mode_'`` such as ``'lstm_'``
         Prefix for names of layers
         (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
@@ -716,7 +716,7 @@ class FusedRNNCell(BaseRNNCell):
 
         Returns
         -------
-        cell : SequentialRNNCell
+        cell : mxnet.rnn.SequentialRNNCell
             unfused cell that can be used for stepping, and can run on CPU.
         """
         stack = SequentialRNNCell()
@@ -832,7 +832,7 @@ class DropoutCell(BaseRNNCell):
     dropout : float
         Percentage of elements to drop out, which
         is 1 - percentage to retain.
-    prefix : str, default 'dropout_'
+    prefix : str, default ``'dropout_'``
         Prefix for names of layers
         (this prefix is also used for names of weights if `params` is None
         i.e. if `params` are being created and not reused)
@@ -1007,7 +1007,7 @@ class BidirectionalCell(BaseRNNCell):
     params : RNNParams, default None.
         Container for weight sharing between cells.
         A new RNNParams container is created if `params` is None.
-    output_prefix : str, default 'bi_'
+    output_prefix : str, default ``'bi_'``
         prefix for name of output
     """
     def __init__(self, l_cell, r_cell, params=None, output_prefix='bi_'):
@@ -1207,7 +1207,7 @@ class ConvRNNCell(BaseConvRNNCell):
     activation : str or Symbol,
         default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
         Type of activation function.
-    prefix : str, default 'ConvRNN_'
+    prefix : str, default ``'ConvRNN_'``
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -1253,7 +1253,8 @@ class ConvRNNCell(BaseConvRNNCell):
 class ConvLSTMCell(BaseConvRNNCell):
     """Convolutional LSTM network cell.
 
-    Reference:
+    References
+    ----------
         Xingjian et al. NIPS2015
 
     Parameters
@@ -1287,7 +1288,7 @@ class ConvLSTMCell(BaseConvRNNCell):
     activation : str or Symbol
         default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
         Type of activation function.
-    prefix : str, default 'ConvLSTM_'
+    prefix : str, default ``'ConvLSTM_'``
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.
@@ -1379,7 +1380,7 @@ class ConvGRUCell(BaseConvRNNCell):
     activation : str or Symbol,
         default functools.partial(symbol.LeakyReLU, act_type='leaky', slope=0.2)
         Type of activation function.
-    prefix : str, default 'ConvGRU_'
+    prefix : str, default ``'ConvGRU_'``
         Prefix for name of layers (and name of weight if params is None).
     params : RNNParams, default None
         Container for weight sharing between cells. Created if None.

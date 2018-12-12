@@ -157,6 +157,13 @@ def waitall():
     """Wait for all async operations to finish in MXNet.
 
     This function is used for benchmarking only.
+
+    .. warning::
+
+       If your code has exceptions, `waitall` can cause silent failures.
+       For this reason you should avoid `waitall` in your code.
+       Use it only if you are confident that your code is error free.
+       Then make sure you call `wait_to_read` on all outputs after `waitall`.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -399,7 +406,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
+        key : int, mxnet.ndarray.slice, list, np.ndarray, NDArray, or tuple of all previous types
             The indexing key.
         value : scalar or array-like object that can be broadcast to the shape of self[key]
             The value to set.
@@ -467,7 +474,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
+        key : int, mxnet.ndarray.slice, list, np.ndarray, NDArray, or tuple of all previous types
             Indexing key.
 
         Examples
@@ -998,7 +1005,7 @@ fixed-size items.
 
               Example::
 
-              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be \
                 (40,5).
               - with reverse=1, output shape will be (50,4).
 
@@ -2642,9 +2649,9 @@ def add(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be added.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be added.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2704,9 +2711,9 @@ def subtract(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be subtracted.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be subtracted.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2765,9 +2772,9 @@ def multiply(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be multiplied.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be multiplied.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2826,9 +2833,9 @@ def divide(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array in division.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array in division.
         The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2883,9 +2890,9 @@ def modulo(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array in modulo.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array in modulo.
         The arrays to be taken modulo. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -3002,9 +3009,9 @@ def maximum(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3059,9 +3066,9 @@ def minimum(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3120,9 +3127,9 @@ def equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3184,9 +3191,9 @@ def not_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3251,9 +3258,9 @@ def greater(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3315,9 +3322,9 @@ def greater_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3379,9 +3386,9 @@ def lesser(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3443,9 +3450,9 @@ def lesser_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3506,9 +3513,9 @@ def logical_and(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3566,9 +3573,9 @@ def logical_or(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3626,9 +3633,9 @@ def logical_xor(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 

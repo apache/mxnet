@@ -17,6 +17,8 @@
 
 # coding: utf-8
 """backend wrapper for onnx test infrastructure"""
+import os
+import sys
 import numpy as np
 from mxnet.contrib.onnx.onnx2mx.import_onnx import GraphProto
 from mxnet.contrib.onnx.mx2onnx.export_onnx import MXNetGraph
@@ -25,6 +27,8 @@ try:
     from onnx.backend.base import Backend
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed")
+CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(CURR_PATH, '../'))
 from backend_rep import MXNetBackendRep
 
 # Using these functions for onnx test infrastructure.

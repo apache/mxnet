@@ -210,7 +210,7 @@ abstract class BaseModule {
    * @param reset Default is `True`, indicating whether we should reset the data iter before start
    *              doing prediction.
    * @return The return value will be a nested list like
-   *         `[[out1_batch1, out2_batch1, ...], [out1_batch2, out2_batch2, ...]]`
+   *         `[ [out1_batch1, out2_batch1, ...], [out1_batch2, out2_batch2, ...] ]`
    *         This mode is useful because in some cases (e.g. bucketing),
    *         the module does not necessarily produce the same number of outputs.
    */
@@ -501,7 +501,7 @@ abstract class BaseModule {
    * Get outputs of the previous forward computation.
    * @return In the case when data-parallelism is used,
    *         the outputs will be collected from multiple devices.
-   *         The results will look like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`,
+   *         The results will look like `[ [out1_dev1, out1_dev2], [out2_dev1, out2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   def getOutputs(): IndexedSeq[IndexedSeq[NDArray]]
@@ -519,7 +519,7 @@ abstract class BaseModule {
    * Get the gradients to the inputs, computed in the previous backward computation.
    * @return In the case when data-parallelism is used,
    *         the grads will be collected from multiple devices.
-   *         The results will look like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`,
+   *         The results will look like `[ [grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   def getInputGrads(): IndexedSeq[IndexedSeq[NDArray]]

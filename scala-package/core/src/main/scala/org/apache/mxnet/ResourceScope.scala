@@ -27,7 +27,7 @@ import scala.util.Try
 import scala.util.control.{ControlThrowable, NonFatal}
 
 /**
-  * This class manages automatically releasing of [[NativeResource]]s
+  * This class manages automatically releasing of `org.apache.mxnet.NativeResource`s
   */
 class ResourceScope extends AutoCloseable {
 
@@ -43,8 +43,8 @@ class ResourceScope extends AutoCloseable {
   ResourceScope.addToThreadLocal(this)
 
   /**
-    * Releases all the [[NativeResource]] by calling
-    * the associated [[NativeResource.close()]] method
+    * Releases all the `org.apache.mxnet.NativeResource` by calling
+    * the associated`'org.apache.mxnet.NativeResource.close()` method
     */
   override def close(): Unit = {
     ResourceScope.removeFromThreadLocal(this)
@@ -58,6 +58,7 @@ class ResourceScope extends AutoCloseable {
     */
   def add(resource: NativeResource): Unit = {
     resourceQ.+=(resource)
+    resource.scope = Some(this)
   }
 
   /**
@@ -67,7 +68,21 @@ class ResourceScope extends AutoCloseable {
     */
   def remove(resource: NativeResource): Unit = {
     resourceQ.-=(resource)
+    resource.scope = None
   }
+
+  /**
+    * Removes from current Scope and moves to outer scope if it exists
+    * @param resource Resource to be moved to an outer scope
+    */
+  def moveToOuterScope(resource: NativeResource): Unit = {
+    val prevScope: Option[ResourceScope] = ResourceScope.getPrevScope()
+    if (prevScope.isDefined) {
+      this.remove(resource)
+      prevScope.get.add(resource)
+    } else this.remove(resource)
+  }
+
 }
 
 object ResourceScope {
@@ -92,30 +107,20 @@ object ResourceScope {
 
     val curScope = if (scope != null) scope else new ResourceScope()
 
-    val prevScope: Option[ResourceScope] = ResourceScope.getPrevScope()
-
     @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
       g.foreach( n =>
         n match {
           case nRes: NativeResource => {
-            removeAndAddToPrevScope(nRes)
+            curScope.moveToOuterScope(nRes)
           }
           case kv: scala.Tuple2[_, _] => {
-            if (kv._1.isInstanceOf[NativeResource]) removeAndAddToPrevScope(
+            if (kv._1.isInstanceOf[NativeResource]) curScope.moveToOuterScope(
               kv._1.asInstanceOf[NativeResource])
-            if (kv._2.isInstanceOf[NativeResource]) removeAndAddToPrevScope(
+            if (kv._2.isInstanceOf[NativeResource]) curScope.moveToOuterScope(
               kv._2.asInstanceOf[NativeResource])
           }
         }
       )
-    }
-
-    @inline def removeAndAddToPrevScope(r: NativeResource) = {
-      curScope.remove(r)
-      if (prevScope.isDefined)  {
-        prevScope.get.add(r)
-        r.scope = prevScope
-      }
     }
 
     @inline def safeAddSuppressed(t: Throwable, suppressed: Throwable): Unit = {
@@ -129,8 +134,8 @@ object ResourceScope {
        ret match {
           // don't de-allocate if returning any collection that contains NativeResource.
         case resInGeneric: scala.collection.Iterable[_] => resourceInGeneric(resInGeneric)
-        case nRes: NativeResource => removeAndAddToPrevScope(nRes)
-        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => removeAndAddToPrevScope(nd) )
+        case nRes: NativeResource => curScope.moveToOuterScope(nRes)
+        case ndRet: NDArrayFuncReturn => ndRet.arr.foreach( nd => curScope.moveToOuterScope(nd) )
         case _ => // do nothing
       }
       ret

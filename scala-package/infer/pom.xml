@@ -6,24 +6,23 @@
     <parent>
         <artifactId>mxnet-parent_2.11</artifactId>
         <groupId>org.apache.mxnet</groupId>
-        <version>1.3.1-SNAPSHOT</version>
+        <version>1.5.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>mxnet-infer_2.11</artifactId>
     <name>MXNet Scala Package - Inference</name>
 
+    <properties>
+        <skipTests>true</skipTests>
+        <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
+    </properties>
+
     <profiles>
         <profile>
             <id>unittest</id>
             <properties>
                 <skipTests>false</skipTests>
-            </properties>
-        </profile>
-        <profile>
-            <id>integrationtest</id>
-            <properties>
-                <skipTests>true</skipTests>
             </properties>
         </profile>
         <profile>
@@ -79,6 +78,9 @@
                         -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
                         -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
                     </argLine>
+                    <environmentVariables>
+                        <LD_LIBRARY_PATH>${MXNET_DIR}/lib</LD_LIBRARY_PATH>
+                    </environmentVariables>
                 </configuration>
             </plugin>
             <plugin>
@@ -91,7 +93,7 @@
         <dependency>
             <groupId>org.apache.mxnet</groupId>
             <artifactId>mxnet-core_${scala.binary.version}</artifactId>
-            <version>1.3.1-SNAPSHOT</version>
+            <version>1.5.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.mockito/mockito-all -->
