@@ -193,7 +193,7 @@ private[mxnet] object TypedNDArrayRandomAPIMacro extends GeneratorBase
             }
           } else {
             if (arg.isOptional) {
-              s"""if (${arg.safeArgName}.isDefined) map("${arg.argName}") = ${arg.safeArgName}.get"""
+              s"""if (${arg.safeArgName}.isDefined) map("${arg.argName}")=${arg.safeArgName}.get"""
             } else {
               s"""map("${arg.argName}") = ${arg.safeArgName}"""
             }
