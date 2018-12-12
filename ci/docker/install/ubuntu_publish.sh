@@ -22,10 +22,11 @@ apt-get update
 apt-get install -y software-properties-common
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
 add-apt-repository ppa:openjdk-r/ppa -y # Java lib
+add-apt-repository ppa:andrei-pozolotin/maven3 -y # Maven lib
 apt-get update
-apt-get install build-essential -y
+curl -sSL https://cmake.org/files/v3.5/cmake-3.5.2-Linux-x86_64.tar.gz | sudo tar -xzC /opt
+sudo ln -s /opt/cmake-3.5.2-Linux-x86_64/bin/* /usr/local/bin
 apt-get install -y git \
-    cmake3 \
     libcurl4-openssl-dev \
     unzip \
     gcc-4.8 \
@@ -38,16 +39,7 @@ apt-get install -y git \
     pandoc \
     python3-pip \
     automake \
-    pkg-config
-update-alternatives \
- --install /usr/bin/gcc gcc /usr/bin/gcc-4.8 50 \
- --slave /usr/bin/g++ g++ /usr/bin/g++-4.8
-update-alternatives --config gcc
-# Java specific
-apt-get install -y openjdk-8-jdk
-curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
-tar xzf apache-maven-3.3.9-bin.tar.gz
-mkdir /usr/local/maven
-mv apache-maven-3.3.9/ /usr/local/maven/
-update-alternatives --install /usr/bin/mvn mvn /usr/local/maven/apache-maven-3.3.9/bin/mvn 1
+    pkg-config \
+    openjdk-8-jdk
+apt-get install -y --no-install-recommends maven3
 update-ca-certificates -f
