@@ -32,13 +32,10 @@ def check_uniform(out, num_hops, max_num_vertices):
     layer = out[2]
     # check sample_id
     assert (len(sample_id) == max_num_vertices+1)
-    count = 0
-    for data in sample_id:
-        if data != -1:
-            count = count + 1
-    assert (mx.nd.array([count-1], dtype=np.int64) == sample_id[-1])
+    num_vertices = sample_id[-1].asnumpy()[0]
     # check sub_csr
     sub_csr.check_format(full_check=True)
+    assert np.all((sub_csr.indptr[num_vertices:] == sub_csr.indptr[num_vertices]).asnumpy())
     # check layer
     for data in layer:
         assert(data <= num_hops)
@@ -50,13 +47,10 @@ def check_non_uniform(out, num_hops, max_num_vertices):
     layer = out[3]
     # check sample_id
     assert (len(sample_id) == max_num_vertices+1)
-    count = 0
-    for data in sample_id:
-        if data != -1:
-            count = count + 1
-    assert (mx.nd.array([count-1], dtype=np.int64) == sample_id[-1])
+    num_vertices = sample_id[-1].asnumpy()[0]
     # check sub_csr
     sub_csr.check_format(full_check=True)
+    assert np.all((sub_csr.indptr[num_vertices:] == sub_csr.indptr[num_vertices]).asnumpy())
     # check prob
     assert (len(prob) == max_num_vertices)
     # check layer
