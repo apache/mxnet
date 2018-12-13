@@ -34,6 +34,7 @@ apt-get install -y git \
     binutils \
     nasm \
     libtool \
+    curl \
     pandoc \
     python3-pip \
     automake \
