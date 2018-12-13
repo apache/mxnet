@@ -140,7 +140,6 @@ build_armv6() {
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
-        -DUSE_MKLDNN=0FF \
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
@@ -172,7 +171,6 @@ build_armv7() {
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
-        -DUSE_MKLDNN=0FF \
         -DBUILD_CPP_EXAMPLES=OFF \
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
@@ -193,7 +191,6 @@ build_armv8() {
         -DUSE_LAPACK=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=Release\
-        -DUSE_MKLDNN=0FF \
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
     ninja -v
@@ -219,7 +216,6 @@ build_android_armv7() {
         -DUSE_OPENCV=OFF\
         -DUSE_OPENMP=OFF\
         -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKLDNN=0FF \
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
@@ -239,7 +235,6 @@ build_android_armv8() {
         -DUSE_SIGNAL_HANDLER=ON\
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_MKLDNN=0FF \
         -G Ninja /work/mxnet
     ninja -v
 }
@@ -257,7 +252,6 @@ build_centos7_cpu() {
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
         USE_DIST_KVSTORE=1 \
-        USE_MKLDNN=0 \
         -j$(nproc)
 }
 
@@ -291,7 +285,6 @@ build_centos7_mkldnn() {
         ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
 }
@@ -310,7 +303,6 @@ build_centos7_gpu() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
-        USE_MKLDNN=0                              \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
@@ -326,7 +318,6 @@ build_ubuntu_cpu_openblas() {
     export CXX="ccache g++"
     make \
         DEV=1                         \
-        USE_MKLDNN=0                  \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -394,7 +385,6 @@ build_ubuntu_cpu_clang39() {
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
-        USE_MKLDNN=0                  \
         -j$(nproc)
 }
 
@@ -412,7 +402,6 @@ build_ubuntu_cpu_clang60() {
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
-        USE_MKLDNN=0                  \
         -j$(nproc)
 }
 
@@ -454,7 +443,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
         -j$(nproc)
 }
@@ -471,7 +459,6 @@ build_ubuntu_cpu_clang60_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
         -j$(nproc)
 }
@@ -486,7 +473,6 @@ build_ubuntu_cpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         -j$(nproc)
 }
 
@@ -545,7 +531,6 @@ build_ubuntu_gpu_tensorrt() {
         USE_TENSORRT=1                                       \
         USE_JEMALLOC=0                                       \
         USE_GPERFTOOLS=0                                     \
-        USE_MKLDNN=0                                         \
         ONNX_NAMESPACE=onnx                                  \
         CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
         -j$(nproc)
@@ -561,7 +546,6 @@ build_ubuntu_gpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1                     \
         USE_CPP_PACKAGE=1                         \
         USE_BLAS=openblas                         \
-        USE_MKLDNN=1                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
@@ -578,7 +562,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
         USE_BLAS=openblas                         \
-        USE_MKLDNN=1                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
@@ -600,7 +583,6 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_MKLDNN=0                              \
         -j$(nproc)
 }
 
@@ -633,7 +615,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_MKLML_MKL=1                       \
-        -DUSE_MKLDNN=1                          \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
@@ -656,7 +637,6 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_MKLML_MKL=0                       \
-        -DUSE_MKLDNN=0                          \
         -DUSE_DIST_KVSTORE=1                    \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
