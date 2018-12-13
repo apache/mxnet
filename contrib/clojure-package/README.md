@@ -105,9 +105,9 @@ brew install opencv
 - Create a new project with `lein new my-mxnet`
 - Edit your `project.clj` and add one of the following entries to `:dependencies`, based on your system and the compute device you want to use:
 
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.4.0"]`
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.4.0"]`
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.4.0"]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.3.1"]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.3.1"]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.3.1"]`
 
 After making this change and running `lein deps`, you should be able to run example code like this [NDArray Tutorial](https://github.com/apache/incubator-mxnet/blob/master/contrib/clojure-package/examples/tutorial/src/tutorial/ndarray.clj).
 
@@ -116,20 +116,20 @@ After making this change and running `lein deps`, you should be able to run exam
 With this option, you will install a Git revision of the Clojure package source and a [Scala package jar from Maven](https://search.maven.org/search?q=g:org.apache.mxnet) with native dependencies baked in.
 
 - Install additional dependencies as described in [the corresponding section for Option 1](#installing-additional-dependencies),
-- Recursively clone the MXNet repository and checkout the desired revision. Here we assume the `1.4.0` tag and a clone into the `~/mxnet` directory:
+- Recursively clone the MXNet repository and checkout the desired revision. Here we assume the `1.3.1` tag and a clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
   cd ~/mxnet
   git tag --list  # Find the tag that matches the Scala package version
-  git checkout tags/1.4.0 -b my_mxnet
+  git checkout tags/1.3.1 -b my_mxnet
   git submodule update --init --recursive
   cd contrib/clojure
   ```
 
 - Edit `project.clj` to include the desired Scala jar from Maven:
 
-      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.4.0”]
+      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.1”]
 
 - Run `lein test`. All the tests should run without error.
 - At this point you can run `lein install` to build and install the Clojure jar locally.
@@ -147,7 +147,7 @@ The first step is to recursively clone the MXNet repository and checkout the des
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
   cd ~/mxnet
-  git checkout tags/1.4.0 -b my_mxnet  # this is optional
+  git checkout tags/1.3.1 -b my_mxnet  # this is optional
   git submodule update --init --recursive
   ```
 
@@ -176,7 +176,7 @@ The outcome of this step will be a shared library `lib/libmxnet.so` that is used
 
 #### Building the Clojure jar
  
-- Enter the `contrib/clojure` directory and edit the `project.clj` file. Add the Scala jar that was just created and installed, e.g., `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.4.0-SNAPSHOT"]`, to the `:dependencies`.
+- Enter the `contrib/clojure` directory and edit the `project.clj` file. Add the Scala jar that was just created and installed, e.g., `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.5.0-SNAPSHOT"]`, to the `:dependencies`.
 - Run `lein test`. All the tests should run without an error.
 - Run `lein install` to build and install the Clojure jar locally.
 

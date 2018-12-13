@@ -23,19 +23,19 @@
 utils = load('ci/Jenkinsfile_utils.groovy')
 
 // mxnet libraries
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
 // Python wheels
 mx_pip = 'build/*.whl'
 
 // for scala build, need to pass extra libs when run with dist_kvstore
-mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
+mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, lib/libmkldnn.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
-mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
-mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
@@ -121,6 +121,20 @@ def compile_unix_openblas_debug_cpu() {
     }]
 }
 
+def compile_unix_mkl_cpu() {
+    return ['CPU: MKL': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-mkl') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
+            utils.pack_lib('cpu_mkl', mx_dist_lib, true)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_mkldnn_cpu() {
     return ['CPU: MKLDNN': {
       node(NODE_LINUX_CPU) {
@@ -129,6 +143,20 @@ def compile_unix_mkldnn_cpu() {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
             utils.pack_lib('mkldnn_cpu', mx_mkldnn_lib, true)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_mkldnn_mkl_cpu() {
+    return ['CPU: MKLDNN_MKL': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-mkldnn-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
+            utils.pack_lib('mkldnn_mkl_cpu', mx_mkldnn_lib, true)
           }
         }
       }
@@ -580,6 +608,23 @@ def test_unix_python3_cpu() {
     }]
 }
 
+def test_unix_python3_mkl_cpu() {
+    return ['Python3: MKL-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-cpu') {
+          try {
+            utils.unpack_and_init('cpu_mkl', mx_lib, true)
+            python3_ut('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
+            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_python3_gpu() {
     return ['Python3: GPU': {
       node(NODE_LINUX_GPU) {
@@ -654,6 +699,23 @@ def test_unix_python3_mkldnn_cpu() {
         ws('workspace/ut-python3-mkldnn-cpu') {
           try {
             utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
+            python3_ut_mkldnn('ubuntu_cpu')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
+            utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_mkldnn_mkl_cpu() {
+    return ['Python3: MKLDNN-MKL-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-python3-mkldnn-mkl-cpu') {
+          try {
+            utils.unpack_and_init('mkldnn_mkl_cpu', mx_mkldnn_lib, true)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {

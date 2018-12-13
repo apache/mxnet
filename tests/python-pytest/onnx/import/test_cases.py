@@ -55,7 +55,6 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_argmax',
     'test_argmin',
     'test_min',
-    'test_logical_',
     # enabling partial test cases for matmul
     'test_matmul_3d',
     'test_matmul_4d',
@@ -86,7 +85,8 @@ IMPLEMENTED_OPERATORS_TEST = [
     'test_operator_maxpool',
     'test_operator_params',
     'test_operator_permute2',
-    'test_depthtospace'
+    'test_depthtospace',
+    'test_size'
     ]
 
 BASIC_MODEL_TESTS = [

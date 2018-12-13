@@ -289,8 +289,8 @@ inline int get_num_threads<cpu>(const int N) {
 
 /* \brief Compute flattened index given coordinates and shape. */
 template<int ndim>
-MSHADOW_XINLINE int ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
-  int ret = 0;
+MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
+  index_t ret = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
     ret = ret * shape[i] + (shape[i] > coord[i]) * coord[i];
@@ -301,11 +301,11 @@ MSHADOW_XINLINE int ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
 
 /* Compute coordinates from flattened index given shape */
 template<int ndim>
-MSHADOW_XINLINE Shape<ndim> unravel(const int idx, const Shape<ndim>& shape) {
+MSHADOW_XINLINE Shape<ndim> unravel(const index_t idx, const Shape<ndim>& shape) {
   Shape<ndim> ret;
   #pragma unroll
-  for (int i = ndim-1, j = idx; i >=0; --i) {
-    int tmp = j / shape[i];
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
     ret[i] = j - tmp*shape[i];
     j = tmp;
   }
@@ -315,8 +315,8 @@ MSHADOW_XINLINE Shape<ndim> unravel(const int idx, const Shape<ndim>& shape) {
 
 /* Compute dot product of two vector */
 template<int ndim>
-MSHADOW_XINLINE int dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
-  int ret = 0;
+MSHADOW_XINLINE index_t dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
+  index_t ret = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
     ret += coord[i] * stride[i];
@@ -327,12 +327,12 @@ MSHADOW_XINLINE int dot(const Shape<ndim>& coord, const Shape<ndim>& stride) {
 
 /* Combining unravel and dot */
 template<int ndim>
-MSHADOW_XINLINE int unravel_dot(const int idx, const Shape<ndim>& shape,
+MSHADOW_XINLINE index_t unravel_dot(const index_t idx, const Shape<ndim>& shape,
   const Shape<ndim>& stride) {
-  int ret = 0;
+  index_t ret = 0;
   #pragma unroll
-  for (int i = ndim-1, j = idx; i >=0; --i) {
-    int tmp = j / shape[i];
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
     ret += (j - tmp*shape[i])*stride[i];
     j = tmp;
   }
@@ -433,51 +433,51 @@ struct op_with_req {
 
   /*! \brief input is one tensor */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
   }
 
   /*! \brief inputs are two tensors */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *lhs, const DType *rhs) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *lhs, const DType *rhs) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
   /*! \brief input is tensor and a scalar value */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in, const DType value) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 
   /*! \brief input is tensor and two scalar value */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in,
                                   const DType value_1, const DType value_2) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value_1, value_2));
   }
 
   /*! \brief No inputs (ie fill to constant value) */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
     KERNEL_ASSIGN(out[i], req, OP::Map());
   }
 
   /*! \brief input is single scalar value */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType value) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(value));
   }
 
   /*! \brief inputs are two tensors and a scalar value */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out,
+  MSHADOW_XINLINE static void Map(index_t i, DType *out,
                                   const DType *input_1, const DType *input_2, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], value));
   }
 
   /*! \brief inputs are three tensors (ie backward grad with binary grad function) */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out,
+  MSHADOW_XINLINE static void Map(index_t i, DType *out,
                                   const DType *input_1,
                                   const DType *input_2,
                                   const DType *input_3) {
@@ -503,21 +503,21 @@ struct Kernel<OP, cpu> {
    * \param args Varargs to eventually pass to the OP::Map() function
    */
   template<typename ...Args>
-  inline static bool Launch(mshadow::Stream<cpu> *, const int N, Args... args) {
+  inline static bool Launch(mshadow::Stream<cpu> *, const size_t N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
-      for (int i = 0; i < N; ++i) {
+      for (size_t i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < N; ++i) {
+      for (index_t i = 0; i < static_cast<index_t>(N); ++i) {
         OP::Map(i, args...);
       }
     }
 #else
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       OP::Map(i, args...);
     }
 #endif
@@ -567,22 +567,22 @@ struct Kernel<OP, cpu> {
    * \param args Varargs to eventually pass to the OP::Map() function
    */
   template<typename PRIMITIVE_OP, typename DType, typename ...Args>
-  static void LaunchTuned(mshadow::Stream<cpu> *, const int N, Args... args) {
+  static void LaunchTuned(mshadow::Stream<cpu> *, const size_t N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2 || !tuned_op<PRIMITIVE_OP, DType>::UseOMP(
-      static_cast<size_t>(N), static_cast<size_t>(omp_threads))) {
-      for (int i = 0; i < N; ++i) {
+      N, static_cast<size_t>(omp_threads))) {
+      for (size_t i = 0; i < N; ++i) {
         OP::Map(i, args...);
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < N; ++i) {
+      for (index_t i = 0; i < static_cast<index_t>(N); ++i) {
         OP::Map(i, args...);
       }
     }
 #else
-    for (int i = 0; i < N; ++i) {
+    for (size_t i = 0; i < N; ++i) {
       OP::Map(i, args...);
     }
 #endif
@@ -596,15 +596,15 @@ struct Kernel<OP, cpu> {
    * \param args Varargs to eventually pass to the UseOMP() and OP::Map() functions
    */
   template<typename ...Args>
-  inline static void LaunchEx(mshadow::Stream<cpu> *s, const int N, Args... args) {
+  inline static void LaunchEx(mshadow::Stream<cpu> *s, const size_t N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
       OP::Map(0, N, args...);
     } else {
-      const int length = (N + omp_threads - 1) / omp_threads;
+      const auto length = (N + omp_threads - 1) / omp_threads;
       #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < N; i += length) {
+      for (index_t i = 0; i < static_cast<index_t>(N); i += length) {
         OP::Map(i, i + length > N ? N - i : length, args...);
       }
     }
@@ -626,7 +626,7 @@ struct Kernel<OP, cpu> {
   template<typename DType, typename T = OP, typename ...Args>
   static MSHADOW_CINLINE
   typename std::enable_if<std::is_base_of<tunable, T>::value, bool>::type
-  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+  Launch(mshadow::Stream<cpu> *s, const size_t N, DType *dest, Args... args) {
     LaunchTuned<T, DType>(s, N, dest, args...);
     return true;
   }
@@ -644,7 +644,7 @@ struct Kernel<OP, cpu> {
   template<typename DType, typename T = OP, typename ...Args>
   static MSHADOW_CINLINE
   typename std::enable_if<std::is_base_of<tunable, typename T::Operation>::value, bool>::type
-  Launch(mshadow::Stream<cpu> *s, const int N, DType *dest, Args... args) {
+  Launch(mshadow::Stream<cpu> *s, const size_t N, DType *dest, Args... args) {
     LaunchTuned<typename T::Operation, DType>(s, N, dest, args...);
     return true;
   }
@@ -700,7 +700,7 @@ template<int val>
 struct set_to_int : public tunable {
   // mxnet_op version (when used directly with Kernel<>::Launch()) */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
     out[i] = DType(val);
   }
   // mshadow_op version (when used with op_with_req<>)

@@ -25,6 +25,7 @@ import unittest
 
 from nose.tools import raises
 
+
 def _get_data(url, dirname):
     import os, tarfile
     download(url, dirname=dirname, overwrite=False)
@@ -49,6 +50,62 @@ def _generate_objects():
     cid = np.random.randint(0, 20, size=num)
     label = np.hstack((cid[:, np.newaxis], boxes)).ravel().tolist()
     return [2, 5] + label
+
+def _test_imageiter_last_batch(imageiter_list, assert_data_shape):
+    test_iter = imageiter_list[0]
+    # test batch data shape
+    for _ in range(3):
+        for batch in test_iter:
+            assert batch.data[0].shape == assert_data_shape
+        test_iter.reset()
+    # test last batch handle(discard)
+    test_iter = imageiter_list[1]
+    i = 0
+    for batch in test_iter:
+        i += 1
+    assert i == 5
+    # test last_batch_handle(pad)
+    test_iter = imageiter_list[2]
+    i = 0
+    for batch in test_iter:
+        if i == 0:
+            first_three_data = batch.data[0][:2]
+        if i == 5:
+            last_three_data = batch.data[0][1:]
+        i += 1
+    assert i == 6
+    assert np.array_equal(first_three_data.asnumpy(), last_three_data.asnumpy())
+    # test last_batch_handle(roll_over)
+    test_iter = imageiter_list[3]
+    i = 0
+    for batch in test_iter:
+        if i == 0:
+            first_image = batch.data[0][0]
+        i += 1
+    assert i == 5
+    test_iter.reset()
+    first_batch_roll_over = test_iter.next()
+    assert np.array_equal(
+        first_batch_roll_over.data[0][1].asnumpy(), first_image.asnumpy())
+    assert first_batch_roll_over.pad == 2
+    # test iteratopr work properly after calling reset several times when last_batch_handle is roll_over
+    for _ in test_iter:
+        pass
+    test_iter.reset()
+    first_batch_roll_over_twice = test_iter.next()
+    assert np.array_equal(
+        first_batch_roll_over_twice.data[0][2].asnumpy(), first_image.asnumpy())
+    assert first_batch_roll_over_twice.pad == 1
+    # we've called next once
+    i = 1
+    for _ in test_iter:
+        i += 1
+    # test the third epoch with size 6
+    assert i == 6
+    # test shuffle option for sanity test
+    test_iter = imageiter_list[4]
+    for _ in test_iter:
+        pass
 
 
 class TestImage(unittest.TestCase):
@@ -84,7 +141,7 @@ class TestImage(unittest.TestCase):
         try:
             import cv2
         except ImportError:
-            return
+            raise unittest.SkipTest("Unable to import cv2.")
         for img in TestImage.IMAGES:
             with open(img, 'rb') as fp:
                 str_image = fp.read()
@@ -118,11 +175,12 @@ class TestImage(unittest.TestCase):
         assert mx.image.scale_down((360, 1000), (480, 500)) == (360, 375)
         assert mx.image.scale_down((300, 400), (0, 0)) == (0, 0)
 
+    @with_seed()
     def test_resize_short(self):
         try:
             import cv2
         except ImportError:
-            return
+            raise unittest.SkipTest("Unable to import cv2")
         for img in TestImage.IMAGES:
             cv_img = cv2.imread(img)
             mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
@@ -139,6 +197,25 @@ class TestImage(unittest.TestCase):
                     mx_resized = mx.image.resize_short(mx_img, new_size, interp)
                     assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
 
+    @with_seed()
+    def test_imresize(self):
+        try:
+            import cv2
+        except ImportError:
+            raise unittest.SkipTest("Unable to import cv2")
+        for img in TestImage.IMAGES:
+            cv_img = cv2.imread(img)
+            mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
+            new_h = np.random.randint(1, 1000)
+            new_w = np.random.randint(1, 1000)
+            for interp_val in range(0, 2):
+                cv_resized = cv2.resize(cv_img, (new_w, new_h), interpolation=interp_val)
+                mx_resized = mx.image.imresize(mx_img, new_w, new_h, interp=interp_val)
+                assert_almost_equal(mx_resized.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
+                out_img = mx.nd.zeros((new_h, new_w, 3), dtype=mx_img.dtype)
+                mx.image.imresize(mx_img, new_w, new_h, interp=interp_val, out=out_img)
+                assert_almost_equal(out_img.asnumpy()[:, :, (2, 1, 0)], cv_resized, atol=3)
+
     def test_color_normalize(self):
         for _ in range(10):
             mean = np.random.rand(3) * 255
@@ -151,86 +228,57 @@ class TestImage(unittest.TestCase):
             assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
 
     def test_imageiter(self):
-        def check_imageiter(dtype='float32'):
-            im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
-            fname = './data/test_imageiter.lst'
-            file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
-                         for k, x in enumerate(TestImage.IMAGES)]
-            with open(fname, 'w') as f:
-                for line in file_list:
-                    f.write(line + '\n')
-            
-            test_list = ['imglist', 'path_imglist']
+        im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
+        fname = './data/test_imageiter.lst'
+        file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
+                        for k, x in enumerate(TestImage.IMAGES)]
+        with open(fname, 'w') as f:
+            for line in file_list:
+                f.write(line + '\n')
 
+        test_list = ['imglist', 'path_imglist']
+        for dtype in ['int32', 'float32', 'int64', 'float64']:
             for test in test_list:
                 imglist = im_list if test == 'imglist' else None
                 path_imglist = fname if test == 'path_imglist' else None
-                
-                test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist, 
-                    path_imglist=path_imglist, path_root='', dtype=dtype)
-                # test batch data shape
-                for _ in range(3):
-                    for batch in test_iter:
-                        assert batch.data[0].shape == (2, 3, 224, 224)
-                    test_iter.reset()
-                # test last batch handle(discard)
-                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard')
-                i = 0
-                for batch in test_iter:
-                    i += 1
-                assert i == 5
-                # test last_batch_handle(pad)
-                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, 
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
-                i = 0
-                for batch in test_iter:
-                    if i == 0:
-                        first_three_data = batch.data[0][:2]
-                    if i == 5:
-                        last_three_data = batch.data[0][1:]
-                    i += 1
-                assert i == 6
-                assert np.array_equal(first_three_data.asnumpy(), last_three_data.asnumpy())
-                # test last_batch_handle(roll_over)
-                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                    path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over')
-                i = 0
-                for batch in test_iter:
-                    if i == 0:
-                        first_image = batch.data[0][0]
-                    i += 1
-                assert i == 5
-                test_iter.reset()
-                first_batch_roll_over = test_iter.next()
-                assert np.array_equal(
-                    first_batch_roll_over.data[0][1].asnumpy(), first_image.asnumpy())
-                assert first_batch_roll_over.pad == 2
-                # test iteratopr work properly after calling reset several times when last_batch_handle is roll_over
-                for _ in test_iter:
-                    pass
-                test_iter.reset()
-                first_batch_roll_over_twice = test_iter.next()
-                assert np.array_equal(
-                    first_batch_roll_over_twice.data[0][2].asnumpy(), first_image.asnumpy())
-                assert first_batch_roll_over_twice.pad == 1
-                # we've called next once
-                i = 1
-                for _ in test_iter:
-                    i += 1
-                # test the third epoch with size 6
-                assert i == 6
-                # test shuffle option for sanity test
-                test_iter = mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, shuffle=True,
-                                               path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
-                for _ in test_iter:
-                    pass
+                imageiter_list = [
+                    mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist,
+                        path_imglist=path_imglist, path_root='', dtype=dtype),
+                    mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard'),
+                    mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad'),
+                    mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
+                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over'),
+                    mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, shuffle=True,
+                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
+                ]
+                _test_imageiter_last_batch(imageiter_list, (2, 3, 224, 224))
 
-        for dtype in ['int32', 'float32', 'int64', 'float64']:
-            check_imageiter(dtype)
-
-        # test with default dtype
-        check_imageiter()
+    @with_seed()
+    def test_copyMakeBorder(self):
+        try:
+            import cv2
+        except ImportError:
+            raise unittest.SkipTest("Unable to import cv2")
+        for img in TestImage.IMAGES:
+            cv_img = cv2.imread(img)
+            mx_img = mx.nd.array(cv_img)
+            top = np.random.randint(1, 10)
+            bot = np.random.randint(1, 10)
+            left = np.random.randint(1, 10)
+            right = np.random.randint(1, 10)
+            new_h, new_w, _ = mx_img.shape
+            new_h += top + bot
+            new_w += left + right
+            val = [np.random.randint(1, 255)] * 3
+            for type_val in range(0, 5):
+                cv_border = cv2.copyMakeBorder(cv_img, top, bot, left, right, borderType=type_val, value=val)
+                mx_border = mx.image.copyMakeBorder(mx_img, top, bot, left, right, type=type_val, values=val)
+                assert_almost_equal(mx_border.asnumpy(), cv_border)
+                out_img = mx.nd.zeros((new_h , new_w, 3), dtype=mx_img.dtype)
+                mx.image.copyMakeBorder(mx_img, top, bot, left, right, type=type_val, values=val, out=out_img)
+                assert_almost_equal(out_img.asnumpy(), cv_border)
 
     @with_seed()
     def test_augmenters(self):
@@ -259,14 +307,20 @@ class TestImage(unittest.TestCase):
         im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]
         det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='')
         for _ in range(3):
-            for batch in det_iter:
+            for _ in det_iter:
                 pass
-            det_iter.reset()
-
+        det_iter.reset()
         val_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='')
         det_iter = val_iter.sync_label_shape(det_iter)
+        assert det_iter.data_shape == val_iter.data_shape
+        assert det_iter.label_shape == val_iter.label_shape
 
-        # test file list
+        # test batch_size is not divisible by number of images
+        det_iter = mx.image.ImageDetIter(4, (3, 300, 300), imglist=im_list, path_root='')
+        for _ in det_iter:
+            pass
+
+        # test file list with last batch handle
         fname = './data/test_imagedetiter.lst'
         im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(TestImage.IMAGES)]
         with open(fname, 'w') as f:
@@ -274,10 +328,19 @@ class TestImage(unittest.TestCase):
                 line = '\t'.join([str(k) for k in line])
                 f.write(line + '\n')
 
-        det_iter = mx.image.ImageDetIter(2, (3, 400, 400), path_imglist=fname,
-            path_root='')
-        for batch in det_iter:
-            pass
+        imageiter_list = [
+            mx.image.ImageDetIter(2, (3, 400, 400),
+                path_imglist=fname, path_root=''),
+            mx.image.ImageDetIter(3, (3, 400, 400),
+                path_imglist=fname, path_root='', last_batch_handle='discard'),
+            mx.image.ImageDetIter(3, (3, 400, 400),
+                path_imglist=fname, path_root='', last_batch_handle='pad'),
+            mx.image.ImageDetIter(3, (3, 400, 400),
+                path_imglist=fname, path_root='', last_batch_handle='roll_over'),
+            mx.image.ImageDetIter(3, (3, 400, 400), shuffle=True,
+                path_imglist=fname, path_root='', last_batch_handle='pad')
+        ]
+        _test_imageiter_last_batch(imageiter_list, (2, 3, 400, 400))
 
     def test_det_augmenters(self):
         # only test if all augmenters will work
