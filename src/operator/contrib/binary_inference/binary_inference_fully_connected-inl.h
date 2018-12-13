@@ -173,8 +173,11 @@ class BinaryInferenceFullyConnectedProp : public OperatorProperty {
 
     index_t num_input = dshape.ProdShape(1, dshape.ndim());
 
-    // define binarized weight tensor shape
-    SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_fullc::kWeight, Shape1(param_.num_hidden * num_input / mxnet::op::xnor::BITS_PER_BINARY_WORD));
+    // defines shape of binarized weights
+    SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_fullc::kWeight, Shape2(param_.num_hidden, num_input / mxnet::op::xnor::BITS_PER_BINARY_WORD));
+    // this is the old 1-D version of binarized weights, will be removed in the final version
+    // SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_fullc::kWeight, Shape1(param_.num_hidden * num_input / mxnet::op::xnor::BITS_PER_BINARY_WORD));
+
 
     if (!param_.no_bias) {
       SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_fullc::kBias, Shape1(param_.num_hidden));

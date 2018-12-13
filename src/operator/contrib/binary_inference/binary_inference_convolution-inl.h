@@ -309,11 +309,18 @@ namespace mxnet {
               << "Input data should be 4D in batch-num_filter-y-x";
                 Shape<4> dshape = ConvertLayout(dshp.get<4>(), param_.layout.value(), kNCHW);
 
-                // For binary weights
-                CHECK_EQ(param_.num_group, 1) << "groups not (yet?) supported for pre-binarized weights";
-                Shape<1> wshape = Shape1(dshape[1] * param_.num_filter * param_.kernel[0] * param_.kernel[1] / mxnet::op::xnor::BITS_PER_BINARY_WORD);
+                // defines shape of binary weights
+                CHECK_EQ(param_.num_group, 1) << "groups not (yet?) supported for pre-binarized weights";                
+                // this is the old 1-D version of binarized weights, will be removed in the final version
+                // Shape<1> wshape = Shape1(dshape[1] * param_.num_filter * param_.kernel[0] * param_.kernel[1] / mxnet::op::xnor::BITS_PER_BINARY_WORD);
+                // SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_conv::kWeight, wshape);                
+                Shape<4> wshape = Shape4(param_.num_filter / param_.num_group,
+                                         dshape[1] / param_.num_group / mxnet::op::xnor::BITS_PER_BINARY_WORD,
+                                         param_.kernel[0], param_.kernel[1]);
+                wshape = ConvertLayout(wshape, kNCHW, param_.layout.value());
+                wshape[0] *= param_.num_group;
                 SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_conv::kWeight, wshape);
-                
+
                 if (!param_.no_bias) {
                   SHAPE_ASSIGN_CHECK(*in_shape, binary_inference_conv::kBias, Shape1(param_.num_filter));
                 }
