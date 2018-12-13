@@ -2406,8 +2406,8 @@ def _indexing_key_expand_implicit_axes(key, shape):
 
     ell_ndim = len(shape) + num_none - len(nonell_key)
     expanded_key = (nonell_key[:ell_idx] +
-                     (slice(None),) * ell_ndim +
-                     nonell_key[ell_idx:])
+                    (slice(None),) * ell_ndim +
+                    nonell_key[ell_idx:])
 
     return expanded_key
 
