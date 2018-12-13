@@ -18,9 +18,18 @@ package org.apache.mxnet.utils
 
 private[mxnet] object CToScalaUtils {
 
-  private val javaType = Array("java.lang.Float", "java.lang.Integer",
-    "java.lang.Long", "java.lang.Double", "java.lang.Boolean")
-  private val scalaType = Array("Float", "Int", "Long", "Double", "Boolean")
+  private val javaType = Map(
+    "float"  -> "java.lang.Float",
+    "int"    -> "java.lang.Integer",
+    "long"   -> "java.lang.Long",
+    "double" -> "java.lang.Double",
+    "bool"   -> "java.lang.Boolean")
+  private val scalaType = Map(
+    "float"  -> "Float",
+    "int"    -> "Int",
+    "long"   -> "Long",
+    "double" -> "Double",
+    "bool"   -> "Boolean")
 
   // Convert C++ Types to Scala Types
   def typeConversion(in : String, argType : String = "", argName : String,
@@ -32,12 +41,12 @@ private[mxnet] object CToScalaUtils {
       case "Symbol" | "NDArray" | "NDArray-or-Symbol" => returnType
       case "Symbol[]" | "NDArray[]" | "NDArray-or-Symbol[]" | "SymbolorSymbol[]"
       => s"Array[$returnType]"
-      case "float" | "real_t" | "floatorNone" => types(0)
-      case "int" | "intorNone" | "int(non-negative)" => types(1)
-      case "long" | "long(non-negative)" => types(2)
-      case "double" | "doubleorNone" => types(3)
+      case "float" | "real_t" | "floatorNone" => types("float")
+      case "int" | "intorNone" | "int(non-negative)" => types("int")
+      case "long" | "long(non-negative)" => types("long")
+      case "double" | "doubleorNone" => types("double")
       case "string" => "String"
-      case "boolean" | "booleanorNone" => types(4)
+      case "boolean" | "booleanorNone" => types("bool")
       case "tupleof<float>" | "tupleof<double>" | "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
