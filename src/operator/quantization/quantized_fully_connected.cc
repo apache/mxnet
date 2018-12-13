@@ -54,9 +54,8 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_shape, 2, bshape);
   }
 
-  std::vector<TShape>::iterator in_s;
-  for (in_s = in_shape->begin() + num_inputs; in_s < in_shape->begin() + 3 * num_inputs; in_s++) {
-    *in_s = TShape{1};
+  for (size_t i = num_inputs; i < 3 * num_inputs; ++i) {
+    SHAPE_ASSIGN_CHECK(*in_shape, i, TShape{1});
   }
 
   SHAPE_ASSIGN_CHECK(*out_shape, 0, TShape({dshape[0], wshape[0]}));
@@ -73,12 +72,11 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), num_inputs * 3);
   CHECK_EQ(out_type->size(), 3U);
 
-  std::vector<int>::iterator in_t;
-  for (in_t = in_type->begin(); in_t < in_type->begin() + num_inputs; in_t++) {
-    *in_t = mshadow::kInt8;
+  for (size_t i = 0; i < num_inputs; ++i) {
+    TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kInt8);
   }
-  for (in_t = in_type->begin() + num_inputs; in_t < in_type->begin() + 3 * num_inputs; in_t++) {
-    *in_t = mshadow::kFloat32;
+  for (size_t i = num_inputs; i < 3 * num_inputs; ++i) {
+    TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kFloat32);
   }
 
   TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt32);
