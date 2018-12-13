@@ -46,7 +46,7 @@ struct where {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const CType* cond,
                                   const DType* x, const DType* y) {
     KERNEL_ASSIGN(out[i], req, (0 != cond[i]? x[i] : y[i]));
   }
@@ -64,7 +64,7 @@ struct where_csr {
   // CType is condition data type
   // i is for i-th row in the output
   template<typename DType, typename CType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* cond_idx,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const IType* cond_idx,
                                   const IType* cond_indptr, const CType* cond_data,
                                   const nnvm::dim_t num_cols, const DType* x) {
     using nnvm::dim_t;
@@ -92,8 +92,8 @@ struct where_batch {
   // DType is the output data type
   // CType is the condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const CType* cond,
-                                  const DType* x, const DType* y, int M) {
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const CType* cond,
+                                  const DType* x, const DType* y, index_t M) {
     KERNEL_ASSIGN(out[i], req, (0 != cond[i/M]? x[i] : y[i]));
   }
 };
@@ -109,7 +109,7 @@ struct where_backward {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
+  MSHADOW_XINLINE static void Map(index_t i, DType* grad_out,
                                   const DType* grad_in,
                                   const CType* cond) {
     KERNEL_ASSIGN(grad_out[i], req,
@@ -130,7 +130,7 @@ struct where_backward_csr {
   // CType is condition data type
   // IType is condition aux data type
   template<typename DType, typename CType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
+  MSHADOW_XINLINE static void Map(index_t i, DType* grad_out,
                                   const DType* grad_in,
                                   const CType* cond_data,
                                   const IType* cond_idx,
@@ -161,9 +161,9 @@ struct where_batch_backward {
   // DType is the output data type
   // CType is condition data type
   template<typename DType, typename CType>
-  MSHADOW_XINLINE static void Map(int i, DType* grad_out,
+  MSHADOW_XINLINE static void Map(index_t i, DType* grad_out,
                                   const DType* grad_in,
-                                  const CType* cond, int M) {
+                                  const CType* cond, index_t M) {
     KERNEL_ASSIGN(grad_out[i], req,
       ((0 == cond[i/M])^negate)? grad_in[i] : static_cast<DType>(0));
   }

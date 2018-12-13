@@ -85,12 +85,10 @@ private[mxnet] object NativeLibraryLoader {
       }
     logger.debug(s"Attempting to load $loadLibname")
     val libFileInJar = libPathInJar + loadLibname
-    val is: InputStream = getClass.getResourceAsStream(libFileInJar)
-    if (is == null) {
-      throw new UnsatisfiedLinkError(s"Couldn't find the resource $loadLibname")
-    }
-    logger.info(s"Loading $loadLibname from $libPathInJar copying to $libname")
-    loadLibraryFromStream(libname, is)
+    saveLibraryToTemp("libmxnet.so", "/lib/native/libmxnet.so")
+    val tempfile: File = saveLibraryToTemp(libname, libFileInJar)
+
+    loadLibraryFromFile(libname, tempfile)
   }
 
   /**
@@ -109,7 +107,7 @@ private[mxnet] object NativeLibraryLoader {
 
   @throws(classOf[IOException])
   private def createTempFile(name: String): File = {
-    new File(_tempDir + File.separator + name)
+    new File(_tempDir, name)
   }
 
   /**
@@ -117,11 +115,34 @@ private[mxnet] object NativeLibraryLoader {
    * and loads from there.
    *
    * @param libname name of the library (just used in constructing the library name)
-   * @param is      InputStream pointing to the library
+   * @param tempfile File pointing to the library
    */
-  private def loadLibraryFromStream(libname: String, is: InputStream) {
+  private def loadLibraryFromFile(libname: String, tempfile: File) {
     try {
-      val tempfile: File = createTempFile(libname)
+      logger.debug("Loading library from {}", tempfile.getPath)
+      System.load(tempfile.getPath)
+    } catch {
+      case ule: UnsatisfiedLinkError =>
+        logger.error("Couldn't load copied link file: {}", ule.toString)
+        throw ule
+    }
+  }
+
+  /**
+    * Load a system library from a stream. Copies the library to a temp file
+    * and loads from there.
+    *
+    * @param libname name of the library (just used in constructing the library name)
+    * @param resource String resource path in the jar file
+    */
+  private def saveLibraryToTemp(libname: String, resource: String): File = {
+    try {
+      val is: InputStream = getClass.getResourceAsStream(resource)
+      if (is == null) {
+        throw new UnsatisfiedLinkError(s"Couldn't find the resource $resource")
+      }
+
+      val tempfile: File = new File(_tempDir, libname)
       val os: OutputStream = new FileOutputStream(tempfile)
       logger.debug("tempfile.getPath() = {}", tempfile.getPath)
       val savedTime: Long = System.currentTimeMillis
@@ -131,20 +152,14 @@ private[mxnet] object NativeLibraryLoader {
         os.write(buf, 0, len)
         len = is.read(buf)
       }
-      os.flush()
-      val lock: InputStream = new FileInputStream(tempfile)
       os.close()
+      is.close()
       val seconds: Double = (System.currentTimeMillis - savedTime).toDouble / 1e3
-      logger.debug(s"Copying took $seconds seconds.")
-      logger.debug("Loading library from {}", tempfile.getPath)
-      System.load(tempfile.getPath)
-      lock.close()
+      logger.debug(s"Copying $libname took $seconds seconds.")
+      tempfile
     } catch {
       case io: IOException =>
-        logger.error("Could not create the temp file: {}", io.toString)
-      case ule: UnsatisfiedLinkError =>
-        logger.error("Couldn't load copied link file: {}", ule.toString)
-        throw ule
+        throw new UnsatisfiedLinkError(s"Could not create temp file for $libname")
     }
   }
 }

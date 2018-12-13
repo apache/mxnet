@@ -156,7 +156,7 @@ The build generates a new jar file in the `target` folder called `javaMXNet-1.0-
 
 To run the ObjectDetectionTutorial.java use the following command from the project's root folder.
 ```bash
-java -cp target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/* mxnet.ObjectDetectionTutorial
+java -cp "target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/*" mxnet.ObjectDetectionTutorial
 ```
     
 You should see a similar output being generated for the dog image that we used:
@@ -181,6 +181,6 @@ The results returned by the inference call translate into the regions in the ima
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](/api/java/infer.html)
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/examples/src/main/java/org/apache/mxnetexamples/infer/)
+* [Java Inference API](/api/java/index.html)
+* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index](/tutorials/index.html)

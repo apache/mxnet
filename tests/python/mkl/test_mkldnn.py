@@ -27,7 +27,6 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
-import test_mkldnn_install as install
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
@@ -383,6 +382,21 @@ def test_fullyconnected():
     for stype in stypes:
         check_fullyconnected_training(stype)
 
+def test_softmax_with_large_inputs():
+    def softmax_forward(input_data, true_output):
+        data = mx.sym.Variable('data')
+        out1 = data.softmax(axis=1)
+        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1.forward()[0].wait_to_read()
+        ndarr = exec1.outputs[0][0][0][0]
+        nparr = ndarr.asnumpy()
+        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
+
+    softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
+
 @with_seed()
 def test_non_mkldnn_fcomputeex():
     # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
@@ -426,7 +440,4 @@ def test_non_mkldnn_fcomputeex():
     custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
     exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
-
-
-if __name__ == '__main__':
-    install.test_mkldnn_install()
+    
