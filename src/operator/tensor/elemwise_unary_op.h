@@ -365,10 +365,10 @@ class UnaryOp : public OpBase {
 
   template<typename xpu, typename OP>
   static void LogCompute(const nnvm::NodeAttrs& attrs,
-            const OpContext& ctx,
-            const std::vector<TBlob>& inputs,
-            const std::vector<OpReqType>& req,
-            const std::vector<TBlob>& outputs) {
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
     if (req[0] == kNullOp) return;
     // if defined MSHADOW_USE_MKL then call mkl log when req is KWriteTo, type_flag is
     // mshadow::kFloat32 or mshadow::kFloat64 and data size less than or equal MKL_INT_MAX
