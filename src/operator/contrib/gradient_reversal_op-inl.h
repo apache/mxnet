@@ -27,6 +27,7 @@
 #define MXNET_OPERATOR_CONTRIB_GRADIENT_REVERSAL_OP_INL_H_
 
 #include <mxnet/operator_util.h>
+#include <vector>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
