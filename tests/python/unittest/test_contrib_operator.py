@@ -262,7 +262,7 @@ def test_multibox_target_op():
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
 def test_gradient_reversal_op():
-    input = mx.nd.normal((5,5))
+    input = mx.nd.random.normal(shape=(5,5))
 
     output = mx.nd.contrib.gradientreversal(input, l=1.0)
     assert_array_equal(input, output)
