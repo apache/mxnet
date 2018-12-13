@@ -442,6 +442,8 @@ def convert_dot(node, **kwargs):
     MatMul and Transpose operators based on the values set for
     transpose_a, transpose_b attributes."""
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    input_node_a = input_nodes[0]
+    input_node_b = input_nodes[1]
 
     trans_a_node = None
     trans_b_node = None
@@ -705,7 +707,7 @@ def convert_softmax_output(node, **kwargs):
 
     softmax_node = onnx.helper.make_node(
         "Softmax",
-        [input1.output[0]],
+        [input1.name],
         [name],
         axis=1,
         name=name
@@ -1645,3 +1647,11 @@ def convert_logical_not(node, **kwargs):
     and return the created node.
     """
     return create_basic_op_node('Not', node, kwargs)
+
+
+@mx_op.register("size_array")
+def convert_size(node, **kwargs):
+    """Map MXNet's size_array operator attributes to onnx's Size operator
+    and return the created node.
+    """
+    return create_basic_op_node('Size', node, kwargs)

@@ -132,7 +132,12 @@ ifeq ($(USE_MKLDNN), 1)
 		LDFLAGS += -L$(MKLROOT)/lib
 	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	# MKLDNN but to needs to be dynamically linked for windows as not all VS compilers support static linking
+	ifneq ($(UNAME_S), Windows)
+		LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
+	else
+		LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	endif
 endif
 
 # setup opencv
@@ -486,6 +491,11 @@ build/plugin/%.o: plugin/%.cc
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
+# Set install path for libmxnet.so on Mac OS
+ifeq ($(UNAME_S), Darwin)
+        LDFLAGS += -Wl,-install_name,@rpath/libmxnet.so
+endif
+
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
 lib/libmxnet.a: $(ALLX_DEP)
@@ -600,11 +610,19 @@ rpkgtest:
 	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
 
+scalatestcompile:
+	(cd $(ROOTDIR)/scala-package && \
+		mvn test-compile -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
+		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dcurrent_libdir="$(ROOTDIR)/lib" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+
 scalapkg:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
 		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
@@ -612,46 +630,55 @@ scalapkg:
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalaunittest:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),unittest -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalaintegrationtest:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),integrationtest -Dcxx="$(CXX)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
 
 scalainstall:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests=true -Dcxx="$(CXX)" \
 		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 
 scalarelease-dryrun:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
 		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
 		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 
 scalarelease-prepare:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn release:clean release:prepare -DautoVersionSubmodules=true \
 		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
 		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 
 scalarelease-perform:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn release:perform -DautoVersionSubmodules=true \
 		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
 		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
 
 scaladeploy:
-	(cd $(ROOTDIR)/scala-package; \
+	(cd $(ROOTDIR)/scala-package && \
 		mvn deploy -Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
 		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
+			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
+			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+
+scaladeploylocal:
+	(cd $(ROOTDIR)/scala-package && \
+		mvn deploy -Papache-release,deployLocal,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
+		  -DaltDeploymentRepository=snapshot-repo::default::file:local-snapshot \
+		  -Dgpg.skip \
+		  -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
 			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
 			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
 

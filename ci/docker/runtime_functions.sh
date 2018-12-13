@@ -326,6 +326,20 @@ build_ubuntu_cpu_openblas() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkl() {
+    set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
+        USE_INTEL_PATH=/opt/intel     \
+        USE_DIST_KVSTORE=1            \
+        -j$(nproc)
+}
+
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     pushd .
@@ -480,6 +494,20 @@ build_ubuntu_cpu_mkldnn() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkldnn_mkl() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
+        USE_MKLDNN=1                  \
+        -j$(nproc)
+}
+
 build_ubuntu_gpu() {
     build_ubuntu_gpu_cuda91_cudnn7
 }
@@ -629,9 +657,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    # libmkldnn.so.0 is a link file. We need an actual binary file named libmkldnn.so.0.
-    cp 3rdparty/mkldnn/src/libmkldnn.so.0 3rdparty/mkldnn/src/libmkldnn.so.0.tmp
-    mv 3rdparty/mkldnn/src/libmkldnn.so.0.tmp 3rdparty/mkldnn/src/libmkldnn.so.0
 }
 
 build_ubuntu_gpu_cmake() {
