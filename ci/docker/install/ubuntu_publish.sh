@@ -24,9 +24,8 @@ add-apt-repository ppa:ubuntu-toolchain-r/test -y
 add-apt-repository ppa:openjdk-r/ppa -y # Java lib
 add-apt-repository ppa:andrei-pozolotin/maven3 -y # Maven lib
 apt-get update
-curl -sSL https://cmake.org/files/v3.5/cmake-3.5.2-Linux-x86_64.tar.gz | sudo tar -xzC /opt
-sudo ln -s /opt/cmake-3.5.2-Linux-x86_64/bin/* /usr/local/bin
 apt-get install -y git \
+    cmake3 \
     libcurl4-openssl-dev \
     unzip \
     gcc-4.8 \
