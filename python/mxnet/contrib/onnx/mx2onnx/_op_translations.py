@@ -630,11 +630,19 @@ def convert_exp(node, **kwargs):
     return create_basic_op_node('Exp', node, kwargs)
 
 @mx_op.register("_copy")
-def convert_identity(node, **kwargs):
+def convert_copy(node, **kwargs):
     """Map MXNet's _copy operator attributes to onnx's Identity operator
     and return the created node.
     """
     return create_basic_op_node('Identity', node, kwargs)
+
+@mx_op.register("identity")
+def convert_identity(node, **kwargs):
+    """Map MXNet's identity operator attributes to onnx's ConstantFill operator
+    and return the created node.
+    """
+    return create_basic_op_node('ConstantFill', node, kwargs)
+
 
 @mx_op.register("InstanceNorm")
 def convert_instancenorm(node, **kwargs):
@@ -725,6 +733,32 @@ def convert_softmax_output(node, **kwargs):
     )
 
     return [softmax_node]
+
+@mx_op.register("LogisticRegressionOutput")
+def convert_logistic_regression_output(node, **kwargs):
+    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
+    and return the created node.
+    """
+    name = node["name"]
+    input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
+    input1 = kwargs["proc_nodes"][input1_idx]
+    sigmoid_node = onnx.helper.make_node(
+        "Sigmoid",
+        [input1.output[0]],
+        [name],
+        name=name
+    )
+    return [sigmoid_node]
+
+@mx_op.register("BlockGrad")
+def convert_blockgrad(node, **kwargs):
+    """ Skip operator  """
+    return create_basic_op_node('ConstantFill', node, kwargs)
+
+@mx_op.register("make_loss")
+def convert_makeloss(node, **kwargs):
+    """ Skip operator  """
+    return create_basic_op_node('ConstantFill', node, kwargs)
 
 
 @mx_op.register("Concat")
@@ -872,6 +906,7 @@ def convert_clip(node, **kwargs):
 def scalar_op_helper(node, op_name, **kwargs):
     """Helper function for scalar arithmetic operations"""
     name, input_nodes, attrs = get_inputs(node, kwargs)
+    from onnx import numpy_helper
 
     input_type = kwargs["in_type"]
     scalar_value = np.array([attrs.get("scalar", 1)],
@@ -884,13 +919,19 @@ def scalar_op_helper(node, op_name, **kwargs):
     for i in initializer:
         if i.name == input_nodes[0]:
             if op_name == 'Mul':
-                new_initializer = onnx.numpy_helper.to_array(i) * scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) * scalar_value[0]
             elif op_name == 'Sub':
-                new_initializer = onnx.numpy_helper.to_array(i) - scalar_value[0]
+                if name.startswith("_rminusscalar"):
+                    new_initializer = scalar_value[0] - numpy_helper.to_array(i)
+                else:
+                    new_initializer = numpy_helper.to_array(i) - scalar_value[0]
             elif op_name == 'Add':
-                new_initializer = onnx.numpy_helper.to_array(i) + scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) + scalar_value[0]
             elif op_name == 'Div':
-                new_initializer = onnx.numpy_helper.to_array(i) / scalar_value[0]
+                if name.startswith("_rdivscalar"):
+                    new_initializer = scalar_value[0] / numpy_helper.to_array(i)
+                else:
+                    new_initializer = numpy_helper.to_array(i) / scalar_value[0]
             flag = False
             break
 
@@ -956,6 +997,13 @@ def convert_minus_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Sub', **kwargs)
 
+@mx_op.register("_rminus_scalar")
+def convert_rminus_scalar(node, **kwargs):
+    """Map MXNet's _rminus_scalar operator attributes to onnx's Sub operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Sub', **kwargs)
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_plus_scalar")
@@ -975,6 +1023,13 @@ def convert_div_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Div', **kwargs)
 
+@mx_op.register("_rdiv_scalar")
+def convert_rdiv_scalar(node, **kwargs):
+    """Map MXNet's _rdiv_scalar operator attributes to onnx's Div operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Div', **kwargs)
 
 # Sorting and Searching
 @mx_op.register("argmax")
