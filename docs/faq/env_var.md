@@ -222,3 +222,17 @@ Settings for More GPU Parallelism
 - Set ```MXNET_GPU_WORKER_NTHREADS``` to a larger number (e.g., 2)
   - To reduce memory usage, consider setting ```MXNET_EXEC_NUM_TEMP```.
   - This might not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
+
+Settings for controlling OMP tuning
+---------------------------------
+- Set ```MXNET_USE_OPERATOR_TUNING=0``` to disable Operator tuning code which decides whether to use OMP or not for operator
+   - Values: String representation of MXNET_ENABLE_OPERATOR_TUNING environment variable
+   -            0=disable all
+   -            1=enable all
+   -            float32, float16, float32=list of types to enable, and disable those not listed
+   - refer : https://github.com/apache/incubator-mxnet/blob/master/src/operator/operator_tune-inl.h#L444
+
+- Set ```MXNET_USE_NUM_CORES_OPERATOR_TUNING``` to define num_cores to be used by operator tuning code.
+  - This reduces operator tuning overhead when there are multiple instances of mxnet running in the system and we know that
+    each mxnet will take only partial num_cores available with system. 
+  - refer: https://github.com/apache/incubator-mxnet/pull/13602

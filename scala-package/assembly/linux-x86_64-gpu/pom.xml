@@ -14,6 +14,10 @@
   <name>MXNet Scala Package - Full Linux-x86_64 GPU</name>
   <packaging>jar</packaging>
 
+  <properties>
+    <MXNET_DIR>${project.parent.parent.basedir}/..</MXNET_DIR>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
