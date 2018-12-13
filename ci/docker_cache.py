@@ -30,10 +30,9 @@ import argparse
 import sys
 import subprocess
 import json
-import time
 from typing import *
 import build as build_util
-from ci.util import retry
+from util import retry
 
 DOCKERHUB_LOGIN_NUM_RETRIES = 5
 DOCKERHUB_RETRY_SECONDS = 5
