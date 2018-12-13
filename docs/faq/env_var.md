@@ -40,9 +40,6 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
   - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
-* MXNET_MP_OMP_NUM_THREADS
-  - Values: Int ```(default=1)```
-  - The number of OpenMP threads limit given to multiprocess workers. OpenMP is disabled in worker process if `MXNET_MP_OMP_NUM_THREADS` <= 1 (default). Enlarge this number may boost operator execution performance of individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
 * MXNET_MP_OPENCV_NUM_THREADS
   - Values: Int ```(default=0)```
   - The number of OpenCV execution threads given to multiprocess workers. OpenCV multithreading is disabled if `MXNET_MP_OPENCV_NUM_THREADS` < 1 (default). Enlarge this number may boost the performance of individual workers when executing underlying OpenCV functions but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
