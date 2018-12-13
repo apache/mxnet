@@ -22,7 +22,6 @@ apt-get update
 apt-get install -y software-properties-common
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
 add-apt-repository ppa:openjdk-r/ppa -y # Java lib
-add-apt-repository ppa:andrei-pozolotin/maven3 -y # Maven lib
 apt-get update
 apt-get install -y git \
     cmake3 \
@@ -40,5 +39,9 @@ apt-get install -y git \
     automake \
     pkg-config \
     openjdk-8-jdk
-apt-get install -y --no-install-recommends maven3
+curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz  
+tar xzf apache-maven-3.3.9-bin.tar.gz   
+mkdir /usr/local/maven  
+mv apache-maven-3.3.9/ /usr/local/maven/    
+update-alternatives --install /usr/bin/mvn mvn /usr/local/maven/apache-maven-3.3.9/bin/mvn 1
 update-ca-certificates -f
