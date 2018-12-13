@@ -1,0 +1,23 @@
+stages:
+  - image
+  - build-test
+
+build_docker_image:
+  stage: image
+  image: docker:stable
+  before_script:
+    - docker info
+  script:
+    - cd ci
+    - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from bmxnet-v2/build.ubuntu_cpu -t bmxnet-v2/build.ubuntu_cpu docker
+
+build_and_test:
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+  stage: build-test
+  image: bmxnet-v2/build.ubuntu_cpu
+  before_script:
+    - ls && pwd
+  script:
+    - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
+    - pytest tests/python/unittest/test_binary.py
