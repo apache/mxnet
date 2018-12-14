@@ -23,6 +23,7 @@ cd ${MXNET_HOME}/contrib/clojure-package
 # first build the package and install it
 lein install
 
+# then run through all the examples 
 cd ${MXNET_HOME}/contrib/clojure-package/examples
 for i in `find ${EXAMPLES_HOME} -name test` ; do
 cd ${i} && lein test
