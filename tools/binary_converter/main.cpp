@@ -7,16 +7,17 @@
 #include <stdio.h>
 #include <libgen.h>
 #include <fstream>
-
+#include <dmlc/logging.h>
 #include <mxnet/ndarray.h>
 
-#include "../src/xnor_cpu.h"
+#include "../../src/operator/contrib/binary_inference/xnor.h"
 
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 
-using mxnet::op::xnor_cpu::BITS_PER_BINARY_WORD;
-using mxnet::op::xnor_cpu::BINARY_WORD;
+using mxnet::op::xnor::BITS_PER_BINARY_WORD;
+using mxnet::op::xnor::BINARY_WORD;
+using namespace std;
 
 /**
  * @brief binarize an NDArray
@@ -27,15 +28,15 @@ using mxnet::op::xnor_cpu::BINARY_WORD;
 void convert_to_binary_row(mxnet::NDArray& array) {
   CHECK(array.shape().ndim() >= 2); // second dimension is input depth from prev. layer, needed for next line
 
-  std::cout << "array shape: " << array.shape() << std::endl;
+  cout << "array shape: " << array.shape() << endl;
   //if(array.shape()[1] < BITS_PER_BINARY_WORD) return;  
   
   CHECK(array.shape()[1] % BITS_PER_BINARY_WORD == 0); // depth from input has to be divisible by 32 (or 64)
   nnvm::TShape binarized_shape(1);
   size_t size = array.shape().Size();
   binarized_shape[0] = size / BITS_PER_BINARY_WORD;
-  mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor_cpu::corresponding_dtype());
-  mxnet::op::xnor_cpu::get_binary_row((float*) array.data().dptr_, (BINARY_WORD*) temp.data().dptr_, size);
+  mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
+  mxnet::op::xnor::get_binary_row((float*) array.data().dptr_, (BINARY_WORD*) temp.data().dptr_, size);
   array = temp;
 }
 
@@ -73,7 +74,7 @@ void transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
   transpose(array);
   CHECK(array.shape().ndim() == 2); // since we binarize column wise, we need to know no of rows and columns
   
-  std::cout << "array shape: " << array.shape() << std::endl;
+  cout << "array shape: " << array.shape() << endl;
 
   //if(array.shape()[0] < BITS_PER_BINARY_WORD) return;
   
@@ -81,8 +82,8 @@ void transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
   nnvm::TShape binarized_shape(1);
   size_t size = array.shape().Size();
   binarized_shape[0] = size / BITS_PER_BINARY_WORD;
-  mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor_cpu::corresponding_dtype());
-  mxnet::op::xnor_cpu::get_binary_col_unrolled((float*) array.data().dptr_, (BINARY_WORD*) temp.data().dptr_, array.shape()[0], array.shape()[1]);
+  mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
+  mxnet::op::xnor::get_binary_col_unrolled((float*) array.data().dptr_, (BINARY_WORD*) temp.data().dptr_, array.shape()[0], array.shape()[1]);
   array = temp;
 }
 
@@ -91,45 +92,45 @@ void transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
  *
  */
 
-void filter_for(std::vector<mxnet::NDArray>& data,
-                const std::vector<std::string>& keys,
-                const std::vector<std::string>& filter_strings,
-                std::function<void(mxnet::NDArray&)> task) {
-  auto containsFilterString = [filter_strings](std::string line_in_params) {
-    auto containsSubString = [line_in_params](std::string filter_string) {
-      return line_in_params.find(filter_string) != std::string::npos;};
-    return std::find_if(filter_strings.begin(),
+void filter_for(vector<mxnet::NDArray>& data,
+                const vector<string>& keys,
+                const vector<string>& filter_strings,
+                function<void(mxnet::NDArray&)> task) {
+  auto containsFilterString = [filter_strings](string line_in_params) {
+    auto containsSubString = [line_in_params](string filter_string) {
+      return line_in_params.find(filter_string) != string::npos;};
+    return find_if(filter_strings.begin(),
                         filter_strings.end(),
                         containsSubString) != filter_strings.end();};
 
-  auto iter = std::find_if(keys.begin(),
+  auto iter = find_if(keys.begin(),
                            keys.end(),
                            containsFilterString);
   int converted = 0;
   //Use a while loop, checking whether iter is at the end of myVector
-  //Do a find_if starting at the item after iter, std::next(iter)
+  //Do a find_if starting at the item after iter, next(iter)
   while (iter != keys.end())
   {
-    if ((*iter).find("weight") == std::string::npos) {
-      iter = std::find_if(std::next(iter),
+    if ((*iter).find("weight") == string::npos) {
+      iter = find_if(next(iter),
                         keys.end(),
                         containsFilterString);
       continue;
     }
 
-    std::cout << "|- converting weights " << *iter << "..." << std::endl;
+    cout << "|- converting weights " << *iter << "..." << endl;
 
     task(data[iter - keys.begin()]);
     converted++;
 
-    iter = std::find_if(std::next(iter),
+    iter = find_if(next(iter),
                         keys.end(),
                         containsFilterString);
   }
 
   if (converted != filter_strings.size()){
-    std::cout << "Error: The number of found q_conv or q_fc layers doesn't equal the number of converted layers." 
-              << std::endl;
+    cout << "Error: The number of found q_conv or q_fc layers doesn't equal the number of converted layers." 
+              << endl;
   }
 }
 
@@ -141,13 +142,13 @@ void filter_for(std::vector<mxnet::NDArray>& data,
  * @param filter_strings list of strings with arrays to convert
  * @return success (0) or failure
  */
-int convert_params_file(const std::string& input_file, const std::string& output_file, const std::vector<std::string> conv_names, const std::vector<std::string> fc_names) {
-  std::vector<mxnet::NDArray> data;
-  std::vector<std::string> keys;
+int convert_params_file(const string& input_file, const string& output_file, const vector<string> conv_names, const vector<string> fc_names) {
+  vector<mxnet::NDArray> data;
+  vector<string> keys;
 
-  std::cout << "loading " << input_file << "..." << std::endl;
+  cout << "loading " << input_file << "..." << endl;
   { // loading params file into data and keys
-    std::unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(input_file.c_str(), "r"));
+    unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(input_file.c_str(), "r"));
     mxnet::NDArray::Load(fi.get(), &data, &keys);
   }
 
@@ -155,10 +156,10 @@ int convert_params_file(const std::string& input_file, const std::string& output
   filter_for(data, keys, fc_names, transpose_and_convert_to_binary_col);
 
   { // saving params back to *_converted
-    std::unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(output_file.c_str(), "w"));
+    unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(output_file.c_str(), "w"));
     mxnet::NDArray::Save(fo.get(), data, keys);
   }
-  std::cout << "wrote converted params to " << output_file << std::endl;
+  cout << "wrote converted params to " << output_file << endl;
   return 0;
 }
 
@@ -169,16 +170,16 @@ int convert_params_file(const std::string& input_file, const std::string& output
  * @param output_file path to converted symbol file
  * @return success (0) or failure
  */
-int convert_json_file(const std::string& input_fname, const std::string& output_fname, std::vector<std::string>& filters_conv, std::vector<std::string>& filters_fc) {
-  std::cout << "loading " << input_fname << "..." << std::endl;
-  std::string json;
+int convert_json_file(const string& input_fname, const string& output_fname, vector<string>& filters_conv, vector<string>& filters_fc) {
+  cout << "loading " << input_fname << "..." << endl;
+  string json;
   {
-    std::ifstream stream(input_fname);
+    ifstream stream(input_fname);
     if (!stream.is_open()) {
-      std::cout << "cant find json file at " + input_fname << std::endl;
+      cout << "cant find json file at " + input_fname << endl;
       return -1;
     }
-    std::stringstream buffer;
+    stringstream buffer;
     buffer << stream.rdbuf();
     json = buffer.str();
   }
@@ -193,7 +194,7 @@ int convert_json_file(const std::string& input_fname, const std::string& output_
   CHECK(itr->value.IsArray());
   CHECK(itr->value.Size() == 2);
   int version = itr->value[1].GetInt();
-  std::string node_attrs_name = "attrs";
+  string node_attrs_name = "attrs";
   if (version / 10000 < 1) {
     LOG(INFO) << "detected model saved with mxnet v" << version/10000 << "." << (version/100)%100 << "." << version%100
               << ", using old 'attr' name for layer attributes instead of 'attrs'";
@@ -206,9 +207,9 @@ int convert_json_file(const std::string& input_fname, const std::string& output_
 
   for (rapidjson::Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr) {
     if (!(itr->HasMember("op") && (*itr)["op"].IsString() &&
-            (std::strcmp((*itr)["op"].GetString(), "QConvolution") == 0 ||
-             std::strcmp((*itr)["op"].GetString(), "QFullyConnected") == 0 ||
-             std::strcmp((*itr)["op"].GetString(), "QConvolution_v1") == 0))) {
+            (strcmp((*itr)["op"].GetString(), "QConvolution") == 0 ||
+             strcmp((*itr)["op"].GetString(), "QFullyConnected") == 0 ||
+             strcmp((*itr)["op"].GetString(), "QConvolution_v1") == 0))) {
       continue;
     }
 
@@ -217,12 +218,12 @@ int convert_json_file(const std::string& input_fname, const std::string& output_
     op_attributes.AddMember("binarized_weights_only", "True", d.GetAllocator());
 
     CHECK((*itr).HasMember("name"));
-    std::cout << "|- adjusting attributes for " << (*itr)["name"].GetString() << std::endl;
+    cout << "|- adjusting attributes for " << (*itr)["name"].GetString() << endl;
 
-    if (std::strcmp((*itr)["op"].GetString(), "QConvolution") == 0 ||
-             std::strcmp((*itr)["op"].GetString(), "QConvolution_v1") == 0) {
+    if (strcmp((*itr)["op"].GetString(), "QConvolution") == 0 ||
+             strcmp((*itr)["op"].GetString(), "QConvolution_v1") == 0) {
       filters_conv.push_back((*itr)["name"].GetString());
-    } else if (std::strcmp((*itr)["op"].GetString(), "QFullyConnected") == 0) {
+    } else if (strcmp((*itr)["op"].GetString(), "QFullyConnected") == 0) {
       filters_fc.push_back((*itr)["name"].GetString());
     }
   }
@@ -232,19 +233,53 @@ int convert_json_file(const std::string& input_fname, const std::string& output_
   d.Accept(writer);
 
   {
-    std::ofstream stream(output_fname);
+    ofstream stream(output_fname);
     if (!stream.is_open()) {
-      std::cout << "cant find json file at " + output_fname << std::endl;
+      cout << "cant find json file at " + output_fname << endl;
       return -1;
     }
-    std::string output = buffer.GetString();
+    string output = buffer.GetString();
     stream << output;
     stream.close();
   }
 
-  std::cout << "wrote converted json to " << output_fname << std::endl;
+  cout << "wrote converted json to " << output_fname << endl;
 
   return 0;
+}
+
+/**
+ * @brief
+    description:
+        We modify the json file.
+        mxnet symbol json objects to be adapted:
+        - nodes: all operators
+        - heads: head node
+        - arg_nodes: arg nodes, usually 'null' operators.
+        - node_row_ptr: not yet found detailed information about this item, 
+                        but it seems not affecting the inference
+ * @param input_file path to mxnet symbol file with qconv and qdense layers
+ * @param output_file path to converted symbol file
+ * @return success (0) or failure
+ */
+int convert_symbol_json(const string& input_fname, const string& output_fname, vector<string>& filters_conv, vector<string>& filters_fc) {
+  cout <<"Load input '.params' file: "<< params_file << endl;
+  string json;
+  {
+    ifstream stream(input_fname);
+    if (!stream.is_open()) {
+      cout << "can't find json file at " + input_fname << endl;
+      return -1;
+    }
+    stringstream buffer;
+    buffer << stream.rdbuf();
+    json = buffer.str();
+  }
+
+  rapidjson::Document d;
+  d.Parse(json.c_str());
+
+  
 }
 
 /**
@@ -253,37 +288,44 @@ int convert_json_file(const std::string& input_fname, const std::string& output_
  */
 int main(int argc, char ** argv){
   if (argc != 2) {
-    std::cout << "usage: " + std::string(argv[0]) + " <mxnet *.params file>" << std::endl;
-    std::cout << "  will binarize the weights of the Convolutional Layers of your model," << std::endl;
-    std::cout << "  pack 32(x86 and ARMv7) or 64(x64) values into one and save the result with the prefix 'binarized_'" << std::endl;
+    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" << endl;
+    cout << "  will binarize the weights of the qconv or qdense layers of your model," << endl;
+    cout << "  pack 32(x86 and ARMv7) or 64(x64) values into one and save the result with the prefix 'binarized_'" << endl;
     return -1;
   }
 
-  const std::string params_file(argv[1]);
+  const string params_file(argv[1]);
   char *file_copy_basename = strdup(argv[1]); 
   char *file_copy_dirname = strdup(argv[1]);
-  const std::string path(dirname(file_copy_dirname));
-  const std::string params_file_name(basename(file_copy_basename));
+  const string path(dirname(file_copy_dirname));
+  const string params_file_name(basename(file_copy_basename));
   free(file_copy_basename);
   free(file_copy_dirname);
 
-  std::string base_name = params_file_name;
+  string base_name = params_file_name;
   base_name.erase(base_name.rfind('-')); // watchout if no '-'
-  const std::string output_name(path + "/" + "binarized_" + params_file_name);
+  const string param_out_fname(path + "/" + "binarized_" + params_file_name);
 
-  const std::string json_file_name(path + "/"                + base_name + "-symbol.json");
-  const std::string json_out_fname(path + "/" + "binarized_" + base_name + "-symbol.json");
+  const string json_file_name(path + "/"                + base_name + "-symbol.json");
+  const string json_out_fname(path + "/" + "binarized_" + base_name + "-symbol.json");
 
-  std::vector<std::string> filters_conv;
-  std::vector<std::string> filters_fc;
 
-  if (int ret = convert_json_file(json_file_name, json_out_fname, filters_conv, filters_fc) != 0) {
+  cout <<"Load input 'symbol json' file: "<< json_file_name << endl;
+  cout <<"Output 'json' file path: "<< json_out_fname << endl;
+  
+  cout <<"Output '.params' file path: "<< param_out_fname << endl;
+
+  vector<string> filters_conv;
+  vector<string> filters_fc;
+
+
+  if (int ret = convert_symbol_json(json_file_name, json_out_fname, filters_conv, filters_fc) != 0) {
     return ret;
   }
 
-  if (int ret = convert_params_file(params_file, output_name, filters_conv, filters_fc) != 0) {
-    return ret;
-  }
+  // if (int ret = convert_params_file(params_file, param_out_fname, filters_conv, filters_fc) != 0) {
+  //   return ret;
+  // }
 
   return 0;
 }

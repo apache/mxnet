@@ -1,9 +1,11 @@
+cmake_minimum_required (VERSION 3.5) 
 if(NOT MSVC AND NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
   set(UNITTEST_STATIC_LINK ON)
 endif()
 
 add_executable(model-converter main.cpp)
-include_directories(../../lib/)
+include_directories(./lib)
+
 
 if(UNITTEST_STATIC_LINK)
     target_link_libraries(model-converter
