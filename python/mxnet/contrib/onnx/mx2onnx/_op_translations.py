@@ -744,7 +744,7 @@ def convert_logistic_regression_output(node, **kwargs):
     input1 = kwargs["proc_nodes"][input1_idx]
     sigmoid_node = onnx.helper.make_node(
         "Sigmoid",
-        [input1.output[0]],
+        [input1.name],
         [name],
         name=name
     )

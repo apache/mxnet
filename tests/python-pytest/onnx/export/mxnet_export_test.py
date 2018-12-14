@@ -327,6 +327,74 @@ def test_softmax():
     # Comparing result of forward pass before using onnx export, import
     npt.assert_almost_equal(result, softmax_out)
 
+def test_logisticRegressionOutput():
+    input1 = np.random.rand(1000, 1000).astype("float32")
+    label1 = np.random.rand(1000, 1000)
+    input_nd = mx.nd.array(input1)
+    label_nd = mx.nd.array(label1)
+
+    ipsym = mx.sym.Variable("ipsym")
+    label = mx.sym.Variable('label')
+    sym = mx.sym.LogisticRegressionOutput(data=ipsym, label=label)
+    ex = sym.bind(ctx=mx.cpu(0), args={'ipsym': input_nd, 'label': label_nd})
+    ex.forward(is_train=True)
+    logistic_out = ex.outputs[0].asnumpy()
+
+    converted_model = onnx_mxnet.export_model(sym, {}, [(1000, 1000), (1000, 1000)], np.float32, "logisticop.onnx")
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+    result = forward_pass(sym, arg_params, aux_params, ['ipsym'], input1)
+
+    # Comparing result of forward pass before using onnx export, import
+    npt.assert_almost_equal(result, logistic_out)
+
+
+def _test_scalar_op(input1, outsym, np_out):
+    model = mx.mod.Module(symbol=outsym, data_names=['input1'], label_names=None)
+    model.bind(for_training=False, data_shapes=[('input1', np.shape(input1))], label_shapes=None)
+    model.init_params()
+
+    args, auxs = model.get_params()
+    params = {}
+    params.update(args)
+    params.update(auxs)
+
+    converted_model = onnx_mxnet.export_model(outsym, params, [np.shape(input1)], np.float32,
+                                              onnx_file_path=outsym.name+".onnx")
+
+    sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+    result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+
+    npt.assert_almost_equal(result, np_out)
+
+@with_seed()
+def test_scalarops():
+    input1 = np.random.randint(1, 10, (2, 3)).astype("float32")
+    ipsym = mx.sym.Variable("input1")
+    operators = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'rDiv']
+    for op in operators:
+        if op == 'Add':
+            out = 2 + ipsym
+            np_out = np.add(2, input1)
+            _test_scalar_op(input1, out, np_out)
+        if op == "Sub":
+            out = ipsym - 2
+            np_out = np.subtract(input1, 2)
+            _test_scalar_op(input1, out, np_out)
+        if op == "rSub":
+            out = 2 - ipsym
+            np_out = np.subtract(2, input1)
+            _test_scalar_op(input1, out, np_out)
+        if op == "Mul":
+            out = 2 * ipsym
+            np_out = np.multiply(2, input1)
+            _test_scalar_op(input1, out, np_out)
+        if op == "Div":
+            np_out = input1/2
+            out = ipsym / 2
+            _test_scalar_op(input1, out, np_out)
+
+
 @with_seed()
 def test_comparison_ops():
     """Test greater, lesser, equal"""
