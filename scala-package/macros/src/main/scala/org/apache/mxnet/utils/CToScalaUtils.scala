@@ -19,17 +19,17 @@ package org.apache.mxnet.utils
 private[mxnet] object CToScalaUtils {
 
   private val javaType = Map(
-    "float"  -> "java.lang.Float",
-    "int"    -> "java.lang.Integer",
-    "long"   -> "java.lang.Long",
+    "float" -> "java.lang.Float",
+    "int" -> "java.lang.Integer",
+    "long" -> "java.lang.Long",
     "double" -> "java.lang.Double",
-    "bool"   -> "java.lang.Boolean")
+    "bool" -> "java.lang.Boolean")
   private val scalaType = Map(
-    "float"  -> "Float",
-    "int"    -> "Int",
-    "long"   -> "Long",
+    "float" -> "Float",
+    "int" -> "Int",
+    "long" -> "Long",
     "double" -> "Double",
-    "bool"   -> "Boolean")
+    "bool" -> "Boolean")
 
   // Convert C++ Types to Scala Types
   def typeConversion(in : String, argType : String = "", argName : String,
