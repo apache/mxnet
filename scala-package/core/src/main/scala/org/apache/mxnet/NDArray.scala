@@ -40,6 +40,7 @@ object NDArray extends NDArrayBase {
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
 
   val api = NDArrayAPI
+  val random = NDArrayRandomAPI
 
   private def addDependency(froms: Array[NDArray], tos: Array[NDArray]): Unit = {
     froms.foreach { from =>
