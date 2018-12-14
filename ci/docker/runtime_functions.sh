@@ -867,6 +867,7 @@ unittest_ubuntu_cpu_julia06() {
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
     julia -e 'Pkg.build("MXNet")'
@@ -1196,6 +1197,7 @@ deploy_jl_docs() {
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
     julia -e 'Pkg.build("MXNet")'
