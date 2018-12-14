@@ -263,7 +263,7 @@ int convert_json_file(const string& input_fname, const string& output_fname, vec
  * @return success (0) or failure
  */
 int convert_symbol_json(const string& input_fname, const string& output_fname, vector<string>& filters_conv, vector<string>& filters_fc) {
-  cout <<"Load input '.params' file: "<< params_file << endl;
+  cout <<"Load input 'symbol json' file: "<< input_fname << endl;
   string json;
   {
     ifstream stream(input_fname);
@@ -279,7 +279,10 @@ int convert_symbol_json(const string& input_fname, const string& output_fname, v
   rapidjson::Document d;
   d.Parse(json.c_str());
 
-  
+  CHECK(d.HasMember("heads"));
+  cout << d["heads"].GetArray()[0].GetArray()[0].GetInt() << endl;
+
+
 }
 
 /**
@@ -310,7 +313,8 @@ int main(int argc, char ** argv){
   const string json_out_fname(path + "/" + "binarized_" + base_name + "-symbol.json");
 
 
-  cout <<"Load input 'symbol json' file: "<< json_file_name << endl;
+  cout <<"Load input '.params' file: "<< params_file << endl;
+  
   cout <<"Output 'json' file path: "<< json_out_fname << endl;
   
   cout <<"Output '.params' file path: "<< param_out_fname << endl;
