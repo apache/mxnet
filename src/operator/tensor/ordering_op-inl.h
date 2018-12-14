@@ -396,11 +396,11 @@ void TopKImpl(const RunContext &ctx,
   size_t temp_size = 0;
   // Temp space needed by the gpu-based full sorts.
   temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<int, int, xpu>(src.Size()));
+    mxnet::op::SortByKeyWorkspaceSize<IDType, IDType, xpu>(src.Size()));
   temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<int, DType, xpu>(src.Size()));
+    mxnet::op::SortByKeyWorkspaceSize<IDType, DType, xpu>(src.Size()));
   temp_size = std::max(temp_size,
-    mxnet::op::SortByKeyWorkspaceSize<DType, int, xpu>(src.Size()));
+    mxnet::op::SortByKeyWorkspaceSize<DType, IDType, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(IDType) * src.Size(), alignment);
   // Temp space for cpu sorts.
@@ -408,7 +408,7 @@ void TopKImpl(const RunContext &ctx,
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
                                     + PadBytes(sizeof(IDType) * src.Size(), alignment);
   if (param.ret_typ == topk_enum::kReturnMask) {
-    workspace_size += PadBytes(sizeof(int) * batch_size * k, alignment);
+    workspace_size += PadBytes(sizeof(IDType) * batch_size * k, alignment);
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
