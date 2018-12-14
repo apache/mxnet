@@ -73,6 +73,9 @@ def test_basic_module():
 def test_basic_data():
     assert _test_tutorial_nb('basic/data')
 
+def test_basic_reshape_transpose():
+       assert _test_tutorial_nb('basic/reshape_transpose')
+
 def test_gluon_customop():
     assert _test_tutorial_nb('gluon/customop')
 

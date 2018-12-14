@@ -276,7 +276,7 @@ def compile_centos7_cpu_mkldnn() {
 }
 
 def compile_centos7_gpu() {
-    return ['vGPU: CentOS 7': {
+    return ['GPU: CentOS 7': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {

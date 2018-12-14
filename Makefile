@@ -136,12 +136,7 @@ ifeq ($(USE_MKLDNN), 1)
 		LDFLAGS += -L$(MKLROOT)/lib
 	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
-	# MKLDNN but to needs to be dynamically linked for windows as not all VS compilers support static linking
-	ifneq ($(UNAME_S), Windows)
-		LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
-	else
-		LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
-	endif
+	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
 endif
 
 # setup opencv
