@@ -862,6 +862,19 @@ def test_unix_clojure_cpu() {
     }]
 }
 
+def test_unix_clojure_integration_cpu() {
+    return ['Clojure: CPU Integration': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-clojure-integration-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_dist_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure_integration', false)
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_r_cpu() {
     return ['Perl: CPU': {
       node(NODE_LINUX_CPU) {

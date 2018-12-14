@@ -801,6 +801,14 @@ unittest_ubuntu_cpu_clojure() {
     ./contrib/clojure-package/ci-test.sh
 }
 
+unittest_ubuntu_cpu_clojure_integration() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    ./contrib/clojure-package/integration-tests.sh
+}
+
+
 unittest_ubuntu_cpugpu_perl() {
     set -ex
     ./perl-package/test.sh
