@@ -7,7 +7,6 @@ Check failed: shape_.Size() == shape.Size() (127872 vs. 25088) NDArray.Reshape: 
 This error message tells you that the data being passed to your model or between layers in the model is not in the correct format. Modifying the shape of tensors is a very common operation in Deep Learning.
 For instance, when using pretrained neural networks it is often necessary to adjust the input data dimensions to correspond to what the network has been trained on, e.g. tensors of shape `[batch_size, channels, width, height]`.  This notebook discusses briefly the difference between the operators [Reshape](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.NDArray.reshape) and [Transpose](http://mxnet.incubator.apache.org/test/api/python/ndarray.html#mxnet.ndarray.transpose). Both allow you to change the shape, however they are not the same and are commonly mistaken.
 
-
 ```python
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
