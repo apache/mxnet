@@ -136,6 +136,7 @@ struct QuantizedSumInitKernelWithBias {
   }
 };
 
+
 template<typename SrcType>
 void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
                                     const OpContext &ctx,
