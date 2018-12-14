@@ -148,8 +148,6 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
                      NDArrayHandle *aux_states,
                      ExecutorHandle shared_exec,
                      ExecutorHandle *out) {
-  Executor* exec = nullptr;
-
   API_BEGIN();
   nnvm::Symbol *symb = static_cast<nnvm::Symbol*>(symbol_handle);
   Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
@@ -181,7 +179,7 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
   *out = Executor::Bind(*symb, ctx, ctx_map, in_args_vec,
                         arg_grad_vec, grad_req_vec, aux_states_vec,
                         reinterpret_cast<Executor*>(shared_exec));
-  API_END_HANDLE_ERROR(delete exec);
+  API_END();
 }
 
 /*!
@@ -558,8 +556,11 @@ int MXExecutorReshape(int partial_shaping,
                       NDArrayHandle** aux_states,
                       ExecutorHandle shared_exec,
                       ExecutorHandle *out) {
+  Executor* new_exec = nullptr;
+
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
+  *out = nullptr;  // ensure we can know whether to free executor on early abort
   // create shape map for in_args and aux_states
   std::unordered_map<std::string, TShape> kwargs(num_provided_arg_shapes);
   for (mx_uint i = 0; i < num_provided_arg_shapes; ++i) {
@@ -581,8 +582,9 @@ int MXExecutorReshape(int partial_shaping,
   std::vector<NDArray> aux_state_vec;
 
   Executor* exec = static_cast<Executor*>(shared_exec);
-  *out = exec->Reshape(partial_shaping, allow_up_sizing, ctx, ctx_map, kwargs,
+  new_exec = exec->Reshape(partial_shaping, allow_up_sizing, ctx, ctx_map, kwargs,
                        &in_arg_vec, &arg_grad_vec, &aux_state_vec);
+  *out = new_exec;
 
   ret->ret_handles.clear();
   ret->ret_handles.reserve(in_arg_vec.size()+arg_grad_vec.size()+aux_state_vec.size());
@@ -623,7 +625,7 @@ int MXExecutorReshape(int partial_shaping,
     *aux_states = &(ret->ret_handles[nd_idx]);
     nd_idx = ret->ret_handles.size();
   }
-  API_END_HANDLE_ERROR(delete out);
+  API_END_HANDLE_ERROR(delete new_exec);
 }
 
 int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
