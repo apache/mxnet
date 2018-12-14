@@ -19,10 +19,11 @@
 set -evx
 
 MXNET_HOME=${PWD}
-EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
-#cd ${MXNET_HOME}/contrib/clojure-package
-#lein test
-#lein cloverage --codecov
+cd ${MXNET_HOME}/contrib/clojure-package
+# first build the package and install it
+lein install
+
+cd ${MXNET_HOME}/contrib/clojure-package/examples
 for i in `find ${EXAMPLES_HOME} -name test` ; do
 cd ${i} && lein test
 done
