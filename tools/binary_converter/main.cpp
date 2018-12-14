@@ -277,9 +277,19 @@ int convert_symbol_json(const string& input_fname, const string& output_fname, v
   }
 
   rapidjson::Document d;
+  Document::AllocatorType& allocator = d.GetAllocator();
   d.Parse(json.c_str());
 
   CHECK(d.HasMember("heads"));
+  CHECK(d.HasMember("arg_nodes"));
+  CHECK(d.HasMember("nodes"));
+
+  Value nodes_new(kArrayType);
+  Value heads_new(kArrayType);
+  int retained_op_num = 0;
+  // update arg_nodes : contains indices of all "null" op
+  Value arg_nodes_new(kArrayType);   
+
   cout << d["heads"].GetArray()[0].GetArray()[0].GetInt() << endl;
 
 
