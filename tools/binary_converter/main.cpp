@@ -18,6 +18,7 @@
 using mxnet::op::xnor::BITS_PER_BINARY_WORD;
 using mxnet::op::xnor::BINARY_WORD;
 using namespace std;
+using namespace rapidjson;
 
 /**
  * @brief binarize an NDArray
@@ -276,7 +277,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname, v
     json = buffer.str();
   }
 
-  rapidjson::Document d;
+  Document d;
   Document::AllocatorType& allocator = d.GetAllocator();
   d.Parse(json.c_str());
 
@@ -285,10 +286,15 @@ int convert_symbol_json(const string& input_fname, const string& output_fname, v
   CHECK(d.HasMember("nodes"));
 
   Value nodes_new(kArrayType);
+  
   Value heads_new(kArrayType);
-  int retained_op_num = 0;
+  heads_new.PushBack(Value().SetInt(0), allocator);
+  heads_new.PushBack(Value().SetInt(0), allocator);
+  heads_new.PushBack(Value().SetInt(0), allocator);
+
   // update arg_nodes : contains indices of all "null" op
   Value arg_nodes_new(kArrayType);   
+  int retained_op_num = 0;
 
   cout << d["heads"].GetArray()[0].GetArray()[0].GetInt() << endl;
 
