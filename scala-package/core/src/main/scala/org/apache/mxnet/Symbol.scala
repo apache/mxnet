@@ -842,6 +842,7 @@ object Symbol extends SymbolBase {
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
 
   val api = SymbolAPI
+  val random = SymbolRandomAPI
 
   def pow(sym1: Symbol, sym2: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_Power")(Array(sym1, sym2))

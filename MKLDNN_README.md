@@ -1,9 +1,9 @@
 # Build/Install MXNet with MKL-DNN
 
-A better training and inference perforamce are expected to achieved on Intel-Architecture CPUs with MXNET built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
-In the following sections, you will find building instructions for MXNET with Intel MKL-DNN on Linux, MacOS and Windows.
+A better training and inference performance is expected to be achieved on Intel-Architecture CPUs with MXNet built with [Intel MKL-DNN](https://github.com/intel/mkl-dnn) on multiple operating system, including Linux, Windows and MacOS.
+In the following sections, you will find build instructions for MXNet with Intel MKL-DNN on Linux, MacOS and Windows.
 
-The detailed performance data collected on Intel Xeon CPU with MXNET built with Intel MKL-DNN can be found at [here](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu).
+The detailed performance data collected on Intel Xeon CPU with MXNet built with Intel MKL-DNN can be found [here](https://mxnet.incubator.apache.org/faq/perf.html#intel-cpu).
 
 
 <h2 id="0">Contents</h2>
@@ -83,7 +83,7 @@ LIBRARY_PATH=$(brew --prefix llvm)/lib/ make -j $(sysctl -n hw.ncpu) CC=$(brew -
 
 <h2 id="3">Windows</h2>
 
-On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNET with Intel MKL-DNN.
+On Windows, you can use [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) and [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) to compile MXNet with Intel MKL-DNN.
 [Micrsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is recommended.
 
 **Visual Studio 2015**
@@ -123,7 +123,7 @@ cmake -G "Visual Studio 14 Win64" .. -DUSE_CUDA=0 -DUSE_CUDNN=0 -DUSE_NVRTC=0 -D
 These commands produce a library called ```libmxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
 Also ```libmkldnn.dll``` with be in the ```./build/3rdparty/mkldnn/src/Release/```
 
-6. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading mxnet.
+6. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
 
 **Visual Studio 2017**
 
@@ -177,7 +177,7 @@ cmake -G "Visual Studio 15 2017 Win64" .. -T host=x64 -DUSE_CUDA=0 -DUSE_CUDNN=0
 msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
 ```
 
-9. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading mxnet.
+9. Make sure that all the dll files used above(such as `libmkldnn.dll`, `libmklml.dll`, `libiomp5.dll`, `libopenblas.dll`, etc) are added to the system PATH. For convinence, you can put all of them to ```\windows\system32```. Or you will come across `Not Found Dependencies` when loading MXNet.
 
 <h2 id="4">Verify MXNet with python</h2>
 
