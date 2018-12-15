@@ -11,7 +11,7 @@
 
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-parent</artifactId>
-  <version>1.5.0-SNAPSHOT</version>
+  <version>INTERNAL</version>
   <name>MXNet Scala Package - Parent</name>
   <url>https://github.com/apache/incubator-mxnet/tree/master/scala-package</url>
   <description>
@@ -38,7 +38,7 @@
 
   <properties>
     <scala.version>2.11.8</scala.version>
-    <build.platform />
+    <build.platform/>
     <cxx>g++</cxx>
     <dollar>$</dollar>
     <MXNET_DIR>${project.basedir}/..</MXNET_DIR>
@@ -55,34 +55,10 @@
     <module>examples</module>
     <module>spark</module>
     <module>assembly</module>
+    <module>deploy</module>
   </modules>
 
   <profiles>
-    <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>add-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${project.build.directory}/genjavadoc</source>
-                  </sources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
     <profile>
       <id>scala-2.11</id>
       <build>
@@ -116,7 +92,9 @@
     <profile>
       <id>osx-x86_64</id>
       <activation>
-        <os><family>mac</family></os>
+        <os>
+          <family>mac</family>
+        </os>
       </activation>
       <properties>
         <platform>osx-x86_64</platform>
@@ -152,7 +130,7 @@
                 </goals>
                 <configuration>
                   <executable>bash</executable>
-                  <commandlineArgs>-c 'if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda.so | wc -l) == "0" ]]; then echo flavor=cpu > /tmp/flavor.properties; else echo flavor=gpu > /tmp/flavor.properties; fi'</commandlineArgs>
+                  <commandlineArgs>-c 'mkdir -p ${project.build.directory}; if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda.so | wc -l) == "0" ]]; then echo flavor=cpu &gt; ${project.build.directory}/flavor.properties; else echo flavor=gpu &gt; ${project.build.directory}/flavor.properties; fi'</commandlineArgs>
                 </configuration>
               </execution>
             </executions>
@@ -170,7 +148,7 @@
                 </goals>
                 <configuration>
                   <files>
-                    <file>/tmp/flavor.properties</file>
+                    <file>${project.build.directory}/flavor.properties</file>
                   </files>
                 </configuration>
               </execution>
@@ -203,14 +181,6 @@
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-release-plugin</artifactId>
-        <configuration>
-          <localCheckout>true</localCheckout>
-          <pushChanges>false</pushChanges>
-        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -357,6 +327,14 @@
           </execution>
         </executions>
       </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <dependencies>
@@ -400,7 +378,7 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Following libraries are required by running javah, the should be excluded from .jar -->
+    <!-- Following libraries are required by running javah, they should be excluded from .jar -->
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>

@@ -128,7 +128,7 @@ You can also run the unit tests and integration tests on the Scala Package by :
 
 ```bash
 cd scala-package
-mvn integration-test
+mvn integration-test -DskipTests=false
 ```
 
 Or run a subset of unit tests, for e.g.,
@@ -140,6 +140,25 @@ mvn -DSCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite integration-test
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
 Also it produces the native library in `native/target`, which you can use to cooperate with the `core` module.
+
+Deploy to repository
+--------------------
+
+By default, `maven deploy` will deploy artifacts to local file system, you can file then in: ``scala-package/deploy/target/repo`` folder.
+
+For nightly build in CI, a snapshot build will be uploaded to apache repository with follow command:
+
+```bash
+cd scala-package
+mvn deploy -Pnightly
+```
+
+Use following command to deploy release build (push artifacts to apache staging repository):
+
+```bash
+cd scala-package
+mvn deploy -Pstaging
+```
 
 Examples & Usage
 -------

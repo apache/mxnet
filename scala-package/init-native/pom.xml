@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-parent</artifactId>
-    <version>1.5.0-SNAPSHOT</version>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -144,25 +144,6 @@
               </linkerEndOptions>
             </configuration>
           </plugin>
-
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>1.6.0</version>
-            <executions>
-              <execution>
-                <id>link-native-lib</id>
-                <phase>generate-resources</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <executable>ln</executable>
-                  <commandlineArgs>-sf ${MXNET_DIR}/lib/libmxnet.so ${project.build.directory}/libmxnet.so</commandlineArgs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
         </plugins>
       </build>
     </profile>
@@ -182,8 +163,8 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <executable>ln</executable>
-              <commandlineArgs>-sf ${MXNET_DIR}/lib/libmxnet.so ${project.build.directory}/libmxnet.so</commandlineArgs>
+              <executable>bash</executable>
+              <commandlineArgs>-c 'ln -sf ${MXNET_DIR}/lib/libmxnet.so ${project.build.directory}/libmxnet.so; ln -sf ${MXNET_DIR}/lib/libgfortran.so.3 ${project.build.directory}/libgfortran.so.3; ln -sf ${MXNET_DIR}/lib/libquadmath.so.0 ${project.build.directory}/libquadmath.so.0'</commandlineArgs>
             </configuration>
           </execution>
         </executions>

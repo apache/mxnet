@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-parent</artifactId>
-    <version>1.5.0-SNAPSHOT</version>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -16,37 +16,6 @@
   <properties>
     <skipTests>true</skipTests>
   </properties>
-
-  <profiles>
-    <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <configuration>
-              <skipSource>true</skipSource>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <configuration>
-              <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 
   <build>
     <plugins>
@@ -125,13 +94,13 @@
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
+      <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-infer</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
+      <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

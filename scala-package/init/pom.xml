@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-parent</artifactId>
-    <version>1.5.0-SNAPSHOT</version>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
@@ -51,9 +51,11 @@
               <goal>exec</goal>
             </goals>
             <configuration>
-              <successCodes>0</successCodes>
               <executable>diff</executable>
-              <commandlineArgs>${project.build.directory}/custom-javah/org_apache_mxnet_init_native_c_api.h ${project.parent.basedir}/init-native/src/main/native/org_apache_mxnet_init_native_c_api.h</commandlineArgs>
+              <commandlineArgs>
+                ${project.build.directory}/custom-javah/org_apache_mxnet_init_native_c_api.h
+                ${project.parent.basedir}/init-native/src/main/native/org_apache_mxnet_init_native_c_api.h
+              </commandlineArgs>
             </configuration>
           </execution>
         </executions>
