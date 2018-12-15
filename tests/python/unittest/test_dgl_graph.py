@@ -77,9 +77,9 @@ def check_compact(csr, id_arr, num_nodes):
 
 def check_layers(layers, num_layers):
     out = mx.nd.contrib.dgl_layer_vid(layers, num_layers=(num_layers))
+    assert len(out[0]) == num_layers
+    assert len(out[1]) == num_layers
     layers = layers.asnumpy()
-    print(layers)
-    print(num_layers)
     for i in range(num_layers):
         ids = np.where(layers == i)[0]
         num_ids = out[1][i].asnumpy()[0]

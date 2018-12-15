@@ -1637,28 +1637,28 @@ DMLC_REGISTER_PARAMETER(LayerVidParam);
 
 static void ComputeLayerVid(const TBlob &layer_ids, const TBlob &out,
                             const TBlob &layer_sizes, size_t num_layers) {
-    CHECK_EQ(out.shape_[0], num_layers);
-    CHECK_EQ(layer_sizes.shape_[0], num_layers);
-    const int64_t *data = layer_ids.dptr<int64_t>();
-    int64_t *out_data = out.dptr<int64_t>();
-    int64_t *num_vs = layer_sizes.dptr<int64_t>();
-    for (size_t i = 0; i < num_layers; i++)
-      num_vs[i] = 0;
-    // Initialize output data.
-    for (size_t i = 0; i < out.shape_.Size(); i++)
-      out_data[i] = -1;
+  CHECK_EQ(out.shape_[0], num_layers);
+  CHECK_EQ(layer_sizes.shape_[0], num_layers);
+  const int64_t *data = layer_ids.dptr<int64_t>();
+  int64_t *out_data = out.dptr<int64_t>();
+  int64_t *num_vs = layer_sizes.dptr<int64_t>();
+  for (size_t i = 0; i < num_layers; i++)
+    num_vs[i] = 0;
+  // Initialize output data.
+  for (size_t i = 0; i < out.shape_.Size(); i++)
+    out_data[i] = -1;
 
-    size_t max_size = out.shape_[1];
-    size_t size = layer_ids.shape_.Size();
-    for (size_t i = 0; i < size; i++) {
-      size_t layer = data[i];
-      // We only look for the vertices within a certain layer.
-      if (layer >= num_layers)
-        continue;
-      int64_t &num = num_vs[layer];
-      out_data[layer * max_size + num] = i;
-      num++;
-    }
+  size_t max_size = out.shape_[1];
+  size_t size = layer_ids.shape_.Size();
+  for (size_t i = 0; i < size; i++) {
+    size_t layer = data[i];
+    // We only look for the vertices within a certain layer.
+    if (layer >= num_layers)
+      continue;
+    int64_t &num = num_vs[layer];
+    out_data[layer * max_size + num] = i;
+    num++;
+  }
 }
 
 static void LayerVidComputeCPU(const nnvm::NodeAttrs& attrs,
@@ -1668,7 +1668,7 @@ static void LayerVidComputeCPU(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& outputs) {
   const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
   int num_arrs = inputs.size();
-#pragma omp parallel for
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int i = 0; i < num_arrs; i++) {
     ComputeLayerVid(inputs[i], outputs[i], outputs[i + num_arrs],
                     params.num_layers[i]);
@@ -1729,7 +1729,24 @@ static bool LayerVidType(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_dgl_layer_vid)
-.describe(R"code()code" ADD_FILELINE)
+.describe(R"code(This operator finds the vertices in different layers.
+
+It's designed for DGL. The input is a 1D array that indicates the layer of each vertex
+when it is sampled from a graph. It outputs a matrix whose row contains the vertex Ids
+in a layer. The number of rows in the matrix is determined by the argument num_layers.
+
+Example:
+
+   .. code:: python
+
+  layer = mx.nd.array([0, 1, 2, 2, 1, 0, 0, 1], dtype=np.int64)
+  out = mx.nd.contrib.dgl_layer_vid(layer, num_layers=2)
+  out[0].asnumpy()
+
+  array([[ 0,  5,  6, -1, -1, -1, -1, -1],
+         [ 1,  4,  7, -1, -1, -1, -1, -1]])
+
+)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<LayerVidParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const LayerVidParam& params = nnvm::get<LayerVidParam>(attrs.parsed);
