@@ -270,6 +270,7 @@ def test_gradient_reversal_op():
     b = np.random.random_sample()
     c = np.random.random_sample()
     l = np.random.random_sample()
+    
     data = mx.symbol.Variable('data')
     quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
     gr_q_sym = mx.sym.contrib.gradientreversal(data=quad_sym, l=l)
