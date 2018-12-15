@@ -158,3 +158,6 @@ function broadcast_hypot(x::NDArray, y::NDArray)
   warn("broadcast_hypot(x, y) is deprecated, use hypot.(x, y) instead.")
   hypot.(x, y)
 end
+
+# Introduced by https://github.com/apache/incubator-mxnet/pull/12845
+@deprecate sum(x::NDArray, dims) sum(x, dims = dims)

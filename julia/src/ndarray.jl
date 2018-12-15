@@ -1239,32 +1239,33 @@ macro _remap(sig::Expr, imp::Symbol)
   end)
 end
 
-_ndsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
-@_remap Base.reshape(arr::NDArray, dim...; reverse = false) reshape
-@_remap Base.reshape(arr::NDArray, dim   ; reverse = false) reshape
+_ndsig[:reshape] = :(reshape(x; shape = dim, reverse = !reverse))
+@_remap Base.reshape(x::NDArray, dim...; reverse = false) reshape
+@_remap Base.reshape(x::NDArray, dim   ; reverse = false) reshape
 
-@_remap Statistics.mean(arr::NDArray)         mean(arr)
-@_remap Statistics.mean(arr::NDArray, region) mean(arr; axis = 0 .- region, keepdims = true)
+@_remap Statistics.mean(x::NDArray)         mean(x)
+@_remap Statistics.mean(x::NDArray, region) mean(x; axis = 0 .- region, keepdims = true)
 
-@_remap Base.sum(arr::NDArray)       sum(arr)
-@_remap Base.sum(arr::NDArray, dims) sum(arr; axis = 0 .- dims, keepdims = true)
+Base.sum(x::NDArray; dims = :) = _sum(x, dims)
+@_remap _sum(x::NDArray, ::Colon) sum(x)
+@_remap _sum(x::NDArray, dims) sum(x; axis = 0 .- dims, keepdims = true)
 
-@_remap Base.maximum(arr::NDArray)       max(arr)
-@_remap Base.maximum(arr::NDArray, dims) max(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.maximum(x::NDArray)       max(x)
+@_remap Base.maximum(x::NDArray, dims) max(x; axis = 0 .- dims, keepdims = true)
 
-@_remap Base.minimum(arr::NDArray)       min(arr)
-@_remap Base.minimum(arr::NDArray, dims) min(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.minimum(x::NDArray)       min(x)
+@_remap Base.minimum(x::NDArray, dims) min(x; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
 @_remap LinearAlgebra.dot(x::NDArray, y::NDArray) dot(y, x)
 
 # See https://github.com/dmlc/MXNet.jl/pull/123
-@_remap Base.transpose(arr::NDArray{T,1}) where T reshape(arr; shape = (1, length(arr)), reverse = true)
-@_remap Base.transpose(arr::NDArray{T,2}) where T transpose(arr)
-@_remap Base.permutedims(arr::NDArray, axes) transpose(arr; axes = length(axes) .- tuple(axes...))
+@_remap Base.transpose(x::NDArray{T,1}) where T reshape(x; shape = (1, length(x)), reverse = true)
+@_remap Base.transpose(x::NDArray{T,2}) where T transpose(x)
+@_remap Base.permutedims(x::NDArray, axes) transpose(x; axes = length(axes) .- tuple(axes...))
 
-@_remap Base.prod(arr::NDArray)       prod(arr)
-@_remap Base.prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
+@_remap Base.prod(x::NDArray)       prod(x)
+@_remap Base.prod(x::NDArray, dims) prod(x; axis = 0 .- dims, keepdims = true)
 
 _nddoc[:clip] = _nddoc[:clip!] =
 """
