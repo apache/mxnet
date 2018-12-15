@@ -39,3 +39,5 @@ if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     make install
     cd -
 fi
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib
