@@ -37,7 +37,7 @@ def check_uniform(out, num_hops, max_num_vertices):
     sub_csr.check_format(full_check=True)
     assert np.all((sub_csr.indptr[num_vertices:] == sub_csr.indptr[num_vertices]).asnumpy())
     # check layer
-    for data in layer:
+    for data in layer[:num_vertices]:
         assert(data <= num_hops)
 
 def check_non_uniform(out, num_hops, max_num_vertices):
@@ -54,7 +54,7 @@ def check_non_uniform(out, num_hops, max_num_vertices):
     # check prob
     assert (len(prob) == max_num_vertices)
     # check layer
-    for data in layer:
+    for data in layer[:num_vertices]:
         assert(data <= num_hops)
 
 def check_compact(csr, id_arr, num_nodes):
