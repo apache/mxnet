@@ -1,6 +1,565 @@
 MXNet Change Log
 ================
 
+## 1.4.0
+### New Features
+#### Java Inference API
+
+Model inference is run and managed by software engineers in a production eco-system which is built with tools and frameworks that use Java/Scala as a primary language. Inference on a trained model has two different use-cases:
+
+  1. Real time or Online Inference - tasks that require immediate feedback, such as fraud detection
+  2. Batch or Offline Inference - tasks that don't require immediate feedback, these are use-cases where you have massive amounts of data and want to run Inference or pre-compute inference results 
+Batch Inference is performed on big data platforms such as Spark using Scala or Java while Real time Inference is typically performed and deployed on popular web frameworks such as Tomcat, Netty, Jetty, etc. which use Java.  With this project, we want to build a new set of APIs which are Java friendly, compatible with Java 7+, are easy to use for inference, and lowers the entry barrier of consuming MXNet for production use-cases. More details can be found at the [Java Inference API document](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Java+Inference+API).
+
+#### Julia API 
+
+MXNet.jl is the Julia package of Apache MXNet. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of features include:
+
+  * Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
+  * Flexible symbolic manipulation to composite and construct state-of-the-art deep learning models.
+
+#### Control Flow Operators
+
+Today we observe more and more dynamic neural network models, especially in the fields of natural language processing and graph analysis. The dynamics in these models come from multiple sources, including:
+
+  * Models are expressed with control flow, such as conditions and loops;
+  * NDArrays in a model may have dynamic shapes, meaning the NDArrays of a model or some of the NDArrays have different shapes for different batches;
+  * Models may want to use more dynamic data structures, such as lists or dictionaries.
+It's natural to express the dynamic models in frameworks with the imperative programming interface (e.g., Gluon, Pytorch, TensorFlow Eager). In this interface, users can simply use Python control flows, or NDArrays with any shape at any moment, or use Python lists and dictionaries to store data as they want. The problem of this approach is that it highly depends on the front-end programming languages (mainly Python). A model implemented in one language can only run in the same language. A common use case is that machine learning scientists want to develop their models in Python but engineers who deploy the models usually have to use a different language (e.g., Java and C). Gluon tries to close the gap between the model development and deployment. Machine learning scientists design and implement their models in Python with the imperative interface and Gluon turns the implementations into symbolic implementations by simply invoking hybridize() for model exporting. 
+
+The goal of this project is to enhance Gluon to turn a dynamic neural network into a static computation graph (where the dynamic control flows are expressed by control flow operators) with Gluon hybridization and export them for deployment. More information can be found at [Optimize dynamic neural network models with control flow operators](https://cwiki.apache.org/confluence/display/MXNET/Optimize+dynamic+neural+network+models+with+control+flow+operators)
+
+#### SVRG Optimization
+
+SVRG stands for Stochastic Variance Reduced Gradient, which was first introduced in the paper [Accelerating Stochastic Gradient Descent using Predicative Variance Reduction in 2013](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). It is an optimization technique that complements SGD. SGD is known for large scale optimization but it suffers from slow convergence asymptotically due to the inherent variance. SGD approximates the full gradient using a small batch of samples which introduces variance. In order to converge faster, SGD often needs to start with a smaller learning rate. SVRG remedies the problem by keeping a version of the estimated weights that is close to the optimal parameters and maintain average of full gradient over full pass of data. The average of full gradients of all data is calculated w.r.t to parameters of last mth epochs. It has provable guarantees for strongly convex smooth functions, and a more detailed proof can be found in section 3 of the paper. SVRG uses a different update rule: gradients w.r.t current parameters minus gradients w.r.t parameters from the last mth epoch, plus the average of gradients over all data. Key Characteristics of SVRG:
+
+  * Explicit variance reduction 
+  * Ability to use relatively large learning rate compared to SGD, which leads to faster convergence.
+More details can be found at [SVRG Optimization in MXNet Python Module](https://cwiki.apache.org/confluence/display/MXNET/Unified+integration+with+external+backend+libraries)
+
+#### Subgraph API
+
+MXNet can integrate with many different kinds of backend libraries, including TVM, MKLDNN, TensorRT, Intel nGraph and more. These backend in general support a limited number of operators, and thus running computation in a model usually involves in interaction between backend-supported operators and MXNet operators. These backend libraries share some common requirements:
+
+TVM , MKLDNN and nGraph uses customized data formats. Interaction between these backends with MXNet requires data format conversion.
+TVM, MKLDNN, TensorRT and nGraph fuses operators.
+Integration with these backends should happen in the granularity of subgraphs instead of in the granularity of operators. To fuse operators, it's obvious that we need to divide a graph into subgraphs so that the operators in a subgraph can be fused into a single operator. To handle customized data formats, we should partition a computation graph into subgraphs as well. Each subgraph contains only TVM, MKLDNN or ngraph operators. In this way, MXNet converts data formats only when entering such a subgraph and the operators inside a subgraph handle format conversion themselves if necessary. This makes interaction of TVM and MKLDNN with MXNet much easier. Neither the MXNet executor nor the MXNet operators need to deal with customized data formats. Even though invoking these libraries from MXNet requires similar steps, the partitioning rule and the subgraph execution of these backends can be different. As such, we define the following interface for backends to customize graph partitioning and subgraph execution inside an operator. More details can be found at PR 12157 and [Subgraph API](https://cwiki.apache.org/confluence/display/MXNET/Unified+integration+with+external+backend+libraries).
+
+#### MXNet nGraph integration
+
+As the diversity of deep learning hardware accelerators increase, it is important to have an efficient abstraction layer so developers can avoid having to enable each accelerator/compute separately. Intel nGraph enables that vision. The primary goal of this integration is to provide a seamless development and deployment experience to data scientists and machine learning engineers to leverage Intel nGraph ecosystem with MXNet. As Subgraph API seamlessly integrates with MXNet frontend API, users should just be able to use or switch nGraph backend with any existing MXNet scripts, models and deployments using the symbolic interface. For more details see  [MXNet nGraph integration using subgraph backend interface](https://cwiki.apache.org/confluence/display/MXNET/MXNet+nGraph+integration+using+subgraph+backend+interface)
+
+#### JVM Memory Management
+
+MXNet Scala and Java API uses native memory to manage NDArray, Symbol, Executor, DataIterators using the MXNet c_api. C APIs provide appropriate interfaces to create, access and free these objects MXNet Scala has corresponding Wrappers and APIs which have pointer references to the native memory. Before this project, JVM users(Scala/Clojure/Java..) of Apache MXNet have to manage MXNet objects manually using the dispose pattern, there are a few usability problems with this approach:
+
+Users have to track the MXNet objects manually and remember to call dispose, this is not Java Idiomatic and not user-friendly, quoting a user "this feels like I am writing C++ code which I stopped ages ago"
+Leads to memory leaks if dispose is not called.
+Many Objects in MXNet-Scala are managed in native memory, needing to use dispose on them as well.
+bloated code with dispose() methods.
+hard to debug memory-leaks
+Goals of the project are to provide MXNet JVM Users automated memory management which can release native memory when there are no references to JVM objects, to be able to manage both GPU and CPU Memory automatically without performance degradation with automated memory management.  More details can be found here: [JVM Memory Management](https://cwiki.apache.org/confluence/display/MXNET/JVM+Memory+Management)
+
+#### Topology-aware AllReduce
+For distributed training, the ring Reduce communication pattern used by NCCL and Parameter server Reduce currently used in MXNet are not optimal for small batch sizes on p3.16xlarge instances with 8 GPUs. The approach is based on the idea of using trees to perform the Reduce and Broadcast. We can use the idea of minimum spanning trees to do a binary tree Reduce communication pattern to improve it following this paper by Wang, Li, Edo and Smola [1]. Our strategy will be to use:
+
+  * a single tree (latency-optimal for small messages) to handle Reduce on small messages
+  * multiple trees (bandwidth-optimal for large messages) to handle large messages. 
+
+More details can be found here: [Topology-aware AllReduce](https://cwiki.apache.org/confluence/display/MXNET/Single+machine+All+Reduce+Topology-aware+Communication)
+
+### New Operators 
+
+* Add trigonometric operators (#12424)
+* [MXNET-807] Support integer label type in ctc_loss operator (#12468)
+* [MXNET-876] make CachedOp a normal operator (#11641)
+* Add index_copy() operator (#12810)
+* getnnz operator  for CSR matrix (#12908)
+* [MXNET-1173] Debug operators - isfinite, isinf and isnan (#12967)
+* sample_like operators (#13034)
+* Add gauss err function operator (#13229)
+* [MXNET -1030] Cosine Embedding Loss (#12750)
+* Add bytearray support back to imdecode (#12855, #12868) (#12912)
+* Add Psroipooling CPU implementation (#12738)
+
+### Feature improvements 
+#### Operator
+* [MXNET-912] Refactoring ctc loss operator (#12637)
+* Refactor L2_normalization (#13059)
+* customized take forward for CPU (#12997)
+* Allow stop of arange to be inferred from dims. (#12064)
+* Make check_isfinite, check_scale optional in clip_global_norm (#12042) add FListInputNames attribute to softmax_cross_entropy (#12701) [MXNET-867] Pooling1D with same padding (#12594)
+* Add support for more req patterns for bilinear sampler backward (#12386) [MXNET-882] Support for N-d arrays added to diag op. (#12430)
+
+#### Optimizer
+* Adagrad optimizer with row-wise learning rate (#12365)
+* Adding python SVRGModule for performing SVRG Optimization Logic (#12376)
+
+#### Sparse
+
+* Fall back when sparse arrays are passed to MKLDNN-enabled operators (#11664)
+* further bump up tolerance for sparse dot (#12527)
+* Sparse support for logic ops (#12860)
+* sparse support for take(csr, axis=0)  (#12889)
+
+#### ONNX
+
+* ONNX export - Clip operator (#12457)
+* Onnx version update from 1.2.1 to 1.3 in CI (#12633) 
+* Use modern onnx API to load model from file (#12777)
+* [MXNET-892] ONNX export/import: DepthToSpace, SpaceToDepth operators (#12731)
+* ONNX export: Fully connected operator w/o bias, ReduceSum, Square (#12646)
+* ONNX export/import: Selu (#12785)
+* ONNX export: Cleanup (#12878)
+* Added operators: Selu, DepthToSpace, SpaceToDepth, HardSigmoid, Logical operators
+
+#### MKLDNN
+
+* MKLDNN Forward FullyConnected  op cache (#11611)
+* [MXNET-753] Fallback when using non-MKLDNN supported operators (#12019)
+* MKLDNN Backward op cache (#11301)
+* Implement mkldnn convolution fusion and quantization. (#12530)
+* Improve mkldnn fallback. (#12663)
+* Update MKL-DNN dependency (#12953)
+* Update MKLML dependency (#13181)
+* [MXNET-33] Enhance mkldnn pooling to support full convention (#11047)
+
+#### Inference
+* [MXNET-910] Multithreading inference. (#12456)
+* Tweaked the copy in c_predict_api.h (#12600)
+
+#### Other
+* support for upper triangular matrices in linalg (#12904)
+* [MXNET-918] Introduce Random module / Refact code generation (#13038)
+* [MXNET-779]Add DLPack Transformation API (#12047)
+* Draw labels name (#9496)
+* Change the way NDArrayIter handle the last batch (#12285)
+* Revert Change the way NDArrayIter handle the last batch (#12537)
+* Track epoch metric separately (#12182)
+* Set correct update on kvstore flag in dist_device_sync mode (#12786)
+
+### Frontend API updates
+
+#### Gluon
+
+* Update basic_layers.py (#13299)
+* Gluon LSTM Projection and Clipping Support (#13056)
+* Make Gluon download function to be atomic (#12572)
+* [MXNET -1004] Poisson NegativeLog Likelihood loss (#12697)
+* add activation information for mxnet.gluon.nn._Conv (#12354)
+* Gluon DataLoader: avoid recursionlimit error (#12622)
+
+#### Symbol
+* Addressed dumplicate object reference issues (#13214)
+* Throw exception if MXSymbolInferShape fails. (#12733)
+* Infer dtype in SymbolBlock import from input symbol (#12412)
+
+### Language API updates
+#### Java
+* [MXNET-1198] MXNet Java API (#13162)
+
+#### R
+* Refactor R Optimizers to fix memory leak - 11374
+* Add new Vignettes to the R package
+  * Char-level Language modeling - 12670
+  * Multidimensional Time series forecasting - 12664
+* Fix broken Examples and tutorials
+  * Tutorial on neural network introduction - 12117
+  * CGAN example - 12283
+  * Test classification with LSTMs - 12263
+
+#### Scala
+* explain the details for Scala Experimental (#12348)
+* MXNET-873 - Bring Clojure Package Inline with New DataDesc and Layout in Scala Package (#12387)
+* [MXNET-716] Adding Scala Inference Benchmarks (#12721)
+* [MXNET-716][MIRROR #12723] Scala Benchmark Extension pack (#12758)
+* NativeResource Management in Scala (#12647)
+* Ignore generated scala files. (#12928)
+* use ResourceScope in Model/Trainer/FeedForward.scala (#12882)
+* [MXNET-1180] Scala Image API (#12995) 
+* ONNX export: Scalar, Reshape - Set appropriate tensor type (#13067)
+* Port of scala Image API to clojure (#13107) 
+* update log4j version of Scala package (#13131)
+* review require() usages to add meaningful messages. (#12570)
+
+#### Clojure
+* Introduction to Clojure-MXNet video link. (#12754)
+* Improve the Clojure Package README to Make it Easier to Get Started (#12881)
+
+#### Perl
+* [MXNET-1026] [Perl] Sync with recent changes in Python's API (#12739)
+
+#### Julia
+* import Julia binding
+
+### Performance improvements
+* update mshadow for omp acceleration when nvcc is not present  (#12674)
+* [MXNET-860] Avoid implicit double conversions (#12361)
+
+### Bug fixes
+* Fix a bug in where op with 1-D input (#12325)
+* [MXNET-825] Fix CGAN R Example with MNIST dataset (#12283)
+* [MXNET-535] Fix bugs in LR Schedulers and add warmup (#11234)
+* Fix speech recognition example (#12291)
+* fix bug in 'device' type kvstore (#12350)
+* fix search result 404s (#12414) 
+* fix help in imread (#12420)
+* fix render issue on &lt; and &gt; (#12482)
+* [MXNET-853] Fix for smooth_l1 operator scalar default value (#12284)
+* fix subscribe links, remove disabled icons (#12474)
+* Fix broken URLs (#12508)
+* Fix/public internal header (#12374)
+* Fix lazy record io when used with dataloader and multi_worker > 0 (#12554)
+* Fix error in try/finally block for blc (#12561)
+* add cudnn_off parameter to SpatialTransformer Op and fix the inconsistency between CPU & GPU code (#12557)
+* [MXNET-798] Fix the dtype cast from non float32 in Gradient computation (#12290)
+* Fix CodeCovs proper commit detection (#12551)
+* add TensorRT tutorial to index and fix ToC (#12587)
+* Fixed typo in c_predict_api.cc (#12601)
+* Fix typo in profiler.h (#12599)
+* Fixed NoSuchMethodError for Jenkins Job for MBCC (#12618)
+* [MXNET-922] Fix memleak in profiler (#12499)
+* [MXNET-969] Fix buffer overflow in RNNOp (#12603) 
+*  Fixed param coercion of clojure executor/forward (#12627) (#12630)
+* Fix version dropdown behavior (#12632)
+* Fix reference to wrong function (#12644)
+* Fix the location of the tutorial of control flow operators (#12638)
+* fix bug, issue 12613 (#12614)
+* [MXNET-780] Fix exception handling bug (#12051)
+* fix bug in prelu , issue 12061 (#12660) 
+* [MXNET-833] [R] Char-level RNN tutorial fix (#12670)
+* Fix static / dynamic linking of gperftools and jemalloc (#12714)
+* Fix #12672, importing numpy scalars (zero-dimensional arrays) (#12678)
+* [MXNET-623] Fixing an integer overflow bug in large NDArray (#11742)
+* fix benchmark on control flow operators. (#12693)
+* Fix regression in MKLDNN caused by PR 12019 (#12740)
+* Fixed broken link for Baidu's WARP CTC (#12774)
+* fix cnn visualization tutorial (#12719) 
+* [MXNET-979] Add fix_beta support in BatchNorm (#12625)
+* R fix metric shape (#12776)
+* Revert [MXNET-979] Add fix_beta support in BatchNorm (#12625) (#12789)
+* Fix mismatch shapes (#12793)
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (#12794)
+* Fixed __setattr__ method of _MXClassPropertyMetaClass (#12811)
+* Fixed regex for matching platform type in Scala Benchmark scripts (#12826)
+* Fix broken links (#12856)
+* Fix Flaky Topk (#12798)
+* [MXNET-1033] Fix a bug in MultiboxTarget GPU implementation (#12840)
+* [MXNET-1107] Fix CPUPinned unexpected behaviour (#12031)
+* Fix __all__ in optimizer/optimizer.py (#12886)
+* Fix Batch input issue with Scala Benchmark (#12848)
+* fix type inference in index_copy. (#12890)
+* fix the paths issue for downloading script (#12913)
+* fix indpt[0] for take(csr) (#12927)
+* Fix the bug of assigning large integer to NDArray (#12921)
+* fix Sphinx errors for tutorials and install ToCs (#12945)
+* fix readme (#13082)
+* Fix variable name in tutorial code snippet (#13052)
+* Fix example for mxnet.nd.contrib.cond and fix typo in src/engine (#12954)
+* Fix a typo in operator guide (#13115)
+* Fix variational autoencoder example (#12880)
+* Fix problem with some OSX not handling the cast on imDecode (#13207)
+* Sphinx failure fixes (#13213)
+* Revert Sphinx failure fixes (#13230)
+* [MXNET-953] Fix oob memory read (#12631)
+* Fix Sphinx error in ONNX file (#13251)
+* [Example] Fixing Gradcam implementation (#13196)
+* fix train mnist for inception-bn and resnet (#13239)
+* Fix a bug in index_copy (#13218)
+* Fix Sphinx errors in box_nms (#13261)
+* Fix Sphinx errors (#13252)
+* fix the flag (#13293)
+* Made fixes to sparse.py and sparse.md (#13305)
+* [Example] Gradcam- Fixing a link (#13307)
+* Manually track num_max_thread (#12380)
+* [Issue #11912] throw mxnet exceptions when decoding invalid images. (#12999)
+* Undefined name: load_model() --> utils.load_model() (#12867)
+* Change the way NDArrayIter handle the last batch (#12545)
+* Add embedding to print_summary (#12796)
+* allow foreach on input with 0 length (#12471)
+* [MXNET-360]auto convert str to bytes in img.imdecode when py3 (#10697)
+
+### Licensing updates
+* Add license headers to R-package (#12559)
+* License header (#13178)
+* add url and license to clojure package project (#13304)
+
+### Improvements
+#### Tutorial
+* [MXNET-422] Distributed training tutorial (#10955)
+* Add a tutorial for control flow operators. (#12340)
+* Add tutorial Gotchas using NumPy (#12007)
+* Updated Symbol tutorial with Gluon (#12190)
+* improve tutorial redirection (#12607) 
+* Include missing import in TensorRT tutorial (#12609)
+* Update Operator Implementation Tutorial (#12230)
+* add a tutorial for the subgraph API. (#12698)
+* Improve clojure tutorial (#12974)
+* Update scala intellij tutorial (#12827)
+* [Example] Gradcam consolidation in tutorial (#13255)
+* [MXNET-1203] Tutorial infogan  (#13144)
+* [MXNET-703] Add a TensorRT walkthrough (#12548)
+
+#### Example
+* update C++ example so it is easier to run (#12397)
+* [MXNET-580] Add SN-GAN example (#12419)
+* [MXNET-637] Multidimensional LSTM example for MXNetR (#12664)
+* [MXNET-982] Provide example to illustrate usage of CSVIter in C++ API (#12636)
+* [MXNET-947] Expand scala imclassification example with resnet (#12639)
+* MKL-DNN Quantization Examples and README (#12808)
+* Extending the DCGAN example implemented by gluon API to provide a more straight-forward evaluation on the generated image (#12790)
+* [MXNET-1017] Updating the readme file for cpp-package and adding readme file for example directory. (#12773)
+* Update tree lstm example (#12960)
+* Update bilstm integer array sorting example (#12929)
+* Updated / Deleted some examples (#12968)
+* Update module example (#12961) 
+* Update adversary attack generation example (#12918)
+* Update Gluon example folder (#12951)
+* Update dec example (#12950)
+* Updated capsnet example (#12934)
+* Updates to several examples (#13068)
+* Update multi-task learning example (#12964)
+* Remove obsolete memory cost example (#13235)
+* [Example] Update cpp example README (#13280)
+* [Example]update NER example readme on module prediction (#13184)
+* Update proposal_target.py (#12709)
+* Removing the re-size for validation data, which breaking the validation accuracy of CIFAR training (#12362)
+
+#### Documentation
+* Update ONNX API docs references (#12317)
+* Documentation update related to sparse support (#12367)
+* Edit shape.array doc and some style improvements (#12162)
+* fixed docs/website build checkout bug (#12413)
+* Add Python API docs for test_utils and visualization (#12455)
+* Fix the installation doc for MKL-DNN backend (#12534)
+* Added comment to docs regarding ToTensor transform (#12186)
+* Pinned dockcross to a tag with fixed ABI for RPi (#12588)
+* Refine the documentation of im2rec (#12606)
+* Update and modify Windows docs (#12620)
+* update docs to list cmake required for build from source page (#12592)
+* update the distributed_training document (#12626)
+* Add docstring in im2rec.py (#12621)
+* [Doc] Change the description for pip packages (#12584)
+* Change dependencies documentation opencv2-->opencv (#12654)
+* Add documents for two new environment variables for memory pool. (#12668)
+* Scala Docs - Replace old Symbol api usages (#12759)
+* add/update infer_range docs (#12879)
+* Fix typo in formula in docstring for GRU cell and layer and add clarification to description (gluon.rnn) (#12896)
+* Fix the operator API documentation (#12942)
+* fix broken docs (#12871)
+* fix mac r install and windows python build from source docs (#12919)
+* Document the newly added env variable (#13049)
+* Add documentation on GPU performance on Quantization example (#13145)
+* Fix Sphinx python docstring formatting error. (#13177)
+* [Doc] Fix repo paths in Ubuntu build doc (#13101)
+* Fix Sphinx document parsing error. (#13195)
+* Fix #13090, Add image.imread to python API doc. (#13176)
+* Fix Sphinx docstring formatting error. (#13004, #13005, #13006) (#13175)
+* Fix #12944, Fix Sphinx python docstring formatting error. (#13174)
+* Fix #13013, Fix Sphinx python docstring error. (#13173)
+* Fixed Sparse astype doc string formatting error (#13171)
+* Fixed Documentation issues (#13215)
+* update the doc (#13205)
+* Fix Sphinx doc errors (#13170)
+* Fix Sphinx python docstring error: initializer.InitDesc (#12939) (#13148)
+* Fix Sphinx python docstring error: text contrib module (#12949) (#13149)
+* Fix Sphinx python docstrings (#13160)
+* Add Java API docs generation (#13071)
+* Fix scaladoc build errors (#13189)
+* Add missing documentations for getnnz (#13128)
+* Addressed ONNX module documentation warnings and added notes for short-form representation (#13259)
+* Doc fixes (#13256)
+* Addressed doc issues (#13165)
+* stop gap fix to let website builds through; scaladoc fix pending (#13298)
+* Fix Sphinx python docstring formatting error. (#13194)
+* Visualization doc fix. Added notes for shortform (#13291)
+* [Example] Add docstring for test optimizer and test score (#13286)
+* Fix descriptions in scaladocs for macro ndarray/sybmol APIs (#13210)
+* Sphinx error reduction (#12323)
+* Sphinx errors in Gluon (#13275)
+* Update env_var.md (#12702)
+* Updated the Instructions for use of the label bot (#13192)
+* update the README (#13186)
+* Added/changed file_name, brief description comments in some files (#13033)
+* Add more models to benchmark_score (#12780)
+* Add resnet50-v1 to benchmark_score (#12595)
+
+#### Test
+* Add cloverage codecov report to CI for clojure (#12335)
+* Disable flaky test test_operator.test_dropout (#12330)
+* add initializer test (#12196)
+* [MXAPPS-581] Disable a long test in the SD nightly. (#12326)
+* [MXAPPS-581] Disable a long test in the SD nightly. (#12326) (#12339)
+* Disable flaky test test_ndarray.test_order (#12311)
+* fix flaky test: test_broadcast_binary_op (#11875)
+* [MXAPPS-581] Disable an additional long test in the SD nightly (#12343)
+* [MXNET-690] Add tests for initializers in R (#12360)
+* Disabled flaky test: test_mkldnn.test_activation (#12378)
+* support softmin operator with unit test (#12306)
+* Revert Revert Disable kvstore test (#11798) (#12279) (#12379)
+* fixed flaky test issue for test_operator_gpu.test_convolution_grouping (#12385)
+* fixed flaky test issue for test_operator_gpu.test_depthwise_convolution (#12402)
+* adjust tolerance levels of test_l2_normalization (#12429)
+* Revert fixed flaky test issue for test_operator_gpu.test_depthwise_convolution (#12402) (#12441)
+* remove flaky test and add consistency test for stable testing (#12427)
+* Fix flaky test test_operator_gpu.test_batchnorm_with_type (#11873)
+* [MXNET-909] Disable tvm_bridge test (#12476)
+* Fix flaky test: test_mkldnn.test_activation #12377 (#12418)
+* Temporarily disable flaky tests (#12513)
+* Temporarily disable flaky tests (#12520)
+* Revert Fix flaky test: test_mkldnn.test_activation #12377 (#12418) (#12516)
+* [MXNET-851] Test coverage metrics for R-package (#12391)
+* redirecting navigation items to latest info (#12540)
+* Disable installation nightly test (#12571)
+* [MXNET-952] Check for correlation kernel size along with unittest (#12558)
+* [MXNET-968] Fix MacOS python tests (#12590)
+* [MXNET-908] Enable python tests in Travis (#12550)
+* fix test_activation by lowering threshold + validate eps for check_numeric_gradient (#12560)
+* Enable gluon multi worker data loader test (#12315)
+* Remove fixed seed for test_ctc_loss (#12686)
+* fix for test order (#12358) 
+* [MXNET-500]Test cases improvement for MKLDNN on Gluon (#10921)
+* Enable test_gluon.test_export (#12688)
+* Disable test batchnorm slice (#12716)
+* Reenable test_gluon.test_conv (#12718)
+* Update packages and tests in the straight dope nightly (#12744)
+* Fix failing GPU test on single GPU host (kvstore) (#12726)
+* [MXNET-915] Java Inference API core wrappers and tests (#12757)
+* Disabled flaky test: test_mkldnn.test_Deconvolution (#12770)
+* Re-enables test_dropout (#12717)
+* [MXNET-707] Add unit test for mxnet to coreml converter (#11952)
+* Added context object to run TestCharRnn example (#12841)
+* [MXNET-703] Show perf info for TensorRT during tests (#12656)
+* [MXNET-793] ★ Virtualized testing in CI with QEMU ★ (#12094)
+* Disabled flaky test: test_gluon_gpu.test_slice_batchnorm_reshape_batchnorm (#12768)
+* Refactor mkldnn test files (#12410)
+* enable batchnorm unit tests (#12986)
+* Disable flaky test test_operator.test_dropout (#13057)
+* Disable flaky test test_prelu (#13060)
+* [MXNET-793] Virtual testing with Qemu, refinement and extract test results to root MXNet folder (#13065)
+* Disable travis tests (#13137)
+* [MXNET-1194] Reenable nightly tutorials tests for Python2 and Python3 (#13099)
+* Refactor kvstore test (#13140)
+* Disable Flaky test test_operator.test_clip (#12902)
+* Tool to ease compilation and reproduction of test results (#13202)
+* Implemented a regression unit test for #11793 (#12975)
+* Fix test failure due to hybridize call in test_gluon_rnn.test_layer_fill_shape (#13043)
+* adding unit test for MKLDNN FullyConnected operator (#12985)
+* enabling test_dropout after fixing flaky issue (#13276)
+*  set proper atol for check_with_uniform (#12313)
+
+#### Website
+* adding apache conf promo to home page (#12347)
+* Consistent website theme and custom 404 (#12426)
+* update apachecon links to https (#12521)
+* [HOLD] 1.3.0 release website updates (#12509)
+* add mentions of the gluon toolkits and links to resources (#12667)
+* remove apachecon promo (#12695)
+* [MXNet-1002] Add GluonCV and NLP tookits, Keras, and developer wiki to navigation (#12704)
+
+#### MXNet Distributions
+* Make the output of ci/docker/install/ubuntu_mklml.sh less verbose (#12422)
+* Fix tvm dependency for docker (#12479)
+* [MXNET-703] Add TensorRT runtime Dockerfile (#12549)
+* [MXNET-951] Python dockerfiles built on pip binaries and build/release script (#12556)
+* Change numpy version to 1.15.2 in python and docker install requirements (#12711)
+* Add mkl-dnn to docker install method (#12643)
+* Fix docker cleanup race condition (#13092)
+* Bugfix in ci/docker_cache.py (#13249)
+* Update PyPI version number (#11773)
+* update download links to apache distros (#12617)
+
+#### Installation
+* Installation instructions consolidation (#12388)
+* Refine mxnet python installation (#12696)
+* R install instructions update for macOS (#12832)
+* remove legacy installation of Roxygen2 5.0 and add R-specific clean target (#12993) (#12998)
+* Force APT cache update before executing install (#13285)
+* Make the Ubuntu scripts executable after download. (#12180)
+* replacing windows setup with newer instructions (#12504)
+* Updated download links and verification instructions (#12651)
+* Remove pip overwrites (#12604)
+
+#### Build and CI
+* [MXNET-908] Enable minimal OSX Travis build (#12462)
+* Used jom for parallel windows builds (#12533)
+* [MXNET-950] Enable parallel R dep builds in CI (#12552)
+* Speed up CI windows builds (#12563)
+* [MXNET-908] Speed up travis builds to avoid timeouts (#12706)
+* simplify mac mkldnn build (#12724)
+* [MXNET-674] Speed up GPU builds in CI (#12782)
+* Improved git reset for CI builds (#12784)
+* Improve cpp-package example project build files. (#13093)
+* Add --no-cache option to build.py when building containers (#13182)
+* Addressed sphinx build issue (#13246)
+* Tighten up PyLint directives again (#12322)
+* [MXNET-859] Add a clang-tidy stage to CI (#12282)
+* A solution to prevent zombie containers locally and in CI (#12381)
+*  [MXNET-696][PYTHON][UNDEFINED NAME] import logging in ci/util.py (#12488)
+* [MXNET-703] Static linking for libprotobuf with TensorRT (#12475)
+* Remove regression checks for website links (#12507)
+* [MXNET-953] - Add ASAN sanitizer, Enable in CI (#12370)
+* allow custom path and static linking for custom mallocs in make (#12645)
+* Correct PR branch detection in code coverage (#12615)
+* Update osx.mk - Added apple to USE_BLAS comment (#12819)
+* [MXNET-953] Correct ASAN cflags flag (#12659)
+* [MXNET-1025] Add Jetpack 3.3 support to Jetson (#12735)
+* Fail the broken link job when broken links are found (#12905)
+* removed unused header (#13066)
+* Maven Surefire bug workaround (#13081)
+* Add Turing and Volta support to arch_name (#13168)
+* Moves f16c autodetection to its own cmake module (#12331)
+* la_op_inline.h to la_op-inl.h for consistency (#13045)
+* [MXNET-793] Virtualized ARMv7 with Qemu CI integration (#13203)
+* remove unused variable rotateM_ (#10803)
+* Separate refactoring from #12276 in a prior PR (#12296)
+* [MXNET-860] Remove std::moves that have no affect (#12730)
+* [MXNET-860] Use emplace where helpful (#12694)
+* Enable C++ coverage (#12642)
+* [MXNET-860] Update to modern nullptr usage (#12352)
+* [MXNET-860] Reduce redundant copies, check for regressions with clang-tidy (#12355)
+
+
+#### 3rd party
+##### TVM: 
+* Updated tvm submodule head (#12764)
+* Updated tvm submodule head (#12448)
+##### CUDNN: 
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (#12992)
+* CudnnFind() usage improvements (#12804)
+* Add option for automatic downcasting dtype for cudnn to allow using Tensorcore for fp32  (#12722)
+##### Horovod:
+* [MXNET-1111] Remove CPUPinned in ImageRecordIter (#12666)
+
+### Deprications
+* Add a deprecate message (#13042) contrib_CTCLoss is deprecated. Added a message in command
+### Other
+* Updating news, readme files and bumping master version to 1.3.1 (#12525)
+* dd new name to CONTRIBUTORS.md (#12763)
+* Update contribute.md (#12685)
+* Updated CONTRIBUTORS.md to include lebeg and gigasquid, moved mabreu to committers section (#12766)
+* Update CONTRIBUTORS.md (#12996)
+* Updated CONTRIBUTORS.md to include mxnet-label-bot  (#13048)
+
+### How to build MXNet
+Please follow the instructions at https://mxnet.incubator.apache.org/install/index.html
+
+### List of submodules used by Apache MXNet (Incubating) and when they were updated last
+Submodule@commit ID::Last updated by MXNet:: Last update in submodule
+
+* cub@::Jul 31, 2017 :: Jul 31, 2017
+* dlpack@:: Oct 30, 2017 :: Aug 23, 2018
+* dmlc-core@:: Aug 15, 2018 :: Nov 15, 2018
+* googletest@:: July 14, 2016 :: July 14, 2016
+* mkldnn@:: Nov 7, 2018 :: Nov 5, 2018
+* mshadow@:: Sep 28, 2018 :: Nov 7,  2018
+* onnx-tensorrt@:: Aug 22, 2018 :: Nov 10, 2018
+* openmp@: Nov 22, 2017 :: Nov 13, 2018
+* ps-lite@: April 25, 2018 :: Oct 9, 2018
+* tvm@: Oct 10, 2018 :: Oct 8, 2018
+
+
+
 ## 1.3.1
 
 ### Bug fixes
