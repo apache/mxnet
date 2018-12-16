@@ -21,6 +21,7 @@
  * \file sarange.cc
 */
 #include "./sarange-inl.h"
+#include "../tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -64,7 +65,15 @@ Experimental CPU-only support for arange of symbolic input.
 .set_attr<nnvm::FInferType>("FInferType", SArangeType)
 .set_attr<FInferStorageType>("FInferStorageType", SArangeStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SArangeForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_contrib_sarange"})
 .add_argument("data", "NDArray-or-Symbol", "Data")
+.add_arguments(SArangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_contrib_sarange)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::relu_grad>>)
 .add_arguments(SArangeParam::__FIELDS__());
 
 }  // namespace op
