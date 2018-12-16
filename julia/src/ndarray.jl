@@ -1248,10 +1248,11 @@ _ndsig[:reshape] = :(reshape(x; shape = dim, reverse = !reverse))
 
 Base.sum(x::NDArray; dims = :) = _sum(x, dims)
 @_remap _sum(x::NDArray, ::Colon) sum(x)
-@_remap _sum(x::NDArray, dims) sum(x; axis = 0 .- dims, keepdims = true)
+@_remap _sum(x::NDArray, dims)    sum(x; axis = 0 .- dims, keepdims = true)
 
-@_remap Base.maximum(x::NDArray)       max(x)
-@_remap Base.maximum(x::NDArray, dims) max(x; axis = 0 .- dims, keepdims = true)
+Base.maximum(x::NDArray; dims = :) = _maximum(x, dims)
+@_remap _maximum(x::NDArray, ::Colon) max(x)
+@_remap _maximum(x::NDArray, dims)    max(x; axis = 0 .- dims, keepdims = true)
 
 @_remap Base.minimum(x::NDArray)       min(x)
 @_remap Base.minimum(x::NDArray, dims) min(x; axis = 0 .- dims, keepdims = true)
