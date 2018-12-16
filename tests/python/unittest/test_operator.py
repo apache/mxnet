@@ -4827,6 +4827,16 @@ def test_boolean_mask():
 
 
 @with_seed()
+def test_sarange():
+    if default_context().device_type != 'cpu':
+        return
+    data = mx.nd.array([5])
+    out = mx.nd.contrib.sarange(data)
+    expected = np.array([0, 1, 2, 3, 4])
+    assert same(out.asnumpy(), expected)
+
+
+@with_seed()
 def test_div_sqrt_dim():
     data_tmp = np.random.normal(0, 1, (5, 10, 8))
     data = mx.symbol.Variable('data')
