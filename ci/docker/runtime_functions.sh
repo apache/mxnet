@@ -502,6 +502,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
     make  \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
         USE_MKLDNN=1                  \
         -j$(nproc)
