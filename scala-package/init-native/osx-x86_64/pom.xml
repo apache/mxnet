@@ -121,7 +121,7 @@
             </goals>
             <configuration>
               <executable>install_name_tool</executable>
-              <commandlineArgs>-change lib/libmxnet.so @loader_path/libmxnet.so ${project.build.directory}/${artifactId}.jnilib</commandlineArgs>
+              <commandlineArgs>-change @rpath/libmxnet.so @loader_path/libmxnet.so ${project.build.directory}/${artifactId}.jnilib</commandlineArgs>
             </configuration>
           </execution>
           <execution>
