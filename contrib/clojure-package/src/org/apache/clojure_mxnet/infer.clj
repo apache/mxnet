@@ -18,9 +18,6 @@
 (ns org.apache.clojure-mxnet.infer
   (:refer-clojure :exclude [type])
   (:require [org.apache.clojure-mxnet.context :as context]
-            [org.apache.clojure-mxnet.dtype :as dtype]
-            [org.apache.clojure-mxnet.io :as io]
-            [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.util :as util]
             [clojure.spec.alpha :as s])
   (:import (org.apache.mxnet NDArray)
@@ -28,12 +25,12 @@
                                    ObjectDetector Predictor)))
 
 (defprotocol APredictor
-  (predict [this input])
-  (predict-with-ndarray [this input-array]))
+  (predict [this inputs])
+  (predict-with-ndarray [this input-arrays]))
 
 (defprotocol AClassifier
-  (classify [this input] [this input topk])
-  (classify-with-ndarray [this input] [this input topk]))
+  (classify [this inputs] [this inputs topk])
+  (classify-with-ndarray [this inputs] [this inputs topk]))
 
 (defprotocol AImageClassifier
   (classify-image [this image] [this image topk])
@@ -53,37 +50,45 @@
 
 (extend-protocol APredictor
   WrappedPredictor
-  (predict [this input]
+  (predict [this inputs]
     (util/coerce-return-recursive
-     (.predict (:predictor this) input)))
-  (predict-with-ndarray [this input-array]
+     (.predict (:predictor this)
+               (util/vec->indexed-seq inputs))))
+  (predict-with-ndarray [this input-arrays]
     (util/coerce-return-recursive
-     (.predictWithNDArray (:predictor this) input-array))))
+     (.predictWithNDArray (:predictor this)
+                          (util/vec->indexed-seq input-arrays)))))
 
 (extend-protocol AClassifier
   WrappedClassifier
-  (classify [this input]
-    (classify this input nil))
-  (classify [this input topk]
+  (classify [this inputs]
+    (classify this inputs nil))
+  (classify [this inputs topk]
     (util/coerce-return-recursive
-     (.classify (:classifier this) input (util/->int-option topk))))
-  (classify-with-ndarray [this input]
-    (classify-with-ndarray this input nil))
-  (classify-with-ndarray [this input topk]
+     (.classify (:classifier this)
+                (util/vec->indexed-seq inputs)
+                (util/->int-option topk))))
+  (classify-with-ndarray [this inputs]
+    (classify-with-ndarray this inputs nil))
+  (classify-with-ndarray [this inputs topk]
     (util/coerce-return-recursive
-     (.classifyWithNDArray (:classifier this) input (util/->int-option topk))))
+     (.classifyWithNDArray (:classifier this)
+                           (util/vec->indexed-seq inputs)
+                           (util/->int-option topk))))
   WrappedImageClassifier
-  (classify [this input]
-    (classify this input nil))
-  (classify [this input topk]
+  (classify [this inputs]
+    (classify this inputs nil))
+  (classify [this inputs topk]
     (util/coerce-return-recursive
-     (.classify (:image-classifier this) input (util/->int-option topk))))
-  (classify-with-ndarray [this input]
-    (classify-with-ndarray this input nil))
-  (classify-with-ndarray [this input topk]
+     (.classify (:image-classifier this)
+                (util/vec->indexed-seq inputs)
+                (util/->int-option topk))))
+  (classify-with-ndarray [this inputs]
+    (classify-with-ndarray this inputs nil))
+  (classify-with-ndarray [this inputs topk]
     (util/coerce-return-recursive
      (.classifyWithNDArray (:image-classifier this)
-                           input
+                           (util/vec->indexed-seq inputs)
                            (util/->int-option topk)))))
 
 (extend-protocol AImageClassifier
@@ -115,7 +120,7 @@
   (detect-objects-batch [this images topk]
     (util/coerce-return-recursive
      (.imageBatchObjectDetect (:object-detector this)
-                              (util/convert-vector images)
+                              images
                               (util/->int-option topk))))
   (detect-objects-with-ndarrays [this input-arrays]
     (detect-objects-with-ndarrays this input-arrays nil))
@@ -178,6 +183,12 @@
             (into-array contexts)
             (util/->int-option epoch))))))
 
+(defn model-factory
+  "Creates a factory that can be used to instantiate an image classifier
+  predictor or object detector"
+  [model-path-prefix input-descriptors]
+  (->InferenceFactory model-path-prefix input-descriptors))
+
 (defn reshape-image
   "Reshape an image to a new shape"
   [image width height]
@@ -197,27 +208,3 @@
   "Loads images from a list of file names"
   [image-paths]
   (ImageClassifier/loadInputBatch (util/convert-vector image-paths)))
-
-;;; Testing
-;(def factory (->InferenceFactory
-;              "/Users/kedar_bellare/Projects/incubator-mxnet/contrib/clojure-package/scripts/infer/models/resnet-152/resnet-152"
-;              [(io/data-desc {:name "data"
-;                              :shape [1 3 224 224]
-;                              :layout layout/NCHW
-;                              :dtype dtype/FLOAT32})]))
-;(def imcls (create-image-classifier factory))
-(def factory (->InferenceFactory
-              "/Users/kedar_bellare/Projects/incubator-mxnet/contrib/clojure-package/scripts/infer/models/resnet50_ssd/resnet50_ssd_model"
-              [(io/data-desc {:name "data"
-                             :shape [1 3 512 512]
-                              :layout layout/NCHW
-                              :dtype dtype/FLOAT32})]))
-(def imdetect (create-object-detector factory))
-
-(def kitten-file "/Users/kedar_bellare/Projects/incubator-mxnet/contrib/clojure-package/scripts/infer/images/kitten.jpg")
-(def kitten (load-image-from-file kitten-file))
-(def kittens (load-image-paths [kitten-file kitten-file]))
-
-;(classify-image imcls kitten 2)
-;(classify-image-batch imcls kittens 2)
-(detect-objects imdetect kitten 2)

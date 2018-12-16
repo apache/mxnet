@@ -1,0 +1,113 @@
+(ns infer.objectdetector-example
+  (:require [org.apache.clojure-mxnet.context :as context]
+            [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.infer :as infer]
+            [org.apache.clojure-mxnet.io :as mx-io]
+            [org.apache.clojure-mxnet.layout :as layout]
+            [clojure.java.io :as io]
+            [clojure.string :refer [join]]
+            [clojure.tools.cli :refer [parse-opts]])
+  (:gen-class))
+
+(defn check-valid-dir
+  "Check that the input directory exists"
+  [input-dir]
+  (let [dir (io/file input-dir)]
+    (and
+     (.exists dir)
+     (.isDirectory dir))))
+
+(defn check-valid-file
+  "Check that the file exists"
+  [input-file]
+  (let [file (io/file input-file)]
+    (.exists file)))
+
+(def cli-options
+  [["-m" "--model-path-prefix PREFIX" "Model path prefix"
+    :default "models/resnet50_ssd/resnet50_ssd_model"
+    :validate [#(check-valid-file (str % "-symbol.json"))
+               "Model path prefix is invalid"]]
+   ["-i" "--input-image IMAGE" "Input image"
+    :default "images/kitten.jpg"
+    :validate [check-valid-file "Input file not found"]]
+   ["-d" "--input-dir IMAGE_DIR" "Input directory"
+    :default "images/"
+    :validate [check-valid-dir "Input directory not found"]]
+   [nil "--device [cpu|gpu]" "Device"
+    :default "cpu"
+    :validate [#(#{"cpu" "gpu"} %) "Device must be one of cpu or gpu"]]
+   [nil "--device-id INT" "Device ID"
+    :default 0]
+   ["-h" "--help"]])
+
+(defn print-predictions
+  "Print image detector predictions for the given input file"
+  [input-file predictions width height]
+  (println (apply str (repeat 80 "=")))
+  (println "Top detected objects for input file:" input-file)
+  (doseq [[label prob-and-bounds] predictions]
+    (println (format
+              "Class: %s Prob=%.5f Coords=(%.3f, %.3f, %.3f, %.3f)"
+              label
+              (aget prob-and-bounds 0)
+              (* (aget prob-and-bounds 1) width)
+              (* (aget prob-and-bounds 2) height)
+              (* (aget prob-and-bounds 3) width)
+              (* (aget prob-and-bounds 4) height))))
+  (println (apply str (repeat 80 "="))))
+
+(defn detect-single-image
+  "Detect objects in a single image and print top-5 predictions"
+  [detector input-image width height]
+  (let [image (infer/load-image-from-file input-image)
+        topk 5
+        [predictions] (infer/detect-objects detector image topk)]
+    (print-predictions input-image predictions width height)))
+
+(defn detect-images-in-dir
+  "Detect objects in all jpg images in the directory"
+  [detector input-dir width height]
+  (let [batch-size 20
+        image-file-batches (->> input-dir
+                                io/file
+                                file-seq
+                                (filter #(.isFile %))
+                                (filter #(re-matches #".*\.jpg$" (.getPath %)))
+                                (mapv #(.getPath %))
+                                (partition-all batch-size))]
+    (doseq [image-files image-file-batches]
+      (let [image-batch (infer/load-image-paths image-files)
+            topk 5]
+        (doseq [[input-image preds]
+                (map list
+                     image-files
+                     (infer/detect-objects-batch detector image-batch topk))]
+          (print-predictions input-image preds width height))))))
+
+(defn run-detector
+  "Runs an image detector based on options provided"
+  [options]
+  (let [{:keys [model-path-prefix input-image input-dir
+                device device-id]} options
+        ctx (if (= device "cpu")
+              (context/cpu device-id)
+              (context/gpu device-id))
+        width 512 height 512
+        descriptors [(mx-io/data-desc {:name "data"
+                                       :shape [1 3 height width]
+                                       :layout layout/NCHW
+                                       :dtype dtype/FLOAT32})]
+        factory (infer/model-factory model-path-prefix descriptors)
+        detector (infer/create-object-detector factory {:contexts [ctx]})]
+    (detect-single-image detector input-image width height)
+    (detect-images-in-dir detector input-dir width height)))
+
+(defn -main
+  [& args]
+  (let [{:keys [options summary errors] :as opts}
+        (parse-opts args cli-options)]
+    (cond
+      (:help options) (println summary)
+      (some? errors) (println (join "\n" errors))
+      :else (run-detector options))))

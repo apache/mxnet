@@ -19,11 +19,11 @@
 
 set -e
 
-MXNET_ROOT=$(cd "$(dirname $0)/../../.."; pwd)
+MXNET_ROOT=$(cd "$(dirname $0)/.."; pwd)
 
-data_path=$MXNET_ROOT/scripts/infer/models/resnet-152/
+data_path=$MXNET_ROOT/models/resnet-18/
 
-image_path=$MXNET_ROOT/scripts/infer/images/
+image_path=$MXNET_ROOT/images/
 
 if [ ! -d "$data_path" ]; then
   mkdir -p "$data_path"
@@ -33,9 +33,12 @@ if [ ! -d "$image_path" ]; then
   mkdir -p "$image_path"
 fi
 
-if [ ! -f "$data_path" ]; then
-  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/resnet-152-0000.params -P $data_path
-  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/resnet-152-symbol.json -P $data_path
-  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/synset.txt -P $data_path
+if [ ! -f "$data_path/resnet-18-0000.params" ]; then
+  wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/resnet-18-symbol.json -P $data_path
+  wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/resnet-18-0000.params -P $data_path
+  wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/synset.txt -P $data_path
+fi
+
+if [ ! -f "$image_path/kitten.jpg" ]; then
   wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/kitten.jpg -P $image_path
 fi
