@@ -5,7 +5,9 @@ MXNet Change Log
 ### New Features
 #### Java Inference API
 
-Model inference is run and managed by software engineers in a production eco-system which is built with tools and frameworks that use Java/Scala as a primary language. Inference on a trained model has two different use-cases:
+Model inference is often managed in a production ecosystem using primarily Java/Scala tools and frameworks. This release seeks to alleviate the need for software engineers to write custom MXNet wrappers to fit their production environment. 
+
+Inference on a trained model has a couple of common use cases:
 
   1. Real time or Online Inference - tasks that require immediate feedback, such as fraud detection
   2. Batch or Offline Inference - tasks that don't require immediate feedback, these are use-cases where you have massive amounts of data and want to run Inference or pre-compute inference results 
