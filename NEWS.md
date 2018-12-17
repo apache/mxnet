@@ -509,7 +509,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-908] Enable minimal OSX Travis build (#12462)
 * Used jom for parallel windows builds (#12533)
 * [MXNET-950] Enable parallel R dep builds in CI (#12552)
-* Speed up CI windows builds (#12563)
+* Speed up CI Windows builds (#12563)
 * [MXNET-908] Speed up travis builds to avoid timeouts (#12706)
 * simplify mac mkldnn build (#12724)
 * [MXNET-674] Speed up GPU builds in CI (#12782)
