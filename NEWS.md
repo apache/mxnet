@@ -25,7 +25,7 @@ More details can be found at the [Java Inference API document](https://cwiki.apa
 MXNet.jl is the Julia package of Apache MXNet. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlights of features include:
 
   * Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
-  * Flexible symbolic manipulation to composite and construct state-of-the-art deep learning models.
+  * Flexible manipulation of symbolic to composite for construction of state-of-the-art deep learning models.
 
 #### Control Flow Operators
 
