@@ -340,7 +340,7 @@ DLManagedTensor* NDArray::ToDLPack() const {
     DLTensor &dltensor = dlmanager->tensor.dl_tensor;
     const int& ndim = dltensor.ndim;
 
-    if (ndim >= 1) {
+    if (dltensor.strides == nullptr && ndim >= 1) {
       int64_t* strides = new int64_t[ndim];
 
       strides[ndim - 1] = 1;
