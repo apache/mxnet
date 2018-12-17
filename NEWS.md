@@ -9,7 +9,7 @@ Model inference is often managed in a production ecosystem using primarily Java/
 
 Inference on a trained model has a couple of common use cases:
 
-  1. Real time or Online Inference - tasks that require immediate feedback, such as fraud detection
+  1. Real-time or Online Inference - tasks that require immediate feedback, such as fraud detection
   2. Batch or Offline Inference - tasks that don't require immediate feedback, these are use-cases where you have massive amounts of data and want to run Inference or pre-compute inference results 
 Batch Inference is performed on big data platforms such as Spark using Scala or Java while Real time Inference is typically performed and deployed on popular web frameworks such as Tomcat, Netty, Jetty, etc. which use Java.  With this project, we want to build a new set of APIs which are Java friendly, compatible with Java 7+, are easy to use for inference, and lowers the entry barrier of consuming MXNet for production use-cases. More details can be found at the [Java Inference API document](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Java+Inference+API).
 
