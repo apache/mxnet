@@ -524,7 +524,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-703] Static linking for libprotobuf with TensorRT (#12475)
 * Remove regression checks for website links (#12507)
 * [MXNET-953] - Add ASAN sanitizer, Enable in CI (#12370)
-* allow custom path and static linking for custom mallocs in make (#12645)
+* Allow custom path and static linking for custom mallocs in make (#12645)
 * Correct PR branch detection in code coverage (#12615)
 * Update osx.mk - Added apple to USE_BLAS comment (#12819)
 * [MXNET-953] Correct ASAN cflags flag (#12659)
