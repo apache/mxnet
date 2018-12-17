@@ -327,6 +327,7 @@ NDArray NDArray::data_ndarray() const {
 struct NDArrayDLManager {
     NDArray handle;  // ref NDArray
     DLManagedTensor tensor;
+    std::unique_ptr<int64_t> strides;
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
@@ -334,6 +335,23 @@ DLManagedTensor* NDArray::ToDLPack() const {
   dlmanager->handle = *this;
   if (!is_none()) {
     dlmanager->tensor.dl_tensor = data().dltensor();
+    // create strides because the strides is nullptr for MXNet NDArray.
+    // MXNet only support compact tensor now.
+    DLTensor &dltensor = dlmanager->tensor.dl_tensor;
+    const int& ndim = dltensor.ndim;
+
+    if (ndim >= 1) {
+      int64_t* strides = new int64_t[ndim];
+
+      strides[ndim - 1] = 1;
+      for (int i = ndim - 2; i >= 0; --i) {
+        strides[i] = dltensor.shape[i + 1] * strides[i + 1];
+      }
+
+      dlmanager->strides.reset(strides);
+      dltensor.strides = strides;
+    }
+
   }
   dlmanager->tensor.manager_ctx = dlmanager;
   dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
