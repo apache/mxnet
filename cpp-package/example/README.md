@@ -2,7 +2,8 @@
 
 ## Building C++ examples
 
-The examples are built while building the MXNet library and cpp-package from source . However, they can be built manually as follows
+The examples in this folder demonstrate the **training** workflow. The **inference workflow** related examples can be found in [inference](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference>) folder.
+The examples in this folder are built while building the MXNet library and cpp-package from source . However, they can be built manually as follows
 
 From cpp-package/examples directory
 
@@ -18,7 +19,7 @@ The examples that are built to be run on GPU may not work on the non-GPU machine
 The makefile will also download the necessary data files and store in a data folder. (The download will take couple of minutes, but will be done only once on a fresh installation.)
 
 
-## Examples
+## Examples demonstrating training workflow
 
 This directory contains following examples. In order to run the examples, ensure that the path to the MXNet shared library is added to the OS specific environment variable viz. **LD\_LIBRARY\_PATH** for Linux, Mac and Ubuntu OS and **PATH** for Windows OS. For example `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/ubuntu/incubator-mxnet/lib` on ubuntu using gpu.
 

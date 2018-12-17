@@ -16,6 +16,10 @@
 
   <packaging>jnilib</packaging>
 
+  <properties>
+    <MXNET_DIR>${project.parent.parent.basedir}/..</MXNET_DIR>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
@@ -62,8 +66,14 @@
             <compilerStartOption>-std=c++0x</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
-            <compilerEndOption>-I../../../include</compilerEndOption>
-            <compilerEndOption>${cflags}</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/include</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/dmlc-core/include</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/mshadow</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/dlpack/include</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/tvm/nnvm/include</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_MKL=0 -DMSHADOW_USE_CUDA=0</compilerEndOption>
+            <compilerEndOption>-g -O0 -fPIC -msse3 -mf16c</compilerEndOption>
+            <compilerEndOption>-Wall -Wsign-compare -Wno-unused-parameter -Wno-unknown-pragmas -Wno-unused-local-typedefs</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
@@ -72,12 +82,9 @@
             <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
-            <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>-force_load ${project.basedir}/../../../lib/libmxnet.a</linkerMiddleOption>
-            <linkerMiddleOption>-force_load ${project.basedir}/../../../3rdparty/tvm/nnvm/lib/libnnvm.a</linkerMiddleOption>
           </linkerMiddleOptions>
           <linkerEndOptions>
-            <linkerEndOption>${ldflags}</linkerEndOption>
+            <linkerEndOption>-Wl,-install_name,libmxnet-scala.jnilib -lmxnet -L${MXNET_DIR}/lib</linkerEndOption>
           </linkerEndOptions>
         </configuration>
 
@@ -86,7 +93,6 @@
             <id>javah</id>
             <phase>generate-sources</phase>
             <configuration>
-              <javahOS>darwin</javahOS>
               <javahProvider>default</javahProvider>
               <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
               <workingDirectory>${basedir}</workingDirectory>
@@ -98,6 +104,36 @@
             <goals>
               <goal>javah</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>post-native-build</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>install_name_tool</executable>
+              <commandlineArgs>-change @rpath/libmxnet.so @loader_path/libmxnet.so ${project.build.directory}/${artifactId}.jnilib</commandlineArgs>
+            </configuration>
+          </execution>
+          <execution>
+            <id>link-native-lib</id>
+            <phase>generate-resources</phase>
+            <goals>
+                <goal>exec</goal>
+            </goals>
+            <configuration>
+                <executable>ln</executable>
+                <commandlineArgs>-sf ${MXNET_DIR}/lib/libmxnet.so ${project.build.directory}/libmxnet.so</commandlineArgs>
+            </configuration>
           </execution>
         </executions>
       </plugin>
