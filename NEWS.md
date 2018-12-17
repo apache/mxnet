@@ -1,4 +1,4 @@
-MXNet Change Log
+Apache MXNet (incubating) Change Log
 ================
 
 ## 1.4.0
