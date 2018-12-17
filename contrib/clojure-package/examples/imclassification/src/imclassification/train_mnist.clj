@@ -32,7 +32,7 @@
 (def batch-size 10) ;; the batch size
 (def optimizer (optimizer/sgd {:learning-rate 0.01 :momentum 0.0}))
 (def eval-metric (eval-metric/accuracy))
-(def num-epoch 5) ;; the number of training epochs
+(def num-epoch 1) ;; the number of training epochs
 (def kvstore "local") ;; the kvstore type
 ;;; Note to run distributed you might need to complile the engine with an option set
 (def role "worker") ;; scheduler/server/worker
@@ -82,7 +82,9 @@
     (sym/fully-connected "fc3" {:data data :num-hidden 10})
     (sym/softmax-output "softmax" {:data data})))
 
-(defn start [devs]
+(defn start 
+  ([devs] (start devs num-epoch))
+  ([devs _num-epoch]
   (when scheduler-host
     (println "Initing PS enviornments with " envs)
     (kvstore-server/init envs))
@@ -94,14 +96,18 @@
     (do
       (println "Starting Training of MNIST ....")
       (println "Running with context devices of" devs)
-      (let [mod (m/module (get-symbol) {:contexts devs})]
-        (m/fit mod {:train-data train-data
+      (let [_mod (m/module (get-symbol) {:contexts devs})]
+        (m/fit _mod {:train-data train-data
                     :eval-data test-data
-                    :num-epoch num-epoch
+                    :num-epoch _num-epoch
                     :fit-params (m/fit-params {:kvstore kvstore
                                                :optimizer optimizer
-                                               :eval-metric eval-metric})}))
-      (println "Finish fit"))))
+                                               :eval-metric eval-metric})})
+        (println "Finish fit")
+        _mod
+        )
+      
+      ))))
 
 (defn -main [& args]
   (let [[dev dev-num] args

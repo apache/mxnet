@@ -24,12 +24,17 @@
             [org.apache.clojure-mxnet.random :as random]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.symbol :as sym]
+            [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
             [mikera.image.core :as img]
             [mikera.image.filters :as img-filter]
             [think.image.pixel :as pixel]
             [neural-style.model-vgg-19 :as model-vgg-19])
   (:gen-class));; An Implementation of the paper A Neural Algorithm of Artistic Style
  ;;by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge
+
+(when-not (.exists (io/file "input"))
+  (do (println "Retrieving data...") (sh "./download.sh")))
 
 (def content-image "input/IMG_4343.jpg")
 (def style-image "input/starry_night.jpg")
@@ -39,7 +44,7 @@
 (def content-weight 5) ;; the weight for the content image
 (def blur-radius 1) ;; the blur filter radius
 (def output-dir "output")
-(def lr 10) ;; the learning rate
+(def lr 10.0) ;; the learning rate
 (def tv-weight 0.01) ;; the magnitude on the tv loss
 (def num-epochs 1000)
 (def num-channels 3)
@@ -157,9 +162,10 @@
           out (ndarray/* out tv-weight)]
       (sym/bind out ctx {"img" img "kernel" kernel}))))
 
-(defn train [devs]
-
-  (let [dev (first devs)
+(defn train 
+  ([devs] (train devs 20)) 
+  ([devs n-epochs]
+    (let [dev (first devs)
         content-np (preprocess-content-image content-image max-long-edge)
         content-np-shape (mx-shape/->vec (ndarray/shape content-np))
         style-np (preprocess-style-image style-image content-np-shape)
@@ -212,7 +218,7 @@
         tv-grad-executor (get-tv-grad-executor img dev tv-weight)
         eps 0.0
         e 0]
-    (doseq [i (range 20)]
+    (doseq [i (range n-epochs)]
       (ndarray/set (:data model-executor) img)
       (-> (:executor model-executor)
           (executor/forward)
@@ -237,8 +243,10 @@
         (println "Epoch " i  "relative change " eps)
         (when (zero? (mod i 2))
           (save-image (ndarray/copy img) (str output-dir "/out_" i ".png") blur-radius true)))
-
-      (ndarray/set old-img img))))
+      (ndarray/set old-img img))
+    ; (save-image (ndarray/copy img) (str output-dir "/final.png") 0 false)
+    ; (postprocess-image img)
+    )))
 
 (defn -main [& args]
   ;;; Note this only works on cpu right now

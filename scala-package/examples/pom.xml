@@ -15,6 +15,7 @@
 
   <properties>
     <skipTests>true</skipTests>
+    <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
   </properties>
 
   <profiles>
@@ -41,6 +42,20 @@
       <properties>
         <platform>linux-x86_64-gpu</platform>
       </properties>
+    </profile>
+    <profile>
+      <id>deployLocal</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <id>release</id>
@@ -137,6 +152,9 @@
             -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
           </argLine>
+          <environmentVariables>
+            <LD_LIBRARY_PATH>${MXNET_DIR}/lib</LD_LIBRARY_PATH>
+          </environmentVariables>
         </configuration>
       </plugin>
       <plugin>

@@ -16,7 +16,9 @@
 ;;
 
 (ns cnn-text-classification.classifier
-  (:require [cnn-text-classification.data-helper :as data-helper]
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
+            [cnn-text-classification.data-helper :as data-helper]
             [org.apache.clojure-mxnet.eval-metric :as eval-metric]
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.module :as m]
@@ -26,11 +28,17 @@
             [org.apache.clojure-mxnet.context :as context])
   (:gen-class))
 
+(def data-dir "data/")
 (def mr-dataset-path "data/mr-data") ;; the MR polarity dataset path
 (def glove-file-path "data/glove/glove.6B.50d.txt")
 (def num-filter 100)
 (def num-label 2)
 (def dropout 0.5)
+
+
+
+(when-not (.exists (io/file (str data-dir)))
+  (do (println "Retrieving data for cnn text classification...") (sh "./get_data.sh")))
 
 (defn shuffle-data [test-num {:keys [data label sentence-count sentence-size embedding-size]}]
   (println "Shuffling the data and splitting into training and test sets")
@@ -103,10 +111,10 @@
   ;;; omit max-examples if you want to run all the examples in the movie review dataset
     ;; to limit mem consumption set to something like 1000 and adjust test size to 100
     (println "Running with context devices of" devs)
-    (train-convnet {:devs [(context/cpu)] :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000})
+    (train-convnet {:devs devs :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000})
     ;; runs all the examples
     #_(train-convnet {:embedding-size 50 :batch-size 100 :test-size 1000 :num-epoch 10})))
 
 (comment
-  (train-convnet {:devs [(context/cpu)] :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000}))
+  (train-convnet {:devs devs :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000}))
 

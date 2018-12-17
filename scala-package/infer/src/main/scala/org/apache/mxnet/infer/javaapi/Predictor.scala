@@ -80,10 +80,11 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
                               An extra List is needed for when the model has more than one input.
     * @return                  Indexed sequence array of outputs
     */
-  def predict(input: java.util.List[java.util.List[Float]]):
-  java.util.List[java.util.List[Float]] = {
+  def predict(input: java.util.List[java.util.List[java.lang.Float]]):
+  java.util.List[java.util.List[java.lang.Float]] = {
     val in = JavaConverters.asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq
-    (predictor.predict(in map {a => a.asScala.toArray}) map {b => b.toList.asJava}).asJava
+    (predictor.predict(in map {a => a.asScala.map(Float2float).toArray})
+      map {b => b.map(float2Float).toList.asJava}).asJava
   }
 
 
