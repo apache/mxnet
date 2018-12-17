@@ -38,7 +38,9 @@ It's natural to express dynamic models in frameworks with an imperative programm
 
 A common use case is that machine learning scientists want to develop their models in Python, whereas engineers who deploy the models usually have to use a different "production" language (e.g., Java or C). Gluon tries to close the gap between the model development and production deployment. Machine learning scientists design and implement their models in Python with the imperative interface, and then Gluon converts the implementations from imperative to symbolic by invoking `hybridize()` for model exporting. 
 
-The goal of this project is to enhance Gluon to turn a dynamic neural network into a static computation graph (where the dynamic control flows are expressed by control flow operators) with Gluon hybridization and export them for deployment. More information can be found at [Optimize dynamic neural network models with control flow operators](https://cwiki.apache.org/confluence/display/MXNET/Optimize+dynamic+neural+network+models+with+control+flow+operators)
+The goal of this project is to enhance Gluon to turn a dynamic neural network into a static computation graph. The dynamic control flows are expressed by control flow operators with Gluon hybridization, and these are exported for deployment. 
+
+More information can be found at [Optimize dynamic neural network models with control flow operators](https://cwiki.apache.org/confluence/display/MXNET/Optimize+dynamic+neural+network+models+with+control+flow+operators)
 
 #### SVRG Optimization
 
