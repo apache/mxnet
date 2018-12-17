@@ -47,7 +47,8 @@ Integration with these backends should happen in the granularity of subgraphs in
 
 #### MXNet nGraph integration
 
-As the diversity of deep learning hardware accelerators increase, it is important to have an efficient abstraction layer so developers can avoid having to enable each accelerator/compute separately. Intel nGraph enables that vision. The primary goal of this integration is to provide a seamless development and deployment experience to data scientists and machine learning engineers to leverage Intel nGraph ecosystem with MXNet. As Subgraph API seamlessly integrates with MXNet frontend API, users should just be able to use or switch nGraph backend with any existing MXNet scripts, models and deployments using the symbolic interface. For more details see  [MXNet nGraph integration using subgraph backend interface](https://cwiki.apache.org/confluence/display/MXNET/MXNet+nGraph+integration+using+subgraph+backend+interface)
+As the diversity of deep learning hardware accelerators increase, it is important to have an efficient abstraction layer so developers can avoid having to enable each accelerator/compute separately. Intel nGraph enables that vision. The primary goal of this integration is to provide a seamless development and deployment experience to data scientists and machine learning engineers to leverage Intel nGraph ecosystem with MXNet. As Subgraph API seamlessly integrates with MXNet frontend API, users should just be able to use or switch nGraph backend with any existing MXNet scripts, models and deployments using the symbolic interface. For more details see  [MXNet nGraph integration using subgraph backend interface](https://cwiki.apache.org/confluence/display/MXNET/MXNet+nGraph+integration+using+subgraph+backend+interface).
+After building MXNet with nGraph support, users can enable nGraph backend by setting MXNET_SUBGRAPH_BACKEND="ngraph" environmental variable.
 
 #### JVM Memory Management
 
@@ -67,6 +68,20 @@ For distributed training, the ring Reduce communication pattern used by NCCL and
   * multiple trees (bandwidth-optimal for large messages) to handle large messages. 
 
 More details can be found here: [Topology-aware AllReduce](https://cwiki.apache.org/confluence/display/MXNET/Single+machine+All+Reduce+Topology-aware+Communication)
+Note: This is an experimental feature and has known problems - see [13341](https://github.com/apache/incubator-mxnet/issues/13341). Please help to contribute to improve the robustness of the feature.
+
+#### MKDNN backend: Graph optimization and Quantization (experimental)
+
+Two advanced features, graph optimization (operator fusion) and reduced-precision (INT8) computation, are introduced to MKL-DNN backend in this release ([#12530](https://github.com/apache/incubator-mxnet/pull/12530), [#13297](https://github.com/apache/incubator-mxnet/pull/13297), [#13260](https://github.com/apache/incubator-mxnet/pull/13260)).
+These features significantly boost the inference performance on CPU (up to 4X) for a broad range of deep learning topologies.
+
+##### Graph Optimization
+MKL-DNN backend takes advantage of MXNet subgraph to implement the most of possible operator fusions for inference, such as Convolution + ReLU, Batch Normalization folding, etc. When using mxnet-mkl package, users can easily enable this feature by setting export MXNET_SUBGRAPH_BACKEND=MKLDNN.
+
+##### Quantization
+Performance of reduced-precision (INT8) computation is also dramatically improved after the graph optimization feature is applied on CPU Platforms. Various models are supported and can benefit from reduced-precision computation, including symbolic models, Gluon models and even custom models. Users can run most of the pre-trained models with only a few lines of commands and a new quantization script imagenet_gen_qsym_mkldnn.py. The observed accuracy loss is less than 0.5% for popular CNN networks, like ResNet-50, Inception-BN, MobileNet, etc.
+
+Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
 
 ### New Operators 
 
@@ -197,6 +212,7 @@ More details can be found here: [Topology-aware AllReduce](https://cwiki.apache.
 * [MXNET-860] Avoid implicit double conversions (#12361)
 
 ### Bug fixes
+* [MXNET-1234] Fix shape inference problems in Activation backward (#13409)
 * Fix a bug in where op with 1-D input (#12325)
 * [MXNET-825] Fix CGAN R Example with MNIST dataset (#12283)
 * [MXNET-535] Fix bugs in LR Schedulers and add warmup (#11234)
