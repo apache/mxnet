@@ -530,7 +530,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-953] Correct ASAN cflags flag (#12659)
 * [MXNET-1025] Add Jetpack 3.3 support to Jetson (#12735)
 * Fail the broken link job when broken links are found (#12905)
-* removed unused header (#13066)
+* Removed unused header (#13066)
 * Maven Surefire bug workaround (#13081)
 * Add Turing and Volta support to arch_name (#13168)
 * Moves f16c autodetection to its own cmake module (#12331)
