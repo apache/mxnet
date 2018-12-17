@@ -560,7 +560,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Add a deprecate message (#13042) contrib_CTCLoss is deprecated. Added a message in command
 ### Other
 * Updating news, readme files and bumping master version to 1.3.1 (#12525)
-* dd new name to CONTRIBUTORS.md (#12763)
+* Add new name to CONTRIBUTORS.md (#12763)
 * Update contribute.md (#12685)
 * Updated CONTRIBUTORS.md to include lebeg and gigasquid, moved mabreu to committers section (#12766)
 * Update CONTRIBUTORS.md (#12996)
