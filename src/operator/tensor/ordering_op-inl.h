@@ -402,7 +402,9 @@ void TopKImpl(const RunContext &ctx,
   temp_size = std::max(temp_size,
     mxnet::op::SortByKeyWorkspaceSize<DType, IDType, xpu>(src.Size()));
   // Additional temp space for gpu full sorts for batch ids.
-  temp_size += PadBytes(sizeof(IDType) * src.Size(), alignment);
+  if (std::is_same<xpu, gpu>::value) {
+    temp_size += PadBytes(sizeof(IDType) * src.Size(), alignment);
+  }
   // Temp space for cpu sorts.
   temp_size = std::max(temp_size, static_cast<size_t>(sizeof(DType) * src.Size()));
   size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
@@ -715,13 +717,8 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_size, 1);
   CHECK(out_size == 1 || out_size == 2);
   if (out_size > 1) {
-    if (param.ret_typ == topk_enum::kReturnValue) {
-      CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt32))
-        << "Failed to set the type of ret_indices.";
-    } else {
-      CHECK(type_assign(&(*out_attrs)[1], param.dtype))
-        << "Failed to set the type of ret_indices.";
-    }
+    CHECK(type_assign(&(*out_attrs)[1], param.dtype))
+      << "Failed to set the type of ret_indices.";
   }
   if (param.ret_typ == topk_enum::kReturnIndices) {
     CHECK(type_assign(&(*out_attrs)[0], param.dtype))
