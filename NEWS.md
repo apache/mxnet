@@ -536,7 +536,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Moves f16c autodetection to its own cmake module (#12331)
 * la_op_inline.h to la_op-inl.h for consistency (#13045)
 * [MXNET-793] Virtualized ARMv7 with Qemu CI integration (#13203)
-* remove unused variable rotateM_ (#10803)
+* Remove unused variable `rotateM_` (#10803)
 * Separate refactoring from #12276 in a prior PR (#12296)
 * [MXNET-860] Remove std::moves that have no affect (#12730)
 * [MXNET-860] Use emplace where helpful (#12694)
