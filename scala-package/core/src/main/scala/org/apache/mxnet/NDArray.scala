@@ -262,6 +262,22 @@ object NDArray extends NDArrayBase {
     arr
   }
 
+  def full(shape: Shape, value: Double, ctx: Context): NDArray = {
+    val arr = empty(shape, ctx, DType.Float64)
+    arr.set(value)
+    arr
+  }
+
+  /**
+    * Create a new NDArray filled with given value, with specified shape.
+    * @param shape shape of the NDArray.
+    * @param value value to be filled with
+    */
+  def full(shape: Shape, value: Double): NDArray = {
+    full(shape, value, null)
+  }
+
+
   // Perform power operator
   def power(lhs: NDArray, rhs: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_power", Seq(lhs, rhs))
@@ -271,7 +287,15 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(lhs, rhs))
   }
 
+  def power(lhs: NDArray, rhs: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(lhs, rhs))
+  }
+
   def power(lhs: Float, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_rpower_scalar", Seq(lhs, rhs))
+  }
+
+  def power(lhs: Double, rhs: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_rpower_scalar", Seq(lhs, rhs))
   }
 
@@ -284,7 +308,15 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
   }
 
+  def maximum(lhs: NDArray, rhs: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
+  }
+
   def maximum(lhs: Float, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
+  }
+
+  def maximum(lhs: Double, rhs: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
   }
 
@@ -297,7 +329,15 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
   }
 
+  def minimum(lhs: NDArray, rhs: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
+  }
+
   def minimum(lhs: Float, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
+  }
+
+  def minimum(lhs: Double, rhs: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
   }
 
@@ -311,6 +351,10 @@ object NDArray extends NDArrayBase {
   }
 
   def equal(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_equal_scalar", Seq(lhs, rhs))
+  }
+
+  def equal(lhs: NDArray, rhs: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_equal_scalar", Seq(lhs, rhs))
   }
 
@@ -328,6 +372,10 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_not_equal_scalar", Seq(lhs, rhs))
   }
 
+  def notEqual(lhs: NDArray, rhs: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_not_equal_scalar", Seq(lhs, rhs))
+  }
+
   /**
    * Returns the result of element-wise **greater than** (>) comparison operation
    * with broadcasting.
@@ -339,6 +387,10 @@ object NDArray extends NDArrayBase {
   }
 
   def greater(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_greater_scalar", Seq(lhs, rhs))
+  }
+
+  def greater(lhs: NDArray, rhs: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_greater_scalar", Seq(lhs, rhs))
   }
 
@@ -356,6 +408,10 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_greater_equal_scalar", Seq(lhs, rhs))
   }
 
+  def greaterEqual(lhs: NDArray, rhs: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_greater_equal_scalar", Seq(lhs, rhs))
+  }
+
   /**
    * Returns the result of element-wise **lesser than** (<) comparison operation
    * with broadcasting.
@@ -367,6 +423,10 @@ object NDArray extends NDArrayBase {
   }
 
   def lesser(lhs: NDArray, rhs: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_lesser_scalar", Seq(lhs, rhs))
+  }
+
+  def lesser(lhs: NDArray, rhs: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_lesser_scalar", Seq(lhs, rhs))
   }
 
@@ -384,6 +444,10 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_lesser_equal_scalar", Seq(lhs, rhs))
   }
 
+  def lesserEqual(lhs: NDArray, rhs: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_lesser_equal_scalar", Seq(lhs, rhs))
+  }
+
   /**
    * Create a new NDArray that copies content from source_array.
    * @param sourceArr Source data to create NDArray from.
@@ -395,6 +459,16 @@ object NDArray extends NDArrayBase {
     val arr = empty(shape, ctx)
     arr.set(sourceArr)
     arr
+  }
+
+  def array(sourceArr: Array[Double], shape: Shape, ctx: Context): NDArray = {
+    val arr = empty(shape, ctx, dtype = DType.Float64)
+    arr.set(sourceArr)
+    arr
+  }
+
+  def array(sourceArr: Array[Double], shape: Shape): NDArray = {
+    array(sourceArr, shape, null)
   }
 
   /**
@@ -645,6 +719,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     checkCall(_LIB.mxNDArraySyncCopyFromCPU(handle, source, source.length))
   }
 
+  private def syncCopyfrom(source: Array[Double]): Unit = {
+    require(source.length == size,
+      s"array size (${source.length}) do not match the size of NDArray ($size)")
+    checkCall(_LIB.mxFloat64NDArraySyncCopyFromCPU(handle, source, source.length))
+  }
+
   /**
    * Return a sliced NDArray that shares memory with current one.
    * NDArray only support continuous slicing on axis 0
@@ -765,6 +845,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def set(value: Double): NDArray = {
+    require(writable, "trying to assign to a readonly NDArray")
+    NDArray.genericNDArrayFunctionInvoke("_set_value", Seq(value), Map("out" -> this))
+    this
+  }
+
   def set(other: NDArray): NDArray = {
     require(writable, "trying to assign to a readonly NDArray")
     other.copyTo(this)
@@ -776,11 +862,21 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def set(other: Array[Double]): NDArray = {
+    require(writable, "trying to assign to a readonly NDArray")
+    syncCopyfrom(other)
+    this
+  }
+
   def +(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_plus", Seq(this, other))
   }
 
   def +(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq(this, other))
+  }
+
+  def +(other: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq(this, other))
   }
 
@@ -800,11 +896,23 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def +=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to add to a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_plus", Seq(this, other), Map("out" -> this))
+    this
+  }
+
   def -(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minus", Seq(this, other))
   }
 
   def -(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other))
+  }
+
+  def -(other: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other))
   }
 
@@ -824,11 +932,23 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def -=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other), Map("out" -> this))
+    this
+  }
+
   def *(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mul", Seq(this, other))
   }
 
   def *(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other))
+  }
+
+  def *(other: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other))
   }
 
@@ -852,11 +972,23 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def *=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other), Map("out" -> this))
+    this
+  }
+
   def /(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_div", Seq(this, other))
   }
 
   def /(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other))
+  }
+
+  def /(other: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other))
   }
 
@@ -876,11 +1008,23 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def /=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to divide from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other), Map("out" -> this))
+    this
+  }
+
   def **(other: NDArray): NDArray = {
     NDArray.power(this, other)
   }
 
   def **(other: Float): NDArray = {
+    NDArray.power(this, other)
+  }
+
+  def **(other: Double): NDArray = {
     NDArray.power(this, other)
   }
 
@@ -892,11 +1036,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(this, other), Map("out" -> this))
   }
 
+  def **=(other: Double): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(this, other), Map("out" -> this))
+  }
+
   def >(other: NDArray): NDArray = {
     NDArray.greater(this, other)
   }
 
   def >(other: Float): NDArray = {
+    NDArray.greater(this, other)
+  }
+
+  def >(other: Double): NDArray = {
     NDArray.greater(this, other)
   }
 
@@ -908,11 +1060,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArray.greaterEqual(this, other)
   }
 
+  def >=(other: Double): NDArray = {
+    NDArray.greaterEqual(this, other)
+  }
+
   def <(other: NDArray): NDArray = {
     NDArray.lesser(this, other)
   }
 
   def <(other: Float): NDArray = {
+    NDArray.lesser(this, other)
+  }
+
+  def <(other: Double): NDArray = {
     NDArray.lesser(this, other)
   }
 
@@ -924,11 +1084,19 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArray.lesserEqual(this, other)
   }
 
+  def <=(other: Double): NDArray = {
+    NDArray.lesserEqual(this, other)
+  }
+
   def %(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other))
   }
 
   def %(other: Float): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other))
+  }
+
+  def %(other: Double): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other))
   }
 
@@ -948,12 +1116,28 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def %=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
+    }
+    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other), Map("out" -> this))
+    this
+  }
+
   /**
    * Return a copied flat java array of current array (row-major).
    * @return  A copy of array content.
    */
   def toArray: Array[Float] = {
     internal.toFloatArray
+  }
+
+  /**
+    * Return a copied flat java array of current array (row-major) with datatype as Float64/Double.
+    * @return  A copy of array content.
+    */
+  def toFloat64Array: Array[Double] = {
+    internal.toDoubleArray
   }
 
   def internal: NDArrayInternal = {
@@ -973,6 +1157,11 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   def toScalar: Float = {
     require(shape == Shape(1), "The current array is not a scalar")
     this.toArray(0)
+  }
+
+  def toFloat64Scalar: Double = {
+    require(shape == Shape(1), "The current array is not a scalar")
+    this.toFloat64Array(0)
   }
 
   /**
@@ -1145,34 +1334,49 @@ private[mxnet] class NDArrayFuncReturn(private[mxnet] val arr: Array[NDArray]) {
   def waitToRead(): Unit = head.waitToRead()
   def context: Context = head.context
   def set(value: Float): NDArray = head.set(value)
+  def set(value: Double): NDArray = head.set(value)
   def set(other: NDArray): NDArray = head.set(other)
   def set(other: Array[Float]): NDArray = head.set(other)
+  def set(other: Array[Double]): NDArray = head.set(other)
   def +(other: NDArray): NDArray = head + other
   def +(other: Float): NDArray = head + other
+  def +(other: Double): NDArray = head + other
   def +=(other: NDArray): NDArray = head += other
   def +=(other: Float): NDArray = head += other
+  def +=(other: Double): NDArray = head += other
   def -(other: NDArray): NDArray = head - other
   def -(other: Float): NDArray = head - other
+  def -(other: Double): NDArray = head - other
   def -=(other: NDArray): NDArray = head -= other
   def -=(other: Float): NDArray = head -= other
+  def -=(other: Double): NDArray = head -= other
   def *(other: NDArray): NDArray = head * other
   def *(other: Float): NDArray = head * other
+  def *(other: Double): NDArray = head * other
   def unary_-(): NDArray = -head
   def *=(other: NDArray): NDArray = head *= other
   def *=(other: Float): NDArray = head *= other
+  def *=(other: Double): NDArray = head *= other
   def /(other: NDArray): NDArray = head / other
   def **(other: NDArray): NDArray = head ** other
   def **(other: Float): NDArray = head ** other
+  def **(other: Double): NDArray = head ** other
   def >(other: NDArray): NDArray = head > other
   def >(other: Float): NDArray = head > other
+  def >(other: Double): NDArray = head > other
   def >=(other: NDArray): NDArray = head >= other
   def >=(other: Float): NDArray = head >= other
+  def >=(other: Double): NDArray = head >= other
   def <(other: NDArray): NDArray = head < other
   def <(other: Float): NDArray = head < other
+  def <(other: Double): NDArray = head < other
   def <=(other: NDArray): NDArray = head <= other
   def <=(other: Float): NDArray = head <= other
+  def <=(other: Double): NDArray = head <= other
   def toArray: Array[Float] = head.toArray
+  def toFloat64Array: Array[Double] = head.toFloat64Array
   def toScalar: Float = head.toScalar
+  def toFloat64Scalar: Double = head.toFloat64Scalar
   def copyTo(other: NDArray): NDArray = head.copyTo(other)
   def copyTo(ctx: Context): NDArray = head.copyTo(ctx)
   def copy(): NDArray = head.copy()

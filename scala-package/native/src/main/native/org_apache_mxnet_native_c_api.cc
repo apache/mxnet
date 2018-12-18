@@ -424,6 +424,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFloat64NDArraySyncCopyFromCPU
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jdoubleArray sourceArr, jint arrSize) {
+  jdouble *sourcePtr = env->GetDoubleArrayElements(sourceArr, NULL);
+  int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
+                                     static_cast<const double *>(sourcePtr), arrSize);
+  env->ReleaseDoubleArrayElements(sourceArr, sourcePtr, 0);
+  return ret;
+}
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetContext
   (JNIEnv *env, jobject obj, jlong arrayPtr, jobject devTypeId, jobject devId) {
   int outDevType;
