@@ -139,7 +139,7 @@ net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.para
 
 ## Operators that does not work with hybridize
 
-While most APIs are the same in NDArray and Symbol, there are some differences. Writting `F.operator` and call `hybridize` may not work all the time.
+If you want to hybridize your model, you must use `F.some_operator` in your 'hybrid_forward' function, F will be 'mxnet.nd' before you hybridize and 'mxnet.sym' after hybridize. While most APIs are the same in NDArray and Symbol,  there are some differences. Writing `F.some_operator` and call `hybridize` may not work all the time.
 Here we list all the APIs that do not work and provide you the work arounds.
 
 ### Element-wise Operators
@@ -150,17 +150,17 @@ However, that's not the case in Symbol API, it's not automatically broadcasted a
 
 | NDArray APIs  | Description  |
 |---|---|
-| [*NDArray.__add__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__add__) | x.__add__(y) <=> x+y <=> mx.nd.add(x, y)  |
-| [*NDArray.__sub__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__sub__) | x.__sub__(y) <=> x-y <=> mx.nd.subtract(x, y)  |
-| [*NDArray.__mul__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mul__) | x.__mul__(y) <=> x*y <=> mx.nd.multiply(x, y)  |
-| [*NDArray.__div__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__div__) | x.__div__(y) <=> x/y <=> mx.nd.divide(x, y)  |
-| [*NDArray.__mod__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mod__) | x.__mod__(y) <=> x%y <=> mx.nd.modulo(x, y)  |
-| [*NDArray.__lt__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__lt__) |  x.__lt__(y) <=> x mx.nd.lesser(x, y) |
-| [*NDArray.__le__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__le__) |  x.__le__(y) <=> x<=y <=> mx.nd.less_equal(x, y) |
-| [*NDArray.__gt__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__gt__) |  x.__gt__(y) <=> x>y <=> mx.nd.greater(x, y) |
-| [*NDArray.__ge__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ge__) |  x.__ge__(y) <=> x>=y <=> mx.nd.greater_equal(x, y)|
-| [*NDArray.__eq__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__eq__) |  x.__eq__(y) <=> x==y <=> mx.nd.equal(x, y) |
-| [*NDArray.__ne__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ne__) |  x.__ne__(y) <=> x!=y <=> mx.nd.not_equal(x, y) |
+| [*NDArray.\__add\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__add__) | x.\__add\__(y) <=> x+y <=> mx.nd.add(x, y)  |
+| [*NDArray.\__sub\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__sub__) | x.\__sub\__(y) <=> x-y <=> mx.nd.subtract(x, y)  |
+| [*NDArray.\__mul\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mul__) | x.\__mul\__(y) <=> x*y <=> mx.nd.multiply(x, y)  |
+| [*NDArray.\__div\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__div__) | x.\__div\__(y) <=> x/y <=> mx.nd.divide(x, y)  |
+| [*NDArray.\__mod\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mod__) | x.\__mod\__(y) <=> x%y <=> mx.nd.modulo(x, y)  |
+| [*NDArray.\__lt\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__lt__) |  x.\__lt\__(y) <=> x mx.nd.lesser(x, y) |
+| [*NDArray.\__le\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__le__) |  x.\__le\__(y) <=> x<=y <=> mx.nd.less_equal(x, y) |
+| [*NDArray.\__gt\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__gt__) |  x.\__gt\__(y) <=> x>y <=> mx.nd.greater(x, y) |
+| [*NDArray.\__ge\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ge__) |  x.\__ge\__(y) <=> x>=y <=> mx.nd.greater_equal(x, y)|
+| [*NDArray.\__eq\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__eq__) |  x.\__eq\__(y) <=> x==y <=> mx.nd.equal(x, y) |
+| [*NDArray.\__ne\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ne__) |  x.\__ne\__(y) <=> x!=y <=> mx.nd.not_equal(x, y) |
 
 The current workaround is to use corecponding broadcast operators for arithmetic and comparison to avoid potential hybridization failure when input shapes are different.
 
@@ -178,11 +178,11 @@ The current workaround is to use corecponding broadcast operators for arithmetic
 |[*broadcast_lesser*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser) |	Returns the result of element-wise *lesser than* (<) comparison operation with broadcasting. |
 |[*broadcast_lesser_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser_equal) | Returns the result of element-wise *lesser than or equal to* (<=) comparison operation with broadcasting. |
 
-For example, if you wan to add a NDarray to your input x, use `broadcast_add` instead of `+`:
+For example, if you want to add a NDarray to your input x, use `broadcast_add` instead of `+`:
 
 ```python
 def hybrid_forward(self, F, x):
-    # avoid writting: return x + F.ones((1, 1))
+    # avoid writing: return x + F.ones((1, 1))
     return F.broadcast_add(x, F.ones((1, 1)))
 ```
 
@@ -195,7 +195,7 @@ AttributeError: 'Symbol' object has no attribute 'shape'
 ```
 
 ### Slice
-[] in NDArray is to get a slice from the array. [] in Symbol is to get an output from a grouped symbol.
+`[]` in NDArray is used to get a slice from the array. However, `[]` in Symbol is used to get an output from a grouped symbol.
 For example, you will get different result for the following method before and after hybridization.
 
 ```python
@@ -203,7 +203,7 @@ def hybrid_forward(self, F, x):
     return x[0]
 ```
 
-The current workaround is explicitly call [`slice`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.slice) operators in `hybrid_forwar`d.
+The current workaround is to explicitly call [`slice`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.slice) operators in `hybrid_forward`.
 
 
 ### Not implemented operators
@@ -212,12 +212,12 @@ Some of the often used operators in NDArray  are not implemented in Symbol, and 
 
 #### Array API
 
-mx.nd.array() is used a lot but Symbol does not have the array API. The current workaround is to use F.ones/ F.zeros/ F.full which exists in both NDArrays and Symbols.
+`mx.nd.array()` is used a lot but Symbol does not have the array API. The current workaround is to use F.ones/ F.zeros/ F.full which exists in both NDArrays and Symbols.
 
 #### In-Place Arithmetic Operators
 
-In place arithmetic operators are also used a lot in Gluon imperative mode. You need to avoid that and write the operations explicitly in `hybrid_forward`.
-For example, avoid `x += y` and use `x  = x + y`, other wise you will get `NotImplementedError`.
+In-place arithmetic operators are also used a lot in Gluon imperative mode. You need to avoid that and write the operations explicitly in `hybrid_forward`.
+For example, avoid `x += y` and use `x  = x + y`, otherwise you will get `NotImplementedError`.
 
 | NDArray in-place arithmetic operators | Description |
 |---|---|
