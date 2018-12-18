@@ -311,6 +311,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
       case mkldnn_oihw:
       case mkldnn_ihwo:
       case mkldnn_hwio:
+      case mkldnn_iohw:
       case mkldnn_oIhw8i:
       case mkldnn_oIhw16i:
       case mkldnn_OIhw8i8o:
@@ -335,6 +336,7 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
   } else if (desc.data.ndims == 5) {
     switch (desc.data.format) {
       case mkldnn_goihw:
+      case mkldnn_giohw:
       case mkldnn_hwigo:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
