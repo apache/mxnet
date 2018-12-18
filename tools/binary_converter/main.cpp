@@ -458,8 +458,9 @@ int main(int argc, char ** argv){
   const string path(dirname(file_copy_dirname));
   const string params_file_name(basename(file_copy_basename));
   string out_path;
-  if(argc == 3)
+  if(argc >= 3)
     out_path = argv[2];
+
   if(out_path.empty() || out_path == "--verbose")
     out_path = path;
   free(file_copy_basename);
