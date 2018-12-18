@@ -32,6 +32,7 @@ const string PREFIX_Q_ACTIV = "qactivation";
 const string PREFIX_WEIGHT = "weight";
 const string PREFIX_BIAS = "bias";
 const string PREFIX_FORWARD = "fwd";
+const string PREFIX_ARG = "arg";
 // symbol json related
 const char* PREFIX_SYM_JSON_NODES = "nodes";
 const char* PREFIX_SYM_JSON_NODE_ROW_PTR = "node_row_ptr";
@@ -47,27 +48,41 @@ const string ARG_NODES_OP_PATTERN = "null";
 
 const string PREFIX_BINARY_INFERENCE_CONV_LAYER = "BinaryInferenceConvolution";
 const string PREFIX_BINARY_INFERENCE_DENSE_LAYER = "BinaryInferenceFullyConnected";
+
+bool _verbose = false;
 //==============================================//
 
 /**
  * @brief binarize an NDArray
+ * the standard 2D-Conv weight array dimension is 
+ * (output_dim, ipnut_dim, kernel_h, hernel_w)
  * 
  * @param array reference to an NDArray that should be binarized
  */
 
-void convert_to_binary_row(mxnet::NDArray& array) {
+int convert_to_binary_row(mxnet::NDArray& array) {
   CHECK(array.shape().ndim() >= 2); // second dimension is input depth from prev. layer, needed for next line
 
-  cout << "array shape: " << array.shape() << endl;
-  //if(array.shape()[1] < BITS_PER_BINARY_WORD) return;  
-  
-  CHECK(array.shape()[1] % BITS_PER_BINARY_WORD == 0); // depth from input has to be divisible by 32 (or 64)
-  nnvm::TShape binarized_shape(1);
+  if (array.shape()[1] % BITS_PER_BINARY_WORD != 0){
+    cout << "Error:" << "the operator has an invalid input dim: " << array.shape()[1];
+    cout << ", which is not divisible by " << BITS_PER_BINARY_WORD << endl;
+    return -1;
+  }
+
+  nnvm::TShape binarized_shape(4);
   size_t size = array.shape().Size();
-  binarized_shape[0] = size / BITS_PER_BINARY_WORD;
+  binarized_shape[0] = array.shape()[0];
+  binarized_shape[1] = array.shape()[1] / BITS_PER_BINARY_WORD;
+  binarized_shape[2] = array.shape()[2];
+  binarized_shape[3] = array.shape()[3];
+
   mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
-  mxnet::op::xnor::get_binary_row((float*) array.data().dptr_, (BINARY_WORD*) temp.data().dptr_, size);
+  mxnet::op::xnor::get_binary_row((float*) array.data().dptr_, 
+                                  (BINARY_WORD*) temp.data().dptr_, 
+                                  size);
   array = temp;
+
+  return 0;
 }
 
 /**
@@ -96,71 +111,85 @@ void transpose(mxnet::NDArray& array) {
 
 /**
  * @brief transpose and then binarize an array column wise
+ * (output_dim, input_dim) after transpose-> (input_dim, output_dim)
  *
  * @param array reference to an NDArray that should be binarized
  */
-
-void transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
+int transpose_and_convert_to_binary_col(mxnet::NDArray& array) {
+  // since in fc layer the weight is considered as col, so we have to transpose it
   transpose(array);
+
   CHECK(array.shape().ndim() == 2); // since we binarize column wise, we need to know no of rows and columns
   
-  cout << "array shape: " << array.shape() << endl;
-
-  //if(array.shape()[0] < BITS_PER_BINARY_WORD) return;
-  
-  CHECK(array.shape()[0] % BITS_PER_BINARY_WORD == 0); // length of columns has to be divisible by 32 (or 64)
-  nnvm::TShape binarized_shape(1);
-  size_t size = array.shape().Size();
-  binarized_shape[0] = size / BITS_PER_BINARY_WORD;
-  mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
-  mxnet::op::xnor::get_binary_col_unrolled((float*) array.data().dptr_, (BINARY_WORD*) temp.data().dptr_, array.shape()[0], array.shape()[1]);
-  array = temp;
-}
-
-/**
- * @brief filter an array of strings for some keys and then perform task on data
- *
- */
-
-void filter_for(vector<mxnet::NDArray>& data,
-                const vector<string>& keys,
-                const vector<string>& filter_strings,
-                function<void(mxnet::NDArray&)> task) {
-  auto containsFilterString = [filter_strings](string line_in_params) {
-    auto containsSubString = [line_in_params](string filter_string) {
-      return line_in_params.find(filter_string) != string::npos;};
-    return find_if(filter_strings.begin(),
-                        filter_strings.end(),
-                        containsSubString) != filter_strings.end();};
-
-  auto iter = find_if(keys.begin(),
-                           keys.end(),
-                           containsFilterString);
-  int converted = 0;
-  //Use a while loop, checking whether iter is at the end of myVector
-  //Do a find_if starting at the item after iter, next(iter)
-  while (iter != keys.end())
-  {
-    if ((*iter).find("weight") == string::npos) {
-      iter = find_if(next(iter),
-                        keys.end(),
-                        containsFilterString);
-      continue;
-    }
-
-    cout << "|- converting weights " << *iter << "..." << endl;
-
-    task(data[iter - keys.begin()]);
-    converted++;
-
-    iter = find_if(next(iter),
-                        keys.end(),
-                        containsFilterString);
+  if (array.shape()[0] % BITS_PER_BINARY_WORD != 0){
+    cout << "Error:" << "the operator has an invalid input dim: " << array.shape()[0];
+    cout << ", which is not divisible by " << BITS_PER_BINARY_WORD << endl;
+    return -1;
   }
 
-  if (converted != filter_strings.size()){
-    cout << "Error: The number of found q_conv or q_fc layers doesn't equal the number of converted layers." 
-              << endl;
+  nnvm::TShape binarized_shape(2);  
+  binarized_shape[0] = array.shape()[1];
+  binarized_shape[1] = array.shape()[0] / BITS_PER_BINARY_WORD;
+
+  mxnet::NDArray temp(binarized_shape, mxnet::Context::CPU(), false, mxnet::op::xnor::corresponding_dtype());
+  mxnet::op::xnor::get_binary_col_unrolled((float*) array.data().dptr_, 
+                                            (BINARY_WORD*) temp.data().dptr_, 
+                                            array.shape()[0], 
+                                            array.shape()[1]);
+  array = temp;
+
+  return 0;
+}
+
+
+/**
+ * @brief 
+ *   concatinate the weights into binary_word.
+ *   the standard 2D-Conv weight array dimension is 
+ *   (output_dim, ipnut_dim, kernel_h, hernel_w)
+ *   the standard dense layer weight array dimension is:
+ *   (output_dim, input_dim)
+ *
+ * @param 
+ *    data: ndarray storing weight params
+ *    keys: the corresponding keys to the weights array
+ */
+void convert_params(vector<mxnet::NDArray>& data, const vector<string>& keys){
+  string delimiter = ":";
+  
+  for (int i = 0; i < keys.size(); ++i)
+  {
+    string tp = keys[i].substr(0, keys[i].find(delimiter));
+    string name = keys[i].substr(keys[i].find(delimiter)+1, keys[i].length()-1);
+
+    if (_verbose){
+      //logging
+      cout << "Info: " << '\t' << "type:" << tp << "; ";
+      cout << "name:" << name << "; ";
+      cout << "shape:" << data[i].shape() << endl;
+    } 
+
+    // concatenate the weights of qconv layer
+    if (tp == PREFIX_ARG 
+        && name.find(PREFIX_Q_CONV) != string::npos
+        && name.find("_"+PREFIX_WEIGHT) != string::npos){
+      // concatenates binary row 
+      if(convert_to_binary_row(data[i]) < 0){
+        cout << "Error: weights concatenation FAILED for operator '" << name <<"'" << endl;
+      }else
+        cout << "Info: CONCATENATED layer: '" << name << "'" << endl;
+    }
+
+    // concatenate the weights of qfc layer
+    if (tp == PREFIX_ARG 
+        && name.find(PREFIX_Q_DENSE) != string::npos
+        && name.find("_"+PREFIX_WEIGHT) != string::npos)
+    {
+      if (transpose_and_convert_to_binary_col(data[i]) < 0){
+        cout << "Error: weights concatenation FAILED for operator '" << name <<"'" << endl;
+      }else
+        cout << "Info: CONCATENATED layer: '" << name << "'" << endl;
+    }
   }
 }
 
@@ -172,109 +201,26 @@ void filter_for(vector<mxnet::NDArray>& data,
  * @param filter_strings list of strings with arrays to convert
  * @return success (0) or failure
  */
-int convert_params_file(const string& input_file, const string& output_file, const vector<string> conv_names, const vector<string> fc_names) {
+int convert_params_file(const string& input_file, const string& output_file) {
   vector<mxnet::NDArray> data;
   vector<string> keys;
-
-  cout << "loading " << input_file << "..." << endl;
+  
   { // loading params file into data and keys
+    // logging
+    cout << "Info: " <<"LOADING input '.params' file: "<< input_file << endl;
     unique_ptr<dmlc::Stream> fi(dmlc::Stream::Create(input_file.c_str(), "r"));
     mxnet::NDArray::Load(fi.get(), &data, &keys);
   }
 
-  filter_for(data, keys, conv_names, convert_to_binary_row);
-  filter_for(data, keys, fc_names, transpose_and_convert_to_binary_col);
+  convert_params(data, keys);
 
   { // saving params back to *_converted
+    cout << "Info: " <<"saving new '.params' file to: "<< output_file << endl;
     unique_ptr<dmlc::Stream> fo(dmlc::Stream::Create(output_file.c_str(), "w"));
     mxnet::NDArray::Save(fo.get(), data, keys);
+    cout << "Info: " << "converted .params file saved!" << endl;
   }
-  cout << "wrote converted params to " << output_file << endl;
-  return 0;
-}
-
-/**
- * @brief add 'binarized_params_only' attribute to conv and fc layers in mxnet symbol file
- *
- * @param input_file path to mxnet symbol file with QConvolution and QFullyconnected layers
- * @param output_file path to converted symbol file
- * @return success (0) or failure
- */
-int convert_json_file(const string& input_fname, const string& output_fname, vector<string>& filters_conv, vector<string>& filters_fc) {
-  cout << "loading " << input_fname << "..." << endl;
-  string json;
-  {
-    ifstream stream(input_fname);
-    if (!stream.is_open()) {
-      cout << "cant find json file at " + input_fname << endl;
-      return -1;
-    }
-    stringstream buffer;
-    buffer << stream.rdbuf();
-    json = buffer.str();
-  }
-
-  rapidjson::Document d;
-  d.Parse(json.c_str());
-
-  // detecting mxnet version, starting with v1.0.0 (?) they switched from key 'attr' to 'attrs'
-  CHECK(d.HasMember("attrs"));
-  rapidjson::Value::ConstMemberIterator itr = d["attrs"].FindMember("mxnet_version");
-  CHECK(itr != d["attrs"].MemberEnd());
-  CHECK(itr->value.IsArray());
-  CHECK(itr->value.Size() == 2);
-  int version = itr->value[1].GetInt();
-  string node_attrs_name = "attrs";
-  if (version / 10000 < 1) {
-    LOG(INFO) << "detected model saved with mxnet v" << version/10000 << "." << (version/100)%100 << "." << version%100
-              << ", using old 'attr' name for layer attributes instead of 'attrs'";
-    node_attrs_name = "attr";
-  }
-
-  CHECK(d.HasMember(PREFIX_SYM_JSON_NODES));
-  rapidjson::Value& nodes = d[PREFIX_SYM_JSON_NODES];
-  CHECK(nodes.IsArray());
-
-  for (rapidjson::Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr) {
-    if (!(itr->HasMember("op") && (*itr)["op"].IsString() &&
-            (strcmp((*itr)["op"].GetString(), "QConvolution") == 0 ||
-             strcmp((*itr)["op"].GetString(), "QFullyConnected") == 0 ||
-             strcmp((*itr)["op"].GetString(), "QConvolution_v1") == 0))) {
-      continue;
-    }
-
-    CHECK((*itr).HasMember(node_attrs_name.c_str()));
-    rapidjson::Value& op_attributes = (*itr)[node_attrs_name.c_str()];
-    op_attributes.AddMember("binarized_weights_only", "True", d.GetAllocator());
-
-    CHECK((*itr).HasMember("name"));
-    cout << "|- adjusting attributes for " << (*itr)["name"].GetString() << endl;
-
-    if (strcmp((*itr)["op"].GetString(), "QConvolution") == 0 ||
-             strcmp((*itr)["op"].GetString(), "QConvolution_v1") == 0) {
-      filters_conv.push_back((*itr)["name"].GetString());
-    } else if (strcmp((*itr)["op"].GetString(), "QFullyConnected") == 0) {
-      filters_fc.push_back((*itr)["name"].GetString());
-    }
-  }
-
-  rapidjson::StringBuffer buffer;
-  rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-  d.Accept(writer);
-
-  {
-    ofstream stream(output_fname);
-    if (!stream.is_open()) {
-      cout << "cant find json file at " + output_fname << endl;
-      return -1;
-    }
-    string output = buffer.GetString();
-    stream << output;
-    stream.close();
-  }
-
-  cout << "wrote converted json to " << output_fname << endl;
-
+  
   return 0;
 }
 
@@ -294,7 +240,7 @@ void print_rapidjson_doc(string json, string log_prefix="") {
   rapidjson::Value& heads = d[PREFIX_SYM_JSON_HEADS];
   CHECK(heads.IsArray() && heads.Capacity() > 0);
   // logging
-  cout << "Info: " << log_prefix.c_str() << "'heads' of input json: " << "[" << "[" 
+  cout << "Info: " << log_prefix << "'heads' of input json: " << "[" << "[" 
        << heads[0][0].GetInt() << ", "
        << heads[0][1].GetInt() << ", "
        << heads[0][2].GetInt() 
@@ -306,7 +252,7 @@ void print_rapidjson_doc(string json, string log_prefix="") {
   CHECK(arg_nodes.IsArray());
   CHECK(!arg_nodes.Empty());
   // logging
-  cout << "Info: " << log_prefix.c_str() << "'arg_nodes' of input json: " << "["; 
+  cout << "Info: " << log_prefix << "'arg_nodes' of input json: " << "["; 
   for (int i = 0; i < arg_nodes.Capacity(); ++i)
   {
     cout << arg_nodes[i].GetInt(); 
@@ -323,13 +269,14 @@ void print_rapidjson_doc(string json, string log_prefix="") {
   CHECK(nodes.IsArray());
   CHECK(!nodes.Empty());
 
-  cout <<"Info: " << log_prefix.c_str() << "number of nodes:" << nodes.Capacity() << endl;    
-  for (int i = 0; i < nodes.Capacity(); ++i)
-  {    
-    cout <<"Info: " << log_prefix.c_str() << "node index " << i << " : " << nodes[i]["name"].GetString() << endl;
+  cout <<"Info: " << log_prefix << "number of nodes:" << nodes.Capacity() << endl;    
+  if (_verbose){
+    for (int i = 0; i < nodes.Capacity(); ++i)
+    {    
+      cout <<"Info: \t" << log_prefix << "node index " << i << " : " << nodes[i]["name"].GetString() << endl;
+    }
   }
 }
-
 
 /**
  * @brief
@@ -347,7 +294,7 @@ void print_rapidjson_doc(string json, string log_prefix="") {
  */
 int convert_symbol_json(const string& input_fname, const string& output_fname) {
   //logging
-  cout << "Info: " <<"Load input 'symbol json' file: "<< input_fname << endl;
+  cout << "Info: " <<"LOADING input 'symbol json' file: "<< input_fname << endl;
   string json;
   {
     ifstream stream(input_fname);
@@ -420,7 +367,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
         (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_CONV_LAYER.c_str(), allocator);
         //logging
         cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
-             << PREFIX_CONVOLUTION.c_str() << "' to '" << PREFIX_BINARY_INFERENCE_CONV_LAYER.c_str() << "'" << endl;
+             << PREFIX_CONVOLUTION << "' to '" << PREFIX_BINARY_INFERENCE_CONV_LAYER << "'" << endl;
       } 
         
       if ((*itr)["op"].IsString() && 
@@ -428,7 +375,7 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
         (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_DENSE_LAYER.c_str(), allocator);      
         //logging
         cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
-             << PREFIX_DENSE.c_str() << "' to '" << PREFIX_BINARY_INFERENCE_DENSE_LAYER.c_str() << "'" << endl;
+             << PREFIX_DENSE << "' to '" << PREFIX_BINARY_INFERENCE_DENSE_LAYER << "'" << endl;
       }
     }
 
@@ -494,14 +441,17 @@ int convert_symbol_json(const string& input_fname, const string& output_fname) {
  *
  */
 int main(int argc, char ** argv){
-  if (argc < 2 || argc > 3) {
-    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" + " <output (optional)>" << endl;
+  if (argc < 2 || argc > 4) {
+    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" + " <output (optional)>" + 
+        " --verbose" << endl;
     cout << "  will binarize the weights of the qconv or qdense layers of your model," << endl;
     cout << "  pack 32(x86 and ARMv7) or 64(x64) values into one and save the result with the prefix 'binarized_'" << endl;
     cout << "<output>: specify the location to store the binarized files. If not specified, the same location as the input model will be used."  << endl;
+    cout << "--verbose: for more information" << endl;
     return -1;
   }
 
+  // prepare file paths
   const string params_file(argv[1]);
   char *file_copy_basename = strdup(argv[1]); 
   char *file_copy_dirname = strdup(argv[1]);  
@@ -510,29 +460,29 @@ int main(int argc, char ** argv){
   string out_path;
   if(argc == 3)
     out_path = argv[2];
-  if(out_path.empty())
+  if(out_path.empty() || out_path == "--verbose")
     out_path = path;
   free(file_copy_basename);
   free(file_copy_dirname);
 
+  if ( (argc == 3 && string(argv[2]) == "--verbose")
+       || (argc == 4 && string(argv[3]) == "--verbose"))
+    _verbose = true;
+  
   string base_name = params_file_name;
   base_name.erase(base_name.rfind('-')); // watchout if no '-'
 
   const string json_file_name(path + "/"                + base_name + "-symbol.json");
   const string param_out_fname(out_path + "/" + "binarized_" + params_file_name);
   const string json_out_fname(out_path + "/" + "binarized_" + base_name + "-symbol.json");
-
-  //logging
-  cout << "Info: " <<"Load input '.params' file: "<< params_file << endl;
   
   if (int ret = convert_symbol_json(json_file_name, json_out_fname) != 0) {
     return ret;
   }
 
-  if (int ret = convert_params_file(params_file, param_out_fname, filters_conv, filters_fc) != 0) {
+  if (int ret = convert_params_file(params_file, param_out_fname) != 0) {
     return ret;
   }
  
-  cout << "Info: " <<"Output '.params' file path: "<< param_out_fname << endl;
   return 0;
 }
