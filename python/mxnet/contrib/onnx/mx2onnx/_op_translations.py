@@ -1738,3 +1738,55 @@ def convert_multinomial(node, **kwargs):
         name=name,
     )
     return [node]
+
+
+@mx_op.register("_random_uniform")
+def convert_random_uniform(node, **kwargs):
+    """Map MXNet's random_uniform operator attributes to onnx's RandomUniform
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to float32
+    low = float(attrs.get("low", 0))
+    high = float(attrs.get("high", 1.0))
+    shape = convert_string_to_list(attrs.get('shape', '[]'))
+    dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(attrs.get('dtype', 'float32'))]
+
+    node = onnx.helper.make_node(
+        'RandomUniform',
+        input_nodes,
+        [name],
+        low=low,
+        high=high,
+        dtype=dtype,
+        shape=shape,
+        name=name
+    )
+    return [node]
+
+
+@mx_op.register("_random_normal")
+def convert_random_normal(node, **kwargs):
+    """Map MXNet's random_normal operator attributes to onnx's RandomNormal
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to float32
+    mean = float(attrs.get("loc", 0))
+    scale = float(attrs.get("scale", 1.0))
+    shape = convert_string_to_list(attrs.get('shape', '[]'))
+    dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(attrs.get('dtype', 'float32'))]
+
+    node = onnx.helper.make_node(
+        'RandomNormal',
+        input_nodes,
+        [name],
+        mean=mean,
+        scale=scale,
+        dtype=dtype,
+        shape=shape,
+        name=name
+    )
+    return [node]

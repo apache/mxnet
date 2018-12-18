@@ -29,14 +29,26 @@ def identity(attrs, inputs, proto_obj):
 
 def random_uniform(attrs, inputs, proto_obj):
     """Draw random samples from a uniform distribtuion."""
-    new_attr = translation_utils._remove_attributes(attrs, ['seed'])
-    return 'random_uniform', new_attr, inputs
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
+    new_attrs = translation_utils._remove_attributes(attrs, ['seed'])
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs.get('dtype', 1))]
+    return 'random_uniform', new_attrs, inputs
 
 def random_normal(attrs, inputs, proto_obj):
     """Draw random samples from a Gaussian distribution."""
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
     new_attr = translation_utils._remove_attributes(attrs, ['seed'])
-    new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
-    return 'random_uniform', new_attr, inputs
+    new_attr = translation_utils._fix_attribute_names(new_attr, {'mean': 'loc'})
+    new_attr['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attr.get('dtype', 1))]
+    return 'random_normal', new_attr, inputs
 
 def sample_multinomial(attrs, inputs, proto_obj):
     """Draw random samples from a multinomial distribution."""
