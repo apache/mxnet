@@ -553,7 +553,8 @@ void Sort(const nnvm::NodeAttrs& attrs,
   topk_param.k = 0;
   topk_param.ret_typ = topk_enum::kReturnValue;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, topk_param);
+    TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs,
+                                  topk_param);
   });
 }
 
