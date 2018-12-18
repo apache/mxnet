@@ -58,7 +58,6 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
   int k;
   int ret_typ;
   bool is_ascend;
-  int dtype;
   DMLC_DECLARE_PARAMETER(TopKParam) {
     DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>(-1))
     .describe("Axis along which to choose the top k indices."
@@ -80,13 +79,6 @@ struct TopKParam : public dmlc::Parameter<TopKParam> {
     DMLC_DECLARE_FIELD(is_ascend).set_default(false)
       .describe("Whether to choose k largest or k smallest elements."
                 " Top K largest elements will be chosen if set to false.");
-    DMLC_DECLARE_FIELD(dtype)
-    .add_enum("int32", mshadow::kInt32)
-    .add_enum("int64", mshadow::kInt64)
-    .set_default(mshadow::kInt64)
-    .describe("DType of the output indices when ret_typ is \"indices\" or \"both\". "
-              "An error will be raised if the selected data type cannot precisely represent the "
-              "indices.");
   }
 };
 
@@ -543,17 +535,9 @@ void TopK(const nnvm::NodeAttrs& attrs,
           const std::vector<OpReqType>& req,
           const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
-  if (param.ret_typ == topk_enum::kReturnIndices || param.ret_typ == topk_enum::kReturnBoth) {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      MSHADOW_IDX_TYPE_SWITCH(param.dtype, IDType, {
-        TopKImpl<xpu, DType, IDType>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
-      })
-    });
-  } else {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
-    });
-  }
+  MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    TopKImpl<xpu, DType, index_t>(ctx.run_ctx, ctx.requested[0], req, inputs[0], outputs, param);
+  });
 }
 
 template<typename xpu>
@@ -584,7 +568,6 @@ void ArgSort(const nnvm::NodeAttrs& attrs,
   topk_param.axis = param.axis;
   topk_param.is_ascend = param.is_ascend;
   topk_param.k = 0;
-  topk_param.dtype = param.dtype;
   topk_param.ret_typ = topk_enum::kReturnIndices;
   MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MSHADOW_IDX_TYPE_SWITCH(param.dtype, IDType, {
@@ -673,13 +656,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
-  if (param.ret_typ == topk_enum::kReturnBoth) {
-    MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      MSHADOW_IDX_TYPE_SWITCH(param.dtype, IDType, {
-        TopKBackwardImpl<xpu, DType, IDType>(ctx, inputs, req, outputs, param);
-      });
-    });
-  } else if (param.ret_typ == topk_enum::kReturnValue) {
+  if (param.ret_typ == topk_enum::kReturnBoth || param.ret_typ == topk_enum::kReturnValue) {
     MXNET_NO_FLOAT16_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       TopKBackwardImpl<xpu, DType, index_t>(ctx, inputs, req, outputs, param);
     });
@@ -717,11 +694,11 @@ inline bool TopKType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_size, 1);
   CHECK(out_size == 1 || out_size == 2);
   if (out_size > 1) {
-    CHECK(type_assign(&(*out_attrs)[1], param.dtype))
+    CHECK(type_assign(&(*out_attrs)[1], mshadow::kInt64))
       << "Failed to set the type of ret_indices.";
   }
   if (param.ret_typ == topk_enum::kReturnIndices) {
-    CHECK(type_assign(&(*out_attrs)[0], param.dtype))
+    CHECK(type_assign(&(*out_attrs)[0], mshadow::kInt64))
             << "Failed to set the type of ret_indices.";
   } else {
     CHECK(type_assign(&data_type, (*in_attrs)[0])) << "Incompatible dtype of input, in_attrs[0]="
