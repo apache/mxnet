@@ -4,5 +4,8 @@ core/src/main/scala/org/apache/mxnet/NDArrayBase.scala
 core/src/main/scala/org/apache/mxnet/javaapi/NDArrayBase.scala
 core/src/main/scala/org/apache/mxnet/SymbolAPIBase.scala
 core/src/main/scala/org/apache/mxnet/SymbolBase.scala
+core/src/main/scala/org/apache/mxnet/NDArrayRandomAPIBase.scala
+core/src/main/scala/org/apache/mxnet/SymbolRandomAPIBase.scala
 examples/scripts/infer/images/
 examples/scripts/infer/models/
+local-snapshot

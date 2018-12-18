@@ -153,7 +153,9 @@ If building on CPU and using OpenBLAS:
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+    echo "USE_OPENCV = 1" >> ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    make -j $(nproc)
 ```
 
 If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
@@ -161,7 +163,11 @@ If building on CPU and using MKL and MKL-DNN (make sure MKL is installed accordi
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=mkl USE_MKLDNN=1
+    echo "USE_OPENCV = 1" >> ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    echo "USE_CUDA = 0" >> ./config.mk
+    echo "USE_MKLDNN = 1" >> ./config.mk
+    make -j $(nproc)
 ```
 
 If building on GPU and you want OpenCV and OpenBLAS (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
@@ -169,7 +175,12 @@ If building on GPU and you want OpenCV and OpenBLAS (make sure you have installe
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+    echo "USE_OPENCV = 1" >> ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    echo "USE_CUDA = 1" >> ./config.mk
+    echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
+    echo "USE_CUDNN = 1" >> ./config.mk
+    make -j $(nproc)
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk` and also review common [usage examples](build_from_source.html#usage-examples).
@@ -339,7 +350,9 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd incubator-mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+$ echo "USE_OPENCV = 1" >> ./config.mk
+$ echo "USE_BLAS = openblas" >> ./config.mk
+$ make -j $(nproc)
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.

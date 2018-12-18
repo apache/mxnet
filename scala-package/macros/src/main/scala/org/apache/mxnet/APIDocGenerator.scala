@@ -27,13 +27,15 @@ import scala.collection.mutable.ListBuffer
   * Two file namely: SymbolAPIBase.scala and NDArrayAPIBase.scala
   * The code will be executed during Macros stage and file live in Core stage
   */
-private[mxnet] object APIDocGenerator extends GeneratorBase {
+private[mxnet] object APIDocGenerator extends GeneratorBase with RandomHelpers {
 
   def main(args: Array[String]): Unit = {
     val FILE_PATH = args(0)
     val hashCollector = ListBuffer[String]()
     hashCollector += typeSafeClassGen(FILE_PATH, true)
     hashCollector += typeSafeClassGen(FILE_PATH, false)
+    hashCollector += typeSafeRandomClassGen(FILE_PATH, true)
+    hashCollector += typeSafeRandomClassGen(FILE_PATH, false)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, true)
     hashCollector += nonTypeSafeClassGen(FILE_PATH, false)
     hashCollector += javaClassGen(FILE_PATH)
@@ -57,8 +59,27 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
 
     writeFile(
       FILE_PATH,
-      if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
       "package org.apache.mxnet",
+      if (isSymbol) "SymbolAPIBase" else "NDArrayAPIBase",
+      "import org.apache.mxnet.annotation.Experimental",
+      generated)
+  }
+
+  def typeSafeRandomClassGen(FILE_PATH: String, isSymbol: Boolean): String = {
+    val generated = typeSafeRandomFunctionsToGenerate(isSymbol)
+      .map { func =>
+        val scalaDoc = generateAPIDocFromBackend(func)
+        val typeParameter = randomGenericTypeSpec(isSymbol, false)
+        val decl = generateAPISignature(func, isSymbol, typeParameter)
+        s"$scalaDoc\n$decl"
+      }
+
+    writeFile(
+      FILE_PATH,
+      "package org.apache.mxnet",
+      if (isSymbol) "SymbolRandomAPIBase" else "NDArrayRandomAPIBase",
+      """import org.apache.mxnet.annotation.Experimental
+        |import scala.reflect.ClassTag""".stripMargin,
       generated)
   }
 
@@ -85,8 +106,9 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
 
     writeFile(
       FILE_PATH,
-      if (isSymbol) "SymbolBase" else "NDArrayBase",
       "package org.apache.mxnet",
+      if (isSymbol) "SymbolBase" else "NDArrayBase",
+      "import org.apache.mxnet.annotation.Experimental",
       absFuncs)
   }
 
@@ -110,7 +132,12 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
       }).toSeq
     val packageName = "NDArrayBase"
     val packageDef = "package org.apache.mxnet.javaapi"
-    writeFile(filePath + "javaapi/", packageName, packageDef, absFuncs)
+    writeFile(
+      filePath + "javaapi/",
+      packageDef,
+      packageName,
+      "import org.apache.mxnet.annotation.Experimental",
+      absFuncs)
   }
 
   def generateAPIDocFromBackend(func: Func, withParam: Boolean = true): String = {
@@ -146,7 +173,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     }
   }
 
-  def generateAPISignature(func: Func, isSymbol: Boolean): String = {
+  def generateAPISignature(func: Func, isSymbol: Boolean, typeParameter: String = ""): String = {
     val argDef = ListBuffer[String]()
 
     argDef ++= typedFunctionCommonArgDef(func)
@@ -162,7 +189,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     val returnType = func.returnType
 
     s"""@Experimental
-       |def ${func.name} (${argDef.mkString(", ")}): $returnType""".stripMargin
+       |def ${func.name}$typeParameter (${argDef.mkString(", ")}): $returnType""".stripMargin
   }
 
   def generateJavaAPISignature(func : Func) : String = {
@@ -223,8 +250,8 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
     }
   }
 
-  def writeFile(FILE_PATH: String, className: String, packageDef: String,
-                absFuncs: Seq[String]): String = {
+  def writeFile(FILE_PATH: String, packageDef: String, className: String,
+                imports: String, absFuncs: Seq[String]): String = {
 
     val finalStr =
       s"""/*
@@ -246,7 +273,7 @@ private[mxnet] object APIDocGenerator extends GeneratorBase {
          |
          |$packageDef
          |
-         |import org.apache.mxnet.annotation.Experimental
+         |$imports
          |
          |// scalastyle:off
          |abstract class $className {

@@ -16,6 +16,10 @@
 
   <packaging>so</packaging>
 
+  <properties>
+    <MXNET_DIR>${project.parent.parent.basedir}/..</MXNET_DIR>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
@@ -62,22 +66,20 @@
             <compilerStartOption>-std=c++0x</compilerStartOption>
           </compilerStartOptions>
           <compilerEndOptions>
-            <compilerEndOption>-I${project.basedir}/../../../include</compilerEndOption>
-            <compilerEndOption>${all_includes}</compilerEndOption>
-            <compilerEndOption>${cflags}</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/include</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/dmlc-core/include</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/mshadow</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/dlpack/include</compilerEndOption>
+            <compilerEndOption>-I${MXNET_DIR}/3rdparty/tvm/nnvm/include</compilerEndOption>
+            <compilerEndOption>-DMSHADOW_USE_MKL=0 -DMSHADOW_USE_CUDA=0</compilerEndOption>
+            <compilerEndOption>-O3 -DNDEBUG=1 -fPIC -msse3 -mf16c</compilerEndOption>
+            <compilerEndOption>-Wall -Wsign-compare -Wno-unused-parameter -Wno-unknown-pragmas -Wno-unused-local-typedefs</compilerEndOption>
           </compilerEndOptions>
           <linkerStartOptions>
             <linkerStartOption>-shared</linkerStartOption>
           </linkerStartOptions>
-          <linkerMiddleOptions>
-            <linkerMiddleOption>${all_ldpaths}</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,--whole-archive</linkerMiddleOption>
-            <linkerMiddleOption>${lddeps}</linkerMiddleOption>
-            <linkerMiddleOption>-Wl,--no-whole-archive</linkerMiddleOption>
-          </linkerMiddleOptions>
           <linkerEndOptions>
-            <linkerEndOption>${ldflags}</linkerEndOption>
-            <linkerEndOption>-fopenmp</linkerEndOption>
+            <linkerEndOption>-Wl,-rpath=${dollar}ORIGIN -lmxnet -L${MXNET_DIR}/lib</linkerEndOption>
           </linkerEndOptions>
         </configuration>
 
@@ -86,7 +88,6 @@
             <id>javah</id>
             <phase>generate-sources</phase>
             <configuration>
-              <javahOS>linux</javahOS>
               <javahProvider>default</javahProvider>
               <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
               <workingDirectory>${basedir}</workingDirectory>
