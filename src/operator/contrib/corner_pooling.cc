@@ -64,7 +64,7 @@ static bool CornerPoolingShape(const nnvm::NodeAttrs &attrs,
 
 DMLC_REGISTER_PARAMETER(CornerPoolingParam);
 
-NNVM_REGISTER_OP(CornerPooling)
+NNVM_REGISTER_OP(_contrib_CornerPooling)
 .describe(R"code(Performs corner pooling over a 4D input with the shape of (NCHW).
     
 Four corner pooling options are supported by ``corner_pooling_type``:
@@ -97,12 +97,12 @@ Four corner pooling options are supported by ``corner_pooling_type``:
 .set_attr<nnvm::FInferShape>("FInferShape", CornerPoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", CornerPoolingCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-                           ElemwiseGradUseInOut{"_backward_CornerPooling"})
+                ElemwiseGradUseInOut{"_backward_contrib_CornerPooling"})
 .add_argument("data", "NDArray-or-Symbol",
               "Input data to the corner pooling operator.")
 .add_arguments(CornerPoolingParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_CornerPooling)
+NNVM_REGISTER_OP(_backward_contrib_CornerPooling)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>(

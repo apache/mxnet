@@ -283,10 +283,10 @@ inline void corner_pool_grad(mshadow::Stream<gpu> *s,
 }
 
 
-NNVM_REGISTER_OP(CornerPooling)
+NNVM_REGISTER_OP(_contrib_CornerPooling)
 .set_attr<FCompute>("FCompute<gpu>", CornerPoolingCompute<gpu>);
 
-NNVM_REGISTER_OP(_backward_CornerPooling)
+NNVM_REGISTER_OP(_backward_contrib_CornerPooling)
 .set_attr<FCompute>("FCompute<gpu>", CornerPoolingGradCompute<gpu>);
 
 }  // namespace op

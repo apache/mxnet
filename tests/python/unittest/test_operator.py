@@ -7245,15 +7245,102 @@ def test_softmax_cross_entropy():
 
 @with_seed()
 def test_corner_pooling():
+    def func(data, corner_type):
+        output = np.zeros_like(data)
+        if 'left' == corner_type or 'right' == corner_type:
+            if corner_type == 'left':
+                start = data.shape[-1] - 1
+                end = -1
+                stride = -1
+            else:
+                start = 0
+                end = data.shape[-1]
+                stride = 1
+            max_val = data[:, :, :, start]
+            for idx in range(start, end, stride):
+                max_val = np.maximum(data[:, :, :, idx], max_val)
+                output[:, :, :, idx] = max_val
+
+        else:
+            if 'top' == corner_type or 'bottom' == corner_type:
+                if corner_type == 'top':
+                    start = data.shape[-2] - 1
+                    end = -1
+                    stride = -1
+                else:
+                    start = 0
+                    end = data.shape[-2]
+                    stride = 1
+                max_val = data[:, :, start, :]
+                for idx in range(start, end, stride):
+                    max_val = np.maximum(data[:, :, idx, :], max_val)
+                    output[:, :, idx, :] = max_val
+            else:
+                assert 0, "error corner type!"
+        return output
+    def func_backward(output, input, corner_type, out_grad):
+        if 'left' == corner_type or 'right' == corner_type:
+            if corner_type == 'left':
+                start = output.shape[-1] - 1
+                end = -1
+                stride = -1
+            else:
+                start = 0
+                end = output.shape[-1]
+                stride = 1
+            output_reshape = np.reshape(output,(-1, output.shape[-1]))
+            out_grad_reshape = np.reshape(out_grad, output_reshape.shape)
+            in_grad_reshape = np.zeros_like(output_reshape)
+            max_index = np.ones(output_reshape.shape[0]).astype(int) * start
+            for idx in range(start, end, stride):
+                update_index = np.where(output_reshape[np.arange(output_reshape.shape[0]),max_index] !=  output_reshape[:, idx])
+                max_index[update_index] = idx
+                in_grad_reshape[np.arange(output_reshape.shape[0]),max_index] += out_grad_reshape[:, idx]
+            in_grad = np.reshape(in_grad_reshape,output.shape)
+        else:
+            if 'top' == corner_type or 'bottom' == corner_type:
+                if corner_type == 'top':
+                    start = output.shape[-2] - 1
+                    end = -1
+                    stride = -1
+                else:
+                    start = 0
+                    end = output.shape[-2]
+                    stride = 1
+                output_reshape = np.reshape(np.transpose(output,(0,1,3,2)),(-1, output.shape[-2]))
+                out_grad_reshape = np.reshape(np.transpose(out_grad,(0,1,3,2)), output_reshape.shape)
+                in_grad_reshape = np.zeros_like(output_reshape)
+                max_index = np.ones(output_reshape.shape[0]).astype(int) * start
+                for idx in range(start, end, stride):
+                    update_index = np.where(output_reshape[np.arange(output_reshape.shape[0]),max_index] !=  output_reshape[:, idx])
+                    max_index[update_index] = idx
+                    in_grad_reshape[np.arange(output_reshape.shape[0]),max_index] += out_grad_reshape[:, idx]
+                in_grad = np.reshape(in_grad_reshape,(np.transpose(output,(0,1,3,2)).shape)).transpose(0,1,3,2)
+            else:
+                assert 0, "error corner type!"
+        return in_grad
     data = mx.sym.Variable(name='data')
-    dirs = ['left', 'right', 'bottom', 'right']
+    dirs = ['left','right','bottom','right']
     for corner_type in dirs:
-        test = mx.sym.CornerPooling(data=data, corner_pooling_type=corner_type)
-        x = np.random.rand(3,3,3,5)
+        x = np.random.rand(3,3,3,4)
+        expected = func(x, corner_type)
+        backward_expected = func_backward(expected, x, corner_type, np.ones(expected.shape))
+        test = mx.sym.contrib.CornerPooling(data=data, corner_pooling_type=corner_type)
+        output = mx.nd.contrib.CornerPooling(data=mx.nd.array(x), corner_pooling_type=corner_type)
+
+        assert_almost_equal(output.asnumpy(),expected,
+                            rtol= 1e-5,
+                            atol= 1e-5)
+        check_symbolic_forward(test, [x], [expected],
+                                rtol=1e-1,
+                                atol=1e-4)
+        check_symbolic_backward(test, [x], [np.ones(expected.shape)],
+                                    [backward_expected],
+                                    rtol = 1e-1,
+                                    atol = 1e-4)
         check_numeric_gradient(sym=test, location=[x],
                                grad_nodes={'data':'write'},
-                               numeric_eps=1e-5, rtol=1e-1, atol=1e-4) 
-
+                               numeric_eps=1e-5, rtol=1e-1, atol=1e-4)
 
 
 @with_seed()
