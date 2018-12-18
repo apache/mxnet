@@ -46,6 +46,38 @@ def test_normalize():
 
 
 @with_seed()
+def test_crop():
+    # test normal case
+    data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype('uint8')
+    out_nd = transforms.Crop(0, 0, 100, 50)(data_in)
+    data_expected = image.fixed_crop(data_in, 0, 0, 100, 50)
+    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    # test 4D input
+    data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype('uint8')
+    out_batch_nd = transforms.Crop(0, 0, 100, 50)(data_bath_in)
+    for i in range(len(out_batch_nd)):
+        assert_almost_equal(image.fixed_crop(data_bath_in[i], 0, 0, 100, 50).asnumpy(),
+            out_batch_nd[i].asnumpy())
+    # test normal case with resize
+    data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype('uint8')
+    out_nd = transforms.Crop(0, 0, 100, 50, (25, 25), 2)(data_in)
+    data_expected = image.imresize(image.fixed_crop(data_in, 0, 0, 100, 50), 25, 25, 2)
+    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+    # test 4D input with resize
+    data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype('uint8')
+    out_batch_nd = transforms.Crop(0, 0, 100, 50, (25, 25), 2)(data_bath_in)
+    for i in range(len(out_batch_nd)):
+        assert_almost_equal(image.imresize(image.fixed_crop(data_bath_in[i], 0, 0, 100, 50), 25, 25, 2).asnumpy(),
+            out_batch_nd[i].asnumpy())
+    def _test_size_below_zero_Exception():
+        transforms.Crop(0, 0, 100, 50, (-25, 25), 2)(data_in)
+    assertRaises(MXNetError, _test_size_below_zero_Exception)    
+    def _test_height_and_width_below_zero_Exception():
+        transforms.Crop(0, 0, -100, -50)(data_in)
+    assertRaises(MXNetError, _test_height_and_width_below_zero_Exception)
+
+
+@with_seed()
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     flip_in = data_in[:, ::-1, :]
