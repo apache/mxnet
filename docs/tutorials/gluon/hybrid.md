@@ -140,7 +140,7 @@ net2 = gluon.SymbolBlock.imports('model-symbol.json', ['data'], 'model-0001.para
 ## Operators that does not work with hybridize
 
 If you want to hybridize your model, you must use `F.some_operator` in your 'hybrid_forward' function, F will be 'mxnet.nd' before you hybridize and 'mxnet.sym' after hybridize. While most APIs are the same in NDArray and Symbol,  there are some differences. Writing `F.some_operator` and call `hybridize` may not work all the time.
-Here we list all the APIs that do not work and provide you the work arounds.
+Here we list some frequently used NDArray APIs that can't be hybridized and provide you the work arounds.
 
 ### Element-wise Operators
 
@@ -162,7 +162,7 @@ However, that's not the case in Symbol API, it's not automatically broadcasted a
 | [*NDArray.\__eq\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__eq__) |  x.\__eq\__(y) <=> x==y <=> mx.nd.equal(x, y) |
 | [*NDArray.\__ne\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ne__) |  x.\__ne\__(y) <=> x!=y <=> mx.nd.not_equal(x, y) |
 
-The current workaround is to use corecponding broadcast operators for arithmetic and comparison to avoid potential hybridization failure when input shapes are different.
+The current workaround is to use corresponding broadcast operators for arithmetic and comparison to avoid potential hybridization failure when input shapes are different.
 
 | Symbol APIs  | Description  |
 |---|---|
@@ -203,7 +203,7 @@ def hybrid_forward(self, F, x):
     return x[0]
 ```
 
-The current workaround is to explicitly call [`slice`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.slice) operators in `hybrid_forward`.
+The current workaround is to explicitly call [`slice`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.slice) or [`slice_axis`](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.slice_axis) operators in `hybrid_forward`.
 
 
 ### Not implemented operators
@@ -221,10 +221,10 @@ For example, avoid `x += y` and use `x  = x + y`, otherwise you will get `NotImp
 
 | NDArray in-place arithmetic operators | Description |
 |---|---|
-|[*NDArray.__iadd__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__iadd__) |	x.__iadd__(y) <=> x+=y |
-|[*NDArray.__isub__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__isub__) |	x.__isub__(y) <=> x-=y |
-|[*NDArray.__imul__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imul__) |	x.__imul__(y) <=> x*=y |
-|[*NDArray.__idiv__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__idiv__) |	x.__rdiv__(y) <=> x/=y |
-|[*NDArray.__imod__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imod__) |	x.__rmod__(y) <=> x%=y |
+|[*NDArray.\__iadd\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__iadd__) |	x.__iadd__(y) <=> x+=y |
+|[*NDArray.\__isub\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__isub__) |	x.__isub__(y) <=> x-=y |
+|[*NDArray.\__imul\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imul__) |	x.__imul__(y) <=> x*=y |
+|[*NDArray.\__idiv\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__idiv__) |	x.__rdiv__(y) <=> x/=y |
+|[*NDArray.\__imod\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imod__) |	x.__rmod__(y) <=> x%=y |
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
