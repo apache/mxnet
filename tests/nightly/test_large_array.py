@@ -145,6 +145,14 @@ def test_where():
     res = nd.sparse.where(csr_cond, a, b)
     assert np.sum(res[0].asnumpy() == 1) == b.shape[1]
 
+def test_topk():
+    a = nd.arange(0, LARGE_X, dtype='int32').reshape(LARGE_X, 1)
+    b = nd.broadcast_to(a, shape=(a.shape[0], SMALL_Y))
+    k = nd.topk(b, k=10)
+    assert np.sum(k.asnumpy() == 9) == LARGE_X
+    k = nd.topk(b, axis=0, k=10)
+    assert np.sum(k.asnumpy() == (LARGE_X-1)) == 10
+
 
 if __name__ == '__main__':
     import nose
