@@ -20,8 +20,7 @@
 (defn check-valid-file
   "Check that the file exists"
   [input-file]
-  (let [file (io/file input-file)]
-    (.exists file)))
+  (.exists (io/file input-file)))
 
 (def cli-options
   [["-m" "--model-path-prefix PREFIX" "Model path prefix"
@@ -34,18 +33,12 @@
    ["-d" "--input-dir IMAGE_DIR" "Input directory"
     :default "images/"
     :validate [check-valid-dir "Input directory not found"]]
-   [nil "--device [cpu|gpu]" "Device"
-    :default "cpu"
-    :validate [#(#{"cpu" "gpu"} %) "Device must be one of cpu or gpu"]]
-   [nil "--device-id INT" "Device ID"
-    :default 0]
    ["-h" "--help"]])
 
 (defn print-predictions
   "Print image classifier predictions for the given input file"
-  [input-file predictions]
+  [predictions]
   (println (apply str (repeat 80 "=")))
-  (println "Input file:" input-file)
   (doseq [[label probability] predictions]
     (println (format "Class: %s Probability=%.8f" label probability)))
   (println (apply str (repeat 80 "="))))
@@ -56,7 +49,7 @@
   (let [image (infer/load-image-from-file input-image)
         topk 5
         [predictions] (infer/classify-image classifier image topk)]
-    (print-predictions input-image predictions)))
+    predictions))
 
 (defn classify-images-in-dir
   "Classify all jpg images in the directory"
@@ -69,32 +62,27 @@
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (doseq [image-files image-file-batches]
-      (let [image-batch (infer/load-image-paths image-files)
-            topk 5]
-        (doseq [[input-image preds]
-                (map list
-                     image-files
-                     (infer/classify-image-batch classifier image-batch topk))]
-          (print-predictions input-image preds))))))
+    (apply
+     concat
+     (for [image-files image-file-batches]
+       (let [image-batch (infer/load-image-paths image-files)
+             topk 5]
+         (infer/classify-image-batch classifier image-batch topk))))))
 
 (defn run-classifier
   "Runs an image classifier based on options provided"
   [options]
-  (let [{:keys [model-path-prefix input-image input-dir
-                device device-id]} options
-        ctx (if (= device "cpu")
-              (context/cpu device-id)
-              (context/gpu device-id))
+  (let [{:keys [model-path-prefix input-image input-dir]} options
         descriptors [(mx-io/data-desc {:name "data"
                                        :shape [1 3 224 224]
                                        :layout layout/NCHW
                                        :dtype dtype/FLOAT32})]
         factory (infer/model-factory model-path-prefix descriptors)
         classifier (infer/create-image-classifier
-                    factory {:contexts [ctx]})]
-    (classify-single-image classifier input-image)
-    (classify-images-in-dir classifier input-dir)))
+                    factory {:contexts [(context/default-context)]})]
+    (print-predictions (classify-single-image classifier input-image))
+    (doseq [predictions (classify-images-in-dir classifier input-dir)]
+      (print-predictions predictions))))
 
 (defn -main
   [& args]

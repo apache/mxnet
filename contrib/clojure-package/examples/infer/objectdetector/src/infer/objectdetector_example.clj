@@ -1,3 +1,19 @@
+;; Licensed to the Apache Software Foundation (ASF) under one or more
+;; contributor license agreements.  See the NOTICE file distributed with
+;; this work for additional information regarding copyright ownership.
+;; The ASF licenses this file to You under the Apache License, Version 2.0
+;; (the "License"); you may not use this file except in compliance with
+;; the License.  You may obtain a copy of the License at
+;;
+;;    http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+;;
+
 (ns infer.objectdetector-example
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
@@ -20,8 +36,7 @@
 (defn check-valid-file
   "Check that the file exists"
   [input-file]
-  (let [file (io/file input-file)]
-    (.exists file)))
+  (.exists (io/file input-file)))
 
 (def cli-options
   [["-m" "--model-path-prefix PREFIX" "Model path prefix"
@@ -34,18 +49,12 @@
    ["-d" "--input-dir IMAGE_DIR" "Input directory"
     :default "images/"
     :validate [check-valid-dir "Input directory not found"]]
-   [nil "--device [cpu|gpu]" "Device"
-    :default "cpu"
-    :validate [#(#{"cpu" "gpu"} %) "Device must be one of cpu or gpu"]]
-   [nil "--device-id INT" "Device ID"
-    :default 0]
    ["-h" "--help"]])
 
 (defn print-predictions
   "Print image detector predictions for the given input file"
-  [input-file predictions width height]
+  [predictions width height]
   (println (apply str (repeat 80 "=")))
-  (println "Top detected objects for input file:" input-file)
   (doseq [[label prob-and-bounds] predictions]
     (println (format
               "Class: %s Prob=%.5f Coords=(%.3f, %.3f, %.3f, %.3f)"
@@ -59,15 +68,15 @@
 
 (defn detect-single-image
   "Detect objects in a single image and print top-5 predictions"
-  [detector input-image width height]
+  [detector input-image]
   (let [image (infer/load-image-from-file input-image)
         topk 5
         [predictions] (infer/detect-objects detector image topk)]
-    (print-predictions input-image predictions width height)))
+    predictions))
 
 (defn detect-images-in-dir
   "Detect objects in all jpg images in the directory"
-  [detector input-dir width height]
+  [detector input-dir]
   (let [batch-size 20
         image-file-batches (->> input-dir
                                 io/file
@@ -76,32 +85,30 @@
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (doseq [image-files image-file-batches]
-      (let [image-batch (infer/load-image-paths image-files)
-            topk 5]
-        (doseq [[input-image preds]
-                (map list
-                     image-files
-                     (infer/detect-objects-batch detector image-batch topk))]
-          (print-predictions input-image preds width height))))))
+    (apply
+     concat
+     (for [image-files image-file-batches]
+       (let [image-batch (infer/load-image-paths image-files)
+             topk 5]
+         (infer/detect-objects-batch detector image-batch topk))))))
 
 (defn run-detector
   "Runs an image detector based on options provided"
   [options]
   (let [{:keys [model-path-prefix input-image input-dir
                 device device-id]} options
-        ctx (if (= device "cpu")
-              (context/cpu device-id)
-              (context/gpu device-id))
         width 512 height 512
         descriptors [(mx-io/data-desc {:name "data"
                                        :shape [1 3 height width]
                                        :layout layout/NCHW
                                        :dtype dtype/FLOAT32})]
         factory (infer/model-factory model-path-prefix descriptors)
-        detector (infer/create-object-detector factory {:contexts [ctx]})]
-    (detect-single-image detector input-image width height)
-    (detect-images-in-dir detector input-dir width height)))
+        detector (infer/create-object-detector
+                  factory
+                  {:contexts [(context/default-context)]})]
+    (print-predictions (detect-single-image detector input-image) width height)
+    (doseq [predictions (detect-images-in-dir detector input-dir)]
+      (print-predictions predictions width height))))
 
 (defn -main
   [& args]
