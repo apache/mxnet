@@ -41,6 +41,9 @@ if(MSVC)
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
 
   include_directories(${MKLROOT}/include)
+  file(COPY ${MKLROOT}/lib/libiomp5md.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  file(COPY ${MKLROOT}/lib/mklml.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  file(COPY ${CMAKE_SOURCE_DIR}/3rdparty/mkldnn/config_template.vcxproj.user DESTINATION ${CMAKE_SOURCE_DIR})
 
 elseif(APPLE)
   set(MKL_NAME "mklml_mac_${MKLML_RELEASE_FILE_SUFFIX}")
@@ -55,6 +58,8 @@ elseif(APPLE)
 
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
   include_directories(${MKLROOT}/include)
+  file(COPY ${MKLROOT}/lib/libiomp5.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  file(COPY ${MKLROOT}/lib/libmklml.dylib DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 elseif(UNIX)
   set(MKL_NAME "mklml_lnx_${MKLML_RELEASE_FILE_SUFFIX}")
@@ -68,6 +73,9 @@ elseif(UNIX)
   set(MKLROOT "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}")
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
   include_directories(${MKLROOT}/include)
+  file(COPY ${MKLROOT}/lib/libiomp5.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  file(COPY ${MKLROOT}/lib/libmklml_gnu.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+  file(COPY ${MKLROOT}/lib/libmklml_intel.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 else()
   message(FATAL_ERROR "Wrong platform")
