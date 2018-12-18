@@ -15,6 +15,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
-include README
-recursive-include * *.py
-recursive-include * *.so
+
+CPPEX_SRC = $(wildcard *.cpp)
+CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
+OPENCV_CFLAGS=`pkg-config --cflags opencv`
+OPENCV_LDFLAGS=`pkg-config --libs opencv`
+
+CXX=g++
+
+
+CFLAGS=$(COMMFLAGS) -I../../../3rdparty/tvm/nnvm/include -I../../../3rdparty/dmlc-core/include -I ../../include -I ../../../include -Wall -O3 -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
+CPPEX_EXTRA_LDFLAGS := -L../../../lib -lmxnet $(OPENCV_LDFLAGS)
+
+all: $(CPPEX_EXE)
+
+debug: CPPEX_CFLAGS += -DDEBUG -g
+debug: all
+
+
+$(CPPEX_EXE):% : %.cpp
+	$(CXX) -std=c++0x $(CFLAGS)  $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+
+clean:
+	rm -f $(CPPEX_EXE)

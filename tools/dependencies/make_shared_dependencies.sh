@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,33 +16,25 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build MXNet for Android ARMv7
 
-FROM mxnetcipinned/dockcross-linux-armv7:11262018
+# This is a convenience script for calling the build scripts of all dependency libraries.
+# Environment variables should be set beforehand.
 
-ENV ARCH armv7l
-ENV HOSTCC gcc
-ENV TARGET ARMV7
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
-WORKDIR /work/deps
 
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
-
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
-
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
-
-ARG USER_ID=0
-ARG GROUP_ID=0
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
+if [[ ! $PLATFORM == 'darwin' ]]; then
+    source $DIR/openblas.sh
+fi
+source $DIR/libz.sh
+source $DIR/libturbojpeg.sh
+source $DIR/libpng.sh
+source $DIR/libtiff.sh
+source $DIR/openssl.sh
+source $DIR/curl.sh
+source $DIR/eigen.sh
+source $DIR/opencv.sh
+source $DIR/protobuf.sh
+source $DIR/cityhash.sh
+source $DIR/zmq.sh
+source $DIR/lz4.sh

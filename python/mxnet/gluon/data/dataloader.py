@@ -26,6 +26,7 @@ import sys
 import multiprocessing
 import multiprocessing.queues
 from multiprocessing.reduction import ForkingPickler
+from multiprocessing.pool import ThreadPool
 import threading
 import numpy as np
 
@@ -384,8 +385,9 @@ def _worker_initializer(dataset):
     global _worker_dataset
     _worker_dataset = dataset
 
-def _worker_fn(samples, batchify_fn):
+def _worker_fn(samples, batchify_fn, dataset=None):
     """Function for processing data in worker process."""
+    # pylint: disable=unused-argument
     # it is required that each worker process has to fork a new MXIndexedRecordIO handle
     # preserving dataset as global variable can save tons of overhead and is safe in new process
     global _worker_dataset
@@ -394,10 +396,14 @@ def _worker_fn(samples, batchify_fn):
     ForkingPickler(buf, pickle.HIGHEST_PROTOCOL).dump(batch)
     return buf.getvalue()
 
+def _thread_worker_fn(samples, batchify_fn, dataset):
+    """Threadpool worker function for processing data."""
+    return batchify_fn([dataset[i] for i in samples])
+
 class _MultiWorkerIter(object):
     """Internal multi-worker iterator for DataLoader."""
     def __init__(self, worker_pool, batchify_fn, batch_sampler, pin_memory=False,
-                 worker_fn=_worker_fn, prefetch=0):
+                 worker_fn=_worker_fn, prefetch=0, dataset=None):
         self._worker_pool = worker_pool
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
@@ -407,6 +413,7 @@ class _MultiWorkerIter(object):
         self._iter = iter(self._batch_sampler)
         self._worker_fn = worker_fn
         self._pin_memory = pin_memory
+        self._dataset = dataset
         # pre-fetch
         for _ in range(prefetch):
             self._push_next()
@@ -419,7 +426,8 @@ class _MultiWorkerIter(object):
         r = next(self._iter, None)
         if r is None:
             return
-        async_ret = self._worker_pool.apply_async(self._worker_fn, (r, self._batchify_fn))
+        async_ret = self._worker_pool.apply_async(
+            self._worker_fn, (r, self._batchify_fn, self._dataset))
         self._data_buffer[self._sent_idx] = async_ret
         self._sent_idx += 1
 
@@ -432,7 +440,7 @@ class _MultiWorkerIter(object):
         assert self._rcvd_idx < self._sent_idx, "rcvd_idx must be smaller than sent_idx"
         assert self._rcvd_idx in self._data_buffer, "fatal error with _push_next, rcvd_idx missing"
         ret = self._data_buffer.pop(self._rcvd_idx)
-        batch = pickle.loads(ret.get())
+        batch = pickle.loads(ret.get()) if self._dataset is None else ret.get()
         if self._pin_memory:
             batch = _as_in_context(batch, context.cpu_pinned())
         batch = batch[0] if len(batch) == 1 else batch
@@ -498,12 +506,18 @@ class DataLoader(object):
         but will consume more shared_memory. Using smaller number may forfeit the purpose of using
         multiple worker processes, try reduce `num_workers` in this case.
         By default it defaults to `num_workers * 2`.
+    thread_pool : bool, default False
+        If ``True``, use threading pool instead of multiprocessing pool. Using threadpool
+        can avoid shared memory usage. If `DataLoader` is more IO bounded or GIL is not a killing
+        problem, threadpool version may achieve better performance than multiprocessing.
+
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
-                 num_workers=0, pin_memory=False, prefetch=None):
+                 num_workers=0, pin_memory=False, prefetch=None, thread_pool=False):
         self._dataset = dataset
         self._pin_memory = pin_memory
+        self._thread_pool = thread_pool
 
         if batch_sampler is None:
             if batch_size is None:
@@ -529,8 +543,11 @@ class DataLoader(object):
         self._worker_pool = None
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if self._num_workers > 0:
-            self._worker_pool = multiprocessing.Pool(
-                self._num_workers, initializer=_worker_initializer, initargs=[self._dataset])
+            if self._thread_pool:
+                self._worker_pool = ThreadPool(self._num_workers)
+            else:
+                self._worker_pool = multiprocessing.Pool(
+                    self._num_workers, initializer=_worker_initializer, initargs=[self._dataset])
         if batchify_fn is None:
             if num_workers > 0:
                 self._batchify_fn = default_mp_batchify_fn
@@ -551,14 +568,17 @@ class DataLoader(object):
 
         # multi-worker
         return _MultiWorkerIter(self._worker_pool, self._batchify_fn, self._batch_sampler,
-                                pin_memory=self._pin_memory, worker_fn=_worker_fn,
-                                prefetch=self._prefetch)
+                                pin_memory=self._pin_memory,
+                                worker_fn=_thread_worker_fn if self._thread_pool else _worker_fn,
+                                prefetch=self._prefetch,
+                                dataset=self._dataset if self._thread_pool else None)
 
     def __len__(self):
         return len(self._batch_sampler)
 
     def __del__(self):
         if self._worker_pool:
-            # manually terminate due to a bug that pool is not automatically terminated on linux
+            # manually terminate due to a bug that pool is not automatically terminated
+            # https://bugs.python.org/issue34172
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
