@@ -756,8 +756,16 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_uniform_sample)
-.describe(R"code(This operator samples sub-graph from a csr graph via an
-uniform probability. 
+.describe(R"code(This operator samples sub-graphs from a csr graph via an
+uniform probability. The operator is designed for DGL.
+
+The operator outputs three sets of NDArrays to represent the sampled results
+(the number of NDArrays in each set is the same as the number of seed NDArrays):
+1) a set of 1D NDArrays containing the sampled vertices, 2) a set of CSRNDArrays representing
+the sampled edges, 3) a set of 1D NDArrays indicating the layer where a vertex is sampled.
+The first set of 1D NDArrays have a length of max_num_vertices+1. The last element in an NDArray
+indicate the acutal number of vertices in a subgraph. The third set of NDArrays have a length
+of max_num_vertices, and the valid number of vertices is the same as the ones in the first set.
 
 Example:
 
@@ -843,7 +851,16 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
 
 NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_non_uniform_sample)
 .describe(R"code(This operator samples sub-graph from a csr graph via an
-uniform probability. 
+non-uniform probability. The operator is designed for DGL.
+
+The operator outputs four sets of NDArrays to represent the sampled results
+(the number of NDArrays in each set is the same as the number of seed NDArrays):
+1) a set of 1D NDArrays containing the sampled vertices, 2) a set of CSRNDArrays representing
+the sampled edges, 3) a set of 1D NDArrays with the probability that vertices are sampled,
+4) a set of 1D NDArrays indicating the layer where a vertex is sampled.
+The first set of 1D NDArrays have a length of max_num_vertices+1. The last element in an NDArray
+indicate the acutal number of vertices in a subgraph. The third and fourth set of NDArrays have a length
+of max_num_vertices, and the valid number of vertices is the same as the ones in the first set.
 
 Example:
 
