@@ -183,9 +183,9 @@ class Crop(HybridBlock):
         Width of the cropping area
     h : int
         Height of the cropping area
-    size : tuple of (w, h)
+    size : int or tuple of (w, h)
         Optional, resize to new size after cropping
-    interp : int, optional, default=1
+    interp : int, optional
         Optional, interpolation method. See opencv for details.
 
     Inputs:

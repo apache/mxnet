@@ -18,10 +18,10 @@
 */
 
 /*!
-* \file image_random.cc
-* \brief
-* \author
-*/
+ *  Copyright (c) 2016 by Contributors
+ * \file crop-cc.h
+ * \brief the image crop operator registration
+ */
 
 #include "mxnet/base.h"
 #include "crop-inl.h"

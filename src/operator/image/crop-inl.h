@@ -18,15 +18,17 @@
 */
 
 /*!
-* \file crop-inl.h
-* \brief
-* \author
-*/
+ *  Copyright (c) 2016 by Contributors
+ * \file crop-inl.h
+ * \brief the image crop operator implementation
+ */
+
 #ifndef MXNET_OPERATOR_IMAGE_CROP_INL_H_
 #define MXNET_OPERATOR_IMAGE_CROP_INL_H_
 
 
 #include <algorithm>
+#include <tuple>
 #include <vector>
 
 #include "mxnet/base.h"
@@ -57,7 +59,7 @@ struct CropParam : public dmlc::Parameter<CropParam> {
     DMLC_DECLARE_FIELD(height)
     .describe("Top boundary of the cropping area");
     DMLC_DECLARE_FIELD(size)
-    .describe("Size of new image. Could be (width, height) or (size)");
+    .describe("Size of image for resizing after crop. Could be (width, height) or size");
     DMLC_DECLARE_FIELD(interp)
     .describe("Interpolation method for resizing. By default uses bilinear interpolation"
         "Options are INTER_NEAREST - a nearest-neighbor interpolation"
@@ -81,7 +83,8 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
   const bool has_size = param.size.has_value();
   const bool has_interp = param.interp.has_value();
 
-  CHECK(has_size == has_interp) << "Missing input. Either size or interp is not assigned value.";
+  CHECK(has_size == has_interp)
+      << "Missing input. Either size or interp is not assigned the value.";
   CHECK((param.height > 0) && (param.width > 0))
       << "Input height and width must be greater than 0";
   if (has_size) {
@@ -114,6 +117,7 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+// overloading version of CropImpl to do resize after crop
 inline void CropImpl(int x,
                       int y,
                       int height,
@@ -142,7 +146,7 @@ inline void CropImpl(int x,
       cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type,
         outputs[0].dptr<DType>() + output_index);
       cv::Rect roi(x, y, width, height);
-      buf(roi).copyTo(dst); 
+      buf(roi).copyTo(dst);
       CHECK(!dst.empty());
       CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr<DType>() + output_index);
     });
@@ -229,7 +233,8 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
 
   if (inputs[0].ndim() == 3) {
     if (need_resize) {
-      CropImpl(param.x, param.y, param.height, param.width, inputs, outputs, size, param.interp.value());
+      CropImpl(param.x, param.y, param.height, param.width,
+        inputs, outputs, size, param.interp.value());
     } else {
       CropImpl(param.x, param.y, param.height, param.width, inputs, outputs);
     }
@@ -245,17 +250,15 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
     #pragma omp parallel for
     for (auto i = 0; i < batch_size; ++i) {
       if (need_resize) {
-        CropImpl(param.x, param.y, param.height, param.width, inputs, outputs, size, param.interp.value(), input_offset * i, output_offset * i);
+        CropImpl(param.x, param.y, param.height, param.width,
+          inputs, outputs, size, param.interp.value(), input_offset * i, output_offset * i);
       } else {
-        CropImpl(param.x, param.y, param.height, param.width, inputs, outputs, input_offset * i, output_offset * i);
+        CropImpl(param.x, param.y, param.height, param.width,
+          inputs, outputs, input_offset * i, output_offset * i);
+      }
     }
   }
 }
-
-
-
-
-
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet
