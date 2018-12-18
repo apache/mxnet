@@ -212,7 +212,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * review require() usages to add meaningful messages. (#12570)
 
 #### Clojure
-* Introduction to Clojure-MXNet video link. (#12754)
+* Introduction to Clojure-MXNet video link (#12754)
 * Improve the Clojure Package README to Make it Easier to Get Started (#12881)
 
 #### Perl
@@ -512,11 +512,11 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 
 #### Build and CI
 * [MXNET-908] Enable minimal OSX Travis build (#12462)
-* Used jom for parallel windows builds (#12533)
+* Use jom for parallel Windows builds (#12533)
 * [MXNET-950] Enable parallel R dep builds in CI (#12552)
 * Speed up CI Windows builds (#12563)
 * [MXNET-908] Speed up travis builds to avoid timeouts (#12706)
-* simplify mac mkldnn build (#12724)
+* Simplify mac MKLDNN build (#12724)
 * [MXNET-674] Speed up GPU builds in CI (#12782)
 * Improved git reset for CI builds (#12784)
 * Improve cpp-package example project build files. (#13093)
