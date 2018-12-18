@@ -15,12 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-Tests for individual operators
-This module contains operator tests which currently do not exist on
-ONNX backend test framework. Once we have PRs on the ONNX repo and get
-those PRs merged, this file will get EOL'ed.
-"""
+
 # pylint: disable=too-many-locals,wrong-import-position,import-error
 from __future__ import absolute_import
 import sys

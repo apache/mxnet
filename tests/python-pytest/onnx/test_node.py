@@ -50,7 +50,7 @@ def get_rnd(shape, low=-1.0, high=1.0, dtype=np.float32):
         return (np.random.uniform(low, high,
                                   np.prod(shape)).reshape(shape).astype(np.float32))
     elif dtype == np.int32:
-        return (np.random.uniform(low, high,
+        return (np.random.randint(low, high,
                                   np.prod(shape)).reshape(shape).astype(np.float32))
     elif dtype == np.bool_:
         return np.random.choice(a=[False, True], size=shape).astype(np.float32)
