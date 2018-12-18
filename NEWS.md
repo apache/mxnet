@@ -44,7 +44,13 @@ More information can be found at [Optimize dynamic neural network models with co
 
 #### SVRG Optimization
 
-SVRG stands for Stochastic Variance Reduced Gradient, which was first introduced in the paper [Accelerating Stochastic Gradient Descent using Predicative Variance Reduction in 2013](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). It is an optimization technique that complements SGD. SGD is known for large scale optimization but it suffers from slow convergence asymptotically due to the inherent variance. SGD approximates the full gradient using a small batch of samples which introduces variance. In order to converge faster, SGD often needs to start with a smaller learning rate. SVRG remedies the problem by keeping a version of the estimated weights that is close to the optimal parameters and maintain average of full gradient over full pass of data. The average of full gradients of all data is calculated w.r.t to parameters of last mth epochs. It has provable guarantees for strongly convex smooth functions, and a more detailed proof can be found in section 3 of the paper. SVRG uses a different update rule: gradients w.r.t current parameters minus gradients w.r.t parameters from the last mth epoch, plus the average of gradients over all data. Key Characteristics of SVRG:
+SVRG stands for Stochastic Variance Reduced Gradient, which was first introduced in the paper [Accelerating Stochastic Gradient Descent using Predicative Variance Reduction in 2013](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). It is an optimization technique that complements SGD. 
+
+SGD is known for large scale optimization, but it suffers from slow convergence asymptotically due to the inherent variance. SGD approximates the full gradient using a small batch of samples which introduces variance. In order to converge faster, SGD often needs to start with a smaller learning rate. 
+
+SVRG remedies the slow convergence problem by keeping a version of the estimated weights that is close to the optimal parameters and maintains the average of the full gradient over the full pass of data. The average of the full gradients of all data is calculated w.r.t to parameters of last mth epochs. It has provable guarantees for strongly convex smooth functions; a detailed proof can be found in section 3 of the [paper](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). SVRG uses a different update rule than SGD: gradients w.r.t current parameters minus gradients w.r.t parameters from the last mth epoch, plus the average of gradients over all data. 
+
+Key Characteristics of SVRG:
 
   * Explicit variance reduction 
   * Ability to use relatively large learning rate compared to SGD, which leads to faster convergence.
