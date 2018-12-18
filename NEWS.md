@@ -131,13 +131,13 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Fall back when sparse arrays are passed to MKLDNN-enabled operators (#11664)
 * further bump up tolerance for sparse dot (#12527)
 * Sparse support for logic ops (#12860)
-* sparse support for take(csr, axis=0)  (#12889)
+* Sparse support for take(csr, axis=0)  (#12889)
 
 #### ONNX
 
 * ONNX export - Clip operator (#12457)
 * ONNX version update from 1.2.1 to 1.3 in CI (#12633) 
-* Use modern onnx API to load model from file (#12777)
+* Use modern ONNX API to load a model from file (#12777)
 * [MXNET-892] ONNX export/import: DepthToSpace, SpaceToDepth operators (#12731)
 * ONNX export: Fully connected operator w/o bias, ReduceSum, Square (#12646)
 * ONNX export/import: Selu (#12785)
@@ -161,10 +161,10 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 
 #### Other
 * support for upper triangular matrices in linalg (#12904)
-* [MXNET-918] Introduce Random module / Refact code generation (#13038)
+* Introduce Random module / Refactor code generation (#13038)
 * [MXNET-779]Add DLPack Transformation API (#12047)
 * Draw labels name (#9496)
-* Change the way NDArrayIter handle the last batch (#12285)
+* Change the way NDArrayIter handles the last batch (#12285)
 * Revert Change the way NDArrayIter handle the last batch (#12537)
 * Track epoch metric separately (#12182)
 * Set correct update on kvstore flag in dist_device_sync mode (#12786)
@@ -177,12 +177,12 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Gluon LSTM Projection and Clipping Support (#13056)
 * Make Gluon download function to be atomic (#12572)
 * [MXNET -1004] Poisson NegativeLog Likelihood loss (#12697)
-* add activation information for mxnet.gluon.nn._Conv (#12354)
+* Add activation information for `mxnet.gluon.nn._Conv` (#12354)
 * Gluon DataLoader: avoid recursionlimit error (#12622)
 
 #### Symbol
 * Addressed dumplicate object reference issues (#13214)
-* Throw exception if MXSymbolInferShape fails. (#12733)
+* Throw exception if MXSymbolInferShape fails (#12733)
 * Infer dtype in SymbolBlock import from input symbol (#12412)
 
 ### Language API updates
@@ -200,17 +200,17 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
   * Test classification with LSTMs - 12263
 
 #### Scala
-* explain the details for Scala Experimental (#12348)
+* Explain the details for Scala Experimental (#12348)
 * MXNET-873 - Bring Clojure Package Inline with New DataDesc and Layout in Scala Package (#12387)
 * [MXNET-716] Adding Scala Inference Benchmarks (#12721)
 * [MXNET-716][MIRROR #12723] Scala Benchmark Extension pack (#12758)
 * NativeResource Management in Scala (#12647)
-* Ignore generated scala files. (#12928)
-* use ResourceScope in Model/Trainer/FeedForward.scala (#12882)
+* Ignore generated Scala files (#12928)
+* Use ResourceScope in Model/Trainer/FeedForward.scala (#12882)
 * [MXNET-1180] Scala Image API (#12995) 
 * ONNX export: Scalar, Reshape - Set appropriate tensor type (#13067)
-* Port of scala Image API to clojure (#13107) 
-* update log4j version of Scala package (#13131)
+* Port of Scala Image API to Clojure (#13107) 
+* Update log4j version of Scala package (#13131)
 * Review require() usages to add meaningful messages (#12570)
 
 #### Clojure
@@ -221,15 +221,15 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-1026] [Perl] Sync with recent changes in Python's API (#12739)
 
 #### Julia
-* import Julia binding
+* Import Julia binding
 
 ### Performance improvements
-* update mshadow for omp acceleration when nvcc is not present  (#12674)
+* Update mshadow for omp acceleration when nvcc is not present  (#12674)
 * [MXNET-860] Avoid implicit double conversions (#12361)
 
 ### Bug fixes
 * [MXNET-1234] Fix shape inference problems in Activation backward (#13409)
-* Fix a bug in where op with 1-D input (#12325)
+* Fix a bug in `where` op with 1-D input (#12325)
 * [MXNET-825] Fix CGAN R Example with MNIST dataset (#12283)
 * [MXNET-535] Fix bugs in LR Schedulers and add warmup (#11234)
 * Fix speech recognition example (#12291)
