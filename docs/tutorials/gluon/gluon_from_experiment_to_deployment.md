@@ -5,7 +5,7 @@
 MXNet Gluon API comes with a lot of great features and it can provide you everything you need from experiment to deploy the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
 
 Let's say you need to build a service that provides flower species recognition. A common use case is, you don't have enough data to train a good model. In such cases we use a technique called Transfer Learning.
-In Transfer Learning we make use of a pre-trained model that solves a related task but is trained on a very large standard dataset such as ImageNet from a different domain, we utilize the knowledge in this pre-trained model to perform a new task at hand. 
+In Transfer Learning we make use of a pre-trained model that solves a related task but is trained on a very large standard dataset such as ImageNet from a different domain, we utilize the knowledge in this pre-trained model to perform a new task at hand.
 
 Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In this tutorial we will use the pre-trained model [ResNet50 V2](https://arxiv.org/abs/1603.05027) trained on ImageNet dataset, this model achieves 77.11% top-1 accuracy on ImageNet, we seek to transfer as much knowledge as possible for our task of recognizing different species of Flowers.
 
@@ -30,7 +30,7 @@ We will use the [Oxford 102 Category Flower Dateset](http://www.robots.ox.ac.uk/
 
 
 ```python
-data_util_file = "oxford_102_flower_dataset.py" 
+data_util_file = "oxford_102_flower_dataset.py"
 base_url = "https://raw.githubusercontent.com/roywei/incubator-mxnet/gluon_tutorial/docs/tutorial_utils/data/{}?raw=true"
 mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
 import oxford_102_flower_dataset
@@ -43,23 +43,23 @@ oxford_102_flower_dataset.get_data(path)
 Now your data will be organized into the following format, all the images belong to the same category will be put together
 ```bash
 data
-├── train
-│   ├── 0
-│   │   ├── image_06736.jpg
-│   │   ├── image_06741.jpg
+|--train
+|   |-- 0
+|   |   |-- image_06736.jpg
+|   |   |-- image_06741.jpg
 ...
-│   ├── 1
-│   │   ├── image_06755.jpg
-│   │   ├── image_06899.jpg
+|   |-- 1
+|   |   |-- image_06755.jpg
+|   |   |-- image_06899.jpg
 ...
-├── test
-│   ├── 0
-│   │   ├── image_00731.jpg
-│   │   ├── image_0002.jpg
+|-- test
+|   |-- 0
+|   |   |-- image_00731.jpg
+|   |   |-- image_0002.jpg
 ...
-│   ├── 1
-│   │   ├── image_00036.jpg
-│   │   ├── image_05011.jpg
+|   |-- 1
+|   |   |-- image_00036.jpg
+|   |   |-- image_05011.jpg
 
 ```
 
@@ -241,146 +241,6 @@ _, test_acc = test(finetune_net, test_data, ctx)
 print('[Finished] Test-acc: %.3f' % (test_acc))
 ```
 
-    Process Process-7:
-    Process Process-5:
-    Process Process-6:
-    Process Process-8:
-    Traceback (most recent call last):
-    Traceback (most recent call last):
-    Traceback (most recent call last):
-    Traceback (most recent call last):
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
-        self.run()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
-        self.run()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
-        self.run()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 258, in _bootstrap
-        self.run()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 93, in run
-        self._target(*self._args, **self._kwargs)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 93, in run
-        self._target(*self._args, **self._kwargs)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 93, in run
-        self._target(*self._args, **self._kwargs)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/process.py", line 93, in run
-        self._target(*self._args, **self._kwargs)
-      File "/Users/lawei/Documents/Workspace/roywei/incubator-mxnet/python/mxnet/gluon/data/dataloader.py", line 186, in worker_loop
-        idx, samples = key_queue.get()
-      File "/Users/lawei/Documents/Workspace/roywei/incubator-mxnet/python/mxnet/gluon/data/dataloader.py", line 186, in worker_loop
-        idx, samples = key_queue.get()
-      File "/Users/lawei/Documents/Workspace/roywei/incubator-mxnet/python/mxnet/gluon/data/dataloader.py", line 186, in worker_loop
-        idx, samples = key_queue.get()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 93, in get
-        with self._rlock:
-      File "/Users/lawei/Documents/Workspace/roywei/incubator-mxnet/python/mxnet/gluon/data/dataloader.py", line 186, in worker_loop
-        idx, samples = key_queue.get()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 93, in get
-        with self._rlock:
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 93, in get
-        with self._rlock:
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/synchronize.py", line 96, in __enter__
-        return self._semlock.__enter__()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/synchronize.py", line 96, in __enter__
-        return self._semlock.__enter__()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 94, in get
-        res = self._recv_bytes()
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/synchronize.py", line 96, in __enter__
-        return self._semlock.__enter__()
-    KeyboardInterrupt
-    KeyboardInterrupt
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 216, in recv_bytes
-        buf = self._recv_bytes(maxlength)
-    KeyboardInterrupt
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 407, in _recv_bytes
-        buf = self._recv(4)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 379, in _recv
-        chunk = read(handle, remaining)
-    KeyboardInterrupt
-    Traceback (most recent call last):
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 240, in _feed
-        send_bytes(obj)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 200, in send_bytes
-        self._send_bytes(m[offset:offset + size])
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 404, in _send_bytes
-        self._send(header + buf)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 368, in _send
-        n = write(self._handle, buf)
-
-
-
-    ---------------------------------------------------------------------------
-
-    KeyboardInterrupt                         Traceback (most recent call last)
-
-    <ipython-input-32-4e9fa8a3bb40> in <module>()
-         38         trainer.set_learning_rate(lr)
-         39         trainer.step(batch_size)
-    ---> 40         train_loss += sum([l.mean().asscalar() for l in loss]) / len(loss)
-         41         metric.update(label, outputs)
-         42         iteration_idx += 1
-
-
-    <ipython-input-32-4e9fa8a3bb40> in <listcomp>(.0)
-         38         trainer.set_learning_rate(lr)
-         39         trainer.step(batch_size)
-    ---> 40         train_loss += sum([l.mean().asscalar() for l in loss]) / len(loss)
-         41         metric.update(label, outputs)
-         42         iteration_idx += 1
-
-
-    ~/Documents/Workspace/roywei/incubator-mxnet/python/mxnet/ndarray/ndarray.py in asscalar(self)
-       1996         if self.shape != (1,):
-       1997             raise ValueError("The current array is not a scalar")
-    -> 1998         return self.asnumpy()[0]
-       1999 
-       2000     def astype(self, dtype, copy=True):
-
-
-    ~/Documents/Workspace/roywei/incubator-mxnet/python/mxnet/ndarray/ndarray.py in asnumpy(self)
-       1978             self.handle,
-       1979             data.ctypes.data_as(ctypes.c_void_p),
-    -> 1980             ctypes.c_size_t(data.size)))
-       1981         return data
-       1982 
-
-
-    KeyboardInterrupt: 
-
-
-    BrokenPipeError: [Errno 32] Broken pipe
-    Traceback (most recent call last):
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 240, in _feed
-        send_bytes(obj)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 200, in send_bytes
-        self._send_bytes(m[offset:offset + size])
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 404, in _send_bytes
-        self._send(header + buf)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 368, in _send
-        n = write(self._handle, buf)
-    BrokenPipeError: [Errno 32] Broken pipe
-    Traceback (most recent call last):
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 240, in _feed
-        send_bytes(obj)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 200, in send_bytes
-        self._send_bytes(m[offset:offset + size])
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 404, in _send_bytes
-        self._send(header + buf)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 368, in _send
-        n = write(self._handle, buf)
-    BrokenPipeError: [Errno 32] Broken pipe
-    Traceback (most recent call last):
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/queues.py", line 240, in _feed
-        send_bytes(obj)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 200, in send_bytes
-        self._send_bytes(m[offset:offset + size])
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 404, in _send_bytes
-        self._send(header + buf)
-      File "/Users/lawei/anaconda3/lib/python3.6/multiprocessing/connection.py", line 368, in _send
-        n = write(self._handle, buf)
-    BrokenPipeError: [Errno 32] Broken pipe
-
-
 Following is the training result:
 ```bash
 [Epoch 40] Train-acc: 0.945, loss: 0.354 | Val-acc: 0.955 | learning-rate: 4.219E-04 | time: 17.8
@@ -408,7 +268,7 @@ export in this case creates `flower-recognition-symbol.json` and `flower-recogni
 
 MXNet provide various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily. Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Java](https://mxnet.incubator.apache.org/api/java/index.html), [Scala](https://mxnet.incubator.apache.org/api/scala/index.html), and [C++](https://mxnet.incubator.apache.org/api/c++/index.html) APIs. In this tutorial, we will focus on the C++ API, for more details, please refer to the [C++ Inference Example](https://github.com/leleamol/incubator-mxnet/tree/inception-example/cpp-package/example/inference).
 
- 
+
 ### Setup MXNet C++ API
 To use C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](https://mxnet.incubator.apache.org/install/ubuntu_setup.html), and [C++ Package documentation](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
 to enable C++ API.
@@ -616,7 +476,7 @@ Then it will predict your iamge
 You can find more ways to run inference and examples here:
 1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 2. [Scala Inference examples](https://mxnet.incubator.apache.org/tutorials/scala/)
-3. [ONNX model inference examples](https://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html) 
+3. [ONNX model inference examples](https://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
 
 ## References
 
