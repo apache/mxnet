@@ -7296,7 +7296,7 @@ def test_corner_pooling():
                 update_index = np.where(output_reshape[np.arange(output_reshape.shape[0]),max_index] !=  output_reshape[:, idx])
                 max_index[update_index] = idx
                 in_grad_reshape[np.arange(output_reshape.shape[0]),max_index] += out_grad_reshape[:, idx]
-            in_grad = np.reshape(in_grad_reshape,output.shape)
+            in_grad = np.reshape(in_grad_reshape,output.shape) 
         else:
             if 'top' == corner_type or 'bottom' == corner_type:
                 if corner_type == 'top':
