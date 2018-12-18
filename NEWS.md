@@ -27,7 +27,7 @@ MXNet.jl is the Julia package of Apache MXNet. MXNet.jl brings flexible and effi
   * Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
   * Flexible manipulation of symbolic to composite for construction of state-of-the-art deep learning models.
 
-#### Control Flow Operators
+#### Control Flow Operators (experimental)
 
 Today we observe more and more dynamic neural network models, especially in the fields of natural language processing and graph analysis. The dynamics in these models come from multiple sources, including:
 
@@ -50,7 +50,7 @@ SVRG stands for Stochastic Variance Reduced Gradient, which was first introduced
   * Ability to use relatively large learning rate compared to SGD, which leads to faster convergence.
 More details can be found at [SVRG Optimization in MXNet Python Module](https://cwiki.apache.org/confluence/display/MXNET/Unified+integration+with+external+backend+libraries)
 
-#### Subgraph API
+#### Subgraph API (experimental)
 
 MXNet can integrate with many different kinds of backend libraries, including TVM, MKLDNN, TensorRT, Intel nGraph and more. These backend in general support a limited number of operators, and thus running computation in a model usually involves in interaction between backend-supported operators and MXNet operators. These backend libraries share some common requirements:
 
@@ -69,7 +69,7 @@ bloated code with dispose() methods.
 hard to debug memory-leaks
 Goals of the project are to provide MXNet JVM Users automated memory management which can release native memory when there are no references to JVM objects, to be able to manage both GPU and CPU Memory automatically without performance degradation with automated memory management.  More details can be found here: [JVM Memory Management](https://cwiki.apache.org/confluence/display/MXNET/JVM+Memory+Management)
 
-#### Topology-aware AllReduce
+#### Topology-aware AllReduce (experimental)
 For distributed training, the ring Reduce communication pattern used by NCCL and Parameter server Reduce currently used in MXNet are not optimal for small batch sizes on p3.16xlarge instances with 8 GPUs. The approach is based on the idea of using trees to perform the Reduce and Broadcast. We can use the idea of minimum spanning trees to do a binary tree Reduce communication pattern to improve it following this paper by Wang, Li, Edo and Smola [1]. Our strategy will be to use:
 
   * a single tree (latency-optimal for small messages) to handle Reduce on small messages
@@ -78,13 +78,13 @@ For distributed training, the ring Reduce communication pattern used by NCCL and
 More details can be found here: [Topology-aware AllReduce](https://cwiki.apache.org/confluence/display/MXNET/Single+machine+All+Reduce+Topology-aware+Communication)
 Note: This is an experimental feature and has known problems - see [13341](https://github.com/apache/incubator-mxnet/issues/13341). Please help to contribute to improve the robustness of the feature.
 
-#### MKDNN backend: Graph optimization and Quantization (experimental)
+#### MKLDNN backend: Graph optimization and Quantization (experimental)
 
-Two advanced features, graph optimization (operator fusion) and reduced-precision (INT8) computation, are introduced to MKL-DNN backend in this release ([#12530](https://github.com/apache/incubator-mxnet/pull/12530), [#13297](https://github.com/apache/incubator-mxnet/pull/13297), [#13260](https://github.com/apache/incubator-mxnet/pull/13260)).
-These features significantly boost the inference performance on CPU (up to 4X) for a broad range of deep learning topologies.
+Two advanced features, graph optimization (operator fusion) and reduced-precision (INT8) computation, are introduced to MKLDNN backend in this release ([#12530](https://github.com/apache/incubator-mxnet/pull/12530), [#13297](https://github.com/apache/incubator-mxnet/pull/13297), [#13260](https://github.com/apache/incubator-mxnet/pull/13260)).
+These features significantly boost the inference performance on CPU (up to 4X) for a broad range of deep learning topologies. Currently, this feature is only available for the inference on the CPU platforms.
 
 ##### Graph Optimization
-MKL-DNN backend takes advantage of MXNet subgraph to implement the most of possible operator fusions for inference, such as Convolution + ReLU, Batch Normalization folding, etc. When using mxnet-mkl package, users can easily enable this feature by setting export MXNET_SUBGRAPH_BACKEND=MKLDNN.
+MKLDNN backend takes advantage of MXNet subgraph to implement the most of possible operator fusions for inference, such as Convolution + ReLU, Batch Normalization folding, etc. When using mxnet-mkl package, users can easily enable this feature by setting export MXNET_SUBGRAPH_BACKEND=MKLDNN.
 
 ##### Quantization
 Performance of reduced-precision (INT8) computation is also dramatically improved after the graph optimization feature is applied on CPU Platforms. Various models are supported and can benefit from reduced-precision computation, including symbolic models, Gluon models and even custom models. Users can run most of the pre-trained models with only a few lines of commands and a new quantization script imagenet_gen_qsym_mkldnn.py. The observed accuracy loss is less than 0.5% for popular CNN networks, like ResNet-50, Inception-BN, MobileNet, etc.
@@ -571,16 +571,16 @@ Please follow the instructions at https://mxnet.incubator.apache.org/install/ind
 ### List of submodules used by Apache MXNet (Incubating) and when they were updated last
 Submodule@commit ID::Last updated by MXNet:: Last update in submodule
 
-* cub@::Jul 31, 2017 :: Jul 31, 2017
-* dlpack@:: Oct 30, 2017 :: Aug 23, 2018
-* dmlc-core@:: Aug 15, 2018 :: Nov 15, 2018
-* googletest@:: July 14, 2016 :: July 14, 2016
-* mkldnn@:: Nov 7, 2018 :: Nov 5, 2018
-* mshadow@:: Sep 28, 2018 :: Nov 7,  2018
-* onnx-tensorrt@:: Aug 22, 2018 :: Nov 10, 2018
-* openmp@: Nov 22, 2017 :: Nov 13, 2018
-* ps-lite@: April 25, 2018 :: Oct 9, 2018
-* tvm@: Oct 10, 2018 :: Oct 8, 2018
+* cub@05eb57f::Jul 31, 2017 :: Jul 31, 2017
+* dlpack@10892ac:: Oct 30, 2017 :: Aug 23, 2018
+* dmlc-core@0a0e8ad:: Aug 15, 2018 :: Nov 15, 2018
+* googletest@ec44c6c:: July 14, 2016 :: July 14, 2016
+* mkldnn@a7c5f53:: Nov 7, 2018 :: Nov 5, 2018
+* mshadow@696803b:: Sep 28, 2018 :: Nov 7,  2018
+* onnx-tensorrt@3d8ee04:: Aug 22, 2018 :: Nov 10, 2018
+* openmp@37c7212: Nov 22, 2017 :: Nov 13, 2018
+* ps-lite@8a76389: April 25, 2018 :: Oct 9, 2018
+* tvm@0f053c8: Oct 10, 2018 :: Oct 8, 2018
 
 
 
