@@ -105,11 +105,11 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-807] Support integer label type in ctc_loss operator (#12468)
 * [MXNET-876] make CachedOp a normal operator (#11641)
 * Add index_copy() operator (#12810)
-* getnnz operator  for CSR matrix (#12908)
+* Fix getnnz operator for CSR matrix (#12908) - issue #12872
 * [MXNET-1173] Debug operators - isfinite, isinf and isnan (#12967)
-* sample_like operators (#13034)
+* Add sample_like operators (#13034)
 * Add gauss err function operator (#13229)
-* [MXNET -1030] Cosine Embedding Loss (#12750)
+* [MXNET -1030] Enhanced Cosine Embedding Loss (#12750)
 * Add bytearray support back to imdecode (#12855, #12868) (#12912)
 * Add Psroipooling CPU implementation (#12738)
 
@@ -117,21 +117,20 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 #### Operator
 * [MXNET-912] Refactoring ctc loss operator (#12637)
 * Refactor L2_normalization (#13059)
-* customized take forward for CPU (#12997)
-* Allow stop of arange to be inferred from dims. (#12064)
+* Customized and faster `TakeOpForward` operator on CPU (#12997)
+* Allow stop of arange operator to be inferred from dims. (#12064)
 * Make check_isfinite, check_scale optional in clip_global_norm (#12042) add FListInputNames attribute to softmax_cross_entropy (#12701) [MXNET-867] Pooling1D with same padding (#12594)
 * Add support for more req patterns for bilinear sampler backward (#12386) [MXNET-882] Support for N-d arrays added to diag op. (#12430)
 
 #### Optimizer
-* Adagrad optimizer with row-wise learning rate (#12365)
+* Add a special version of Adagrad optimizer with row-wise learning rate (#12365)
 * Add a Python SVRGModule for performing SVRG Optimization Logic (#12376)
 
 #### Sparse
 
 * Fall back when sparse arrays are passed to MKLDNN-enabled operators (#11664)
-* further bump up tolerance for sparse dot (#12527)
-* Sparse support for logic ops (#12860)
-* Sparse support for take(csr, axis=0)  (#12889)
+* Add Sparse support for logic operators (#12860)
+* Add Sparse support for take(csr, axis=0)  (#12889)
 
 #### ONNX
 
@@ -143,6 +142,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * ONNX export/import: Selu (#12785)
 * ONNX export: Cleanup (#12878)
 * Added operators: Selu, DepthToSpace, SpaceToDepth, HardSigmoid, Logical operators
+* ONNX export: Scalar, Reshape - Set appropriate tensor type (#13067)
 
 #### MKLDNN
 
@@ -163,9 +163,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * support for upper triangular matrices in linalg (#12904)
 * Introduce Random module / Refactor code generation (#13038)
 * [MXNET-779]Add DLPack Transformation API (#12047)
-* Draw labels name (#9496)
-* Change the way NDArrayIter handles the last batch (#12285)
-* Revert Change the way NDArrayIter handle the last batch (#12537)
+* Draw label name next to corresponding bounding boxes when the mapping of id to names is specified (#9496)
 * Track epoch metric separately (#12182)
 * Set correct update on kvstore flag in dist_device_sync mode (#12786)
 
@@ -208,10 +206,10 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Ignore generated Scala files (#12928)
 * Use ResourceScope in Model/Trainer/FeedForward.scala (#12882)
 * [MXNET-1180] Scala Image API (#12995) 
-* ONNX export: Scalar, Reshape - Set appropriate tensor type (#13067)
 * Port of Scala Image API to Clojure (#13107) 
 * Update log4j version of Scala package (#13131)
 * Review require() usages to add meaningful messages (#12570)
+* Fix Scala readme (#13082)
 
 #### Clojure
 * Introduction to Clojure-MXNet video link (#12754)
@@ -228,6 +226,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-860] Avoid implicit double conversions (#12361)
 
 ### Bug fixes
+* Fix for #10920 -  increase tolerance for sparse dot (#12527)
 * [MXNET-1234] Fix shape inference problems in Activation backward (#13409)
 * Fix a bug in `where` op with 1-D input (#12325)
 * [MXNET-825] Fix CGAN R Example with MNIST dataset (#12283)
@@ -256,7 +255,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Fix version dropdown behavior (#12632)
 * Fix reference to wrong function (#12644)
 * Fix the location of the tutorial of control flow operators (#12638)
-* fix bug, issue 12613 (#12614)
+* Fix issue 12613 (#12614)
 * [MXNET-780] Fix exception handling bug (#12051)
 * Fix bug in prelu, issue 12061 (#12660) 
 * [MXNET-833] [R] Char-level RNN tutorial fix (#12670)
@@ -285,7 +284,6 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Fix indpt[0] for take(csr) (#12927)
 * Fix the bug of assigning large integer to NDArray (#12921)
 * Fix Sphinx errors for tutorials and install ToCs (#12945)
-* fix readme (#13082)
 * Fix variable name in tutorial code snippet (#13052)
 * Fix example for mxnet.nd.contrib.cond and fix typo in src/engine (#12954)
 * Fix a typo in operator guide (#13115)
@@ -296,11 +294,11 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-953] Fix oob memory read (#12631)
 * Fix Sphinx error in ONNX file (#13251)
 * [Example] Fixing Gradcam implementation (#13196)
-* fix train mnist for inception-bn and resnet (#13239)
+* Fix train mnist for inception-bn and resnet (#13239)
 * Fix a bug in index_copy (#13218)
 * Fix Sphinx errors in box_nms (#13261)
 * Fix Sphinx errors (#13252)
-* fix the flag (#13293)
+* Fix the cpp example compiler flag (#13293)
 * Made fixes to sparse.py and sparse.md (#13305)
 * [Example] Gradcam- Fixing a link (#13307)
 * Manually track num_max_thread (#12380)
@@ -308,7 +306,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Undefined name: load_model() --> utils.load_model() (#12867)
 * Change the way NDArrayIter handle the last batch (#12545)
 * Add embedding to print_summary (#12796)
-* allow foreach on input with 0 length (#12471)
+* Allow foreach on input with 0 length (#12471)
 * [MXNET-360]auto convert str to bytes in img.imdecode when py3 (#10697)
 
 ### Licensing updates
@@ -322,10 +320,10 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Add a tutorial for control flow operators. (#12340)
 * Add tutorial Gotchas using NumPy (#12007)
 * Updated Symbol tutorial with Gluon (#12190)
-* improve tutorial redirection (#12607) 
+* Improve tutorial redirection (#12607) 
 * Include missing import in TensorRT tutorial (#12609)
 * Update Operator Implementation Tutorial (#12230)
-* add a tutorial for the subgraph API. (#12698)
+* Add a tutorial for the subgraph API. (#12698)
 * Improve clojure tutorial (#12974)
 * Update scala intellij tutorial (#12827)
 * [Example] Gradcam consolidation in tutorial (#13255)
@@ -333,7 +331,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-703] Add a TensorRT walkthrough (#12548)
 
 #### Example
-* update C++ example so it is easier to run (#12397)
+* Update C++ example so it is easier to run (#12397)
 * [MXNET-580] Add SN-GAN example (#12419)
 * [MXNET-637] Multidimensional LSTM example for MXNetR (#12664)
 * [MXNET-982] Provide example to illustrate usage of CSVIter in C++ API (#12636)
@@ -361,7 +359,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Update ONNX API docs references (#12317)
 * Documentation update related to sparse support (#12367)
 * Edit shape.array doc and some style improvements (#12162)
-* fixed docs/website build checkout bug (#12413)
+* Fixed docs/website build checkout bug (#12413)
 * Add Python API docs for test_utils and visualization (#12455)
 * Fix the installation doc for MKL-DNN backend (#12534)
 * Added comment to docs regarding ToTensor transform (#12186)
