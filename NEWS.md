@@ -58,28 +58,30 @@ More details can be found at [SVRG Optimization in MXNet Python Module](https://
 
 #### Subgraph API (experimental)
 
-MXNet can integrate with many different kinds of backend libraries, including TVM, MKLDNN, TensorRT, Intel nGraph and more. These backend in general support a limited number of operators, and thus running computation in a model usually involves in interaction between backend-supported operators and MXNet operators. These backend libraries share some common requirements:
+MXNet can integrate with many different kinds of backend libraries, including TVM, MKLDNN, TensorRT, Intel nGraph and more. In general, these backends support a limited number of operators, so running computation in a model usually involves an interaction between backend-supported operators and MXNet operators. These backend libraries share some common requirements:
 
-TVM , MKLDNN and nGraph uses customized data formats. Interaction between these backends with MXNet requires data format conversion.
+TVM , MKLDNN and nGraph use customized data formats. Interaction between these backends with MXNet requires data format conversion.
 TVM, MKLDNN, TensorRT and nGraph fuses operators.
-Integration with these backends should happen in the granularity of subgraphs instead of in the granularity of operators. To fuse operators, it's obvious that we need to divide a graph into subgraphs so that the operators in a subgraph can be fused into a single operator. To handle customized data formats, we should partition a computation graph into subgraphs as well. Each subgraph contains only TVM, MKLDNN or ngraph operators. In this way, MXNet converts data formats only when entering such a subgraph and the operators inside a subgraph handle format conversion themselves if necessary. This makes interaction of TVM and MKLDNN with MXNet much easier. Neither the MXNet executor nor the MXNet operators need to deal with customized data formats. Even though invoking these libraries from MXNet requires similar steps, the partitioning rule and the subgraph execution of these backends can be different. As such, we define the following interface for backends to customize graph partitioning and subgraph execution inside an operator. More details can be found at PR 12157 and [Subgraph API](https://cwiki.apache.org/confluence/display/MXNET/Unified+integration+with+external+backend+libraries).
+Integration with these backends should happen in the granularity of subgraphs instead of in the granularity of operators. To fuse operators, it's obvious that we need to divide a graph into subgraphs so that the operators in a subgraph can be fused into a single operator. To handle customized data formats, we should partition a computation graph into subgraphs as well. Each subgraph contains only TVM, MKLDNN or nGraph operators. In this way, MXNet converts data formats only when entering such a subgraph, and the operators inside a subgraph handle format conversion themselves if necessary. This makes interaction of TVM and MKLDNN with MXNet much easier. Neither the MXNet executor nor the MXNet operators need to deal with customized data formats. Even though invoking these libraries from MXNet requires similar steps, the partitioning rule and the subgraph execution of these backends can be different. As such, we define the following interface for backends to customize graph partitioning and subgraph execution inside an operator. More details can be found at PR 12157 and [Subgraph API](https://cwiki.apache.org/confluence/display/MXNET/Unified+integration+with+external+backend+libraries).
 
 #### JVM Memory Management
 
-MXNet Scala and Java API uses native memory to manage NDArray, Symbol, Executor, DataIterators using the MXNet c_api. C APIs provide appropriate interfaces to create, access and free these objects MXNet Scala has corresponding Wrappers and APIs which have pointer references to the native memory. Before this project, JVM users(Scala/Clojure/Java..) of Apache MXNet have to manage MXNet objects manually using the dispose pattern, there are a few usability problems with this approach:
+The MXNet Scala and Java API uses native memory to manage NDArray, Symbol, Executor, DataIterators using MXNet's internal C APIs.  The C APIs provide appropriate interfaces to create, access and free these objects. MXNet Scala has corresponding Wrappers and APIs that have pointer references to the native memory. Before this project, JVM users (e.g. Scala, Clojure, or Java) of MXNet have to manage MXNet objects manually using the dispose pattern. There are a few usability problems with this approach:
 
-Users have to track the MXNet objects manually and remember to call dispose, this is not Java Idiomatic and not user-friendly, quoting a user "this feels like I am writing C++ code which I stopped ages ago"
-Leads to memory leaks if dispose is not called.
-Many Objects in MXNet-Scala are managed in native memory, needing to use dispose on them as well.
-bloated code with dispose() methods.
-hard to debug memory-leaks
-Goals of the project are to provide MXNet JVM Users automated memory management which can release native memory when there are no references to JVM objects, to be able to manage both GPU and CPU Memory automatically without performance degradation with automated memory management.  More details can be found here: [JVM Memory Management](https://cwiki.apache.org/confluence/display/MXNET/JVM+Memory+Management)
+* Users have to track the MXNet objects manually and remember to call `dispose`. This is not Java idiomatic and not user friendly. Quoting a user: "this feels like I am writing C++ code which I stopped ages ago".
+* Leads to memory leaks if `dispose` is not called.
+* Many objects in MXNet-Scala are managed in native memory, needing to use `dispose` on them as well.
+* Bloated code with `dispose()` methods.
+* Hard to debug memory-leaks.
+Goals of the project are: 
+* Provide MXNet JVM users automated memory management that can release native memory when there are no references to JVM objects. 
+* Provide automated memory management for both GPU and CPU memory without performance degradation.  More details can be found here: [JVM Memory Management](https://cwiki.apache.org/confluence/display/MXNET/JVM+Memory+Management)
 
 #### Topology-aware AllReduce (experimental)
-For distributed training, the ring Reduce communication pattern used by NCCL and Parameter server Reduce currently used in MXNet are not optimal for small batch sizes on p3.16xlarge instances with 8 GPUs. The approach is based on the idea of using trees to perform the Reduce and Broadcast. We can use the idea of minimum spanning trees to do a binary tree Reduce communication pattern to improve it following this paper by Wang, Li, Edo and Smola [1]. Our strategy will be to use:
+For distributed training, the `Reduce` communication patterns used by NCCL and MXNet are not optimal for small batch sizes. The `Topology-aware AllReduce` approach is based on the idea of using trees to perform the `Reduce` and `Broadcast` operations. We can use the idea of minimum spanning trees to do a binary tree `Reduce` communication pattern to improve distributed training following this paper by Wang, Li, Edo and Smola [1]. Our strategy is to use:
 
-  * a single tree (latency-optimal for small messages) to handle Reduce on small messages
-  * multiple trees (bandwidth-optimal for large messages) to handle large messages. 
+  * a single tree (latency-optimal for small messages) to handle `Reduce` on small messages
+  * multiple trees (bandwidth-optimal for large messages) to handle `Reduce` on large messages
 
 More details can be found here: [Topology-aware AllReduce](https://cwiki.apache.org/confluence/display/MXNET/Single+machine+All+Reduce+Topology-aware+Communication)
 Note: This is an experimental feature and has known problems - see [13341](https://github.com/apache/incubator-mxnet/issues/13341). Please help to contribute to improve the robustness of the feature.
@@ -122,7 +124,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 
 #### Optimizer
 * Adagrad optimizer with row-wise learning rate (#12365)
-* Adding python SVRGModule for performing SVRG Optimization Logic (#12376)
+* Add a Python SVRGModule for performing SVRG Optimization Logic (#12376)
 
 #### Sparse
 
