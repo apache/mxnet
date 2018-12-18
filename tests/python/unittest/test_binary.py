@@ -295,3 +295,21 @@ def test_binary_layer_config_scaling():
     with nn.set_binary_layer_config(approximation="xnor"):
         assert isinstance(nn.activated_conv(3), nn.ScaledBinaryConv)
     assert isinstance(nn.activated_conv(3), nn.BinaryConvolution)
+
+def test_binary_inference_conv():
+    bits = 32
+    input_data = mx.nd.random.normal(-1, 1, shape=(100,64,8,8))
+    weight = mx.nd.random.normal(-1, 1, shape=(64, 64, 5, 5))
+
+    # do weights concatenation
+    weight_concatenated = mx.nd.zeros(64, 64/bits, 5, 5)
+    binary_infer = mx.ndarray.BinaryInferenceConvolution(data=input_data, 
+                    weight=weight_concatenated, kernel=(5,5), num_filter=64)
+
+    # TODO: create qconv2d layer, assign weights and set input.
+    # binary_layer = nn.QConv2D(...)
+    # result1 = binary_layer.forward(in_data)
+    # something like this
+    # d = mx.nd.Convolution(data=mx.nd.random.normal(-1, 1, shape=(100,64,8,8)), 
+                            # weight=mx.nd.random.normal(-1, 1, shape=(64, 64, 5, 5)), 
+                            # kernel=(5,5), num_filter=64, no_bias=True)
