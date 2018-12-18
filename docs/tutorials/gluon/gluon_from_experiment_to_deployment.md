@@ -447,8 +447,8 @@ void Predictor::PredictImage(const std::string& image_file) {
 
 ### Compile and Run Inference Code
 
-You can find the full code [here](https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/inception_inference.cpp)
-, and to compile it use this [Makefile](https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/Makefile)
+You can find the full code [here](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference)
+, and to compile it use this [Makefile](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/Makefile)
 
 Now you will be able to compile the run inference, just do `make all` and pass the parameters as follows
 
@@ -473,16 +473,17 @@ Then it will predict your iamge
 
 ## What's next
 
-You can find more ways to run inference and examples here:
+You can find more ways to run inference and deploy your models here:
 1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 2. [Scala Inference examples](https://mxnet.incubator.apache.org/tutorials/scala/)
 3. [ONNX model inference examples](https://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
+4. [MXNet Model Server Examples](https://github.com/awslabs/mxnet-model-server/tree/master/examples)
 
 ## References
 
-1. https://github.com/Arsey/keras-transfer-learning-for-oxford102
-1. https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html
-2. https://github.com/leleamol/incubator-mxnet/blob/inception-example/cpp-package/example/inference/
-3. https://gluon-crash-course.mxnet.io/
+1. [Trasnfer Learning for Oxford102 Flower Dataset](https://github.com/Arsey/keras-transfer-learning-for-oxford102)
+2. [Gluon tutorial on fine-tuning](https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
+3. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
+4. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
