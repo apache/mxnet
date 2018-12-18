@@ -13,12 +13,41 @@
 #include "../../src/operator/contrib/binary_inference/xnor.h"
 
 #include "rapidjson/document.h"
-#include "rapidjson/writer.h"
+#include "rapidjson/prettywriter.h"
 
 using mxnet::op::xnor::BITS_PER_BINARY_WORD;
 using mxnet::op::xnor::BINARY_WORD;
 using namespace std;
 using namespace rapidjson;
+
+//======= string constant definition ========//
+// layer name related
+const string PREFIX_BINARIZED_FILE= "binarized_";
+const string POSTFIX_SYM_JSON = "-symbol.json";
+const string PREFIX_GRAD_CANCEL = "_contrib_gradcancel";
+const string PREFIX_DET_SIGN = "det_sign";
+const string PREFIX_Q_CONV = "qconv";
+const string PREFIX_Q_DENSE = "qdense";
+const string PREFIX_Q_ACTIV = "qactivation";
+const string PREFIX_WEIGHT = "weight";
+const string PREFIX_BIAS = "bias";
+const string PREFIX_FORWARD = "fwd";
+// symbol json related
+const char* PREFIX_SYM_JSON_NODES = "nodes";
+const char* PREFIX_SYM_JSON_NODE_ROW_PTR = "node_row_ptr";
+const char* PREFIX_SYM_JSON_ATTRS = "attrs";
+const char* PREFIX_SYM_JSON_HEADS = "heads";
+const char* PREFIX_SYM_JSON_ARG_NODES = "arg_nodes";
+
+// name of standard convolution and dense layer
+const string PREFIX_DENSE = "FullyConnected";
+const string PREFIX_CONVOLUTION = "Convolution";
+// use this to distinguish arg_nodes : op = 'null'
+const string ARG_NODES_OP_PATTERN = "null";
+
+const string PREFIX_BINARY_INFERENCE_CONV_LAYER = "BinaryInferenceConvolution";
+const string PREFIX_BINARY_INFERENCE_DENSE_LAYER = "BinaryInferenceFullyConnected";
+//==============================================//
 
 /**
  * @brief binarize an NDArray
@@ -202,8 +231,8 @@ int convert_json_file(const string& input_fname, const string& output_fname, vec
     node_attrs_name = "attr";
   }
 
-  CHECK(d.HasMember("nodes"));
-  rapidjson::Value& nodes = d["nodes"];
+  CHECK(d.HasMember(PREFIX_SYM_JSON_NODES));
+  rapidjson::Value& nodes = d[PREFIX_SYM_JSON_NODES];
   CHECK(nodes.IsArray());
 
   for (rapidjson::Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr) {
@@ -252,6 +281,59 @@ int convert_json_file(const string& input_fname, const string& output_fname, vec
 /**
  * @brief
     description:
+        helper function for printing out "heads", "arg_nodes" and "nodes"
+        from the given mxnet symbol json file.
+ * @param a json file
+ */
+void print_rapidjson_doc(string json, string log_prefix="") {
+  Document d;  
+  d.Parse(json.c_str());
+
+  // print heads
+  CHECK(d.HasMember(PREFIX_SYM_JSON_HEADS));
+  rapidjson::Value& heads = d[PREFIX_SYM_JSON_HEADS];
+  CHECK(heads.IsArray() && heads.Capacity() > 0);
+  // logging
+  cout << "Info: " << log_prefix.c_str() << "'heads' of input json: " << "[" << "[" 
+       << heads[0][0].GetInt() << ", "
+       << heads[0][1].GetInt() << ", "
+       << heads[0][2].GetInt() 
+       << "]" << "]" << endl;
+
+  // print arg_nodes
+  CHECK(d.HasMember(PREFIX_SYM_JSON_ARG_NODES));   
+  Value& arg_nodes = d[PREFIX_SYM_JSON_ARG_NODES];
+  CHECK(arg_nodes.IsArray());
+  CHECK(!arg_nodes.Empty());
+  // logging
+  cout << "Info: " << log_prefix.c_str() << "'arg_nodes' of input json: " << "["; 
+  for (int i = 0; i < arg_nodes.Capacity(); ++i)
+  {
+    cout << arg_nodes[i].GetInt(); 
+    if (i < arg_nodes.Capacity()-1)
+    {
+      cout << ",";
+    }
+  }
+  cout << "]" << endl;
+
+  // print nodes
+  CHECK(d.HasMember(PREFIX_SYM_JSON_NODES));
+  Value& nodes = d[PREFIX_SYM_JSON_NODES];
+  CHECK(nodes.IsArray());
+  CHECK(!nodes.Empty());
+
+  cout <<"Info: " << log_prefix.c_str() << "number of nodes:" << nodes.Capacity() << endl;    
+  for (int i = 0; i < nodes.Capacity(); ++i)
+  {    
+    cout <<"Info: " << log_prefix.c_str() << "node index " << i << " : " << nodes[i]["name"].GetString() << endl;
+  }
+}
+
+
+/**
+ * @brief
+    description:
         We modify the json file.
         mxnet symbol json objects to be adapted:
         - nodes: all operators
@@ -263,8 +345,9 @@ int convert_json_file(const string& input_fname, const string& output_fname, vec
  * @param output_file path to converted symbol file
  * @return success (0) or failure
  */
-int convert_symbol_json(const string& input_fname, const string& output_fname, vector<string>& filters_conv, vector<string>& filters_fc) {
-  cout <<"Load input 'symbol json' file: "<< input_fname << endl;
+int convert_symbol_json(const string& input_fname, const string& output_fname) {
+  //logging
+  cout << "Info: " <<"Load input 'symbol json' file: "<< input_fname << endl;
   string json;
   {
     ifstream stream(input_fname);
@@ -281,24 +364,129 @@ int convert_symbol_json(const string& input_fname, const string& output_fname, v
   Document::AllocatorType& allocator = d.GetAllocator();
   d.Parse(json.c_str());
 
-  CHECK(d.HasMember("heads"));
-  CHECK(d.HasMember("arg_nodes"));
-  CHECK(d.HasMember("nodes"));
-
-  Value nodes_new(kArrayType);
-  
-  Value heads_new(kArrayType);
-  heads_new.PushBack(Value().SetInt(0), allocator);
-  heads_new.PushBack(Value().SetInt(0), allocator);
-  heads_new.PushBack(Value().SetInt(0), allocator);
+  // get heads
+  // heads : total num of nodes : [[index last element, 0, 0]]
+  CHECK(d.HasMember(PREFIX_SYM_JSON_HEADS));
+  rapidjson::Value& heads = d[PREFIX_SYM_JSON_HEADS];
+  CHECK(heads.IsArray() && heads.Capacity() > 0);
 
   // update arg_nodes : contains indices of all "null" op
-  Value arg_nodes_new(kArrayType);   
+  CHECK(d.HasMember(PREFIX_SYM_JSON_ARG_NODES));   
+  Value& arg_nodes = d[PREFIX_SYM_JSON_ARG_NODES];
+  CHECK(arg_nodes.IsArray());
+  CHECK(!arg_nodes.Empty());
+  
+  // check, create nodes
   int retained_op_num = 0;
+  CHECK(d.HasMember(PREFIX_SYM_JSON_NODES));
+  Value& nodes = d[PREFIX_SYM_JSON_NODES];
+  CHECK(nodes.IsArray());
+  CHECK(!nodes.Empty());
+  Value nodes_new(kArrayType);
 
-  cout << d["heads"].GetArray()[0].GetArray()[0].GetInt() << endl;
+  // print the current json docu
+  print_rapidjson_doc(json);
+
+  // clear arg_nodes
+  arg_nodes.Clear();
+
+  for (Value::ValueIterator itr = nodes.Begin(); itr != nodes.End(); ++itr) {
+
+    CHECK((*itr).HasMember("op"));
+    // 1. remove qactivation ops, containing _grad_cancel and det_sign
+    if ((string((*itr)["name"].GetString()).find(PREFIX_Q_ACTIV) != string::npos))
+      continue;
+
+    // adapt qconv and qdense ops
+    CHECK((*itr).HasMember("name"));
+    
+    bool foundq = false;
+    bool retain = false;
+    // if qconv or qdense found
+    if (string((*itr)["name"].GetString()).find(PREFIX_Q_CONV) != string::npos
+        || string((*itr)["name"].GetString()).find(PREFIX_Q_DENSE) != string::npos){
+      
+      foundq = true;       
+      //2.for qconv and qdense, we only retain  'weight', 'bias' and 'fwd'                                    
+      if (string((*itr)["name"].GetString()).find(PREFIX_WEIGHT) != string::npos
+          || string((*itr)["name"].GetString()).find(PREFIX_BIAS) != string::npos
+          || string((*itr)["name"].GetString()).find(PREFIX_FORWARD) != string::npos
+         )
+        retain = true;  
+
+      // replace convolution and dense operators with binary inference layer
+      if ((*itr)["op"].IsString() && 
+          string((*itr)["op"].GetString()) == PREFIX_CONVOLUTION){
+        (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_CONV_LAYER.c_str(), allocator);
+        //logging
+        cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
+             << PREFIX_CONVOLUTION.c_str() << "' to '" << PREFIX_BINARY_INFERENCE_CONV_LAYER.c_str() << "'" << endl;
+      } 
+        
+      if ((*itr)["op"].IsString() && 
+          string((*itr)["op"].GetString()) == PREFIX_DENSE){
+        (*itr)["op"].SetString(PREFIX_BINARY_INFERENCE_DENSE_LAYER.c_str(), allocator);      
+        //logging
+        cout << "Info: " <<"CONVERTING op: '" << (*itr)["name"].GetString() << "' from '"
+             << PREFIX_DENSE.c_str() << "' to '" << PREFIX_BINARY_INFERENCE_DENSE_LAYER.c_str() << "'" << endl;
+      }
+    }
+
+    if (!foundq || retain){
+      // get updated inputs
+      CHECK((*itr).HasMember("inputs"));
+      CHECK((*itr)["inputs"].IsArray());
+
+      int arr_size = (*itr)["inputs"].Capacity();
+
+      for (int i = 0; i < arr_size; ++i){
+        (*itr)["inputs"][i][0].SetInt(retained_op_num - (arr_size - i));        
+      }
+
+      // add node      
+      nodes_new.PushBack((*itr), allocator);
+
+      // add arg_node
+      if ( string((*itr)["op"].GetString()) == ARG_NODES_OP_PATTERN){     
+        arg_nodes.PushBack(Value().SetInt(retained_op_num), allocator);        
+      }      
+      
+      //cout << (*itr)["name"].GetString() << endl;     
+      retained_op_num++;      
+    }
+  }  
+
+  // update heads 
+  // heads : total num of nodes : [[index last element, 0, 0]]
+  heads[0][0].SetInt(retained_op_num - 1);  
+
+  // update nodes  
+  nodes = nodes_new;
 
 
+  // Save output json file
+  cout << "Info: " <<"saving new 'symbol json' file to: "<< output_fname << endl;
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+  d.Accept(writer);
+
+  {
+    ofstream stream(output_fname);
+    if (!stream.is_open()) {
+      cout << "Error: " << "cant find json file at " + output_fname << endl;
+      return -1;
+    }
+    string output = buffer.GetString();
+    stream << output;
+    stream.close();
+
+    cout << "Info: " << "converted json file saved!" << endl;
+  
+    // print the current json docu
+    print_rapidjson_doc(output, "updated ");
+  }
+
+  return 0;
 }
 
 /**
@@ -306,46 +494,45 @@ int convert_symbol_json(const string& input_fname, const string& output_fname, v
  *
  */
 int main(int argc, char ** argv){
-  if (argc != 2) {
-    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" << endl;
+  if (argc < 2 || argc > 3) {
+    cout << "usage: " + string(argv[0]) + " <mxnet *.params file>" + " <output (optional)>" << endl;
     cout << "  will binarize the weights of the qconv or qdense layers of your model," << endl;
     cout << "  pack 32(x86 and ARMv7) or 64(x64) values into one and save the result with the prefix 'binarized_'" << endl;
+    cout << "<output>: specify the location to store the binarized files. If not specified, the same location as the input model will be used."  << endl;
     return -1;
   }
 
   const string params_file(argv[1]);
   char *file_copy_basename = strdup(argv[1]); 
-  char *file_copy_dirname = strdup(argv[1]);
+  char *file_copy_dirname = strdup(argv[1]);  
   const string path(dirname(file_copy_dirname));
   const string params_file_name(basename(file_copy_basename));
+  string out_path;
+  if(argc == 3)
+    out_path = argv[2];
+  if(out_path.empty())
+    out_path = path;
   free(file_copy_basename);
   free(file_copy_dirname);
 
   string base_name = params_file_name;
   base_name.erase(base_name.rfind('-')); // watchout if no '-'
-  const string param_out_fname(path + "/" + "binarized_" + params_file_name);
 
   const string json_file_name(path + "/"                + base_name + "-symbol.json");
-  const string json_out_fname(path + "/" + "binarized_" + base_name + "-symbol.json");
+  const string param_out_fname(out_path + "/" + "binarized_" + params_file_name);
+  const string json_out_fname(out_path + "/" + "binarized_" + base_name + "-symbol.json");
 
-
-  cout <<"Load input '.params' file: "<< params_file << endl;
+  //logging
+  cout << "Info: " <<"Load input '.params' file: "<< params_file << endl;
   
-  cout <<"Output 'json' file path: "<< json_out_fname << endl;
-  
-  cout <<"Output '.params' file path: "<< param_out_fname << endl;
-
-  vector<string> filters_conv;
-  vector<string> filters_fc;
-
-
-  if (int ret = convert_symbol_json(json_file_name, json_out_fname, filters_conv, filters_fc) != 0) {
+  if (int ret = convert_symbol_json(json_file_name, json_out_fname) != 0) {
     return ret;
   }
 
-  // if (int ret = convert_params_file(params_file, param_out_fname, filters_conv, filters_fc) != 0) {
-  //   return ret;
-  // }
-
+  if (int ret = convert_params_file(params_file, param_out_fname, filters_conv, filters_fc) != 0) {
+    return ret;
+  }
+ 
+  cout << "Info: " <<"Output '.params' file path: "<< param_out_fname << endl;
   return 0;
 }
