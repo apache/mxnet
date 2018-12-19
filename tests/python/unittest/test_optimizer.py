@@ -385,8 +385,7 @@ class PyNAG(PySGD):
             else:
               mom = state
               mom[:] *= self.momentum
-              grad += wd * weight
-              mom[:] += grad
+              mom[:] += grad + wd * weight
               grad[:] += self.momentum * mom
               weight[:] += -lr * grad
         else:
@@ -400,8 +399,7 @@ class PyNAG(PySGD):
                 weight32[:] += -lr * (grad32 + wd * weight32)
             else:
                 mom[:] *= self.momentum
-                grad32 += wd * weight32
-                mom[:] += grad32
+                mom[:] += grad32 + wd * weight32
                 grad32[:] += self.momentum * mom
                 weight32[:] += -lr * grad32
             tmp = weight32.astype(weight.dtype)
