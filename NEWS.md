@@ -55,14 +55,14 @@ Apache MXNet (incubating) Change Log
 ### New Features
 #### Java Inference API
 
-Model inference is often managed in a production ecosystem using primarily Java/Scala tools and frameworks. This release seeks to alleviate the need for software engineers to write custom MXNet wrappers to fit their production environment. 
+Model inference is often managed in a production ecosystem using primarily Java/Scala tools and frameworks. This release seeks to alleviate the need for software engineers to write custom MXNet wrappers to fit their production environment.
 
 Inference on a trained model has a couple of common use cases:
 
   1. Real-time or Online Inference - tasks that require immediate feedback, such as fraud detection
-  2. Batch or Offline Inference - tasks that don't require immediate feedback, these are use cases where you have massive amounts of data and want to run inference or pre-compute inference results 
+  2. Batch or Offline Inference - tasks that don't require immediate feedback, these are use cases where you have massive amounts of data and want to run inference or pre-compute inference results
 Real-time Inference is often performed and deployed on popular web frameworks such as Tomcat, Netty, Jetty, etc., all of which use Java.
-Batch Inference is often performed on big data platforms such as Spark using Scala or Java.  
+Batch Inference is often performed on big data platforms such as Spark using Scala or Java.
 
 With this project, we had the following goals:
 * Build a new set of APIs that are Java friendly, compatible with Java 7+, are easy to use for inference.
@@ -70,7 +70,7 @@ With this project, we had the following goals:
 
 More details can be found at the [Java Inference API document](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Java+Inference+API).
 
-#### Julia API 
+#### Julia API
 
 MXNet.jl is the Julia package of Apache MXNet. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlights of features include:
 
@@ -84,25 +84,25 @@ Today we observe more and more dynamic neural network models, especially in the 
   * Models are expressed with control flow, such as conditions and loops;
   * NDArrays in a model may have dynamic shapes, meaning the NDArrays of a model or some of the NDArrays have different shapes for different batches;
   * Models may want to use more dynamic data structures, such as lists or dictionaries.
-It's natural to express dynamic models in frameworks with an imperative programming interface (e.g., Gluon, Pytorch, TensorFlow Eager). In this kind of interface, developers can use Python control flows, or NDArrays with any shape at any moment, or use Python lists and dictionaries to store data as they want. The problem of this approach is that it highly dependent on the originating front-end programming language (mainly Python). A model implemented in one language can only run in the same language. 
+It's natural to express dynamic models in frameworks with an imperative programming interface (e.g., Gluon, Pytorch, TensorFlow Eager). In this kind of interface, developers can use Python control flows, or NDArrays with any shape at any moment, or use Python lists and dictionaries to store data as they want. The problem of this approach is that it highly dependent on the originating front-end programming language (mainly Python). A model implemented in one language can only run in the same language.
 
-A common use case is that machine learning scientists want to develop their models in Python, whereas engineers who deploy the models usually have to use a different "production" language (e.g., Java or C). Gluon tries to close the gap between the model development and production deployment. Machine learning scientists design and implement their models in Python with the imperative interface, and then Gluon converts the implementations from imperative to symbolic by invoking `hybridize()` for model exporting. 
+A common use case is that machine learning scientists want to develop their models in Python, whereas engineers who deploy the models usually have to use a different "production" language (e.g., Java or C). Gluon tries to close the gap between the model development and production deployment. Machine learning scientists design and implement their models in Python with the imperative interface, and then Gluon converts the implementations from imperative to symbolic by invoking `hybridize()` for model exporting.
 
-The goal of this project is to enhance Gluon to turn a dynamic neural network into a static computation graph. The dynamic control flows are expressed by control flow operators with Gluon hybridization, and these are exported for deployment. 
+The goal of this project is to enhance Gluon to turn a dynamic neural network into a static computation graph. The dynamic control flows are expressed by control flow operators with Gluon hybridization, and these are exported for deployment.
 
 More information can be found at [Optimize dynamic neural network models with control flow operators](https://cwiki.apache.org/confluence/display/MXNET/Optimize+dynamic+neural+network+models+with+control+flow+operators)
 
 #### SVRG Optimization
 
-SVRG stands for Stochastic Variance Reduced Gradient, which was first introduced in the paper [Accelerating Stochastic Gradient Descent using Predicative Variance Reduction in 2013](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). It is an optimization technique that complements SGD. 
+SVRG stands for Stochastic Variance Reduced Gradient, which was first introduced in the paper [Accelerating Stochastic Gradient Descent using Predicative Variance Reduction in 2013](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). It is an optimization technique that complements SGD.
 
-SGD is known for large scale optimization, but it suffers from slow convergence asymptotically due to the inherent variance. SGD approximates the full gradient using a small batch of samples which introduces variance. In order to converge faster, SGD often needs to start with a smaller learning rate. 
+SGD is known for large scale optimization, but it suffers from slow convergence asymptotically due to the inherent variance. SGD approximates the full gradient using a small batch of samples which introduces variance. In order to converge faster, SGD often needs to start with a smaller learning rate.
 
-SVRG remedies the slow convergence problem by keeping a version of the estimated weights that is close to the optimal parameters and maintains the average of the full gradient over the full pass of data. The average of the full gradients of all data is calculated w.r.t to parameters of last mth epochs. It has provable guarantees for strongly convex smooth functions; a detailed proof can be found in section 3 of the [paper](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). SVRG uses a different update rule than SGD: gradients w.r.t current parameters minus gradients w.r.t parameters from the last mth epoch, plus the average of gradients over all data. 
+SVRG remedies the slow convergence problem by keeping a version of the estimated weights that is close to the optimal parameters and maintains the average of the full gradient over the full pass of data. The average of the full gradients of all data is calculated w.r.t to parameters of last mth epochs. It has provable guarantees for strongly convex smooth functions; a detailed proof can be found in section 3 of the [paper](https://papers.nips.cc/paper/4937-accelerating-stochastic-gradient-descent-using-predictive-variance-reduction.pdf). SVRG uses a different update rule than SGD: gradients w.r.t current parameters minus gradients w.r.t parameters from the last mth epoch, plus the average of gradients over all data.
 
 Key Characteristics of SVRG:
 
-  * Explicit variance reduction 
+  * Explicit variance reduction
   * Ability to use relatively large learning rate compared to SGD, which leads to faster convergence.
 More details can be found at [SVRG Optimization in MXNet Python Module](https://cwiki.apache.org/confluence/display/MXNET/Unified+integration+with+external+backend+libraries)
 
@@ -123,8 +123,8 @@ The MXNet Scala and Java API uses native memory to manage NDArray, Symbol, Execu
 * Many objects in MXNet-Scala are managed in native memory, needing to use `dispose` on them as well.
 * Bloated code with `dispose()` methods.
 * Hard to debug memory-leaks.
-Goals of the project are: 
-* Provide MXNet JVM users automated memory management that can release native memory when there are no references to JVM objects. 
+Goals of the project are:
+* Provide MXNet JVM users automated memory management that can release native memory when there are no references to JVM objects.
 * Provide automated memory management for both GPU and CPU memory without performance degradation.  More details can be found here: [JVM Memory Management](https://cwiki.apache.org/confluence/display/MXNET/JVM+Memory+Management)
 
 #### Topology-aware AllReduce (experimental)
@@ -149,7 +149,7 @@ Performance of reduced-precision (INT8) computation is also dramatically improve
 
 Please find detailed information and performance/accuracy numbers here: [MKLDNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md), [quantization README](https://github.com/apache/incubator-mxnet/tree/master/example/quantization#1) and [design proposal](https://cwiki.apache.org/confluence/display/MXNET/MXNet+Graph+Optimization+and+Quantization+based+on+subgraph+and+MKL-DNN)
 
-### New Operators 
+### New Operators
 
 * Add trigonometric operators (#12424)
 * [MXNET-807] Support integer label type in ctc_loss operator (#12468)
@@ -163,7 +163,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Add bytearray support back to imdecode (#12855, #12868) (#12912)
 * Add Psroipooling CPU implementation (#12738)
 
-### Feature improvements 
+### Feature improvements
 #### Operator
 * [MXNET-912] Refactoring ctc loss operator (#12637)
 * Refactor L2_normalization (#13059)
@@ -185,7 +185,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 #### ONNX
 
 * ONNX export - Clip operator (#12457)
-* ONNX version update from 1.2.1 to 1.3 in CI (#12633) 
+* ONNX version update from 1.2.1 to 1.3 in CI (#12633)
 * Use modern ONNX API to load a model from file (#12777)
 * [MXNET-892] ONNX export/import: DepthToSpace, SpaceToDepth operators (#12731)
 * ONNX export: Fully connected operator w/o bias, ReduceSum, Square (#12646)
@@ -255,7 +255,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * NativeResource Management in Scala (#12647)
 * Ignore generated Scala files (#12928)
 * Use ResourceScope in Model/Trainer/FeedForward.scala (#12882)
-* [MXNET-1180] Scala Image API (#12995) 
+* [MXNET-1180] Scala Image API (#12995)
 * Update log4j version of Scala package (#13131)
 * Review require() usages to add meaningful messages (#12570)
 * Fix Scala readme (#13082)
@@ -264,7 +264,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Introduction to Clojure-MXNet video link (#12754)
 * Improve the Clojure Package README to Make it Easier to Get Started (#12881)
 * MXNET-873 - Bring Clojure Package Inline with New DataDesc and Layout in Scala Package (#12387)
-* Port of Scala Image API to Clojure (#13107) 
+* Port of Scala Image API to Clojure (#13107)
 
 #### Perl
 * [MXNET-1026] [Perl] Sync with recent changes in Python's API (#12739)
@@ -286,7 +286,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [MXNET-535] Fix bugs in LR Schedulers and add warmup (#11234)
 * Fix speech recognition example (#12291)
 * Fix bug in 'device' type kvstore (#12350)
-* fix search result 404s (#12414) 
+* fix search result 404s (#12414)
 * Fix help in imread (#12420)
 * Fix render issue on &lt; and &gt; (#12482)
 * [MXNET-853] Fix for smooth_l1 operator scalar default value (#12284)
@@ -303,14 +303,14 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Fix typo in profiler.h (#12599)
 * Fixed NoSuchMethodError for Jenkins Job for MBCC (#12618)
 * [MXNET-922] Fix memleak in profiler (#12499)
-* [MXNET-969] Fix buffer overflow in RNNOp (#12603) 
+* [MXNET-969] Fix buffer overflow in RNNOp (#12603)
 *  Fixed param coercion of clojure executor/forward (#12627) (#12630)
 * Fix version dropdown behavior (#12632)
 * Fix reference to wrong function (#12644)
 * Fix the location of the tutorial of control flow operators (#12638)
 * Fix issue 12613 (#12614)
 * [MXNET-780] Fix exception handling bug (#12051)
-* Fix bug in prelu, issue 12061 (#12660) 
+* Fix bug in prelu, issue 12061 (#12660)
 * [MXNET-833] [R] Char-level RNN tutorial fix (#12670)
 * Fix static / dynamic linking of gperftools and jemalloc (#12714)
 * Fix #12672, importing numpy scalars (zero-dimensional arrays) (#12678)
@@ -318,7 +318,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Fix benchmark on control flow operators (#12693)
 * Fix regression in MKLDNN caused by PR 12019 (#12740)
 * Fixed broken link for Baidu's WARP CTC (#12774)
-* Fix CNN visualization tutorial (#12719) 
+* Fix CNN visualization tutorial (#12719)
 * [MXNET-979] Add fix_beta support in BatchNorm (#12625)
 * R fix metric shape (#12776)
 * Revert [MXNET-979] Add fix_beta support in BatchNorm (#12625) (#12789)
@@ -359,6 +359,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Add embedding to print_summary (#12796)
 * Allow foreach on input with 0 length (#12471)
 * [MXNET-360]auto convert str to bytes in img.imdecode when py3 (#10697)
+* Fix unpicklable transform_first on windows (#13686)
 
 ### Licensing updates
 * Add license headers to R-package (#12559)
@@ -371,7 +372,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Add a tutorial for control flow operators. (#12340)
 * Add tutorial Gotchas using NumPy (#12007)
 * Updated Symbol tutorial with Gluon (#12190)
-* Improve tutorial redirection (#12607) 
+* Improve tutorial redirection (#12607)
 * Include missing import in TensorRT tutorial (#12609)
 * Update Operator Implementation Tutorial (#12230)
 * Add a tutorial for the subgraph API. (#12698)
@@ -393,7 +394,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Update tree lstm example (#12960)
 * Update bilstm integer array sorting example (#12929)
 * Updated / Deleted some examples (#12968)
-* Update module example (#12961) 
+* Update module example (#12961)
 * Update adversary attack generation example (#12918)
 * Update Gluon example folder (#12951)
 * Update dec example (#12950)
@@ -536,10 +537,10 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 
 
 #### 3rd party
-##### TVM: 
+##### TVM:
 * Updated tvm submodule head (#12764)
 * Updated tvm submodule head (#12448)
-##### CUDNN: 
+##### CUDNN:
 * [MXNET-1179] Enforce deterministic algorithms in convolution layers (#12992)
 * CudnnFind() usage improvements (#12804)
 * Add option for automatic downcasting dtype for cudnn to allow using Tensorcore for fp32  (#12722)
@@ -579,20 +580,20 @@ Submodule@commit ID::Last updated by MXNet:: Last update in submodule
 
 ### Bug fixes
 
-* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)  
+* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)
 Simple bugfix addressing an out-of-bounds memory read.
 
 
-* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)  
+* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)
 This fixes an buffer overflow detected by ASAN.
 
 
-* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)  
+* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)
   This PR improves the MXNet's use of cudnnFind() to address a few issues:
   1. With the gluon imperative style, cudnnFind() is called during forward(), and so might have its timings perturbed by other GPU activity (including potentially other cudnnFind() calls).
   2. With some cuda drivers versions, care is needed to ensure that the large I/O and workspace cudaMallocs() performed by cudnnFind() are immediately released and available to MXNet.
-  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.  
-  
+  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.
+
   This PR addresses these issues, providing the following benefits:
   1. Consistent algo choice for a given convolution type in a model, both for instances in the same GPU and in other GPUs in a multi-GPU training setting.
   2. Consistent algo choice from run to run, based on eliminating sources of interference of the cudnnFind() timing process.
@@ -600,38 +601,38 @@ This fixes an buffer overflow detected by ASAN.
   4. Increased training performance based on being able to consistently run with models that approach the GPU's full global memory footprint.
   5. Adds a unittest for and solves issue #12662.
 
-* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)  
+* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)
   Fix a memleak reported locally by ASAN during a normal inference test.
 
-* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)  
+* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)
   Fixes multi_worker data loader when record file is used. The MXRecordIO instance needs to require a new file handler after fork to be safely manipulated simultaneously.
 
   This fix also safely voids the previous temporary fixes #12093 #11370.
 
-* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)  
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)
   This fixes #12783, by assigning all nodes in hybrid_forward a unique name. Some operations were in fact performed without attaching the appropriate (time) prefix to the name, which makes serialized graphs non-deserializable.
 
-* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)  
+* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)
   Fixed `__setattr__` method
 
-* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)  
+* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)
   Fix #12470. With this change, outs shape can be inferred correctly.
 
-* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)  
-  Fix for the issue - #11849  
-  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,  
-  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.  
+* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)
+  Fix for the issue - #11849
+  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,
+  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.
   Added the tests
 
 ### Documentation fixes
 
-* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)  
+* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)
   Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/incubator-mxnet/pull/12992)
 
-* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)  
+* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)
   This PR fixes broken links on the website.
 
-* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)  
+* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)
   Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/incubator-mxnet/issues/12854)
 
   This PR manually specifies members of the IO module so that the docs will render as expected. This is workaround in the docs to deal with a bug introduced in the Python code/structure since v1.3.0. See the comments for more info.
@@ -640,7 +641,7 @@ This fixes an buffer overflow detected by ASAN.
 
   This is important for any future modules - that they recognize this issue and make efforts to map the params and other elements.
 
-* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)  
+* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)
   This PR adds or updates the docs for the infer_range feature.
 
   Clarifies the param in the C op docs
@@ -651,13 +652,13 @@ This fixes an buffer overflow detected by ASAN.
 
 ### Other Improvements
 
-* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)  
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)
   Some of the CUDNN convolution algorithms are non-deterministic (see issue #11341). This PR adds an env variable to enforce determinism in the convolution operators. If set to true, only deterministic CUDNN algorithms will be used. If no deterministic algorithm is available, MXNet will error out.
 
 
 ### Submodule updates
 
-* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)  
+* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)
   Update mshadow for omp acceleration when nvcc is not present
 
 ### Known issues
@@ -782,7 +783,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - CTC operator performance improvement from HawkAaron/MXNet-CTC (#11834)
 - Improve performance of broadcast ops backward pass (#11252)
 - Improved numerical stability as a result of using stable L2 norm (#11573)
-- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input) 
+- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input)
 - Support for dot(dns, csr) = dns and dot(dns, csr.T) = dns on CPU ([#11113](https://github.com/apache/incubator-mxnet/pull/11113))
 - Performance improvement for Batch Dot on CPU from mshadow ([mshadow PR#342](https://github.com/dmlc/mshadow/pull/342))
 
