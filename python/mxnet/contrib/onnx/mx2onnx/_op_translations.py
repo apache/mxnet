@@ -755,7 +755,7 @@ def convert_blockgrad(node, **kwargs):
     """ Skip operator  """
     return create_basic_op_node('ConstantFill', node, kwargs)
 
-@mx_op.register("make_loss")
+@mx_op.register("MakeLoss")
 def convert_makeloss(node, **kwargs):
     """ Skip operator  """
     return create_basic_op_node('ConstantFill', node, kwargs)

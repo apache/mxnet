@@ -158,7 +158,7 @@ def _fix_broadcast(op_name, inputs, broadcast_axis, proto_obj):
         assert len(list(inputs)) == 2
 
         input0_shape = get_input_shape(inputs[0], proto_obj)
-        #creating reshape shape
+        # creating reshape shape
         reshape_shape = list(len(input0_shape) * (1,))
         reshape_shape[broadcast_axis] = -1
         reshape_shape = tuple(reshape_shape)
