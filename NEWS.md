@@ -359,6 +359,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Add embedding to print_summary (#12796)
 * Allow foreach on input with 0 length (#12471)
 * [MXNET-360]auto convert str to bytes in img.imdecode when py3 (#10697)
+* Fix unpicklable transform_first on windows (#13686 )
 
 ### Licensing updates
 * Add license headers to R-package (#12559)
