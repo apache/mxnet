@@ -413,6 +413,7 @@ build_ubuntu_cpu_cmake_asan() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=OFF \
         -DCMAKE_BUILD_TYPE=Debug \
