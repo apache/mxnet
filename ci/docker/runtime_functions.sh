@@ -707,7 +707,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_MKLML_MKL=1                       \
-        -DUSE_MKLDNN=1                          \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
@@ -732,6 +731,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_MKLML_MKL=0                       \
+        -DUSE_MKLDNN=0                          \
         -DUSE_DIST_KVSTORE=1                    \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
