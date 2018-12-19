@@ -838,9 +838,6 @@ unittest_ubuntu_cpu_scala() {
 
 unittest_centos7_cpu_scala() {
     set -ex
-    mkdir -p /work/mxnet/3rdparty/mkldnn/build/install/lib/
-    cp lib/libmkldnn.so.0 /work/mxnet/3rdparty/mkldnn/build/install/lib/libmkldnn.so
-    cp lib/libmklml_intel.so /work/mxnet/3rdparty/mkldnn/build/install/lib/libmklml_intel.so
     cd /work/mxnet
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
     make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
