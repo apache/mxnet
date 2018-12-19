@@ -974,8 +974,7 @@ class NAG(Optimizer):
         if state is not None:
             mom = state
             mom[:] *= self.momentum
-            grad += wd * weight
-            mom[:] += grad
+            mom[:] += grad + wd * weight
             grad[:] += self.momentum * mom
             weight[:] += -lr * grad
         else:
