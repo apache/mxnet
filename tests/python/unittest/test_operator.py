@@ -6848,6 +6848,17 @@ def test_op_roi_align():
     # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_op/test_roi_align_op.py
     T = np.float32
 
+    def assert_same_dtype(dtype_a, dtype_b):
+        '''
+        Assert whether the two data type are the same
+        Parameters
+        ----------
+        dtype_a, dtype_b: type
+            Input data types to compare
+        '''
+        assert dtype_a == dtype_b,\
+            TypeError('Unmatched data types: %s vs %s' % (dtype_a, dtype_b))
+
     def bilinear_interpolate(bottom, height, width, y, x):
         if y < -1.0 or y > height or x < -1.0 or x > width:
             return T(0.0), []
@@ -6894,27 +6905,30 @@ def test_op_roi_align():
         w3 = ly * hx
         w4 = ly * lx
 
-        assert w1.dtype == T
-        assert w2.dtype == T
-        assert w3.dtype == T
-        assert w4.dtype == T
+        assert_same_dtype(w1.dtype, T)
+        assert_same_dtype(w2.dtype, T)
+        assert_same_dtype(w3.dtype, T)
+        assert_same_dtype(w4.dtype, T)
 
         val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
-        assert val.dtype == T
+        assert_same_dtype(val.dtype, T)
         grad = [(y_low, x_low, w1), (y_low, x_high, w2),
                 (y_high, x_low, w3), (y_high, x_high, w4)
                 ]
         return val, grad
 
-
     def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio, dy):
         N, C, H, W = data.shape
         R = rois.shape[0]
         PH, PW = pooled_size
-        assert len(rois.shape) == 2
-        assert rois.shape[1] == 5
-        assert data.dtype == T
-        assert rois.dtype == T
+        assert rois.ndim == 2,\
+            ValueError(
+                'The ndim of rois should be 2 rather than %d' % rois.ndim)
+        assert rois.shape[1] == 5,\
+            ValueError(
+                'The length of the axis 1 of rois should be 5 rather than %d' % rois.shape[1])
+        assert_same_dtype(data.dtype, T)
+        assert_same_dtype(rois.dtype, T)
 
         out = np.zeros((R, C, PH, PW), dtype=T)
         dx = np.zeros_like(data)
@@ -6944,52 +6958,53 @@ def test_op_roi_align():
                             for ix in range(roi_bin_grid_w):
                                 x = sw + T(pw) * bin_w + (T(ix) + T(0.5)) * \
                                     bin_w / T(roi_bin_grid_w)
-                                v, g = bilinear_interpolate(bdata[c], H, W, y, x)
-                                assert v.dtype == T
+                                v, g = bilinear_interpolate(
+                                    bdata[c], H, W, y, x)
+                                assert_same_dtype(v.dtype, T)
                                 val += v
                                 # compute grad
                                 for qy, qx, qw in g:
-                                    assert qw.dtype == T
+                                    assert_same_dtype(qw.dtype, T)
                                     dx[batch_ind, c, qy, qx] += dy[r,
                                                                    c, ph, pw] * qw / count
 
                         out[r, c, ph, pw] = val / count
-        assert out.dtype == T, out.dtype
+        assert_same_dtype(out.dtype, T)
         return out, [dx, drois]
 
-
     def test_roi_align_value(sampling_ratio=0):
-        ctx=default_context()
+        ctx = default_context()
         dtype = np.float32
 
         dlen = 224
         N, C, H, W = 5, 3, 16, 16
-        assert H == W
         R = 7
         pooled_size = (3, 4)
 
         spatial_scale = H * 1.0 / dlen
-        data = mx.nd.array(np.arange(N*C*W*H).reshape((N,C,H,W)), ctx=ctx, dtype = dtype)
+        data = mx.nd.array(
+            np.arange(N * C * W * H).reshape((N, C, H, W)), ctx=ctx, dtype=dtype)
         # data = mx.nd.random.uniform(0, 1, (N, C, H, W), dtype = dtype)
-        center_xy = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype = dtype)
-        wh = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype = dtype)
-        batch_ind = mx.nd.array(np.random.randint(0, N, size = (R,1)), ctx=ctx)
-        pos = mx.nd.concat(center_xy - wh / 2, center_xy + wh / 2, dim = 1)
-        rois = mx.nd.concat(batch_ind, pos, dim = 1)
+        center_xy = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype=dtype)
+        wh = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype=dtype)
+        batch_ind = mx.nd.array(np.random.randint(0, N, size=(R, 1)), ctx=ctx)
+        pos = mx.nd.concat(center_xy - wh / 2, center_xy + wh / 2, dim=1)
+        rois = mx.nd.concat(batch_ind, pos, dim=1)
 
         data.attach_grad()
         rois.attach_grad()
         with mx.autograd.record():
             output = mx.nd.contrib.ROIAlign(data, rois, pooled_size=pooled_size,
-                    spatial_scale=spatial_scale, sample_ratio=sampling_ratio)
-        dy = mx.nd.random.uniform(-1, 1, (R, C) + pooled_size, ctx=ctx, dtype = dtype)
+                                            spatial_scale=spatial_scale, sample_ratio=sampling_ratio)
+        dy = mx.nd.random.uniform(-1, 1, (R, C) +
+                                  pooled_size, ctx=ctx, dtype=dtype)
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
                                                              spatial_scale, sampling_ratio, dy.asnumpy())
-        assert_almost_equal(output.asnumpy(), real_output, atol = 1e-5)
+        assert_almost_equal(output.asnumpy(), real_output, atol=1e-5)
         # It seems that the precision between Cfloat and Pyfloat is different.
-        assert_almost_equal(data.grad.asnumpy(), dx, atol = 1e-5)
-        assert_almost_equal(rois.grad.asnumpy(), drois, atol = 1e-5)
+        assert_almost_equal(data.grad.asnumpy(), dx, atol=1e-5)
+        assert_almost_equal(rois.grad.asnumpy(), drois, atol=1e-5)
 
     # modified from test_roipooling()
     def test_roi_align_autograd(sampling_ratio=0):
@@ -7004,10 +7019,10 @@ def test_op_roi_align():
                        [1, 3.1, 1.1, 5.2, 10.2]], dtype='float64')
 
         check_numeric_gradient(sym=test, location=[x1, x2],
-                               grad_nodes={'data':'write', 'rois':'null'},
+                               grad_nodes={'data': 'write', 'rois': 'null'},
                                numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
         check_numeric_gradient(sym=test, location=[x1, x2],
-                               grad_nodes={'data':'add', 'rois':'null'},
+                               grad_nodes={'data': 'add', 'rois': 'null'},
                                numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
 
     test_roi_align_value()
