@@ -157,9 +157,7 @@ if __name__ == '__main__':
                                                         calib_mode=calib_mode, calib_data=eval_iter,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        label_names=(label_name,),
-                                                        calib_quantize_op = True,
-                                                        logger=logger)
+                                                        label_names=(label_name,), logger=logger)
         sym_name = '%s-symbol.json' % ('./model/cqssd_vgg16_reduced_300')
         param_name = '%s-%04d.params' % ('./model/cqssd_vgg16_reduced_300', epoch)
     qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')

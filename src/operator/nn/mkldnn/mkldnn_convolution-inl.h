@@ -85,22 +85,27 @@ static inline bool IsOutputUInt8(const MKLDNNConvParam &mkldnn_param) {
          mkldnn_param.with_postsum_relu;
 }
 
-mkldnn::convolution_forward::primitive_desc
-GetConvFwdImpl(const MKLDNNConvFullParam &param, const bool is_train,
-               const NDArray &data, const NDArray &weights, const NDArray *bias,
-               const NDArray &output);
+mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullParam &param,
+                                                           const bool is_train,
+                                                           const NDArray &data,
+                                                           const NDArray &weights,
+                                                           const NDArray *bias,
+                                                           const NDArray &output);
 
 class MKLDNNConvForward {
  public:
   mkldnn::convolution_forward::primitive_desc fwd_pd;
 
-  MKLDNNConvForward(const MKLDNNConvFullParam &param, const bool is_train,
-                    const NDArray &data, const NDArray &weights,
-                    const NDArray *bias, const NDArray &output)
-      : fwd_pd(GetConvFwdImpl(param, is_train, data, weights, bias, output)) {}
+  MKLDNNConvForward(const MKLDNNConvFullParam &param, const bool is_train, const NDArray &data,
+                    const NDArray &weights, const NDArray *bias, const NDArray &output);
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
                  const mkldnn::memory *bias, const mkldnn::memory &output);
+
+  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
+    this->data_->set_data_handle(data.get_data_handle());
+    this->out_->set_data_handle(output.get_data_handle());
+  }
 
   const mkldnn::convolution_forward &GetFwd() const {
     return *fwd_;

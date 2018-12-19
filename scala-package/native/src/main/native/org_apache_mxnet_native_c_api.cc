@@ -915,7 +915,8 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorSetMonitorCallbac
   jobject callbackFuncObjGlb = env->NewGlobalRef(callbackFuncObj);
   return MXExecutorSetMonitorCallback(reinterpret_cast<ExecutorHandle>(executorPtr),
                                       ExecutorMonitorCallbackFunc,
-                                      reinterpret_cast<void *>(callbackFuncObjGlb));
+                                      reinterpret_cast<void *>(callbackFuncObjGlb),
+                                      false);
 }
 
 JNIEXPORT jstring JNICALL Java_org_apache_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
