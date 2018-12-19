@@ -301,34 +301,72 @@ def test_binary_layer_config_scaling():
 """
     Test binary inference layers
 """
+# TODO: would be nice to find better solution do this
+import sys
+# Add the ptdraft folder path to the sys.path list
+sys.path.append('./example/bmxnet-examples/model_converter/')
+from concatenation_operator import get_binary_row, get_binary_col
 
 def test_binary_inference_conv():
-    bits = 32
-    input_data = mx.nd.random.normal(-1, 1, shape=(1,64,8,8))
-    weight = mx.nd.random.normal(-1, 1, shape=(64, 64, 5, 5))
+    bits_binary_word = 32
+    input_dim = 32
+    output_dim = 1
+    batch_size = 10
+    kernel_dim = 1
+    input_data = mx.nd.random.normal(-1, 1, shape=(batch_size, input_dim, kernel_dim, kernel_dim))
+    weight = mx.nd.random.normal(-1, 1, shape=(output_dim, input_dim, kernel_dim, kernel_dim))
 
     # weights concatenation
-    import sys
-    # Add the ptdraft folder path to the sys.path list
-    sys.path.append('./example/bmxnet-examples/model_converter/')
-    from concatenation_operator import get_binary_row
-
-    # create binary inference conv layer
-    size_binary_row = int(weight.size / bits)
-    #weight_concatenated = np.zeros((64, (int)(64/bits), 5, 5), dtype='uint64')
-    weight_concatenated = np.zeros((size_binary_row), dtype='uint64')
+    size_binary_row = int(weight.size / bits_binary_word)
+    weight_concatenated = np.zeros((size_binary_row), dtype='uint32')
     weight_concatenated = mx.nd.array(get_binary_row(weight.reshape(-1), 
                                                      weight_concatenated, 
                                                      weight.size, 
-                                                     bits), dtype='float32') 
-    weight_concatenated = weight_concatenated.reshape((weight.shape[0], -1, weight.shape[2], weight.shape[3]))
+                                                     bits_binary_word), 
+                                      dtype='float64') 
+    weight_concatenated = weight_concatenated.reshape((weight.shape[0], 
+                                                        -1, 
+                                                        weight.shape[2], 
+                                                        weight.shape[3]))
+    # create binary inference conv layer
     binary_infer_result = mx.ndarray.BinaryInferenceConvolution(data=input_data, 
-                                                     weight=weight_concatenated, kernel=(5,5), num_filter=64)
+                            weight=weight_concatenated, kernel=(kernel_dim, kernel_dim), num_filter=output_dim)
 
     # create qconv2d layer, assign weights and set input_data.
-    qconv_layer = nn.QConv2D(64, 5, bits=1, use_bias=False, in_channels=64, apply_scaling=False, 
-                            no_offset = False)
-    qconv_result = qconv_layer.hybrid_forward(F, x=input_data, weight=weight)
+    qconv_layer = nn.QConv2D(output_dim, kernel_dim, bits=1, use_bias=False, in_channels=input_dim, 
+                        apply_scaling=False, no_offset = False)
+    qact = nn.QActivation(bits=1)
+    qact_result = qact.forward(input_data)
+    qconv_result = qconv_layer.hybrid_forward(F, x=qact_result, weight=weight)
 
-    # compare
     assert_almost_equal(binary_infer_result, qconv_result)
+
+
+def test_binary_inference_fc():
+    # setup data
+    bits_binary_word = 32
+    num_hidden_fc = 10
+    input_data = mx.nd.random.normal(-1, 1, shape=(1, 1024))
+    weight = mx.nd.random.normal(-1, 1, shape=(num_hidden_fc, 1024))
+
+    # weights concatenation
+    weight_T = weight.T
+    size_binary_col = int(weight_T.size / bits_binary_word)
+    weight_concatenated = np.zeros((size_binary_col), dtype='uint32')
+    weight_concatenated =mx.nd.array(get_binary_col(weight_T.reshape((-1)), 
+                                                    weight_concatenated, 
+                                                    weight_T.shape[0], 
+                                                    weight_T.shape[1], 
+                                                    bits_binary_word), 
+                                    dtype='float64')
+    weight_concatenated = weight_concatenated.reshape((weight_T.shape[1], -1))    
+    # create binary inference fc layer
+    binary_infer_result = mx.ndarray.BinaryInferenceFullyConnected(data=input_data, 
+                                                     weight=weight_concatenated, num_hidden=num_hidden_fc)
+    # create qdense layer, assign weights and set input_data.
+    qdense_layer = nn.QDense(num_hidden_fc)
+    qact = nn.QActivation(bits=1)
+    qact_result = qact.forward(input_data)
+    qdense_result = qdense_layer.hybrid_forward(F, x=qact_result, weight=weight)
+
+    assert_almost_equal(binary_infer_result, qdense_result)
