@@ -283,20 +283,28 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_power", Seq(lhs, rhs))
   }
 
-  def power(lhs: NDArray, rhs: Float): NDArray = {
+  private def powerImpl[@specialized (Base.MX_PRIMITIVES) T ](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(lhs, rhs))
+  }
+
+  def power(lhs: NDArray, rhs: Float): NDArray = {
+    powerImpl(lhs, rhs)
   }
 
   def power(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(lhs, rhs))
+   powerImpl(lhs, rhs)
+  }
+
+  private def powerImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: T, rhs: NDArray): NDArray = {
+    NDArray.genericNDArrayFunctionInvoke("_rpower_scalar", Seq(lhs, rhs))
   }
 
   def power(lhs: Float, rhs: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_rpower_scalar", Seq(lhs, rhs))
+    powerImpl(lhs, rhs)
   }
 
   def power(lhs: Double, rhs: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_rpower_scalar", Seq(lhs, rhs))
+    powerImpl(lhs, rhs)
   }
 
   // Perform maximum operator
@@ -304,20 +312,28 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_maximum", Seq(lhs, rhs))
   }
 
-  def maximum(lhs: NDArray, rhs: Float): NDArray = {
+  private def maximumImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
   }
 
+  def maximum(lhs: NDArray, rhs: Float): NDArray = {
+    maximumImpl(lhs, rhs)
+  }
+
   def maximum(lhs: NDArray, rhs: Double): NDArray = {
+    maximumImpl(lhs, rhs)
+  }
+
+  private def maximumImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: T, rhs: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
   }
 
   def maximum(lhs: Float, rhs: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
+    maximumImpl(lhs, rhs)
   }
 
   def maximum(lhs: Double, rhs: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_maximum_scalar", Seq(lhs, rhs))
+    maximumImpl(lhs, rhs)
   }
 
   // Perform minimum operator
@@ -325,20 +341,28 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("_minimum", Seq(lhs, rhs))
   }
 
-  def minimum(lhs: NDArray, rhs: Float): NDArray = {
+  private def minimumImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
   }
 
+  def minimum(lhs: NDArray, rhs: Float): NDArray = {
+    minimumImpl(lhs, rhs)
+  }
+
   def minimum(lhs: NDArray, rhs: Double): NDArray = {
+    minimumImpl(lhs, rhs)
+  }
+
+  private def minimumImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: T, rhs: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
   }
 
   def minimum(lhs: Float, rhs: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
+    minimumImpl(lhs, rhs)
   }
 
   def minimum(lhs: Double, rhs: NDArray): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_minimum_scalar", Seq(lhs, rhs))
+    minimumImpl(lhs, rhs)
   }
 
   /**
@@ -350,12 +374,16 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("broadcast_equal", Seq(lhs, rhs))
   }
 
-  def equal(lhs: NDArray, rhs: Float): NDArray = {
+  def equalImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_equal_scalar", Seq(lhs, rhs))
   }
 
+  def equal(lhs: NDArray, rhs: Float): NDArray = {
+    equalImpl(lhs, rhs)
+  }
+
   def equal(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_equal_scalar", Seq(lhs, rhs))
+    equalImpl(lhs, rhs)
   }
 
   /**
@@ -368,12 +396,16 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("broadcast_not_equal", Seq(lhs, rhs))
   }
 
-  def notEqual(lhs: NDArray, rhs: Float): NDArray = {
+  def notEqualImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_not_equal_scalar", Seq(lhs, rhs))
   }
 
+  def notEqual(lhs: NDArray, rhs: Float): NDArray = {
+    notEqualImpl(lhs, rhs)
+  }
+
   def notEqual(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_not_equal_scalar", Seq(lhs, rhs))
+    notEqualImpl(lhs, rhs)
   }
 
   /**
@@ -386,12 +418,16 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("broadcast_greater", Seq(lhs, rhs))
   }
 
-  def greater(lhs: NDArray, rhs: Float): NDArray = {
+  def greaterImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_greater_scalar", Seq(lhs, rhs))
   }
 
+  def greater(lhs: NDArray, rhs: Float): NDArray = {
+    greaterImpl(lhs, rhs)
+  }
+
   def greater(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_greater_scalar", Seq(lhs, rhs))
+    greaterImpl(lhs, rhs)
   }
 
   /**
@@ -404,12 +440,16 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("broadcast_greater_equal", Seq(lhs, rhs))
   }
 
-  def greaterEqual(lhs: NDArray, rhs: Float): NDArray = {
+  def greaterEqualImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_greater_equal_scalar", Seq(lhs, rhs))
   }
 
+  def greaterEqual(lhs: NDArray, rhs: Float): NDArray = {
+    greaterEqualImpl(lhs, rhs)
+  }
+
   def greaterEqual(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_greater_equal_scalar", Seq(lhs, rhs))
+    greaterEqualImpl(lhs, rhs)
   }
 
   /**
@@ -422,12 +462,16 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("broadcast_lesser", Seq(lhs, rhs))
   }
 
-  def lesser(lhs: NDArray, rhs: Float): NDArray = {
+  def lesserImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_lesser_scalar", Seq(lhs, rhs))
   }
 
+  def lesser(lhs: NDArray, rhs: Float): NDArray = {
+    lesserImpl(lhs, rhs)
+  }
+
   def lesser(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_lesser_scalar", Seq(lhs, rhs))
+    lesserImpl(lhs, rhs)
   }
 
   /**
@@ -440,12 +484,16 @@ object NDArray extends NDArrayBase {
     NDArray.genericNDArrayFunctionInvoke("broadcast_lesser_equal", Seq(lhs, rhs))
   }
 
-  def lesserEqual(lhs: NDArray, rhs: Float): NDArray = {
+  def lesserEqualImpl[@specialized (Base.MX_PRIMITIVES) T](lhs: NDArray, rhs: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_lesser_equal_scalar", Seq(lhs, rhs))
   }
 
+  def lesserEqual(lhs: NDArray, rhs: Float): NDArray = {
+    lesserEqualImpl(lhs, rhs)
+  }
+
   def lesserEqual(lhs: NDArray, rhs: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_lesser_equal_scalar", Seq(lhs, rhs))
+    lesserEqualImpl(lhs, rhs)
   }
 
   /**
@@ -872,12 +920,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArray.genericNDArrayFunctionInvoke("_plus", Seq(this, other))
   }
 
-  def +(other: Float): NDArray = {
+  private def _plusImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq(this, other))
   }
 
+  def +(other: Float): NDArray = {
+    _plusImpl(other)
+  }
+
   def +(other: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_plus_scalar", Seq(this, other))
+    _plusImpl(other)
   }
 
   def +=(other: NDArray): NDArray = {
@@ -888,7 +940,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
-  def +=(other: Float): NDArray = {
+  private def _plusEqualToImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
@@ -896,24 +948,28 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def +=(other: Float): NDArray = {
+    _plusEqualToImpl(other)
+  }
+
   def +=(other: Double): NDArray = {
-    if (!writable) {
-      throw new IllegalArgumentException("trying to add to a readonly NDArray")
-    }
-    NDArray.genericNDArrayFunctionInvoke("_plus", Seq(this, other), Map("out" -> this))
-    this
+    _plusEqualToImpl(other)
   }
 
   def -(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minus", Seq(this, other))
   }
 
-  def -(other: Float): NDArray = {
+  private def _minusImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other))
   }
 
+  def -(other: Float): NDArray = {
+    _minusImpl(other)
+  }
+
   def -(other: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other))
+    _minusImpl(other)
   }
 
   def -=(other: NDArray): NDArray = {
@@ -924,7 +980,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
-  def -=(other: Float): NDArray = {
+  private def _minusEqualToImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
@@ -932,24 +988,28 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def -=(other: Float): NDArray = {
+    _minusEqualToImpl(other)
+  }
+
   def -=(other: Double): NDArray = {
-    if (!writable) {
-      throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
-    }
-    NDArray.genericNDArrayFunctionInvoke("_minus_scalar", Seq(this, other), Map("out" -> this))
-    this
+    _minusEqualToImpl(other)
   }
 
   def *(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mul", Seq(this, other))
   }
 
-  def *(other: Float): NDArray = {
+  private def _mulImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other))
   }
 
+  def *(other: Float): NDArray = {
+    _mulImpl(other)
+  }
+
   def *(other: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other))
+    _mulImpl(other)
   }
 
   def unary_-(): NDArray = {
@@ -964,7 +1024,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
-  def *=(other: Float): NDArray = {
+  private def _mulEqualToImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
@@ -972,24 +1032,28 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def *=(other: Float): NDArray = {
+    _minusEqualToImpl(other)
+  }
+
   def *=(other: Double): NDArray = {
-    if (!writable) {
-      throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
-    }
-    NDArray.genericNDArrayFunctionInvoke("_mul_scalar", Seq(this, other), Map("out" -> this))
-    this
+    _minusEqualToImpl(other)
   }
 
   def /(other: NDArray): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_div", Seq(this, other))
   }
 
-  def /(other: Float): NDArray = {
+  private def _divImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other))
   }
 
+  def /(other: Float): NDArray = {
+    _divImpl(other)
+  }
+
   def /(other: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other))
+    _divImpl(other)
   }
 
   def /=(other: NDArray): NDArray = {
@@ -1000,7 +1064,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
-  def /=(other: Float): NDArray = {
+  private def _divEqualToImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
@@ -1008,12 +1072,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def /=(other: Float): NDArray = {
+    _divEqualToImpl(other)
+  }
+
   def /=(other: Double): NDArray = {
-    if (!writable) {
-      throw new IllegalArgumentException("trying to divide from a readonly NDArray")
-    }
-    NDArray.genericNDArrayFunctionInvoke("_div_scalar", Seq(this, other), Map("out" -> this))
-    this
+    _divEqualToImpl(other)
   }
 
   def **(other: NDArray): NDArray = {
@@ -1032,12 +1096,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArray.genericNDArrayFunctionInvoke("_power", Seq(this, other), Map("out" -> this))
   }
 
-  def **=(other: Float): NDArray = {
+  private def _powEqualToImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(this, other), Map("out" -> this))
   }
 
+  def **=(other: Float): NDArray = {
+    _powEqualToImpl(other)
+  }
+
   def **=(other: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_power_scalar", Seq(this, other), Map("out" -> this))
+    _powEqualToImpl(other)
   }
 
   def >(other: NDArray): NDArray = {
@@ -1092,12 +1160,16 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     NDArray.genericNDArrayFunctionInvoke("_mod", Seq(this, other))
   }
 
-  def %(other: Float): NDArray = {
+  private def _moduloImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other))
   }
 
+  def %(other: Float): NDArray = {
+    _moduloImpl(other)
+  }
+
   def %(other: Double): NDArray = {
-    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other))
+    _moduloImpl(other)
   }
 
   def %=(other: NDArray): NDArray = {
@@ -1108,7 +1180,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
-  def %=(other: Float): NDArray = {
+  private def _moduloEqualImpl[@specialized (Base.MX_PRIMITIVES) T](other: T): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
     }
@@ -1116,12 +1188,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     this
   }
 
+  def %=(other: Float): NDArray = {
+    _moduloEqualImpl(other)
+  }
+
   def %=(other: Double): NDArray = {
-    if (!writable) {
-      throw new IllegalArgumentException("trying to take modulo from a readonly NDArray")
-    }
-    NDArray.genericNDArrayFunctionInvoke("_mod_scalar", Seq(this, other), Map("out" -> this))
-    this
+    _moduloEqualImpl(other)
   }
 
   /**
