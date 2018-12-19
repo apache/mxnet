@@ -141,8 +141,9 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * ONNX export: Fully connected operator w/o bias, ReduceSum, Square (#12646)
 * ONNX export/import: Selu (#12785)
 * ONNX export: Cleanup (#12878)
-* Added operators: Selu, DepthToSpace, SpaceToDepth, HardSigmoid, Logical operators
+* [MXNET-892] ONNX export/import: DepthToSpace, SpaceToDepth operators (#12731)
 * ONNX export: Scalar, Reshape - Set appropriate tensor type (#13067)
+* [MXNET-886] ONNX export: HardSigmoid, Less, Greater, Equal (#12812)
 
 #### MKLDNN
 
@@ -221,9 +222,11 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 #### Julia
 * Import Julia binding
 
-### Performance improvements
+### Performance benchmarks and improvements
 * Update mshadow for omp acceleration when nvcc is not present  (#12674)
 * [MXNET-860] Avoid implicit double conversions (#12361)
+* Add more models to benchmark_score (#12780)
+* Add resnet50-v1 to benchmark_score (#12595)
 
 ### Bug fixes
 * Fix for #10920 -  increase tolerance for sparse dot (#12527)
@@ -289,8 +292,6 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Fix a typo in operator guide (#13115)
 * Fix variational autoencoder example (#12880)
 * Fix problem with some OSX not handling the cast on imDecode (#13207)
-* Sphinx failure fixes (#13213)
-* Revert Sphinx failure fixes (#13230)
 * [MXNET-953] Fix oob memory read (#12631)
 * Fix Sphinx error in ONNX file (#13251)
 * [Example] Fixing Gradcam implementation (#13196)
@@ -354,6 +355,7 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * [Example]update NER example readme on module prediction (#13184)
 * Update proposal_target.py (#12709)
 * Removing the re-size for validation data, which breaking the validation accuracy of CIFAR training (#12362)
+* Update the README with instruction to redirect the user to gluon-cv (#13186)
 
 #### Documentation
 * Update ONNX API docs references (#12317)
@@ -409,10 +411,8 @@ Please find detailed information and performance/accuracy numbers here: [MKLDNN 
 * Sphinx errors in Gluon (#13275)
 * Update env_var.md (#12702)
 * Updated the Instructions for use of the label bot (#13192)
-* update the README (#13186)
 * Added/changed file_name, brief description comments in some files (#13033)
-* Add more models to benchmark_score (#12780)
-* Add resnet50-v1 to benchmark_score (#12595)
+
 
 #### Test
 * Add cloverage codecov report to CI for clojure (#12335)
