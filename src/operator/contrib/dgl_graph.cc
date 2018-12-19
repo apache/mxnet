@@ -413,21 +413,6 @@ static bool CSRNeighborNonUniformSampleType(const nnvm::NodeAttrs& attrs,
   return success;
 }
 
-/*
- * Get src vertex and edge id for a destination vertex
- */
-static void GetSrcList(const dgl_id_t* val_list,
-                       const dgl_id_t* col_list,
-                       const dgl_id_t* indptr,
-                       const dgl_id_t dst_id,
-                       std::vector<dgl_id_t>* src_list,
-                       std::vector<dgl_id_t>* edge_list) {
-  for (dgl_id_t i = *(indptr+dst_id); i < *(indptr+dst_id+1); ++i) {
-    src_list->push_back(col_list[i]);
-    edge_list->push_back(val_list[i]);
-  }
-}
-
 static void RandomSample(size_t set_size,
                          size_t num,
                          std::vector<size_t>* out,
@@ -464,34 +449,34 @@ static void NegateSet(const std::vector<size_t> &idxs,
 /*
  * Uniform sample
  */
-static void GetUniformSample(const std::vector<dgl_id_t>& ver_list,
-                             const std::vector<dgl_id_t>& edge_list,
+static void GetUniformSample(const dgl_id_t* val_list,
+                             const dgl_id_t* col_list,
+                             const size_t ver_len,
                              const size_t max_num_neighbor,
                              std::vector<dgl_id_t>* out_ver,
                              std::vector<dgl_id_t>* out_edge,
                              unsigned int* seed) {
-  CHECK_EQ(ver_list.size(), edge_list.size());
   // Copy ver_list to output
-  if (ver_list.size() <= max_num_neighbor) {
-    for (size_t i = 0; i < ver_list.size(); ++i) {
-      out_ver->push_back(ver_list[i]);
-      out_edge->push_back(edge_list[i]);
+  if (ver_len <= max_num_neighbor) {
+    for (size_t i = 0; i < ver_len; ++i) {
+      out_ver->push_back(col_list[i]);
+      out_edge->push_back(val_list[i]);
     }
     return;
   }
   // If we just sample a small number of elements from a large neighbor list.
   std::vector<size_t> sorted_idxs;
-  if (ver_list.size() > max_num_neighbor * 2) {
+  if (ver_len > max_num_neighbor * 2) {
     sorted_idxs.reserve(max_num_neighbor);
-    RandomSample(ver_list.size(), max_num_neighbor, &sorted_idxs, seed);
+    RandomSample(ver_len, max_num_neighbor, &sorted_idxs, seed);
     std::sort(sorted_idxs.begin(), sorted_idxs.end());
   } else {
     std::vector<size_t> negate;
-    negate.reserve(ver_list.size() - max_num_neighbor);
-    RandomSample(ver_list.size(), ver_list.size() - max_num_neighbor,
+    negate.reserve(ver_len - max_num_neighbor);
+    RandomSample(ver_len, ver_len - max_num_neighbor,
                  &negate, seed);
     std::sort(negate.begin(), negate.end());
-    NegateSet(negate, ver_list.size(), &sorted_idxs);
+    NegateSet(negate, ver_len, &sorted_idxs);
   }
   // verify the result.
   CHECK_EQ(sorted_idxs.size(), max_num_neighbor);
@@ -499,8 +484,8 @@ static void GetUniformSample(const std::vector<dgl_id_t>& ver_list,
     CHECK_GT(sorted_idxs[i], sorted_idxs[i - 1]);
   }
   for (auto idx : sorted_idxs) {
-    out_ver->push_back(ver_list[idx]);
-    out_edge->push_back(edge_list[idx]);
+    out_ver->push_back(col_list[idx]);
+    out_edge->push_back(val_list[idx]);
   }
 }
 
@@ -508,26 +493,26 @@ static void GetUniformSample(const std::vector<dgl_id_t>& ver_list,
  * Non-uniform sample via ArrayHeap
  */
 static void GetNonUniformSample(const float* probability,
-                                const std::vector<dgl_id_t>& ver_list,
-                                const std::vector<dgl_id_t>& edge_list,
+                                const dgl_id_t* val_list,
+                                const dgl_id_t* col_list,
+                                const size_t ver_len,
                                 const size_t max_num_neighbor,
                                 std::vector<dgl_id_t>* out_ver,
                                 std::vector<dgl_id_t>* out_edge,
                                 unsigned int* seed) {
-  CHECK_EQ(ver_list.size(), edge_list.size());
   // Copy ver_list to output
-  if (ver_list.size() <= max_num_neighbor) {
-    for (size_t i = 0; i < ver_list.size(); ++i) {
-      out_ver->push_back(ver_list[i]);
-      out_edge->push_back(edge_list[i]);
+  if (ver_len <= max_num_neighbor) {
+    for (size_t i = 0; i < ver_len; ++i) {
+      out_ver->push_back(col_list[i]);
+      out_edge->push_back(val_list[i]);
     }
     return;
   }
   // Make sample
   std::vector<size_t> sp_index(max_num_neighbor);
-  std::vector<float> sp_prob(ver_list.size());
-  for (size_t i = 0; i < ver_list.size(); ++i) {
-    sp_prob[i] = probability[ver_list[i]];
+  std::vector<float> sp_prob(ver_len);
+  for (size_t i = 0; i < ver_len; ++i) {
+    sp_prob[i] = probability[col_list[i]];
   }
   ArrayHeap arrayHeap(sp_prob);
   arrayHeap.SampleWithoutReplacement(max_num_neighbor, &sp_index, seed);
@@ -535,20 +520,12 @@ static void GetNonUniformSample(const float* probability,
   out_edge->resize(max_num_neighbor);
   for (size_t i = 0; i < max_num_neighbor; ++i) {
     size_t idx = sp_index[i];
-    out_ver->at(i) = ver_list[idx];
-    out_edge->at(i) = edge_list[idx];
+    out_ver->at(i) = col_list[idx];
+    out_edge->at(i) = val_list[idx];
   }
   sort(out_ver->begin(), out_ver->end());
   sort(out_edge->begin(), out_edge->end());
 }
-
-/*
- * This is used for BFS traversal
- */
-struct ver_node {
-  dgl_id_t vertex_id;
-  int level;
-};
 
 /*
  * Used for subgraph sampling
@@ -571,9 +548,9 @@ static void SampleSubgraph(const NDArray &csr,
                            float* sub_prob,
                            const NDArray &sub_layer,
                            const float* probability,
-                           dgl_id_t num_hops,
-                           dgl_id_t num_neighbor,
-                           dgl_id_t max_num_vertices) {
+                           int num_hops,
+                           size_t num_neighbor,
+                           size_t max_num_vertices) {
   unsigned int time_seed = time(nullptr);
   size_t num_seeds = seed_arr.shape().Size();
   CHECK_GE(max_num_vertices, num_seeds);
@@ -586,123 +563,119 @@ static void SampleSubgraph(const NDArray &csr,
   dgl_id_t* out_layer = sub_layer.data().dptr<dgl_id_t>();
 
   // BFS traverse the graph and sample vertices
-  dgl_id_t sub_vertices_count = 0;
   // <vertex_id, layer_id>
-  std::unordered_map<dgl_id_t, int> sub_ver_mp;
-  std::queue<ver_node> node_queue;
+  std::unordered_set<dgl_id_t> sub_ver_mp;
+  std::vector<std::pair<dgl_id_t, dgl_id_t> > sub_vers;
+  sub_vers.reserve(num_seeds * 10);
   // add seed vertices
   for (size_t i = 0; i < num_seeds; ++i) {
-    ver_node node;
-    node.vertex_id = seed[i];
-    node.level = 0;
-    node_queue.push(node);
+    auto ret = sub_ver_mp.insert(seed[i]);
+    // If the vertex is inserted successfully.
+    if (ret.second) {
+      sub_vers.emplace_back(seed[i], 0);
+    }
   }
-  std::vector<dgl_id_t> tmp_src_list;
-  std::vector<dgl_id_t> tmp_edge_list;
   std::vector<dgl_id_t> tmp_sampled_src_list;
   std::vector<dgl_id_t> tmp_sampled_edge_list;
-  std::unordered_map<dgl_id_t, neigh_list> neigh_mp;
+  // ver_id, position
+  std::vector<std::pair<dgl_id_t, size_t> > neigh_pos;
+  neigh_pos.reserve(num_seeds);
+  std::vector<dgl_id_t> neighbor_list;
   size_t num_edges = 0;
-  while (!node_queue.empty() &&
-    sub_vertices_count <= max_num_vertices ) {
-    ver_node& cur_node = node_queue.front();
-    dgl_id_t dst_id = cur_node.vertex_id;
-    if (cur_node.level < num_hops) {
-      auto ret = sub_ver_mp.find(dst_id);
-      if (ret != sub_ver_mp.end()) {
-        node_queue.pop();
-        continue;
-      }
-      tmp_src_list.clear();
-      tmp_edge_list.clear();
-      tmp_sampled_src_list.clear();
-      tmp_sampled_edge_list.clear();
-      GetSrcList(val_list,
-                 col_list,
-                 indptr,
-                 dst_id,
-                 &tmp_src_list,
-                 &tmp_edge_list);
-      if (probability == nullptr) {  // uniform-sample
-        GetUniformSample(tmp_src_list,
-                       tmp_edge_list,
+
+  // sub_vers is used both as a node collection and a queue.
+  // In the while loop, we iterate over sub_vers and new nodes are added to the vector.
+  // A vertex in the vector only needs to be accessed once. If there is a vertex behind idx
+  // isn't in the last level, we will sample its neighbors. If not, the while loop terminates.
+  size_t idx = 0;
+  while (idx < sub_vers.size() &&
+    sub_ver_mp.size() < max_num_vertices) {
+    dgl_id_t dst_id = sub_vers[idx].first;
+    int cur_node_level = sub_vers[idx].second;
+    idx++;
+    // If the node is in the last level, we don't need to sample neighbors
+    // from this node.
+    if (cur_node_level >= num_hops)
+      continue;
+
+    tmp_sampled_src_list.clear();
+    tmp_sampled_edge_list.clear();
+    dgl_id_t ver_len = *(indptr+dst_id+1) - *(indptr+dst_id);
+    if (probability == nullptr) {  // uniform-sample
+      GetUniformSample(val_list + *(indptr + dst_id),
+                       col_list + *(indptr + dst_id),
+                       ver_len,
                        num_neighbor,
                        &tmp_sampled_src_list,
                        &tmp_sampled_edge_list,
                        &time_seed);
-      } else {  // non-uniform-sample
-        GetNonUniformSample(probability,
-                       tmp_src_list,
-                       tmp_edge_list,
+    } else {  // non-uniform-sample
+      GetNonUniformSample(probability,
+                       val_list + *(indptr + dst_id),
+                       col_list + *(indptr + dst_id),
+                       ver_len,
                        num_neighbor,
                        &tmp_sampled_src_list,
                        &tmp_sampled_edge_list,
                        &time_seed);
-      }
-      neigh_mp.insert(std::pair<dgl_id_t, neigh_list>(dst_id,
-        neigh_list(tmp_sampled_src_list,
-                   tmp_sampled_edge_list)));
-      num_edges += tmp_sampled_src_list.size();
-      sub_ver_mp[cur_node.vertex_id] = cur_node.level;
-      for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
-        auto ret = sub_ver_mp.find(tmp_sampled_src_list[i]);
-        if (ret == sub_ver_mp.end()) {
-          ver_node new_node;
-          new_node.vertex_id = tmp_sampled_src_list[i];
-          new_node.level = cur_node.level + 1;
-          node_queue.push(new_node);
-        }
-      }
-    } else {  // vertex without any neighbor
-      auto ret = sub_ver_mp.find(dst_id);
-      if (ret != sub_ver_mp.end()) {
-        node_queue.pop();
-        continue;
-      }
-      tmp_sampled_src_list.clear();
-      tmp_sampled_edge_list.clear();
-      neigh_mp.insert(std::pair<dgl_id_t, neigh_list>(dst_id,
-        neigh_list(tmp_sampled_src_list,      // empty vector
-                   tmp_sampled_edge_list)));  // empty vector
-      sub_ver_mp[cur_node.vertex_id] = cur_node.level;
     }
-    sub_vertices_count++;
-    node_queue.pop();
+    CHECK_EQ(tmp_sampled_src_list.size(), tmp_sampled_edge_list.size());
+    size_t pos = neighbor_list.size();
+    neigh_pos.emplace_back(dst_id, pos);
+    // First we push the size of neighbor vector
+    neighbor_list.push_back(tmp_sampled_edge_list.size());
+    // Then push the vertices
+    for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
+      neighbor_list.push_back(tmp_sampled_src_list[i]);
+    }
+    // Finally we push the edge list
+    for (size_t i = 0; i < tmp_sampled_edge_list.size(); ++i) {
+      neighbor_list.push_back(tmp_sampled_edge_list[i]);
+    }
+    num_edges += tmp_sampled_src_list.size();
+    for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
+      // If we have sampled the max number of vertices, we have to stop.
+      if (sub_ver_mp.size() >= max_num_vertices)
+        break;
+      // We need to add the neighbor in the hashtable here. This ensures that
+      // the vertex in the queue is unique. If we see a vertex before, we don't
+      // need to add it to the queue again.
+      auto ret = sub_ver_mp.insert(tmp_sampled_src_list[i]);
+      // If the sampled neighbor is inserted to the map successfully.
+      if (ret.second)
+        sub_vers.emplace_back(tmp_sampled_src_list[i], cur_node_level + 1);
+    }
+  }
+  // Let's check if there is a vertex that we haven't sampled its neighbors.
+  for (; idx < sub_vers.size(); idx++) {
+    if (sub_vers[idx].second < num_hops) {
+      LOG(WARNING)
+        << "The sampling is truncated because we have reached the max number of vertices\n"
+        << "Please use a smaller number of seeds or a small neighborhood";
+      break;
+    }
   }
 
   // Copy sub_ver_mp to output[0]
-  size_t idx = 0;
-  for (auto& data : sub_ver_mp) {
-    *(out+idx) = data.first;
-    idx++;
-  }
+  // Copy layer
   size_t num_vertices = sub_ver_mp.size();
-  std::sort(out, out + num_vertices);
-  // The rest data will be set to -1
-  for (dgl_id_t i = idx; i < max_num_vertices; ++i) {
-    *(out+i) = -1;
+  std::sort(sub_vers.begin(), sub_vers.end(),
+            [](const std::pair<dgl_id_t, dgl_id_t> &a1, const std::pair<dgl_id_t, dgl_id_t> &a2) {
+    return a1.first < a2.first;
+  });
+  for (size_t i = 0; i < sub_vers.size(); i++) {
+    out[i] = sub_vers[i].first;
+    out_layer[i] = sub_vers[i].second;
   }
   // The last element stores the actual
   // number of vertices in the subgraph.
   out[max_num_vertices] = sub_ver_mp.size();
+
   // Copy sub_probability
   if (sub_prob != nullptr) {
-    for (dgl_id_t i = 0; i < max_num_vertices; ++i) {
+    for (size_t i = 0; i < sub_ver_mp.size(); ++i) {
       dgl_id_t idx = out[i];
-      if (idx != -1) {
-        sub_prob[i] = probability[idx];
-      } else {
-        sub_prob[i] = -1;
-      }
-    }
-  }
-  // Copy layer
-  for (dgl_id_t i = 0; i < max_num_vertices; ++i) {
-    dgl_id_t idx = out[i];
-    if (idx != -1) {
-      out_layer[i] = sub_ver_mp[idx];
-    } else {
-      out_layer[i] = -1;
+      sub_prob[i] = probability[idx];
     }
   }
   // Construct sub_csr_graph
@@ -718,20 +691,37 @@ static void SampleSubgraph(const NDArray &csr,
   dgl_id_t* indptr_out = sub_csr.aux_data(0).dptr<dgl_id_t>();
   indptr_out[0] = 0;
   size_t collected_nedges = 0;
+
+  // Both the out array and neigh_pos are sorted. By scanning the two arrays, we can see
+  // which vertices have neighbors and which don't.
+  std::sort(neigh_pos.begin(), neigh_pos.end(),
+            [](const std::pair<dgl_id_t, size_t> &a1, const std::pair<dgl_id_t, size_t> &a2) {
+    return a1.first < a2.first;
+  });
+  size_t idx_with_neigh = 0;
   for (size_t i = 0; i < num_vertices; i++) {
     dgl_id_t dst_id = *(out + i);
-    auto it = neigh_mp.find(dst_id);
-    const auto &edges = it->second.edges;
-    const auto &neighs = it->second.neighs;
-    CHECK_EQ(edges.size(), neighs.size());
-    if (!edges.empty()) {
-      std::copy(edges.begin(), edges.end(), val_list_out + collected_nedges);
-      std::copy(neighs.begin(), neighs.end(), col_list_out + collected_nedges);
-      collected_nedges += edges.size();
+    // If a vertex is in sub_ver_mp but not in neigh_pos, this vertex must not
+    // have edges.
+    size_t edge_size = 0;
+    if (idx_with_neigh < neigh_pos.size() && dst_id == neigh_pos[idx_with_neigh].first) {
+      size_t pos = neigh_pos[idx_with_neigh].second;
+      CHECK_LT(pos, neighbor_list.size());
+      edge_size = neighbor_list[pos];
+      CHECK_LE(pos + edge_size * 2 + 1, neighbor_list.size());
+
+      std::copy_n(neighbor_list.begin() + pos + 1,
+                  edge_size,
+                  col_list_out + collected_nedges);
+      std::copy_n(neighbor_list.begin() + pos + edge_size + 1,
+                  edge_size,
+                  val_list_out + collected_nedges);
+      collected_nedges += edge_size;
+      idx_with_neigh++;
     }
-    indptr_out[i+1] = indptr_out[i] + edges.size();
+    indptr_out[i+1] = indptr_out[i] + edge_size;
   }
-  for (dgl_id_t i = num_vertices+1; i <= max_num_vertices; ++i) {
+  for (size_t i = num_vertices+1; i <= max_num_vertices; ++i) {
     indptr_out[i] = indptr_out[i-1];
   }
 }
@@ -766,8 +756,16 @@ static void CSRNeighborUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_uniform_sample)
-.describe(R"code(This operator samples sub-graph from a csr graph via an
-uniform probability. 
+.describe(R"code(This operator samples sub-graphs from a csr graph via an
+uniform probability. The operator is designed for DGL.
+
+The operator outputs three sets of NDArrays to represent the sampled results
+(the number of NDArrays in each set is the same as the number of seed NDArrays):
+1) a set of 1D NDArrays containing the sampled vertices, 2) a set of CSRNDArrays representing
+the sampled edges, 3) a set of 1D NDArrays indicating the layer where a vertex is sampled.
+The first set of 1D NDArrays have a length of max_num_vertices+1. The last element in an NDArray
+indicate the acutal number of vertices in a subgraph. The third set of NDArrays have a length
+of max_num_vertices, and the valid number of vertices is the same as the ones in the first set.
 
 Example:
 
@@ -853,7 +851,16 @@ static void CSRNeighborNonUniformSampleComputeExCPU(const nnvm::NodeAttrs& attrs
 
 NNVM_REGISTER_OP(_contrib_dgl_csr_neighbor_non_uniform_sample)
 .describe(R"code(This operator samples sub-graph from a csr graph via an
-uniform probability. 
+non-uniform probability. The operator is designed for DGL.
+
+The operator outputs four sets of NDArrays to represent the sampled results
+(the number of NDArrays in each set is the same as the number of seed NDArrays):
+1) a set of 1D NDArrays containing the sampled vertices, 2) a set of CSRNDArrays representing
+the sampled edges, 3) a set of 1D NDArrays with the probability that vertices are sampled,
+4) a set of 1D NDArrays indicating the layer where a vertex is sampled.
+The first set of 1D NDArrays have a length of max_num_vertices+1. The last element in an NDArray
+indicate the acutal number of vertices in a subgraph. The third and fourth set of NDArrays have a length
+of max_num_vertices, and the valid number of vertices is the same as the ones in the first set.
 
 Example:
 
