@@ -73,10 +73,10 @@ def test_resize():
     data_expected = image.imresize(data_in, 150, 225, 1)
     assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
     def _test_size_below_zero_Exception():
-        out_nd = transforms.Resize(-150, keep_ratio=True)(data_in)
+        transforms.Resize(-150, keep_ratio=True)(data_in)
     assertRaises(MXNetError, _test_size_below_zero_Exception)
     def _test_size_more_than_2_Exception():
-        out_nd = transforms.Resize((100, 100, 100), keep_ratio=True)(data_in)
+        transforms.Resize((100, 100, 100), keep_ratio=True)(data_in)
     assertRaises(MXNetError, _test_size_more_than_2_Exception)
 
 
