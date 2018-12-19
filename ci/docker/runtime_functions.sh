@@ -285,14 +285,9 @@ build_centos7_cpu() {
         ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
+        USE_MKLDNN=0 \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
-    cp lib/libmkldnn.so.0 lib/libmkldnn.so.0.tmp
-    mv lib/libmkldnn.so.0.tmp lib/libmkldnn.so.0
-    cp lib/libmklml_intel.so lib/libmklml_intel.so.tmp
-    mv lib/libmklml_intel.so.tmp lib/libmklml_intel.so
-    cp lib/libiomp5.so lib/libiomp5.so.tmp
-    mv lib/libiomp5.so.tmp lib/libiomp5.so
 }
 
 build_amzn_linux_cpu() {
@@ -341,18 +336,13 @@ build_centos7_gpu() {
         USE_LAPACK=1                              \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
         USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         -j$(nproc)
-    cp lib/libmkldnn.so.0 lib/libmkldnn.so.0.tmp
-    mv lib/libmkldnn.so.0.tmp lib/libmkldnn.so.0
-    cp lib/libmklml_intel.so lib/libmklml_intel.so.tmp
-    mv lib/libmklml_intel.so.tmp lib/libmklml_intel.so
-    cp lib/libiomp5.so lib/libiomp5.so.tmp
-    mv lib/libiomp5.so.tmp lib/libiomp5.so
 }
 
 build_ubuntu_cpu() {
