@@ -66,6 +66,7 @@ __pycache__
 build
 cmake-build*
 data
+model
 recommonmark
 deps
 

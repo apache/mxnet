@@ -649,7 +649,8 @@ int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
 
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                  ExecutorMonitorCallback callback,
-                                 void* callback_handle) {
+                                 void* callback_handle,
+                                 bool monitor_all) {
   API_BEGIN();
   ExecutorMonitorCallback callback_temp = callback;
   void* callback_handle_temp = callback_handle;
@@ -658,6 +659,6 @@ int MXExecutorSetMonitorCallback(ExecutorHandle handle,
     callback_temp(name, handle, callback_handle_temp);
   };
   Executor *exec = static_cast<Executor*>(handle);
-  exec->SetMonitorCallback(clbk);
+  exec->SetMonitorCallback(clbk, monitor_all);
   API_END();
 }

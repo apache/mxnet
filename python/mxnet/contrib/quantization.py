@@ -26,6 +26,7 @@ except ImportError:
 import ctypes
 import logging
 import os
+import sys
 import numpy as np
 from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
@@ -80,8 +81,7 @@ def _quantize_params(qsym, params, th_dict):
                 quantized_params[name] = ndarray.array([th_dict[output][1]])
     return quantized_params
 
-def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
-                     quantized_dtype='int8', calib_quantize_op=False):
+def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_dtype='int8'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -98,8 +98,6 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
         avoided.
     quantized_dtype: str
         The quantized destination type for input data.
-    calib_quantize_op : bool
-        Whether perform offline calibration for quantize op.
     """
     num_excluded_symbols = 0
     if excluded_symbols is not None:
@@ -122,8 +120,7 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
                                      c_str_array(excluded_symbols),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
-                                     c_str(quantized_dtype),
-                                     ctypes.c_bool(calib_quantize_op)))
+                                     c_str(quantized_dtype)))
     return Symbol(out)
 
 
@@ -139,18 +136,20 @@ class _LayerOutputCollector(object):
 
     def collect(self, name, arr):
         """Callback function for collecting layer output NDArrays."""
-        name = py_str(name)
-        if self.include_layer is not None and not self.include_layer(name):
-            return
-        handle = ctypes.cast(arr, NDArrayHandle)
-        arr = NDArray(handle, writable=False).copyto(cpu())
-        if self.logger is not None:
-            self.logger.info("Collecting layer %s output of shape %s" % (name, arr.shape))
-        if name in self.nd_dict:
-            self.nd_dict[name].append(arr)
-        else:
-            self.nd_dict[name] = [arr]
-
+        try:
+            name = py_str(name)
+            if self.include_layer is not None and not self.include_layer(name):
+                return
+            handle = ctypes.cast(arr, NDArrayHandle)
+            arr = NDArray(handle, writable=False).copyto(cpu())
+            if self.logger is not None:
+                self.logger.info("Collecting layer %s output of shape %s" % (name, arr.shape))
+            if name in self.nd_dict:
+                self.nd_dict[name].append(arr)
+            else:
+                self.nd_dict[name] = [arr]
+        except KeyboardInterrupt:
+            sys.exit(1)
 
 class _LayerOutputMinMaxCollector(object):
     """Saves layer output min and max values in a dict with layer names as keys.
@@ -163,23 +162,25 @@ class _LayerOutputMinMaxCollector(object):
 
     def collect(self, name, arr):
         """Callback function for collecting min and max values from an NDArray."""
-        name = py_str(name)
-        if self.include_layer is not None and not self.include_layer(name):
-            return
-        handle = ctypes.cast(arr, NDArrayHandle)
-        arr = NDArray(handle, writable=False)
-        min_range = ndarray.min(arr).asscalar()
-        max_range = ndarray.max(arr).asscalar()
-        if name in self.min_max_dict:
-            cur_min_max = self.min_max_dict[name]
-            self.min_max_dict[name] = (min(cur_min_max[0], min_range),
-                                       max(cur_min_max[1], max_range))
-        else:
-            self.min_max_dict[name] = (min_range, max_range)
-        if self.logger is not None:
-            self.logger.info("Collecting layer %s output min_range=%f, max_range=%f"
-                             % (name, min_range, max_range))
-
+        try:
+            name = py_str(name)
+            if self.include_layer is not None and not self.include_layer(name):
+                return
+            handle = ctypes.cast(arr, NDArrayHandle)
+            arr = NDArray(handle, writable=False)
+            min_range = ndarray.min(arr).asscalar()
+            max_range = ndarray.max(arr).asscalar()
+            if name in self.min_max_dict:
+                cur_min_max = self.min_max_dict[name]
+                self.min_max_dict[name] = (min(cur_min_max[0], min_range),
+                                           max(cur_min_max[1], max_range))
+            else:
+                self.min_max_dict[name] = (min_range, max_range)
+            if self.logger is not None:
+                self.logger.info("Collecting layer %s min_range=%f, max_range=%f"
+                                 % (name, min_range, max_range))
+        except KeyboardInterrupt:
+            sys.exit(1)
 
 def _calibrate_quantized_sym(qsym, th_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
@@ -210,7 +211,7 @@ def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logge
     if not isinstance(data, DataIter):
         raise ValueError('Only supports data as a type of DataIter, while received type %s'
                          % str(type(data)))
-    mod._exec_group.execs[0].set_monitor_callback(collector.collect)
+    mod._exec_group.execs[0].set_monitor_callback(collector.collect, monitor_all=True)
     num_batches = 0
     num_examples = 0
     for batch in data:
@@ -265,6 +266,9 @@ def _smooth_distribution(p, eps=0.0001):
 # pylint: disable=line-too-long
 def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     """Given a dataset, find the optimal threshold for quantizing it.
+    The reference distribution is `q`, and the candidate distribution is `p`.
+    `q` is a truncated version of the original distribution.
+
     Ref: http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
     """
     if isinstance(arr, NDArray):
@@ -286,12 +290,12 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     min_val = np.min(arr)
     max_val = np.max(arr)
     th = max(abs(min_val), abs(max_val))
+    if min_val >= 0:
+        num_quantized_bins = (num_quantized_bins // 2) * 4 + 1
 
     hist, hist_edges = np.histogram(arr, bins=num_bins, range=(-th, th))
     zero_bin_idx = num_bins // 2
     num_half_quantized_bins = num_quantized_bins // 2
-    assert np.allclose(hist_edges[zero_bin_idx] + hist_edges[zero_bin_idx + 1],
-                       0, rtol=1e-5, atol=1e-7)
 
     thresholds = np.zeros(num_bins // 2 + 1 - num_quantized_bins // 2)
     divergence = np.zeros_like(thresholds)
@@ -315,10 +319,10 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
         right_outlier_count = np.sum(hist[p_bin_idx_stop:])
         p[-1] += right_outlier_count
         # is_nonzeros[k] indicates whether hist[k] is nonzero
-        is_nonzeros = (sliced_nd_hist != 0).astype(np.int32)
+        is_nonzeros = (p != 0).astype(np.int32)
 
         # calculate how many bins should be merged to generate quantized distribution q
-        num_merged_bins = p.size // num_quantized_bins
+        num_merged_bins = sliced_nd_hist.size // num_quantized_bins
         # merge hist into num_quantized_bins bins
         for j in range(num_quantized_bins):
             start = j * num_merged_bins
@@ -326,17 +330,17 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
             quantized_bins[j] = sliced_nd_hist[start:stop].sum()
         quantized_bins[-1] += sliced_nd_hist[num_quantized_bins * num_merged_bins:].sum()
         # expand quantized_bins into p.size bins
-        q = np.zeros(p.size, dtype=np.float32)
+        q = np.zeros(sliced_nd_hist.size, dtype=np.float32)
         for j in range(num_quantized_bins):
             start = j * num_merged_bins
             if j == num_quantized_bins - 1:
-                stop = -1
+                stop = len(is_nonzeros)
             else:
                 stop = start + num_merged_bins
             norm = is_nonzeros[start:stop].sum()
             if norm != 0:
                 q[start:stop] = float(quantized_bins[j]) / float(norm)
-        q[sliced_nd_hist == 0] = 0
+        q[p == 0] = 0
         p = _smooth_distribution(p)
         # There is a chance that q is an invalid probability distribution.
         try:
@@ -344,7 +348,6 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
         except ValueError:
             divergence[i - num_half_quantized_bins] = float("inf")
         divergence[i - num_half_quantized_bins] = stats.entropy(p, q)
-        quantized_bins[:] = 0
 
     min_divergence_idx = np.argmin(divergence)
     min_divergence = divergence[min_divergence_idx]
@@ -424,7 +427,7 @@ def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None, calib_layer=None,
-                   quantized_dtype='int8', calib_quantize_op=False, logger=logging):
+                   quantized_dtype='int8', logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -476,9 +479,8 @@ def quantize_model(sym, arg_params, aux_params,
         all the layers' outputs that need requantization will be collected.
     quantized_dtype : str
         The quantized destination type for input data. Currently support 'int8'
-        and 'uint8', default value is 'int8'.
-    calib_quantize_op: bool
-        Whether calibrate quantize op with its input calibration data. The quantize op's input should be in calib_layer
+        , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
+        Default value is 'int8'.
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -496,13 +498,12 @@ def quantize_model(sym, arg_params, aux_params,
                          ' while received type %s' % str(type(excluded_sym_names)))
 
     logger.info('Quantizing symbol')
-    if quantized_dtype not in ('int8', 'uint8'):
+    if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
-                         ' expected `int8` or `uint8`' % quantized_dtype)
+                         ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
-                            quantized_dtype=quantized_dtype,
-                            calib_quantize_op=calib_quantize_op)
+                            quantized_dtype=quantized_dtype)
 
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':

@@ -189,6 +189,9 @@ static int GetTypeSize(int dtype) {
 }
 
 static inline size_t GetArraySize(const NDArray &arr) {
+  if (arr.IsMKLDNNData()) {
+    return arr.GetMKLDNNData()->get_primitive_desc().get_size();
+  }
   return arr.shape().Size() * GetTypeSize(arr.dtype());
 }
 
@@ -237,21 +240,20 @@ static inline size_t GetMemDescSize(const mkldnn::memory::desc &md) {
   return ret;
 }
 
-inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
+inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int dtype = -1) {
+  int ndim = arr.shape().ndim();
   mkldnn::memory::dims dims(ndim);
+  dtype = (dtype == -1) ? arr.dtype() : dtype;
   for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
-  return mkldnn::memory::desc{dims, get_mkldnn_type(arr.dtype()),
-                              mkldnn::memory::format::any};
-}
-
-inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
-  return GetMemDesc(arr, arr.shape().ndim());
+  return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format::any};
 }
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
-                                                 int num_groups) {
+                                                 int num_groups,
+                                                 bool quantized = false) {
+  int dtype = quantized ? mshadow::kInt8 : arr.dtype();
   if (num_groups == 1) {
-    return GetMemDesc(arr);
+    return GetMemDesc(arr, dtype);
   } else {
     CHECK_EQ(arr.shape().ndim(), 4U);
     mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
@@ -259,7 +261,7 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
       static_cast<int>(arr.shape()[1]),
       static_cast<int>(arr.shape()[2]),
       static_cast<int>(arr.shape()[3])};
-    return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
+    return mkldnn::memory::desc{tz, get_mkldnn_type(dtype),
                                 mkldnn::memory::format::any};
   }
 }
@@ -436,6 +438,8 @@ static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
       out_arrs->push_back(arrs[i]);
   }
 }
+
+const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups);
 
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,

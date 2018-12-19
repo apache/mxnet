@@ -234,13 +234,15 @@ class Executor(object):
             ndarray,
             ctypes.c_int(is_train)))
 
-    def set_monitor_callback(self, callback):
+    def set_monitor_callback(self, callback, monitor_all=False):
         """Install callback for monitor.
 
         Parameters
         ----------
         callback : function
             Takes a string and an NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input and output, otherwise monitor output only.
 
         Examples
         --------
@@ -254,7 +256,8 @@ class Executor(object):
         check_call(_LIB.MXExecutorSetMonitorCallback(
             self.handle,
             self._monitor_callback,
-            None))
+            None,
+            ctypes.c_int(monitor_all)))
 
     @property
     def arg_dict(self):

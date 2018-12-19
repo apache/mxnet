@@ -1614,10 +1614,12 @@ int MXExecutorReshape(int partial_shaping,
 
 /*!
  * \brief set a call back to notify the completion of operation
+ * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
  */
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
-                                           void* callback_handle);
+                                           void* callback_handle,
+                                           bool monitor_all);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------
@@ -2167,4 +2169,3 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** cuda_kernel_
                                   mx_uint grid_dim_z, mx_uint block_dim_x,
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
-
