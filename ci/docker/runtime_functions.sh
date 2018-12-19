@@ -437,6 +437,7 @@ build_ubuntu_cpu_clang39() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -454,6 +455,7 @@ build_ubuntu_cpu_clang60() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -473,6 +475,7 @@ build_ubuntu_cpu_clang_tidy() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
+        -DUSE_MKLDNN=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENCV=ON \
         -DCMAKE_BUILD_TYPE=Debug \
