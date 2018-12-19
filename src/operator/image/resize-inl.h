@@ -26,12 +26,12 @@
 #define MXNET_OPERATOR_IMAGE_RESIZE_INL_H_
 
 
-#include <tuple>
 #include <vector>
 
 #include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "image_utils.h"
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -62,9 +62,9 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
   }
 };
 
-inline std::tuple<int, int> GetHeightAndWidth(int data_h,
-                                              int data_w,
-                                              const ResizeParam& param) {
+inline SizeParam GetHeightAndWidth(int data_h,
+                                    int data_w,
+                                    const ResizeParam& param) {
   CHECK((param.size.ndim() == 1) || (param.size.ndim() == 2))
       << "Input size dimension must be 1 or 2, but got "
       << param.size.ndim();
@@ -96,8 +96,7 @@ inline std::tuple<int, int> GetHeightAndWidth(int data_h,
     resized_h = param.size[1];
     resized_w = param.size[0];
   }
-
-  return std::make_tuple(resized_h, resized_w);
+  return SizeParam(resized_h, resized_w);
 }
 
 inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
@@ -109,14 +108,14 @@ inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
     << in_attrs->at(0).ndim();
   const auto& ishape = (*in_attrs)[0];
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
-  std::tuple<int, int> t;
+  SizeParam size;
   if (ishape.ndim() == 3) {
-    t = GetHeightAndWidth(ishape[0], ishape[1], param);
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({std::get<0>(t), std::get<1>(t), ishape[2]}));
+    size = GetHeightAndWidth(ishape[H], ishape[W], param);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({size.height, size.width, ishape[C]}));
   } else {
-    t = GetHeightAndWidth(ishape[1], ishape[2], param);
+    size = GetHeightAndWidth(ishape[kH], ishape[kW], param);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0,
-      TShape({ishape[0], std::get<0>(t), std::get<1>(t), ishape[3]}));
+      TShape({ishape[N], size.height, size.width, ishape[kC]}));
   }
   return true;
 }
@@ -134,17 +133,17 @@ inline void ResizeImpl(const std::vector<TBlob> &inputs,
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
-    cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
-    cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
+    cv::Mat buf(inputs[0].shape_[H], inputs[0].shape_[W], cv_type, inputs[0].dptr_);
+    cv::Mat dst(outputs[0].shape_[H], outputs[0].shape_[W], cv_type, outputs[0].dptr_);
     cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
     CHECK(!dst.empty());
     CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
   } else {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      cv::Mat buf(inputs[0].shape_[1], inputs[0].shape_[2], cv_type,
+      cv::Mat buf(inputs[0].shape_[kH], inputs[0].shape_[kW], cv_type,
         inputs[0].dptr<DType>() + input_index);
-      cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type,
+      cv::Mat dst(outputs[0].shape_[kH], outputs[0].shape_[kW], cv_type,
         outputs[0].dptr<DType>() + output_index);
       cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
       CHECK(!dst.empty());
@@ -163,18 +162,18 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
                    const std::vector<TBlob> &outputs) {
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
-  std::tuple<int, int> t;
+  SizeParam size;
   if (inputs[0].ndim() == 3) {
-    t = GetHeightAndWidth(inputs[0].shape_[0], inputs[0].shape_[1], param);
-    ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t), param.interp);
+    size = GetHeightAndWidth(inputs[0].shape_[H], inputs[0].shape_[W], param);
+    ResizeImpl(inputs, outputs, size.height, size.width, param.interp);
   } else {
-    t = GetHeightAndWidth(inputs[0].shape_[1], inputs[0].shape_[2], param);
-    const auto batch_size = inputs[0].shape_[0];
-    const auto input_step = inputs[0].shape_[1] * inputs[0].shape_[2] * inputs[0].shape_[3];
-    const auto output_step = std::get<0>(t) * std::get<1>(t) * inputs[0].shape_[3];
+    size = GetHeightAndWidth(inputs[0].shape_[kH], inputs[0].shape_[kW], param);
+    const auto batch_size = inputs[0].shape_[N];
+    const auto input_step = inputs[0].shape_[kH] * inputs[0].shape_[kW] * inputs[0].shape_[kC];
+    const auto output_step = size.height * size.width * inputs[0].shape_[kC];
     #pragma omp parallel for
     for (auto i = 0; i < batch_size; ++i) {
-      ResizeImpl(inputs, outputs, std::get<0>(t), std::get<1>(t),
+      ResizeImpl(inputs, outputs, size.height, size.width,
         param.interp, i * input_step, i * output_step);
     }
   }
