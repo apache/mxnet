@@ -995,9 +995,6 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 
 integrationtest_ubuntu_gpu_scala() {
     set -ex
-    mkdir -p /work/mxnet/3rdparty/mkldnn/build/install/lib/
-    cp lib/libmkldnn.so.0 /work/mxnet/3rdparty/mkldnn/build/install/lib/libmkldnn.so
-    cp lib/libmklml_intel.so /work/mxnet/3rdparty/mkldnn/build/install/lib/libmklml_intel.so
     make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1 ENABLE_TESTCOVERAGE=1
     make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
