@@ -861,7 +861,7 @@ unittest_ubuntu_cpugpu_perl() {
 
 unittest_ubuntu_gpu_cpp() {
     set -ex
-    export LD_DEBUG=libs
+    export LD_LIBRARY_PATH = ./build/:$LD_LIBRARY_PATH
     build/tests/mxnet_unit_tests
 }
 
