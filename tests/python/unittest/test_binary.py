@@ -303,7 +303,6 @@ def test_binary_layer_config_scaling():
 """
 # TODO: would be nice to find better solution do this
 import sys
-# Add the ptdraft folder path to the sys.path list
 sys.path.append('./example/bmxnet-examples/model_converter/')
 from concatenation_operator import get_binary_row, get_binary_col
 
