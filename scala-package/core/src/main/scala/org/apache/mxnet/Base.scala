@@ -18,7 +18,9 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.util.NativeLibraryLoader
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{Logger, LoggerFactory}
+
+import scala.Specializable.Group
 
 private[mxnet] object Base {
   private val logger: Logger = LoggerFactory.getLogger("MXNetJVM")
@@ -56,6 +58,9 @@ private[mxnet] object Base {
   type RtcHandleRef = RefLong
 
   val MX_REAL_TYPE = DType.Float32
+
+  // The primitives currently supported for NDArray operations
+  val MX_PRIMITIVES = new Group ((Double, Float))
 
   try {
     try {
