@@ -359,6 +359,7 @@ build_ubuntu_cpu_openblas() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
 }
@@ -372,6 +373,7 @@ build_ubuntu_cpu_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -544,7 +546,6 @@ build_ubuntu_cpu_mkldnn_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
-        USE_MKLDNN=1                  \
         -j$(nproc)
 }
 
