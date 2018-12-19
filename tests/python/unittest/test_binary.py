@@ -6,6 +6,7 @@ import numpy as np
 from mxnet import autograd
 from mxnet.test_utils import assert_almost_equal, check_numeric_gradient, numeric_grad
 from mxnet.gluon import nn
+import mxnet.ndarray as F
 import pytest
 
 
@@ -296,20 +297,38 @@ def test_binary_layer_config_scaling():
         assert isinstance(nn.activated_conv(3), nn.ScaledBinaryConv)
     assert isinstance(nn.activated_conv(3), nn.BinaryConvolution)
 
+
+"""
+    Test binary inference layers
+"""
+
 def test_binary_inference_conv():
     bits = 32
-    input_data = mx.nd.random.normal(-1, 1, shape=(100,64,8,8))
+    input_data = mx.nd.random.normal(-1, 1, shape=(1,64,8,8))
     weight = mx.nd.random.normal(-1, 1, shape=(64, 64, 5, 5))
 
-    # do weights concatenation
-    weight_concatenated = mx.nd.zeros(64, 64/bits, 5, 5)
-    binary_infer = mx.ndarray.BinaryInferenceConvolution(data=input_data, 
-                    weight=weight_concatenated, kernel=(5,5), num_filter=64)
+    # weights concatenation
+    import sys
+    # Add the ptdraft folder path to the sys.path list
+    sys.path.append('./example/bmxnet-examples/model_converter/')
+    from concatenation_operator import get_binary_row
 
-    # TODO: create qconv2d layer, assign weights and set input.
-    # binary_layer = nn.QConv2D(...)
-    # result1 = binary_layer.forward(in_data)
-    # something like this
-    # d = mx.nd.Convolution(data=mx.nd.random.normal(-1, 1, shape=(100,64,8,8)), 
-                            # weight=mx.nd.random.normal(-1, 1, shape=(64, 64, 5, 5)), 
-                            # kernel=(5,5), num_filter=64, no_bias=True)
+    # create binary inference conv layer
+    size_binary_row = int(weight.size / bits)
+    #weight_concatenated = np.zeros((64, (int)(64/bits), 5, 5), dtype='uint64')
+    weight_concatenated = np.zeros((size_binary_row), dtype='uint64')
+    weight_concatenated = mx.nd.array(get_binary_row(weight.reshape(-1), 
+                                                     weight_concatenated, 
+                                                     weight.size, 
+                                                     bits), dtype='float32') 
+    weight_concatenated = weight_concatenated.reshape((weight.shape[0], -1, weight.shape[2], weight.shape[3]))
+    binary_infer_result = mx.ndarray.BinaryInferenceConvolution(data=input_data, 
+                                                     weight=weight_concatenated, kernel=(5,5), num_filter=64)
+
+    # create qconv2d layer, assign weights and set input_data.
+    qconv_layer = nn.QConv2D(64, 5, bits=1, use_bias=False, in_channels=64, apply_scaling=False, 
+                            no_offset = False)
+    qconv_result = qconv_layer.hybrid_forward(F, x=input_data, weight=weight)
+
+    # compare
+    assert_almost_equal(binary_infer_result, qconv_result)
