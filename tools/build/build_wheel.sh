@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,33 +16,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build MXNet for Android ARMv7
 
-FROM mxnetcipinned/dockcross-linux-armv7:11262018
+# This script builds the wheel for binary distribution and performs sanity check.
 
-ENV ARCH armv7l
-ENV HOSTCC gcc
-ENV TARGET ARMV7
+cd mxnet-build
+echo $(git rev-parse HEAD) >> python/mxnet/COMMIT_HASH
+cd -
 
-WORKDIR /work/deps
+# Make wheel for testing
+python setup.py bdist_wheel
 
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
-
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
-
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
-
-ARG USER_ID=0
-ARG GROUP_ID=0
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
+wheel_name=$(ls -t dist | head -n 1)
+pip install -U --user --force-reinstall dist/$wheel_name
+python sanity_test.py

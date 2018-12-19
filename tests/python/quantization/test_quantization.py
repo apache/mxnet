@@ -26,6 +26,7 @@ from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
 import unittest
+import operator
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -278,8 +279,15 @@ def test_quantized_pooling():
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if mx.current_context().device_type != 'gpu':
-            print('skipped testing quantized_fc on cpu since it is not supported yet')
-            return
+            hasMKL = False;
+            for key in os.environ.keys():
+                if operator.eq(key, "BUILD_TAG"):
+                    if os.environ['BUILD_TAG'].find("MKL") != -1:
+                        hasMKL = True
+                    break
+            if hasMKL == False:
+                print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
+                return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return
@@ -291,16 +299,16 @@ def test_quantized_fc():
         fc_fp32_exe = fc_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
         if qdtype == 'uint8':
             data_low = 0.0
-            data_high = 127.0
+            data_high = 63.0
         else:
-            data_low = -127.0
-            data_high = 127.0
+            data_low = -63.0
+            data_high = 63.0
         fc_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
                                                                      shape=data_shape).astype('int32')
-        fc_fp32_exe.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
+        fc_fp32_exe.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
                                                                      shape=arg_shapes[1]).astype('int32')
         if not no_bias:
-            fc_fp32_exe.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
+            fc_fp32_exe.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
                                                                          shape=arg_shapes[2]).astype('int32')
         output = fc_fp32_exe.forward()[0]
 
@@ -343,6 +351,10 @@ def test_quantized_fc():
         check_quantized_fc((32, 111, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 512, 2, 2), 100, False, qdtype)
         check_quantized_fc((32, 111, 2, 2), 100, False, qdtype)
+        check_quantized_fc((256, 2048, 2, 2), 800, False, qdtype)
+        check_quantized_fc((256, 111, 2, 2), 800, False, qdtype)
+        check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype)
+        check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
 
 @with_seed()
 def test_quantized_flatten():
