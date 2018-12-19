@@ -23,8 +23,8 @@
  * \brief the image operator utility function implementation
  */
 
-#ifndef MXNET_OPERATOR_IMAGE_UTILS_INL_H_
-#define MXNET_OPERATOR_IMAGE_UTILS_INL_H_
+#ifndef MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
+#define MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
 
 namespace mxnet {
 namespace op {
@@ -38,13 +38,13 @@ struct SizeParam {
   int width;
   SizeParam() {}
   SizeParam(int height_, int width_) {
-		height = height_;
-		width = width_;
+    height = height_;
+    width = width_;
   }
-};// struct SizeParam
+};  // struct SizeParam
 
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_IMAGE_UTILS_INL_H_
+#endif  // MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
