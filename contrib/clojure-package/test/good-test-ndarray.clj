@@ -27,11 +27,11 @@
 
 (defn
  div
- ([ndarray num-or-ndarray]
+ ([ndarray num-or-double-or-ndarray]
   (util/coerce-return
    (.$div
     ndarray
     (util/coerce-param
-     num-or-ndarray
-     #{"float" "org.apache.mxnet.NDArray"})))))
+     num-or-double-or-ndarray
+     #{"float" "double" "org.apache.mxnet.NDArray"})))))
 
