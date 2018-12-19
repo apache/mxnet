@@ -6845,7 +6845,6 @@ def test_context_num_gpus():
 
 @with_seed()
 def test_op_roi_align():
-    # Adapted from https://github.com/wkcn/MobulaOP/blob/master/tests/test_op/test_roi_align_op.py
     T = np.float32
 
     def assert_same_dtype(dtype_a, dtype_b):
