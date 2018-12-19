@@ -133,12 +133,34 @@ build_jetson() {
     set -ex
     pushd .
 
-    #build_ccache_wrappers
+    build_ccache_wrappers
+    
+    cd /work/build
+    cmake \
+	-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+	-DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+	-DCMAKE_C_COMPILER_LAUNCHER=ccache \
+	-DCMAKE_CROSSCOMPILING=ON \
+	-DUSE_CUDA=ON \
+	-DUSE_CUDNN=ON \
+	-DUSE_OPENCV=OFF \
+	-DUSE_OPENMP=ON \
+	-DUSE_SSE=OFF \
+	-DCMAKE_C_FLAGS=-DMSHADOW_USE_SSE=0 \
+	-DUSE_MKL_IF_AVAILABLE=OFF \
+	-DUSE_LAPACK=OFF \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DCUDA_TOOLKIT_ROOT_DIR=${CUDA_PATH} \
+	-DCUDA_TOOLKIT_TARGET_DIR=${CUDA_PATH}/targets/${CROSS_TRIPLE} \
+	-DCUDA_ARCH_LIST="5.3 6.2" \
+	-DCUDA_NVCC_FLAGS="${NVCCFLAGS}" \
+	-DCMAKE_CUDA_HOST_COMPILER=${CXX} \
+	-DUSE_TENSORRT=ON \
+	-G Ninja /work/mxnet
 
-    cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
-
-    build_wheel /work/mxnet/python /work/mxnet/lib
+    ninja
+    
+    build_wheel
     popd
 }
 

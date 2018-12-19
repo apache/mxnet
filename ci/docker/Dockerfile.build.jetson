@@ -38,6 +38,9 @@ WORKDIR /work/deps
 COPY install/ubuntu_arm.sh /work/
 RUN /work/ubuntu_arm.sh
 
+COPY install/deb_ubuntu_ccache.sh /work/
+RUN /work/deb_ubuntu_ccache.sh
+
 COPY install/arm_openblas.sh /work/
 RUN /work/arm_openblas.sh
 
@@ -47,8 +50,12 @@ ENV OpenBLAS_DIR=${CROSS_ROOT}
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
+COPY install/arm_protobuf.sh /work/
+RUN /work/arm_protobuf.sh
+
 # Setup CUDA build env (including configuring and copying nvcc)
-COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
+COPY --from=cudabuilder /usr/local/cuda-9.0 /usr/local/cuda-9.0
+
 ENV TARGET_ARCH aarch64
 ENV TARGET_OS linux
 
@@ -76,12 +83,22 @@ RUN JETPACK_DOWNLOAD_PREFIX=https://developer.download.nvidia.com/devzone/devcen
     dpkg -i --force-architecture  $CUDA_REPO_PREFIX/$ARM_CUBLAS_INSTALLER && \
     dpkg -i --force-architecture  $ARM_NVINFER_INSTALLER_PACKAGE && \
     dpkg -i --force-architecture  $ARM_NVINFER_DEV_INSTALLER_PACKAGE && \
-    apt update -y || true && apt install -y cuda-libraries-dev-9-0 libcudnn7-dev libnvinfer-dev
+    apt update -y || true && apt install -y unzip cuda-libraries-dev-9-0 libcudnn7-dev libnvinfer-dev
 RUN ln -s /usr/include/aarch64-linux-gnu/cudnn_v7.h /usr/include/aarch64-linux-gnu/cudnn.h
-ENV PATH $PATH:/usr/local/cuda/bin
+RUN ln -s cuda-9.0 /usr/local/cuda
+ENV CUDA_PATH=/usr/local/cuda
+ENV CUDA_BIN_PATH=${CUDA_PATH}/bin
+ENV CUDA_LIB_PATH=${CUDA_PATH}/lib64
+
+# Needed for FindCUDA.cmake module
+ENV CUDA_TOOLKIT_ROOT=${CUDA_PATH}
+
+ENV PATH ${PATH}:${CUDA_BIN_PATH}
+RUN ln -s ${CUDA_LIB_PATH}/stubs/libcuda.so ${CUDA_LIB_PATH}/libcuda.so
 ENV NVCCFLAGS "-m64"
-ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"
-ENV NVCC /usr/local/cuda/bin/nvcc
+
+COPY install/arm_onnx.sh /work/
+RUN /work/arm_onnx.sh
 
 ARG USER_ID=0
 ARG GROUP_ID=0
