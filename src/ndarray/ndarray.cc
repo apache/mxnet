@@ -333,7 +333,7 @@ DLManagedTensor* NDArray::ToDLPack() const {
   NDArrayDLManager* dlmanager(new NDArrayDLManager);
   dlmanager->handle = *this;
   if (!is_none()) {
-    dlmanager->tensor.dl_tensor = data().dltensor();
+    dlmanager->tensor.dl_tensor = dlmanager->handle.data().dltensor();
   }
   dlmanager->tensor.manager_ctx = dlmanager;
   dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
