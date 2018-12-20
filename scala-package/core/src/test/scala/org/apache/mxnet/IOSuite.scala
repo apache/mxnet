@@ -318,7 +318,8 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(labelDesc4(0).layout == Layout.NT)
 
     // Test with Float64 coming from the data itself
-    val dataF64 = IndexedSeq(NDArray.ones(shape0, dtype = DType.Float64), NDArray.zeros(shape0, dtype = DType.Float64))
+    val dataF64 = IndexedSeq(NDArray.ones(shape0, dtype = DType.Float64),
+      NDArray.zeros(shape0, dtype = DType.Float64))
 
     val dataIter5 = new NDArrayIter(
       IO.initDataDesc(dataF64, false, "data", DType.Float64, Layout.NTC),
