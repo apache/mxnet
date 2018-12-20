@@ -56,11 +56,18 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
     // no calib info
     in_buffer = inputs[0].Reorder2Default();
     auto in_ptr = in_buffer.data().dptr<float>();
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) \
-    reduction(min : data_min) reduction(max : data_max)
+    auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    std::vector<float> data_maxs(nthreads, data_max);
+    std::vector<float> data_mins(nthreads, data_min);
+#pragma omp parallel for num_threads(nthreads)
     for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
-      if (in_ptr[i] > data_max) data_max = in_ptr[i];
-      if (in_ptr[i] < data_min) data_min = in_ptr[i];
+      int tid = omp_get_thread_num();
+      if (in_ptr[i] > data_maxs[tid]) data_maxs[tid] = in_ptr[i];
+      if (in_ptr[i] < data_mins[tid]) data_mins[tid] = in_ptr[i];
+    }
+    for (index_t i = 0; i < nthreads; i++) {
+      if (data_maxs[i] > data_max) data_max = data_maxs[i];
+      if (data_mins[i] < data_min) data_min = data_mins[i];
     }
   }
   auto out_type = GetOutputType(param);
