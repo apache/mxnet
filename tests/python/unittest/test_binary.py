@@ -378,7 +378,7 @@ def test_binary_inference_fc():
     binary_infer_result = mx.ndarray.BinaryInferenceFullyConnected(data=input_data,
                                                      weight=weight_concatenated, num_hidden=num_hidden_fc)
 
-    binary_infer_result2 = mx.ndarray.BinaryInferenceFullyConnected(data=qact_result,
+    binary_infer_result2 = mx.ndarray.BinaryInferenceFullyConnected(data=input_data,
                                                      weight=weight_concatenated, num_hidden=num_hidden_fc)
 
     # create qdense layer, assign weights and set input_data.
