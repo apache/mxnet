@@ -61,7 +61,9 @@ endif
 include $(config)
 
 ifndef $(USE_MKLDNN)
-    USE_MKLDNN = 1
+ifneq ($(UNAME_S), Darwin)
+	USE_MKLDNN = 1
+endif
 endif
 
 ifeq ($(USE_MKL2017), 1)
