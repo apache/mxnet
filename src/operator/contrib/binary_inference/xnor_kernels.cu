@@ -21,7 +21,7 @@
  * \file binary_inference_convolution-inl.h
  * \brief
  * \ref: https://arxiv.org/abs/1705.09864
- * \author HPI-DeepLearning
+ * \author MatthieuCourbariaux (Github), HPI-DeepLearning
 */
 
 #include "./xnor_kernels.h"
@@ -35,7 +35,7 @@ __device__ BINARY_WORD concatenate(float* array)
     for (int i = 0; i < BITS_PER_BINARY_WORD; i++)
     {
         sign = (array[i]>=0);
-        rvalue = rvalue | (sign<< (i));
+        rvalue |= (sign << i);
     }
     
     return rvalue;
@@ -49,21 +49,32 @@ __global__ void concatenate_rows_kernel(float *a, BINARY_WORD *b, int size)
 }
 
 //concatinate column, processing directions: (COL_left->COL_right {ROW_top->ROW_down} ) 
+/*	this method should give the same result as the following implementation:
+ *   for(int y=0; y<(n/BITS_PER_BINARY_WORD); y++){
+      #pragma omp parallel for
+      for(int x=0; x < k; ++x){          
+        BINARY_WORD rvalue=0;
+        BINARY_WORD sign;    
+        for(int b=0; b<BITS_PER_BINARY_WORD; ++b){
+          sign = (col[(y*BITS_PER_BINARY_WORD+b)*k + x]>=0);          
+          rvalue |= (sign << b);
+        }
+        b_col[y*k + x] = rvalue;
+      }
+    }    
+ */
 __global__ void concatenate_cols_kernel(float *a, BINARY_WORD *b, int n, int k)
 {   
-
     int j = blockIdx.x * blockDim.x + threadIdx.x;
     
     if(j<k){        
-        for(int i=0; i<n; i+=BITS_PER_BINARY_WORD){
-        	float * array = new float[BITS_PER_BINARY_WORD];
-            
+    	float * array = new float[BITS_PER_BINARY_WORD];
+        for(int i=0; i<n; i+=BITS_PER_BINARY_WORD){       	            
             for(int bit=0; bit<BITS_PER_BINARY_WORD;bit++) 
-            	array[bit] = a[j + k*(i+bit)];
-            
-            b[j+k*i/BITS_PER_BINARY_WORD]=concatenate(array); 
-            delete[] array;
-        }         
+            	array[bit] = a[j + k*(i+bit)];            
+            b[j+k*i/BITS_PER_BINARY_WORD]=concatenate(array);             
+        }   
+        delete[] array;      
     }
 }
 
@@ -90,7 +101,7 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
     // Each thread computes one element of Csub
     // by accumulating results into Cvalue
     // BLOCK_SIZE_XNOR = 16 -> 256 threads, one per Csub element
-    BINARY_WORD Cvalue = 0;
+    float Cvalue = 0;
     
     // Loop over all the sub-matrices of A and B that are
     // required to compute Csub
@@ -116,7 +127,7 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
         // Multiply Asub and Bsub together
         // apply xnor and popcount: 
         //CUDA has population count intrinsics for both 32-bit and 64-bit types. (__popc() and __popcll())
-        for (int j = 0; j < BLOCK_SIZE_XNOR; ++j) Cvalue += __popc(~(As[row][j]^Bs[j][col]));
+        for (int j = 0; j < BLOCK_SIZE_XNOR; ++j) Cvalue += (float)__popc(~(As[row][j]^Bs[j][col]));
         
         // Synchronize to make sure that the preceding
         // computation is done before loading two new
@@ -126,5 +137,25 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
     
     // Write Csub to device memory
     // Each thread writes one element    
-    if(col + blockCol* BLOCK_SIZE_XNOR< k && row + blockRow* BLOCK_SIZE_XNOR< m) Csub[row*k+col] = (float)Cvalue;
+    if(col + blockCol* BLOCK_SIZE_XNOR< k && row + blockRow* BLOCK_SIZE_XNOR< m) Csub[row*k+col] = Cvalue;
 }
+
+
+// TODO: implement a baseline based on the cpu Version
+// // our baseline xnor
+// void xnor_gemm_baseline(int M, int N, int K,
+//                       BINARY_WORD *A, int lda,
+//                       BINARY_WORD *B, int ldb,
+//                       float *C, int ldc){
+//   int m,k,n;
+//   #pragma omp parallel for collapse(2)    
+//   for (m = 0; m < M; ++m) {
+//     for (k = 0; k < K; k++) {
+//       BINARY_WORD A_PART = A[m*lda+k];
+//       #pragma omp parallel for
+//       for (n = 0; n < N; ++n) {
+//         C[m*ldc+n] += __builtin_popcountll(~(A_PART ^ B[k*ldb+n]));
+//       }
+//     }
+//   }
+// }

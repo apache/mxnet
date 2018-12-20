@@ -29,7 +29,7 @@
 
 typedef unsigned int BINARY_WORD;
 const int BITS_PER_BINARY_WORD (sizeof(BINARY_WORD) * CHAR_BIT);
-#define BLOCK_SIZE_XNOR 8
+#define BLOCK_SIZE_XNOR 1
 
 __device__ unsigned int concatenate(float* array);
 __global__ void concatenate_rows_kernel(float *a, unsigned int *b, int size);
