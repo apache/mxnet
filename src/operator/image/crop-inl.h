@@ -28,14 +28,17 @@
 
 
 #include <algorithm>
-#include <tuple>
 #include <vector>
 
 #include "mxnet/base.h"
 #include "dmlc/optional.h"
-
+#include "image_utils.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace op {
@@ -102,15 +105,15 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
       width = param.size.value()[0];
     }
     if (ishape.ndim() == 3) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({height, width, ishape[2]}));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({height, width, ishape[C]}));
     } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({ishape[0], height, width, ishape[3]}));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({ishape[N], height, width, ishape[kC]}));
     }
   } else {
     if (ishape.ndim() == 3) {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({param.height, param.width, ishape[2]}));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({param.height, param.width, ishape[C]}));
     } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({ishape[0], param.height, param.width, ishape[3]}));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({ishape[N], param.height, param.width, ishape[kC]}));
     }
   }
   return true;
@@ -131,8 +134,8 @@ inline void CropImpl(int x,
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
-    cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
-    cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
+    cv::Mat buf(inputs[0].shape_[H], inputs[0].shape_[W], cv_type, inputs[0].dptr_);
+    cv::Mat dst(outputs[0].shape_[H], outputs[0].shape_[W], cv_type, outputs[0].dptr_);
     cv::Rect roi(x, y, width, height);
     buf(roi).copyTo(dst);
     CHECK(!dst.empty());
@@ -140,9 +143,9 @@ inline void CropImpl(int x,
   } else {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      cv::Mat buf(inputs[0].shape_[1], inputs[0].shape_[2], cv_type,
+      cv::Mat buf(inputs[0].shape_[kH], inputs[0].shape_[kW], cv_type,
         inputs[0].dptr<DType>() + input_index);
-      cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type,
+      cv::Mat dst(outputs[0].shape_[kH], outputs[0].shape_[kW], cv_type,
         outputs[0].dptr<DType>() + output_index);
       cv::Rect roi(x, y, width, height);
       buf(roi).copyTo(dst);
@@ -161,7 +164,7 @@ inline void CropImpl(int x,
                       int width,
                       const std::vector<TBlob> &inputs,
                       const std::vector<TBlob> &outputs,
-                      const std::tuple<int, int> &size,
+                      const SizeParam &size,
                       int interp,
                       int input_index = 0,
                       int output_index = 0) {
@@ -171,21 +174,21 @@ inline void CropImpl(int x,
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
-    cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
-    cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
+    cv::Mat buf(inputs[0].shape_[H], inputs[0].shape_[W], cv_type, inputs[0].dptr_);
+    cv::Mat dst(outputs[0].shape_[H], outputs[0].shape_[W], cv_type, outputs[0].dptr_);
     cv::Rect roi(x, y, width, height);
-    cv::resize(buf(roi), dst, cv::Size(std::get<0>(size), std::get<1>(size)), 0, 0, interp);
+    cv::resize(buf(roi), dst, cv::Size(size.width, size.height), 0, 0, interp);
     CHECK(!dst.empty());
     CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
   } else {
     const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      cv::Mat buf(inputs[0].shape_[1], inputs[0].shape_[2], cv_type,
+      cv::Mat buf(inputs[0].shape_[kH], inputs[0].shape_[kW], cv_type,
         inputs[0].dptr<DType>() + input_index);
-      cv::Mat dst(outputs[0].shape_[1], outputs[0].shape_[2], cv_type,
+      cv::Mat dst(outputs[0].shape_[kH], outputs[0].shape_[kW], cv_type,
         outputs[0].dptr<DType>() + output_index);
       cv::Rect roi(x, y, width, height);
-      cv::resize(buf(roi), dst, cv::Size(std::get<0>(size), std::get<1>(size)), 0, 0, interp);
+      cv::resize(buf(roi), dst, cv::Size(size.width, size.height), 0, 0, interp);
       CHECK(!dst.empty());
       CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr<DType>() + output_index);
     });
@@ -204,7 +207,7 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
   const CropParam& param = nnvm::get<CropParam>(attrs.parsed);
   const bool has_size = param.size.has_value();
   auto need_resize = false;
-  std::tuple<int, int> size;
+  SizeParam size;
   CHECK((param.height > 0) && (param.width > 0))
       << "Input height and width must be greater than 0";
   if (has_size) {
@@ -214,7 +217,7 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
       CHECK_GT(param.size.value()[0], 0)
         << "Input size should greater than 0, but got "
         << param.size.value()[0];
-      size = std::make_tuple(param.size.value()[0], param.size.value()[0]);
+      size = SizeParam(param.size.value()[0], param.size.value()[0]);
     } else {
       CHECK_GT(param.size.value()[0], 0)
         << "Input width in size should greater than 0, but got "
@@ -222,10 +225,10 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
       CHECK_GT(param.size.value()[1], 0)
         << "Input height in size should greater than 0, but got "
         << param.size.value()[1];
-      size = std::make_tuple(param.size.value()[0], param.size.value()[1]);
+      size = SizeParam(param.size.value()[1], param.size.value()[0]);
     }
     // if size given is not the same as input height, width, resize it.
-    if ((param.height != std::get<1>(size)) || (param.width != std::get<0>(size))) {
+    if ((param.height != size.height) || (param.width != size.width)) {
       need_resize = true;
     }
   }
@@ -242,7 +245,7 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
     const auto input_offset = inputs[0].shape_[1] * inputs[0].shape_[2] * inputs[0].shape_[3];
     int output_offset;
     if (need_resize) {
-      output_offset = std::get<0>(size) * std::get<0>(size) * outputs[0].shape_[3];
+      output_offset = size.height * size.width * outputs[0].shape_[3];
     } else {
       output_offset = param.width * param.height * outputs[0].shape_[3];
     }
