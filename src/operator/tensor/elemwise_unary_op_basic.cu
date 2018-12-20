@@ -68,6 +68,10 @@ NNVM_REGISTER_OP(_copy)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>);
 
 NNVM_REGISTER_OP(_backward_copy)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>);
+
+NNVM_REGISTER_OP(_backward_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(BlockGrad)
