@@ -1033,11 +1033,11 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def *=(other: Float): NDArray = {
-    _minusEqualToImpl(other)
+    _mulEqualToImpl(other)
   }
 
   def *=(other: Double): NDArray = {
-    _minusEqualToImpl(other)
+    _mulEqualToImpl(other)
   }
 
   def /(other: NDArray): NDArray = {
