@@ -62,7 +62,7 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
            lastBatchHandle: String = "pad",
            dataName: String = "data", labelName: String = "label") {
     this(IO.initDataDesc(data, allowEmpty = false, dataName,
-      if (data.isEmpty)  MX_REAL_TYPE else data(0).dtype, Layout.UNDEFINED),
+      if (data == null || data.isEmpty)  MX_REAL_TYPE else data(0).dtype, Layout.UNDEFINED),
       IO.initDataDesc(label, allowEmpty = true, labelName, MX_REAL_TYPE, Layout.UNDEFINED),
       dataBatchSize, shuffle, lastBatchHandle)
   }
