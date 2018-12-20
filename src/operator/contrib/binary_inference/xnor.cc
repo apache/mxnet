@@ -508,7 +508,7 @@ void xnor_gemm_benchmarking(int M, int N, int K,
                  float *C, int ldc){    
     //benchmarking several xnor_gemm methods
     //xnor_gemm_benchmarking(M, N, K, A, lda, B, ldb, C, ldc);
-    xnor_gemm_combined(M, N, K, A, lda, B, ldb, C, ldc);
+    xnor_gemm_unrolled(M, N, K, A, lda, B, ldb, C, ldc);
   }
 
 } //namespace xnor_cpu

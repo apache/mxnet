@@ -24,8 +24,8 @@
  * \author HPI-DeepLearning
 */
 
-#ifndef MXNET_OPERATOR_BINARY_INFERENCE_FULLY_CONNECTED_INL_H_
-#define MXNET_OPERATOR_BINARY_INFERENCE_FULLY_CONNECTED_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_FULLY_CONNECTED_INL_H_
+#define MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_FULLY_CONNECTED_INL_H_
 
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
@@ -259,4 +259,4 @@ class BinaryInferenceFullyConnectedProp : public OperatorProperty {
 #endif
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_BINARY_INFERENCE_FULLY_CONNECTED_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_FULLY_CONNECTED_INL_H_

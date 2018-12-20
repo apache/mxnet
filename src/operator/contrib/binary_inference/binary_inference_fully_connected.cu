@@ -26,84 +26,64 @@
 
 #include "./binary_inference_fully_connected-inl.h"
 #include <mshadow/tensor.h>
+#include "./xnor_kernels.h"
 
 namespace mshadow {
-// !deprecated! will be removed later
-// namespace cuda {
-// #include "./xnor_kernels.h"
-// inline void BinaryFullyConnectedForward(const Tensor<gpu, 2, float> &data,
-//                                 const Tensor<gpu, 2, float> &wmat,
-//                                 const Tensor<gpu, 2, float> &out) {
-                                      
-//  //======== TODO: able to support arbitrary input channel size ==========//
-//  CHECK_EQ(data.size(1) % BITS_PER_BINARY_WORD, 0) << "input channel number for binary fully_connected layer is not divisible by 32.";
-                            
-//  //get matrix dimension    
-//  int m, n, k;
-//  int basic_factor_nchannel_input = BITS_PER_BINARY_WORD;
-//  m = data.size(0);
-//  n = data.size(1);
-//  k = wmat.size(1); 
-  
-//  //check matrix dims:
-//  //  data.size(1) should equal wmat.size(0)
-//  //  out should have dims (m, k)
-//  CHECK_EQ((int)data.size(1), (int)wmat.size(0));
-//  CHECK_EQ((int)out.size(0), (int)data.size(0));
-//  CHECK_EQ((int)out.size(1), (int)wmat.size(1));
-  
-//  cudaStream_t stream = Stream<gpu>::GetStream(out.stream_);
-  
-//  //set memory
-//  float *fA = data.dptr_; 
-//  float *fB = wmat.dptr_;
-//  float *fC = out.dptr_;  
-      
-//  //set bit memory
-//  //!!NOTE!! here we save 32 float numbers into one binary word
-//  BINARY_WORD *Aconc, *Bconc;
-//  cudaMalloc(&Aconc, m*n/basic_factor_nchannel_input*sizeof(int));
-//  cudaMalloc(&Bconc, n*k/basic_factor_nchannel_input*sizeof(int));        
-  
-//  //concatinates matrix (m x n) -> (m x n/32)
-//  // kMaxThreadsPerBlock defined in "mxnet/mshadow/mshadow/cuda/tensor_gpu-inl.cuh"
-//  int threads_per_block = kMaxThreadsPerBlock;
-//  int blocks_per_grid = m * n / (threads_per_block * basic_factor_nchannel_input) + 1;
-//  concatenate_rows_kernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(fA, Aconc, m * n / basic_factor_nchannel_input);
+namespace cuda {
 
-//  //concatinates matrix (n x k) -> (n/32 x k)
-//  threads_per_block = kMaxThreadsPerBlock;
-//  blocks_per_grid = k / threads_per_block + 1;
-//  concatenate_cols_kernel<<<blocks_per_grid, threads_per_block, 0, stream>>>(fB, Bconc, n, k);
-//  cudaDeviceSynchronize();
+/*
+ *  m: batch size
+ *  n: input_dim e.g. 1024
+ *  k: hidden_num e.g. 1000
+ */
+inline void _BinaryInferenceFullyConnectedForward(int m, int n, int k,
+                                                 const Tensor<gpu, 2, float> &data,
+                                                 Tensor<gpu, 1, float> &workspace,
+                                                 mxnet::op::xnor::BINARY_WORD* wmat_binarized,
+                                                 Tensor<gpu, 2, float> &out) {
+                                      
+  CHECK_EQ(workspace.shape_.Size() * sizeof(workspace[0]) * CHAR_BIT, n * m);         
+  int basic_factor_nchannel_input = BITS_PER_BINARY_WORD;
+  cudaStream_t stream = Stream<gpu>::GetStream(out.stream_);
+
+  //set memory
+  float *fA = data.dptr_; 
+  // float *fB = wmat.dptr_;
+  float *fC = out.dptr_;  
+  BINARY_WORD* binary_row = (BINARY_WORD*) workspace.dptr_;
   
-//  //perform xnor gemm
-//  threads_per_block = BLOCK_SIZE_XNOR;
-//  dim3 blockDim(threads_per_block, threads_per_block);
-//  dim3 gridDim(k / threads_per_block + 1, m / threads_per_block + 1);
-//  xnor_gemm<<<gridDim, blockDim, 0, stream>>>(Aconc, Bconc, fC, m, n / basic_factor_nchannel_input, k);   
-//  cudaDeviceSynchronize();  
+  int mem_size = m*n/basic_factor_nchannel_input*sizeof(int);
+  cudaMemset(binary_row, 0, mem_size);
       
-//  cudaFree(Aconc);
-//  cudaFree(Bconc);
-// }
-// }  // namespace cuda
+  //concatinates matrix (m x n) -> (m x n/32)
+  int threads_per_block = basic_factor_nchannel_input;
+  dim3 conc_block(threads_per_block, 1, 1);
+  dim3 conc_grid(m*n/(threads_per_block*basic_factor_nchannel_input)+1,1);
+  concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, binary_row, m*n/basic_factor_nchannel_input);
+
+  //perform xnor gemm
+  threads_per_block = BLOCK_SIZE_XNOR;
+  dim3 block(threads_per_block, threads_per_block);
+  dim3 grid(k / threads_per_block + 1, m / threads_per_block + 1);
+  xnor_gemm<<<grid, block, 0, stream>>>(binary_row, wmat_binarized, fC, m, n/basic_factor_nchannel_input, k);   
+  cudaDeviceSynchronize();        
+}
+}  // namespace cuda
   
   inline void BinaryInferenceFullyConnectedForward(int m, int n, int k,
                                      const Tensor<gpu, 2, float> &data,
                                      Tensor<gpu, 1, float> &workspace,
                                      mxnet::op::xnor::BINARY_WORD* wmat_binarized,
                                      Tensor<gpu, 2, float> &out) {
-    CHECK(false) << "cuda with pre-binarized weights not implemented";
+    cuda::_BinaryInferenceFullyConnectedForward(m, n, k, data, workspace, wmat_binarized, out);
   }
 
   inline void BinaryInferenceFullyConnectedForward(int m, int n, int k,
                                      const Tensor<gpu, 2, float> &data,
                                      Tensor<gpu, 1, float> &workspace,
                                      const Tensor<gpu, 2, float> &wmat,
-                                     Tensor<gpu, 2, float> &out) {
-    // !deprecated! will be removed later
-    //cuda::BinaryFullyConnectedForward(data, wmat, out);
+                                     Tensor<gpu, 2, float> &out) {    
+    CHECK(false) << "cuda for non-concatenated weights not implemented"; 
   }
 
   template<typename DType>

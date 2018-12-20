@@ -24,8 +24,8 @@
  * \author HPI-DeepLearning
 */
 
-#ifndef MXNET_XNOR_H
-#define MXNET_XNOR_H
+#ifndef MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_H
+#define MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_H
 
 #include <dmlc/logging.h>
 #include <mshadow/base.h>
@@ -280,4 +280,4 @@ namespace xnor {
 } //namespace xnor
 } //namespace op
 } //namespace mxnet
-#endif //MXNET_XNOR_H
+#endif //MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_H

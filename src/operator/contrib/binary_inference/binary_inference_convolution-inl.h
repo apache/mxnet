@@ -23,8 +23,8 @@
  * \ref: https://arxiv.org/abs/1705.09864
  * \author HPI-DeepLearning
 */
-#ifndef MXNET_OPERATOR_BINARY_INFERENCE_CONVOLUTION_INL_H_
-#define MXNET_OPERATOR_BINARY_INFERENCE_CONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_CONVOLUTION_INL_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -441,4 +441,4 @@ namespace mxnet {
 #endif  // DMLC_USE_CXX11
     }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_BINARY_INFERENCE_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_CONVOLUTION_INL_H_
