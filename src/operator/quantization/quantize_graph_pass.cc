@@ -312,8 +312,7 @@ Graph QuantizeGraph(Graph &&src) {
     }
   }
 
-  if (!offline_params.empty()) outputs =
-    OfflineParams(std::move(outputs), std::move(offline_params));
+  if (!offline_params.empty()) outputs = OfflineParams(std::move(outputs), offline_params);
 
   Graph ret;
   ret.outputs = std::move(outputs);

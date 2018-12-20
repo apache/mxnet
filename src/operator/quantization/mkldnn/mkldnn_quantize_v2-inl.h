@@ -58,7 +58,7 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
     auto in_ptr = in_buffer.data().dptr<float>();
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) \
     reduction(min : data_min) reduction(max : data_max)
-    for (int64_t i = 0; i < in_buffer.shape().Size(); i++) {
+    for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
       if (in_ptr[i] > data_max) data_max = in_ptr[i];
       if (in_ptr[i] < data_min) data_min = in_ptr[i];
     }
