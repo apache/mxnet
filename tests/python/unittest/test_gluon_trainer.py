@@ -74,7 +74,7 @@ def test_trainer():
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
         assert trainer._optimizer == trainer._kvstore._updater.optimizer
-        # check invalid usage of update and allreduce_grads if update_on_kvstore is True
+        # invalid usage of update and allreduce_grads if update_on_kvstore
         assert_raises(AssertionError, trainer.update, 1)
         assert_raises(AssertionError, trainer.allreduce_grads)
     else:
