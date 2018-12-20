@@ -36,6 +36,7 @@ mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/li
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_dist_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
@@ -268,7 +269,7 @@ def compile_centos7_cpu_mkldnn() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn', mx_lib, true)
+            utils.pack_lib('centos7_mkldnn', mx_dist_mkldnn_lib, true)
           }
         }
       }
@@ -992,6 +993,25 @@ def test_centos7_python3_cpu() {
     }]
 }
 
+def test_centos7_python3_cpu_mkldnn() {
+    return ['Python3: CentOS 7 CPU MKLDNN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-centos7-cpu-mkldnn') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.unpack_and_init('centos7_mkldnn', mx_dist_mkldnn_lib, true)
+              utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_mkldnn_unittest.xml')
+              utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_mkldnn_train.xml')
+            }
+          }
+        }
+      }
+    }]
+}
+
 def test_centos7_python3_gpu() {
     return ['Python3: CentOS 7 GPU': {
       node(NODE_LINUX_GPU) {
@@ -1016,6 +1036,20 @@ def test_centos7_scala_cpu() {
         ws('workspace/ut-scala-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('centos7_cpu', mx_dist_lib, true)
+            utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_scala_cpu_mkldnn() {
+    return ['Scala: CentOS CPU MKLDNN': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-scala-centos7-cpu-mkldnn') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('centos7_mkldnn', mx_dist_mkldnn_lib, true)
             utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
             utils.publish_test_coverage()
           }
