@@ -6846,7 +6846,6 @@ def test_context_num_gpus():
 @with_seed()
 def test_op_roi_align():
     T = np.float32
-
     def assert_same_dtype(dtype_a, dtype_b):
         '''
         Assert whether the two data type are the same
@@ -6870,45 +6869,27 @@ def test_op_roi_align():
             x = T(x_low)
         else:
             x_high = x_low + 1
-
         if y_low >= height - 1:
             y_low = y_high = height - 1
             y = T(y_low)
         else:
             y_high = y_low + 1
-
         ly = y - T(y_low)
         lx = x - T(x_low)
         hy = T(1.0) - ly
         hx = T(1.0) - lx
-
         v1 = bottom[y_low, x_low]
         v2 = bottom[y_low, x_high]
         v3 = bottom[y_high, x_low]
         v4 = bottom[y_high, x_high]
-
-        '''
-        ----------->x
-        |hx hy | lx hy
-        |------+------
-        |hx ly | lx ly
-        V
-        y
-
-        v1|v2
-        --+--
-        v3|v4
-        '''
         w1 = hy * hx
         w2 = hy * lx
         w3 = ly * hx
         w4 = ly * lx
-
         assert_same_dtype(w1.dtype, T)
         assert_same_dtype(w2.dtype, T)
         assert_same_dtype(w3.dtype, T)
         assert_same_dtype(w4.dtype, T)
-
         val = w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4
         assert_same_dtype(val.dtype, T)
         grad = [(y_low, x_low, w1), (y_low, x_high, w2),
@@ -6964,9 +6945,7 @@ def test_op_roi_align():
                                 # compute grad
                                 for qy, qx, qw in g:
                                     assert_same_dtype(qw.dtype, T)
-                                    dx[batch_ind, c, qy, qx] += dy[r,
-                                                                   c, ph, pw] * qw / count
-
+                                    dx[batch_ind, c, qy, qx] += dy[r, c, ph, pw] * qw / count
                         out[r, c, ph, pw] = val / count
         assert_same_dtype(out.dtype, T)
         return out, [dx, drois]
@@ -6974,13 +6953,12 @@ def test_op_roi_align():
     def test_roi_align_value(sampling_ratio=0):
         ctx = default_context()
         dtype = np.float32
-
         dlen = 224
         N, C, H, W = 5, 3, 16, 16
         R = 7
         pooled_size = (3, 4)
-
         spatial_scale = H * 1.0 / dlen
+
         data = mx.nd.array(
             np.arange(N * C * W * H).reshape((N, C, H, W)), ctx=ctx, dtype=dtype)
         # data = mx.nd.random.uniform(0, 1, (N, C, H, W), dtype = dtype)
@@ -7001,7 +6979,6 @@ def test_op_roi_align():
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
                                                              spatial_scale, sampling_ratio, dy.asnumpy())
         assert_almost_equal(output.asnumpy(), real_output, atol=1e-5)
-        # It seems that the precision between Cfloat and Pyfloat is different.
         assert_almost_equal(data.grad.asnumpy(), dx, atol=1e-5)
         assert_almost_equal(rois.grad.asnumpy(), drois, atol=1e-5)
 
