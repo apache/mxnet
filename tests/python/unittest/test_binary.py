@@ -306,6 +306,7 @@ import sys
 sys.path.append('./example/bmxnet-examples/model_converter/')
 from concatenation_operator import get_binary_row, get_binary_col
 
+
 def test_binary_inference_conv():
     bits_binary_word = 32
     input_dim = 32
@@ -331,6 +332,9 @@ def test_binary_inference_conv():
     binary_infer_result = mx.ndarray.BinaryInferenceConvolution(data=input_data, 
                             weight=weight_concatenated, kernel=(kernel_dim, kernel_dim), num_filter=output_dim)
 
+    binary_infer_result2 = mx.ndarray.BinaryInferenceConvolution(data=input_data,
+                            weight=weight_concatenated, kernel=(kernel_dim, kernel_dim), num_filter=output_dim)
+
     # create qconv2d layer, assign weights and set input_data.
     qconv_layer = nn.QConv2D(output_dim, kernel_dim, bits=1, use_bias=False, in_channels=input_dim, 
                         apply_scaling=False, no_offset = False)
@@ -338,34 +342,51 @@ def test_binary_inference_conv():
     qact_result = qact.forward(input_data)
     qconv_result = qconv_layer.hybrid_forward(F, x=qact_result, weight=weight)
 
-    assert_almost_equal(binary_infer_result, qconv_result)
-
+    np.testing.assert_almost_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
+    np.testing.assert_almost_equal(binary_infer_result.asnumpy(), qconv_result.asnumpy())
+    # assert_almost_equal(binary_infer_result, qconv_result)
 
 def test_binary_inference_fc():
     # setup data
+    batch_size = 1
     bits_binary_word = 32
     num_hidden_fc = 10
-    input_data = mx.nd.random.normal(-1, 1, shape=(1, 1024))
-    weight = mx.nd.random.normal(-1, 1, shape=(num_hidden_fc, 1024))
+    num_input_features = 1024
+    input_data = mx.nd.random.normal(-1, 1, shape=(batch_size, num_input_features))
+    weight = mx.nd.random.normal(-1, 1, shape=(num_hidden_fc, num_input_features))
+
+    # input_npy = (np.sign(input_data.asnumpy()).flatten() + 1) / 2
+    # weight_npy = (np.sign(weight.asnumpy()).flatten() + 1) / 2
+    # result = 0
+    # for i in range(len(weight_npy)):
+    #     result += 0 if (input_npy[i] + weight_npy[i]) == 1 else 1
 
     # weights concatenation
     weight_T = weight.T
     size_binary_col = int(weight_T.size / bits_binary_word)
     weight_concatenated = np.zeros((size_binary_col), dtype='uint32')
-    weight_concatenated =mx.nd.array(get_binary_col(weight_T.reshape((-1)), 
+    weight_concatenated =mx.nd.array(get_binary_col(weight_T.reshape((-1)),
                                                     weight_concatenated, 
                                                     weight_T.shape[0], 
                                                     weight_T.shape[1], 
                                                     bits_binary_word), 
                                     dtype='float64')
-    weight_concatenated = weight_concatenated.reshape((weight_T.shape[1], -1))    
+    weight_concatenated = weight_concatenated.reshape((weight_T.shape[1], -1))
+    assert weight_concatenated.shape[0] == num_hidden_fc
+    assert weight_concatenated.shape[1] == num_input_features // bits_binary_word
     # create binary inference fc layer
-    binary_infer_result = mx.ndarray.BinaryInferenceFullyConnected(data=input_data, 
+    binary_infer_result = mx.ndarray.BinaryInferenceFullyConnected(data=input_data,
                                                      weight=weight_concatenated, num_hidden=num_hidden_fc)
+
+    binary_infer_result2 = mx.ndarray.BinaryInferenceFullyConnected(data=qact_result,
+                                                     weight=weight_concatenated, num_hidden=num_hidden_fc)
+
     # create qdense layer, assign weights and set input_data.
     qdense_layer = nn.QDense(num_hidden_fc)
     qact = nn.QActivation(bits=1)
     qact_result = qact.forward(input_data)
     qdense_result = qdense_layer.hybrid_forward(F, x=qact_result, weight=weight)
 
-    assert_almost_equal(binary_infer_result, qdense_result)
+    np.testing.assert_almost_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
+    np.testing.assert_almost_equal(binary_infer_result.asnumpy(), qdense_result.asnumpy())
+    # assert_almost_equal(binary_infer_result, qdense_result)

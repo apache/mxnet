@@ -21,3 +21,6 @@ else()
             mxnet
             )
 endif()
+
+# Build library
+add_library(converter SHARED main.cpp)
