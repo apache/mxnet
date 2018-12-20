@@ -303,5 +303,18 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     assert(dataDesc(0).layout == Layout.NTC)
     assert(labelDesc(0).dtype == DType.Int32)
     assert(labelDesc(0).layout == Layout.NT)
+
+
+    // Test with passing Float64 as Dtype of data
+    val dataIter4 = new NDArrayIter(
+      IO.initDataDesc(data, false, "data", DType.Float64, Layout.NTC),
+      IO.initDataDesc(label, false, "label", DType.Int32, Layout.NT),
+      128, false, "pad")
+    val dataDesc4 = dataIter4.provideDataDesc
+    val labelDesc4 = dataIter4.provideLabelDesc
+    assert(dataDesc4(0).dtype == DType.Float64)
+    assert(dataDesc4(0).layout == Layout.NTC)
+    assert(labelDesc4(0).dtype == DType.Int32)
+    assert(labelDesc4(0).layout == Layout.NT)
   }
 }
