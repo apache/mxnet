@@ -64,7 +64,7 @@ NodePtr InsertNode(std::string op_name,
 }
 
 std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
-                                     const std::unordered_set<std::string>&& offline_params) {
+                                     const std::unordered_set<std::string>& offline_params) {
   std::string node_suffixs[3] = {"", "_min", "_max"};
   std::unordered_map<Node*, NodePtr> mirror_map;
   nnvm::NodeEntryMap<NodePtr> entry_var;
@@ -89,7 +89,8 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
   return outputs;
 }
 
-inline bool NeedQuantize(NodePtr node, const std::unordered_set<std::string>& excluded_nodes) {
+inline bool NeedQuantize(const NodePtr node,
+                         const std::unordered_set<std::string>& excluded_nodes) {
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
   const auto& op = node->op();
