@@ -24,6 +24,7 @@ ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
 else
 	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
 endif
 
 ifndef config
@@ -62,7 +63,9 @@ include $(config)
 
 ifndef $(USE_MKLDNN)
 ifneq ($(UNAME_S), Darwin)
-	USE_MKLDNN = 1
+ifeq ($(UNAME_P), x86_64)
+	USE_MKLDNN=1
+endif
 endif
 endif
 
