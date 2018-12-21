@@ -16,11 +16,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 #include <string>
 #include <vector>
 #include <cassert>
 
-#include <mxnet-cpp/MxNetCpp.h>
+#include "mxnet-cpp/MxNetCpp.h"
 #include <opencv/cv.hpp>
 
 #include "predictor.h"
