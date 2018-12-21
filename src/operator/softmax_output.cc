@@ -25,7 +25,7 @@
 */
 #include "./softmax_output-inl.h"
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn_ops-inl.h"
+#include "./nn/mkldnn/mkldnn_ops-inl.h"
 #endif
 namespace mxnet {
 namespace op {
