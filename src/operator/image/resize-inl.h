@@ -132,14 +132,14 @@ inline void ResizeImpl(const std::vector<TBlob> &inputs,
   // mapping to opencv matrix element type according to channel
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
-    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
+    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[C]);
     cv::Mat buf(inputs[0].shape_[H], inputs[0].shape_[W], cv_type, inputs[0].dptr_);
     cv::Mat dst(outputs[0].shape_[H], outputs[0].shape_[W], cv_type, outputs[0].dptr_);
     cv::resize(buf, dst, cv::Size(width, height), 0, 0, interp);
     CHECK(!dst.empty());
     CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
   } else {
-    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
+    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[kC]);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       cv::Mat buf(inputs[0].shape_[kH], inputs[0].shape_[kW], cv_type,
         inputs[0].dptr<DType>() + input_index);
