@@ -74,7 +74,6 @@ elseif(UNIX)
   message(STATUS "Setting MKLROOT path to ${MKLROOT}")
   include_directories(${MKLROOT}/include)
   file(COPY ${MKLROOT}/lib/libiomp5.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-  file(COPY ${MKLROOT}/lib/libmklml_gnu.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
   file(COPY ${MKLROOT}/lib/libmklml_intel.so DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 else()
