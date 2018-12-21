@@ -1679,9 +1679,11 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "_rmod_scalar",
 
     "dot",
+    "_maximum",
     "max",
     "max_axis",
     "mean",
+    "_minimum",
     "min",
     "min_axis",
     "prod",
