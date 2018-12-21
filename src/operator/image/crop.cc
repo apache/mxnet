@@ -35,7 +35,8 @@ namespace image {
 DMLC_REGISTER_PARAMETER(CropParam);
 
 NNVM_REGISTER_OP(_image_crop)
-.describe(R"code()code" ADD_FILELINE)
+.describe("Crop the input image with and optionally resize it"
+            "Input could be either (H x W x C) or (N x H x W x C)")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<CropParam>)
