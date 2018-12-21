@@ -124,8 +124,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     int ret_val = mshadow::kNCW;
     if (layout.has_value()) {
       ret_val = layout.value();
-    }
-    else {
+    } else {
       switch (input_dim) {
         case 3U: ret_val = mshadow::kNCW; break;
         case 4U: ret_val = mshadow::kNCHW; break;
