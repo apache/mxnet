@@ -779,3 +779,10 @@ def lpnormalization(attrs, inputs, proto_obj):
     axis = int(attrs.get("axis", -1))
     new_attrs.update(axis=axis)
     return 'norm', new_attrs, inputs
+
+
+def topk(attrs, inputs, proto_obj):
+    """Returns the top k elements in an input array along the given axis."""
+    new_attrs = translation_utils._add_extra_attributes(attrs,
+                                                        {'ret_typ': 'both'})
+    return 'topk', new_attrs, inputs
