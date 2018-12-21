@@ -46,17 +46,19 @@ class GPUDeviceStorage {
    * \param size Size to allocate.
    * \return Pointer to the storage.
    */
-  inline static void* Alloc(size_t size);
+  inline static void* Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
    * \param ptr Pointer to deallocate.
    */
-  inline static void Free(void* ptr);
+  inline static void Free(Storage::Handle handle);
 };  // class GPUDeviceStorage
 
-inline void* GPUDeviceStorage::Alloc(size_t size) {
+inline void* GPUDeviceStorage::Alloc(Storage::Handle* handle) {
+  const size_t size = handle->size;
   void* ret = nullptr;
 #if MXNET_USE_CUDA
+  mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
@@ -69,8 +71,10 @@ inline void* GPUDeviceStorage::Alloc(size_t size) {
   return ret;
 }
 
-inline void GPUDeviceStorage::Free(void* ptr) {
+inline void GPUDeviceStorage::Free(Storage::Handle handle) {
 #if MXNET_USE_CUDA
+  void * ptr = handle.dptr;
+  mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL

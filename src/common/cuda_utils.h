@@ -286,9 +286,14 @@ inline DType __device__ CudaMin(DType a, DType b) {
 class DeviceStore {
  public:
   /*! \brief default constructor- only optionally restores previous device */
-  explicit DeviceStore(bool restore = true) : restore_(restore) {
+  explicit DeviceStore(int requested_device = -1, bool restore = true) : restore_(restore) {
     if (restore_)
       CUDA_CALL(cudaGetDevice(&restore_device_));
+    if (requested_device != restore_device_) {
+      SetDevice(requested_device);
+    } else {
+      restore_ = false;
+    }
   }
 
   ~DeviceStore() {
@@ -297,7 +302,9 @@ class DeviceStore {
   }
 
   void SetDevice(int device) {
-    CUDA_CALL(cudaSetDevice(device));
+    if (device != -1) {
+      CUDA_CALL(cudaSetDevice(device));
+    }
   }
 
  private:
