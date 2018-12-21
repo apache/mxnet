@@ -356,6 +356,8 @@ class Trainer(object):
         self._update(ignore_stale_grad)
 
     def _update(self, ignore_stale_grad=False):
+        updates = [[] for _ in self._updaters]
+
         for i, param in enumerate(self._params):
             if param.grad_req == 'null':
                 continue
@@ -379,10 +381,16 @@ class Trainer(object):
                     self._kvstore.pull(i, param.list_data(), priority=-i)
                 continue
 
-            for upd, arr, grad in zip(self._updaters, param.list_data(), param.list_grad()):
+            for upd, arr, grad in zip(updates, param.list_data(), param.list_grad()):
                 if not ignore_stale_grad or arr._fresh_grad:
-                    upd(i, grad, arr)
+                    upd.append((i, grad, arr))
                     arr._fresh_grad = False
+
+        if not (self._kvstore and self._update_on_kvstore):
+            for updater, upd in zip(self._updaters, updates):
+                if upd:
+                    i, w, g = zip(*upd)
+                    updater(i, w, g)
 
     def save_states(self, fname):
         """Saves trainer states (e.g. optimizer, momentum) to a file.
