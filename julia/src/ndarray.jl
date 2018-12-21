@@ -144,6 +144,8 @@ Base.unsafe_convert(::Type{MX_handle}, x::NDArray) =
 Base.convert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
 Base.cconvert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
 
+MX_handle(x::NDArray) = Base.convert(MX_handle, x)
+
 ################################################################################
 # NDArray functions exported to the users
 ################################################################################
