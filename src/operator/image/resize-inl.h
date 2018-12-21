@@ -128,7 +128,8 @@ inline void ResizeImpl(const std::vector<TBlob> &inputs,
                       const int input_index = 0,
                       const int output_index = 0) {
 #if MXNET_USE_OPENCV
-  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "image resize doesn't support fp16";
+  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "opencv image mat doesn't support fp16";
+  CHECK((inputs[0].type_flag_ != mshadow::kInt32) || (inputs[0].type_flag_ != mshadow::kInt64)) << "opencv resize doesn't support int32, int64";
   // mapping to opencv matrix element type according to channel
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
   if (inputs[0].ndim() == 3) {
