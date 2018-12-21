@@ -6,12 +6,13 @@
   <parent>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-parent_2.11</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
   <properties>
     <skipTests>true</skipTests>
+    <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
   </properties>
 
   <artifactId>mxnet-core_2.11</artifactId>
@@ -77,6 +78,9 @@
             -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
           </argLine>
+          <environmentVariables>
+            <LD_LIBRARY_PATH>${MXNET_DIR}/lib</LD_LIBRARY_PATH>
+          </environmentVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -88,6 +92,10 @@
             -Djava.library.path=${project.parent.basedir}/native/${platform}/target
           </argLine>
           <skipTests>${skipTests}</skipTests>
+          <forkMode>always</forkMode>
+          <environmentVariables>
+            <LD_LIBRARY_PATH>${MXNET_DIR}/lib</LD_LIBRARY_PATH>
+          </environmentVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -100,13 +108,13 @@
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-init_${scala.binary.version}</artifactId>
-      <version>1.4.0-SNAPSHOT</version>
+      <version>1.5.0-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-macros_${scala.binary.version}</artifactId>
-      <version>1.4.0-SNAPSHOT</version>
+      <version>1.5.0-SNAPSHOT</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

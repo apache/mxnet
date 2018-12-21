@@ -32,15 +32,12 @@ def check_uniform(out, num_hops, max_num_vertices):
     layer = out[2]
     # check sample_id
     assert (len(sample_id) == max_num_vertices+1)
-    count = 0
-    for data in sample_id:
-        if data != -1:
-            count = count + 1
-    assert (mx.nd.array([count-1], dtype=np.int64) == sample_id[-1])
+    num_vertices = sample_id[-1].asnumpy()[0]
     # check sub_csr
     sub_csr.check_format(full_check=True)
+    assert np.all((sub_csr.indptr[num_vertices:] == sub_csr.indptr[num_vertices]).asnumpy())
     # check layer
-    for data in layer:
+    for data in layer[:num_vertices]:
         assert(data <= num_hops)
 
 def check_non_uniform(out, num_hops, max_num_vertices):
@@ -50,17 +47,14 @@ def check_non_uniform(out, num_hops, max_num_vertices):
     layer = out[3]
     # check sample_id
     assert (len(sample_id) == max_num_vertices+1)
-    count = 0
-    for data in sample_id:
-        if data != -1:
-            count = count + 1
-    assert (mx.nd.array([count-1], dtype=np.int64) == sample_id[-1])
+    num_vertices = sample_id[-1].asnumpy()[0]
     # check sub_csr
     sub_csr.check_format(full_check=True)
+    assert np.all((sub_csr.indptr[num_vertices:] == sub_csr.indptr[num_vertices]).asnumpy())
     # check prob
     assert (len(prob) == max_num_vertices)
     # check layer
-    for data in layer:
+    for data in layer[:num_vertices]:
         assert(data <= num_hops)
 
 def check_compact(csr, id_arr, num_nodes):
@@ -101,9 +95,9 @@ def test_uniform_sample():
     check_compact(out[1], out[0], num_nodes)
 
     seed = mx.nd.array([0], dtype=np.int64)
-    out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=1, max_num_vertices=4)
+    out = mx.nd.contrib.dgl_csr_neighbor_uniform_sample(a, seed, num_args=2, num_hops=2, num_neighbor=1, max_num_vertices=3)
     assert (len(out) == 3)
-    check_uniform(out, num_hops=2, max_num_vertices=4)
+    check_uniform(out, num_hops=2, max_num_vertices=3)
     num_nodes = out[0][-1].asnumpy()
     assert num_nodes > 0
     assert num_nodes < len(out[0])
