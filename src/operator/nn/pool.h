@@ -407,7 +407,7 @@ inline void pool_sum_1d_nwc_cpu(const DType* in_data, const TShape& ishape, cons
   const int stride_w = stride[0];
   const int features = oshape[2];
   const index_t in_data_offset = ishape[1] * features;
-  const index_t out_data_offset = oshape[1 * features];
+  const index_t out_data_offset = oshape[1] * features;
   std::vector<DType> sums(features);
   for (index_t n = 0; n < oshape[0]; ++n) {
     for (int pw = 0; pw < pooled_width; ++pw) {
