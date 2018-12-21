@@ -51,6 +51,7 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
     DMLC_DECLARE_FIELD(keep_ratio)
     .describe("Whether to resize the short edge or both edges to `size`, "
       "if size is give as an integer.");
+    .set_default(false)
     DMLC_DECLARE_FIELD(interp)
     .set_default(1)
     .describe("Interpolation method for resizing. By default uses bilinear interpolation"
