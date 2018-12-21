@@ -1254,8 +1254,9 @@ Base.maximum(x::NDArray; dims = :) = _maximum(x, dims)
 @_remap _maximum(x::NDArray, ::Colon) max(x)
 @_remap _maximum(x::NDArray, dims)    max(x; axis = 0 .- dims, keepdims = true)
 
-@_remap Base.minimum(x::NDArray)       min(x)
-@_remap Base.minimum(x::NDArray, dims) min(x; axis = 0 .- dims, keepdims = true)
+Base.minimum(x::NDArray; dims = :) = _minimum(x, dims)
+@_remap _minimum(x::NDArray, ::Colon) min(x)
+@_remap _minimum(x::NDArray, dims)    min(x; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
 @_remap LinearAlgebra.dot(x::NDArray, y::NDArray) dot(y, x)

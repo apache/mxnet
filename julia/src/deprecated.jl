@@ -162,3 +162,4 @@ end
 # Introduced by https://github.com/apache/incubator-mxnet/pull/12845
 @deprecate sum(x::NDArray, dims) sum(x, dims = dims)
 @deprecate maximum(x::NDArray, dims) maximum(x, dims = dims)
+@deprecate minimum(x::NDArray, dims) minimum(x, dims = dims)
