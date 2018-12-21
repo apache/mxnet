@@ -49,35 +49,39 @@ def test_normalize():
 
 @with_seed()
 def test_resize():
-    # test normal case
-    data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype('uint8')
-    out_nd = transforms.Resize(200)(data_in)
-    data_expected = image.imresize(data_in, 200, 200, 1)
-    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-    # test 4D input
-    data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype('uint8')
-    out_batch_nd = transforms.Resize(200)(data_bath_in)
-    for i in range(len(out_batch_nd)):
-        assert_almost_equal(image.imresize(data_bath_in[i], 200, 200, 1).asnumpy(),
-            out_batch_nd[i].asnumpy())
-    # test interp = 2
-    out_nd = transforms.Resize(200, interpolation=2)(data_in)
-    data_expected = image.imresize(data_in, 200, 200, 2)
-    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-    # test height not equals to width
-    out_nd = transforms.Resize((200, 100))(data_in)
-    data_expected = image.imresize(data_in, 200, 100, 1)
-    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-    # test keep_ratio
-    out_nd = transforms.Resize(150, keep_ratio=True)(data_in)
-    data_expected = image.imresize(data_in, 150, 225, 1)
-    assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-    def _test_size_below_zero_Exception():
-        transforms.Resize(-150, keep_ratio=True)(data_in)
-    assertRaises(MXNetError, _test_size_below_zero_Exception)
-    def _test_size_more_than_2_Exception():
-        transforms.Resize((100, 100, 100), keep_ratio=True)(data_in)
-    assertRaises(MXNetError, _test_size_more_than_2_Exception)
+    def _test_resize_with_diff_type(dtype):
+        # test normal case
+        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
+        out_nd = transforms.Resize(200)(data_in)
+        data_expected = image.imresize(data_in, 200, 200, 1)
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        # test 4D input
+        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
+        out_batch_nd = transforms.Resize(200)(data_bath_in)
+        for i in range(len(out_batch_nd)):
+            assert_almost_equal(image.imresize(data_bath_in[i], 200, 200, 1).asnumpy(),
+                out_batch_nd[i].asnumpy())
+        # test interp = 2
+        out_nd = transforms.Resize(200, interpolation=2)(data_in)
+        data_expected = image.imresize(data_in, 200, 200, 2)
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        # test height not equals to width
+        out_nd = transforms.Resize((200, 100))(data_in)
+        data_expected = image.imresize(data_in, 200, 100, 1)
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        # test keep_ratio
+        out_nd = transforms.Resize(150, keep_ratio=True)(data_in)
+        data_expected = image.imresize(data_in, 150, 225, 1)
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        def _test_size_below_zero_Exception():
+            transforms.Resize(-150, keep_ratio=True)(data_in)
+        assertRaises(MXNetError, _test_size_below_zero_Exception)
+        def _test_size_more_than_2_Exception():
+            transforms.Resize((100, 100, 100), keep_ratio=True)(data_in)
+        assertRaises(MXNetError, _test_size_more_than_2_Exception)
+
+    for dtype in ['uint8', 'float32', 'float64']:
+        _test_resize_with_diff_type(dtype)    
 
 
 @with_seed()
