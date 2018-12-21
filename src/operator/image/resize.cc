@@ -35,7 +35,8 @@ namespace image {
 DMLC_REGISTER_PARAMETER(ResizeParam);
 
 NNVM_REGISTER_OP(_image_resize)
-.describe(R"code()code" ADD_FILELINE)
+.describe("Resize an image or a batch of image NDArray to the given size."
+        "Input tensor should be with (H, W, C) or (N, H, W, C)")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ResizeParam>)
