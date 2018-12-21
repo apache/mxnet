@@ -153,6 +153,7 @@ class TestModel(unittest.TestCase):
                 logging.info(model_name + " conversion successful")
 
 
+# test_case = ("model name", input shape, output shape)
 test_cases = [
     ("bvlc_googlenet", (1, 3, 224, 224), (1, 1000)),
     ("bvlc_reference_caffenet", (1, 3, 224, 224), (1, 1000)),
