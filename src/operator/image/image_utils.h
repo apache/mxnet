@@ -43,6 +43,20 @@ struct SizeParam {
   }
 };  // struct SizeParam
 
+template<typename T>
+inline SizeParam GetHeightAndWidthFromSize(const T& param) {
+  int h, w;
+  if (param.size.ndim() == 1) {
+    h = param.size[0];
+    w = param.size[0];
+  } else {
+    // size should be (w, h) instead of (h, w)
+    h = param.size[1];
+    w = param.size[0];
+  }
+  return SizeParam(h, w);
+}
+
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet
