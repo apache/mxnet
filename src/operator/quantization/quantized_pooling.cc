@@ -40,6 +40,9 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(dshape.ndim(), 4U)
       << "quantized_pooling: Input data should be 4D in "
       << "(batch, channel, y, x)";
+  int layout = param.GetLayout(dshape.ndim());
+  CHECK_EQ(layout, mshadow::kNCHW)
+      << "QuantizedPoolingOp only supports NCHW layout for now, saw " << layout;
   // NCHW layout
   const int N = 0, H = 2, W = 3, C = 1;
   TShape oshape(4);
