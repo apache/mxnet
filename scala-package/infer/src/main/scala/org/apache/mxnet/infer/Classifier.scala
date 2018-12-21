@@ -17,11 +17,10 @@
 
 package org.apache.mxnet.infer
 
-import org.apache.mxnet.{Base, Context, DataDesc, NDArray}
+import org.apache.mxnet._
 import java.io.File
 
 import org.slf4j.LoggerFactory
-
 import scala.io
 import scala.collection.mutable.ListBuffer
 import scala.collection.parallel.mutable.ParArray
@@ -30,7 +29,7 @@ trait ClassifierBase {
 
   /**
     * Takes an array of floats and returns corresponding (Label, Score) tuples
-    * @param input            Indexed sequence one-dimensional array of floats
+    * @param input            Indexed sequence one-dimensional array of floats/doubles
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
@@ -45,8 +44,8 @@ trait ClassifierBase {
     *                         elements to return. Default returns unsorted output.
     * @return                 Traversable sequence of (Label, Score) tuple
     */
-  def classifyWithNDArray(input: IndexedSeq[NDArray],
-              topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]]
+  def classifyWithNDArray[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[NDArray],
+              topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, T)]]
 }
 
 /**
@@ -78,7 +77,7 @@ class Classifier(modelPathPrefix: String,
 
   /**
     * Takes flat arrays as input and returns (Label, Score) tuples.
-    * @param input            Indexed sequence one-dimensional array of floats
+    * @param input            Indexed sequence one-dimensional array of floats/doubles
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
@@ -139,15 +138,68 @@ class Classifier(modelPathPrefix: String,
     * @param input            Indexed sequence of NDArrays
     * @param topK             (Optional) How many result (sorting based on the last axis)
     *                         elements to return. Default returns unsorted output.
-    * @return                 Traversable sequence of (Label, Score) tuples
+    * @return                 Traversable sequence of (Label, Score) tuples.
     */
-  override def classifyWithNDArray(input: IndexedSeq[NDArray], topK: Option[Int] = None)
+  override def classifyWithNDArray[@specialized (Base.MX_PRIMITIVES) T]
+  (input: IndexedSeq[NDArray], topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, T)]] = {
+
+    val result = input(0).dtype match {
+      case DType.Float64 => classifyWithNDArrayDoubleImpl(input, topK)
+      case _ => classifyWithNDArrayFloatImpl(input, topK)
+    }
+
+    result.asInstanceOf[IndexedSeq[IndexedSeq[(String, T)]]]
+  }
+
+  private def classifyWithNDArrayDoubleImpl(input: IndexedSeq[NDArray], topK: Option[Int] = None)
+  : IndexedSeq[IndexedSeq[(String, Double)]] = {
+
+    // considering only the first output
+    // Copy NDArray to CPU to avoid frequent GPU to CPU copying
+    val predictResultND: NDArray =
+    predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
+    // Parallel Execution with ParArray for better performance
+    val predictResultPar: ParArray[Array[Double]] =
+      new ParArray[Array[Double]](predictResultND.shape(0))
+
+    // iterating over the individual items(batch size is in axis 0)
+    (0 until predictResultND.shape(0)).toVector.par.foreach( i => {
+      val r = predictResultND.at(i)
+      predictResultPar(i) = r.toFloat64Array
+      r.dispose()
+    })
+
+    val predictResult = predictResultPar.toArray
+
+    var result: ListBuffer[IndexedSeq[(String, Double)]] =
+      ListBuffer.empty[IndexedSeq[(String, Double)]]
+
+    if (topK.isDefined) {
+      val sortedIndices = predictResult.map(r =>
+        r.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
+      )
+      for (i <- sortedIndices.indices) {
+        result += sortedIndices(i).map(sIndx =>
+          (synset(sIndx), predictResult(i)(sIndx))).toIndexedSeq
+      }
+    } else {
+      for (i <- predictResult.indices) {
+        result += synset.zip(predictResult(i)).toIndexedSeq
+      }
+    }
+
+    handler.execute(predictResultND.dispose())
+
+    result.toIndexedSeq
+  }
+
+  private def classifyWithNDArrayFloatImpl(input: IndexedSeq[NDArray], topK: Option[Int] = None)
   : IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     // considering only the first output
     // Copy NDArray to CPU to avoid frequent GPU to CPU copying
     val predictResultND: NDArray =
-      predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
+    predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
     // Parallel Execution with ParArray for better performance
     val predictResultPar: ParArray[Array[Float]] =
       new ParArray[Array[Float]](predictResultND.shape(0))
