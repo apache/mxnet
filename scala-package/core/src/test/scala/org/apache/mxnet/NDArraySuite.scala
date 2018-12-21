@@ -600,7 +600,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     val arr4 = NDArray.ones(Shape(1), dtype = DType.Float64)
     val arr5 = NDArray.api.norm(arr3, ord = Some(1), out = Some(arr4))
     // With SomeConversion
-    import org.apache.mxnet.util.SomeConversion._
+    import org.apache.mxnet.util.OptionConversion._
     val arr = NDArray.ones(Shape(1, 2), dtype = DType.Float64)
     val arr2 = NDArray.ones(Shape(1), dtype = DType.Float64)
     NDArray.api.norm(arr, ord = 1, out = arr2)

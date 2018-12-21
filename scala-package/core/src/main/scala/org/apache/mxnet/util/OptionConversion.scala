@@ -17,6 +17,6 @@
 
 package org.apache.mxnet.util
 
-object SomeConversion {
+object OptionConversion {
   implicit def someWrapper[A](noSome : A) : Option[A] = Option(noSome)
 }
