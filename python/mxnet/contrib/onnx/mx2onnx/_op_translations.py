@@ -586,7 +586,7 @@ def convert_pooling(node, **kwargs):
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
     global_pool = get_boolean_attribute_value(attrs, "global_pool")
-    p_value = int(attrs.get('p_value', '2'))
+    p_value = attrs.get('p_value', 'None')
 
     pooling_convention = attrs.get('pooling_convention', 'valid')
 
@@ -603,13 +603,16 @@ def convert_pooling(node, **kwargs):
     global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool",
                          "lp": "GlobalLpPool"}
 
+    if pool_type == 'lp' and p_value == 'None':
+        raise AttributeError('ONNX requires a p value for LpPool and GlobalLpPool')
+
     if global_pool:
         if pool_type == 'lp':
             node = onnx.helper.make_node(
                 global_pool_types[pool_type],
                 input_nodes,  # input
                 [name],
-                p=p_value,
+                p=int(p_value),
                 name=name
             )
         else:
@@ -625,7 +628,7 @@ def convert_pooling(node, **kwargs):
                 pool_types[pool_type],
                 input_nodes,  # input
                 [name],
-                p=p_value,
+                p=int(p_value),
                 kernel_shape=kernel,
                 pads=pad_dims,
                 strides=stride,
