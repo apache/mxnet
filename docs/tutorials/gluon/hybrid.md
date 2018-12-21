@@ -1,6 +1,6 @@
 # Hybrid - Faster training and easy deployment
 
-*Related Contents:*
+*Related Content:*
 * [Fast, portable neural networks with Gluon HybridBlocks](https://gluon.mxnet.io/chapter07_distributed-learning/hybridize.html)
 * [A Hybrid of Imperative and Symbolic Programming
 ](http://en.diveintodeeplearning.org/chapter_computational-performance/hybridize.html)
@@ -214,10 +214,10 @@ The current workaround is to explicitly call [`slice`](https://mxnet.incubator.a
 
 ### Not implemented operators
 
-Some of the often used operators in NDArray are not implemented in Symbol, and will cause hybridization failure
+Some of the often used operators in NDArray are not implemented in Symbol, and will cause hybridization failure.
 
 #### NDArray.asnumpy
-Symbol does not support `asnumpy` function, you need to avoid calling `asnumpy` in `hybrid_forward`.
+Symbol does not support the `asnumpy` function. You need to avoid calling `asnumpy` in `hybrid_forward`.
 
 #### Array creation APIs
 
