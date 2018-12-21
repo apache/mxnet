@@ -17,7 +17,7 @@
 
 package org.apache.mxnet.infer
 
-import org.apache.mxnet.{Context, DataDesc, NDArray}
+import org.apache.mxnet.{Base, Context, DataDesc, NDArray}
 import java.io.File
 
 import org.slf4j.LoggerFactory
@@ -35,8 +35,8 @@ trait ClassifierBase {
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
-  def classify(input: IndexedSeq[Array[Float]],
-               topK: Option[Int] = None): IndexedSeq[(String, Float)]
+  def classify[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]],
+               topK: Option[Int] = None): IndexedSeq[(String, T)]
 
   /**
     * Takes a sequence of NDArrays and returns (Label, Score) tuples
@@ -83,12 +83,46 @@ class Classifier(modelPathPrefix: String,
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
-  override def classify(input: IndexedSeq[Array[Float]],
-                        topK: Option[Int] = None): IndexedSeq[(String, Float)] = {
+  override def classify[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]],
+                        topK: Option[Int] = None): IndexedSeq[(String, T)] = {
+
+    // considering only the first output
+    val result = input(0)(0) match {
+      case d: Double => {
+        classifyWithDoubleImpl(input.asInstanceOf[IndexedSeq[Array[Double]]], topK)
+      }
+      case _ => {
+        classifyWithFloatImpl(input.asInstanceOf[IndexedSeq[Array[Float]]], topK)
+      }
+    }
+
+    result.asInstanceOf[IndexedSeq[(String, T)]]
+  }
+
+  private def classifyWithFloatImpl(input: IndexedSeq[Array[Float]], topK: Option[Int] = None)
+  : IndexedSeq[(String, Float)] = {
 
     // considering only the first output
     val predictResult = predictor.predict(input)(0)
+
     var result: IndexedSeq[(String, Float)] = IndexedSeq.empty
+
+    if (topK.isDefined) {
+      val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
+      result = sortedIndex.map(i => (synset(i), predictResult(i))).toIndexedSeq
+    } else {
+      result = synset.zip(predictResult).toIndexedSeq
+    }
+    result
+  }
+
+  private def classifyWithDoubleImpl(input: IndexedSeq[Array[Double]], topK: Option[Int] = None)
+  : IndexedSeq[(String, Double)] = {
+
+    // considering only the first output
+    val predictResult = predictor.predict(input)(0)
+
+    var result: IndexedSeq[(String, Double)] = IndexedSeq.empty
 
     if (topK.isDefined) {
       val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
