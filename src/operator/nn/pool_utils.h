@@ -98,14 +98,16 @@ struct lp_grad<DType, 1> {
 template<typename DType>
 struct lp_grad<DType, 2> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
-    return grad * in_data / out_data;
+    // Avoid nan result if both grad and out_data are 0.
+    return (grad == DType(0.0)) ? DType(0.0) : grad * in_data / out_data;
   }
 };
 
 template<typename DType>
 struct lp_grad<DType, 3> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
-    return grad * in_data * in_data / (out_data * out_data);
+    // Avoid nan result if both grad and out_data are 0.
+    return (grad == DType(0.0)) ? DType(0.0) : grad * in_data * in_data / (out_data * out_data);
   }
 };
 

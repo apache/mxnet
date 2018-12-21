@@ -169,8 +169,17 @@ class PoolingOp {
     TShape padding = param_.pad;
     TShape stride = param_.stride;
     if (param_.global_pool) {
-      kernel = TShape(ishape.data() + 2,
-               ishape.data() + ishape.ndim());
+      // with global pooling, kernel shape corresponds to input shape with 'N' and 'C' removed
+      if (param_.layout.value() == mshadow::kNWC ||
+          param_.layout.value() == mshadow::kNHWC ||
+          param_.layout.value() == mshadow::kNDHWC) {
+        kernel = TShape(ishape.data() + 1,
+                        ishape.data() + ishape.ndim() - 1);
+
+      } else {
+        kernel = TShape(ishape.data() + 2,
+                        ishape.data() + ishape.ndim());
+      }
       padding = TShape(ishape.ndim() - 2);
       for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
@@ -218,8 +227,17 @@ class PoolingOp {
     TShape padding = param_.pad;
     TShape stride = param_.stride;
     if (param_.global_pool) {
-      kernel = TShape(ishape.data() + 2,
-               ishape.data() + ishape.ndim());
+      // with global pooling, kernel shape corresponds to input shape with 'N' and 'C' removed
+      if (param_.layout.value() == mshadow::kNWC ||
+          param_.layout.value() == mshadow::kNHWC ||
+          param_.layout.value() == mshadow::kNDHWC) {
+        kernel = TShape(ishape.data() + 1,
+                        ishape.data() + ishape.ndim() - 1);
+
+      } else {
+        kernel = TShape(ishape.data() + 2,
+                        ishape.data() + ishape.ndim());
+      }
       padding = TShape(ishape.ndim() - 2);
       for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;

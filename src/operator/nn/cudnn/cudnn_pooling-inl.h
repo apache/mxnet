@@ -21,13 +21,13 @@
  * Copyright (c) 2015 by Contributors
  * \file cudnn_pooling-inl.h
  * \brief
- * \author Bing Xu
+ * \author Bing Xu, Dick Carter
 */
 
 #ifndef MXNET_OPERATOR_NN_CUDNN_CUDNN_POOLING_INL_H_
 #define MXNET_OPERATOR_NN_CUDNN_CUDNN_POOLING_INL_H_
 #include <algorithm>
-#include <vector>
+#include <array>
 #include "../pooling-inl.h"
 
 namespace mxnet {
@@ -178,6 +178,8 @@ class CuDNNPoolingOp {
     using namespace mshadow;
     static bool sum_pooling_warning_issued = false;
     static bool lp_pooling_warning_issued = false;
+    static bool unsupported_dim_warning_issued = false;
+    int layout = param.layout.value();
 
     switch (param.pool_type) {
       case pool_enum::kMaxPooling:
@@ -200,14 +202,14 @@ class CuDNNPoolingOp {
     }
 
     if (param.kernel.ndim() == 2) {
-      // 2d conv
-      if (param.layout.value() != mshadow::kNCHW && param.layout.value() != mshadow::kNHWC)
+      // 2d pooling
+      if (!(layout == mshadow::kNCHW || layout == mshadow::kNHWC))
         return false;
 #if CUDNN_VERSION == 7104
       // CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
       // Perform shape calculations in a standard (NCHW) layout space
       mshadow::Shape<4> input_shape = input.shape_.get<4>();
-      mshadow::Shape<4> dshape_nchw = (param.layout.value() == mshadow::kNHWC) ?
+      mshadow::Shape<4> dshape_nchw = (layout == mshadow::kNHWC) ?
                                       ConvertLayout(input_shape, mshadow::kNHWC, mshadow::kNCHW) :
                                       input_shape;
       int window_height = param.global_pool ? dshape_nchw[2] : param.kernel[0];
@@ -215,14 +217,25 @@ class CuDNNPoolingOp {
       if (window_height > 8 || window_width > 8)
         return false;
 #endif
+      // Avoid strided NHWC max pooling for some configs, to be corrected in a future cudnn release.
+      if (layout == mshadow::kNHWC &&
+          param.pool_type == pool_enum::kMaxPooling && !param.global_pool) {
+        if ((param.stride[0] >= 3 || param.stride[0] == 2 && param.kernel[0] % 2 == 0))
+          return false;
+        if ((param.stride[1] >= 3 || param.stride[1] == 2 && param.kernel[1] % 2 == 0))
+          return false;
+      }
     } else if (param.kernel.ndim() == 3) {
+      // 3d pooling
 #if CUDNN_MAJOR < 5
+      LogUnsupportedDim(&unsupported_dim_warning_issued, param.kernel.ndim());
       return false;
 #endif
-      if (param.layout.value() != mshadow::kNCDHW)
+      if (!(layout == mshadow::kNCDHW || layout == mshadow::kNDHWC))
         return false;
     } else {
       // Unsupported kernel dim
+      LogUnsupportedDim(&unsupported_dim_warning_issued, param.kernel.ndim());
       return false;
     }
 
@@ -239,9 +252,9 @@ class CuDNNPoolingOp {
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
     #endif
     if (param_.kernel.ndim() == 2) {
-      // 2d conv
+      // 2d pooling
       CHECK(param_.layout.value() == mshadow::kNCHW ||
-            param_.layout.value() == mshadow::kNHWC) << "Need 2D layout";
+            param_.layout.value() == mshadow::kNHWC) << "Need 2D layout NCHW or NHWC.";
       cudnnTensorFormat_t cudnn_layout =
           (param_.layout.value() == mshadow::kNCHW) ? CUDNN_TENSOR_NCHW
                                                     : CUDNN_TENSOR_NHWC;
@@ -298,57 +311,70 @@ class CuDNNPoolingOp {
       #endif
     } else {
       CHECK(param_.layout.value() == mshadow::kNCDHW ||
-            param_.layout.value() == mshadow::kNDHWC) << "Need 3D layout";
-      CHECK(param_.layout.value() == mshadow::kNCDHW) << "Only the NCDHW layout is supported.";
+            param_.layout.value() == mshadow::kNDHWC) << "Need 3D layout NCDHW or NDHWC.";
       Tensor<gpu, 5, DType> data = in_data.get<gpu, 5, DType>(s);
+      mshadow::Shape<5> dshape = data.shape_;
+      mshadow::Shape<5> dstride = mshadow::Shape5(dshape.ProdShape(1, 5),
+                                           dshape.ProdShape(2, 5),
+                                           dshape.ProdShape(3, 5),
+                                           dshape.ProdShape(4, 5),
+                                           dshape.ProdShape(5, 5));
+
       Tensor<gpu, 5, DType> out = out_data.get<gpu, 5, DType>(s);
-      std::vector<int> ishape = {static_cast<int>(data.shape_[0]),
-                                 static_cast<int>(data.shape_[1]),
-                                 static_cast<int>(data.shape_[2]),
-                                 static_cast<int>(data.shape_[3]),
-                                 static_cast<int>(data.shape_[4])};
+      mshadow::Shape<5> oshape = out.shape_;
+      mshadow::Shape<5> ostride = mshadow::Shape5(oshape.ProdShape(1, 5),
+                                           oshape.ProdShape(2, 5),
+                                           oshape.ProdShape(3, 5),
+                                           oshape.ProdShape(4, 5),
+                                           oshape.ProdShape(5, 5));
+      // Convert to a standard (NCDHW) layout space to create args for cuDNN
 
-      std::vector<int> istride = {static_cast<int>(ishape[1] * ishape[2] * ishape[3] * ishape[4]),
-                                  static_cast<int>(ishape[2] * ishape[3] * ishape[4]),
-                                  static_cast<int>(ishape[3] * ishape[4]),
-                                  static_cast<int>(ishape[4]), 1};
+      mshadow::Shape<5> dshape_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+                                       ConvertLayout(dshape, mshadow::kNDHWC, mshadow::kNCDHW) :
+                                       dshape;
+      mshadow::Shape<5> dstride_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+                                        ConvertLayout(dstride, mshadow::kNDHWC, mshadow::kNCDHW) :
+                                        dstride;
+      mshadow::Shape<5> oshape_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+                                        ConvertLayout(oshape, mshadow::kNDHWC, mshadow::kNCDHW) :
+                                        oshape;
+      mshadow::Shape<5> ostride_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+                                        ConvertLayout(ostride, mshadow::kNDHWC, mshadow::kNCDHW) :
+                                        ostride;
+      // Create int arrays for passing into cuDNN
+      std::array<int, 5> dshape_ncdhw_int, dstride_ncdhw_int, oshape_ncdhw_int, ostride_ncdhw_int;
+      for (int i = 0; i < 5; ++i) {
+        dshape_ncdhw_int[i] = static_cast<int>(dshape_ncdhw[i]);
+        dstride_ncdhw_int[i] = static_cast<int>(dstride_ncdhw[i]);
+        oshape_ncdhw_int[i] = static_cast<int>(oshape_ncdhw[i]);
+        ostride_ncdhw_int[i] = static_cast<int>(ostride_ncdhw[i]);
+      }
 
-      std::vector<int> oshape = {static_cast<int>(out.shape_[0]),
-                                 static_cast<int>(out.shape_[1]),
-                                 static_cast<int>(out.shape_[2]),
-                                 static_cast<int>(out.shape_[3]),
-                                 static_cast<int>(out.shape_[4])};
-
-      std::vector<int> ostride = {static_cast<int>(oshape[1] * oshape[2] * oshape[3] * oshape[4]),
-                                  static_cast<int>(oshape[2] * oshape[3] * oshape[4]),
-                                  static_cast<int>(oshape[3] * oshape[4]),
-                                  static_cast<int>(oshape[4]), 1};
-
-      std::vector<int> kernel_vec = {param_.global_pool ? ishape[2] :
+      std::array<int, 3> kernel_vec = {param_.global_pool ? static_cast<int>(dshape_ncdhw[2]) :
                                                           static_cast<int>(param_.kernel[0]),
-                                     param_.global_pool ? ishape[3] :
+                                     param_.global_pool ? static_cast<int>(dshape_ncdhw[3]) :
                                                           static_cast<int>(param_.kernel[1]),
-                                     param_.global_pool ? ishape[4] :
+                                     param_.global_pool ? static_cast<int>(dshape_ncdhw[4]) :
                                                           static_cast<int>(param_.kernel[2])};
 
-      std::vector<int> pad_vec = {param_.global_pool ? 0 : static_cast<int>(param_.pad[0]),
+      std::array<int, 3> pad_vec = {param_.global_pool ? 0 : static_cast<int>(param_.pad[0]),
                                   param_.global_pool ? 0 : static_cast<int>(param_.pad[1]),
                                   param_.global_pool ? 0 : static_cast<int>(param_.pad[2])};
 
-      std::vector<int> stride_vec = {param_.global_pool ? 1 : static_cast<int>(param_.stride[0]),
+      std::array<int, 3> stride_vec = {param_.global_pool ? 1 : static_cast<int>(param_.stride[0]),
                                      param_.global_pool ? 1 : static_cast<int>(param_.stride[1]),
                                      param_.global_pool ? 1 : static_cast<int>(param_.stride[2])};
 
       CUDNN_CALL(cudnnSetTensorNdDescriptor(in_desc_,
                                             dtype_,
-                                            static_cast<int>(ishape.size()),
-                                            &ishape[0],
-                                            &istride[0]));
+                                            static_cast<int>(dshape_ncdhw_int.size()),
+                                            &dshape_ncdhw_int[0],
+                                            &dstride_ncdhw_int[0]));
       CUDNN_CALL(cudnnSetTensorNdDescriptor(out_desc_,
                                             dtype_,
-                                            static_cast<int>(oshape.size()),
-                                            &oshape[0],
-                                            &ostride[0]));
+                                            static_cast<int>(oshape_ncdhw_int.size()),
+                                            &oshape_ncdhw_int[0],
+                                            &ostride_ncdhw_int[0]));
       #if CUDNN_MAJOR >= 5
       CUDNN_CALL(cudnnSetPoolingNdDescriptor(pooling_desc_,
                                              mode_,
@@ -358,10 +384,19 @@ class CuDNNPoolingOp {
                                              &(pad_vec[0]),
                                              &(stride_vec[0])));
       #else
-      LOG(FATAL) << "3D pooling only support CUDNN v5 and above";
+      LOG(FATAL) << "3D pooling is only supported by CUDNN v5 and above.";
       #endif
     }
     return is_supported;
+  }
+
+  // Log once that the dimension of the pooling operation isn't supported
+  static void LogUnsupportedDim(bool *msg_logged, int ndim) {
+    if (!*msg_logged) {
+      *msg_logged = true;
+      LOG(WARNING) << ndim << "D pooling is not supported by cudnn, "
+                   << "MXNet " << ndim << "D pooling is applied.";
+    }
   }
 
   cudnnDataType_t dtype_;
