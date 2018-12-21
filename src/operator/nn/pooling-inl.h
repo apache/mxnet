@@ -118,6 +118,27 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
            this->count_include_pad  == other.count_include_pad &&
            this->layout             == other.layout;
   }
+
+  // Extract layout from param, or supply default layout based on provided input dimension.
+  int GetLayout(int input_dim) const {
+    int ret_val = mshadow::kNCW;
+    if (layout.has_value()) {
+      ret_val = layout.value();
+    }
+    else {
+      switch (input_dim) {
+        case 3U: ret_val = mshadow::kNCW; break;
+        case 4U: ret_val = mshadow::kNCHW; break;
+        case 5U: ret_val = mshadow::kNCDHW; break;
+        default:
+          LOG(FATAL) << "Unexpected input data dim " << input_dim << "\n"
+                     << "Pooling: Input data should be  3D in (batch, channel, x), "
+                     << " or 4D in (batch, channel, y, x), "
+                     << " or 5D in (batch, channel, d, y, x).";
+      }
+    }
+    return ret_val;
+  }
 };
 
 }  // namespace op
@@ -137,7 +158,8 @@ struct hash<mxnet::op::PoolingParam> {
     ret = dmlc::HashCombine(ret, val.cudnn_off);
     ret = dmlc::HashCombine(ret, val.p_value);
     ret = dmlc::HashCombine(ret, val.count_include_pad);
-    ret = dmlc::HashCombine(ret, val.layout);
+    int val_layout = val.layout.has_value() ? val.layout.value() : -1;
+    ret = dmlc::HashCombine(ret, val_layout);
     return ret;
   }
 };
@@ -168,11 +190,10 @@ class PoolingOp {
     TShape kernel = param_.kernel;
     TShape padding = param_.pad;
     TShape stride = param_.stride;
+    int layout = param_.GetLayout(ishape.ndim());
     if (param_.global_pool) {
       // with global pooling, kernel shape corresponds to input shape with 'N' and 'C' removed
-      if (param_.layout.value() == mshadow::kNWC ||
-          param_.layout.value() == mshadow::kNHWC ||
-          param_.layout.value() == mshadow::kNDHWC) {
+      if (layout == mshadow::kNWC || layout == mshadow::kNHWC || layout == mshadow::kNDHWC) {
         kernel = TShape(ishape.data() + 1,
                         ishape.data() + ishape.ndim() - 1);
 
@@ -196,21 +217,21 @@ class PoolingOp {
           kernel,
           padding,
           stride,
-          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, param_.layout);
+          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, layout);
         break;
       case 2:
         pool<DType, 2>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
           kernel,
           padding,
           stride,
-          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, param_.layout);
+          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, layout);
         break;
       case 3:
         pool<DType, 3>(s, in_data.dptr<DType>(), in_data.shape_, out_data.shape_,
           kernel,
           padding,
           stride,
-          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, param_.layout);
+          param_.pool_type, req, out_data.dptr<DType>(), count_include_pad, layout);
         break;
       default:
         LOG(FATAL) << "p value of " << p_value << " is not supported yet...";
@@ -226,11 +247,10 @@ class PoolingOp {
     TShape kernel = param_.kernel;
     TShape padding = param_.pad;
     TShape stride = param_.stride;
+    int layout = param_.GetLayout(ishape.ndim());
     if (param_.global_pool) {
       // with global pooling, kernel shape corresponds to input shape with 'N' and 'C' removed
-      if (param_.layout.value() == mshadow::kNWC ||
-          param_.layout.value() == mshadow::kNHWC ||
-          param_.layout.value() == mshadow::kNDHWC) {
+      if (layout == mshadow::kNWC || layout == mshadow::kNHWC || layout == mshadow::kNDHWC) {
         kernel = TShape(ishape.data() + 1,
                         ishape.data() + ishape.ndim() - 1);
 
@@ -256,7 +276,7 @@ class PoolingOp {
            kernel,
            padding,
            stride,
-           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, param_.layout);
+           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, layout);
         break;
       case 2:
         unpool<DType, 2>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
@@ -264,7 +284,7 @@ class PoolingOp {
            kernel,
            padding,
            stride,
-           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, param_.layout);
+           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, layout);
         break;
       case 3:
         unpool<DType, 3>(s, out_grad.dptr<DType>(), in_data.dptr<DType>(), out_data.dptr<DType>(),
@@ -272,7 +292,7 @@ class PoolingOp {
            kernel,
            padding,
            stride,
-           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, param_.layout);
+           param_.pool_type, req, in_grad.dptr<DType>(), count_include_pad, layout);
         break;
       default:
         LOG(FATAL) << "p value of " << p_value << " is not supported yet...";

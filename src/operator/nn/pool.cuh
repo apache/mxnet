@@ -866,45 +866,45 @@ template<typename DType, int p>
 inline void pool(mshadow::Stream<gpu>* s, const DType* in_data, const TShape& ishape,
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
-                 DType* out_data, const bool count_include_pad, const dmlc::optional<int> &layout) {
+                 DType* out_data, const bool count_include_pad, int layout) {
   if (kernel.ndim() == 1) {
-    if (layout.has_value() && layout.value() == mshadow::kNWC) {
+    if (layout == mshadow::kNWC) {
       // standardize shapes to NCW to aid templated kernel invocation
       TShape ishape_ncw = ConvertLayout(ishape.get<3>(), mshadow::kNWC, mshadow::kNCW);
       TShape oshape_ncw = ConvertLayout(oshape.get<3>(), mshadow::kNWC, mshadow::kNCW);
       pool<DType, mshadow::kNWC, p>(s, in_data, ishape_ncw, oshape_ncw, kernel,
                                     pad, stride, pool_type, req_type, out_data, count_include_pad);
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCW) {
+    } else if (layout == mshadow::kNCW) {
       pool<DType, mshadow::kNCW, p>(s, in_data, ishape, oshape, kernel,
                                     pad, stride, pool_type, req_type, out_data, count_include_pad);
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 2) {
-    if (layout.has_value() && layout.value() == mshadow::kNHWC) {
+    if (layout == mshadow::kNHWC) {
       // standardize shapes to NCHW to aid templated kernel invocation
       TShape ishape_nchw = ConvertLayout(ishape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
       TShape oshape_nchw = ConvertLayout(oshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
       pool<DType, mshadow::kNHWC, p>(s, in_data, ishape_nchw, oshape_nchw, kernel,
                                      pad, stride, pool_type, req_type, out_data, count_include_pad);
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCHW) {
+    } else if (layout == mshadow::kNCHW) {
       pool<DType, mshadow::kNCHW, p>(s, in_data, ishape, oshape, kernel,
                                      pad, stride, pool_type, req_type, out_data, count_include_pad);
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 3) {
-    if (layout.has_value() && layout.value() == mshadow::kNDHWC) {
+    if (layout == mshadow::kNDHWC) {
       // standardize shapes to NCDHW to aid templated kernel invocation
       TShape ishape_ncdhw = ConvertLayout(ishape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
       TShape oshape_ncdhw = ConvertLayout(oshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
       pool<DType, mshadow::kNDHWC, p>(s, in_data, ishape_ncdhw, oshape_ncdhw, kernel,
                                      pad, stride, pool_type, req_type, out_data, count_include_pad);
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCDHW) {
+    } else if (layout == mshadow::kNCDHW) {
       pool<DType, mshadow::kNCDHW, p>(s, in_data, ishape, oshape, kernel,
                                      pad, stride, pool_type, req_type, out_data, count_include_pad);
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout;
     }
   } else {
     LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D pooling";
@@ -1086,45 +1086,45 @@ inline void unpool(mshadow::Stream<gpu>* s, const DType* out_grad, const DType* 
                    const DType* out_data, const TShape& ishape, const TShape& oshape,
                    const TShape& kernel, const TShape& pad, const TShape& stride,
                    const int pool_type, OpReqType req_type, DType* in_grad,
-                   const bool count_include_pad, const dmlc::optional<int> &layout) {
+                   const bool count_include_pad, int layout) {
   if (kernel.ndim() == 1) {
-    if (layout.has_value() && layout.value() == mshadow::kNWC) {
+    if (layout == mshadow::kNWC) {
       // standardize shapes to NCW to aid templated kernel invocation
       TShape ishape_ncw = ConvertLayout(ishape.get<3>(), mshadow::kNWC, mshadow::kNCW);
       TShape oshape_ncw = ConvertLayout(oshape.get<3>(), mshadow::kNWC, mshadow::kNCW);
       unpool<DType, mshadow::kNWC, p>(s, out_grad, in_data, out_data, ishape_ncw, oshape_ncw,
                               kernel, pad, stride, pool_type, req_type, in_grad, count_include_pad);
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCW) {
+    } else if (layout == mshadow::kNCW) {
       unpool<DType, mshadow::kNCW, p>(s, out_grad, in_data, out_data, ishape, oshape, kernel,
                               pad, stride, pool_type, req_type, in_grad, count_include_pad);
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 2) {
-    if (layout.has_value() && layout.value() == mshadow::kNHWC) {
+    if (layout == mshadow::kNHWC) {
       // standardize shapes to NCHW to aid templated kernel invocation
       TShape ishape_nchw = ConvertLayout(ishape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
       TShape oshape_nchw = ConvertLayout(oshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW);
       unpool<DType, mshadow::kNHWC, p>(s, out_grad, in_data, out_data, ishape_nchw, oshape_nchw,
                               kernel, pad, stride, pool_type, req_type, in_grad, count_include_pad);
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCHW) {
+    } else if (layout == mshadow::kNCHW) {
       unpool<DType, mshadow::kNCHW, p>(s, out_grad, in_data, out_data, ishape, oshape, kernel,
                               pad, stride, pool_type, req_type, in_grad, count_include_pad);
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 3) {
-    if (layout.has_value() && layout.value() == mshadow::kNDHWC) {
+    if (layout == mshadow::kNDHWC) {
       // standardize shapes to NCDHW to aid templated kernel invocation
       TShape ishape_ncdhw = ConvertLayout(ishape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
       TShape oshape_ncdhw = ConvertLayout(oshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW);
       unpool<DType, mshadow::kNDHWC, p>(s, out_grad, in_data, out_data, ishape_ncdhw, oshape_ncdhw,
                               kernel, pad, stride, pool_type, req_type, in_grad, count_include_pad);
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCDHW) {
+    } else if (layout == mshadow::kNCDHW) {
       unpool<DType, mshadow::kNCDHW, p>(s, out_grad, in_data, out_data, ishape, oshape, kernel,
                               pad, stride, pool_type, req_type, in_grad, count_include_pad);
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout;
     }
   } else {
     LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D unpooling";

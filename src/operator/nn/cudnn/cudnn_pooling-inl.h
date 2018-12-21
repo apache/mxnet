@@ -179,7 +179,7 @@ class CuDNNPoolingOp {
     static bool sum_pooling_warning_issued = false;
     static bool lp_pooling_warning_issued = false;
     static bool unsupported_dim_warning_issued = false;
-    int layout = param.layout.value();
+    int layout = param.GetLayout(input.ndim());
 
     switch (param.pool_type) {
       case pool_enum::kMaxPooling:
@@ -251,20 +251,19 @@ class CuDNNPoolingOp {
     #if CUDNN_MAJOR >= 5
     nan_prop_ = CUDNN_NOT_PROPAGATE_NAN;
     #endif
+    int layout = param_.GetLayout(in_data.ndim());
     if (param_.kernel.ndim() == 2) {
       // 2d pooling
-      CHECK(param_.layout.value() == mshadow::kNCHW ||
-            param_.layout.value() == mshadow::kNHWC) << "Need 2D layout NCHW or NHWC.";
-      cudnnTensorFormat_t cudnn_layout =
-          (param_.layout.value() == mshadow::kNCHW) ? CUDNN_TENSOR_NCHW
-                                                    : CUDNN_TENSOR_NHWC;
+      CHECK(layout == mshadow::kNCHW || layout == mshadow::kNHWC) << "Need 2D layout NCHW or NHWC.";
+      cudnnTensorFormat_t cudnn_layout = (layout == mshadow::kNCHW) ? CUDNN_TENSOR_NCHW
+                                                                    : CUDNN_TENSOR_NHWC;
       Tensor<gpu, 4, DType> data = in_data.get<gpu, 4, DType>(s);
       Tensor<gpu, 4, DType> out = out_data.get<gpu, 4, DType>(s);
       // Perform shape calculations in a standard (NCHW) layout space
-      mshadow::Shape<4> dshape_nchw = (param_.layout.value() == mshadow::kNHWC) ?
+      mshadow::Shape<4> dshape_nchw = (layout == mshadow::kNHWC) ?
                                       ConvertLayout(data.shape_, mshadow::kNHWC, mshadow::kNCHW) :
                                       data.shape_;
-      mshadow::Shape<4> oshape_nchw = (param_.layout.value() == mshadow::kNHWC) ?
+      mshadow::Shape<4> oshape_nchw = (layout == mshadow::kNHWC) ?
                                       ConvertLayout(out.shape_, mshadow::kNHWC, mshadow::kNCHW) :
                                       out.shape_;
       CUDNN_CALL(cudnnSetTensor4dDescriptor(in_desc_,
@@ -310,8 +309,8 @@ class CuDNNPoolingOp {
                                              param_.global_pool ? 1 : param_.stride[1]));
       #endif
     } else {
-      CHECK(param_.layout.value() == mshadow::kNCDHW ||
-            param_.layout.value() == mshadow::kNDHWC) << "Need 3D layout NCDHW or NDHWC.";
+      CHECK(layout == mshadow::kNCDHW ||
+            layout == mshadow::kNDHWC) << "Need 3D layout NCDHW or NDHWC.";
       Tensor<gpu, 5, DType> data = in_data.get<gpu, 5, DType>(s);
       mshadow::Shape<5> dshape = data.shape_;
       mshadow::Shape<5> dstride = mshadow::Shape5(dshape.ProdShape(1, 5),
@@ -329,16 +328,16 @@ class CuDNNPoolingOp {
                                            oshape.ProdShape(5, 5));
       // Convert to a standard (NCDHW) layout space to create args for cuDNN
 
-      mshadow::Shape<5> dshape_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+      mshadow::Shape<5> dshape_ncdhw = (layout == mshadow::kNDHWC) ?
                                        ConvertLayout(dshape, mshadow::kNDHWC, mshadow::kNCDHW) :
                                        dshape;
-      mshadow::Shape<5> dstride_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+      mshadow::Shape<5> dstride_ncdhw = (layout == mshadow::kNDHWC) ?
                                         ConvertLayout(dstride, mshadow::kNDHWC, mshadow::kNCDHW) :
                                         dstride;
-      mshadow::Shape<5> oshape_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+      mshadow::Shape<5> oshape_ncdhw = (layout == mshadow::kNDHWC) ?
                                         ConvertLayout(oshape, mshadow::kNDHWC, mshadow::kNCDHW) :
                                         oshape;
-      mshadow::Shape<5> ostride_ncdhw = (param_.layout.value() == mshadow::kNDHWC) ?
+      mshadow::Shape<5> ostride_ncdhw = (layout == mshadow::kNDHWC) ?
                                         ConvertLayout(ostride, mshadow::kNDHWC, mshadow::kNCDHW) :
                                         ostride;
       // Create int arrays for passing into cuDNN

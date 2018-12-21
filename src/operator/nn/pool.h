@@ -1326,10 +1326,10 @@ template<typename DType, int p>
 inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& ishape,
                  const TShape& oshape, const TShape& kernel, const TShape& pad,
                  const TShape& stride, const int pool_type, OpReqType req_type,
-                 DType* out_data, const bool count_include_pad, const dmlc::optional<int> &layout) {
+                 DType* out_data, const bool count_include_pad, int layout) {
   CHECK_EQ(req_type, kWriteTo) << "Only support req=kWriteTo in pooling operations";
   if (kernel.ndim() == 1) {
-    if (layout.has_value() && layout.value() == mshadow::kNWC) {
+    if (layout == mshadow::kNWC) {
       if (pool_enum::kMaxPooling == pool_type) {
         pool_max_1d_nwc_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
       } else if (pool_enum::kAvgPooling == pool_type) {
@@ -1342,7 +1342,7 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
       } else {
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCW) {
+    } else if (layout == mshadow::kNCW) {
       if (pool_enum::kMaxPooling == pool_type) {
         pool_max_1d_ncw_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
       } else if (pool_enum::kAvgPooling == pool_type) {
@@ -1356,10 +1356,10 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 2) {
-    if (layout.has_value() && layout.value() == mshadow::kNHWC) {
+    if (layout == mshadow::kNHWC) {
       if (pool_enum::kMaxPooling == pool_type) {
         pool_max_2d_nhwc_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
       } else if (pool_enum::kAvgPooling == pool_type) {
@@ -1372,7 +1372,7 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
       } else {
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCHW) {
+    } else if (layout == mshadow::kNCHW) {
       if (pool_enum::kMaxPooling == pool_type) {
         pool_max_2d_nchw_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
       } else if (pool_enum::kAvgPooling == pool_type) {
@@ -1386,10 +1386,10 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 3) {
-    if (layout.has_value() && layout.value() == mshadow::kNDHWC) {
+    if (layout == mshadow::kNDHWC) {
       if (pool_enum::kMaxPooling == pool_type) {
         pool_max_3d_ndhwc_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
       } else if (pool_enum::kAvgPooling == pool_type) {
@@ -1402,7 +1402,7 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
       } else {
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCDHW) {
+    } else if (layout == mshadow::kNCDHW) {
       if (pool_enum::kMaxPooling == pool_type) {
         pool_max_3d_ncdhw_cpu(in_data, ishape, oshape, kernel, pad, stride, out_data);
       } else if (pool_enum::kAvgPooling == pool_type) {
@@ -1416,7 +1416,7 @@ inline void pool(mshadow::Stream<cpu>* s, const DType* in_data, const TShape& is
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout;
     }
   } else {
     LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D pooling";
@@ -1444,13 +1444,13 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
                    const DType* out_data, const TShape& ishape, const TShape& oshape,
                    const TShape& kernel, const TShape& pad, const TShape& stride,
                    const int pool_type, OpReqType req_type, DType* in_grad,
-                   const bool count_include_pad, const dmlc::optional<int> &layout) {
+                   const bool count_include_pad, int layout) {
   if (mxnet::kNullOp == req_type) return;
   if (mxnet::kAddTo != req_type) {
     mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, ishape.Size(), in_grad);
   }
   if (kernel.ndim() == 1) {
-    if (layout.has_value() && layout.value() == mshadow::kNWC) {
+    if (layout == mshadow::kNWC) {
       if (pool_enum::kMaxPooling == pool_type) {
         unpool_max_1d_nwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
@@ -1467,7 +1467,7 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
       } else {
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCW) {
+    } else if (layout == mshadow::kNCW) {
       if (pool_enum::kMaxPooling == pool_type) {
         unpool_max_1d_ncw_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                               in_grad);
@@ -1486,10 +1486,10 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCW or kNWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 2) {
-    if (layout.has_value() && layout.value() == mshadow::kNHWC) {
+    if (layout == mshadow::kNHWC) {
       if (pool_enum::kMaxPooling == pool_type) {
         unpool_max_2d_nhwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
@@ -1507,7 +1507,7 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
       } else {
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCHW) {
+    } else if (layout == mshadow::kNCHW) {
       if (pool_enum::kMaxPooling == pool_type) {
         unpool_max_2d_nchw_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                                in_grad);
@@ -1526,10 +1526,10 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCHW or kNHWC, saw: " << layout;
     }
   } else if (kernel.ndim() == 3) {
-    if (layout.has_value() && layout.value() == mshadow::kNDHWC) {
+    if (layout == mshadow::kNDHWC) {
       if (pool_enum::kMaxPooling == pool_type) {
         unpool_max_3d_ndhwc_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                           in_grad);
@@ -1546,7 +1546,7 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
       } else {
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
-    } else if (!layout.has_value() || layout.value() == mshadow::kNCDHW) {
+    } else if (layout == mshadow::kNCDHW) {
       if (pool_enum::kMaxPooling == pool_type) {
         unpool_max_3d_ncdhw_cpu(out_grad, in_data, out_data, ishape, oshape, kernel, pad, stride,
                                 in_grad);
@@ -1565,7 +1565,7 @@ inline void unpool(mshadow::Stream<cpu>* s, const DType* out_grad, const DType* 
         LOG(FATAL) << "Unknown pooling type " << pool_type;
       }
     } else {
-      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout.value();
+      LOG(FATAL) << "Unsupported layout, expecting kNCDHW or kNDHWC, saw: " << layout;
     }
   } else {
     LOG(FATAL) << "Unsupported " << kernel.ndim() << "-D unpooling";

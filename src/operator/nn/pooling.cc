@@ -39,12 +39,13 @@ void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   using namespace mshadow;
   PoolingParam param;
   param.Init(attrs->dict);
+  // Set default layout if it can be inferred from kernel shape.
+  if (param.kernel.ndim() > 0)
+    param.layout = param.GetLayout(param.kernel.ndim() + 2);
   if (param.kernel.ndim() == 1) {
-    param.layout = param.layout ? param.layout.value() : mshadow::kNCW;
     if (param.stride.ndim() == 0) param.stride = Shape1(1);
     if (param.pad.ndim() == 0) param.pad = Shape1(0);
   } else if (param.kernel.ndim() == 2) {
-    param.layout = param.layout ? param.layout.value() : mshadow::kNCHW;
     if (param.stride.ndim() == 0) param.stride = Shape2(1, 1);
     if (param.pad.ndim() == 0) param.pad = Shape2(0, 0);
   } else {
@@ -53,7 +54,6 @@ void PoolingParamParser(nnvm::NodeAttrs *attrs) {
         CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
             << "D pooling not supported";
       }
-    param.layout = param.layout ? param.layout.value(): mshadow::kNCDHW;
     if (param.stride.ndim() == 0) param.stride = Shape3(1, 1, 1);
     if (param.pad.ndim() == 0) param.pad = Shape3(0, 0, 0);
   }
@@ -115,10 +115,11 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
   if (dshape.ndim() == 0) return false;
+  int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
     TShape oshape = dshape;
     size_t c_index = 0;
-    switch (param.layout.value()) {
+    switch (layout) {
       case mshadow::kNCW:
       case mshadow::kNCHW:
       case mshadow::kNCDHW:
@@ -146,10 +147,9 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   } else if (param.kernel.ndim() == 1) {
     CHECK_EQ(dshape.ndim(), 3U) <<
       "Pooling: Input data should be 3D in (batch, channel, x)";
-    CHECK(param.layout.value() == mshadow::kNCW ||
-          param.layout.value() == mshadow::kNWC) << "Need 1D layout";
+    CHECK(layout == mshadow::kNCW || layout == mshadow::kNWC) << "Need 1D layout";
     // Perform shape calculations in a standard (NCW) layout space
-    mshadow::Shape<3> dshape_ncw = (param.layout.value() == mshadow::kNWC) ?
+    mshadow::Shape<3> dshape_ncw = (layout == mshadow::kNWC) ?
                                     ConvertLayout(dshape.get<3>(), mshadow::kNWC, mshadow::kNCW) :
                                     dshape.get<3>();
     mshadow::Shape<3> oshape_ncw = dshape_ncw;
@@ -171,7 +171,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                           param.stride[0]));
     }
     // Convert back from standard (NCW) layout space to the actual layout type
-    TShape oshape = (param.layout.value() == mshadow::kNWC) ?
+    TShape oshape = (layout == mshadow::kNWC) ?
                     ConvertLayout(oshape_ncw, mshadow::kNCW, mshadow::kNWC) : oshape_ncw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -181,10 +181,9 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
 #endif
   } else if (param.kernel.ndim() == 2) {
     CHECK_EQ(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
-    CHECK(param.layout.value() == mshadow::kNCHW ||
-          param.layout.value() == mshadow::kNHWC) << "Need 2D layout";
+    CHECK(layout == mshadow::kNCHW || layout == mshadow::kNHWC) << "Need 2D layout";
     // Perform shape calculations in a standard (NCHW) layout space
-    mshadow::Shape<4> dshape_nchw = (param.layout.value() == mshadow::kNHWC) ?
+    mshadow::Shape<4> dshape_nchw = (layout == mshadow::kNHWC) ?
                                     ConvertLayout(dshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW) :
                                     dshape.get<4>();
     mshadow::Shape<4> oshape_nchw = dshape_nchw;
@@ -210,7 +209,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                                param.stride[1]));
     }
     // Convert back from standard (NCHW) layout space to the actual layout type
-    TShape oshape = (param.layout.value() == mshadow::kNHWC) ?
+    TShape oshape = (layout == mshadow::kNHWC) ?
                     ConvertLayout(oshape_nchw, mshadow::kNCHW, mshadow::kNHWC) : oshape_nchw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -221,10 +220,9 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   } else if (param.kernel.ndim() == 3) {
     CHECK_EQ(dshape.ndim(), 5U)
       << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
-    CHECK(param.layout.value() == mshadow::kNCDHW ||
-          param.layout.value() == mshadow::kNDHWC) << "Need 3D layout";
+    CHECK(layout == mshadow::kNCDHW || layout == mshadow::kNDHWC) << "Need 3D layout";
     // Perform shape calculations in a standard (NCDHW) layout space
-    mshadow::Shape<5> dshape_ncdhw = (param.layout.value() == mshadow::kNDHWC) ?
+    mshadow::Shape<5> dshape_ncdhw = (layout == mshadow::kNDHWC) ?
                                   ConvertLayout(dshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW) :
                                   dshape.get<5>();
     mshadow::Shape<5> oshape_ncdhw = dshape_ncdhw;
@@ -253,7 +251,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                                 param.stride[2]));
     }
     // Convert back from standard (NCDHW) layout space to the actual layout type
-    TShape oshape = (param.layout.value() == mshadow::kNDHWC) ?
+    TShape oshape = (layout == mshadow::kNDHWC) ?
                     ConvertLayout(oshape_ncdhw, mshadow::kNCDHW, mshadow::kNDHWC) : oshape_ncdhw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
