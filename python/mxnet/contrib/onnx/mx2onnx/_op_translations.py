@@ -2047,3 +2047,32 @@ def convert_broadcast_to(node, **kwargs):
     )
 
     return [tensor_node, expand_node]
+
+
+@mx_op.register("topk")
+def convert_topk(node, **kwargs):
+    """Map MXNet's size_array operator attributes to onnx's Size operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axis = int(attrs.get('axis', '-1'))
+    k = int(attrs.get('k', '1'))
+    ret_type = attrs.get('ret_typ')
+    outputs = [name + '_output0']
+
+    if ret_type and ret_type == 'both':
+        outputs.append(name + '_output1')
+    else:
+        raise NotImplementedError("ONNX expects both value and indices as output")
+
+    topk_node = onnx.helper.make_node(
+        "TopK",
+        input_nodes,
+        outputs,
+        axis=axis,
+        k=k,
+        name=name
+    )
+
+    return [topk_node]
