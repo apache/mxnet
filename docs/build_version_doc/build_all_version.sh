@@ -122,6 +122,8 @@ function checkout () {
     git pull
     # master gets warnings as errors for Sphinx builds
     OPTS="-W"
+  else
+    OPTS=
   fi
   git submodule update --init --recursive
   cd ..
