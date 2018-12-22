@@ -17,11 +17,19 @@
 
 package org.apache.mxnet
 
+/**
+  * This defines the basic primitives we can use in Scala for mathematical
+  * computations in NDArrays. This gives us a flexibility to expand to
+  * more supported primitives in the future. Currently Float and Double
+  * are supported.
+  */
 object MX_PRIMITIVES {
 
   /**
-    * This defines the basic primitives we can use in Scala for mathematical computations in NDArrays.
-    * This gives us a flexibility to expand to more supported primitives in the future.
+    * This defines the basic primitives we can use in Scala for mathematical
+    * computations in NDArrays.This gives us a flexibility to expand to
+    * more supported primitives in the future. Currently Float and Double
+    * * are supported.
     */
   trait MX_NUMBER_LIKE {
 
