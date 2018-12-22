@@ -104,7 +104,8 @@ class MKLDNNPoolingBwd {
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2 &&
          (param.pool_type == pool_enum::kMaxPooling ||
-          param.pool_type == pool_enum::kAvgPooling);
+          param.pool_type == pool_enum::kAvgPooling) &&
+         (!param.layout.has_value() || param.layout.value() == mshadow::kNCHW);
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
