@@ -1070,12 +1070,12 @@ function test_mean()
   @info("NDArray::mean")
 
   let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
-    @test copy(mean(X))[]       == mean(A)
-    @test copy(mean(X, 1))      == mean(A, 1)
-    @test copy(mean(X, 2))      == mean(A, 2)
-    @test copy(mean(X, 3))      == mean(A, 3)
-    @test copy(mean(X, [1, 2])) == mean(A, [1, 2])
-    @test copy(mean(X, (1, 2))) == mean(A, (1, 2))
+    @test copy(mean(X))[]              == mean(A)
+    @test copy(mean(X, dims = 1))      == mean(A, dims = 1)
+    @test copy(mean(X, dims = 2))      == mean(A, dims = 2)
+    @test copy(mean(X, dims = 3))      == mean(A, dims = 3)
+    @test copy(mean(X, dims = [1, 2])) == mean(A, dims = [1, 2])
+    @test copy(mean(X, dims = (1, 2))) == mean(A, dims = (1, 2))
   end
 end
 

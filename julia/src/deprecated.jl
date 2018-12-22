@@ -164,3 +164,6 @@ import Base: sum, maximum, minimum
 @deprecate sum(x::NDArray, dims) sum(x, dims = dims)
 @deprecate maximum(x::NDArray, dims) maximum(x, dims = dims)
 @deprecate minimum(x::NDArray, dims) minimum(x, dims = dims)
+
+import Statistics: mean
+@deprecate mean(x::NDArray, dims) mean(x, dims = dims)

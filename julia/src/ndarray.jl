@@ -1245,8 +1245,9 @@ _ndsig[:reshape] = :(reshape(x; shape = dim, reverse = !reverse))
 @_remap Base.reshape(x::NDArray, dim...; reverse = false) reshape
 @_remap Base.reshape(x::NDArray, dim   ; reverse = false) reshape
 
-@_remap Statistics.mean(x::NDArray)         mean(x)
-@_remap Statistics.mean(x::NDArray, region) mean(x; axis = 0 .- region, keepdims = true)
+Statistics.mean(x::NDArray; dims = :) = _mean(x, dims)
+@_remap _mean(x::NDArray, ::Colon) mean(x)
+@_remap _mean(x::NDArray, dims)    mean(x; axis = 0 .- dims, keepdims = true)
 
 Base.sum(x::NDArray; dims = :) = _sum(x, dims)
 @_remap _sum(x::NDArray, ::Colon) sum(x)
