@@ -17,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
+set -evx
 
 MXNET_ROOT=$(cd "$(dirname $0)/.."; pwd)
 

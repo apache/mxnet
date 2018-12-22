@@ -14,27 +14,25 @@
 ;; limitations under the License.
 ;;
 
-(ns infer.predictor-example-test
-  (:require [infer.predictor-example :refer [preprocess
-                                             do-inference
-                                             postprocess]]
-            [org.apache.clojure-mxnet.context :as context]
+(ns org.apache.clojure-mxnet.infer.predictor-test
+  (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
+            [org.apache.clojure-mxnet.ndarray :as ndarray]
+            [org.apache.clojure-mxnet.shape :as shape]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.test :refer :all]))
 
-(def model-dir "models/")
-(def image-file "images/kitten.jpg")
+(def model-dir "data/")
 (def model-path-prefix (str model-dir "resnet-18/resnet-18"))
 (def width 224)
 (def height 224)
 
 (when-not (.exists (io/file (str model-path-prefix "-symbol.json")))
-  (sh "./scripts/get_resnet_18_data.sh"))
+  (sh "./scripts/infer/get_resnet_18_data.sh"))
 
 (defn create-predictor []
   (let [descriptors [(mx-io/data-desc {:name "data"
@@ -46,7 +44,13 @@
 
 (deftest predictor-test
   (let [predictor (create-predictor)
-        image-ndarray (preprocess image-file width height)
-        predictions (do-inference predictor image-ndarray)
-        best-prediction (postprocess model-path-prefix predictions)]
-    (is (= "n02123159 tiger cat" best-prediction))))
+        image-ndarray (-> "test/test-images/kitten.jpg"
+                          infer/load-image-from-file
+                          (infer/reshape-image width height)
+                          (infer/buffered-image-to-pixels
+                           (shape/->shape [3 width height]))
+                          (ndarray/expand-dims 0))
+        [predictions] (infer/predict-with-ndarray predictor [image-ndarray])
+        [best-index] (ndarray/->int-vec (ndarray/argmax predictions 1))]
+    ; Should match the tiger cat index in synset file
+    (is (= 282 best-index))))

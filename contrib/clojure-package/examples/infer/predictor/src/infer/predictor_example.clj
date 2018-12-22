@@ -35,7 +35,7 @@
 
 (def cli-options
   [["-m" "--model-path-prefix PREFIX" "Model path prefix"
-    :default "models/resnet-152/resnet-152"
+    :default "models/resnet-18/resnet-18"
     :validate [#(check-valid-file (str % "-symbol.json"))
                "Model path prefix is invalid"]]
    ["-i" "--input-image IMAGE" "Image path"
@@ -53,12 +53,10 @@
   "Preprocesses image to make it ready for prediction"
   [image-path width height]
   (-> image-path
-      image/read-image
-      (image/resize-image width height)
-      ; HWC -> CHW
-      (ndarray/transpose (shape/->shape [2 0 1]))
-      (ndarray/expand-dims 0)
-      (ndarray/as-type dtype/FLOAT32)))
+      infer/load-image-from-file
+      (infer/reshape-image width height)
+      (infer/buffered-image-to-pixels (shape/->shape [3 width height]))
+      (ndarray/expand-dims 0)))
 
 (defn do-inference
   "Run inference using given predictor"
@@ -90,8 +88,8 @@
         predictor (infer/create-predictor
                    factory
                    {:contexts [(context/default-context)]})
-        image (preprocess input-image width height)
-        predictions (do-inference predictor image)
+        image-ndarray (preprocess input-image width height)
+        predictions (do-inference predictor image-ndarray)
         best-prediction (postprocess model-path-prefix predictions)]
     (print-prediction best-prediction)))
 

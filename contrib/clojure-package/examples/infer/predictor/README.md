@@ -11,6 +11,10 @@ Run model prediction using clojure infer package.
 ```
 $ chmod +x scripts/get_resnet_18_data.sh
 $ ./scripts/get_resnet_18_data.sh
+$
+$ lein run -- --help
+$ lein run -- -m models/resnet-18/resnet-18 -i images/kitten.jpg
+$
 $ lein uberjar
 $ java -jar target/predictor-0.1.0-SNAPSHOT-standalone.jar --help
 $ java -jar target/predictor-0.1.0-SNAPSHOT-standalone.jar \

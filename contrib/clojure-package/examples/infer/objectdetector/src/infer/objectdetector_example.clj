@@ -44,7 +44,7 @@
     :validate [#(check-valid-file (str % "-symbol.json"))
                "Model path prefix is invalid"]]
    ["-i" "--input-image IMAGE" "Input image"
-    :default "images/kitten.jpg"
+    :default "images/dog.jpg"
     :validate [check-valid-file "Input file not found"]]
    ["-d" "--input-dir IMAGE_DIR" "Input directory"
     :default "images/"
@@ -106,7 +106,9 @@
         detector (infer/create-object-detector
                   factory
                   {:contexts [(context/default-context)]})]
+    (println "Object detection on a single image")
     (print-predictions (detect-single-image detector input-image) width height)
+    (println "Object detection on images in a directory")
     (doseq [predictions (detect-images-in-dir detector input-dir)]
       (print-predictions predictions width height))))
 

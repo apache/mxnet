@@ -24,7 +24,7 @@
 
 (def cli-options
   [["-m" "--model-path-prefix PREFIX" "Model path prefix"
-    :default "models/resnet-152/resnet-152"
+    :default "models/resnet-18/resnet-18"
     :validate [#(check-valid-file (str % "-symbol.json"))
                "Model path prefix is invalid"]]
    ["-i" "--input-image IMAGE" "Input image"
@@ -80,7 +80,9 @@
         factory (infer/model-factory model-path-prefix descriptors)
         classifier (infer/create-image-classifier
                     factory {:contexts [(context/default-context)]})]
+    (println "Classifying a single image")
     (print-predictions (classify-single-image classifier input-image))
+    (println "Classifying images in a directory")
     (doseq [predictions (classify-images-in-dir classifier input-dir)]
       (print-predictions predictions))))
 
