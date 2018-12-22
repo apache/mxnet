@@ -2,7 +2,6 @@
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.infer :as infer]
-            [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
             [clojure.java.io :as io]
             [clojure.string :refer [join]]
@@ -73,10 +72,10 @@
   "Runs an image classifier based on options provided"
   [options]
   (let [{:keys [model-path-prefix input-image input-dir]} options
-        descriptors [(mx-io/data-desc {:name "data"
-                                       :shape [1 3 224 224]
-                                       :layout layout/NCHW
-                                       :dtype dtype/FLOAT32})]
+        descriptors [{:name "data"
+                      :shape [1 3 224 224]
+                      :layout layout/NCHW
+                      :dtype dtype/FLOAT32}]
         factory (infer/model-factory model-path-prefix descriptors)
         classifier (infer/create-image-classifier
                     factory {:contexts [(context/default-context)]})]

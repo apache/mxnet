@@ -18,12 +18,12 @@
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.infer :as infer]
-            [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.shape :as shape]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
+            [clojure.string :refer [split]]
             [clojure.test :refer :all]))
 
 (def model-dir "data/")
@@ -35,10 +35,10 @@
   (sh "./scripts/infer/get_resnet_18_data.sh"))
 
 (defn create-predictor []
-  (let [descriptors [(mx-io/data-desc {:name "data"
-                                       :shape [1 3 height width]
-                                       :layout layout/NCHW
-                                       :dtype dtype/FLOAT32})]
+  (let [descriptors [{:name "data"
+                      :shape [1 3 height width]
+                      :layout layout/NCHW
+                      :dtype dtype/FLOAT32}]
         factory (infer/model-factory model-path-prefix descriptors)]
     (infer/create-predictor factory)))
 
@@ -47,10 +47,13 @@
         image-ndarray (-> "test/test-images/kitten.jpg"
                           infer/load-image-from-file
                           (infer/reshape-image width height)
-                          (infer/buffered-image-to-pixels
-                           (shape/->shape [3 width height]))
+                          (infer/buffered-image-to-pixels [3 width height])
                           (ndarray/expand-dims 0))
         [predictions] (infer/predict-with-ndarray predictor [image-ndarray])
-        [best-index] (ndarray/->int-vec (ndarray/argmax predictions 1))]
-    ; Should match the tiger cat index in synset file
-    (is (= 282 best-index))))
+        synset-file (-> (io/file model-path-prefix)
+                        (.getParent)
+                        (io/file "synset.txt"))
+        synset-names (split (slurp synset-file) #"\n")
+        [best-index] (ndarray/->int-vec (ndarray/argmax predictions 1))
+        best-prediction (synset-names best-index)]
+    (is (= "n02123159 tiger cat" best-prediction))))

@@ -18,7 +18,6 @@
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.infer :as infer]
-            [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
@@ -31,10 +30,10 @@
   (sh "./scripts/infer/get_resnet_18_data.sh"))
 
 (defn create-classifier []
-  (let [descriptors [(mx-io/data-desc {:name "data"
-                                       :shape [1 3 224 224]
-                                       :layout layout/NCHW
-                                       :dtype dtype/FLOAT32})]
+  (let [descriptors [{:name "data"
+                      :shape [1 3 224 224]
+                      :layout layout/NCHW
+                      :dtype dtype/FLOAT32}]
         factory (infer/model-factory model-path-prefix descriptors)]
     (infer/create-image-classifier factory)))
 

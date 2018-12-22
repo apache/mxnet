@@ -19,10 +19,8 @@
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.image :as image]
             [org.apache.clojure-mxnet.infer :as infer]
-            [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.layout :as layout]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
-            [org.apache.clojure-mxnet.shape :as shape]
             [clojure.java.io :as io]
             [clojure.string :refer [join split]]
             [clojure.tools.cli :refer [parse-opts]])
@@ -55,7 +53,7 @@
   (-> image-path
       infer/load-image-from-file
       (infer/reshape-image width height)
-      (infer/buffered-image-to-pixels (shape/->shape [3 width height]))
+      (infer/buffered-image-to-pixels [3 width height])
       (ndarray/expand-dims 0)))
 
 (defn do-inference
@@ -80,10 +78,10 @@
   (let [{:keys [model-path-prefix input-image]} options
         width 224
         height 224
-        descriptors [(mx-io/data-desc {:name "data"
-                                       :shape [1 3 height width]
-                                       :layout layout/NCHW
-                                       :dtype dtype/FLOAT32})]
+        descriptors [{:name "data"
+                      :shape [1 3 height width]
+                      :layout layout/NCHW
+                      :dtype dtype/FLOAT32}]
         factory (infer/model-factory model-path-prefix descriptors)
         predictor (infer/create-predictor
                    factory
