@@ -63,8 +63,10 @@ include $(config)
 
 ifndef $(USE_MKLDNN)
 ifneq ($(UNAME_S), Darwin)
+ifneq ($(UNAME_S), Windows)
 ifeq ($(UNAME_P), x86_64)
 	USE_MKLDNN=1
+endif
 endif
 endif
 endif
