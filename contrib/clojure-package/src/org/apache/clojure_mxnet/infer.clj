@@ -97,7 +97,7 @@
      (.predictWithNDArray (:predictor wrapped-predictor)
                           (util/vec->indexed-seq input-arrays)))))
 
-(s/def ::nil-or-int? (s/nilable int?))
+(s/def ::nil-or-int (s/nilable int?))
 
 (extend-protocol AClassifier
   WrappedClassifier
@@ -112,7 +112,7 @@
                     "Invalid classifier")
     (util/validate! ::vec-of-float-arrays inputs
                     "Invalid inputs")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.classify (:classifier wrapped-classifier)
                 (util/vec->indexed-seq inputs)
@@ -128,7 +128,7 @@
                     "Invalid classifier")
     (util/validate! ::vec-of-ndarrays inputs
                     "Invalid inputs")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.classifyWithNDArray (:classifier wrapped-classifier)
                            (util/vec->indexed-seq inputs)
@@ -145,7 +145,7 @@
                     "Invalid classifier")
     (util/validate! ::vec-of-float-arrays inputs
                     "Invalid inputs")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.classify (:image-classifier wrapped-image-classifier)
                 (util/vec->indexed-seq inputs)
@@ -161,7 +161,7 @@
                     "Invalid classifier")
     (util/validate! ::vec-of-ndarrays inputs
                     "Invalid inputs")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.classifyWithNDArray (:image-classifier wrapped-image-classifier)
                            (util/vec->indexed-seq inputs)
@@ -180,7 +180,7 @@
     (util/validate! ::wrapped-image-classifier wrapped-image-classifier
                     "Invalid classifier")
     (util/validate! ::image image "Invalid image")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.classifyImage (:image-classifier wrapped-image-classifier)
                      image
@@ -192,7 +192,7 @@
   (classify-image-batch [wrapped-image-classifier images topk]
     (util/validate! ::wrapped-image-classifier wrapped-image-classifier
                     "Invalid classifier")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.classifyImageBatch (:image-classifier wrapped-image-classifier)
                           images
@@ -209,7 +209,7 @@
     (util/validate! ::wrapped-detector wrapped-detector
                     "Invalid object detector")
     (util/validate! ::image image "Invalid image")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.imageObjectDetect (:object-detector wrapped-detector)
                          image
@@ -221,7 +221,7 @@
   (detect-objects-batch [wrapped-detector images topk]
     (util/validate! ::wrapped-detector wrapped-detector
                     "Invalid object detector")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.imageBatchObjectDetect (:object-detector wrapped-detector)
                               images
@@ -237,7 +237,7 @@
                     "Invalid object detector")
     (util/validate! ::vec-of-ndarrays input-arrays
                     "Invalid inputs")
-    (util/validate! ::nil-or-int? topk "Invalid top-K")
+    (util/validate! ::nil-or-int topk "Invalid top-K")
     (util/coerce-return-recursive
      (.objectDetectWithNDArray (:object-detector wrapped-detector)
                                (util/vec->indexed-seq input-arrays)
