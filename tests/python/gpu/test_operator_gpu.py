@@ -656,22 +656,23 @@ def test_pooling_nhwc_with_convention():
 
     # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
     # We compare nhwc and nchw results only within a given precision.
-    for in_shape in [(3, 4, 8, 8), (2, 2, 10, 10)]:
-        for data_type in [np.float64, np.float32, np.float16]:
-            # NHWC pooling is only enabled on GPU with CUDNN
-            ctx_list = [{'ctx': mx.gpu(0), 'pool_data': in_shape,
-                         'type_dict': {'pool_data': data_type}}]
-            symlist = make_pooling_syms(kernel=(3,3), pool_type='max',
-                                        pooling_convention='valid', name='pool')
-            check_consistency_NxM(symlist, ctx_list)
+    for in_shape in [(3, 4, 8, 8), (2, 2, 20, 20)]:
+        for kernel in [(2,2), (3,3), (4,4)]:
+            for stride in [(1,1), (1,2), (2,1), (2,2)]:
+                for data_type in [np.float64, np.float32, np.float16]:
+                    ctx_list = [{'ctx': mx.gpu(0), 'pool_data': in_shape,
+                                 'type_dict': {'pool_data': data_type}}]
+                    symlist = make_pooling_syms(kernel=kernel, pool_type='max', stride=stride,
+                                                pooling_convention='valid', name='pool')
+                    check_consistency_NxM(symlist, ctx_list)
 
-            symlist = make_pooling_syms(kernel=(3,3), pool_type='max',
-                                        pooling_convention='full', name='pool')
-            check_consistency_NxM(symlist, ctx_list)
+                    symlist = make_pooling_syms(kernel=kernel, pool_type='max', stride=stride,
+                                                pooling_convention='full', name='pool')
+                    check_consistency_NxM(symlist, ctx_list)
 
-            symlist = make_pooling_syms(kernel=(300,300), pool_type='max',
-                                        global_pool=True, name='pool')
-            check_consistency_NxM(symlist, ctx_list)
+                    symlist = make_pooling_syms(kernel=(300,300), pool_type='max',
+                                                global_pool=True, name='pool')
+                    check_consistency_NxM(symlist, ctx_list)
 
 
 def test_pooling_with_type():

@@ -217,14 +217,18 @@ class CuDNNPoolingOp {
       if (window_height > 8 || window_width > 8)
         return false;
 #endif
-      // Avoid strided NHWC max pooling for some configs, to be corrected in a future cudnn release.
+#if CUDNN_VERSION >= 7105 && CUDNN_VERSION < 7500
+      // Avoid strided NHWC max pooling for some configs
       if (layout == mshadow::kNHWC &&
           param.pool_type == pool_enum::kMaxPooling && !param.global_pool) {
-        if ((param.stride[0] >= 3 || param.stride[0] == 2 && param.kernel[0] % 2 == 0))
+        if (param.stride[0] >= 3 ||
+            param.stride[0] == 2 && param.kernel[0] % 2 == 0 && param.kernel[0] != 2)
           return false;
-        if ((param.stride[1] >= 3 || param.stride[1] == 2 && param.kernel[1] % 2 == 0))
+        if (param.stride[1] >= 3 ||
+            param.stride[1] == 2 && param.kernel[1] % 2 == 0 && param.kernel[1] != 2)
           return false;
       }
+#endif
     } else if (param.kernel.ndim() == 3) {
       // 3d pooling
 #if CUDNN_MAJOR < 5
