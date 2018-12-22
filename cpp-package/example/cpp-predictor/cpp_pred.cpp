@@ -45,8 +45,8 @@ int main() {
     memcpy(data + image_size * 2, rgb[0].data, image_size * sizeof(mx_float));
 
     try {
-        std::string symbol_json = "somesr2x_uin8_quantized-symbol.json";
-        std::string param_data = "somesr2x_uin8_quantized-0000.params";
+        std::string symbol_json = "somesr2x_int8_quantized-symbol.json";
+        std::string param_data = "somesr2x_int8_quantized-0000.params";
 
         auto ctx = Context::gpu(0);
         auto input_shape = Shape{ 1, ch, height, width };
