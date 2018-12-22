@@ -253,7 +253,7 @@ function Base.size(x::NDArray)
   tuple(map(Int, reverse(unsafe_wrap(Array, ref_shape[], ref_ndim[])))...)
 end
 
-Base.size(x::NDArray{T,N}, dims::Integer) where {T,N} = (dim > N) ? 1 : size(x)[dim]
+Base.size(x::NDArray{T,N}, dims::Integer) where {T,N} = (dims > N) ? 1 : size(x)[dims]
 
 """
     length(x::NDArray)
