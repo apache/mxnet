@@ -967,7 +967,7 @@ macro nd_as_jl(m_args...)
   wait_statements  = Expr(:block, [:(_wait_to_read($v)) for v in nd_ro]...,
                                   [:(_wait_to_write($v)) for v in nd_rw]...)
   clear_statements = Expr(:block, [:($v_orig = nothing) for v_orig in rw_origs]...)
-  let_assignments  = [:($v = try_get_shared($v)) for v in nd_all]
+  let_assignments  = Expr(:block, [:($v = try_get_shared($v)) for v in nd_all]...)
   sync_statements  = map(rw_origs, nd_rw) do v_orig, v
     quote
       if !is_shared($v, $v_orig)
@@ -978,14 +978,14 @@ macro nd_as_jl(m_args...)
   end
   sync_statements  = Expr(:block, sync_statements...)
 
-  let_statement = Expr(:let, quote
+  let_statement = Expr(:let, let_assignments, quote
     $stmts
     $sync_statements
-  end, let_assignments...)
+  end)
   m_body = quote
     $wait_statements
     $save_statements
-    # $let_statement FIXME
+    $let_statement
     $clear_statements
     nothing # the final results is always nothing
   end
