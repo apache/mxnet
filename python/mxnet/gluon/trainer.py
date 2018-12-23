@@ -53,8 +53,8 @@ class Trainer(object):
         Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
         suitable option depending on the type of kvstore.
 
-    Notes
-    -----
+    Note
+    ----
     `update_on_kvstore=False` is not supported in the following cases:
     - dist kvstore with sparse weights or sparse gradients
     - dist async kvstore
@@ -288,12 +288,12 @@ class Trainer(object):
 
     def _check_and_rescale_grad(self, scale):
         if self._update_on_kvstore and self._distributed and self._kv_initialized:
-           if self._optimizer.rescale_grad != scale:
-               raise UserWarning('Possible change in the `batch_size` from previous '
-                                 '`step` detected. Optimizer gradient normalizing '
-                                 'factor will not change w.r.t new batch_size when '
-                                 'update_on_kvstore=True and when distributed kvstore '
-                                 'is used.')
+            if self._optimizer.rescale_grad != scale:
+                raise UserWarning('Possible change in the `batch_size` from previous '
+                                  '`step` detected. Optimizer gradient normalizing '
+                                  'factor will not change w.r.t new batch_size when '
+                                  'update_on_kvstore=True and when distributed kvstore '
+                                  'is used.')
         self._optimizer.rescale_grad = scale
 
     def step(self, batch_size, ignore_stale_grad=False):
