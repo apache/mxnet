@@ -1226,8 +1226,9 @@ function test_size()
   @info("NDArray::size")
   let A = [1 2; 3 4; 5 6], x = mx.NDArray(A)
     @test size(A) == size(x)
-    @test size(A, 1, 2, 3, 4, 5) == size(x, 1, 2, 3, 4, 5)
-    @inferred size(x, 1, 2, 3, 4, 5)
+    dims = (1, 2, 3, 4, 5)
+    @test map(d -> size(A, d), dims) == map(d -> size(x, d), dims)
+    @inferred map(d -> size(x, d), dims)
   end
 end  # function test_size()
 
