@@ -376,18 +376,21 @@ def test_invalid_operations():
     check_invalid_pull()
 
 def test_gluon_trainer_type():
-    def check_trainer_kv_type(stype, grad_stype, update_on_kv):
+    def check_trainer_kv_type(stype, grad_stype, update_on_kv, expected_update_on_kv):
         params = mx.gluon.ParameterDict()
         x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+                                   kvstore=kv, update_on_kvstore=update_on_kv)
         trainer._init_kvstore()
         assert trainer._kv_initialized
-        assert trainer._update_on_kvstore is update_on_kv
+        assert trainer._update_on_kvstore is expected_update_on_kv
 
-    check_trainer_kv_type('default', 'default', False)
-    check_trainer_kv_type('default', 'row_sparse', True)
-    check_trainer_kv_type('row_sparse', 'row_sparse', True)
+    check_trainer_kv_type('default', 'default', None, True)
+    check_trainer_kv_type('default', 'default', True, True)
+    check_trainer_kv_type('default', 'default', False, False)
+    check_trainer_kv_type('default', 'row_sparse', None, True)
+    check_trainer_kv_type('row_sparse', 'row_sparse', None, True)
     print('worker ' + str(my_rank) + ' passed test_gluon_trainer_type')
 
 def test_gluon_trainer_step():
