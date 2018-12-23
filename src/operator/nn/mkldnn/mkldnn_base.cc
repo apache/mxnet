@@ -331,9 +331,11 @@ mkldnn_memory_format_t GetDefaultFormat(const mkldnn::memory::desc &desc) {
     switch (desc.data.format) {
       case mkldnn_goihw:
       case mkldnn_hwigo:
+      case mkldnn_hwigo_s8s8:
       case mkldnn_gOIhw8i8o:
       case mkldnn_gOIhw16i16o:
       case mkldnn_gOIhw4i16o4i:
+      case mkldnn_gOIhw4i16o4i_s8s8:
       case mkldnn_gOIhw8i16o2i:
       case mkldnn_gOIhw8o16i2o:
       case mkldnn_gOIhw8o8i:
