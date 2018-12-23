@@ -55,9 +55,7 @@ def test_trainer():
             y.backward()
     trainer.step(1)
 
-    assert len(trainer._optimizers) == 2
-    assert len(trainer._updaters) == 2
-    assert trainer._optimizers[0].param_dict == trainer._optimizers[1].param_dict
+    assert trainer._optimizer.param_dict == trainer._optimizer.param_dict
     assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
 
     x.lr_mult = 0.5
@@ -74,18 +72,14 @@ def test_trainer():
     trainer.load_states('test_trainer.states')
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
-        assert trainer._optimizers[0] == trainer._kvstore._updater.optimizer
-        assert len(trainer._optimizers) == 2
-        assert len(trainer._updaters) == 2
+        assert trainer._optimizer == trainer._kvstore._updater.optimizer
         # invalid usage of update and allreduce_grads if update_on_kvstore
         assert_raises(AssertionError, trainer.update, 1)
         assert_raises(AssertionError, trainer.allreduce_grads)
     else:
         for updater in trainer._updaters:
             dict_equ(updater.states, states)
-        assert trainer._optimizers[0] == trainer._updaters[0].optimizer
-        assert len(trainer._optimizers) == 2
-        assert len(trainer._updaters) == 2
+        assert trainer._optimizer == trainer._updaters[0].optimizer
 
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
@@ -254,4 +248,19 @@ def test_trainer_sparse_kv():
 
 @with_seed()
 def test_trainer_lr_scheduler():
-    pass
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    freq = 2
+    factor = 0.1
+    lr = 1
+    lr_sched = mx.lr_scheduler.FactorScheduler(freq, factor=factor, base_lr=lr)
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': lr, 'lr_scheduler': lr_sched})
+    for i in range(10):
+        with mx.autograd.record():
+            for w in x.list_data():
+                y = w + 1
+                y.backward()
+        trainer.step(1)
+        if i % freq == 0:
+            assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
+            lr *= factor
