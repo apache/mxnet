@@ -247,7 +247,7 @@ def test_trainer_sparse_kv():
         check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', False, ValueError)
 
 @with_seed()
-def test_trainer_lr_scheduler():
+def test_trainer_lr_sched():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     freq = 2
@@ -264,3 +264,21 @@ def test_trainer_lr_scheduler():
         if i % freq == 0:
             assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
             lr *= factor
+    mx.nd.waitall()
+
+@with_seed()
+def test_trainer_invalid_lr_sched():
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    freq = 2
+    factor = 0.1
+    lr = 1
+    lr_sched = mx.lr_scheduler.FactorScheduler(freq, factor=factor, base_lr=lr)
+    invalid_trainer = gluon.Trainer([x], 'sgd', {'learning_rate': lr, 'lr_scheduler': lr_sched},
+                                    update_on_kvstore=False)
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    assert_raises(ValueError, invalid_trainer.step, 1)
+    mx.nd.waitall()
