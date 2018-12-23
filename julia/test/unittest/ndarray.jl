@@ -1401,11 +1401,11 @@ function test_broadcast_axis()
   x = NDArray(A)
 
   @test mx.broadcast_axis(x, 1, 4) |> copy == [A; A; A; A]
-  @test mx.broadcast_axis(x, 3, 2) |> copy == cat(3, A, A)
+  @test mx.broadcast_axis(x, 3, 2) |> copy == cat(A, A, dims = 3)
 
   @info("NDArray::broadcast_axes")
   @test mx.broadcast_axes(x, 1, 4) |> copy == [A; A; A; A]
-  @test mx.broadcast_axes(x, 3, 2) |> copy == cat(3, A, A)
+  @test mx.broadcast_axes(x, 3, 2) |> copy == cat(A, A, dims = 3)
 end  # function test_broadcast_axis
 
 function test_hypot()

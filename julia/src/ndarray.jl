@@ -532,27 +532,27 @@ end
 """
     hcat(x::NDArray...)
 """
-Base.hcat(xs::NDArray{T}...) where T = cat(2, xs...)
+Base.hcat(xs::NDArray{T}...) where T = cat(xs..., dims = 2)
 
 """
     vcat(x::NDArray...)
 """
-Base.vcat(xs::NDArray{T}...) where T = cat(1, xs...)
+Base.vcat(xs::NDArray{T}...) where T = cat(xs..., dims = 1)
 
 """
-    cat(dim, xs::NDArray...)
+    cat(xs::NDArray...; dims)
 
-Concate the `NDArray`s which have the same element type along the `dim`.
+Concate the `NDArray`s which have the same element type along the `dims`.
 Building a diagonal matrix is not supported yet.
 """
-function Base.cat(dim::Int, xs::NDArray{T}...) where T
+function Base.cat(xs::NDArray{T}...; dims) where T
   ns = ndims.(xs)
-  d = Base.max(dim, maximum(ns))
+  d = Base.max(dims, maximum(ns))
   xs′ = map(zip(ns, xs)) do i
     n, x = i
     (d > n) ? reshape(x, -2, Base.ones(Int, d - n)...) : x
   end
-  concat(xs′..., dim = d - dim)
+  concat(xs′..., dim = d - dims)
 end
 
 """
