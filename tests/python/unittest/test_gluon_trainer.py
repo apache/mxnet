@@ -217,26 +217,29 @@ def test_trainer_reset_kv():
 
 @with_seed()
 def test_trainer_sparse_kv():
-    def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected_update_on_kv):
+    def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
         params = gluon.ParameterDict()
         x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
                                 kvstore=kv, update_on_kvstore=update_on_kv)
         all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
-        ws = x.list_data() if stype == 'default' else x.list_row_sparse_data(all_rows)
-        with mx.autograd.record():
-            for w in ws:
-                y = w + 1
-                y.backward()
-        trainer.step(1)
-        assert trainer._kvstore.type == kv
-        assert trainer._kv_initialized
-        assert trainer._update_on_kvstore is expected_update_on_kv
-        # the updated parameter should be based on the loaded checkpoint
-        mx.nd.waitall()
-        updated_w = x.data(mx.cpu(0)) if stype == 'default' else x.row_sparse_data(all_rows)
-        assert (updated_w == -0.2).asnumpy().all()
+        try:
+            ws = x.list_data() if stype == 'default' else x.list_row_sparse_data(all_rows)
+            with mx.autograd.record():
+                for w in ws:
+                    y = w + 1
+                    y.backward()
+            trainer.step(1)
+            assert trainer._kvstore.type == kv
+            assert trainer._kv_initialized
+            assert trainer._update_on_kvstore is expected
+            # the updated parameter should be based on the loaded checkpoint
+            mx.nd.waitall()
+            updated_w = x.data(mx.cpu(0)) if stype == 'default' else x.row_sparse_data(all_rows)
+            assert (updated_w == -0.2).asnumpy().all()
+        except Exception as err:
+            assert isinstance(err, expected)
 
     kvs = ['local', 'device']
     for kv in kvs:
@@ -244,7 +247,10 @@ def test_trainer_sparse_kv():
         check_trainer_sparse_kv(kv, 'default', 'default', False, False)
         check_trainer_sparse_kv(kv, 'default', 'default', None, True)
         check_trainer_sparse_kv(kv, 'default', 'row_sparse', None, False)
+        check_trainer_sparse_kv(kv, 'default', 'row_sparse', True, True)
+        check_trainer_sparse_kv(kv, 'default', 'row_sparse', False, False)
         check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', None, True)
+        check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', False, ValueError)
 
 @with_seed()
 def test_trainer_lr_scheduler():

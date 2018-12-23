@@ -217,9 +217,11 @@ class Trainer(object):
             self._distributed = 'dist' in kvstore.type if kvstore else False
             update_on_kvstore = self._distributed
             # raise err if user provides unsupported configs
-            if config['update_on_kvstore'] is False and self._distributed:
-                raise RuntimeError("Cannot set update_on_kvstore=False on dist kvstore "
-                                   "when sparse gradients are present.")
+            if config['update_on_kvstore'] is not None:
+                if config['update_on_kvstore'] is False and self._distributed:
+                    raise ValueError("Cannot set update_on_kvstore=False on dist kvstore "
+                                     "when sparse gradients are present.")
+                update_on_kvstore = config['update_on_kvstore']
 
         else:
             # Training with dense weight and dense gradients.
