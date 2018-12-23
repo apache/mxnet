@@ -749,6 +749,7 @@ fixed-size items.
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
+        # FIXME: broken now, fix it!
         indices = self._get_index_nd(key)
         vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
         value_nd = self._prepare_value_nd(value, vshape)
@@ -763,7 +764,12 @@ fixed-size items.
         ``key`` should not be the result of int-to-slice conversion, but the
         original indices.
         """
-        cum_steps = np.arange(ndim + 1)
+        steps = [0] + [0 if isinstance(idx, integer_types) else 1
+                       for idx in key]
+        for _ in range(len(key), ndim):
+            steps.append(1)
+        assert len(steps) == 1 + ndim
+        cum_steps = np.cumsum(steps)
         axes_in_bounds = [ax for ax in axes if ax < len(cum_steps)]
         axes_out_of_bounds = [ax for ax in axes if ax >= len(cum_steps)]
         axes_after = tuple(cum_steps[axes_in_bounds])
