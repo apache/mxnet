@@ -55,16 +55,17 @@ def test_trainer():
             y.backward()
     trainer.step(1)
 
+    assert len(trainer._optimizers) == 2
+    assert len(trainer._updaters) == 2
+    assert trainer._optimizers[0].param_dict == trainer._optimizers[1].param_dict
     assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
 
     x.lr_mult = 0.5
-
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
             y.backward()
     trainer.step(1)
-
     assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
 
     trainer.save_states('test_trainer.states')
@@ -74,6 +75,8 @@ def test_trainer():
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
         assert trainer._optimizers[0] == trainer._kvstore._updater.optimizer
+        assert len(trainer._optimizers) == 2
+        assert len(trainer._updaters) == 2
         # invalid usage of update and allreduce_grads if update_on_kvstore
         assert_raises(AssertionError, trainer.update, 1)
         assert_raises(AssertionError, trainer.allreduce_grads)
@@ -81,6 +84,8 @@ def test_trainer():
         for updater in trainer._updaters:
             dict_equ(updater.states, states)
         assert trainer._optimizers[0] == trainer._updaters[0].optimizer
+        assert len(trainer._optimizers) == 2
+        assert len(trainer._updaters) == 2
 
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
@@ -212,11 +217,12 @@ def test_trainer_reset_kv():
 
 @with_seed()
 def test_trainer_sparse_kv():
-    def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv):
+    def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected_update_on_kv):
         params = gluon.ParameterDict()
         x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+                                kvstore=kv, update_on_kvstore=update_on_kv)
         all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
         ws = x.list_data() if stype == 'default' else x.list_row_sparse_data(all_rows)
         with mx.autograd.record():
@@ -226,7 +232,7 @@ def test_trainer_sparse_kv():
         trainer.step(1)
         assert trainer._kvstore.type == kv
         assert trainer._kv_initialized
-        assert trainer._update_on_kvstore is update_on_kv
+        assert trainer._update_on_kvstore is expected_update_on_kv
         # the updated parameter should be based on the loaded checkpoint
         mx.nd.waitall()
         updated_w = x.data(mx.cpu(0)) if stype == 'default' else x.row_sparse_data(all_rows)
@@ -234,6 +240,12 @@ def test_trainer_sparse_kv():
 
     kvs = ['local', 'device']
     for kv in kvs:
-        check_trainer_sparse_kv(kv, 'default', 'default', True)
-        check_trainer_sparse_kv(kv, 'default', 'row_sparse', False)
-        check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', True)
+        check_trainer_sparse_kv(kv, 'default', 'default', True, True)
+        check_trainer_sparse_kv(kv, 'default', 'default', False, False)
+        check_trainer_sparse_kv(kv, 'default', 'default', None, True)
+        check_trainer_sparse_kv(kv, 'default', 'row_sparse', None, False)
+        check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', None, True)
+
+@with_seed()
+def test_trainer_lr_scheduler():
+    pass

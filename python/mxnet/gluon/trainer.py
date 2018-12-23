@@ -135,7 +135,8 @@ class Trainer(object):
         # create a deep copy of the optimizer per context
         for _ in range(len(self._contexts) - 1):
             optim = copy.deepcopy(optimizer)
-            # param_dict must not be deep copied
+            # param_dict must not be deep copied, so that if user mutate the lr_mult
+            # or wd_mult of some parameters, it takes effect.
             optim.param_dict = param_dict
             self._optimizers.append(optim)
             self._updaters.append(opt.get_updater(optim))
