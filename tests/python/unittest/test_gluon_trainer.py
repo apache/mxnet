@@ -73,11 +73,11 @@ def test_trainer():
     trainer.load_states('test_trainer.states')
     if trainer._update_on_kvstore:
         dict_equ(trainer._kvstore._updater.states, states)
-        assert trainer._optimizer == trainer._kvstore._updater.optimizer
+        assert trainer._optimizers[0] == trainer._kvstore._updater.optimizer
     else:
         for updater in trainer._updaters:
             dict_equ(updater.states, states)
-        assert trainer._optimizer == trainer._updaters[0].optimizer
+        assert trainer._optimizers[0] == trainer._updaters[0].optimizer
     assert_raises(AssertionError, trainer.update, 1)
     assert_raises(AssertionError, trainer.allreduce_grads)
 
