@@ -18,7 +18,7 @@
 module TestSymbolicNode
 
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: mlp2, mlpchain, exec
 
@@ -26,7 +26,7 @@ using ..Main: mlp2, mlpchain, exec
 # Test Implementations
 ################################################################################
 function test_basic()
-  info("SymbolicNode::basic")
+  @info("SymbolicNode::basic")
 
   model = mlp2()
   @test mx.list_arguments(model) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
@@ -35,7 +35,7 @@ function test_basic()
 end
 
 function test_chain()
-  info("SymbolicNode::chain")
+  @info("SymbolicNode::chain")
 
   model = mlpchain()
   @test mx.list_arguments(model) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
@@ -57,7 +57,7 @@ function test_chain()
 end
 
 function test_internal()
-  info("SymbolicNode::internal")
+  @info("SymbolicNode::internal")
 
   data  = mx.Variable(:data)
   oldfc = mx.FullyConnected(data, name=:fc1, num_hidden=10)
@@ -71,7 +71,7 @@ function test_internal()
 end
 
 function test_get_children()
-  info("SymbolicNode::get_children")
+  @info("SymbolicNode::get_children")
 
   let x = mx.Variable(:x), y = mx.Variable(:y)
     z = x + y
@@ -80,7 +80,7 @@ function test_get_children()
     @test mx.list_outputs(mx.get_children(z)) == [:x, :y]
   end
 
-  info("SymbolicNode::get_children::on leaf")
+  @info("SymbolicNode::get_children::on leaf")
   let x = mx.Variable(:x)
     @test mx.get_children(x) == nothing
   end
@@ -88,7 +88,7 @@ end  # test_get_children
 
 
 function test_compose()
-  info("SymbolicNode::compose")
+  @info("SymbolicNode::compose")
 
   data = mx.Variable(:data)
   net1 = mx.FullyConnected(data, name=:fc1, num_hidden=10)
@@ -104,7 +104,7 @@ function test_compose()
 end
 
 function test_infer_shape()
-  info("SymbolicNode::infer_shape::mlp2")
+  @info("SymbolicNode::infer_shape::mlp2")
 
   model = mlp2()
   data_shape = (100, 100)
@@ -118,7 +118,7 @@ function test_infer_shape()
 end
 
 function test_infer_shape_error()
-  info("SymbolicNode::infer_shape::throws")
+  @info("SymbolicNode::infer_shape::throws")
 
   model = mlp2()
   weight_shape = (100, 1)
@@ -127,7 +127,7 @@ function test_infer_shape_error()
 end
 
 function test_saveload()
-  info("SymbolicNode::saveload::mlp2")
+  @info("SymbolicNode::saveload::mlp2")
 
   model = mlp2()
   fname = tempname()
@@ -139,7 +139,7 @@ function test_saveload()
 end
 
 function test_attrs()
-  info("SymbolicNode::Attributes")
+  @info("SymbolicNode::Attributes")
 
   data = mx.Variable(:data)
 
@@ -163,13 +163,13 @@ function test_attrs()
 end
 
 function test_functions()
-  info("SymbolicNode::Functions")
+  @info("SymbolicNode::Functions")
   data = mx.Variable(:data)
   typeof(mx.sum(data)) == mx.SymbolicNode
 end
 
 function test_reshape()
-  info("SymbolicNode::reshape(sym, dim...)")
+  @info("SymbolicNode::reshape(sym, dim...)")
 
   A = mx.NDArray(collect(1:24))
   x = mx.Variable(:x)
@@ -181,7 +181,7 @@ function test_reshape()
   @test size(out) == (2, 3, 4)
   @test copy(out) == reshape(1:24, 2, 3, 4)
 
-  info("SymbolicNode::reshape(sym, dim)")
+  @info("SymbolicNode::reshape(sym, dim)")
 
   A = mx.NDArray(collect(1:24))
   x = mx.Variable(:x)
@@ -193,7 +193,7 @@ function test_reshape()
   @test size(out) == (2, 3, 4)
   @test copy(out) == reshape(1:24, 2, 3, 4)
 
-  info("SymbolicNode::reshape::reverse")
+  @info("SymbolicNode::reshape::reverse")
 
   A = mx.zeros(10, 5, 4)
   x = mx.Variable(:x)
@@ -204,7 +204,7 @@ function test_reshape()
 
   @test size(out) == (50, 4)
 
-  info("SymbolicNode::reshape::0")
+  @info("SymbolicNode::reshape::0")
 
   A = mx.zeros(2, 3, 4)
   x = mx.Variable(:x)
@@ -215,7 +215,7 @@ function test_reshape()
 
   @test size(out) == (4, 3, 2)
 
-  info("SymbolicNode::reshape::-1")
+  @info("SymbolicNode::reshape::-1")
 
   A = mx.zeros(2, 3, 4)
   x = mx.Variable(:x)
@@ -226,7 +226,7 @@ function test_reshape()
 
   @test size(out) == (6, 1, 4)
 
-  info("SymbolicNode::reshape::-2")
+  @info("SymbolicNode::reshape::-2")
 
   A = mx.zeros(2, 3, 4, 2)
   x = mx.Variable(:x)
@@ -237,7 +237,7 @@ function test_reshape()
 
   @test size(out) == (3, 2, 4, 2)
 
-  info("SymbolicNode::reshape::-3")
+  @info("SymbolicNode::reshape::-3")
 
   A = mx.zeros(2, 3, 4, 5)
   x = mx.Variable(:x)
@@ -248,7 +248,7 @@ function test_reshape()
 
   @test size(out) == (6, 20)
 
-  info("SymbolicNode::reshape::-4")
+  @info("SymbolicNode::reshape::-4")
 
   A = mx.zeros(2, 3, 4)
   x = mx.Variable(:x)
@@ -261,7 +261,7 @@ function test_reshape()
 end
 
 function test_dot()
-  info("SymbolicNode::dot")
+  @info("SymbolicNode::dot")
   x = mx.Variable(:x)
   y = mx.Variable(:y)
   z = mx.dot(x, y)
@@ -275,14 +275,14 @@ function test_dot()
 end
 
 function test_print()
-  info("SymbolicNode::print")
+  @info("SymbolicNode::print")
   io = IOBuffer()
   print(io, mx.Variable(:x))
   @test !isempty(String(take!(io)))
 end
 
 function test_misc()
-  info("SymbolicNode::Miscellaneous")
+  @info("SymbolicNode::Miscellaneous")
   # Test for #189
   a = mx.Variable("a")
   b = mx.Variable("b")
@@ -290,7 +290,7 @@ function test_misc()
 end
 
 function test_add()
-  info("SymbolicNode::elementwise add")
+  @info("SymbolicNode::elementwise add")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x .+ 42; :x => A)[]
       @test size(y) == size(A)
@@ -329,7 +329,7 @@ function test_add()
 end  # function test_add
 
 function test_minus()
-  info("SymbolicNode::elementwise minus")
+  @info("SymbolicNode::elementwise minus")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x .- 42; :x => A)[]
       @test size(y) == size(A)
@@ -373,7 +373,7 @@ function test_minus()
 end  # function test_minus
 
 function test_mul()
-  info("SymbolicNode::elementwise mul")
+  @info("SymbolicNode::elementwise mul")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x .* 42; :x => A)[]
       @test size(y) == size(A)
@@ -412,7 +412,7 @@ function test_mul()
 end  # function test_mul
 
 function test_div()
-  info("SymbolicNode::elementwise div")
+  @info("SymbolicNode::elementwise div")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = exec(x ./ 42; :x => A)[]
       @test size(y) == size(A)
@@ -451,16 +451,16 @@ function test_div()
 end  # function test_div
 
 function test_power()
-  info("SymbolicNode::elementwise power")
+  @info("SymbolicNode::elementwise power")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
-    let y = exec(x.^42; :x => A)[]
+    let y = exec(x .^ 42; :x => A)[]
       @test size(y) == size(A)
-      @test copy(y) ≈ A.^42
+      @test copy(y) ≈ A .^ 42
     end
 
-    let y = exec(42.^x; :x => A)[]
+    let y = exec(42 .^ x; :x => A)[]
       @test size(y) == size(A)
-      @test copy(y) ≈ 42.^A
+      @test copy(y) ≈ 42 .^ A
     end
   end
 
@@ -483,7 +483,7 @@ function test_power()
     end
   end
 
-  info("SymbolicNode::power::e.^x::x.^e")
+  @info("SymbolicNode::power::e.^x::x.^e")
   let x = mx.Variable(:x), A = [0 0 0; 0 0 0]
     y = exec(e.^x; :x => A)[]
     @test copy(y) ≈ ones(A)
@@ -501,7 +501,7 @@ function test_power()
     end
   end
 
-  info("SymbolicNode::power::π.^x::x.^π")
+  @info("SymbolicNode::power::π.^x::x.^π")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
     let y = π.^x
       z = exec(y; :x => A)[]
@@ -516,13 +516,13 @@ function test_power()
 end  # function test_power
 
 function test_get_name()
-  info("SymbolicNode::get_name::with get_internals")
+  @info("SymbolicNode::get_name::with get_internals")
   name = mx.get_name(mx.get_internals(mlp2()))  # no error
   @test contains(name, "Ptr")
 end  # function test_get_name
 
 function test_var()
-  info("SymbolicNode::var")
+  @info("SymbolicNode::var")
   x = @mx.var x
   @test x isa mx.SymbolicNode
 
