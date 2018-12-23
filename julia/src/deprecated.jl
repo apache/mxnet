@@ -160,10 +160,11 @@ function broadcast_hypot(x::NDArray, y::NDArray)
 end
 
 # Introduced by https://github.com/apache/incubator-mxnet/pull/12845
-import Base: sum, maximum, minimum
+import Base: sum, maximum, minimum, prod
 @deprecate sum(x::NDArray, dims) sum(x, dims = dims)
 @deprecate maximum(x::NDArray, dims) maximum(x, dims = dims)
 @deprecate minimum(x::NDArray, dims) minimum(x, dims = dims)
+@deprecate prod(x::NDArray, dims) prod(x, dims = dims)
 
 import Statistics: mean
 @deprecate mean(x::NDArray, dims) mean(x, dims = dims)

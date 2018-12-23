@@ -19,6 +19,7 @@ module TestNDArray
 
 using MXNet
 using Statistics
+using LinearAlgebra
 using Test
 
 using ..Main: rand_dims
@@ -947,7 +948,7 @@ function test_nd_as_jl()
     end
 
     z[:, 1] = y[:, 1]
-    y[:] = 0
+    y .= 0
   end
 
   @test sum(copy(y)) == 0
@@ -1135,12 +1136,12 @@ function test_prod()
   @info("NDArray::prod")
 
   let A = reshape(1.0:8, 2, 2, 2), X = mx.NDArray(A)
-    @test copy(prod(X))[]       == prod(A)
-    @test copy(prod(X, 1))      == prod(A, 1)
-    @test copy(prod(X, 2))      == prod(A, 2)
-    @test copy(prod(X, 3))      == prod(A, 3)
-    @test copy(prod(X, [1, 2])) == prod(A, [1, 2])
-    @test copy(prod(X, (1, 2))) == prod(A, (1, 2))
+    @test copy(prod(X))[]              == prod(A)
+    @test copy(prod(X, dims = 1))      == prod(A, dims = 1)
+    @test copy(prod(X, dims = 2))      == prod(A, dims = 2)
+    @test copy(prod(X, dims = 3))      == prod(A, dims = 3)
+    @test copy(prod(X, dims = [1, 2])) == prod(A, dims = [1, 2])
+    @test copy(prod(X, dims = (1, 2))) == prod(A, dims = (1, 2))
   end
 end
 

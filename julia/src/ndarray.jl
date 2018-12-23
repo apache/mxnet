@@ -1269,8 +1269,9 @@ Base.minimum(x::NDArray; dims = :) = _minimum(x, dims)
 @_remap Base.transpose(x::NDArray{T,2}) where T transpose(x)
 @_remap Base.permutedims(x::NDArray, axes) transpose(x; axes = length(axes) .- tuple(axes...))
 
-@_remap Base.prod(x::NDArray)       prod(x)
-@_remap Base.prod(x::NDArray, dims) prod(x; axis = 0 .- dims, keepdims = true)
+Base.prod(x::NDArray; dims = :) = _prod(x, dims)
+@_remap _prod(x::NDArray, ::Colon) prod(x)
+@_remap _prod(x::NDArray, dims)    prod(x; axis = 0 .- dims, keepdims = true)
 
 _nddoc[:clip] = _nddoc[:clip!] =
 """
