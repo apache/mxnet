@@ -20,7 +20,6 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
-import copy
 from .. import optimizer as opt
 from ..model import _create_kvstore, _create_sparse_kvstore
 from .parameter import ParameterDict, Parameter
@@ -240,7 +239,7 @@ class Trainer(object):
             self._kvstore = kvstore
             self._update_on_kvstore = update_on_kvstore
             if self._optimizer.lr_scheduler is not None:
-                assert self._update_on_kvstore, "update_on_kvstore=True does not support " \
+                assert self._update_on_kvstore, "update_on_kvstore=False does not support " \
                                                 "optimizer with LRScheduler. Please " \
                                                 "consider setting learning rate manually."
         else:
@@ -469,14 +468,14 @@ class Trainer(object):
             self._init_params()
 
         if self._update_on_kvstore:
+            self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer
-            param_dict = {i: param for i, param in enumerate(self._params)}
         else:
             with open(fname, 'rb') as f:
                 states = f.read()
-            param_dict = {i: param for i, param in enumerate(self._params)}
             for updater in self._updaters:
                 updater.set_states(states)
                 updater.optimizer = self._updaters[0].optimizer
             self._optimizer = self._updaters[0].optimizer
+        param_dict = {i: param for i, param in enumerate(self._params)}
         self._optimizer.param_dict = param_dict
