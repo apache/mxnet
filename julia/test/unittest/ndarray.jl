@@ -1312,12 +1312,12 @@ function test_act_funcs()
   @info("NDArray::softmax::2D")
   let
     A = Float32[1 2; 3 4]
-    B = exp.(A) ./ sum(exp.(A), 1)
+    B = exp.(A) ./ sum(exp.(A), dims = 1)
     x = NDArray(A)
     y = softmax.(x, 1)
     @test copy(y) ≈ B
 
-    C = exp.(A) ./ sum(exp.(A), 2)
+    C = exp.(A) ./ sum(exp.(A), dims = 2)
     z = softmax.(x, 2)
     @test copy(z) ≈ C
   end
@@ -1334,12 +1334,12 @@ function test_act_funcs()
   @info("NDArray::log_softmax::2D")
   let
     A = Float32[1 2; 3 4]
-    B = log.(exp.(A) ./ sum(exp.(A), 1))
+    B = log.(exp.(A) ./ sum(exp.(A), dims = 1))
     x = NDArray(A)
     y = log_softmax.(x, 1)
     @test copy(y) ≈ B
 
-    C = log.(exp.(A) ./ sum(exp.(A), 2))
+    C = log.(exp.(A) ./ sum(exp.(A), dims = 2))
     z = log_softmax.(x, 2)
     @test copy(z) ≈ C
   end
