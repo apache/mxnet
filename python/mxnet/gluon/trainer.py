@@ -28,6 +28,13 @@ class Trainer(object):
     """Applies an `Optimizer` on a set of Parameters. Trainer should
     be used together with `autograd`.
 
+    .. note::
+
+        `update_on_kvstore=False` is not supported in the following cases:
+        - dist kvstore with sparse weights or sparse gradients
+        - dist async kvstore
+        - optimizer.lr_scheduler is not None
+
     Parameters
     ----------
     params : ParameterDict
@@ -52,13 +59,6 @@ class Trainer(object):
     update_on_kvstore : bool, default None
         Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
         suitable option depending on the type of kvstore.
-
-    Note
-    ----
-    `update_on_kvstore=False` is not supported in the following cases:
-    - dist kvstore with sparse weights or sparse gradients
-    - dist async kvstore
-    - optimizer.lr_scheduler is not None
 
     Properties
     ----------
