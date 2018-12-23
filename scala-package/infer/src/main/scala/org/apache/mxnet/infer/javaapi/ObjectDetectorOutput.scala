@@ -17,18 +17,55 @@
 
 package org.apache.mxnet.infer.javaapi
 
+/**
+  * The ObjectDetectorOutput class is a simple POJO helper class that is used to simplify
+  * the interactions with ObjectDetector predict results. The class stores the bounding box
+  * coordinates, name of preicted class, and the probability.
+  */
+
+
 class ObjectDetectorOutput (className: String, args: Array[Float]){
 
+  /**
+    * Gets the predicted class's name.
+    *
+    * @return       String representing the name of the predicted class
+    */
   def getClassName: String = className
 
+  /**
+    * Gets the probability of the predicted class.
+    *
+    * @return       Float representing the probability of predicted class
+    */
   def getProbability: Float = args(0)
 
+  /**
+    * Gets the minimum X coordinate for the bounding box containing the predicted object.
+    *
+    * @return       Float of the min X coordinate for the object bounding box
+    */
   def getXMin: Float = args(1)
 
+  /**
+    * Gets the maximum X coordinate for the bounding box containing the predicted object.
+    *
+    * @return       Float of the max X coordinate for the object bounding box
+    */
   def getXMax: Float = args(2)
 
+  /**
+    * Gets the minimum Y coordinate for the bounding box containing the predicted object.
+    *
+    * @return       Float of the min Y coordinate for the object bounding box
+    */
   def getYMin: Float = args(3)
 
+  /**
+    * Gets the maximum Y coordinate for the bounding box containing the predicted object.
+    *
+    * @return       Float of the max Y coordinate for the object bounding box
+    */
   def getYMax: Float = args(4)
 
 }
