@@ -243,7 +243,16 @@ class SyncBatchNorm(BatchNorm):
 
 class PixelShuffle1D(HybridBlock):
 
-    """Pixel-shuffle layer for upsampling in 1 dimension.
+    r"""Pixel-shuffle layer for upsampling in 1 dimension.
+
+    Pixel-shuffling is the operation of taking groups of values along
+    the *channel* dimension and regrouping them into blocks of pixels
+    along the ``W`` dimension, thereby effectively multiplying that dimension
+    by a constant factor in size.
+
+    For example, a feature map of shape :math:`(fC, W)` is reshaped
+    into :math:`(C, fW)` by forming little value groups of size :math:`f`
+    and arranging them in a grid of size :math:`W`.
 
     Parameters
     ----------
@@ -282,7 +291,24 @@ class PixelShuffle1D(HybridBlock):
 
 class PixelShuffle2D(HybridBlock):
 
-    """Pixel-shuffle layer for upsampling in 2 dimensions.
+    r"""Pixel-shuffle layer for upsampling in 2 dimensions.
+
+    Pixel-shuffling is the operation of taking groups of values along
+    the *channel* dimension and regrouping them into blocks of pixels
+    along the ``H`` and ``W`` dimensions, thereby effectively multiplying
+    those dimensions by a constant factor in size.
+
+    For example, a feature map of shape :math:`(f^2 C, H, W)` is reshaped
+    into :math:`(C, fH, fW)` by forming little :math:`f \times f` blocks
+    of pixels and arranging them in an :math:`H \times W` grid.
+
+    Pixel-shuffling together with regular convolution is an alternative,
+    learnable way of upsampling an image by arbitrary factors. It is reported
+    to help overcome checkerboard artifacts that are common in upsampling with
+    transposed convolutions (also called deconvolutions). See the paper
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_
+    for further details.
 
     Parameters
     ----------
@@ -314,7 +340,7 @@ class PixelShuffle2D(HybridBlock):
     def hybrid_forward(self, F, x):
         """Perform pixel-shuffling on the input."""
         f1, f2 = self._factors
-                                                      # (N, C*f1*f2, H, W)
+                                                      # (N, f1*f2*C, H, W)
         x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
         x = F.reshape(x, (0, 0, -4, f1, f2, 0, 0))    # (N, C, f1, f2, H, W)
         x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
@@ -327,7 +353,24 @@ class PixelShuffle2D(HybridBlock):
 
 class PixelShuffle3D(HybridBlock):
 
-    """Pixel-shuffle layer for upsampling in 3 dimensions.
+    r"""Pixel-shuffle layer for upsampling in 3 dimensions.
+
+    Pixel-shuffling (or voxel-shuffling in 3D) is the operation of taking
+    groups of values along the *channel* dimension and regrouping them into
+    blocks of voxels along the ``D``, ``H`` and ``W`` dimensions, thereby
+    effectively multiplying those dimensions by a constant factor in size.
+
+    For example, a feature map of shape :math:`(f^3 C, D, H, W)` is reshaped
+    into :math:`(C, fD, fH, fW)` by forming little :math:`f \times f \times f`
+    blocks of voxels and arranging them in a :math:`D \times H \times W` grid.
+
+    Pixel-shuffling together with regular convolution is an alternative,
+    learnable way of upsampling an image by arbitrary factors. It is reported
+    to help overcome checkerboard artifacts that are common in upsampling with
+    transposed convolutions (also called deconvolutions). See the paper
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_
+    for further details.
 
     Parameters
     ----------
