@@ -15,6 +15,7 @@
 
     <properties>
         <skipTests>true</skipTests>
+        <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
     </properties>
 
     <profiles>
@@ -77,6 +78,9 @@
                         -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
                         -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
                     </argLine>
+                    <environmentVariables>
+                        <LD_LIBRARY_PATH>${MXNET_DIR}/lib</LD_LIBRARY_PATH>
+                    </environmentVariables>
                 </configuration>
             </plugin>
             <plugin>

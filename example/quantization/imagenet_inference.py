@@ -181,6 +181,9 @@ if __name__ == '__main__':
     logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
     std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
+    combine_mean_std = {}
+    combine_mean_std.update(mean_args)
+    combine_mean_std.update(std_args)
 
     label_name = args.label_name
     logger.info('label_name = %s' % label_name)
@@ -206,8 +209,7 @@ if __name__ == '__main__':
                                     shuffle=True,
                                     shuffle_chunk_seed=3982304,
                                     seed=48564309,
-                                    **mean_args,
-                                    **std_args)
+                                    **combine_mean_std)
 
         # loading model
         sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)

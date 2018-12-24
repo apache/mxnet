@@ -39,32 +39,59 @@ clean_repo() {
 build_ccache_wrappers() {
     set -ex
 
-    rm -f cc
-    rm -f cxx
-
-    touch cc
-    touch cxx
-
     if [ -z ${CC+x} ]; then
         echo "No \$CC set, defaulting to gcc";
         export CC=gcc
     fi
-
-    if [ -z ${CXX+x} ]; then
+     if [ -z ${CXX+x} ]; then
        echo "No \$CXX set, defaulting to g++";
        export CXX=g++
     fi
 
-    # this function is nessesary for cuda enabled make based builds, since nvcc needs just an executable for -ccbin
+    # Recommended by CCache: https://ccache.samba.org/manual.html#_run_modes
+    # Add to the beginning of path to ensure this redirection is picked up instead
+    # of the original ones. Especially CUDA/NVCC appends itself to the beginning of the
+    # path and thus this redirect is ignored. This change fixes this problem
+    # This hacky approach with symbolic links is required because underlying build
+    # systems of our submodules ignore our CMake settings. If they use Makefile,
+    # we can't influence them at all in general and NVCC also prefers to hardcode their
+    # compiler instead of respecting the settings. Thus, we take this brutal approach
+    # and just redirect everything of this installer has been called.
+    # In future, we could do these links during image build time of the container.
+    # But in the beginning, we'll make this opt-in. In future, loads of processes like
+    # the scala make step or numpy compilation and other pip package generations
+    # could be heavily sped up by using ccache as well.
+    mkdir /tmp/ccache-redirects
+    export PATH=/tmp/ccache-redirects:$PATH
+    ln -s ccache /tmp/ccache-redirects/gcc
+    ln -s ccache /tmp/ccache-redirects/gcc-8
+    ln -s ccache /tmp/ccache-redirects/g++
+    ln -s ccache /tmp/ccache-redirects/g++-8
+    ln -s ccache /tmp/ccache-redirects/nvcc
+    ln -s ccache /tmp/ccache-redirects/clang++-3.9
+    ln -s ccache /tmp/ccache-redirects/clang-3.9
+    ln -s ccache /tmp/ccache-redirects/clang++-5.0
+    ln -s ccache /tmp/ccache-redirects/clang-5.0
+    ln -s ccache /tmp/ccache-redirects/clang++-6.0
+    ln -s ccache /tmp/ccache-redirects/clang-6.0
+    ln -s ccache /usr/local/bin/gcc
+    ln -s ccache /usr/local/bin/gcc-8
+    ln -s ccache /usr/local/bin/g++
+    ln -s ccache /usr/local/bin/g++-8
+    ln -s ccache /usr/local/bin/nvcc
+    ln -s ccache /usr/local/bin/clang++-3.9
+    ln -s ccache /usr/local/bin/clang-3.9
+    ln -s ccache /usr/local/bin/clang++-5.0
+    ln -s ccache /usr/local/bin/clang-5.0
+    ln -s ccache /usr/local/bin/clang++-6.0
+    ln -s ccache /usr/local/bin/clang-6.0
 
-    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CC} \"\$@\"\n" >> cc
-    echo -e "#!/bin/sh\n/usr/local/bin/ccache ${CXX} \"\$@\"\n" >> cxx
+    export NVCC=ccache
 
-    chmod +x cc
-    chmod +x cxx
-
-    export CC=`pwd`/cc
-    export CXX=`pwd`/cxx
+    # Uncomment if you would like to debug CCache hit rates.
+    # You can monitor using tail -f ccache-log
+    # export CCACHE_LOGFILE=/work/mxnet/ccache-log
+    # export CCACHE_DEBUG=1
 }
 
 build_wheel() {
@@ -106,6 +133,8 @@ build_jetson() {
     set -ex
     pushd .
 
+    #build_ccache_wrappers
+
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
@@ -129,6 +158,7 @@ build_armv6() {
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
+    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -159,6 +189,7 @@ build_armv7() {
     # file tries to add -llapack. Lapack functionality though, requires -lgfortran
     # to be linked additionally.
 
+    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CROSSCOMPILING=ON \
@@ -181,6 +212,7 @@ build_armv7() {
 }
 
 build_armv8() {
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -205,6 +237,7 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DANDROID=ON\
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -225,6 +258,7 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -244,7 +278,7 @@ build_centos7_cpu() {
     cd /work/mxnet
     export CC="ccache gcc"
     export CXX="ccache g++"
-
+    build_ccache_wrappers
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -257,6 +291,7 @@ build_centos7_cpu() {
 
 build_amzn_linux_cpu() {
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -279,7 +314,7 @@ build_centos7_mkldnn() {
     cd /work/mxnet
     export CC="ccache gcc"
     export CXX="ccache g++"
-
+    build_ccache_wrappers
     make \
         DEV=1 \
         ENABLE_TESTCOVERAGE=1 \
@@ -294,7 +329,7 @@ build_centos7_gpu() {
     set -ex
     cd /work/mxnet
     # unfortunately this build has problems in 3rdparty dependencies with ccache and make
-    # build_ccache_wrappers
+    build_ccache_wrappers
     make \
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
@@ -315,8 +350,9 @@ build_ubuntu_cpu() {
 
 build_ubuntu_cpu_openblas() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
+    export CC="gcc"
+    export CXX="g++"
+    build_ccache_wrappers
     make \
         DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
@@ -326,10 +362,25 @@ build_ubuntu_cpu_openblas() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkl() {
+    set -ex
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
+        USE_INTEL_PATH=/opt/intel     \
+        USE_DIST_KVSTORE=1            \
+        -j$(nproc)
+}
+
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     pushd .
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -351,11 +402,12 @@ build_ubuntu_cpu_cmake_asan() {
 
     pushd .
     cd /work/build
+    export CXX=g++-8
+    export CC=gcc-8
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER=/usr/bin/g++-8 \
-        -DCMAKE_C_COMPILER=/usr/bin/gcc-8 \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
@@ -377,10 +429,10 @@ build_ubuntu_cpu_cmake_asan() {
 
 build_ubuntu_cpu_clang39() {
     set -ex
-     export CXX=clang++-3.9
+    export CXX=clang++-3.9
     export CC=clang-3.9
-     build_ccache_wrappers
-     make \
+    build_ccache_wrappers
+    make \
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
@@ -415,6 +467,7 @@ build_ubuntu_cpu_clang_tidy() {
 
     pushd .
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
@@ -480,6 +533,20 @@ build_ubuntu_cpu_mkldnn() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_mkldnn_mkl() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=mkl                  \
+        USE_MKLDNN=1                  \
+        -j$(nproc)
+}
+
 build_ubuntu_gpu() {
     build_ubuntu_gpu_cuda91_cudnn7
 }
@@ -498,6 +565,8 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
@@ -512,7 +581,10 @@ build_ubuntu_gpu_tensorrt() {
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake ..
+    cmake \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+        ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
@@ -595,6 +667,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
+    build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
@@ -604,6 +677,7 @@ build_ubuntu_amalgamation() {
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
+    build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
         USE_BLAS=openblas     \
@@ -614,9 +688,11 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake_mkldnn() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
@@ -637,9 +713,11 @@ build_ubuntu_gpu_cmake_mkldnn() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
+    build_ccache_wrappers
     cmake \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DENABLE_TESTCOVERAGE=ON                \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
@@ -1110,7 +1188,7 @@ nightly_straight_dope_python3_multi_gpu_tests() {
 nightly_tutorial_test_ubuntu_python3_gpu() {
     set -ex
     cd /work/mxnet/docs
-    export BUILD_VER=tutorial 
+    export BUILD_VER=tutorial
     export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -1140,7 +1218,7 @@ deploy_docs() {
     set -ex
     pushd .
 
-    make docs
+    make docs SPHINXOPTS=-W
 
     popd
 }
@@ -1196,5 +1274,3 @@ EOF
     declare -F | cut -d' ' -f3
     echo
 fi
-
-

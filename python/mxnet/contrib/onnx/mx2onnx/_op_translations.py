@@ -232,6 +232,17 @@ def convert_fully_connected(node, **kwargs):
 
     fcnode = []
 
+    op_name = "flatten_" + str(kwargs["idx"])
+    flatten_node = onnx.helper.make_node(
+        'Flatten',
+        inputs=[input_nodes[0]],
+        outputs=[op_name],
+        name=op_name
+    )
+
+    input_nodes[0] = op_name
+    fcnode.append(flatten_node)
+
     if no_bias:
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
         bias_name = "bias" + str(kwargs["idx"])

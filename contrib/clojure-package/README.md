@@ -105,9 +105,12 @@ brew install opencv
 - Create a new project with `lein new my-mxnet`
 - Edit your `project.clj` and add one of the following entries to `:dependencies`, based on your system and the compute device you want to use:
 
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu "1.3.1"]`
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu "1.3.1"]`
-  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu "1.3.1"]`
+
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-cpu <latest-version>]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-linux-gpu <latest-version>]`
+  - `[org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu <latest-version>]`
+
+You can find the latest version out on [maven central- clojure-mxnet latest](https://search.maven.org/search?q=clojure-mxnet)
 
 After making this change and running `lein deps`, you should be able to run example code like this [NDArray Tutorial](https://github.com/apache/incubator-mxnet/blob/master/contrib/clojure-package/examples/tutorial/src/tutorial/ndarray.clj).
 
@@ -116,38 +119,58 @@ After making this change and running `lein deps`, you should be able to run exam
 With this option, you will install a Git revision of the Clojure package source and a [Scala package jar from Maven](https://search.maven.org/search?q=g:org.apache.mxnet) with native dependencies baked in.
 
 - Install additional dependencies as described in [the corresponding section for Option 1](#installing-additional-dependencies),
-- Recursively clone the MXNet repository and checkout the desired revision. Here we assume the `1.3.1` tag and a clone into the `~/mxnet` directory:
+
+- Recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and a clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
   cd ~/mxnet
   git tag --list  # Find the tag that matches the Scala package version
-  git checkout tags/1.3.1 -b my_mxnet
+
+  git checkout tags/<version> -b my_mxnet
   git submodule update --init --recursive
   cd contrib/clojure
   ```
 
 - Edit `project.clj` to include the desired Scala jar from Maven:
 
-      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.3.1”]
+
+      [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu <latest-version>]
 
 - Run `lein test`. All the tests should run without error.
 - At this point you can run `lein install` to build and install the Clojure jar locally.
 
 To run examples, you can now use `lein run` in any of the example directories, e.g., `examples/imclassification`. You can also specify the compute device, e.g., `lein run :cpu 2` (for 2 CPUs) or `lein run :gpu` (for 1 GPU).
 
-**Note:** Instead of a release tag, you can also use a development version of the Clojure package, e.g., Git `master`, together with the prebuilt Scala jar. In that case, however, breakage can happen at any point, for instance when the Scala development version adds, changes or removes an interface and the Clojure development version moves along. If you really need the most recent version, you should consider [installation option 3](#option-3-everything-from-source).
+#### Experimental: Using Scala Snapshot Jars
+**Note:** Instead of a release tag, you can also use a development version of the Clojure package, e.g., Git `master`, together with the prebuilt Scala jar. There is a repo of nightly built snapshots of Scala jars. You can use them in your `project.clj` by adding a repository:
+
+```
+["snapshots" {:url "https://repository.apache.org/content/repositories/snapshots"
+                              :snapshots true
+                              :sign-releases false
+                              :checksum :fail
+                              :update :always
+                              :releases {:checksum :fail :update :always}}]
+```
+
+Then you should be able to run with your dependency:
+
+    [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "latest-version-SNAPSHOT"]
+
+
+In that case, however, breakage can happen at any point, for instance when the Scala development version adds, changes or removes an interface and the Clojure development version moves along. If you really need the most recent version, you should consider [installation option 3](#option-3-everything-from-source).
 
 ### Option 3: Everything from Source
 
 With this option, you will compile the core MXNet C++ package and jars for both Scala and Clojure language bindings from source. If you intend to make changes to the code in any of the parts, or if you simply want the latest and greatest features, this choice is for you.
 
-The first step is to recursively clone the MXNet repository and checkout the desired revision. Here we assume a clone into the `~/mxnet` directory:
+The first step is to recursively clone the MXNet repository and checkout the desired version, (example 1.3.1). You should use the latest [version](https://search.maven.org/search?q=clojure-mxnet)), and clone into the `~/mxnet` directory:
 
   ```bash
   git clone --recursive https://github.com/apache/incubator-mxnet.git ~/mxnet
   cd ~/mxnet
-  git checkout tags/1.3.1 -b my_mxnet  # this is optional
+  git checkout tags/version -b my_mxnet  # this is optional
   git submodule update --init --recursive
   ```
 
@@ -176,7 +199,7 @@ The outcome of this step will be a shared library `lib/libmxnet.so` that is used
 
 #### Building the Clojure jar
  
-- Enter the `contrib/clojure` directory and edit the `project.clj` file. Add the Scala jar that was just created and installed, e.g., `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.5.0-SNAPSHOT"]`, to the `:dependencies`.
+- Enter the `contrib/clojure` directory and edit the `project.clj` file. Add the Scala jar that was just created and installed, e.g., `[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "latest-version-SNAPSHOT"]`, to the `:dependencies`.
 - Run `lein test`. All the tests should run without an error.
 - Run `lein install` to build and install the Clojure jar locally.
 

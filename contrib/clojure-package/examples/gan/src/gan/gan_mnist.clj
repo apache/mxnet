@@ -157,7 +157,9 @@
 
       (save-img-diff i n calc-diff))))
 
-(defn train [devs]
+(defn train 
+  ([devs] (train devs num-epoch))
+  ([devs num-epoch]
   (let [mod-d  (-> (m/module (discriminator) {:contexts devs :data-names ["data"] :label-names ["label"]})
                    (m/bind {:data-shapes (mx-io/provide-data-desc mnist-iter)
                             :label-shapes (mx-io/provide-label-desc mnist-iter)
@@ -203,7 +205,7 @@
                                   (save-img-gout i n (ndarray/copy (ffirst out-g)))
                                   (save-img-data i n batch)
                                   (calc-diff i n (ffirst diff-d)))
-                                (inc n)))))))
+                                (inc n))))))))
 
 (defn -main [& args]
   (let [[dev dev-num] args

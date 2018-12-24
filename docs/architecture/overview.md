@@ -567,8 +567,8 @@ let's check input data shape consistency and provide output shape.
 ```cpp
     typedef TShape (*UnaryShapeFunction)(const TShape& src,
                                          const EnvArguments& env);
-    typedef TShape (*BinaryShapeFunction)(const TShape&                                         const TShape& rhs,lhs,
-
+    typedef TShape (*BinaryShapeFunction)(const TShape& lhs,
+                                          const TShape& rhs,
                                           const EnvArguments& env);
 ```
 You can use `mshadow::TShape` to check input data shape and designate output data shape.
@@ -597,6 +597,7 @@ Written explicitly, it is:
     inline TShape SmoothL1Shape_(const TShape& src,
                                  const EnvArguments& env) {
       return TShape(src);
+    }
 ```
 
 ### Define Functions

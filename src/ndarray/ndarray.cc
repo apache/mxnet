@@ -330,11 +330,10 @@ struct NDArrayDLManager {
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
+  CHECK(!is_none()) << "NDArray is not initialized";
   NDArrayDLManager* dlmanager(new NDArrayDLManager);
   dlmanager->handle = *this;
-  if (!is_none()) {
-    dlmanager->tensor.dl_tensor = data().dltensor();
-  }
+  dlmanager->tensor.dl_tensor = dlmanager->handle.data().dltensor();
   dlmanager->tensor.manager_ctx = dlmanager;
   dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
     delete static_cast<NDArrayDLManager*>(dlmanager->manager_ctx);

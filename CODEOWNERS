@@ -13,14 +13,14 @@
 
 # Language bindings
 /R-package/                @thirdwing
-/scala-package/            @yzhliu @nswamy
+/scala-package/            @yzhliu @nswamy @pllarroy
 /perl-package/             @sergeykolychev
-/python/                   @szha
+/python/                   @szha @pllarroy
 /contrib/clojure-package/  @gigasquid
 
 # C++ base
 /src/kvstore/     @rahul003 @anirudh2290
-/include/         @anirudh2290
+/include/         @anirudh2290 @pllarroy
 /src/c_api/       @anirudh2290
 /src/common/      @anirudh2290
 /src/engine/      @anirudh2290
@@ -33,13 +33,17 @@
 /src/profiler/    @anirudh2290
 /src/storage/     @anirudh2290
 /tests/cpp/       @anirudh2290
-/cpp-package/ @nswamy
+/cpp-package/     @nswamy @pllarroy
+/src/             @pllarroy
+/plugin/          @pllarroy
 
 # CMake
-CMakeLists.txt    @szha @rahul003
-/cmake/           @szha @rahul003
+CMakeLists.txt    @szha @rahul003 @pllarroy
+/cmake/           @szha @rahul003 @pllarroy
 
 # MXNet CI
+dev_menu.py         @pllarroy
+/ci/                @pllarroy
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
 .travis.yml         @marcoabreu
@@ -50,16 +54,16 @@ Makefile          @szha
 prepare_mkl.sh    @szha
 
 # Docs
-/docs/            @szha
+/docs/            @szha @pllarroy
 
 # Submodules
 .gitmodules       @szha
 
 # Examples
-/example/         @szha
+/example/         @szha @pllarroy
 
 # Tools
-/tools/           @szha
+/tools/           @szha @pllarroy
 
 # Github templates
 /.github/         @szha

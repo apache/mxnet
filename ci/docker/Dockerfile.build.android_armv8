@@ -74,6 +74,12 @@ ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
 COPY install/android_arm64_openblas.sh /work/
 RUN /work/android_arm64_openblas.sh
 ENV CPLUS_INCLUDE_PATH /work/deps/OpenBLAS
-WORKDIR /work/build
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
+
+WORKDIR /work/build

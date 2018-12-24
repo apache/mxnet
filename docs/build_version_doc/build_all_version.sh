@@ -43,6 +43,9 @@
 set -e
 set -x
 
+# Set OPTS to any Sphinx build options, like -W for "warnings as errors"
+OPTS=
+
 # $1 is the list of branches/tags to build
 if [ -z "$1" ]
   then
@@ -117,6 +120,8 @@ function checkout () {
   git checkout "$repo_folder" || git branch $repo_folder "upstream/$repo_folder" && git checkout "$repo_folder" || exit 1
   if [ $tag == 'master' ]; then
     git pull
+    # master gets warnings as errors for Sphinx builds
+    OPTS="-W"
   fi
   git submodule update --init --recursive
   cd ..
@@ -160,7 +165,7 @@ for key in ${!build_arr[@]}; do
 
     echo "Building $tag..."
     cd $tag/docs
-    make html USE_OPENMP=1 BUILD_VER=$tag || exit 1
+    make html USE_OPENMP=1 BUILD_VER=$tag SPHINXOPTS=$OPTS || exit 1
     # Navigate back to build_version_doc folder
     cd ../../../
     # Use the display tag name for the folder name
