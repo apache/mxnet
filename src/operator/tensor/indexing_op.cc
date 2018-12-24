@@ -678,11 +678,14 @@ Examples::
   // In this case we will get rows 0 and 1, then 1 and 2 (calculated by wrapping around).
   // Along axis 1
 
-  take(x, [[0, 3], [-1, -2]], axis=1, mode='wrap') = [[[ 1.,  2.],
-                                                       [ 3.,  4.]],
+  take(x, [[0, 3], [-1, -2]], axis=1, mode='wrap') = [[[ 1.  2.]
+                                                       [ 2.  1.]]
 
-                                                      [[ 3.,  4.],
-                                                       [ 5.,  6.]]]
+                                                      [[ 3.  4.]
+                                                       [ 4.  3.]]
+
+                                                      [[ 5.  6.]
+                                                       [ 6.  5.]]]
 
 The storage type of ``take`` output depends upon the input storage type:
 
