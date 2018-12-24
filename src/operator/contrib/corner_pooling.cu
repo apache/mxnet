@@ -51,7 +51,7 @@ __global__ void CornerPoolingForwardTBKernel(const int count,
     in_data += (b*channel + c)*height*width + w;
     out_data += (b*channel + c)*height*width + w;
 
-    for (int h{h_start}; h != h_end; h += h_step) {
+    for (int h = h_start; h != h_end; h += h_step) {
       const int index = h * width;
       max_val = max_val > in_data[index] ? max_val : in_data[index];
       out_data[index] = max_val;
@@ -78,7 +78,7 @@ __global__ void CornerPoolingBackwardTBKernel(const int count,
     in_grad += (b*channel + c)*height*width + w;
 
     int max_h_idx = h_start;
-    for (int h{h_start}; h != h_end; h += h_step) {
+    for (int h = h_start; h != h_end; h += h_step) {
       const int index = h * width;
       if (out_data[index] != out_data[max_h_idx]) {
         max_h_idx = index;
@@ -106,7 +106,7 @@ __global__ void CornerPoolingForwardLRKernel(const int count,
     in_data += ((b*channel + c)*height + h)*width;
     out_data += ((b*channel + c)*height + h)*width;
 
-    for (int w{w_start}; w != w_end; w += w_step) {
+    for (int w = w_start; w != w_end; w += w_step) {
       const int index = w;
       max_val = max_val > in_data[index] ? max_val : in_data[index];
       out_data[index] = max_val;
@@ -133,7 +133,7 @@ __global__ void CornerPoolingBackwardLRKernel(const int count,
     in_grad += ((b*channel + c)*height + h)*width;
 
     int max_w_idx = w_start;
-    for (int w{w_start}; w != w_end; w += w_step) {
+    for (int w = w_start; w != w_end; w += w_step) {
       const int index = w;
       if (out_data[index] != out_data[max_w_idx]) {
         max_w_idx = index;

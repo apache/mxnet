@@ -92,7 +92,6 @@ inline void corner_pool(mshadow::Stream<cpu> *s,
   CHECK_EQ(req_type, kWriteTo)
     << "Only support req=kWriteTo in corner pooling operations";
   using mshadow::red::limits::MinValue;
-// const TShape &oshape = ishape;
   int height = ishape[2], width = ishape[3];
   if (corner_pooling_type == 0 || corner_pooling_type == 1) {
     // top or bottom
@@ -107,11 +106,12 @@ inline void corner_pool(mshadow::Stream<cpu> *s,
       h_end = height;
     }
     const index_t data_offset = width * height;
-    for (index_t b{0}; b < ishape[0]; ++b)
-      for (index_t c{0}; c < ishape[1]; ++c) {
-        for (index_t w{0}; w < width; ++w) {
+    // TODO(BigDeviltjj): optimize with Kernel::Launch
+    for (index_t b = 0; b < ishape[0]; ++b)
+      for (index_t c = 0; c < ishape[1]; ++c) {
+        for (index_t w = 0; w < width; ++w) {
           DType max_val = MinValue<DType>();
-          for (int h{h_start}; h != h_end; h += h_step) {
+          for (int h = h_start; h != h_end; h += h_step) {
             const int index = h*width + w;
             max_val = max_val > in_data[index] ? max_val : in_data[index];
             out_data[index] = max_val;
@@ -133,11 +133,12 @@ inline void corner_pool(mshadow::Stream<cpu> *s,
       w_end = width;
     }
     const index_t data_offset = width * height;
-    for (index_t b{0}; b < ishape[0]; ++b)
-      for (index_t c{0}; c < ishape[1]; ++c) {
-        for (index_t h{0}; h < height; ++h) {
+    // TODO(BigDeviltjj): optimize with Kernel::Launch
+    for (index_t b = 0; b < ishape[0]; ++b)
+      for (index_t c = 0; c < ishape[1]; ++c) {
+        for (index_t h = 0; h < height; ++h) {
           DType max_val = MinValue<DType>();
-          for (int w{w_start}; w != w_end; w += w_step) {
+          for (int w = w_start; w != w_end; w += w_step) {
             const int index = h*width + w;
             max_val = max_val > in_data[index] ? max_val : in_data[index];
             out_data[index] = max_val;
@@ -179,11 +180,12 @@ inline void corner_pool_grad(mshadow::Stream<cpu> *s,
       h_start = 0;
       h_end = height;
     }
-    for (index_t b{0}; b < ishape[0]; ++b)
-      for (index_t c{0}; c < ishape[1]; ++c) {
-        for (index_t w{0}; w < width; ++w) {
+    // TODO(BigDeviltjj): optimize with Kernel::Launch
+    for (index_t b = 0; b < ishape[0]; ++b)
+      for (index_t c = 0; c < ishape[1]; ++c) {
+        for (index_t w = 0; w < width; ++w) {
           int max_h_idx = h_start;
-          for (int h{h_start}; h != h_end; h += h_step) {
+          for (int h = h_start; h != h_end; h += h_step) {
             const int index = h*width + w;
             if (out_data[index] != out_data[max_h_idx]) {
               max_h_idx = index;
@@ -208,11 +210,12 @@ inline void corner_pool_grad(mshadow::Stream<cpu> *s,
       w_end = width;
     }
     const index_t data_offset = width * height;
-    for (index_t b{0}; b < ishape[0]; ++b)
-      for (index_t c{0}; c < ishape[1]; ++c) {
-        for (index_t h{0}; h < height; ++h) {
+    // TODO(BigDeviltjj): optimize with Kernel::Launch
+    for (index_t b = 0; b < ishape[0]; ++b)
+      for (index_t c = 0; c < ishape[1]; ++c) {
+        for (index_t h = 0; h < height; ++h) {
           int max_w_idx = w_start;
-          for (int w{w_start}; w != w_end; w += w_step) {
+          for (int w = w_start; w != w_end; w += w_step) {
             const int index = h*width + w;
             if (out_data[index] != out_data[max_w_idx]) {
               max_w_idx = index;

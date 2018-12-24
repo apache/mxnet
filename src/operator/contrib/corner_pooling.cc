@@ -40,8 +40,11 @@ void CornerPoolingParamParser(nnvm::NodeAttrs *attrs) {
 static bool CornerPoolingType(const nnvm::NodeAttrs &attrs,
                               std::vector<int> *in_attrs,
                               std::vector<int> *out_attrs) {
-  out_attrs->at(0) = in_attrs->at(0);
-  return true;
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return out_attrs->at(0) != -1;
 }
 
 static bool CornerPoolingShape(const nnvm::NodeAttrs &attrs,
