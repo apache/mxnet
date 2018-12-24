@@ -88,11 +88,11 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
   dmlc::optional<int> axis;
   bool keepdims;
   DMLC_DECLARE_PARAMETER(ReduceAxisParam) {
-    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>())
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<int>(-1))
       .describe("The axis along which to perform the reduction. "
                 "Negative values means indexing from right to left. "
-                "``Requires axis to be set as int, because global reduction "
-                "is not supported yet.``");
+                "``The axis need to be set as an int. If the axis is "
+                "not set, the rightmost axis will be reduced.``");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axis is left "
                 "in the result as dimension with size one.");

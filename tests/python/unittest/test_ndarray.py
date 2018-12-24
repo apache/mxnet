@@ -477,7 +477,6 @@ def test_dot():
     C = mx.nd.dot(A, B, transpose_a=True, transpose_b=True)
     assert_almost_equal(c, C.asnumpy(), atol=atol)
 
-
 @with_seed()
 def test_reduce():
     sample_num = 200
@@ -523,6 +522,31 @@ def test_reduce():
     test_reduce_inner(lambda data, axis,
                              keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
                       mx.nd.argmin, False)
+
+@with_seed()
+def test_argmax_argmin():
+    # test optional parameters
+    # test name : input data, argmax result, argmin result
+    tests = {
+        'axis_0' : [[[1, 2, 3], [4, 5, 6]], [1, 1, 1], [0, 0, 0]],
+        'keep_dims' : [[[1, 2, 3], [4, 5, 6]], [[2], [2]], [[0], [0]]],
+        'axis_none' : [[1, 2, 3, 4], 3, 0]
+    }
+
+    arg_max = mx.nd.array(tests['axis_0'][0]).argmax(axis=0)
+    arg_min = mx.nd.array(tests['axis_0'][0]).argmin(axis=0)
+    assert_almost_equal(arg_max.asnumpy(), tests['axis_0'][1])
+    assert_almost_equal(arg_min.asnumpy(), tests['axis_0'][2])
+
+    arg_max = mx.nd.array(tests['keep_dims'][0]).argmax(axis=1, keepdims=True)
+    arg_min = mx.nd.array(tests['keep_dims'][0]).argmin(axis=1, keepdims=True)
+    assert_almost_equal(arg_max.asnumpy(), tests['keep_dims'][1])
+    assert_almost_equal(arg_min.asnumpy(), tests['keep_dims'][2])
+
+    arg_max = mx.nd.array(tests['axis_none'][0]).argmax()
+    arg_min = mx.nd.array(tests['axis_none'][0]).argmin()
+    assert_almost_equal(arg_max.asnumpy(), tests['axis_none'][1])
+    assert_almost_equal(arg_min.asnumpy(), tests['axis_none'][2])
 
 @with_seed()
 def test_broadcast():
