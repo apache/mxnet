@@ -37,6 +37,9 @@ In the rest of this document, we list routines provided by the `gluon.contrib` p
     Identity
     SparseEmbedding
     SyncBatchNorm
+    PixelShuffle1D
+    PixelShuffle2D
+    PixelShuffle3D
 ```
 
 ### Recurrent neural network
