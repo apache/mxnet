@@ -6772,7 +6772,7 @@ def test_op_output_names_monitor():
 
 @with_seed()
 def test_activation():
-    shape=(9, 10)
+    shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
     dtype_l = [np.float64, np.float32, np.float16]
     rtol_l = [1e-7, 1e-6, 1e-2]
     atol_l = [1e-7, 1e-6, 1e-2]
@@ -6803,17 +6803,19 @@ def test_activation():
     }
     # Loop over operators
     for name, op in unary_ops.items():
-        # Loop over dtype's
-        for ind in range(len(dtype_l)):
-            dtype = dtype_l[ind]
-            rtol = rtol_l[ind]
-            atol = atol_l[ind]
-            compare_forw_backw_unary_op(
-                name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
-                dtype)
-        # Finite difference testing
-        finite_diff_unary_op(
-            name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
+        # Loop over shapes
+        for shape in shapes:
+            # Loop over dtype's
+            for ind in range(len(dtype_l)):
+                dtype = dtype_l[ind]
+                rtol = rtol_l[ind]
+                atol = atol_l[ind]
+                compare_forw_backw_unary_op(
+                    name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
+                    dtype)
+            # Finite difference testing
+            finite_diff_unary_op(
+                name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
 
 @with_seed()
 def test_ravel():

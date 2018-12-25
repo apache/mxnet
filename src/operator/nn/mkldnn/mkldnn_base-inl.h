@@ -251,26 +251,26 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
                                                  int num_groups) {
+  auto ndim = arr.shape().ndim();
+  mkldnn::memory::dims tz = mkldnn::memory::dims{0};
   if (num_groups == 1) {
     return GetMemDesc(arr);
   } else {
-    CHECK((arr.shape().ndim() == 3) || (arr.shape().ndim() == 4))
+    CHECK((ndim == 3) || (ndim == 4))
         << "MKL-DNN weight currectly supports 3d and 4d layout";
     const int N = 0, H = 2, W = 3, C = 1;
-    if (arr.shape().ndim() == 3) {
-      mkldnn::memory::dims tz = mkldnn::memory::dims{
+    if (ndim == 3) {
+      tz = mkldnn::memory::dims{
           num_groups, static_cast<int>(arr.shape()[N] / num_groups),
           static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H])};
-      return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-                                  mkldnn::memory::format::any};
     } else {
-      mkldnn::memory::dims tz = mkldnn::memory::dims{
+      tz = mkldnn::memory::dims{
           num_groups, static_cast<int>(arr.shape()[N] / num_groups),
           static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
           static_cast<int>(arr.shape()[W])};
-      return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-                                  mkldnn::memory::format::any};
     }
+    return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
+                                mkldnn::memory::format::any};
   }
 }
 
