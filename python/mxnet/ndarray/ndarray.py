@@ -18,9 +18,10 @@
 # coding: utf-8
 # pylint: disable=too-many-lines, protected-access
 # pylint: disable=import-error, no-name-in-module, undefined-variable
+
 """NDArray API of MXNet."""
-from __future__ import absolute_import
-from __future__ import division
+
+from __future__ import absolute_import, division
 
 try:
     from __builtin__ import slice as py_slice
@@ -757,23 +758,23 @@ fixed-size items.
                                   shape=self.shape, out=self)
 
     @staticmethod
-    def _axes_after_indexing(axes, key, ndim):
-        """Return indices of ``axes`` after slicing with ``key``.
+    def _new_axes_after_basic_indexing(axes, key_nd):
+        """Return indices of ``axes`` after slicing with ``key_nd``.
 
-        Integer entries are considered as collapsed axes after indexing, i.e.,
-        ``key`` should not be the result of int-to-slice conversion, but the
-        original indices.
+        This function is used to calculate the positions where new axes should
+        end up after indexing, taking into account the removal of axes by
+        integer indexing.
+
+        The ``key_nd`` sequence should contain slices and integers only, no
+        ``None`` entries.
         """
         steps = [0] + [0 if isinstance(idx, integer_types) else 1
-                       for idx in key]
-        for _ in range(len(key), ndim):
-            steps.append(1)
-        assert len(steps) == 1 + ndim
+                       for idx in key_nd]
         cum_steps = np.cumsum(steps)
         axes_in_bounds = [ax for ax in axes if ax < len(cum_steps)]
         axes_out_of_bounds = [ax for ax in axes if ax >= len(cum_steps)]
         axes_after = tuple(cum_steps[axes_in_bounds])
-        oob_offsets = [ax - ndim for ax in axes_out_of_bounds]
+        oob_offsets = [ax - len(key_nd) for ax in axes_out_of_bounds]
         axes_after += tuple(cum_steps[-1] + offset for offset in oob_offsets)
         return axes_after
 
@@ -794,7 +795,14 @@ fixed-size items.
 
         none_axes = [ax for ax in range(len(key)) if key[ax] is None]
         slc_key, int_axes = _indexing_key_int_to_slice(key_nd)
-        new_axes = self._axes_after_indexing(none_axes, key_nd, self.ndim)
+        new_axes = self._new_axes_after_basic_indexing(none_axes, key_nd)
+
+        # Check bounds for integer axes
+        for ax in int_axes:
+            if not -self.shape[ax] <= key_nd[ax] < self.shape[ax]:
+                raise IndexError(
+                    'index {} is out of bounds for axis {} with size {}'
+                    ''.format(key_nd[ax], ax, self.shape[ax]))
 
         # Make sure we don't accidentally have advanced indexing or
         # unsupported entries.
@@ -805,21 +813,16 @@ fixed-size items.
                     'This is a bug, please report it!'
                     ''.format(type(idx)))
 
-        # Check index bounds. Only `begin` is relevant, `end` is automatically
-        # clipped.
-        begin, _, _ = _basic_indexing_key_to_begin_end_step(
+        # Convert to begin, end and step, and return immediately if the slice
+        # is non-empty
+        begin, end, step = _basic_indexing_key_to_begin_end_step(
             slc_key, self.shape, keep_none=False
         )
-        for ax, (b, n) in enumerate(zip(begin, self.shape)):
-            if not -(n + 1) <= b <= n:
-                raise IndexError(
-                    'index {} is out of bounds for axis {} with size {}'
-                    ''.format(b, ax, n))
+        if any(
+            b >= e and s > 0 or b <= e and s < 0 for b, e, s in zip(begin, end, step)
+        ):
+            return array([], self.context, self.dtype)
 
-        # Do the slicing.
-        begin, end, step = _basic_indexing_key_to_begin_end_step(
-            slc_key, self.shape, keep_none=True
-        )
         # TODO: copy-free indexing if possible
         sliced = op.slice(self, begin, end, step)
 
@@ -2471,10 +2474,7 @@ def _basic_indexing_key_to_begin_end_step(idcs, shape, keep_none=True):
     idcs = [idx for idx in idcs if idx is not None]
     idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
             for idx in idcs]
-    if keep_none:
-        sss_list = [(slc.start, slc.stop, slc.step) for slc in idcs]
-    else:
-        sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
+    sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
     return tuple(zip(*sss_list))
 
 
@@ -2804,6 +2804,8 @@ def array(source_array, ctx=None, dtype=None):
         arr = empty((1,), ctx, dtype)
         arr[:] = source_array
         return arr.reshape(())
+    elif source_array.size == 0:
+        return empty((0,), ctx, dtype)
     else:
         arr = empty(source_array.shape, ctx, dtype)
         arr[:] = source_array
