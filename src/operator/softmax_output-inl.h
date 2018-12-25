@@ -91,13 +91,13 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
 
   bool operator==(const SoftmaxOutputParam& other) const {
     return this->grad_scale == other.grad_scale &&
-    this->ignore_label == other.ignore_label &&
-    this->multi_output == other.multi_output &&
-    this->use_ignore == other.use_ignore &&
-    this->preserve_shape == other.preserve_shape &&
-    this->normalization == other.normalization &&
-    this->out_grad == other.out_grad &&
-    this->smooth_alpha == other.smooth_alpha;
+      this->ignore_label == other.ignore_label &&
+      this->multi_output == other.multi_output &&
+      this->use_ignore == other.use_ignore &&
+      this->preserve_shape == other.preserve_shape &&
+      this->normalization == other.normalization &&
+      this->out_grad == other.out_grad &&
+      this->smooth_alpha == other.smooth_alpha;
   }
 };
 
@@ -286,8 +286,7 @@ void SoftmaxOutputCompute(const nnvm::NodeAttrs& attrs,
   const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
   const std::vector<TBlob> no_use_but_adapt_origin_api;
   CHECK_EQ(inputs.size(), 2U);
-  std::vector<TBlob> in_data(inputs.begin(),
-                             inputs.begin() + softmaxout_enum::kLabel);
+
   MSHADOW_REAL_TYPE_SWITCH(inputs[softmaxout_enum::kData].type_flag_, DType, {
     SoftmaxOutputOp<xpu, DType> op(param);
     op.Forward(ctx, inputs, req, outputs, no_use_but_adapt_origin_api);

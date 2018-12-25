@@ -147,8 +147,7 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs &attrs,
   if (SupportMKLDNN(inputs[0]) && !ctx.is_train && SupportMKLDNNSoftmaxOutput(param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNSoftmaxOutputForward(attrs, ctx, inputs, req, outputs);
-    auto fn = SoftmaxOutputCompute<cpu>;
-    MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
+    MKLDNN_OPCHECK_RUN(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -238,6 +237,8 @@ NNVM_REGISTER_OP(SoftmaxOutput)
 .set_attr_parser(ParamParser<SoftmaxOutputParam>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxOutputStorageType)
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxOutputComputeExCPU)
 #endif
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"data", "label"};
@@ -245,10 +246,6 @@ NNVM_REGISTER_OP(SoftmaxOutput)
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output"};
 })
-#if MXNET_USE_MKLDNN == 1
-.set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxOutputComputeExCPU)
-#endif
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxOutputShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOutputType)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxOutputCompute<cpu>)
@@ -260,8 +257,6 @@ NNVM_REGISTER_OP(SoftmaxOutput)
 .add_argument("label", "NDArray-or-Symbol", "Ground truth label.")
 .add_arguments(SoftmaxOutputParam::__FIELDS__());
 
-
-
 NNVM_REGISTER_OP(_backward_SoftmaxOutput)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -270,8 +265,5 @@ NNVM_REGISTER_OP(_backward_SoftmaxOutput)
 })
 .set_attr_parser(ParamParser<SoftmaxOutputParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxOutputGradCompute<cpu>);
-
 }  // namespace op
 }  // namespace mxnet
-
-
