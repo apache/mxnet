@@ -126,8 +126,8 @@ def test_logistic_loss_equal_bce():
     loss_bce = gluon.loss.SigmoidBCELoss(from_sigmoid=False)
     data = mx.random.uniform(-10, 10, shape=(N, 1))
     label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
-    assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy())
-    assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy())
+    assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy(), atol=1e-6)
+    assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy(), atol=1e-6)
 
 @with_seed()
 def test_kl_loss():
@@ -434,7 +434,7 @@ def test_bce_loss_with_pos_weight():
     l = mx.symbol.Variable('label')
     pos_w = mx.symbol.Variable('pos_w')
     Loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
-    loss = Loss(output, l, None, pos_w)
+    loss = Loss(output, l, pos_w)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'pos_w'))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
@@ -445,7 +445,7 @@ def test_bce_loss_with_pos_weight():
     data = mx.nd.random.uniform(-5, 5, shape=(10, 5))
     label =mx.nd.array(np.random.randint(2, size=(10, 5)), dtype='float32')
     pos_weight = mx.nd.random.uniform(0, 10, shape=(1, 5))
-    mx_bce_loss = Loss(data, label, None, pos_weight).asnumpy()
+    mx_bce_loss = Loss(data, label, pos_weight).asnumpy()
     prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
     label_npy = label.asnumpy()
     pos_weight_npy = pos_weight.asnumpy()
