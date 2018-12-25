@@ -506,12 +506,11 @@ def test_ftml():
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), lazy_update=True, **kwargs):
+                 lazy_update=True, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        self.decay_factor = decay_factor
         self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
@@ -614,6 +613,92 @@ def test_adam():
                                           dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
 
+# ADAMW
+class PyAdamW(mx.optimizer.Optimizer):
+    """python reference implemenation of AdamW"""
+    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
+                 **kwargs):
+        super(PyAdamW, self).__init__(learning_rate=learning_rate, **kwargs)
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.epsilon = epsilon
+
+    def create_state(self, index, weight):
+        """Create additional optimizer state: mean, variance
+
+        Parameters
+        ----------
+        weight : NDArray
+        The weight data
+
+        """
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype))  # variance
+
+    def update(self, index, weight, grad, state):
+        """Update the parameters.
+
+        Parameters
+        ----------
+        index : int
+        An unique integer key used to index the parameters
+
+        weight : NDArray
+        weight ndarray
+
+        grad : NDArray
+        grad ndarray
+
+        state : NDArray or other objects returned by init_state
+        The auxiliary state used in optimization.
+        """
+        lr = self._get_lr(index)
+        self._update_count(index)
+
+        t = self._index_update_count[index]
+        mean, variance = state
+
+        wd = self._get_wd(index)
+        coef1 = 1. - self.beta1**t
+        coef2 = 1. - self.beta2**t
+        lr *= math.sqrt(coef2)/coef1
+
+        grad *= self.rescale_grad
+        # clip gradients
+        if self.clip_gradient is not None:
+            mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient, out=grad)
+        # update mean
+        mean *= self.beta1
+        mean += grad * (1. - self.beta1)
+        # update variance
+        variance *= self.beta2
+        variance += (1 - self.beta2) * mx.nd.square(grad, out=grad)
+        # update weight
+        weight -= lr * (mean/(mx.nd.sqrt(variance) + self.epsilon) + wd * weight)
+
+@with_seed()
+def test_adamw():
+    opt1 = PyAdamW
+    opt2 = mx.optimizer.AdamW
+    shape = (3, 4, 5)
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    for dtype in [np.float16, np.float32, np.float64]:
+        for cg_option in cg_options:
+            for rg_option in rg_options:
+                for wd_option in wd_options:
+                    for mp_option in mp_options:
+                        kwarg = {}
+                        kwarg.update(cg_option)
+                        kwarg.update(rg_option)
+                        kwarg.update(wd_option)
+                        kwarg.update(mp_option)
+                        if (dtype == np.float16 and
+                            ('multi_precision' not in kwarg or not kwarg['multi_precision'])):
+                            continue
+                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, dtype)
 
 # AdaMax
 class PyAdamax(mx.optimizer.Optimizer):
