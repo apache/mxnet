@@ -1315,13 +1315,10 @@ def test_ndarray_indexing():
         if isinstance(index, mx.nd.NDArray):
             np_index = index.asnumpy()
         if isinstance(index, tuple):
-            np_index = []
-            for idx in index:
-                if isinstance(idx, mx.nd.NDArray):
-                    np_index.append(idx.asnumpy())
-                else:
-                    np_index.append(idx)
-            np_index = tuple(np_index)
+            np_index = tuple(
+                idx.asnumpy() if isinstance(idx, mx.nd.NDArray) else idx
+                for idx in index
+            )
 
         np_indexed_array = np_array[np_index]
         mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
@@ -1330,6 +1327,16 @@ def test_ndarray_indexing():
             mx_indexed_array = mx_indexed_array.asscalar()
         else:
             mx_indexed_array = mx_indexed_array.asnumpy()
+
+        passed = same(np_indexed_array, mx_indexed_array)
+        if not passed:
+            print("index:", index)
+            print("shape:", np_array.shape)
+            print(mx_indexed_array.shape)
+            #print(np.where(mx_indexed_array != np_indexed_array))
+            #print(np_indexed_array[mx_indexed_array != np_indexed_array])
+            #print(np_indexed_array[mx_indexed_array != np_indexed_array].shape)
+
         assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
 
     def test_setitem(np_array, index, is_scalar):
