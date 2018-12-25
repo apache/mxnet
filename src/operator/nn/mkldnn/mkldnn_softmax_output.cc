@@ -32,8 +32,8 @@ namespace mxnet {
 namespace op {
 
 static mkldnn::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
-    const SoftmaxOutputParam& param, bool is_train,
-    const NDArray &data, const mkldnn::memory &input_mem) {
+               const SoftmaxOutputParam& param, bool is_train,
+               const NDArray &data, const mkldnn::memory &input_mem) {
   mkldnn::memory::primitive_desc data_mpd = input_mem.get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
@@ -57,38 +57,39 @@ class MKLDNNSoftmaxOutputFwd {
   const mkldnn::softmax_forward::primitive_desc fwd_pd;
 
   MKLDNNSoftmaxOutputFwd(const SoftmaxOutputParam& param, bool is_train,
-           const NDArray &data, const mkldnn::memory &mem): fwd_pd(
-             GetSoftmaxOutputFwdDescImpl(param, is_train, data, mem)) {
+                         const NDArray &data, const mkldnn::memory &mem): fwd_pd(
+                         GetSoftmaxOutputFwdDescImpl(param, is_train, data, mem)) {
   }
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
-  if (this->data == nullptr)
-    this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+    if (this->data == nullptr)
+      this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
         data.get_primitive_desc(), data.get_data_handle()));
-  else
-    this->data->set_data_handle(data.get_data_handle());
+    else
+      this->data->set_data_handle(data.get_data_handle());
 
-  if (this->out == nullptr)
-    this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-            output.get_primitive_desc(), output.get_data_handle()));
-  else
-    this->out->set_data_handle(output.get_data_handle());
+    if (this->out == nullptr)
+      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+        output.get_primitive_desc(), output.get_data_handle()));
+    else
+      this->out->set_data_handle(output.get_data_handle());
 
-  if (this->fwd == nullptr) {
-    this->fwd = std::shared_ptr<mkldnn::softmax_forward>(
-      new mkldnn::softmax_forward(fwd_pd, mkldnn::primitive::at(*this->data),
-                    *this->out));
-  }
+    if (this->fwd == nullptr) {
+      this->fwd = std::shared_ptr<mkldnn::softmax_forward>(
+        new mkldnn::softmax_forward(fwd_pd, mkldnn::primitive::at(*this->data),
+        *this->out));
+    }
   }
 
   const mkldnn::softmax_forward &GetFwd() const {
-  return *fwd;
+    return *fwd;
   }
 };
 
 static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam& param,
-                     const OpContext &ctx, const NDArray &in_data,
-                     const mkldnn::memory &in_mem) {
+                                                       const OpContext &ctx,
+                                                       const NDArray &in_data,
+                                                       const mkldnn::memory &in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local
     std::unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash> fwds;
@@ -102,11 +103,8 @@ static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam&
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-  MKLDNNSoftmaxOutputFwd fwd(param, ctx.is_train, in_data, in_mem);
-  auto ins_ret = fwds.insert(std::pair<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd>(
-      key, fwd));
-  CHECK(ins_ret.second);
-  it = ins_ret.first;
+    MKLDNNSoftmaxOutputFwd fwd(param, ctx.is_train, in_data, in_mem);
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
@@ -116,9 +114,11 @@ bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param) {
   return param.multi_output ? false : true;
 }
 
-void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                          const std::vector<NDArray> &in_data, const std::vector<OpReqType> &req,
-                          const std::vector<NDArray> &out_data) {
+void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
+                                const OpContext &ctx,
+                                const std::vector<NDArray> &in_data,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &out_data) {
   const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
 
   NDArray idata = in_data[softmaxout_enum::kData];
@@ -142,8 +142,3 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext &c
 
 
 #endif
-
-
-
-
-
