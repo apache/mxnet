@@ -184,24 +184,20 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
 
         prob = \frac{1}{1 + \exp(-{pred})}
 
-        L = - \sum_i {label}_i * \log({prob}_i) +
+        L = - \sum_i {label}_i * \log({prob}_i) * {pos\_weight}_i +
             (1 - {label}_i) * \log(1 - {prob}_i)
 
     If `from_sigmoid` is True, this loss computes:
 
     .. math::
 
-        L = - \sum_i {label}_i * \log({pred}_i) +
+        L = - \sum_i {label}_i * \log({pred}_i) * {pos\_weight}_i +
             (1 - {label}_i) * \log(1 - {pred}_i)
 
-    A value `pos_weights > 1` decreases the false negative count, hence increasing
+    A value `pos_weight > 1` decreases the false negative count, hence increasing
     the recall.
-    Conversely setting `pos_weights < 1` decreases the false positive count and
+    Conversely setting `pos_weight < 1` decreases the false positive count and
     increases the precision.
-    This can be seen from the fact that `pos_weight` is introduced as a
-    multiplicative coefficient for the positive targets term
-    in the loss expression:
-    label * -log(sigmoid(pred)) * pos_weight + (1 - label) * -log(1 - sigmoid(pred))
 
     `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
@@ -238,20 +234,14 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         super(SigmoidBinaryCrossEntropyLoss, self).__init__(weight, batch_axis, **kwargs)
         self._from_sigmoid = from_sigmoid
 
-    def hybrid_forward(self, F, pred, label, sample_weight=None, pos_weight=None):
+    def hybrid_forward(self, F, pred, label, pos_weight=1, sample_weight=None):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
             # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
-            if pos_weight is None:
-                loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
-            else:
-                log_weight = 1 + (pos_weight - 1) * label
-                loss = pred - pred*label + log_weight*(F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
+            log_weight = 1 + (pos_weight - 1) * label
+            loss = pred - pred*label + log_weight*(F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
         else:
-            if pos_weight is None:
-                loss = -(F.log(pred+1e-12)*label + F.log(1.-pred+1e-12)*(1.-label))
-            else:
-                loss = -(F.log(pred+1e-12)*label*pos_weight + F.log(1.-pred+1e-12)*(1.-label))
+            loss = -(F.log(pred+1e-12)*label*pos_weight + F.log(1.-pred+1e-12)*(1.-label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
