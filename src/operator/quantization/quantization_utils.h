@@ -27,6 +27,7 @@
 #include <mxnet/base.h>
 #include <algorithm>
 #include "../mxnet_op.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
