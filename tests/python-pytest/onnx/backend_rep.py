@@ -82,8 +82,10 @@ class MXNetBackendRep(BackendRep):
         args = dict(zip(data_names, data_forward))
         exe = self.symbol.bind(ctx, args=args, aux_states=self.aux_params)
         exe.forward(is_train=False)
-        result = exe.outputs[0].asnumpy()
-        return [result]
+        result = []
+        for output in exe.outputs:
+            result.append(output.asnumpy())
+        return result
 
 
 # GluonBackendRep object will be returned by GluonBackend's prepare method which is used to
