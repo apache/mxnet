@@ -174,7 +174,7 @@ class Executor {
   /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(const MonitorCallback& callback, bool monitor_input) {}
+  virtual void SetMonitorCallback(const MonitorCallback& callback, bool monitor_all) {}
 };  // class executor
 }  // namespace mxnet
 #endif  // MXNET_EXECUTOR_H_
