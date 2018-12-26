@@ -35,7 +35,6 @@
 namespace mxnet {
 namespace op {
 
-
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
 namespace roialign {
