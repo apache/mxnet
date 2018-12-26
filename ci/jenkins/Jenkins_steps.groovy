@@ -289,20 +289,6 @@ def compile_centos7_gpu() {
     }]
 }
 
-def compile_centos7_gpu_mkldnn() {
-    return ['GPU: CentOS 7 MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-gpu-mkldnn') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_gpu', 'build_centos7_gpu_mkldnn', false)
-            utils.pack_lib('centos7_gpu_mkldnn', mx_mkldnn_lib, true)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_clang_3_9_cpu() {
     return ['CPU: Clang 3.9': {
       node(NODE_LINUX_CPU) {
@@ -1006,25 +992,6 @@ def test_centos7_python3_cpu() {
     }]
 }
 
-def test_centos7_python3_cpu_mkldnn() {
-    return ['Python3: CentOS 7 CPU MKLDNN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-centos7-cpu-mkldnn') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init('centos7_mkldnn', mx_mkldnn_lib, true)
-              utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_mkldnn_unittest.xml')
-              utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_mkldnn_train.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
 def test_centos7_python3_gpu() {
     return ['Python3: CentOS 7 GPU': {
       node(NODE_LINUX_GPU) {
@@ -1036,24 +1003,6 @@ def test_centos7_python3_gpu() {
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
-def test_centos7_python3_gpu_mkldnn() {
-    return ['Python3: CentOS 7 GPU MKLDNN': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/build-centos7-gpu-mkldnn') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init('centos7_gpu_mkldnn', mx_mkldnn_lib, true)
-              utils.docker_run('centos7_gpu', 'unittest_centos7_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu_mkldnn.xml')
             }
           }
         }
