@@ -79,7 +79,6 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_softplus'
              ],
     'import': ['test_gather',
-               'test_unsqueeze',
                'test_global_lppooling',
                'test_softsign',
                'test_reduce_',
