@@ -22,7 +22,9 @@ try:
 except ImportError:
     raise ImportError("Onnx and protobuf need to be installed. Instructions to"
                       + " install - https://github.com/onnx/onnx#installation")
+import numpy as np
 import mxnet as mx
+from mxnet import nd
 
 # Using these functions for onnx test infrastructure.
 # Implemented by following onnx docs guide:
@@ -81,4 +83,48 @@ class MXNetBackendRep(BackendRep):
         exe = self.symbol.bind(ctx, args=args, aux_states=self.aux_params)
         exe.forward(is_train=False)
         result = exe.outputs[0].asnumpy()
+        return [result]
+
+
+# GluonBackendRep object will be returned by GluonBackend's prepare method which is used to
+# execute a model repeatedly.
+# Inputs will be passed to the run method of MXNetBackendRep class, it will perform computation and
+# retrieve the corresponding results for comparison to the onnx backend.
+# https://github.com/onnx/onnx/blob/master/onnx/backend/test/runner/__init__.py.
+# Implemented by following onnx docs guide:
+# https://github.com/onnx/onnx/blob/master/docs/ImplementingAnOnnxBackend.md
+
+class GluonBackendRep(BackendRep):
+    """Running model inference on gluon backend and return the result
+     to onnx test infrastructure for comparison."""
+    def __init__(self, net, device):
+        self.net = net
+        self.device = device
+
+    def run(self, inputs, **kwargs):
+        """Run model inference and return the result
+
+        Parameters
+        ----------
+        inputs : numpy array
+            input to run a layer on
+
+        Returns
+        -------
+        params : numpy array
+            result obtained after running the inference on mxnet
+        """
+        # create module, passing cpu context
+        if self.device == 'CPU':
+            ctx = mx.cpu()
+        else:
+            raise NotImplementedError("ONNX tests are run only for CPU context.")
+
+        # run inference
+        net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
+        net_outputs = self.net(*net_inputs)
+        results = []
+        results.extend([o for o in net_outputs.asnumpy()])
+        result = np.array(results)
+
         return [result]
