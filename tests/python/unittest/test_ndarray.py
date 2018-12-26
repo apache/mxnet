@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 from distutils.version import LooseVersion
+from itertools import permutations, combinations_with_replacement
 import os
 import pickle as pkl
 from nose.tools import assert_raises, raises
@@ -1303,6 +1304,32 @@ def test_bool():
     assert not bool(mx.nd.array([]))
     assert not bool(mx.nd.zeros((1,)))
     assert bool(mx.nd.ones((1,)))
+
+
+def test_basic_indexing_is_contiguous():
+    x = np.arange(np.prod((6, 7, 8, 9))).reshape((6, 7, 8, 9))
+    slices = [
+        slice(None),
+        slice(2),
+        slice(20),
+        slice(1, 4),
+        slice(None, None, 2),
+        slice(None, None, 20),
+        slice(0, 1),
+        slice(None, None, -1),
+        slice(3, None, -2),
+    ]
+
+    is_contiguous = mx.nd.NDArray._basic_indexing_slice_is_contiguous
+
+    for idx in combinations_with_replacement(slices, 4):
+        for slc in permutations(idx):
+            contig_pred = is_contiguous(slc, x.shape)
+            contig_true = x[slc].flags.contiguous
+            assert contig_pred == contig_true, (
+                "failed with slc={}, pred ({}) != actual ({})"
+                "".format(slc, contig_pred, contig_true)
+            )
 
 
 @with_seed()
