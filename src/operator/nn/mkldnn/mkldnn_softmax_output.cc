@@ -109,7 +109,6 @@ static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam&
   return it->second;
 }
 
-
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param) {
   return param.multi_output ? false : true;
 }
@@ -136,9 +135,6 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
   stream->RegisterPrim(fwd.GetFwd());
   stream->Submit();
 }
-
 }   // namespace op
 }   // namespace mxnet
-
-
 #endif

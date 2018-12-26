@@ -91,13 +91,13 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
 
   bool operator==(const SoftmaxOutputParam& other) const {
     return this->grad_scale == other.grad_scale &&
-      this->ignore_label == other.ignore_label &&
-      this->multi_output == other.multi_output &&
-      this->use_ignore == other.use_ignore &&
-      this->preserve_shape == other.preserve_shape &&
-      this->normalization == other.normalization &&
-      this->out_grad == other.out_grad &&
-      this->smooth_alpha == other.smooth_alpha;
+           this->ignore_label == other.ignore_label &&
+           this->multi_output == other.multi_output &&
+           this->use_ignore == other.use_ignore &&
+           this->preserve_shape == other.preserve_shape &&
+           this->normalization == other.normalization &&
+           this->out_grad == other.out_grad &&
+           this->smooth_alpha == other.smooth_alpha;
   }
 };
 
