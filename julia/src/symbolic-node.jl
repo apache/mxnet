@@ -166,7 +166,8 @@ end
 
 Get attribute attached to this `SymbolicNode` belonging to key.
 
-Returns the value belonging to key as a `Nullable`.
+Returns the value belonging to key as a `String`.
+If not available, returns `missing`.
 """
 function get_attr(s::SymbolicNode, key::Symbol)
   key_s = string(key)
@@ -175,9 +176,9 @@ function get_attr(s::SymbolicNode, key::Symbol)
   @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}),
           s, key_s, ref_out, ref_success)
   if ref_success[] == 1
-    return Nullable{String}(unsafe_string(ref_out[]))
+    unsafe_string(ref_out[])
   else
-    return Nullable{String}()
+    missing
   end
 end
 
