@@ -394,28 +394,6 @@ def test_scalarops():
             out = ipsym / 2
             _test_scalar_op(input1, out, np_out)
 
-def test_makeloss():
-    v1 = mx.nd.array([1, 2])
-    v2 = mx.nd.array([0, 1])
-    a = mx.sym.Variable('a')
-    b = mx.sym.Variable('b')
-    sym = mx.sym.MakeLoss(b + a)
-    ex = sym.bind(ctx=mx.cpu(0), args={'a': v1, 'b': v2})
-    ex.forward(is_train=True)
-    makeloss_out = ex.outputs[0].asnumpy()
-
-    converted_model = onnx_mxnet.export_model(sym, {}, [(2,),(2,)], np.float32, "makelossop.onnx")
-
-    # sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
-    # result = forward_pass(sym, arg_params, aux_params, ['ipsym'], input1)
-    #
-    # # Comparing result of forward pass before using onnx export, import
-    # npt.assert_almost_equal(result, makeloss_out)
-    #
-    # executor = loss.simple_bind(ctx=mx.cpu(0), a=(2,), b=(2,))
-    # executor.forward(is_train=True, a=v1, b=v2)
-    # print(executor.outputs[0])
-
 @with_seed()
 def test_comparison_ops():
     """Test greater, lesser, equal"""
