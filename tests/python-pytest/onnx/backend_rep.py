@@ -124,7 +124,12 @@ class GluonBackendRep(BackendRep):
         net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
         net_outputs = self.net(*net_inputs)
         results = []
-        results.extend([o for o in net_outputs.asnumpy()])
-        result = np.array(results)
+        if isinstance(net_outputs, list):
+            for output in net_outputs:
+                results.append(output.asnumpy())
+            result = results
+        else:
+            results.extend([o for o in net_outputs.asnumpy()])
+            result = [np.array(results)]
 
-        return [result]
+        return result
