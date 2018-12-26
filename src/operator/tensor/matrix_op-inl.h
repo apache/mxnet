@@ -37,6 +37,8 @@
 #include "broadcast_reduce_op.h"
 #include "./init_op.h"
 #include "../../common/static_array.h"
+#include "./slice-inl.h"
+#include "../nn/mkldnn/mkldnn_slice-inl.h"
 
 #if MXNET_USE_CUDA
 #include <thrust/device_vector.h>
@@ -398,20 +400,6 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-struct SliceParam : public dmlc::Parameter<SliceParam> {
-  nnvm::Tuple<dmlc::optional<int>> begin, end;
-  nnvm::Tuple<dmlc::optional<int>> step;
-  DMLC_DECLARE_PARAMETER(SliceParam) {
-    DMLC_DECLARE_FIELD(begin)
-    .describe("starting indices for the slice operation, supports negative indices.");
-    DMLC_DECLARE_FIELD(end)
-    .describe("ending indices for the slice operation, supports negative indices.");
-    DMLC_DECLARE_FIELD(step)
-    .set_default(nnvm::Tuple<dmlc::optional<int>>())
-    .describe("step for the slice operation, supports negative values.");
-  }
-};
-
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          DispatchMode* dispatch_mode,
@@ -432,7 +420,16 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       && (!param.step[0].has_value() || param.step[0].value() == 1)) {
     trivial_step = true;
   }
-  if (!dispatched && in_stype == kDefaultStorage) {
+  if (!dispatched && in_stype == kDefaultStorage && trivial_step) {
+#if MXNET_USE_MKLDNN == 1
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, dispatch_ex);
+#else
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+#endif
+  }
+  else if (!dispatched && in_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
@@ -601,23 +598,6 @@ void SliceCsrImpl(const SliceParam &param, const OpContext& ctx,
     default:
       LOG(FATAL) << "CSR is only for 2-D shape";
       break;
-  }
-}
-
-template<typename xpu>
-void SliceEx(const nnvm::NodeAttrs& attrs,
-             const OpContext& ctx,
-             const std::vector<NDArray>& inputs,
-             const std::vector<OpReqType>& req,
-             const std::vector<NDArray>& outputs) {
-  CHECK_EQ(inputs.size(), 1);
-  CHECK_EQ(outputs.size(), 1);
-  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
-  auto in_stype = inputs[0].storage_type();
-  if (in_stype == kCSRStorage) {
-    SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
-  } else {
-    LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
   }
 }
 
@@ -827,6 +807,31 @@ void SliceOpForward(const nnvm::NodeAttrs& attrs,
       })
     })
   })
+}
+
+template<typename xpu>
+void SliceEx(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  auto in_stype = inputs[0].storage_type();
+  if (in_stype == kCSRStorage) {
+    SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
+#if MXNET_USE_MKLDNN == 1
+  } else if(in_stype == kDefaultStorage){ // For default storage, detect whether we are using MKLDNN or not
+    if (SupportMKLDNN(inputs[0])) {
+      MKLDNNSlice(param, ctx, inputs[0], req[0], outputs[0]);
+    } else {
+      FallBackCompute(SliceOpForward<xpu>, attrs, ctx, inputs, req, outputs);
+    }
+#endif
+  } else {
+    LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
+  }
 }
 
 template<int ndim, int req, typename xpu>

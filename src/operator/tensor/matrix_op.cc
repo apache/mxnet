@@ -479,6 +479,9 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
