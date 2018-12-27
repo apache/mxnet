@@ -704,8 +704,11 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
                        << " exceeds limit of input dimension[" << i << "]=" << len;
 
       // checking upper and lower bounds for end
-      if (e < 0 && param_end[i].has_value() && !(s < 0 && e == -1)) { // Keep -1 as one-beyond-limits index for negative stride
-        e += len;
+      if (e < 0 && param_end[i].has_value()) {
+        if (!(s < 0 && e == -1)){
+          // Keep end=-1 as one-beyond-limits index for negative stride
+          e += len;
+        }
         CHECK_GE(e, 0) << "slicing with end[" << i << "]=" << e - len
                        << " exceeds limit of input dimension[" << i << "]=" << len;
       }
