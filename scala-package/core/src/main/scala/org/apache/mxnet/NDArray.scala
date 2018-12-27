@@ -1049,7 +1049,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return The copy target NDArray
    */
   def copyTo(ctx: Context): NDArray = {
-    val ret = new NDArray(NDArray.newAllocHandle(shape, ctx, delayAlloc = true))
+    val ret = new NDArray(NDArray.newAllocHandle(shape, ctx, delayAlloc = true, dtype = dtype))
     copyTo(ret)
   }
 
