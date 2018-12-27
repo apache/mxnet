@@ -19,7 +19,7 @@
 
 /*!
  * \file mkldnn_softmax_output.cc
- * \brief
+ * \brief integrate mkldnn softmax to softmax_output forward
  * \author Zhang Rong A
 */
 
@@ -37,6 +37,7 @@ static mkldnn::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
   mkldnn::memory::primitive_desc data_mpd = input_mem.get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = data_mpd.get_engine();
+  //  softmax_output has no axis parameter, so use it as it original implement.
   int axis = data.shape().ndim() - 1;
   mkldnn::softmax_forward::desc desc = is_train
       ? mkldnn::softmax_forward::desc(mkldnn::prop_kind::forward_training,
