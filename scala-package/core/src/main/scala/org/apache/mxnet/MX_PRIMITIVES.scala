@@ -31,9 +31,11 @@ object MX_PRIMITIVES {
     * more supported primitives in the future. Currently Float and Double
     * * are supported.
     */
-  trait MX_NUMBER_LIKE {
+  trait MX_NUMBER_LIKE extends Ordered[MX_NUMBER_LIKE]{
 
     def toString: String
+
+    def unary_- : MX_NUMBER_LIKE
   }
 
   /**
@@ -43,12 +45,15 @@ object MX_PRIMITIVES {
   class MX_FLOAT(val data: Float) extends MX_NUMBER_LIKE {
 
     override def toString: String = data.toString
+
+    override def unary_- : MX_NUMBER_LIKE = new MX_FLOAT(data.unary_-)
+
+    override def compare(that: MX_NUMBER_LIKE): Int = this.data.compareTo(that.asInstanceOf[MX_FLOAT].data)
   }
 
   implicit def FloatToMX_Float(d : Float): MX_FLOAT = new MX_FLOAT(d)
 
-
-  implicit def MX_FLoatToFloat(d: MX_FLOAT) : Float = d.data
+  implicit def MX_FloatToFloat(d: MX_FLOAT) : Float = d.data
 
   /**
     * Mimics Double in Scala.
@@ -57,12 +62,14 @@ object MX_PRIMITIVES {
   class MX_Double(val data: Double) extends MX_NUMBER_LIKE {
 
     override def toString: String = data.toString
+
+    override def unary_- : MX_NUMBER_LIKE = new MX_Double(data.unary_-)
+
+    override def compare(that: MX_NUMBER_LIKE): Int = this.data.compareTo(that.asInstanceOf[MX_Double].data)
   }
 
   implicit def DoubleToMX_Double(d : Double): MX_Double = new MX_Double(d)
 
-
   implicit def MX_DoubleToDouble(d: MX_Double) : Double = d.data
-
 
 }
