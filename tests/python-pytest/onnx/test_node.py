@@ -204,6 +204,8 @@ test_cases = [
      {'kernel': (4, 5), 'pad': (0, 0), 'stride': (1, 1), 'p_value': 2, 'pool_type': 'lp', 'global_pool': True}, False,
      {'modify': {'p_value': 'p'},
       'remove': ['pool_type', 'kernel', 'pad', 'stride', 'global_pool']}, True, False),
+
+    # since results would be random, checking for shape alone
     ("test_multinomial", mx.sym.sample_multinomial, "Multinomial",
      [np.array([0, 0.1, 0.2, 0.3, 0.4]).astype("float32")],
      {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True)
