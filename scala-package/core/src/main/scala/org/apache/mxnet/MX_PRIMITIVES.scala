@@ -48,7 +48,9 @@ object MX_PRIMITIVES {
 
     override def unary_- : MX_PRIMITIVE_TYPE = new MX_FLOAT(data.unary_-)
 
-    override def compare(that: MX_PRIMITIVE_TYPE): Int = this.data.compareTo(that.asInstanceOf[MX_FLOAT].data)
+    override def compare(that: MX_PRIMITIVE_TYPE): Int = {
+      this.data.compareTo(that.asInstanceOf[MX_FLOAT].data)
+    }
   }
 
   implicit def FloatToMX_Float(d : Float): MX_FLOAT = new MX_FLOAT(d)
@@ -65,7 +67,9 @@ object MX_PRIMITIVES {
 
     override def unary_- : MX_PRIMITIVE_TYPE = new MX_Double(data.unary_-)
 
-    override def compare(that: MX_PRIMITIVE_TYPE): Int = this.data.compareTo(that.asInstanceOf[MX_Double].data)
+    override def compare(that: MX_PRIMITIVE_TYPE): Int = {
+      this.data.compareTo(that.asInstanceOf[MX_Double].data)
+    }
   }
 
   implicit def DoubleToMX_Double(d : Double): MX_Double = new MX_Double(d)
