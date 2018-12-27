@@ -19,21 +19,8 @@
 
 set -e
 
-hw_type=cpu
-if [ "$USE_GPU" = "1" ]
-then
-    hw_type=gpu
-fi
-
-platform=linux-x86_64
-
-if [[ $OSTYPE = [darwin]* ]]
-then
-    platform=osx-x86_64
-fi
-
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*
 
 java -Xmx8G -Dmxnet.traceLeakedObjects=true -cp $CLASS_PATH \
 	org.apache.mxnetexamples.javaapi.benchmark.JavaBenchmark $@
