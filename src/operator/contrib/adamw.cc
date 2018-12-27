@@ -48,7 +48,7 @@ It updates the weights using::
 
  m = beta1*m + (1-beta1)*grad
  v = beta2*v + (1-beta2)*(grad**2)
- w -= sched_mult * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
+ w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
 
 )code" ADD_FILELINE)
 .set_num_inputs(4)

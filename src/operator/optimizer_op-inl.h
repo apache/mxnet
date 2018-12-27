@@ -837,10 +837,7 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
   }
 };
 
-/*
- * \brief adam and adam_w update. Set decoupled=True for adam_w.
- */
-template<typename xpu, bool decoupled>
+template<typename xpu>
 inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
@@ -858,12 +855,9 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 2, DType> var = inputs[3].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
 
-    if (decoupled) {
-      grad = scalar<DType>(param.rescale_grad) * grad;
-    } else {
-      grad = scalar<DType>(param.rescale_grad) * grad +
-        scalar<DType>(param.wd) * weight;
-    }
+    grad = scalar<DType>(param.rescale_grad) * grad +
+      scalar<DType>(param.wd) * weight;
+
     if (param.clip_gradient >= 0.0f) {
       mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) *
           F<clip>(grad, DType(param.clip_gradient));
@@ -873,18 +867,10 @@ inline void AdamUpdate(const nnvm::NodeAttrs& attrs,
       mean = scalar<DType>(param.beta1)*mean + scalar<DType>(1.f-param.beta1) * grad;
       var = scalar<DType>(param.beta2)*var + scalar<DType>(1.f-param.beta2) * F<square>(grad);
     }
-    if (decoupled) {
-      Assign(out, req[0],
-             weight -
-             scalar<DType>(param.lr) * (mean /
-             (F<square_root>(var) + scalar<DType>(param.epsilon)) +
-             (scalar<DType>(param.wd) * weight)));
-    } else {
-      Assign(out, req[0],
-             weight -
-             scalar<DType>(param.lr) * mean /
-             (F<square_root>(var) + scalar<DType>(param.epsilon)));
-    }
+    Assign(out, req[0],
+           weight -
+           scalar<DType>(param.lr) * mean /
+           (F<square_root>(var) + scalar<DType>(param.epsilon)));
   });
 }
 

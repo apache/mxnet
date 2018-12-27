@@ -47,7 +47,7 @@ struct AdamWParam : public dmlc::Parameter<AdamWParam> {
   float beta2;
   float epsilon;
   float wd;
-  float sched_mult;
+  float eta;
   float rescale_grad;
   float clip_gradient;
   DMLC_DECLARE_PARAMETER(AdamWParam) {
@@ -67,7 +67,7 @@ struct AdamWParam : public dmlc::Parameter<AdamWParam> {
     .describe("Weight decay augments the objective function with a "
               "regularization term that penalizes large weights. "
               "The penalty scales with the square of the magnitude of each weight.");
-    DMLC_DECLARE_FIELD(sched_mult)
+    DMLC_DECLARE_FIELD(eta)
     .describe("Learning rate schedule multiplier");
     DMLC_DECLARE_FIELD(rescale_grad)
     .set_default(1.0f)
@@ -113,7 +113,7 @@ inline void AdamWUpdate(const nnvm::NodeAttrs& attrs,
     }
     Assign(out, req[0],
            weight -
-           scalar<DType>(param.sched_mult) * (scalar<DType>(param.lr) *
+           scalar<DType>(param.eta) * (scalar<DType>(param.lr) *
            mean / (F<square_root>(var) + scalar<DType>(param.epsilon)) +
            (scalar<DType>(param.wd) * weight)));
   });
