@@ -933,6 +933,7 @@ fixed-size items.
         else:
             raise RuntimeError('illegal index type {}'.format(type(idx)))
 
+    @staticmethod
     def _broadcast_advanced_indices(arrays, block_axes):
         """Broadcast arrays according to position in the sequence.
 
