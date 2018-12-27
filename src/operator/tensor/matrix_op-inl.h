@@ -420,7 +420,8 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       && (!param.step[0].has_value() || param.step[0].value() == 1)) {
     trivial_step = true;
   }
-  if (!dispatched && in_stype == kDefaultStorage && trivial_step) {
+  if (!dispatched && in_stype == kDefaultStorage
+                  && trivial_step && dev_mask == Context::kCPU) {
 #if MXNET_USE_MKLDNN == 1
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, dispatch_ex);
@@ -428,8 +429,7 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
 #endif
-  }
-  else if (!dispatched && in_stype == kDefaultStorage) {
+  } else if (!dispatched && in_stype == kDefaultStorage) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
   }
@@ -822,7 +822,7 @@ void SliceEx(const nnvm::NodeAttrs& attrs,
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<xpu>(param, ctx, inputs[0], req[0], outputs[0]);
 #if MXNET_USE_MKLDNN == 1
-  } else if(in_stype == kDefaultStorage){ // For default storage, detect whether we are using MKLDNN or not
+  } else if (in_stype == kDefaultStorage) {
     if (SupportMKLDNN(inputs[0])) {
       MKLDNNSlice(param, ctx, inputs[0], req[0], outputs[0]);
     } else {
