@@ -70,7 +70,7 @@ The training data folder should look like :
 ## Training
 
 - arguments
-  - batch_size : Define batch size (defualt=64)
+  - batch_size : Define batch size (default=64)
   - epochs : Define total epochs (default=100)
   - image_path : Path for lip image files (default='./data/datasets/')
   - align_path : Path for align files (default='./data/align/')
