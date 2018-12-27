@@ -85,5 +85,4 @@ for bkend in backends:
         log.info('Executing tests for ' + bkend + ' backend: ' + operation)
         mxnet_backend.MXNetBackend.set_params(bkend, operation)
         BACKEND_TESTS = prepare_tests(mxnet_backend, operation)
-        # import all test cases at global scope to make them visible to python.unittest
         unittest.TextTestRunner().run(test_suite(BACKEND_TESTS.enable_report()))
