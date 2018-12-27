@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,13 +17,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -evx
+set -e
 
-MXNET_HOME=$(cd "$(dirname $0)/../.."; pwd)
-EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
-#cd ${MXNET_HOME}/contrib/clojure-package
-#lein test
-#lein cloverage --codecov
-for test_dir in `find ${EXAMPLES_HOME} -name test` ; do
-  cd ${test_dir} && lein test
-done
+MXNET_ROOT=$(cd "$(dirname $0)/.."; pwd)
+
+data_path=$MXNET_ROOT/models/resnet-152/
+
+image_path=$MXNET_ROOT/images/
+
+if [ ! -d "$data_path" ]; then
+  mkdir -p "$data_path"
+fi
+
+if [ ! -d "$image_path" ]; then
+  mkdir -p "$image_path"
+fi
+
+if [ ! -f "$data_path/resnet-152-0000.params" ]; then
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/resnet-152-0000.params -P $data_path
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/resnet-152-symbol.json -P $data_path
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/synset.txt -P $data_path
+fi
+
+if [ ! -f "$image_path/kitten.jpg" ]; then
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/kitten.jpg -P $image_path
+fi

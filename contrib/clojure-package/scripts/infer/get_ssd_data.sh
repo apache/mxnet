@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,13 +17,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
+
 set -evx
 
-MXNET_HOME=$(cd "$(dirname $0)/../.."; pwd)
-EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
-#cd ${MXNET_HOME}/contrib/clojure-package
-#lein test
-#lein cloverage --codecov
-for test_dir in `find ${EXAMPLES_HOME} -name test` ; do
-  cd ${test_dir} && lein test
-done
+if [ ! -z "$MXNET_HOME" ]; then
+  data_path="$MXNET_HOME/data"
+else
+  MXNET_ROOT=$(cd "$(dirname $0)/../.."; pwd)
+  data_path="$MXNET_ROOT/data"
+fi
+
+if [ ! -d "$data_path" ]; then
+    mkdir -p "$data_path"
+fi
+
+resnet50_ssd_data_path="$data_path/resnet50_ssd"
+if [ ! -f "$resnet50_ssd_data_path/resnet50_ssd_model-0000.params" ]; then
+  wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json -P $resnet50_ssd_data_path
+  wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params -P $resnet50_ssd_data_path
+  wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/synset.txt -P $resnet50_ssd_data_path
+fi
