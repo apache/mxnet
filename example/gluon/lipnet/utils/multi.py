@@ -65,7 +65,7 @@ def multi_p_run(tot_num, _func, worker, params, n_process):
 
 def split_seq(sam_num, n_tile):
     """
-    Spli the number(sam_num) into numbers by n_tile
+    Split the number(sam_num) into numbers by n_tile
     """
     import math
     print(sam_num)
