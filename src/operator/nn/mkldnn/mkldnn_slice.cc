@@ -56,7 +56,7 @@ MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam &param,
   auto reorder_pd = reorder::primitive_desc(view_pd.dst_primitive_desc(), out_mem_pd);
   this->data_ = std::make_shared<mkldnn::memory>(view_pd.dst_primitive_desc(), nullptr);
   this->out_ = std::make_shared<mkldnn::memory>(view_pd.dst_primitive_desc(), nullptr);
-  fwd_.reset(new mkldnn::reorder(reorder_pd, *data_, *out_));
+  this->fwd_ = std::make_shared<mkldnn::reorder>(reorder_pd, *this->data_, *this->out_);
 }
 
 void MKLDNNSliceFwd::SetNewMem(const mkldnn::memory &input, const mkldnn::memory &output) {
