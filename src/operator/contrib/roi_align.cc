@@ -564,6 +564,8 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
   out_shape->clear();
   if (param.position_sensitive) {
     out_shape->push_back(
+         CHECK_EQ(dshape[1] % (param.pooled_size[0]*param.pooled_size[1]), 0) <<
+           "Input channels shuold be divided by pooled_size[0]*pooled_size[1]";
          Shape4(bshape[0], dshape[1]/param.pooled_size[0]/param.pooled_size[1],
                 param.pooled_size[0], param.pooled_size[1]));
   } else {
