@@ -17,6 +17,7 @@
 
 """
 Module: download_data
+This module provides utilities for downloading the datasets for training LipNet
 """
 
 import os
