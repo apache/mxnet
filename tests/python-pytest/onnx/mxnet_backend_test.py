@@ -21,35 +21,26 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+
 import unittest
+import backend as mxnet_backend
+import backend_test
+
 try:
     import onnx.backend.test
 except ImportError:
-    raise ImportError("Onnx and protobuf need to be installed. Instructions to"
-                      + " install - https://github.com/onnx/onnx#installation")
+    raise ImportError("Onnx and protobuf need to be installed")
 
-import mxnet_backend
-import test_cases
-
+operations = ['import', 'export']
 # This is a pytest magic variable to load extra plugins
 pytest_plugins = "onnx.backend.test.report",
 
-BACKEND_TESTS = onnx.backend.test.BackendTest(mxnet_backend, __name__)
 
-for op_tests in test_cases.IMPLEMENTED_OPERATORS_TEST:
-    BACKEND_TESTS.include(op_tests)
-
-for basic_model_test in test_cases.BASIC_MODEL_TESTS:
-    BACKEND_TESTS.include(basic_model_test)
-
-for std_model_test in test_cases.STANDARD_MODEL:
-    BACKEND_TESTS.include(std_model_test)
-
-BACKEND_TESTS.exclude('.*broadcast.*')
-BACKEND_TESTS.exclude('.*bcast.*')
-
-# import all test cases at global scope to make them visible to python.unittest
-globals().update(BACKEND_TESTS.enable_report().test_cases)
+for operation in operations:
+    mxnet_backend.MXNetBackend.set_params('mxnet', operation)
+    BACKEND_TESTS = backend_test.prepare_tests(mxnet_backend, operation)
+    # import all test cases at global scope to make them visible to python.unittest
+    globals().update(BACKEND_TESTS.enable_report().test_cases)
 
 if __name__ == '__main__':
     unittest.main()
