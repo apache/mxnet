@@ -502,48 +502,116 @@ fixed-size items.
 
         Examples
         --------
+        The default is to give explicit indices for all axes:
+
         >>> x = mx.nd.arange(0, 6).reshape((2, 3))
         >>> x.asnumpy()
         array([[ 0.,  1.,  2.],
                [ 3.,  4.,  5.]], dtype=float32)
-        >>> x[1].asnumpy()
-        array([ 3.,  4.,  5.], dtype=float32)
-        >>> y = x[0:1]
-        >>> y[:] = 2
+        >>> x[0, :].asnumpy()
+        array([0., 1., 2.], dtype=float32)
+        >>> x[0, :2].asnumpy()
+        array([0., 1.], dtype=float32)
+        >>> x[:, :-1].asnumpy()
+        array([[0., 1.],
+               [3., 4.]], dtype=float32)
+
+        If fewer indices are given, they are automatically supplemented by an
+        appropriate number of ``slice(None)`` ("``:``") to the right. For
+        instance, a single integer indexes along the first axis:
+
+        >>> x = mx.nd.arange(0, 6).reshape((2, 3))
+        >>> x[0].asnumpy()
+        array([0., 1., 2.], dtype=float32)
+        >>> x[1:].asnumpy()
+        array([[3., 4., 5.]], dtype=float32)
+
+        To omit a range of axes that should be kept as-is, an `Ellipsis`
+        ("``...``") can be used:
+
+        >>> x = mx.nd.arange(0, 16).reshape((2, 2, 2, 2))
+        >>> x[0, ..., 1].asnumpy()
+        array([[1., 3.],
+               [5., 7.]], dtype=float32)
+        >>> x[0, :, :, 1].asnumpy()  # equivalent
+        array([[1., 3.],
+               [5., 7.]], dtype=float32)
+
+        New axes of length 1 can be created by inserting ``None``
+        (`numpy.newaxis`) in the index:
+
+        >>> x = mx.nd.arange(0, 6).reshape((2, 3))
+        >>> x[None, :, :].asnumpy()
+        array([[[0., 1., 2.],
+                [3., 4., 5.]]], dtype=float32)
+        >>> x[None, :, :].shape
+        (1, 2, 3)
+
+        If the indexed portion of the array is contiguous in memory, no data
+        is copied. Instead, a shared-memory view of the original array is
+        returned, and changes to that view affect the original array:
+
+        >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
+        >>> y = x[0]  # contiguous
+        >>> y.asnumpy()
+        array([[0., 1.],
+               [2., 3.]], dtype=float32)
+        >>> y[:] = -1
         >>> x.asnumpy()
-        array([[ 2.,  2.,  2.],
-               [ 3.,  4.,  5.]], dtype=float32)
-        >>> x = mx.nd.arange(0, 8, dtype='int32').reshape((2, 2, 2))
-        >>> x[1, :]
-        [[4 5]
-         [6 7]]
-        >>> x[1, ...]  # equivalent
-        [[4 5]
-         [6 7]]
-        >>> x[[0, 1]]
-        [[[0 1]
-          [2 3]]
-         [[4 5]
-          [6 7]]]
-        >>> x[1:, [0, 1]]
-        [[[4 5]
-          [6 7]]]
+        array([[[-1., -1.],
+                [-1., -1.]],
+        <BLANKLINE>
+               [[ 4.,  5.],
+                [ 6.,  7.]]], dtype=float32)
+        >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
+        >>> y = x[1, :1, :]  # contiguous
+        >>> y.asnumpy()
+        array([[4., 5.]], dtype=float32)
+        >>> y[:] = -1
+        >>> x.asnumpy()
+        array([[[ 0.,  1.],
+                [ 2.,  3.]],
+        <BLANKLINE>
+               [[-1., -1.],
+                [ 6.,  7.]]], dtype=float32)
+        >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
+        >>> y = x[:, :, 1]  # not contiguous
+        >>> y.asnumpy()
+        array([[1., 3.],
+               [5., 7.]], dtype=float32)
+        >>> y[:] = -1
+        >>> x.asnumpy()
+        array([[[0., 1.],
+                [2., 3.]],
+        <BLANKLINE>
+               [[4., 5.],
+                [6., 7.]]], dtype=float32)
+
+        If the indexing key contains `list`, `numpy.ndarray` or `NDArray`
+        objects, advanced indexing is triggered, which always returns a
+        copy:
+
+        >>> x = mx.nd.arange(0, 8).reshape((2, 2, 2))
+        >>> x[[0, 1]].asnumpy()
+        array([[[0., 1.],
+                [2., 3.]],
+        <BLANKLINE>
+               [[4., 5.],
+                [6., 7.]]], dtype=float32)
+        >>> x[[0, 1], :].asnumpy()  # equivalent
+        array([[[0., 1.],
+                [2., 3.]],
+        <BLANKLINE>
+               [[4., 5.],
+                [6., 7.]]], dtype=float32)
         >>> y = np.array([0, 1], dtype='int32')
-        >>> x[1:, y]
-        [[[4 5]
-          [6 7]]]
+        >>> x[1:, y].asnumpy()
+        array([[[4., 5.],
+                [6., 7.]]], dtype=float32)
         >>> y = mx.nd.array([0, 1], dtype='int32')
-        >>> x[1:, y]
-        [[[4 5]
-          [6 7]]]
-        >>> x[None, None].shape
-        (1, 1, 2, 2, 2)
-        >>> x[None, None, :].shape  # equivalent
-        (1, 1, 2, 2, 2)
-        >>> x[None, None, ...].shape  # equivalent
-        (1, 1, 2, 2, 2)
-        >>> x[None, ..., None].shape
-        (1, 2, 2, 2, 1)
+        >>> x[1:, y].asnumpy()
+        array([[[4., 5.],
+                [6., 7.]]], dtype=float32)
         """
         key = _indexing_key_expand_implicit_axes(key, self.shape)
         if len(key) == 0:
