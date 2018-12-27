@@ -34,7 +34,7 @@ import dlib
 
 def mkdir_p(path):
     """
-    Make a diretory
+    Make a directory
     """
     try:
         os.makedirs(path)
