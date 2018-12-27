@@ -30,7 +30,9 @@ class Trainer(object):
 
     .. note::
 
-        `update_on_kvstore=False` is not supported in the following cases:
+        For the following cases, updates will always happen on kvstore,
+        i.e., you cannot set update_on_kvstore=False.
+
         - dist kvstore with sparse weights or sparse gradients
         - dist async kvstore
         - `optimizer.lr_scheduler` is not None
