@@ -2,7 +2,7 @@
 
 ---
 
-Gluon inplementation of [LipNet: End-to-End Sentence-level Lipreading](https://arxiv.org/abs/1611.01599)
+Gluon implementation of [LipNet: End-to-End Sentence-level Lipreading](https://arxiv.org/abs/1611.01599)
 
 ![net_structure](asset/network_structure.png)
 
