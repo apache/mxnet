@@ -47,7 +47,7 @@ def sample_multinomial(attrs, inputs, proto_obj):
                           + "Instructions to install - https://github.com/onnx/onnx")
     new_attrs = translation_utils._remove_attributes(attrs, ['seed'])
     new_attrs = translation_utils._fix_attribute_names(new_attrs, {'sample_size': 'shape'})
-    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs['dtype'])]
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
     return 'sample_multinomial', new_attrs, inputs
 
 
