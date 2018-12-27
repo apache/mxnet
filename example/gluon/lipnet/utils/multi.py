@@ -51,7 +51,7 @@ def multi_p_run(tot_num, _func, worker, params, n_process):
         for i in procs:
             i.join()
     except KeyboardInterrupt:
-        print('Killing all the childer in the pool.')
+        print('Killing all the children in the pool.')
         for i in procs:
             i.terminate()
             i.join()
