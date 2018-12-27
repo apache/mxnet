@@ -732,6 +732,7 @@ def hardmax(attrs, inputs, proto_obj):
     # since reshape doesn't take a tensor for shape,
     # computing with np.prod. This needs to be changed to
     # to use mx.sym.prod() when mx.sym.reshape() is fixed.
+    # (https://github.com/apache/incubator-mxnet/issues/10789)
     new_shape = (int(np.prod(input_shape[:axis])),
                  int(np.prod(input_shape[axis:])))
     reshape_op = symbol.reshape(inputs[0], new_shape)
