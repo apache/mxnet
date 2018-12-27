@@ -27,14 +27,14 @@ from ..base import py_str
 from ..ndarray import (NDArray, zeros, clip, sqrt, cast, maximum, abs as NDabs, array, multiply)
 from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, rmspropalex_update,
                        mp_sgd_update, mp_sgd_mom_update, square, ftrl_update, ftml_update,
-                       signsgd_update, signum_update, adamw_update)
+                       signsgd_update, signum_update)
 from ..ndarray import sparse
 from ..random import normal
 
 __all__ = [
     'AdaDelta', 'AdaGrad', 'Adam', 'Adamax', 'DCASGD', 'FTML', 'Ftrl', 'LBSGD',
     'NAG', 'NDabs', 'Nadam', 'Optimizer', 'RMSProp', 'SGD', 'SGLD', 'Signum',
-    'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register', 'AdamW'
+    'Test', 'Updater', 'ccSGD', 'create', 'get_updater', 'register'
 ]
 
 
@@ -1017,70 +1017,6 @@ class ccSGD(SGD):
     """[DEPRECATED] Same as `SGD`. Left here for backward compatibility."""
     def __init__(self, *args, **kwargs):
         super(ccSGD, self).__init__(*args, **kwargs)
-
-@register
-class AdamW(Optimizer):
-    """The Adam optimizer with fixed weight decay regularization.
-
-    This class implements the optimizer described in *Fixing Weight Decay
-    Regularization in Adam*, available at https://arxiv.org/abs/1711.05101.
-
-    Note that this is different from the original Adam optimizer which adds L2
-    regularization on the weights to the loss: it regularizes weights with large
-    gradients more than L2 regularization would, which was shown to yield better
-    training loss and generalization error in the paper above.
-
-    Updates are applied by::
-
-        rescaled_grad = clip(grad * rescale_grad, clip_gradient)
-        m = beta1 * m + (1 - beta1) * rescaled_grad
-        v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
-        w = w - learning_rate * (m / (sqrt(v) + epsilon) + wd * w)
-
-    This optimizer accepts the following parameters in addition to those accepted
-    by :class:`.Optimizer`.
-
-    For details of the update algorithm, see :class:`~mxnet.ndarray.adamw_update`.
-
-    Parameters
-    ----------
-    beta1 : float, optional
-        Exponential decay rate for the first moment estimates.
-    beta2 : float, optional
-        Exponential decay rate for the second moment estimates.
-    epsilon : float, optional
-        Small value to avoid division by 0.
-    """
-    def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 **kwargs):
-        super(AdamW, self).__init__(learning_rate=learning_rate, **kwargs)
-        self.beta1 = beta1
-        self.beta2 = beta2
-        self.epsilon = epsilon
-
-    def create_state(self, index, weight):
-        return (zeros(weight.shape, weight.context, dtype=weight.dtype), #mean
-                zeros(weight.shape, weight.context, dtype=weight.dtype)) #variance
-
-    def update(self, index, weight, grad, state):
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
-        self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-
-        t = self._index_update_count[index]
-        coef1 = 1. - self.beta1**t
-        coef2 = 1. - self.beta2**t
-        lr *= math.sqrt(coef2)/coef1
-
-        kwargs = {'beta1': self.beta1, 'beta2': self.beta2, 'epsilon': self.epsilon,
-                  'rescale_grad': self.rescale_grad}
-        if self.clip_gradient:
-            kwargs['clip_gradient'] = self.clip_gradient
-
-        mean, var = state
-        adamw_update(weight, grad, mean, var, out=weight, lr=lr, wd=wd, **kwargs)
 
 @register
 class Adam(Optimizer):
