@@ -86,7 +86,8 @@ if __name__ == "__main__":
         help='the init type of fcn-xs model, e.g. vgg16, fcnxs')
     parser.add_argument('--retrain', action='store_true', default=False,
         help='true means continue training.')
-    parser.add_argument("--gpu", type=int, help="gpu device_id. if not provide, then use cpu")
+    parser.add_argument("--gpu", type=int,
+                        help="gpu device_id eg: 0, does not support multi-gpus. if not provide, then use cpu")
     args = parser.parse_args()
     logging.info(args)
     main()

@@ -231,7 +231,7 @@ def run_mnist_DistilledSGLD(training_num=50000, gpu_id=None):
                       teacher_learning_rate=teacher_learning_rate,
                       student_learning_rate=student_learning_rate,
                       teacher_prior_precision=teacher_prior, student_prior_precision=student_prior,
-                      perturb_deviation=perturb_deviation, minibatch_size=100, dev=dev(xpu))
+                      perturb_deviation=perturb_deviation, minibatch_size=100, dev=dev(gpu_id))
 
 
 def run_toy_SGLD(gpu_id=None):
@@ -266,7 +266,7 @@ def run_toy_DistilledSGLD(gpu_id=None):
     teacher_data_inputs = {'data': nd.zeros(data_shape, ctx=dev(gpu_id)),
                            'teacher_output_label': nd.zeros((minibatch_size, 1), ctx=dev(gpu_id))}
     student_data_inputs = {'data': nd.zeros(data_shape, ctx=dev(gpu_id))}
-    #                   'softmax_label': nd.zeros((minibatch_size, 10), ctx=dev(xpu))}
+
     teacher_initializer = mx.init.Uniform(0.07)
     student_initializer = mx.init.Uniform(0.07)
     student_grad_f = lambda student_outputs, teacher_pred: \
@@ -350,7 +350,8 @@ if __name__ == '__main__':
                         help="Type of algorithm to use. 0 --> SGD, 1 --> SGLD, other-->DistilledSGLD")
     parser.add_argument("-t", "--training", type=int, default=50000,
                         help="Number of training samples")
-    parser.add_argument("--gpu", type=int, help="if None then use cpu else use gpu")
+    parser.add_argument("--gpu", type=int,
+                        help="gpu device_id eg: 0, does not support multi-gpus, if not provided then use cpu")
     args = parser.parse_args()
     training_num = args.training
     if args.dataset == 1:

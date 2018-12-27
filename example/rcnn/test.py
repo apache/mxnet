@@ -94,7 +94,8 @@ def parse_args():
     parser.add_argument('--params', type=str, default='', help='path to trained model')
     parser.add_argument('--dataset', type=str, default='voc', help='training dataset')
     parser.add_argument('--imageset', type=str, default='', help='imageset splits')
-    parser.add_argument('--gpu', type=int, default=0, help='gpu device_id eg: 0, if not provide then use cpu.')
+    parser.add_argument('--gpu', type=int, default=0,
+                        help='gpu device_id eg: 0, does not support multi-gpus, if not provide then use cpu.')
     # faster rcnn params
     parser.add_argument('--img-short-side', type=int, default=600)
     parser.add_argument('--img-long-side', type=int, default=1000)
