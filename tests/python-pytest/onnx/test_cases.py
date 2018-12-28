@@ -49,7 +49,7 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_argmin',
              'test_min',
              # pytorch operator tests
-             'test_operator_exp',
+             'test_exp_',
              'test_operator_maxpool',
              'test_operator_params',
              'test_operator_permute2',
@@ -60,21 +60,28 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_asin',
              'test_atan',
              'test_squeeze',
-             'test_matmul_3d',
-             'test_matmul_4d',
+             'test_matmul',
              'test_depthtospace',
              'test_hardsigmoid',
              'test_instancenorm',
              'test_shape',
              'test_cast',
              'test_clip',
-             'test_size'
+             'test_size',
+             'test_dropout',
+             'test_unsqueeze',
+             'test_log_',
+             'test_flatten_default_axis',
+             'test_leakyrelu',
+             'test_selu_default',
+             'test_elu',
+             'test_max_',
+             'test_softplus'
              ],
-    'import': ['test_unsqueeze',
+    'import': ['test_gather',
                'test_global_lppooling',
                'test_softsign',
                'test_reduce_',
-               'test_softplus',
                'test_mean',
                'test_averagepool_1d',
                'test_averagepool_2d_pads_count_include_pad',
@@ -84,18 +91,16 @@ IMPLEMENTED_OPERATORS_TEST = {
                'test_averagepool_3d',
                'test_LpPool_',
                'test_split_equal'
-               'test_random_',
                ],
     'export': ['test_random_uniform',
                'test_random_normal',
                'test_reduce_min',
                'test_reduce_max',
-               'test_squeeze',
                'test_reduce_mean',
                'test_reduce_prod',
                'test_reduce_sum_d',
                'test_reduce_sum_keepdims_random',
-               'test_max_',
+               'test_lrn'
                ]
 }
 
@@ -104,17 +109,12 @@ BASIC_MODEL_TESTS = {
              'test_BatchNorm',
              'test_ConstantPad2d'
              'test_Conv2d',
-             'test_ELU',
-             'test_LeakyReLU',
              'test_MaxPool',
              'test_PReLU',
-             'test_ReLU',
-             'test_selu_default',
-             'test_Sigmoid',
              'test_Softmax',
              'test_softmax_functional',
              'test_softmax_lastdim',
-             'test_Tanh']
+             ]
 }
 
 STANDARD_MODEL = {

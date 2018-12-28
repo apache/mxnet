@@ -82,8 +82,10 @@ class MXNetBackendRep(BackendRep):
         args = dict(zip(data_names, data_forward))
         exe = self.symbol.bind(ctx, args=args, aux_states=self.aux_params)
         exe.forward(is_train=False)
-        result = exe.outputs[0].asnumpy()
-        return [result]
+        result = []
+        for output in exe.outputs:
+            result.append(output.asnumpy())
+        return result
 
 
 # GluonBackendRep object will be returned by GluonBackend's prepare method which is used to
@@ -124,7 +126,12 @@ class GluonBackendRep(BackendRep):
         net_inputs = [nd.array(input_data, ctx=ctx) for input_data in inputs]
         net_outputs = self.net(*net_inputs)
         results = []
-        results.extend([o for o in net_outputs.asnumpy()])
-        result = np.array(results)
+        if isinstance(net_outputs, list):
+            for output in net_outputs:
+                results.append(output.asnumpy())
+            result = results
+        else:
+            results.extend([o for o in net_outputs.asnumpy()])
+            result = [np.array(results)]
 
-        return [result]
+        return result
