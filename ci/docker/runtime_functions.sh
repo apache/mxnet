@@ -939,8 +939,7 @@ unittest_centos7_gpu() {
 integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
-	pytest tests/python-pytest/onnx/gluon_backend_test.py
-	pytest tests/python-pytest/onnx/mxnet_backend_test.py
+	python tests/python-pytest/onnx/backend_test.py
 	pytest tests/python-pytest/onnx/mxnet_export_test.py
 	pytest tests/python-pytest/onnx/test_models.py
 	pytest tests/python-pytest/onnx/test_node.py
