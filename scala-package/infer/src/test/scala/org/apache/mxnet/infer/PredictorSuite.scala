@@ -94,7 +94,7 @@ class PredictorSuite extends FunSuite with BeforeAndAfterAll {
   test("PredictorSuite-testWithFlatFloat64Arrays") {
 
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2),
-      layout = Layout.NCHW))
+      layout = Layout.NCHW, dtype = DType.Float64))
     val inputData = Array.fill[Double](12)(1d)
 
     // this will disposed at the end of the predict call on Predictor.
