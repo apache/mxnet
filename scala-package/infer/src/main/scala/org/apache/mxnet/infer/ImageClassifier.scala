@@ -76,9 +76,8 @@ class ImageClassifier(modelPathPrefix: String,
     *                         Defaults to DType.Float32
     * @return                 List of list of tuples of (Label, Probability)
     */
-  def classifyImage[@specialized (Base.MX_PRIMITIVES) T]
-  (inputImage: BufferedImage, topK: Option[Int] = None, dType: DType = DType.Float32):
-  IndexedSeq[IndexedSeq[(String, T)]] = {
+  def classifyImage(inputImage: BufferedImage, topK: Option[Int] = None, dType: DType = DType.Float32):
+  IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
     val imageShape = inputShape.drop(1)
@@ -105,9 +104,8 @@ class ImageClassifier(modelPathPrefix: String,
     *                         Defaults to DType.Float32
     * @return                 List of list of tuples of (Label, Probability)
     */
-  def classifyImageBatch[@specialized (Base.MX_PRIMITIVES) T]
-  (inputBatch: Traversable[BufferedImage], topK: Option[Int] = None,
-   dType: DType = DType.Float32): IndexedSeq[IndexedSeq[(String, T)]] = {
+  def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None,
+   dType: DType = DType.Float32): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val inputBatchSeq = inputBatch.toIndexedSeq
     val imageBatch = inputBatchSeq.indices.par.map(idx => {
