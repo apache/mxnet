@@ -22,15 +22,11 @@
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.shape :as shape]
             [org.apache.clojure-mxnet.util :as util]
-            [clojure.spec.alpha :as s]
-            [clojure.reflect :as r])
+            [clojure.spec.alpha :as s])
   (:import (java.awt.image BufferedImage)
            (org.apache.mxnet NDArray)
            (org.apache.mxnet.infer Classifier ImageClassifier
                                    ObjectDetector Predictor)))
-
-(require '[clojure.reflect :as r])
-(r/reflect ImageClassifier)
 
 (s/def ::predictor #(instance? Predictor %))
 (s/def ::classifier #(instance? Classifier %))
