@@ -17,6 +17,7 @@
 
 package org.apache.mxnet.infer
 
+import org.apache.mxnet.MX_PRIMITIVES.MX_PRIMITIVE_TYPE
 import org.apache.mxnet.io.NDArrayIter
 import org.apache.mxnet._
 import org.apache.mxnet.module.Module
@@ -144,22 +145,27 @@ class Predictor(modelPathPrefix: String,
 
     // Infer the dtype of input and call relevant method
     val result = input(0)(0) match {
-      case d: Double => predictWithDoubleImpl(input.asInstanceOf[IndexedSeq[Array[Double]]])
-      case _ => predictWithFloatImpl(input.asInstanceOf[IndexedSeq[Array[Float]]])
+      case d: Double => predictImpl(input.asInstanceOf[IndexedSeq[Array[Double]]])
+      case _ => predictImpl(input.asInstanceOf[IndexedSeq[Array[Float]]])
     }
 
     result.asInstanceOf[IndexedSeq[Array[T]]]
   }
 
-  private def predictWithFloatImpl(input: IndexedSeq[Array[Float]])
-  : IndexedSeq[Array[Float]] = {
+  private def predictImpl[B, A <: MX_PRIMITIVE_TYPE]
+  (input: IndexedSeq[Array[B]])(implicit ev: B => A)
+  : IndexedSeq[Array[B]] = {
 
     var inputND: ListBuffer[NDArray] = ListBuffer.empty[NDArray]
 
     for((i, d) <- input.zip(inputDescriptors)) {
       val shape = d.shape.toVector.patch(from = batchIndex, patch = Vector(1), replaced = 1)
-
-      inputND += mxNetHandler.execute(NDArray.array(i, Shape(shape)))
+      if (d.dtype == DType.Float64) {
+        inputND += mxNetHandler.execute(NDArray.array(i.asInstanceOf[Array[Double]], Shape(shape)))
+      }
+      else {
+        inputND += mxNetHandler.execute(NDArray.array(i.asInstanceOf[Array[Float]], Shape(shape)))
+      }
     }
 
     // rebind with batchsize 1
@@ -173,7 +179,7 @@ class Predictor(modelPathPrefix: String,
     val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(
       inputND.toIndexedSeq, dataBatchSize = 1)))
 
-    val result = resultND.map((f : NDArray) => f.toArray)
+    val result = resultND.map((f : NDArray) => if (f.dtype == DType.Float64) f.toFloat64Array else f.toArray)
 
     mxNetHandler.execute(inputND.foreach(_.dispose))
     mxNetHandler.execute(resultND.foreach(_.dispose))
@@ -183,43 +189,9 @@ class Predictor(modelPathPrefix: String,
       mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false, forceRebind = true))
     }
 
-    result
+    result.asInstanceOf[IndexedSeq[Array[B]]]
   }
 
-  private def predictWithDoubleImpl(input: IndexedSeq[Array[Double]])
-  : IndexedSeq[Array[Double]] = {
-
-    var inputND: ListBuffer[NDArray] = ListBuffer.empty[NDArray]
-
-    for((i, d) <- input.zip(inputDescriptors)) {
-      val shape = d.shape.toVector.patch(from = batchIndex, patch = Vector(1), replaced = 1)
-
-      inputND += mxNetHandler.execute(NDArray.array(i, Shape(shape)))
-    }
-
-    // rebind with batchsize 1
-    if (batchSize != 1) {
-      val desc = iDescriptors.map((f : DataDesc) => new DataDesc(f.name,
-        Shape(f.shape.toVector.patch(batchIndex, Vector(1), 1)), f.dtype, f.layout) )
-      mxNetHandler.execute(mod.bind(desc, forceRebind = true,
-        forTraining = false))
-    }
-
-    val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(
-      inputND.toIndexedSeq, dataBatchSize = 1)))
-
-    val result = resultND.map((f : NDArray) => f.toFloat64Array)
-
-    mxNetHandler.execute(inputND.foreach(_.dispose))
-    mxNetHandler.execute(resultND.foreach(_.dispose))
-
-    // rebind to batchSize
-    if (batchSize != 1) {
-      mxNetHandler.execute(mod.bind(inputDescriptors, forTraining = false, forceRebind = true))
-    }
-
-    result
-  }
 
 
   /**
