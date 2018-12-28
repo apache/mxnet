@@ -18,14 +18,19 @@
 (ns org.apache.clojure-mxnet.infer
   (:refer-clojure :exclude [type])
   (:require [org.apache.clojure-mxnet.context :as context]
+            [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.shape :as shape]
             [org.apache.clojure-mxnet.util :as util]
-            [clojure.spec.alpha :as s])
+            [clojure.spec.alpha :as s]
+            [clojure.reflect :as r])
   (:import (java.awt.image BufferedImage)
            (org.apache.mxnet NDArray)
            (org.apache.mxnet.infer Classifier ImageClassifier
                                    ObjectDetector Predictor)))
+
+(require '[clojure.reflect :as r])
+(r/reflect ImageClassifier)
 
 (s/def ::predictor #(instance? Predictor %))
 (s/def ::classifier #(instance? Classifier %))
@@ -62,10 +67,12 @@
 (defprotocol AImageClassifier
   (classify-image
     [wrapped-image-classifier image]
-    [wrapped-image-classifier image topk])
+    [wrapped-image-classifier image topk]
+    [wrapped-image-classifier image topk dtype])
   (classify-image-batch
     [wrapped-image-classifier images]
-    [wrapped-image-classifier images topk]))
+    [wrapped-image-classifier images topk]
+    [wrapped-image-classifier images topk dtype]))
 
 (defprotocol AObjectDetector
   (detect-objects
@@ -80,7 +87,8 @@
 
 (extend-protocol APredictor
   WrappedPredictor
-  (predict [wrapped-predictor inputs]
+  (predict
+    [wrapped-predictor inputs]
     (util/validate! ::wrapped-predictor wrapped-predictor
                     "Invalid predictor")
     (util/validate! ::vec-of-float-arrays inputs
@@ -101,62 +109,50 @@
 
 (extend-protocol AClassifier
   WrappedClassifier
-  (classify [wrapped-classifier inputs]
-    (util/validate! ::wrapped-classifier wrapped-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-float-arrays inputs
-                    "Invalid inputs")
-    (classify wrapped-classifier inputs nil))
-  (classify [wrapped-classifier inputs topk]
-    (util/validate! ::wrapped-classifier wrapped-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-float-arrays inputs
-                    "Invalid inputs")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.classify (:classifier wrapped-classifier)
-                (util/vec->indexed-seq inputs)
-                (util/->int-option topk))))
-  (classify-with-ndarray [wrapped-classifier inputs]
-    (util/validate! ::wrapped-classifier wrapped-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-ndarrays inputs
-                    "Invalid inputs")
-    (classify-with-ndarray wrapped-classifier inputs nil))
-  (classify-with-ndarray [wrapped-classifier inputs topk]
-    (util/validate! ::wrapped-classifier wrapped-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-ndarrays inputs
-                    "Invalid inputs")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.classifyWithNDArray (:classifier wrapped-classifier)
-                           (util/vec->indexed-seq inputs)
-                           (util/->int-option topk))))
+  (classify
+    ([wrapped-classifier inputs]
+     (classify wrapped-classifier inputs nil))
+    ([wrapped-classifier inputs topk]
+     (util/validate! ::wrapped-classifier wrapped-classifier
+                     "Invalid classifier")
+     (util/validate! ::vec-of-float-arrays inputs
+                     "Invalid inputs")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/coerce-return-recursive
+      (.classify (:classifier wrapped-classifier)
+                 (util/vec->indexed-seq inputs)
+                 (util/->int-option topk)))))
+  (classify-with-ndarray
+    ([wrapped-classifier inputs]
+     (classify-with-ndarray wrapped-classifier inputs nil))
+    ([wrapped-classifier inputs topk]
+     (util/validate! ::wrapped-classifier wrapped-classifier
+                     "Invalid classifier")
+     (util/validate! ::vec-of-ndarrays inputs
+                     "Invalid inputs")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/coerce-return-recursive
+      (.classifyWithNDArray (:classifier wrapped-classifier)
+                            (util/vec->indexed-seq inputs)
+                           (util/->int-option topk)))))
   WrappedImageClassifier
-  (classify [wrapped-image-classifier inputs]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-float-arrays inputs
-                    "Invalid inputs")
-    (classify wrapped-image-classifier inputs nil))
-  (classify [wrapped-image-classifier inputs topk]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-float-arrays inputs
-                    "Invalid inputs")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.classify (:image-classifier wrapped-image-classifier)
-                (util/vec->indexed-seq inputs)
-                (util/->int-option topk))))
-  (classify-with-ndarray [wrapped-image-classifier inputs]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (util/validate! ::vec-of-ndarrays inputs
-                    "Invalid inputs")
-    (classify-with-ndarray wrapped-image-classifier inputs nil))
-  (classify-with-ndarray [wrapped-image-classifier inputs topk]
+  (classify
+    ([wrapped-image-classifier inputs]
+     (classify wrapped-image-classifier inputs nil))
+    ([wrapped-image-classifier inputs topk]
+     (util/validate! ::wrapped-image-classifier wrapped-image-classifier
+                     "Invalid classifier")
+     (util/validate! ::vec-of-float-arrays inputs
+                     "Invalid inputs")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/coerce-return-recursive
+      (.classify (:image-classifier wrapped-image-classifier)
+                 (util/vec->indexed-seq inputs)
+                 (util/->int-option topk)))))
+  (classify-with-ndarray
+    ([wrapped-image-classifier inputs]
+     (classify-with-ndarray wrapped-image-classifier inputs nil))
+    ([wrapped-image-classifier inputs topk]
     (util/validate! ::wrapped-image-classifier wrapped-image-classifier
                     "Invalid classifier")
     (util/validate! ::vec-of-ndarrays inputs
@@ -165,83 +161,83 @@
     (util/coerce-return-recursive
      (.classifyWithNDArray (:image-classifier wrapped-image-classifier)
                            (util/vec->indexed-seq inputs)
-                           (util/->int-option topk)))))
+                           (util/->int-option topk))))))
 
 (s/def ::image #(instance? BufferedImage %))
+(s/def ::dtype #{dtype/UINT8 dtype/INT32 dtype/FLOAT16 dtype/FLOAT32 dtype/FLOAT64})
 
 (extend-protocol AImageClassifier
   WrappedImageClassifier
-  (classify-image [wrapped-image-classifier image]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (util/validate! ::image image "Invalid image")
-    (classify-image wrapped-image-classifier image nil))
-  (classify-image [wrapped-image-classifier image topk]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (util/validate! ::image image "Invalid image")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.classifyImage (:image-classifier wrapped-image-classifier)
-                     image
-                     (util/->int-option topk))))
-  (classify-image-batch [wrapped-image-classifier images]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (classify-image-batch wrapped-image-classifier images nil))
-  (classify-image-batch [wrapped-image-classifier images topk]
-    (util/validate! ::wrapped-image-classifier wrapped-image-classifier
-                    "Invalid classifier")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.classifyImageBatch (:image-classifier wrapped-image-classifier)
-                          images
-                          (util/->int-option topk)))))
+  (classify-image
+    ([wrapped-image-classifier image]
+     (classify-image wrapped-image-classifier image nil dtype/FLOAT32))
+    ([wrapped-image-classifier image topk]
+     (classify-image wrapped-image-classifier image topk dtype/FLOAT32))
+    ([wrapped-image-classifier image topk dtype]
+     (util/validate! ::wrapped-image-classifier wrapped-image-classifier
+                     "Invalid classifier")
+     (util/validate! ::image image "Invalid image")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/validate! ::dtype dtype "Invalid dtype")
+     (util/coerce-return-recursive
+      (.classifyImage (:image-classifier wrapped-image-classifier)
+                      image
+                      (util/->int-option topk)
+                      dtype))))
+  (classify-image-batch
+    ([wrapped-image-classifier images]
+     (classify-image-batch wrapped-image-classifier images nil dtype/FLOAT32))
+    ([wrapped-image-classifier images topk]
+         (classify-image-batch wrapped-image-classifier images topk dtype/FLOAT32))
+    ([wrapped-image-classifier images topk dtype]
+     (util/validate! ::wrapped-image-classifier wrapped-image-classifier
+                     "Invalid classifier")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/validate! ::dtype dtype "Invalid dtype")
+     (util/coerce-return-recursive
+      (.classifyImageBatch (:image-classifier wrapped-image-classifier)
+                           images
+                           (util/->int-option topk)
+                           dtype)))))
 
 (extend-protocol AObjectDetector
   WrappedObjectDetector
-  (detect-objects [wrapped-detector image]
+  (detect-objects
+    ([wrapped-detector image]
+     (detect-objects wrapped-detector image nil))
+    ([wrapped-detector image topk]
     (util/validate! ::wrapped-detector wrapped-detector
                     "Invalid object detector")
-    (util/validate! ::image image "Invalid image")
-    (detect-objects wrapped-detector image nil))
-  (detect-objects [wrapped-detector image topk]
-    (util/validate! ::wrapped-detector wrapped-detector
-                    "Invalid object detector")
-    (util/validate! ::image image "Invalid image")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.imageObjectDetect (:object-detector wrapped-detector)
-                         image
-                         (util/->int-option topk))))
-  (detect-objects-batch [wrapped-detector images]
-    (util/validate! ::wrapped-detector wrapped-detector
-                    "Invalid object detector")
-    (detect-objects-batch wrapped-detector images nil))
-  (detect-objects-batch [wrapped-detector images topk]
-    (util/validate! ::wrapped-detector wrapped-detector
-                    "Invalid object detector")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.imageBatchObjectDetect (:object-detector wrapped-detector)
-                              images
-                              (util/->int-option topk))))
-  (detect-objects-with-ndarrays [wrapped-detector input-arrays]
-    (util/validate! ::wrapped-detector wrapped-detector
-                    "Invalid object detector")
-    (util/validate! ::vec-of-ndarrays input-arrays
-                    "Invalid inputs")
-    (detect-objects-with-ndarrays wrapped-detector input-arrays nil))
-  (detect-objects-with-ndarrays [wrapped-detector input-arrays topk]
-    (util/validate! ::wrapped-detector wrapped-detector
-                    "Invalid object detector")
-    (util/validate! ::vec-of-ndarrays input-arrays
-                    "Invalid inputs")
-    (util/validate! ::nil-or-int topk "Invalid top-K")
-    (util/coerce-return-recursive
-     (.objectDetectWithNDArray (:object-detector wrapped-detector)
-                               (util/vec->indexed-seq input-arrays)
+     (util/validate! ::image image "Invalid image")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/coerce-return-recursive
+      (.imageObjectDetect (:object-detector wrapped-detector)
+                          image
+                          (util/->int-option topk)))))
+  (detect-objects-batch
+    ([wrapped-detector images]
+     (detect-objects-batch wrapped-detector images nil))
+    ([wrapped-detector images topk]
+     (util/validate! ::wrapped-detector wrapped-detector
+                     "Invalid object detector")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/coerce-return-recursive
+      (.imageBatchObjectDetect (:object-detector wrapped-detector)
+                               images
                                (util/->int-option topk)))))
+  (detect-objects-with-ndarrays
+    ([wrapped-detector input-arrays]
+     (detect-objects-with-ndarrays wrapped-detector input-arrays nil))
+    ([wrapped-detector input-arrays topk]
+     (util/validate! ::wrapped-detector wrapped-detector
+                     "Invalid object detector")
+     (util/validate! ::vec-of-ndarrays input-arrays
+                     "Invalid inputs")
+     (util/validate! ::nil-or-int topk "Invalid top-K")
+     (util/coerce-return-recursive
+      (.objectDetectWithNDArray (:object-detector wrapped-detector)
+                                (util/vec->indexed-seq input-arrays)
+                                (util/->int-option topk))))))
 
 (defprotocol AInferenceFactory
   (create-predictor [factory] [factory opts])
@@ -335,7 +331,7 @@
   [image input-shape-vec]
   (util/validate! ::image image "Invalid image")
   (util/validate! (s/coll-of int?) input-shape-vec "Invalid shape vector")
-  (ImageClassifier/bufferedImageToPixels image (shape/->shape input-shape-vec)))
+  (ImageClassifier/bufferedImageToPixels image (shape/->shape input-shape-vec) dtype/FLOAT32))
 
 (s/def ::image-path string?)
 (s/def ::image-paths (s/coll-of ::image-path))
