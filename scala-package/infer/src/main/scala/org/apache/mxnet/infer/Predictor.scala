@@ -179,7 +179,8 @@ class Predictor(modelPathPrefix: String,
     val resultND = mxNetHandler.execute(mod.predict(new NDArrayIter(
       inputND.toIndexedSeq, dataBatchSize = 1)))
 
-    val result = resultND.map((f : NDArray) => if (f.dtype == DType.Float64) f.toFloat64Array else f.toArray)
+    val result =
+      resultND.map((f : NDArray) => if (f.dtype == DType.Float64) f.toFloat64Array else f.toArray)
 
     mxNetHandler.execute(inputND.foreach(_.dispose))
     mxNetHandler.execute(resultND.foreach(_.dispose))

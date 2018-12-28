@@ -76,7 +76,8 @@ class ImageClassifier(modelPathPrefix: String,
     *                         Defaults to DType.Float32
     * @return                 List of list of tuples of (Label, Probability)
     */
-  def classifyImage(inputImage: BufferedImage, topK: Option[Int] = None, dType: DType = DType.Float32):
+  def classifyImage
+  (inputImage: BufferedImage, topK: Option[Int] = None, dType: DType = DType.Float32):
   IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
