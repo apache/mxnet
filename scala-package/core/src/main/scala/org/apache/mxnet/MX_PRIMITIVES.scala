@@ -38,6 +38,14 @@ object MX_PRIMITIVES {
     def unary_- : MX_PRIMITIVE_TYPE
   }
 
+  trait MXPrimitiveOrdering extends Ordering[MX_PRIMITIVE_TYPE] {
+
+    def compare(x: MX_PRIMITIVE_TYPE, y: MX_PRIMITIVE_TYPE) = x.compare(y)
+
+  }
+  
+  implicit object MX_PRIMITIVE_TYPE extends MXPrimitiveOrdering
+
   /**
     * Mimics Float in Scala.
     * @param data

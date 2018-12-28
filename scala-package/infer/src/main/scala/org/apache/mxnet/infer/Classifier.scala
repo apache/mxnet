@@ -20,7 +20,9 @@ package org.apache.mxnet.infer
 import org.apache.mxnet._
 import java.io.File
 
+import org.apache.mxnet.MX_PRIMITIVES.MX_PRIMITIVE_TYPE
 import org.slf4j.LoggerFactory
+
 import scala.io
 import scala.collection.mutable.ListBuffer
 import scala.collection.parallel.mutable.ParArray
@@ -88,40 +90,24 @@ class Classifier(modelPathPrefix: String,
     // considering only the first output
     val result = input(0)(0) match {
       case d: Double => {
-        classifyWithDoubleImpl(input.asInstanceOf[IndexedSeq[Array[Double]]], topK)
+        classifyImpl(input.asInstanceOf[IndexedSeq[Array[Double]]], topK)
       }
       case _ => {
-        classifyWithFloatImpl(input.asInstanceOf[IndexedSeq[Array[Float]]], topK)
+        classifyImpl(input.asInstanceOf[IndexedSeq[Array[Float]]], topK)
       }
     }
 
     result.asInstanceOf[IndexedSeq[(String, T)]]
   }
 
-  private def classifyWithFloatImpl(input: IndexedSeq[Array[Float]], topK: Option[Int] = None)
-  : IndexedSeq[(String, Float)] = {
+  private def classifyImpl[B, A <: MX_PRIMITIVE_TYPE]
+  (input: IndexedSeq[Array[B]], topK: Option[Int] = None)(implicit ev: B => A)
+  : IndexedSeq[(String, B)] = {
 
     // considering only the first output
     val predictResult = predictor.predict(input)(0)
 
-    var result: IndexedSeq[(String, Float)] = IndexedSeq.empty
-
-    if (topK.isDefined) {
-      val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
-      result = sortedIndex.map(i => (synset(i), predictResult(i))).toIndexedSeq
-    } else {
-      result = synset.zip(predictResult).toIndexedSeq
-    }
-    result
-  }
-
-  private def classifyWithDoubleImpl(input: IndexedSeq[Array[Double]], topK: Option[Int] = None)
-  : IndexedSeq[(String, Double)] = {
-
-    // considering only the first output
-    val predictResult = predictor.predict(input)(0)
-
-    var result: IndexedSeq[(String, Double)] = IndexedSeq.empty
+    var result: IndexedSeq[(String, B)] = IndexedSeq.empty
 
     if (topK.isDefined) {
       val sortedIndex = predictResult.zipWithIndex.sortBy(-_._1).map(_._2).take(topK.get)
