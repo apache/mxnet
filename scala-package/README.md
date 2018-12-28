@@ -135,7 +135,7 @@ Or run a subset of unit tests, for e.g.,
 
 ```bash
 cd scala-package
-mvn -DSCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite integration-test
+mvn -Dsuites=org.apache.mxnet.NDArraySuite integration-test
 ```
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
@@ -196,3 +196,7 @@ More details about JVM Memory Management are available [here](https://github.com
 License
 -------
 MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/incubator-mxnet/blob/master/scala-package/LICENSE) license.
+
+MXNet uses some 3rd party softwares. Following 3rd party license files are bundled inside Scala jar file:
+* cub/LICENSE.TXT
+* mkldnn/external/mklml_mac_2019.0.1.20180928/license.txt

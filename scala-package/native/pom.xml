@@ -159,7 +159,7 @@
             </goals>
             <configuration>
               <executable>bash</executable>
-              <commandlineArgs>-c 'ln -sf ${MXNET_DIR}/lib/libmxnet.so ${project.build.directory}/libmxnet.so; ln -sf ${MXNET_DIR}/lib/libgfortran.so.3 ${project.build.directory}/libgfortran.so.3; ln -sf ${MXNET_DIR}/lib/libquadmath.so.0 ${project.build.directory}/libquadmath.so.0'</commandlineArgs>
+              <commandlineArgs>-c 'ln -sf ${MXNET_DIR}/lib/* ${project.build.directory}/'</commandlineArgs>
             </configuration>
           </execution>
         </executions>
