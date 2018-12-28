@@ -28,11 +28,13 @@ from models.network import LipNet
 from BeamSearch import ctcBeamSearch
 from utils.common import char_conv, int2char
 # set gpu count
+
+
 def setting_ctx(use_gpu):
     """
     Description : set gpu module
     """
-    if use_gpu:
+    if eval(use_gpu):
         ctx = mx.gpu()
     else:
         ctx = mx.cpu()

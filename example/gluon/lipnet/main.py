@@ -31,7 +31,7 @@ def main():
     parser.add_argument('--image_path', type=str, default='./data/datasets/')
     parser.add_argument('--align_path', type=str, default='./data/align/')
     parser.add_argument('--dr_rate', type=float, default=0.5)
-    parser.add_argument('--use_gpu', type=bool, default=True)
+    parser.add_argument('--use_gpu', type=str, default="True")
     parser.add_argument('--num_workers', type=int, default=2)
     config = parser.parse_args()
     trainer = Train(config)
