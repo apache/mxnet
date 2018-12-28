@@ -54,7 +54,6 @@ from . import callback
 from . import lr_scheduler
 # use mx.kv as short for kvstore
 from . import kvstore as kv
-from . import kvstore_server
 # Runtime compile module
 from . import rtc
 # Attribute scope to add attributes to symbolic graphs
@@ -82,3 +81,7 @@ from . import rnn
 from . import gluon
 
 __version__ = base.__version__
+
+# dist kvstore module which launches a separate process when role is set to "server".
+# this should be done after other modules are initialized.
+from . import kvstore_server
