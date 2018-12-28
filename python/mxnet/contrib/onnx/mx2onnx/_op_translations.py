@@ -932,6 +932,8 @@ def scalar_op_helper(node, op_name, **kwargs):
                     new_initializer = scalar_value[0] / numpy_helper.to_array(i)
                 else:
                     new_initializer = numpy_helper.to_array(i) / scalar_value[0]
+            elif op_name == 'Pow':
+                new_initializer = numpy_helper.to_array(i) ** scalar_value[0]
             flag = False
             break
 
@@ -1030,6 +1032,14 @@ def convert_rdiv_scalar(node, **kwargs):
     and return multiple created nodes.
     """
     return scalar_op_helper(node, 'Div', **kwargs)
+
+@mx_op.register("_power_scalar")
+def convert_pow_scalar(node, **kwargs):
+    """Map MXNet's _pow_scalar operator attributes to onnx's Pow operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Pow', **kwargs)
 
 # Sorting and Searching
 @mx_op.register("argmax")
