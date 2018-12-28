@@ -459,12 +459,10 @@ class DeconvolutionOp {
                                      oshape[1] / param_.num_group,
                                      oshape[2] * oshape[3]);
     // See convolution for workspace calculations. nstep_ will be the effective batch size
-    nstep_ = std::max(
-        std::min(
-            static_cast<index_t>(
-                param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
-            ishape[0]),
-        1L);
+    nstep_ = std::max(std::min(static_cast<index_t>(param_.workspace / (shape_colunit_.Size() +
+                                                                        shape_dstunit_.Size())),
+                               ishape[0]),
+                      static_cast<index_t>(1));
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
