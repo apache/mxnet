@@ -36,7 +36,7 @@ static mkldnn::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
                const NDArray &data, const mkldnn::memory &input_mem) {
   mkldnn::memory::primitive_desc data_mpd = input_mem.get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
-  auto cpu_engine = data_mpd.get_engine();
+  auto cpu_engine = CpuEngine::Get()->get_engine();
   //  softmax_output has no axis parameter, so use it as it original implement.
   int axis = data.shape().ndim() - 1;
   mkldnn::softmax_forward::desc desc = is_train
@@ -50,9 +50,9 @@ static mkldnn::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
 typedef ParamOpSign<SoftmaxOutputParam> MKLDNNSoftmaxOuputSignature;
 
 class MKLDNNSoftmaxOutputFwd {
-  std::shared_ptr<mkldnn::softmax_forward> fwd;
-  std::shared_ptr<mkldnn::memory> data;
-  std::shared_ptr<mkldnn::memory> out;
+  std::shared_ptr<mkldnn::softmax_forward> fwd_;
+  std::shared_ptr<mkldnn::memory> data_;
+  std::shared_ptr<mkldnn::memory> out_;
 
  public:
   const mkldnn::softmax_forward::primitive_desc fwd_pd;
@@ -63,27 +63,27 @@ class MKLDNNSoftmaxOutputFwd {
   }
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
-    if (this->data == nullptr)
-      this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+    if (this->data_ == nullptr)
+      this->data_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
         data.get_primitive_desc(), data.get_data_handle()));
     else
-      this->data->set_data_handle(data.get_data_handle());
+      this->data_->set_data_handle(data.get_data_handle());
 
-    if (this->out == nullptr)
-      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+    if (this->out_ == nullptr)
+      this->out_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
         output.get_primitive_desc(), output.get_data_handle()));
     else
-      this->out->set_data_handle(output.get_data_handle());
+      this->out_->set_data_handle(output.get_data_handle());
 
-    if (this->fwd == nullptr) {
-      this->fwd = std::shared_ptr<mkldnn::softmax_forward>(
-        new mkldnn::softmax_forward(fwd_pd, mkldnn::primitive::at(*this->data),
-        *this->out));
+    if (this->fwd_ == nullptr) {
+      this->fwd_ = std::shared_ptr<mkldnn::softmax_forward>(
+        new mkldnn::softmax_forward(fwd_pd, mkldnn::primitive::at(*this->data_),
+        *this->out_));
     }
   }
 
   const mkldnn::softmax_forward &GetFwd() const {
-    return *fwd;
+    return *fwd_;
   }
 };
 
