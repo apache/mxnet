@@ -164,17 +164,17 @@ object ImageClassifier {
     *
     * @param inputImageShape  Input shape; for example for resnet it is (3,224,224).
                               Should be same as inputDescriptor shape.
-    * @param dType            The DataType of the NDArray that should be returned.
+    * @param dType            The DataType of the NDArray created from the image
+    *                         that should be returned.
     *                         Currently it defaults to Dtype.Float32
     * @return                 NDArray pixels array with shape (3, 224, 224) in CHW format
     */
   def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape,
                             dType : DType = DType.Float32): NDArray = {
 
-    // 3 times height and width for R,G,B channels
       if (dType == DType.Float64) {
-        val result = getDoublePixelsArray(resizedImage)
-        NDArray.array(result, shape = inputImageShape)
+        val result = getFloatPixelsArray(resizedImage)
+        NDArray.array(result.map(_.toDouble), shape = inputImageShape)
       }
       else {
         val result = getFloatPixelsArray(resizedImage)
@@ -191,39 +191,8 @@ object ImageClassifier {
     // get an array of integer pixels in the default RGB color mode
     val pixels = resizedImage.getRGB(0, 0, w, h, null, 0, w)
 
+    // 3 times height and width for R,G,B channels
     val result = new Array[Float](3 * h * w)
-    var row = 0
-    // copy pixels to array vertically
-    while (row < h) {
-      var col = 0
-      // copy pixels to array horizontally
-      while (col < w) {
-        val rgb = pixels(row * w + col)
-        // getting red color
-        result(0 * h * w + row * w + col) = (rgb >> 16) & 0xFF
-        // getting green color
-        result(1 * h * w + row * w + col) = (rgb >> 8) & 0xFF
-        // getting blue color
-        result(2 * h * w + row * w + col) = rgb & 0xFF
-        col += 1
-      }
-      row += 1
-    }
-
-    resizedImage.flush()
-
-    result
-  }
-
-  private def getDoublePixelsArray(resizedImage: BufferedImage): Array[Double] = {
-    // Get height and width of the image
-    val w = resizedImage.getWidth()
-    val h = resizedImage.getHeight()
-
-    // get an array of integer pixels in the default RGB color mode
-    val pixels = resizedImage.getRGB(0, 0, w, h, null, 0, w)
-
-    val result = new Array[Double](3 * h * w)
     var row = 0
     // copy pixels to array vertically
     while (row < h) {

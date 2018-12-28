@@ -40,10 +40,10 @@ object MX_PRIMITIVES {
 
   trait MXPrimitiveOrdering extends Ordering[MX_PRIMITIVE_TYPE] {
 
-    def compare(x: MX_PRIMITIVE_TYPE, y: MX_PRIMITIVE_TYPE) = x.compare(y)
+    def compare(x: MX_PRIMITIVE_TYPE, y: MX_PRIMITIVE_TYPE): Int = x.compare(y)
 
   }
-  
+
   implicit object MX_PRIMITIVE_TYPE extends MXPrimitiveOrdering
 
   /**
