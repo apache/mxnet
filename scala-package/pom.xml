@@ -37,8 +37,14 @@
   </scm>
 
   <properties>
+    <java.version>1.7</java.version>
     <scala.version>2.11.8</scala.version>
     <build.platform/>
+    <scala.binary.version>2.11</scala.binary.version>
+    <build.platform />
+    <scoverage.plugin.version>1.3.0</scoverage.plugin.version>
+    <scoverage.aggregate>true</scoverage.aggregate>
+    <scoverage.skip>true</scoverage.skip>
     <cxx>g++</cxx>
     <dollar>$</dollar>
     <MXNET_DIR>${project.basedir}/..</MXNET_DIR>
@@ -236,9 +242,11 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.3</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
           <encoding>UTF-8</encoding>
+          <skipMain>true</skipMain>
+          <skip>true</skip>
         </configuration>
       </plugin>
       <plugin>
@@ -300,6 +308,16 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.scoverage</groupId>
+        <artifactId>scoverage-maven-plugin</artifactId>
+        <version>${scoverage.plugin.version}</version>
+        <configuration>
+          <scalaVersion>${scala.version}</scalaVersion>
+          <highlighting>true</highlighting>
+          <aggregate>true</aggregate>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.scalastyle</groupId>
         <artifactId>scalastyle-maven-plugin</artifactId>
         <version>1.0.0</version>
@@ -323,11 +341,13 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
+        <groupId>net.alchim31.maven</groupId>
+        <artifactId>scala-maven-plugin</artifactId>
+        <version>3.4.4</version>
         <configuration>
           <recompileMode>incremental</recompileMode>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
           <compilerPlugins>
             <compilerPlugin>
               <groupId>org.scalamacros</groupId>
@@ -338,25 +358,19 @@
         </configuration>
         <executions>
           <execution>
+            <id>compile</id>
             <goals>
+              <goal>add-source</goal>
               <goal>compile</goal>
               <goal>testCompile</goal>
+              <goal>doc-jar</goal>
             </goals>
           </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>net.alchim31.maven</groupId>
-        <artifactId>scala-maven-plugin</artifactId>
-        <version>3.3.2</version>
-        <configuration>
-        </configuration>
-        <executions>
           <execution>
-            <phase>package</phase>
-            <id>attach-javadocs</id>
+            <id>presite</id>
+            <phase>pre-site</phase>
             <goals>
-              <goal>doc-jar</goal>
+              <goal>add-source</goal>
             </goals>
           </execution>
         </executions>
@@ -371,7 +385,51 @@
         </configuration>
       </plugin>
     </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.5.1</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
+
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.scoverage</groupId>
+        <artifactId>scoverage-maven-plugin</artifactId>
+        <version>${scoverage.plugin.version}</version>
+        <configuration>
+          <aggregate>true</aggregate>
+        </configuration>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>report-only</report> <!-- select only one report from: report, integration-report and report-only reporters -->
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.9</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>index</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+
+
   <dependencies>
     <dependency>
       <groupId>commons-codec</groupId>
