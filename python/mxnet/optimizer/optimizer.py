@@ -993,22 +993,19 @@ class SGLD(Optimizer):
     This class implements the optimizer described in the paper *Stochastic Gradient
     Riemannian Langevin Dynamics on the Probability Simplex*, available at
     https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf.
+    To reproduce the updates exactly, a seed for the noise generation must be set in the user program.
 
-    Parameters
-    ----------
-    noise_seed : int, optional
-       The seed for generating the Gaussian noise in a reproducible manner.
     """
-    def __init__(self, noise_seed=None, **kwargs):
+
+    def __init__(self, **kwargs):
         super(SGLD, self).__init__(**kwargs)
-        self.noise_seed = noise_seed
 
     def create_state(self, index, weight):
         return None
 
     def update(self, index, weight, grad, state):
-        assert(isinstance(weight, NDArray))
-        assert(isinstance(grad, NDArray))
+        assert (isinstance(weight, NDArray))
+        assert (isinstance(grad, NDArray))
         self._update_count(index)
         lr = self._get_lr(index)
         wd = self._get_wd(index)
@@ -1016,12 +1013,8 @@ class SGLD(Optimizer):
         grad = grad * self.rescale_grad
         if self.clip_gradient is not None:
             grad = clip(grad, -self.clip_gradient, self.clip_gradient)
-
-        if self.noise_seed is not None:
-            seed(self.noise_seed)
-
-        weight[:] += - lr/2 * (grad + wd * weight) + normal(0, math.sqrt(lr), shape=weight.shape,
-                                                            dtype=weight.dtype, ctx=weight.context)
+        weight[:] += - lr / 2 * (grad + wd * weight) + normal(0, math.sqrt(lr), shape=weight.shape,
+                                                              dtype=weight.dtype, ctx=weight.context)
 
 
 @register  # pylint: disable=invalid-name
