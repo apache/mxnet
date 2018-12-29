@@ -915,7 +915,7 @@ OpStatePtr CachedOp::NaiveForward(
   states.resize(idx.num_nodes());
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   ShapeVector shapes = g.GetAttr<ShapeVector>("shape");
-  NaiveRunGraph(false, default_ctx, idx, arrays, shapes, 0, idx.num_nodes(),
+  NaiveRunGraph(false, default_ctx, idx, arrays, &shapes, 0, idx.num_nodes(),
                 std::move(array_reqs), std::move(ref_count), &states,
                 dispatch_modes, recording && inlining_);
   {
