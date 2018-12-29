@@ -21,7 +21,6 @@
  * \file sarange.cc
 */
 #include "./sarange-inl.h"
-#include "../tensor/elemwise_binary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -55,6 +54,25 @@ bool SArangeStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+bool SArangeBackStorageType(const nnvm::NodeAttrs& attrs,
+                            const int dev_mask,
+                            DispatchMode* dispatch_mode,
+                            std::vector<int> *in_attrs,
+                            std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2);
+  CHECK_EQ(out_attrs->size(), 1);
+  for (int &attr : *in_attrs) {
+    CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
+  }
+  for (int &attr : *out_attrs) {
+    attr = kDefaultStorage;
+  }
+  for (size_t i = 0; i < out_attrs->size(); i++)
+    out_attrs->at(i) = kDefaultStorage;
+  *dispatch_mode = DispatchMode::kFComputeEx;
+  return true;
+}
+
 NNVM_REGISTER_OP(_contrib_sarange)
 .describe(R"code(
 Experimental CPU-only support for arange of symbolic input.
@@ -70,10 +88,11 @@ Experimental CPU-only support for arange of symbolic input.
 .add_arguments(SArangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_sarange)
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::relu_grad>>)
+.set_attr<FInferStorageType>("FInferStorageType", SArangeBackStorageType)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SArangeBackward<cpu>)
 .add_arguments(SArangeParam::__FIELDS__());
 
 }  // namespace op

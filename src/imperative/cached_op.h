@@ -33,6 +33,7 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t inline_limit;
   uint32_t forward_bulk_size;
   uint32_t backward_bulk_size;
+  bool is_dynamic;
   bool static_alloc;
   bool static_shape;
   nnvm::Tuple<uint32_t> data_indices;
@@ -183,7 +184,8 @@ class CachedOp {
       const std::vector<NDArray*>& outputs);
   bool CheckDynamicShapeExists(
       const Context& default_ctx,
-      const std::vector<NDArray*>& inputs);
+      const std::vector<NDArray*>& inputs,
+      bool erase_result);
   OpStatePtr NaiveForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,

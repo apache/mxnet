@@ -100,6 +100,7 @@ CachedOp::CachedOp(
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy = Op::Get("_copy");
   config_.Init(flags);
+  config_.is_dynamic = false;
 
   if (config_.static_shape) {
     CHECK(config_.static_alloc) << "static_alloc must be True when static_shape is True";
@@ -263,7 +264,8 @@ std::vector<nnvm::NodeEntry> CachedOp::Gradient(
 }
 
 bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
-                                       const std::vector<NDArray*>& inputs) {
+                                       const std::vector<NDArray*>& inputs,
+                                       bool erase_result) {
   using namespace nnvm;
   using namespace imperative;
   CHECK_EQ(inputs.size(), num_inputs());
@@ -281,8 +283,10 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
                      &contain_dynamic_shape);
-  g.attrs.erase("shape");
-  g.attrs.erase("shape_inputs");
+  if (erase_result) {
+    g.attrs.erase("shape");
+    g.attrs.erase("shape_inputs");
+  }
   return contain_dynamic_shape;
 }
 
@@ -910,9 +914,18 @@ OpStatePtr CachedOp::NaiveForward(
   auto& states = runtime.op_states;
   states.resize(idx.num_nodes());
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
+  ShapeVector shapes = g.GetAttr<ShapeVector>("shape");
+  NaiveRunGraph(false, default_ctx, idx, arrays, shapes, 0, idx.num_nodes(),
                 std::move(array_reqs), std::move(ref_count), &states,
                 dispatch_modes, recording && inlining_);
+  {
+    auto state_ptr = GetCachedOpState(default_ctx);
+    auto& state = state_ptr.get_state<CachedOpState>();
+    auto copied_shape = shapes;
+    std::lock_guard<std::mutex> lock(state.mutex);
+    state.info.fwd_graph.attrs["shape"] = std::make_shared<dmlc::any>(std::move(copied_shape));
+  }
+  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
   return op_state;
 }
 
@@ -940,7 +953,9 @@ OpStatePtr CachedOp::Forward(
 
   OpStatePtr op_state;
   try {
-    if (this->CheckDynamicShapeExists(default_ctx, inputs)) {
+    if (config_.is_dynamic || this->CheckDynamicShapeExists(default_ctx, inputs, true)) {
+      config_.is_dynamic = true;
+      config_.static_alloc = false;
       op_state = NaiveForward(default_ctx, inputs, outputs);
     } else if (config_.static_alloc) {
       op_state = StaticForward(default_ctx, inputs, outputs);

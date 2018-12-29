@@ -28,6 +28,7 @@ void NaiveRunGraph(
     const Context& default_ctx,
     const nnvm::IndexedGraph& idx,
     const std::vector<NDArray*> arrays,
+    std::vector<TShape> &shapes,
     size_t node_start, size_t node_end,
     std::vector<OpReqType>&& array_reqs,
     std::vector<uint32_t>&& ref_count,
@@ -72,11 +73,14 @@ void NaiveRunGraph(
       std::vector<OpReqType> req;
       SetWriteInplaceReq(ndinputs, ndoutputs, &req);
       imp->InvokeOp(ctx, node.source->attrs, ndinputs, ndoutputs, req, dispatch_mode, state);
-      for (size_t i = 0; i < ndoutputs.size(); i++) {
-        if (ndoutputs[i]->shape().ndim() == 0) {
-          ndoutputs[i]->WaitToRead();
-          ndoutputs[i]->SetShapeFromChunk();
+      for (size_t j = 0; j < ndoutputs.size(); ++j) {
+        if (ndoutputs[j]->shape().ndim() == 0) {
+          ndoutputs[j]->WaitToRead();
+          ndoutputs[j]->SetShapeFromChunk();
         }
+        size_t eid = idx.entry_id(i, j);
+        auto shape = ndoutputs[j]->shape();
+        shapes[eid] = shape;
       }
       if (recording) {
         imp->RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, state);

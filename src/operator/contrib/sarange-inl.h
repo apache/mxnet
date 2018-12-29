@@ -90,6 +90,22 @@ inline void SArangeForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+
+template<typename xpu>
+inline void SArangeBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext &ctx,
+                            const std::vector<NDArray> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<NDArray> &outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  // inputs: {ograd, data}
+  // outputs: {igrad_data}
+  const NDArray& igrad_data = outputs[0];
+  mshadow::Stream<xpu> *stream = ctx.get_stream<xpu>();
+  Fill<false>(stream, igrad_data.data(), req[0], 0);
+}
+
 }  // namespace op
 }  // namespace mxnet
 
