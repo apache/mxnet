@@ -197,7 +197,7 @@ function test_reshape()
 
   A = mx.zeros(10, 5, 4)
   x = mx.Variable(:x)
-  y = mx.reshape(x, -1, 0, reverse=true)
+  y = mx.reshape(x, -1, 0, reverse = true)
   e = mx.bind(y, mx.cpu(), Dict(:x => A))
   mx.forward(e)
   out = e.outputs[1]
@@ -265,8 +265,8 @@ function test_dot()
   x = mx.Variable(:x)
   y = mx.Variable(:y)
   z = mx.dot(x, y)
-  z_exec = mx.bind(z, context=mx.cpu(),
-                   args=Dict(:x => mx.ones((100, 2)), :y => mx.ones((2, 200))))
+  z_exec = mx.bind(z, context = mx.cpu(),
+                   args = Dict(:x => mx.ones((100, 2)), :y => mx.ones((2, 200))))
   mx.forward(z_exec)
 
   ret = copy(z_exec.outputs[1])
@@ -468,49 +468,49 @@ function test_power()
     x = mx.Variable(:x)
     y = mx.Variable(:y)
 
-    let z = x.^y
+    let z = x .^ y
       z = exec(z; :x => A, :y => B)[]
 
       @test size(z) == size(A)
-      @test copy(z) ≈ A.^B
+      @test copy(z) ≈ A .^ B
     end
 
-    let z = y.^x
+    let z = y .^ x
       z = exec(z; :x => A, :y => B)[]
 
       @test size(z) == size(A)
-      @test copy(z) ≈ B.^A
+      @test copy(z) ≈ B .^ A
     end
   end
 
-  @info("SymbolicNode::power::e.^x::x.^e")
+  @info("SymbolicNode::power::e .^ x::x .^ e")
   let x = mx.Variable(:x), A = [0 0 0; 0 0 0]
-    y = exec(e.^x; :x => A)[]
-    @test copy(y) ≈ ones(A)
+    y = exec(ℯ .^ x; :x => A)[]
+    @test copy(y) ≈ fill(1, size(A))
   end
 
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
-    let y = e.^x
+    let y = ℯ .^ x
       z = exec(y; :x => A)[]
-      @test copy(z) ≈ e.^A
+      @test copy(z) ≈ ℯ .^ A
     end
 
-    let y = x.^e
+    let y = x .^ ℯ
       z = exec(y; :x => A)[]
-      @test copy(z) ≈ A.^e
+      @test copy(z) ≈ A .^ ℯ
     end
   end
 
-  @info("SymbolicNode::power::π.^x::x.^π")
+  @info("SymbolicNode::power::π .^ x::x .^ π")
   let x = mx.Variable(:x), A = Float32[1 2; 3 4]
-    let y = π.^x
+    let y = π .^ x
       z = exec(y; :x => A)[]
-      @test copy(z) ≈ π.^A
+      @test copy(z) ≈ π .^ A
     end
 
-    let y = x.^π
+    let y = x .^ π
       z = exec(y; :x => A)[]
-      @test copy(z) ≈ A.^π
+      @test copy(z) ≈ A .^ π
     end
   end
 end  # function test_power
@@ -518,7 +518,7 @@ end  # function test_power
 function test_get_name()
   @info("SymbolicNode::get_name::with get_internals")
   name = mx.get_name(mx.get_internals(mlp2()))  # no error
-  @test contains(name, "Ptr")
+  @test occursin("Ptr", name)
 end  # function test_get_name
 
 function test_var()
