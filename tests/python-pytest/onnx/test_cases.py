@@ -90,7 +90,8 @@ IMPLEMENTED_OPERATORS_TEST = {
                'test_averagepool_2d_strides',
                'test_averagepool_3d',
                'test_LpPool_',
-               'test_split_equal'
+               'test_split_equal',
+               'test_hardmax'
                ],
     'export': ['test_random_uniform',
                'test_random_normal',
