@@ -101,7 +101,7 @@ class Loss(HybridBlock):
 class L2Loss(Loss):
     r"""Calculates the mean squared error between `pred` and `label`.
 
-    .. math:: L = \frac{1}{2} \sum_i \vert {pred}_i - {label}_i \vert^2.
+    .. math:: L = \frac{1}{2} \sum_i \vert {label}_i - {pred}_i \vert^2.
 
     `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
@@ -131,7 +131,7 @@ class L2Loss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.square(pred - label)
+        loss = F.square(label - pred)
         loss = _apply_weighting(F, loss, self._weight/2, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -139,7 +139,7 @@ class L2Loss(Loss):
 class L1Loss(Loss):
     r"""Calculates the mean absolute error between `pred` and `label`.
 
-    .. math:: L = \sum_i \vert {pred}_i - {label}_i \vert.
+    .. math:: L = \sum_i \vert {label}_i - {pred}_i \vert.
 
     `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
@@ -169,7 +169,7 @@ class L1Loss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.abs(pred - label)
+        loss = F.abs(label - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -481,9 +481,9 @@ class HuberLoss(Loss):
     exceeds rho but is equal to L2 loss otherwise. Also called SmoothedL1 loss.
 
     .. math::
-        L = \sum_i \begin{cases} \frac{1}{2 {rho}} ({pred}_i - {label}_i)^2 &
-                           \text{ if } |{pred}_i - {label}_i| < {rho} \\
-                           |{pred}_i - {label}_i| - \frac{{rho}}{2} &
+        L = \sum_i \begin{cases} \frac{1}{2 {rho}} ({label}_i - {pred}_i)^2 &
+                           \text{ if } |{label}_i - {pred}_i| < {rho} \\
+                           |{label}_i - {pred}_i| - \frac{{rho}}{2} &
                            \text{ otherwise }
             \end{cases}
 
@@ -518,7 +518,7 @@ class HuberLoss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.abs(pred - label)
+        loss = F.abs(label - pred)
         loss = F.where(loss > self._rho, loss - 0.5 * self._rho,
                        (0.5/self._rho) * F.square(loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
@@ -670,8 +670,8 @@ class TripletLoss(Loss):
     example and a negative example:
 
     .. math::
-        L = \sum_i \max(\Vert {pred}_i - {pos_i} \Vert_2^2 -
-                        \Vert {pred}_i - {neg_i} \Vert_2^2 + {margin}, 0)
+        L = \sum_i \max(\Vert {pos_i}_i - {pred} \Vert_2^2 -
+                        \Vert {neg_i}_i - {pred} \Vert_2^2 + {margin}, 0)
 
     `pred`, `positive` and `negative` can have arbitrary shape as long as they
     have the same number of elements.
@@ -703,7 +703,7 @@ class TripletLoss(Loss):
     def hybrid_forward(self, F, pred, positive, negative):
         positive = _reshape_like(F, positive, pred)
         negative = _reshape_like(F, negative, pred)
-        loss = F.sum(F.square(pred-positive) - F.square(pred-negative),
+        loss = F.sum(F.square(positive-pred) - F.square(negative-pred),
                      axis=self._batch_axis, exclude=True)
         loss = F.relu(loss + self._margin)
         return _apply_weighting(F, loss, self._weight, None)
