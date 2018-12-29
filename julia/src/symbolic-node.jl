@@ -542,7 +542,7 @@ indicating the index, as in the list of [`list_outputs`](@ref).
 """
 function Base.getindex(self :: SymbolicNode, idx :: Union{Base.Symbol, AbstractString})
   idx   = Symbol(idx)
-  i_idx = find(idx .== list_outputs(self))
+  i_idx = findall(idx .== list_outputs(self))
   @assert(length(i_idx) > 0, "Cannot find output with name '$idx'")
   @assert(length(i_idx) < 2, "Found duplicated output with name '$idx'")
   Base.getindex(self, i_idx[1])
@@ -970,7 +970,7 @@ macro chain(layers)
     last_layer = nothing
 
     function _chain_layer(layer, last_layer)
-        if isa(last_layer, Void)
+        if last_layer ≡ nothing
             return esc(layer)
         else
             if @capture(layer, f_(x__))
