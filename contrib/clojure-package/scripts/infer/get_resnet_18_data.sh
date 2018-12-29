@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,11 +19,20 @@
 
 set -evx
 
-MXNET_HOME=$(cd "$(dirname $0)/../.."; pwd)
-EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
-#cd ${MXNET_HOME}/contrib/clojure-package
-#lein test
-#lein cloverage --codecov
-for test_dir in `find ${EXAMPLES_HOME} -name test` ; do
-  cd ${test_dir} && lein test
-done
+if [ ! -z "$MXNET_HOME" ]; then
+  data_path="$MXNET_HOME/data"
+else
+  MXNET_ROOT=$(cd "$(dirname $0)/../.."; pwd)
+  data_path="$MXNET_ROOT/data"
+fi
+
+if [ ! -d "$data_path" ]; then
+    mkdir -p "$data_path"
+fi
+
+resnet_18_data_path="$data_path/resnet-18"
+if [ ! -f "$resnet_18_data_path/resnet-18-0000.params" ]; then
+    wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/resnet-18-symbol.json -P $resnet_18_data_path
+    wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/resnet-18-0000.params -P $resnet_18_data_path
+    wget https://s3.us-east-2.amazonaws.com/scala-infer-models/resnet-18/synset.txt -P $resnet_18_data_path
+fi
