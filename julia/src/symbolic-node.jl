@@ -652,10 +652,12 @@ Operating with `Real` is available.
 ^
 
 broadcasted(::typeof(^), x::SymbolicNode, y::SymbolicNode) = _power(x, y)
-broadcasted(::typeof(^), x::SymbolicNode, s::Real) = _power_scalar(x,  scalar=MX_float(s))
-broadcasted(::typeof(^), s::Real, x::SymbolicNode) = _rpower_scalar(x, scalar=MX_float(s))
+broadcasted(::typeof(^), x::SymbolicNode, s::Real) = _power_scalar(x,  scalar = s)
+broadcasted(::typeof(^), s::Real, x::SymbolicNode) = _rpower_scalar(x, scalar = s)
+broadcasted(::typeof(Base.literal_pow), ::typeof(^), x::SymbolicNode, ::Val{s}) where {s} =
+  _power_scalar(x, scalar = s)
 
-broadcasted(::typeof(^), ::Irrational{:e}, x::SymbolicNode) = exp(x)
+broadcasted(::typeof(^), ::Irrational{:ℯ}, x::SymbolicNode) = exp(x)
 broadcasted(::typeof(^), x::SymbolicNode, s::Irrational) =
   _power_scalar(x, scalar=MX_float(s))
 broadcasted(::typeof(^), s::Irrational, x::SymbolicNode) =
