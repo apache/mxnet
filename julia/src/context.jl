@@ -27,6 +27,8 @@ A context describes the device type and id on which computation should be carrie
 struct Context
   device_type::CONTEXT_TYPE
   device_id::Int
+
+  Context(dev_type::CONTEXT_TYPE, dev_id::Integer = 0) = new(dev_type, dev_id)
 end
 
 Context(dev_type::Integer, dev_id::Integer = 0) =

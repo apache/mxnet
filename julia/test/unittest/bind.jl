@@ -17,7 +17,7 @@
 
 module TestBind
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: rand_dims
 
@@ -26,7 +26,7 @@ using ..Main: rand_dims
 ################################################################################
 function test_arithmetic(::Type{T}, uf, gf) where T <: mx.DType
   shape = rand_dims()
-  info("Bind::arithmetic::$T::$uf::dims = $shape")
+  @info "Bind::arithmetic::$T::$uf::dims = $shape"
 
   lhs = mx.Variable(:lhs)
   rhs = mx.Variable(:rhs)
@@ -77,7 +77,7 @@ function test_arithmetic()
     test_arithmetic(T, (x,y) -> x .- y, (g,x,y) -> (g,-g))
     test_arithmetic(T, (x,y) -> x .* y, (g,x,y) -> (y.*g, x.*g))
     if T <: Integer || T == Float16
-      warn("Not running division test for $T")
+      @warn "Not running division test for $T"
     else
       test_arithmetic(T, (x,y) -> x ./ y, (g,x,y) -> (g ./ y, -x .* g ./ (y.^2)))
     end
