@@ -452,7 +452,7 @@ function infer_shape(self :: SymbolicNode; kwargs...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
   for (k,v) in kwargs
-    append!(sdata, flipdim([v...],1))
+    append!(sdata, reverse([v...], dims = 1))
     push!(indptr, length(sdata))
   end
   keys = AbstractString[string(x[1]) for x in kwargs]
@@ -463,7 +463,7 @@ function infer_shape(self :: SymbolicNode, args::Union{Tuple, Cvoid}...)
   indptr = MX_uint[0]
   for arg in args
     if isa(arg, Cvoid); continue; end
-    append!(sdata, flipdim([arg...],1))
+    append!(sdata, reverse([arg...], dims = 1))
     push!(indptr, length(sdata))
   end
   keys = Ptr{char_p}(0)
