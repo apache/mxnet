@@ -18,14 +18,14 @@
 module TestOperator
 
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: rand_dims
 
 function test_scalar_op()
   data  = mx.Variable(:data)
   shape = rand_dims()
-  info("Operator::scalar_op::dims = $shape")
+  @info "Operator::scalar_op::dims = $shape"
 
   data_jl  = 5ones(Float32, shape)
   arr_data = mx.copy(data_jl, mx.cpu())
