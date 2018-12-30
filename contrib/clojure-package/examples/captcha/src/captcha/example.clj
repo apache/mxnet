@@ -22,6 +22,8 @@
                             :label-width label-width
                             :data-shape data-shape
                                         ;:mean-img "mean.bin"
+                            :shuffle true
+                            :seed 42
                             :mean-r 127
                             :mean-g 127
                             :mean-b 127
@@ -46,16 +48,11 @@
 (defn multi-label-accuracy
   [label pred]
   (let [[nr nc] (ndarray/shape-vec label)
-        pred-label (-> pred
-                       (ndarray/argmax 1)
-                       (ndarray/reshape [nr nc]))
-        digit-matches (ndarray/equal label pred-label)
-                                        ; captcha-matches (ndarray/equal (ndarray/sum digit-matches 1) 4)
-                                        ; num-complete-matches (ndarray/sum captcha-matches)
-        num-digit-matches (ndarray/sum digit-matches)
-        [total] (ndarray/->vec num-digit-matches)
-        ]
-    ; (println "Fraction:" (float (/ total nr nc)))
+        label-t (-> label ndarray/transpose (ndarray/reshape [-1]))
+        pred-label (ndarray/argmax pred 1)
+        [total] (-> (ndarray/equal label-t pred-label)
+                     ndarray/sum
+                     ndarray/->vec)]
     (float (/ total nr nc))))
 
 (defn get-data-symbol
@@ -79,8 +76,7 @@
         relu4 (sym/activation {:data pool4 :act-type "relu"})
 
         flattened (sym/flatten {:data relu4})
-        dropped (sym/dropout {:data flattened :p 0.1})
-        fc1 (sym/fully-connected {:data dropped :num-hidden 256})
+        fc1 (sym/fully-connected {:data flattened :num-hidden 256})
         fc21 (sym/fully-connected {:data fc1 :num-hidden 10})
         fc22 (sym/fully-connected {:data fc1 :num-hidden 10})
         fc23 (sym/fully-connected {:data fc1 :num-hidden 10})
