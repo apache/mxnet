@@ -47,12 +47,11 @@ Update and accumulate metrics.
 * `labels::Vector{NDArray}`: the labels from the data provider.
 * `preds::Vector{NDArray}`: the outputs (predictions) of the network.
 """
-function update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray) where T <: AbstractEvalMetric
+update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray) where T<:AbstractEvalMetric =
   _update!(metric, labels, preds, hasNDArraySupport(metric))
-end
 
 function _update!(metric::T, labels::VecOfNDArray, preds::VecOfNDArray,
-                  ::Val{true}) where T<: AbstractEvalMetric
+                  ::Val{true}) where T<:AbstractEvalMetric
   if length(labels) != length(preds)
     @warn(
       "The number of labels ($(length(labels))) does not correspond to the " *
@@ -126,19 +125,19 @@ To calculate both mean-squared error [`Accuracy`](@ref) and log-loss [`ACE`](@re
 ```
 """
 mutable struct MultiMetric <: AbstractEvalMetric
-    metrics :: Vector{mx.AbstractEvalMetric}
+  metrics :: Vector{mx.AbstractEvalMetric}
 end
 
 function update!(metric :: MultiMetric, labels :: Vector{<:NDArray}, preds :: Vector{<:NDArray})
-    for m in metric.metrics
-        update!(m, labels, preds)
-    end
-    nothing
+  for m in metric.metrics
+    update!(m, labels, preds)
+  end
+  nothing
 end
 
 function reset!(metric :: MultiMetric)
-    map(reset!, metric.metrics)
-    nothing
+  map(reset!, metric.metrics)
+  nothing
 end
 
 get(metric::MultiMetric) = mapreduce(get, append!, metric.metrics)
@@ -156,21 +155,21 @@ and log-loss [`ACE`](@ref) for the second output:
 ```
 """
 mutable struct SeqMetric <: AbstractEvalMetric
-    metrics :: Vector{AbstractEvalMetric}
+  metrics :: Vector{AbstractEvalMetric}
 end
 
 function update!(metric::SeqMetric, labels::VecOfNDArray, preds::VecOfNDArray)
-    @assert length(metric.metrics) == length(labels)
-    @assert length(metric.metrics) == length(preds)
-    for (m, l, p) in zip(metric.metrics, labels, preds)
-        update!(m, [l], [p])
-    end
-    nothing
+  @assert length(metric.metrics) == length(labels)
+  @assert length(metric.metrics) == length(preds)
+  for (m, l, p) in zip(metric.metrics, labels, preds)
+    update!(m, [l], [p])
+  end
+  nothing
 end
 
 function reset!(metric::SeqMetric)
-    map(reset!, metric.metrics)
-    nothing
+  map(reset!, metric.metrics)
+  nothing
 end
 
 get(metric::SeqMetric) = mapreduce(get, append!, metric.metrics)
