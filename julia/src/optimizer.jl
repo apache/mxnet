@@ -73,6 +73,8 @@ OptimizationState(batch_size::Int) = OptimizationState(batch_size, 0, 0, 0)
 
 module LearningRate
 
+using Markdown
+
 import Base: get
 import ..mx: AbstractLearningRateScheduler, OptimizationState, update!
 
@@ -100,7 +102,7 @@ end
 
 get(f::Fixed) = f.η
 
-doc"""
+@doc doc"""
     LearningRate.Exp(η₀; γ = 0.9)
 
 ```math
@@ -155,6 +157,8 @@ using .LearningRate
 ###############################################################################
 
 module Momentum
+
+using Markdown
 
 import Base: get
 import ..mx: AbstractMomentumScheduler, OptimizationState
