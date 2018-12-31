@@ -19,7 +19,7 @@
 # Dataset related utilities
 ################################################################################
 function get_data_dir()
-  data_dir = joinpath(Pkg.dir("MXNet"), "data")
+  data_dir = joinpath(dirname(@__FILE__), "..", "data")
   mkpath(data_dir)
   data_dir
 end
@@ -32,7 +32,7 @@ function get_mnist_ubyte()
                    :train_label => "train-labels-idx1-ubyte",
                    :test_data   => "t10k-images-idx3-ubyte",
                    :test_label  => "t10k-labels-idx1-ubyte")
-  filenames = Dict(map((x) -> x[1] => joinpath(mnist_dir, x[2]), filenames))
+  filenames = Dict((x[1] => joinpath(mnist_dir, x[2]) for x ∈ pairs(filenames)))
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
       mnist_dir = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
@@ -40,7 +40,7 @@ function get_mnist_ubyte()
           run(`unzip -u $mnist_dir`)
         catch
           try
-            run(pipe(`7z x $mnist_dir`,stdout=DevNull))
+            run(pipe(`7z x $mnist_dir`,stdout = devnull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end
@@ -63,7 +63,7 @@ function get_cifar10()
           run(`unzip -u cifar10.zip`)
         catch
           try
-            run(pipeline(`7z x cifar10.zip`, stdout=DevNull))
+            run(pipeline(`7z x cifar10.zip`, stdout = devnull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end
