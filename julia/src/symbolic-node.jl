@@ -397,7 +397,7 @@ function _build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data
   shape_data = unsafe_wrap(Array, shape_data, shape_size)
   shapes = map(1:shape_size) do i
     my_shape = unsafe_wrap(Array, shape_data[i], shape_ndim[i])
-    tuple(flipdim(Int[my_shape...],1)...)
+    tuple(reverse(Int[my_shape...], dims = 1)...)
   end
   convert(Vector{Tuple}, shapes)
 end
