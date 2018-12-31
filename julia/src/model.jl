@@ -264,7 +264,7 @@ function predict(self::FeedForward, data::AbstractDataProvider;
   end
 
   # concatenate along mini-batches
-  output_arrays = [cat(ndims(x[1]), x...) for x in output_list]
+  output_arrays = [cat(x..., dims = ndims(x[1])) for x in output_list]
   if length(output_arrays) == 1
     # only 1 output, return it directly, instead of a list
     output_arrays = output_arrays[1]

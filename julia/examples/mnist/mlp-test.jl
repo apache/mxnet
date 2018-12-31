@@ -68,7 +68,7 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   for batch in eval_provider
     push!(labels, copy(mx.get(eval_provider, batch, :softmax_label)))
   end
-  labels = cat(1, labels...)
+  labels = cat(labels..., dims = 1)
 
   # Now we use compute the accuracy
   correct = 0
