@@ -16,7 +16,7 @@
 # under the License.
 
 """
-Module: common
+Module: This module contains common conversion functions
 
 """
 
