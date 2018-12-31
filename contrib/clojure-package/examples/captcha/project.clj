@@ -20,5 +20,9 @@
   :plugins [[lein-cljfmt "0.5.7"]]
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]]
-  :main ^:skip-aot captcha.example
-  :profiles {:uberjar {:aot :all}})
+  :main ^:skip-aot captcha.train-ocr
+  :profiles {:train {:main captcha.train-ocr}
+             :infer {:main captcha.infer-ocr}
+             :uberjar {:aot :all}}
+  :aliases {"train" ["with-profile" "train" "run"]
+            "infer" ["with-profile" "infer" "run"]})

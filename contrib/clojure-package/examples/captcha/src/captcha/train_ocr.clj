@@ -1,4 +1,4 @@
-(ns captcha.example
+(ns captcha.train-ocr
   (:require [clojure.java.io :as io]
             [org.apache.clojure-mxnet.callback :as callback]
             [org.apache.clojure-mxnet.context :as context]
@@ -21,45 +21,40 @@
                             :batch-size batch-size
                             :label-width label-width
                             :data-shape data-shape
-                                        ;:mean-img "mean.bin"
                             :shuffle true
-                            :seed 42
-                            :mean-r 127
-                            :mean-g 127
-                            :mean-b 127
-                            :mean-a 127
-                            :scale (/ 1.0 128)
-                            }))
+                            :seed 42}))
 
 (defonce eval-data
   (mx-io/image-record-iter {:path-imgrec "captcha_example/captcha_test.rec"
                             :path-imglist "captcha_example/captcha_test.lst"
                             :batch-size batch-size
                             :label-width label-width
-                            :data-shape data-shape
-                                        ;:mean-img "mean.bin"
-                            :mean-r 127
-                            :mean-g 127
-                            :mean-b 127
-                            :mean-a 127
-                            :scale (/ 1.0 128)
-                            }))
+                            :data-shape data-shape}))
 
 (defn multi-label-accuracy
   [label pred]
   (let [[nr nc] (ndarray/shape-vec label)
         label-t (-> label ndarray/transpose (ndarray/reshape [-1]))
         pred-label (ndarray/argmax pred 1)
-        [total] (-> (ndarray/equal label-t pred-label)
-                     ndarray/sum
-                     ndarray/->vec)]
-    (float (/ total nr nc))))
+        matches (ndarray/equal label-t pred-label)
+        [digit-matches] (-> matches
+                            ndarray/sum
+                            ndarray/->vec)
+        [complete-matches] (-> matches
+                               (ndarray/reshape [nc nr])
+                               (ndarray/sum 0)
+                               (ndarray/equal label-width)
+                               ndarray/sum
+                               ndarray/->vec)]
+    ; (float (/ digit-matches nr nc))
+    (float (/ complete-matches nr))))
 
 (defn get-data-symbol
   []
   (let [data (sym/variable "data")
+        scaled (sym/div (sym/- data 127) 128)
 
-        conv1 (sym/convolution {:data data :kernel [5 5] :num-filter 32})
+        conv1 (sym/convolution {:data scaled :kernel [5 5] :num-filter 32})
         pool1 (sym/pooling {:data conv1 :pool-type "max" :kernel [2 2] :stride [1 1]})
         relu1 (sym/activation {:data pool1 :act-type "relu"})
 
@@ -76,7 +71,8 @@
         relu4 (sym/activation {:data pool4 :act-type "relu"})
 
         flattened (sym/flatten {:data relu4})
-        fc1 (sym/fully-connected {:data flattened :num-hidden 256})
+        dropped (sym/dropout {:data flattened :p 0.25})
+        fc1 (sym/fully-connected {:data dropped :num-hidden 256})
         fc21 (sym/fully-connected {:data fc1 :num-hidden 10})
         fc22 (sym/fully-connected {:data fc1 :num-hidden 10})
         fc23 (sym/fully-connected {:data fc1 :num-hidden 10})
@@ -100,63 +96,53 @@
   (mx-io/batch-index batch)
   (-> batch mx-io/batch-label first ndarray/->vec)
   (-> batch mx-io/batch-data first ndarray/->vec)
-  (def _mod (m/module (create-captcha-net)
+  (def model (m/module (create-captcha-net)
                       {:data-names ["data"] :label-names ["label"]}))
-  (m/bind _mod {:data-shapes (mx-io/provide-data-desc train-data)
+  (m/bind model {:data-shapes (mx-io/provide-data-desc train-data)
                 :label-shapes (mx-io/provide-label-desc train-data)})
-  (m/init-params _mod
+  (m/init-params model
                  {:initializer (initializer/uniform 0.01)
                   :force-init true})
-  ; (m/init-params _mod)
-  (m/forward _mod batch)
-  (m/output-shapes _mod)
-  (m/outputs _mod)
+  ; (m/init-params model)
+  (m/forward model batch)
+  (m/output-shapes model)
+  (m/outputs model)
   (-> batch mx-io/batch-label first ndarray/->vec)
-  ; (-> _mod m/outputs first first (ndarray/> 0.5) (ndarray/reshape [0 -1 4]) (ndarray/argmax 1) ndarray/->vec)
-  (-> _mod m/outputs-merged first ndarray/->vec)
-  (m/backward _mod)
-  (def out-grads (m/grad-arrays _mod))
+  ; (-> model m/outputs first first (ndarray/> 0.5) (ndarray/reshape [0 -1 4]) (ndarray/argmax 1) ndarray/->vec)
+  (-> model m/outputs-merged first ndarray/->vec)
+  (m/backward model)
+  (def out-grads (m/grad-arrays model))
   (map #(-> % first ndarray/shape-vec) out-grads))
 
-(comment
-  (def optimizer
-    (optimizer/sgd
-     {:learning-rate 0.0001
-      :momentum 0.9
-      :wd 0.00001
-      :clip-gradient 10})))
 (def optimizer
   (optimizer/adam
    {:learning-rate 0.0002
     :wd 0.00001
     :clip-gradient 10}))
 
-(defn start
+(defn train-ocr
   [devs]
-  (do
-    (println "Starting the captcha training ...")
-    (let [_mod (m/module
-                (create-captcha-net)
-                {:data-names ["data"] :label-names ["label"]
-                 :contexts devs})]
-      (m/fit _mod {:train-data train-data
-                   :eval-data eval-data
-                   :num-epoch 20
-                   :fit-params (m/fit-params
-                                {:kvstore "local"
-                                 :batch-end-callback
-                                 (callback/speedometer batch-size 50)
-                                 :initializer
-                                 (initializer/xavier {:factor-type "in"
-                                                      :magnitude 2.34})
-                                 ;(initializer/uniform 0.01)
-                                 :optimizer optimizer
-                                 :eval-metric (eval-metric/custom-metric
-                                               #(multi-label-accuracy %1 %2)
-                                               "accuracy")
-                                 })})
-      (println "Finished the fit")
-      _mod)))
+  (println "Starting the captcha training ...")
+  (let [model (m/module
+               (create-captcha-net)
+               {:data-names ["data"] :label-names ["label"]
+                :contexts devs})]
+    (m/fit model {:train-data train-data
+                  :eval-data eval-data
+                  :num-epoch 10
+                  :fit-params (m/fit-params
+                               {:kvstore "local"
+                                :batch-end-callback
+                                (callback/speedometer batch-size 100)
+                                :initializer
+                                (initializer/xavier {:factor-type "in"
+                                                     :magnitude 2.34})
+                                :optimizer optimizer
+                                :eval-metric (eval-metric/custom-metric
+                                              #(multi-label-accuracy %1 %2)
+                                              "accuracy")})})
+    (println "Finished the fit")
+    model))
 
 (defn -main
   [& args]
@@ -164,5 +150,6 @@
         num-devices (Integer/parseInt (or dev-num "1"))
         devs (if (= dev ":gpu")
                (mapv #(context/gpu %) (range num-devices))
-               (mapv #(context/cpu %) (range num-devices)))]
-    (start devs)))
+               (mapv #(context/cpu %) (range num-devices)))
+        model (train-ocr devs)]
+    (m/save-checkpoint model {:prefix "ocr" :epoch 0})))
