@@ -1,6 +1,3 @@
-"""
-Descrition : LipNet module using gluon
-"""
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,6 +14,11 @@ Descrition : LipNet module using gluon
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+"""
+Description : LipNet module using gluon
+"""
+
 
 from mxnet import nd
 from mxnet.gluon import nn, rnn
