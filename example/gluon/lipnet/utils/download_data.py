@@ -92,7 +92,7 @@ if __name__ == '__main__':
                   bzip2 -d shape_predictor_68_face_landmarks.dat.bz2')
 
     os.makedirs('{src_path}'.format(src_path=PARAMS['src_path']), exist_ok=True)
-    os.makedirs('{src_path}'.format(src_path=PARAMS['align_path']), exist_ok=True)
+    os.makedirs('{align_path}'.format(align_path=PARAMS['align_path']), exist_ok=True)
 
     if N_PROCESS == 1:
         RES = download_mp4(0, 35, PARAMS)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
         RES = multi_p_run(tot_num=35, _func=put_worker, worker=download_align, \
                           params=PARAMS, n_process=N_PROCESS)
 
-    #os.system('rm -f {src_path}/*.zip && rm -f {src_path}/*/Thumbs.db'.format( \
-    #          src_path=PARAMS['src_path']))
+    os.system('rm -f {src_path}/*.zip && rm -f {src_path}/*/Thumbs.db'.format( \
+              src_path=PARAMS['src_path']))
     os.system('rm -f {align_path}/*.tar && rm -f {align_path}/Thumbs.db'.format( \
               align_path=PARAMS['align_path']))
