@@ -164,7 +164,7 @@ function _setup_predictor(self::FeedForward, overwrite::Bool=false; verbosity::I
     # the predictor use only the first device
     self.pred_exec = simple_bind(self.arch, self.ctx[1]; grad_req=GRAD_NOP, data_shapes...)
     dbg_str = mx.debug_str(self.pred_exec)
-    verbosity >= 1 && info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[1]))
+    verbosity >= 1 && @info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[1]))
     copy_params_from(self.pred_exec, self.arg_params, self.aux_params)
   else
     # make sure the new setup is compatible with the existing one
@@ -289,7 +289,7 @@ function _create_kvstore(kv_type::Symbol, num_device::Int, arg_params::Dict{Symb
       else
         kv_type = :local_allreduce_cpu
       end
-      verbosity >= 2 && info("Auto-select kvstore type = $kv_type")
+      verbosity >= 2 && @info("Auto-select kvstore type = $kv_type")
     end
     return KVStore(kv_type)
   end
@@ -364,20 +364,20 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
              kwargs...)
   opts = TrainingOptions(; kwargs...)
 
-  opts.verbosity >= 1 && info("Start training on $(self.ctx)")
+  opts.verbosity >= 1 && @info("Start training on $(self.ctx)")
 
   batch_size  = get_batch_size(data)
   num_dev     = length(self.ctx)
   slices      = _split_inputs(batch_size, num_dev)
 
   # initialize parameters
-  opts.verbosity >= 2 && info("Initializing parameters...")
+  opts.verbosity >= 2 && @info("Initializing parameters...")
   arg_names, param_names, aux_names = _init_model(self, data, opts.initializer, opts.force_init)
 
   # setup kvstore
   kvstore = opts.kvstore
   if isa(kvstore, Symbol)
-    opts.verbosity >= 2 && info("Creating KVStore...")
+    opts.verbosity >= 2 && @info("Creating KVStore...")
     kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params, opts.verbosity)
   end
 
@@ -413,7 +413,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     label_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_label(data)))
     train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=grad_req, data_shapes..., label_shapes...)
     dbg_str = mx.debug_str(train_execs[i])
-    opts.verbosity >= 2 && info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
+    opts.verbosity >= 2 && @info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
 
     copy_params_from(train_execs[i], self.arg_params, self.aux_params)
   end
@@ -446,7 +446,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
       set_optimizer(kvstore, optimizer)
     end
 
-    opts.verbosity >= 2 && info("Initializing KVStore...")
+    opts.verbosity >= 2 && @info("Initializing KVStore...")
     # init kv with gradients
     for idx = 1:length(param_arrays)
       param_on_devs = param_arrays[idx]
@@ -469,7 +469,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
 
-  opts.verbosity >= 2 && info("Start training...")
+  opts.verbosity >= 2 && @info("Start training...")
   for i_epoch = 1:opts.n_epoch
     time_start = time()
     reset!(opts.eval_metric)
@@ -543,13 +543,13 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
 
     time_stop = time()
     metric = get(opts.eval_metric)
-    opts.verbosity >= 2 && info(format("== Epoch {1:0>3d}/{2:0>3d} ==========", i_epoch, opts.n_epoch))
+    opts.verbosity >= 2 && @info(format("== Epoch {1:0>3d}/{2:0>3d} ==========", i_epoch, opts.n_epoch))
     if opts.verbosity >= 3
-        info("## Training summary")
+        @info("## Training summary")
         for (name, value) in metric
-            info(format("{1:>18s} = {2:.4f}", string(name), value))
+            @info(format("{1:>18s} = {2:.4f}", string(name), value))
         end
-        info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
+        @info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
     end
 
     # evaluation on validation set
@@ -577,9 +577,9 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
       end
 
       if opts.verbosity >= 3
-          info("## Validation summary")
+          @info("## Validation summary")
           for (name, value) in get(opts.eval_metric)
-            info(format("{1:>18s} = {2:.4f}", string(name), value))
+            @info(format("{1:>18s} = {2:.4f}", string(name), value))
           end
       end
     end
@@ -603,7 +603,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback; metric=metric)
   end # end of all epochs
 
-  opts.verbosity >= 1 && info("Finish training on $(self.ctx)")
+  opts.verbosity >= 1 && @info("Finish training on $(self.ctx)")
   nothing
 end
 
@@ -619,7 +619,7 @@ function save_checkpoint(sym::SymbolicNode, arg_params::Dict{Symbol},
   end
   save_filename = format("{1}-{2:04d}.params", prefix, epoch)
   save(save_filename, save_dict)
-  info("Saved checkpoint to '$save_filename'")
+  @info("Saved checkpoint to '$save_filename'")
 end
 
 function load_checkpoint(prefix::AbstractString, epoch::Int)
@@ -656,7 +656,7 @@ end
 function load_checkpoint(self::FeedForward, prefix::AbstractString, epoch::Int;
                          overwrite::Bool = true, allow_different_arch::Bool = false)
   if isdefined(self, :arg_params) && isdefined(self, :aux_params) && !overwrite
-    info("model weights already exists, skip loading... (call with overwrite=true if needed)")
+    @info("model weights already exists, skip loading... (call with overwrite=true if needed)")
     return self
   end
 
