@@ -1,6 +1,3 @@
-"""
-Descrition : main module to run code
-"""
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -18,12 +15,17 @@ Descrition : main module to run code
 # specific language governing permissions and limitations
 # under the License.
 
+"""
+Description : main module to run the lipnet training code
+"""
+
+
 import argparse
 from trainer import Train
 
 def main():
     """
-    Description : run code using argument info
+    Description : run lipnet training code using argument info
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=64)
