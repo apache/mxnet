@@ -205,7 +205,7 @@ function _update_single_output(metric::Accuracy, label::Array, pred::Array)
         for i in 1:size(labels, 1)
           label = labels[i, j, 1, sample]
           klasses = view(pred, i, j, :, sample)
-          klass = indmax(klasses) - 1 # Classes start at 0...k-1
+          klass = argmax(klasses) - 1 # Classes start at 0...k-1
 
           metric.acc_sum += klass == label
           metric.n_sample += 1
@@ -214,7 +214,7 @@ function _update_single_output(metric::Accuracy, label::Array, pred::Array)
     end
   elseif ndims(pred) == 2 # 1-dimensional case
     for sample in 1:size(label, 1)
-      klass = indmax(view(pred, :, sample)) - 1
+      klass = argmax(view(pred, :, sample)) - 1
       metric.acc_sum += klass == label[sample]
       metric.n_sample += 1
     end

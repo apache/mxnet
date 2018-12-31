@@ -74,7 +74,7 @@ function mnist_fit_and_predict(optimizer, initializer, n_epoch)
   correct = 0
   for i = 1:length(labels)
     # labels are 0...9
-    if indmax(probs[:,i]) == labels[i]+1
+    if argmax(probs[:,i]) == labels[i]+1
       correct += 1
     end
   end
