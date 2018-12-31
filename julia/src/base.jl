@@ -251,11 +251,11 @@ function _defstruct_impl(is_immutable, name, fields)
     name       = esc(name.args[1])
   end
 
-  field_defs     = Vector{Expr}(length(fields))        # :(field2 :: Int)
-  field_names    = Vector{Expr}(length(fields))        # :field2
-  field_defaults = Vector{Expr}(length(fields))        # :(field2 = 0)
-  field_types    = Vector{Expr}(length(fields))        # Int
-  field_asserts  = Vector{Expr}(length(fields))        # :(field2 >= 0)
+  field_defs     = Vector{Expr}(undef, length(fields))  # :(field2 :: Int)
+  field_names    = Vector{Expr}(undef, length(fields))  # :field2
+  field_defaults = Vector{Expr}(undef, length(fields))  # :(field2 = 0)
+  field_types    = Vector{Expr}(undef, length(fields))  # Int
+  field_asserts  = Vector{Expr}(undef, length(fields))  # :(field2 >= 0)
   required_field = Symbol[]
 
   for i = 1:length(fields)
