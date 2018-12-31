@@ -32,12 +32,11 @@ end
 
 @info "libmxnet version => $(mx.LIB_VERSION[])"
 
-const BASEDIR = joinpath(dirname(@__FILE__), "..")
-const TESTDIR = dirname(@__FILE__)
+const BASEDIR = joinpath(@__DIR__, "..")
 
-include(joinpath(TESTDIR, "common.jl"))
+include(joinpath(@__DIR__, "common.jl"))
 @testset "MXNet Test" begin
-  test_dir(joinpath(TESTDIR, "unittest"))
+  test_dir(joinpath(@__DIR__, "unittest"))
 
   # run the basic MNIST mlp example
   if haskey(ENV, "CONTINUOUS_INTEGRATION")

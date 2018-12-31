@@ -19,7 +19,7 @@
 # Dataset related utilities
 ################################################################################
 function get_data_dir()
-  data_dir = joinpath(dirname(@__FILE__), "..", "data")
+  data_dir = joinpath(@__DIR__, "..", "data")
   mkpath(data_dir)
   data_dir
 end
