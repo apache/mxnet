@@ -22,8 +22,10 @@ using MXNet
 # are run first, this makes waiting time shorter when writing
 # or modifying unit-tests
 function test_dir(dir)
-  jl_files = sort(filter(x -> ismatch(r".*\.jl$", x), readdir(dir)), by = fn -> stat(joinpath(dir,fn)).mtime)
-  map(reverse(jl_files)) do file
+  jl_files = sort(
+    filter(x -> occursin(r".*\.jl$", x), readdir(dir)),
+           by = fn -> stat(joinpath(dir, fn)).mtime)
+  foreach(reverse(jl_files)) do file
     include("$dir/$file")
   end
 end
