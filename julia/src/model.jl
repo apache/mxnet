@@ -279,7 +279,7 @@ function _init_model(self::FeedForward, data::AbstractDataProvider,
 end
 
 function _create_kvstore(kv_type::Symbol, num_device::Int, arg_params::Dict{Symbol}, verbosity::Int)
-  if num_device == 1 && !ismatch(r"dist", string(kv_type))
+  if num_device == 1 && !occursin(r"dist", string(kv_type))
     return nothing
   else
     if kv_type == :local
@@ -382,7 +382,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   end
 
   update_on_kvstore = true
-  if isa(kvstore, Cvoid) || ismatch(r"local_allreduce", string(get_type(kvstore)))
+  if isa(kvstore, Cvoid) || occursin(r"local_allreduce", string(get_type(kvstore)))
     update_on_kvstore = false
   end
 

@@ -336,7 +336,7 @@ julia> W
 ```
 """
 function setoptimizer!(kv::KVStore, opt::AbstractOptimizer)
-  if ismatch(r"dist", string(get_type(kv))) && _isworker()
+  if occursin(r"dist", string(get_type(kv))) && _isworker()
     # TODO
     error("not implemented")
   else
