@@ -203,14 +203,14 @@ def preprocess(from_idx, to_idx, _params):
     Preprocess: Convert a video into the mouth images
     """
     source_exts = '*.mpg'
-    source_path = _params['src_path']
-    target_path = _params['tgt_path']
+    src_path = _params['src_path']
+    tgt_path = _params['tgt_path']
     face_predictor_path = './shape_predictor_68_face_landmarks.dat'
 
     succ = set()
     fail = set()
     for idx in range(from_idx, to_idx):
-        source_path = source_path + '/' + 's' + str(idx) + '/'
+        source_path = src_path + '/' + 's' + str(idx) + '/'
         try:
             for filepath in find_files(source_path, source_exts):
                 print("Processing: {}".format(filepath))
@@ -218,7 +218,7 @@ def preprocess(from_idx, to_idx, _params):
                               face_predictor_path=face_predictor_path).from_video(filepath)
 
                 filepath_wo_ext = os.path.splitext(filepath)[0].split('/')[-1]
-                target_dir = os.path.join(target_path, filepath_wo_ext)
+                target_dir = os.path.join(tgt_path, filepath_wo_ext)
                 mkdir_p(target_dir)
 
                 i = 0
@@ -244,9 +244,8 @@ if __name__ == '__main__':
               'tgt_path':CONFIG.tgt_path}
 
     os.makedirs('{tgt_path}'.format(tgt_path=PARAMS['tgt_path']), exist_ok=True)
-    os.system('rm -rf {tgt_path}'.format(tgt_path=PARAMS['tgt_path']))
     
     if N_PROCESS == 1:
-        RES = multi_p_run(35, put_worker, preprocess, PARAMS, N_PROCESS)
-    else:
         RES = preprocess(0, 35, PARAMS)
+    else:
+        RES = multi_p_run(35, put_worker, preprocess, PARAMS, N_PROCESS)
