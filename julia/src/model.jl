@@ -38,7 +38,7 @@ mutable struct FeedForward <: AbstractModel
   arg_params  :: Dict{Symbol}
   aux_params  :: Dict{Symbol}
 
-  pred_exec   :: Union{Executor,Void}
+  pred_exec   :: Union{Executor,Cvoid}
 
   # leave the rest fields undefined
   FeedForward(arch::SymbolicNode, ctx::Vector{Context}) = new(arch, ctx)
@@ -156,7 +156,7 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
 end
 
 function _setup_predictor(self::FeedForward, overwrite::Bool=false; verbosity::Integer = 1, data_shapes...)
-  if !isdefined(self, :pred_exec) || isa(self.pred_exec, Void) || overwrite
+  if !isdefined(self, :pred_exec) || isa(self.pred_exec, Cvoid) || overwrite
     if !isdefined(self, :arg_params) || !isdefined(self, :aux_params)
       @assert(false, "Model weights not defined, please init or train the model, or load from file")
     end
@@ -224,7 +224,7 @@ function predict(callback::Function, self::FeedForward, data::AbstractDataProvid
   predict(self, data; overwrite = overwrite, callback=callback, verbosity = verbosity)
 end
 function predict(self::FeedForward, data::AbstractDataProvider;
-                 overwrite::Bool = true, callback::Union{Function,Void}=nothing, verbosity::Integer = 1)
+                 overwrite::Bool = true, callback::Union{Function,Cvoid}=nothing, verbosity::Integer = 1)
   data_shapes = provide_data(data)
   data_names  = [x[1] for x in data_shapes]
   _setup_predictor(self, overwrite; verbosity = verbosity, data_shapes...)
@@ -235,7 +235,7 @@ function predict(self::FeedForward, data::AbstractDataProvider;
   for batch in eachbatch(data)
     load_data!(data, batch, data_arrays)
     forward(self.pred_exec, is_train=false)
-    if isa(callback, Void)
+    if isa(callback, Cvoid)
       # no callback, accumulate the data and return at the end
       for (o_list, o_nd) in zip(output_list, self.pred_exec.outputs)
         push!(o_list, copy(slice(o_nd, 1:count_samples(data, batch))))
@@ -249,7 +249,7 @@ function predict(self::FeedForward, data::AbstractDataProvider;
     end
   end
 
-  if !isa(callback, Void)
+  if !isa(callback, Cvoid)
     # callback exists, do not accumulate data
     return nothing
   end
@@ -298,7 +298,7 @@ end
 @defstruct TrainingOptions (
   initializer :: AbstractInitializer = UniformInitializer(0.01),
   n_epoch     :: Int = 10,
-  eval_data   :: Union{Void,AbstractDataProvider} = nothing,
+  eval_data   :: Union{Cvoid,AbstractDataProvider} = nothing,
   eval_metric :: AbstractEvalMetric = Accuracy(),
   kvstore     :: Union{Symbol,KVStore} = :local,
   force_init  :: Bool = false,
@@ -382,7 +382,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   end
 
   update_on_kvstore = true
-  if isa(kvstore, Void) || ismatch(r"local_allreduce", string(get_type(kvstore)))
+  if isa(kvstore, Cvoid) || ismatch(r"local_allreduce", string(get_type(kvstore)))
     update_on_kvstore = false
   end
 
@@ -441,7 +441,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     updater = getupdater(optimizer)
   end
 
-  if !isa(kvstore, Void)
+  if !isa(kvstore, Cvoid)
     if update_on_kvstore
       set_optimizer(kvstore, optimizer)
     end
@@ -506,7 +506,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
         end
 
         # gradient synchronization
-        if !isa(kvstore, Void)
+        if !isa(kvstore, Cvoid)
           # push gradient, priority is negative index
           push!(kvstore, idx, grad_arrays[idx], priority=-idx)
           if update_on_kvstore
@@ -553,7 +553,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     end
 
     # evaluation on validation set
-    if !isa(opts.eval_data, Void)
+    if !isa(opts.eval_data, Cvoid)
       # because we are re-using the memory allocated for the training network,
       # the batch_size of the validation dataset must be the same as the training
       # batch_size
