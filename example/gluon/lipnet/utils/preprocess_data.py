@@ -217,8 +217,8 @@ def preprocess(from_idx, to_idx, _params):
                 video = Video(vtype='face', \
                               face_predictor_path=face_predictor_path).from_video(filepath)
 
-                filepath_wo_ext = os.path.splitext(filepath)[0].split('/')[-1]
-                target_dir = os.path.join(tgt_path, filepath_wo_ext)
+                filepath_wo_ext = os.path.splitext(filepath)[0].split('/')[-2:]
+                target_dir = os.path.join(tgt_path, '/'.join(filepath_wo_ext))
                 mkdir_p(target_dir)
 
                 i = 0
