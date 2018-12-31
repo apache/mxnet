@@ -1253,13 +1253,13 @@ Base.sum(x::NDArray; dims = :) = _sum(x, dims)
 @_remap _sum(x::NDArray, ::Colon) sum(x)
 @_remap _sum(x::NDArray, dims)    sum(x; axis = 0 .- dims, keepdims = true)
 
-Base.maximum(x::NDArray; dims = :) = _maximum(x, dims)
-@_remap _maximum(x::NDArray, ::Colon) max(x)
-@_remap _maximum(x::NDArray, dims)    max(x; axis = 0 .- dims, keepdims = true)
+Base.maximum(x::NDArray; dims = :) = _nd_maximum(x, dims)
+@_remap _nd_maximum(x::NDArray, ::Colon) max(x)
+@_remap _nd_maximum(x::NDArray, dims)    max(x; axis = 0 .- dims, keepdims = true)
 
-Base.minimum(x::NDArray; dims = :) = _minimum(x, dims)
-@_remap _minimum(x::NDArray, ::Colon) min(x)
-@_remap _minimum(x::NDArray, dims)    min(x; axis = 0 .- dims, keepdims = true)
+Base.minimum(x::NDArray; dims = :) = _nd_minimum(x, dims)
+@_remap _nd_minimum(x::NDArray, ::Colon) min(x)
+@_remap _nd_minimum(x::NDArray, dims)    min(x; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
 @_remap LinearAlgebra.dot(x::NDArray, y::NDArray) dot(y, x)
@@ -1553,7 +1553,7 @@ julia> mx.broadcast_axis(x, 3, 2)
 """
 @_remap(broadcast_axis(x::NDArray, dim, size),
         broadcast_axis(x; axis = ndims(x) .- dim, size = size))
-@_remap(broadcast_axes(x::NDArray, dim, size),
+@_remap(Base.broadcast_axes(x::NDArray, dim, size),
         broadcast_axes(x; axis = ndims(x) .- dim, size = size))
 
 ################################################################################
@@ -1681,11 +1681,9 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "_rmod_scalar",
 
     "dot",
-    "_maximum",
     "max",
     "max_axis",
     "mean",
-    "_minimum",
     "min",
     "min_axis",
     "prod",
