@@ -52,7 +52,7 @@ const MXNET_LIB = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],
                                       get(ENV, "MXNET_HOME", ""),
                                       joinpath(dirname(@__FILE__), "..",
                                                "deps", "usr", "lib")])
-const LIB_VERSION = Ref{Int}(0)
+const LIB_VERSION = Ref{Cint}(0)
 
 if isempty(MXNET_LIB)
   # touch this file, so that after the user properly build libmxnet, the precompiled
@@ -68,8 +68,7 @@ function __init__()
   # TODO: bug in nnvm, if do not call this, call get handle "_copyto" will fail
   _get_libmx_op_names()
   _populate_iter_creator_cache!()
-
-  global LIB_VERSION[] = _get_lib_version()
+  _get_lib_version!()
 
   atexit() do
     # notify libmxnet we are shutting down
@@ -101,11 +100,12 @@ end
 
 """
 Get libmxnet version
+
+This function will changes the global variable `LIB_VERSION`.
 """
-function _get_lib_version()
-  ver = Ref{Cint}(0)
-  @mxcall :MXGetVersion (Ref{Cint},) ver
-  ver[]
+function _get_lib_version!()
+  @mxcall :MXGetVersion (Ref{Cint},) LIB_VERSION
+  LIB_VERSION[]
 end
 
 ################################################################################
