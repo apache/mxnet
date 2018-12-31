@@ -50,7 +50,7 @@ end
 
 if is_unix()
   try
-    push!(CUDAPATHS, replace(strip(readstring(`which nvcc`)), "bin/nvcc", "lib64"))
+    push!(CUDAPATHS, replace(strip(read(`which nvcc`, String)), "bin/nvcc", "lib64"))
   end
 end
 
