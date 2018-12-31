@@ -23,7 +23,7 @@ using Test
 
 function test_getdocdefine()
   @info("Util::_getdocdefine")
-  @test contains(mx._getdocdefine("sgd_update"), "Defined in")
+  @test occursin("Defined in", mx._getdocdefine("sgd_update"))
 end  # function test_getdocdefine
 
 
