@@ -144,7 +144,6 @@ include("context.jl")
 include("util.jl")
 
 include("ndarray.jl")
-include("broadcast.jl")
 
 include("random.jl")
 include("autograd.jl")
@@ -152,6 +151,8 @@ include("autograd.jl")
 include("name.jl")
 include("symbolic-node.jl")
 include("executor.jl")
+
+include("broadcast.jl")
 
 include("metric.jl")
 include("optimizer.jl")

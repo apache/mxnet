@@ -458,6 +458,18 @@ function test_minus()
     # @inplace x .-= y
     # @test copy(x) == A .- B
   end
+
+  @info("NDArray::scalar::rminus")
+  let
+    A = [1 2 3;
+         4 5 6]
+    B = 10 .- A
+
+    x = NDArray(A)
+    y = 10 .- x
+
+    @test copy(y) == B
+  end
 end
 
 function test_mul()

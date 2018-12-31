@@ -305,7 +305,7 @@ function test_sub()
     end
   end
 
-  # TODO: @info("AutoGrad::add::x .- y")
+  # TODO: @info("AutoGrad::sub::x .- y")
 end  # function test_sub
 
 

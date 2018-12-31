@@ -26,6 +26,6 @@ Base.broadcastable(x::NDArray) = x
 
 # Make it non-lazy
 broadcasted(f, x::NDArray, args...)    = f(x, args...)
-broadcasted(f, y, x::NDArray, args...) = broadcasted(f, x, y, args...)
+broadcasted(f, y, x::NDArray, args...) = f(y, x, args...)
 broadcasted(f, x::NDArray{T,N}, y::NDArray{T,N}, args...) where {T,N} =
   f(x, y, args...)
