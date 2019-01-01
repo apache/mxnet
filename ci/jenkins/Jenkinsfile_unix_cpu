@@ -53,6 +53,7 @@ core_logic: {
     custom_steps.test_unix_clojure_cpu(),
     custom_steps.test_unix_r_cpu(),
     custom_steps.test_unix_julia07_cpu(),
+    custom_steps.test_unix_julia10_cpu(),
     custom_steps.test_unix_onnx_cpu(),
 
     /*  Disabled due to master build failure:

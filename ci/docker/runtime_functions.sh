@@ -893,9 +893,9 @@ unittest_ubuntu_gpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
-unittest_ubuntu_cpu_julia07() {
+unittest_ubuntu_cpu_julia() {
     set -ex
-    export PATH="/work/julia/bin:$PATH"
+    export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_PKGDIR='/work/julia-pkg'
     export DEPDIR=`julia -e 'print(Pkg.dir())'`
@@ -920,6 +920,16 @@ unittest_ubuntu_cpu_julia07() {
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
     julia -e 'using MXNet; mx._sig_checker()'
+}
+
+unittest_ubuntu_cpu_julia07() {
+    set -ex
+    unittest_ubuntu_cpu_julia /work/julia07
+}
+
+unittest_ubuntu_cpu_julia10() {
+    set -ex
+    unittest_ubuntu_cpu_julia /work/julia10
 }
 
 unittest_centos7_cpu() {
