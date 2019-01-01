@@ -16,5 +16,9 @@
 # under the License.
 
 all:
-	julia --color=yes ./make.jl
+	julia --color=yes --project=./ -e \
+	  'using Pkg; \
+	  Pkg.instantiate(); \
+	  Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
+	julia --color=yes --project=./ ./make.jl
 	mkdocs build

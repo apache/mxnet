@@ -1234,24 +1234,18 @@ deploy_docs() {
 
 deploy_jl_docs() {
     set -ex
-    export PATH="/work/julia/bin:$PATH"
+    export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
-    export JULIA_PKGDIR='/work/julia-pkg'
-    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
-    julia -e 'versioninfo()'
-    julia -e 'Pkg.init()'
-    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
-    julia -e 'Pkg.resolve()'
+    julia -e 'using InteractiveUtils; versioninfo()'
+    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
 
-    # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'Pkg.build("MXNet")'
-    # build docs
-    julia -e 'Pkg.add("Documenter")'
-    julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'
+    make -C docs
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
