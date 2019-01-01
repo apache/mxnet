@@ -143,7 +143,6 @@ function mx_define_handle_t(name, destructor)
     end
     Base.convert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
     Base.cconvert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
-    Base.isnull(obj::$name) = (obj.value == C_NULL)
 
     MX_handle(x::$name) = Base.convert(MX_handle, x)
   end
