@@ -903,6 +903,7 @@ unittest_ubuntu_cpu_julia() {
     julia -e 'using InteractiveUtils; versioninfo()'
 
     # install package
+    mkdir -p $DEVDIR
     ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
 
     # register MXNet.jl and dependencies
