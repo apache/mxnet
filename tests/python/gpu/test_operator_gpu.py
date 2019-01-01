@@ -963,11 +963,21 @@ def test_pooling_versions():
 
         for pad, stride in zip(pads, strides):
             for pooling_convention in ['valid', 'full']:
-                test_pooling_versions_helper(pool_op_list=pool_op_list,
+                try:
+                    test_pooling_versions_helper(pool_op_list=pool_op_list,
                                      data=data, kernel=kernel, pad=pad, stride=stride,
                                      pool_type=pool_type, pooling_convention=pooling_convention,
                                      global_pool=False, p_value=p_value,
                                      count_include_pad=count_include_pad, dtype=dtype)
+                except:
+                    print('pool_op_list = {}'.format(pool_op_list)
+                    print('kernel={}, pad={}, stride={}'.format(kernel, pad, stride))
+                    print('pool_type={}, pooling_convention={}, global_pool=False'.format(pool_type,
+                          pooling_convention))
+                    print('p_value={}, count_include_pad={}, dtype={}'.format(p_value,
+                          count_include_pad, dtype))
+                    print('environ = \n{}'.format(os.environ))
+                    raise
 
         test_pooling_versions_helper(pool_op_list=pool_op_list,
                                      data=data, kernel=kernel, pad=None, stride=None,
