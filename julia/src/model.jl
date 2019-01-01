@@ -407,7 +407,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     end
   end
 
-  train_execs = Array{Executor}(num_dev)
+  train_execs = Array{Executor}(undef, num_dev)
   for i = 1:num_dev
     data_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_data(data)))
     label_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_label(data)))
@@ -613,7 +613,9 @@ save_checkpoint(self::FeedForward, prefix::AbstractString, state::OptimizationSt
 function save_checkpoint(sym::SymbolicNode, arg_params::Dict{Symbol},
                          aux_params::Dict{Symbol}, prefix::AbstractString, epoch::Int)
   save("$prefix-symbol.json", sym)
-  save_dict = Dict{Symbol, NDArray}(map((x) -> Symbol("arg:$(x[1])") => x[2], arg_params))
+  save_dict = Dict{Symbol,NDArray}(
+    Symbol("arg:$(x[1])") => x[2] for x in arg_params
+  )
   if !isempty(aux_params)
     merge!(save_dict, Dict(map((x) -> Symbol("aux:$(x[1])") => x[2], aux_params)))
   end
