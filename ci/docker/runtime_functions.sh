@@ -900,7 +900,7 @@ unittest_ubuntu_cpu_julia() {
     export JULIA_DEPOT_PATH='/work/julia-depot'
     export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
-    julia -e 'versioninfo()'
+    julia -e 'using InteractiveUtils; versioninfo()'
 
     # install package
     ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet

@@ -36,7 +36,7 @@ function install_julia() {
     tar xzvf $JLBINARY -C $JULIADIR --strip 1
     rm $JLBINARY
 
-    $JULIA -e 'versioninfo()'
+    $JULIA -e 'using InteractiveUtils; versioninfo()'
 }
 
 install_julia 0.7 0.7.0
