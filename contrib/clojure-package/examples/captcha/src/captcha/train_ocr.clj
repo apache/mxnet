@@ -1,5 +1,6 @@
 (ns captcha.train-ocr
   (:require [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
             [org.apache.clojure-mxnet.callback :as callback]
             [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.eval-metric :as eval-metric]
@@ -15,12 +16,22 @@
 (def data-shape [3 30 80])
 (def label-width 4)
 
+(when-not (.exists (io/file "captcha_example/captcha_train.lst"))
+  (sh "./get_data.sh"))
+
 (defonce train-data
   (mx-io/image-record-iter {:path-imgrec "captcha_example/captcha_train.rec"
                             :path-imglist "captcha_example/captcha_train.lst"
                             :batch-size batch-size
                             :label-width label-width
                             :data-shape data-shape
+                            ;:rotate 5
+                            ;:brightness 0.05
+                            ;:contrast 0.05
+                            ;:saturation 0.05
+                            ;:random-h 20
+                            ;:random-s 5
+                            ;:random-l 5
                             :shuffle true
                             :seed 42}))
 
@@ -71,12 +82,12 @@
         relu4 (sym/activation {:data pool4 :act-type "relu"})
 
         flattened (sym/flatten {:data relu4})
-        dropped (sym/dropout {:data flattened :p 0.25})
-        fc1 (sym/fully-connected {:data dropped :num-hidden 256})
-        fc21 (sym/fully-connected {:data fc1 :num-hidden 10})
-        fc22 (sym/fully-connected {:data fc1 :num-hidden 10})
-        fc23 (sym/fully-connected {:data fc1 :num-hidden 10})
-        fc24 (sym/fully-connected {:data fc1 :num-hidden 10})]
+        fc1 (sym/fully-connected {:data flattened :num-hidden 256})
+        dropped (sym/dropout {:data fc1 :p 0.1})
+        fc21 (sym/fully-connected {:data dropped :num-hidden 10})
+        fc22 (sym/fully-connected {:data dropped :num-hidden 10})
+        fc23 (sym/fully-connected {:data dropped :num-hidden 10})
+        fc24 (sym/fully-connected {:data dropped :num-hidden 10})]
     (sym/concat "concat" nil [fc21 fc22 fc23 fc24] {:dim 0})))
 
 (defn get-label-symbol
