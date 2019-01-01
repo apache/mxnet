@@ -210,15 +210,20 @@ def preprocess(from_idx, to_idx, _params):
     succ = set()
     fail = set()
     for idx in range(from_idx, to_idx):
-        source_path = src_path + '/' + 's' + str(idx) + '/'
+        s_id = 's' + str(idx) + '/'
+        source_path = src_path + '/' + s_id
+        target_path = tgt_path + '/' + s_id
+        if os.path.exists(target_path):
+            if len(os.listdir(target_path)) == 1000:
+                continue
         try:
             for filepath in find_files(source_path, source_exts):
                 print("Processing: {}".format(filepath))
+                filepath_wo_ext = os.path.splitext(filepath)[0].split('/')[-2:]
+                target_dir = os.path.join(tgt_path, '/'.join(filepath_wo_ext))
                 video = Video(vtype='face', \
                               face_predictor_path=face_predictor_path).from_video(filepath)
 
-                filepath_wo_ext = os.path.splitext(filepath)[0].split('/')[-2:]
-                target_dir = os.path.join(tgt_path, '/'.join(filepath_wo_ext))
                 mkdir_p(target_dir)
 
                 i = 0
@@ -226,7 +231,7 @@ def preprocess(from_idx, to_idx, _params):
                     io.imsave(os.path.join(target_dir, "mouth_{0:03d}.png".format(i)), frame)
                     i += 1
             succ.add(idx)
-        except OSError as error:
+        except ValueError as error:
             print(error)
             fail.add(idx)
     return (succ, fail)
@@ -244,7 +249,7 @@ if __name__ == '__main__':
               'tgt_path':CONFIG.tgt_path}
 
     os.makedirs('{tgt_path}'.format(tgt_path=PARAMS['tgt_path']), exist_ok=True)
-    
+
     if N_PROCESS == 1:
         RES = preprocess(0, 35, PARAMS)
     else:
