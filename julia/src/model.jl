@@ -118,7 +118,7 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
         arg_params[name] = self.arg_params[name]
         continue
       else
-        warn("Shape mismatch for $name. Overwriting with new one.")
+        @warn("Shape mismatch for $name. Overwriting with new one.")
         delete!(self.arg_params, name)
       end
     end
@@ -131,7 +131,7 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
         aux_params[name] = self.aux_params[name]
         continue
       else
-        warn("Shape mismatch for $name. Overwriting with new one.")
+        @warn("Shape mismatch for $name. Overwriting with new one.")
         delete!(self.aux_params, name)
       end
     end

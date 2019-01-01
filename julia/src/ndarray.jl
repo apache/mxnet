@@ -448,7 +448,7 @@ Copy contents of `src` into `dst`.
 function copy!(dst::NDArray, src::NDArray)
   @assert(dst.writable)
   if dst.handle == src.handle
-    warn("Copying an NDArray to itself")
+    @warn("Copying an NDArray to itself")
     return
   end
 

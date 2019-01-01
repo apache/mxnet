@@ -226,7 +226,7 @@ function _sig_checker()
       return
     end
 
-    warn(_sig)
+    @warn(_sig)
 
   end
 end
