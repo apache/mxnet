@@ -4390,6 +4390,7 @@ def test_where():
     test_1d_cond()
 
 
+@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13600")
 @with_seed()
 def test_softmin():
     for ndim in range(1, 5):
