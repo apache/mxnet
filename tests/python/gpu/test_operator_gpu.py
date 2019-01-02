@@ -970,7 +970,7 @@ def test_pooling_versions():
                                      global_pool=False, p_value=p_value,
                                      count_include_pad=count_include_pad, dtype=dtype)
                 except:
-                    print('pool_op_list = {}'.format(pool_op_list)
+                    print('pool_op_list = {}'.format(pool_op_list))
                     print('kernel={}, pad={}, stride={}'.format(kernel, pad, stride))
                     print('pool_type={}, pooling_convention={}, global_pool=False'.format(pool_type,
                           pooling_convention))
