@@ -28,6 +28,15 @@ class Trainer(object):
     """Applies an `Optimizer` on a set of Parameters. Trainer should
     be used together with `autograd`.
 
+    .. note::
+
+        For the following cases, updates will always happen on kvstore,
+        i.e., you cannot set update_on_kvstore=False.
+
+        - dist kvstore with sparse weights or sparse gradients
+        - dist async kvstore
+        - `optimizer.lr_scheduler` is not None
+
     Parameters
     ----------
     params : ParameterDict
@@ -115,11 +124,12 @@ class Trainer(object):
                 "optimizer_params must be None if optimizer is an instance of " \
                 "Optimizer instead of str"
             self._optimizer = optimizer
+            # param_dict must not be deep copied, so that if user mutate the lr_mult
+            # or wd_mult of some parameters, it takes effect.
             self._optimizer.param_dict = param_dict
         else:
             self._optimizer = opt.create(optimizer, param_dict=param_dict,
                                          **optimizer_params)
-
         self._updaters = [opt.get_updater(self._optimizer) \
                             for _ in self._contexts]
 
@@ -158,59 +168,82 @@ class Trainer(object):
     def _init_kvstore(self):
         """Create kvstore."""
         config = self._kvstore_params
-        # if weight is sparse, the weight must be updated on KVStore.
-        # training loop contains:
-        #    - row_sparse_pull(sparse_weight)
-        #    - forward()
-        #    - backward()
-        #    - push(sparse_grad), push(dense_grad)
-        #    - pull(dense_weight)
+        # configure kvstore, update_on_kvstore and self._distributed on three cases:
         if self._contains_sparse_weight:
+            # If weight is sparse, kvstore must be present and the weight must be updated on kvstore.
+            # The training loop is the following:
+            #    - row_sparse_pull(sparse_weight)
+            #    - forward()
+            #    - backward()
+            #    - push_and_update(grad)
+            #    - pull(weight)
             kvstore, update_on_kvstore = _create_sparse_kvstore(config['kvstore'])
-            # raise Error if update_on_kvstore is set to False by the user
+            self._distributed = 'dist' in kvstore.type
+            # raise err if user provides unsupported configs
             if config['update_on_kvstore'] is False:
-                raise RuntimeError("Cannot set update_on_kvstore to False when sparse weights "
-                                   "are present.")
-        # if weight is dense and grad is sparse, the weight better not be updated on KVStore.
-        # training loop contains:
-        #    - forward()
-        #    - backward()
-        #    - push(grad)
-        #    - pull(grad)
-        #    - update(grad, weight)
+                raise ValueError("Cannot set update_on_kvstore=False when sparse weights "
+                                 "are present.")
+
         elif self._contains_sparse_grad:
+            # For single node training with dense weight and sparse grad,
+            # we prefer update_on_kvstore=False because this is usually faster.
+            # This means we push and pull sparse gradients, and we do not store weight in kvstore.
+            # The training loop is the following:
+            #    - forward()
+            #    - backward()
+            #    - push(grad)
+            #    - pull(grad)
+            #    - update(grad, weight)
+            #
+            # For multi-node training with dense weight and sparse grad,
+            # only update_on_kvstore=True is supported, due to the fact that
+            # kv.row_sparse_pull(grad) is not implemented.
+            # Therefore, we push sparse gradients and pull dense weights.
+            # The training loop contains:
+            #    - forward()
+            #    - backward()
+            #    - push_and_update(grad)
+            #    - pull(weight)
             arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
             kvstore, _ = _create_kvstore(config['kvstore'], len(self._contexts), arg_arrays)
-            update_on_kvstore = False
-        # normal case
+            self._distributed = 'dist' in kvstore.type if kvstore else False
+            update_on_kvstore = self._distributed
+            # raise err if user provides unsupported configs
+            if config['update_on_kvstore'] is not None:
+                if config['update_on_kvstore'] is False and self._distributed:
+                    raise ValueError("Cannot set update_on_kvstore=False on dist kvstore "
+                                     "when sparse gradients are present.")
+                update_on_kvstore = config['update_on_kvstore']
+
         else:
+            # Training with dense weight and dense gradients.
+            # The only unsupported mode is async with update_on_kvstore=False
             arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
             kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
                                                          arg_arrays)
-            if kvstore and 'async' in kvstore.type and config['update_on_kvstore'] is not None\
-                    and not config['update_on_kvstore']:
-                raise ValueError("Please set update_on_kvstore to true "
-                                 "when training in async mode.")
-
+            self._distributed = 'dist' in kvstore.type if kvstore else False
+            if self._distributed and 'async' in kvstore.type:
+                update_on_kvstore = True
+                # raise err if user provides unsupported configs
+                if config['update_on_kvstore'] is False:
+                    raise ValueError("Please set update_on_kvstore=True "
+                                     "when training in async mode.")
             if config['update_on_kvstore'] is not None:
                 update_on_kvstore = config['update_on_kvstore']
 
+        # set grad compression and optimizers
         if kvstore:
             if self._compression_params:
                 kvstore.set_gradient_compression(self._compression_params)
-            self._distributed = 'dist' in kvstore.type
-            if self._distributed:
-                # kv.pull(row_sparse_grad) is not supported for dist kvstore
-                # Captures condition for dist_async, dist_device_sync or based on config for
-                # update_on_kvstore
-                update_on_kvstore = self._contains_sparse_weight or self._contains_sparse_grad \
-                                    or 'device' in kvstore.type or 'async' in kvstore.type \
-                                    or config['update_on_kvstore']
             if update_on_kvstore:
                 # optimizer preferably needs to be set before init for multiprecision
                 kvstore.set_optimizer(self._optimizer)
             self._kvstore = kvstore
             self._update_on_kvstore = update_on_kvstore
+            if self._optimizer.lr_scheduler and not self._update_on_kvstore:
+                raise ValueError("update_on_kvstore=False does not support " \
+                                 "optimizer with LRScheduler. Please " \
+                                 "consider setting learning rate manually.")
         else:
             self._kvstore = None
             self._update_on_kvstore = None
@@ -255,6 +288,16 @@ class Trainer(object):
         else:
             self._kvstore.row_sparse_pull(idx, out=out, row_ids=row_id, priority=-idx)
 
+    def _check_and_rescale_grad(self, scale):
+        if self._update_on_kvstore and self._distributed and self._kv_initialized:
+            if self._optimizer.rescale_grad != scale:
+                raise UserWarning('Possible change in the `batch_size` from previous '
+                                  '`step` detected. Optimizer gradient normalizing '
+                                  'factor will not change w.r.t new batch_size when '
+                                  'update_on_kvstore=True and when distributed kvstore '
+                                  'is used.')
+        self._optimizer.rescale_grad = scale
+
     def step(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update. Should be called after
         `autograd.backward()` and outside of `record()` scope.
@@ -274,13 +317,7 @@ class Trainer(object):
             been updated by `backward` after last step) and skip update.
         """
         rescale_grad = self._scale / batch_size
-        if self._update_on_kvstore and self._distributed and \
-           self._optimizer.rescale_grad != rescale_grad:
-            raise UserWarning('Possible change in the `batch_size` from previous `step` detected.' \
-                            'Optimizer gradient normalizing factor will not change w.r.t new batch_size when ' \
-                            'update_on_kvstore=True and when distributed `kvstore` is used.')
-
-        self._optimizer.rescale_grad = rescale_grad
+        self._check_and_rescale_grad(rescale_grad)
 
         if not self._kv_initialized:
             self._init_kvstore()
@@ -352,7 +389,7 @@ class Trainer(object):
                 'is not supported. Try setting `update_on_kvstore` ' \
                 'to False when creating trainer.'
 
-        self._optimizer.rescale_grad = self._scale / batch_size
+        self._check_and_rescale_grad(self._scale / batch_size)
         self._update(ignore_stale_grad)
 
     def _update(self, ignore_stale_grad=False):
@@ -387,10 +424,16 @@ class Trainer(object):
     def save_states(self, fname):
         """Saves trainer states (e.g. optimizer, momentum) to a file.
 
+
         Parameters
         ----------
         fname : str
             Path to output states file.
+
+        Note
+        ----
+        `optimizer.param_dict`, which contains Parameter information (such as
+        `lr_mult` and `wd_mult`) will not be saved.
         """
         assert self._optimizer is not None
 
@@ -414,6 +457,12 @@ class Trainer(object):
         ----------
         fname : str
             Path to input states file.
+
+        Note
+        ----
+        `optimizer.param_dict`, which contains Parameter information (such as
+        `lr_mult` and `wd_mult`) will not be loaded from the file, but rather set
+        based on current Trainer's parameters.
         """
         if not self._kv_initialized:
             self._init_kvstore()
@@ -423,8 +472,6 @@ class Trainer(object):
         if self._update_on_kvstore:
             self._kvstore.load_optimizer_states(fname)
             self._optimizer = self._kvstore._updater.optimizer
-            param_dict = {i: param for i, param in enumerate(self._params)}
-            self._optimizer.param_dict = param_dict
         else:
             with open(fname, 'rb') as f:
                 states = f.read()
@@ -432,3 +479,5 @@ class Trainer(object):
                 updater.set_states(states)
                 updater.optimizer = self._updaters[0].optimizer
             self._optimizer = self._updaters[0].optimizer
+        param_dict = {i: param for i, param in enumerate(self._params)}
+        self._optimizer.param_dict = param_dict

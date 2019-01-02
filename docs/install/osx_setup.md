@@ -83,7 +83,7 @@ After you have installed the dependencies, pull the MXNet source code from Git a
 The file called ```osx.mk``` has the configuration required for building MXNet on OS X. First copy ```make/osx.mk``` into ```config.mk```, which is used by the ```make``` command:
 
 ```bash
-    git clone --recursive https://github.com/dmlc/mxnet ~/mxnet
+    git clone --recursive https://github.com/apache/incubator-mxnet ~/mxnet
     cd ~/mxnet
     cp make/osx.mk ./config.mk
     echo "USE_BLAS = openblas" >> ./config.mk

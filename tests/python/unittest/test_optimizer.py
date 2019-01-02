@@ -506,12 +506,11 @@ def test_ftml():
 class PyAdam(mx.optimizer.Optimizer):
     """python reference implemenation of adam"""
     def __init__(self, learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8,
-                 decay_factor=(1 - 1e-8), lazy_update=True, **kwargs):
+                 lazy_update=True, **kwargs):
         super(PyAdam, self).__init__(learning_rate=learning_rate, **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        self.decay_factor = decay_factor
         self.lazy_update = lazy_update
 
     def create_state(self, index, weight):
@@ -613,7 +612,6 @@ def test_adam():
                         compare_optimizer(opt1(lazy_update=False, **kwarg), opt2(lazy_update=False, **kwarg), shape,
                                           dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
-
 
 # AdaMax
 class PyAdamax(mx.optimizer.Optimizer):
