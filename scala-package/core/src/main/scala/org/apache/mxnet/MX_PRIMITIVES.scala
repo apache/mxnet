@@ -50,20 +50,22 @@ object MX_PRIMITIVES {
     * Mimics Float in Scala.
     * @param data
     */
-  class MX_FLOAT(val data: Float) extends MX_PRIMITIVE_TYPE {
+  class MX_Float(val data: Float) extends MX_PRIMITIVE_TYPE {
 
     override def toString: String = data.toString
 
-    override def unary_- : MX_PRIMITIVE_TYPE = new MX_FLOAT(data.unary_-)
+    override def unary_- : MX_PRIMITIVE_TYPE = new MX_Float(data.unary_-)
 
     override def compare(that: MX_PRIMITIVE_TYPE): Int = {
-      this.data.compareTo(that.asInstanceOf[MX_FLOAT].data)
+      this.data.compareTo(that.asInstanceOf[MX_Float].data)
     }
   }
 
-  implicit def FloatToMX_Float(d : Float): MX_FLOAT = new MX_FLOAT(d)
+  implicit def FloatToMX_Float(d : Float): MX_Float = new MX_Float(d)
 
-  implicit def MX_FloatToFloat(d: MX_FLOAT) : Float = d.data
+  implicit def MX_FloatToFloat(d: MX_Float) : Float = d.data
+
+  implicit def IntToMX_Float(d: Int): MX_Float = new MX_Float(d.toFloat)
 
   /**
     * Mimics Double in Scala.
