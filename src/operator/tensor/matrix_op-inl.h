@@ -421,20 +421,20 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   }
   if (!dispatched && in_stype == kDefaultStorage && trivial_step) {
 #if MXNET_USE_MKLDNN == 1
-  if (!MKLDNNEnvSet()) {
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
-  } else {
+  if (MKLDNNEnvSet() && dev_mask == Context::kCPU) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, dispatch_ex);
+  } else {
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
 #else
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
 #endif
   } else if (!dispatched && in_stype == kDefaultStorage) {
-     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                      dispatch_mode, DispatchMode::kFCompute);
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
 
   if (!dispatched && in_stype == kCSRStorage && trivial_step) {
