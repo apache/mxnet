@@ -28,7 +28,6 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include <mkldnn.hpp>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
