@@ -198,6 +198,7 @@ if __name__ == '__main__':
     # get image shape
     image_shape = args.image_shape
 
+    calib_layer = lambda name: name.endswith('_output') or name == "data"
     exclude_first_conv = args.exclude_first_conv
     excluded_sym_names = []
     if args.model == 'imagenet1k-resnet-152':
@@ -243,11 +244,7 @@ if __name__ == '__main__':
         rgb_mean = '0,0,0'
         rgb_std = '0,0,0'
         # add layer names you donnot want to quantize.
-        # add conv/pool layer names that has negative inputs
-        # since Intel MKL-DNN only support uint8 quantization temporary.
-        # add all fc layer names since Intel MKL-DNN does not support temporary.
         excluded_sym_names += ['layers']
-        # add your first conv layer names since Intel MKL-DNN only support uint8 quantization temporary.
         if exclude_first_conv:
             excluded_sym_names += ['layers']
     else:
@@ -264,7 +261,7 @@ if __name__ == '__main__':
     mean_args = {'mean_r': rgb_mean[0], 'mean_g': rgb_mean[1], 'mean_b': rgb_mean[2]}
     logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
-    std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}    
+    std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
     combine_mean_std = {}
     combine_mean_std.update(mean_args)
     combine_mean_std.update(std_args)
@@ -294,7 +291,7 @@ if __name__ == '__main__':
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=None, quantized_dtype=args.quantized_dtype,
+                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
                                                         label_names=(label_name,), logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches

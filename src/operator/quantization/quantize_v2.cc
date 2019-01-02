@@ -74,7 +74,7 @@ If min_calib_range < 0.0f, the output type will be int8, otherwise will be uint8
 If min_calib_range isn't presented, the output type will be int8.
 
 .. Note::
-    This operator only supports forward propogation. DO NOT use it in training.)code" ADD_FILELINE)
+    This operator only supports forward propagation. DO NOT use it in training.)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<QuantizeV2Param>)
 .set_num_inputs(1)
 .set_num_outputs(3)

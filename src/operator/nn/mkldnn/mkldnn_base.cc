@@ -262,8 +262,7 @@ const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups) {
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd, int num_groups) {
   const mkldnn::memory *mem = arr.GetMKLDNNData(target_pd);
-  // If the weight array already uses the target layout, simply return it
-  // directly.
+  // If the weight array already uses the target layout, simply return it directly.
   if (mem) return mem;
   mem = GetWeights(arr, num_groups);
   if (mem == nullptr) mem = arr.GetMKLDNNDataReorder(target_pd);

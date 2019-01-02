@@ -26,7 +26,6 @@ except ImportError:
 import ctypes
 import logging
 import os
-import sys
 import numpy as np
 from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
@@ -136,20 +135,17 @@ class _LayerOutputCollector(object):
 
     def collect(self, name, arr):
         """Callback function for collecting layer output NDArrays."""
-        try:
-            name = py_str(name)
-            if self.include_layer is not None and not self.include_layer(name):
-                return
-            handle = ctypes.cast(arr, NDArrayHandle)
-            arr = NDArray(handle, writable=False).copyto(cpu())
-            if self.logger is not None:
-                self.logger.info("Collecting layer %s output of shape %s" % (name, arr.shape))
-            if name in self.nd_dict:
-                self.nd_dict[name].append(arr)
-            else:
-                self.nd_dict[name] = [arr]
-        except KeyboardInterrupt:
-            sys.exit(1)
+        name = py_str(name)
+        if self.include_layer is not None and not self.include_layer(name):
+            return
+        handle = ctypes.cast(arr, NDArrayHandle)
+        arr = NDArray(handle, writable=False).copyto(cpu())
+        if self.logger is not None:
+            self.logger.info("Collecting layer %s output of shape %s" % (name, arr.shape))
+        if name in self.nd_dict:
+            self.nd_dict[name].append(arr)
+        else:
+            self.nd_dict[name] = [arr]
 
 class _LayerOutputMinMaxCollector(object):
     """Saves layer output min and max values in a dict with layer names as keys.
@@ -162,25 +158,22 @@ class _LayerOutputMinMaxCollector(object):
 
     def collect(self, name, arr):
         """Callback function for collecting min and max values from an NDArray."""
-        try:
-            name = py_str(name)
-            if self.include_layer is not None and not self.include_layer(name):
-                return
-            handle = ctypes.cast(arr, NDArrayHandle)
-            arr = NDArray(handle, writable=False)
-            min_range = ndarray.min(arr).asscalar()
-            max_range = ndarray.max(arr).asscalar()
-            if name in self.min_max_dict:
-                cur_min_max = self.min_max_dict[name]
-                self.min_max_dict[name] = (min(cur_min_max[0], min_range),
-                                           max(cur_min_max[1], max_range))
-            else:
-                self.min_max_dict[name] = (min_range, max_range)
-            if self.logger is not None:
-                self.logger.info("Collecting layer %s min_range=%f, max_range=%f"
-                                 % (name, min_range, max_range))
-        except KeyboardInterrupt:
-            sys.exit(1)
+        name = py_str(name)
+        if self.include_layer is not None and not self.include_layer(name):
+            return
+        handle = ctypes.cast(arr, NDArrayHandle)
+        arr = NDArray(handle, writable=False)
+        min_range = ndarray.min(arr).asscalar()
+        max_range = ndarray.max(arr).asscalar()
+        if name in self.min_max_dict:
+            cur_min_max = self.min_max_dict[name]
+            self.min_max_dict[name] = (min(cur_min_max[0], min_range),
+                                       max(cur_min_max[1], max_range))
+        else:
+            self.min_max_dict[name] = (min_range, max_range)
+        if self.logger is not None:
+            self.logger.info("Collecting layer %s min_range=%f, max_range=%f"
+                             % (name, min_range, max_range))
 
 def _calibrate_quantized_sym(qsym, th_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,

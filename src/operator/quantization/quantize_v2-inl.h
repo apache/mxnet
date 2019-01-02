@@ -47,7 +47,7 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
       .add_enum("auto", kAuto)
       .add_enum("int8", kInt8)
       .add_enum("uint8", kUint8)
-      .set_default(kUint8)
+      .set_default(kAuto)
       .describe("Output data type. `auto` can be specified to automatically determine output type "
                 "according to min_calib_range.");
     DMLC_DECLARE_FIELD(min_calib_range)

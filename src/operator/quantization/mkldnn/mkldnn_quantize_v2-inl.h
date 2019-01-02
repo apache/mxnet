@@ -43,11 +43,11 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   using namespace mxnet_op;
   using red::limits::MaxValue;
   using red::limits::MinValue;
-  float real_range = 0.0;
-  float quantized_range = 0.0;
+  SrcType real_range = 0.f;
+  DstType quantized_range = 0;
   NDArray in_buffer = inputs[0];
-  float data_min = red::limits::MaxValue<float>();
-  float data_max = red::limits::MinValue<float>();
+  SrcType data_min = red::limits::MaxValue<SrcType>();
+  SrcType data_max = red::limits::MinValue<SrcType>();
 
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     data_min = param.min_calib_range.value();
@@ -55,10 +55,10 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   } else {
     // no calib info
     in_buffer = inputs[0].Reorder2Default();
-    auto in_ptr = in_buffer.data().dptr<float>();
+    auto in_ptr = in_buffer.data().dptr<SrcType>();
     auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    std::vector<float> data_maxs(nthreads, data_max);
-    std::vector<float> data_mins(nthreads, data_min);
+    std::vector<SrcType> data_maxs(nthreads, data_max);
+    std::vector<SrcType> data_mins(nthreads, data_min);
 #pragma omp parallel for num_threads(nthreads)
     for (index_t i = 0; i < static_cast<index_t>(in_buffer.shape().Size()); i++) {
       int tid = omp_get_thread_num();
@@ -72,10 +72,10 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   }
   auto out_type = GetOutputType(param);
   if (out_type == mshadow::kUint8) {
-    real_range = MaxAbs(data_min, data_max);
-    quantized_range = MaxAbs(MaxValue<DstType>(), MinValue<DstType>());
-    *outputs[1].data().dptr<float>() = data_min;
-    *outputs[2].data().dptr<float>() = data_max;
+    real_range = std::max<SrcType>(0.f, data_max);
+    quantized_range = MaxValue<DstType>();
+    *outputs[1].data().dptr<float>() = 0.f;
+    *outputs[2].data().dptr<float>() = real_range;
   } else if (out_type == mshadow::kInt8) {
     real_range = MaxAbs(data_min, data_max);
     quantized_range = MinAbs(MaxValue<DstType>(), MinValue<DstType>());
@@ -84,7 +84,7 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   } else {
     LOG(FATAL) << "mkldnn quantize op only supports int8 and uint8 as output type";
   }
-  float scale = quantized_range / real_range;
+  float scale = static_cast<float>(quantized_range) / real_range;
 
   primitive_attr attr;
   const int mask = 0;
