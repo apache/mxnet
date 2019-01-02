@@ -34,7 +34,7 @@ def main():
     parser.add_argument('--dilation_depth', type=int, default=10)
     parser.add_argument('--n_repeat', type=int, default=2)
     parser.add_argument('--seq_size', type=int, default=20000)
-    parser.add_argument('--use_gpu', type=bool, default=True)
+    parser.add_argument('--use_gpu', type=str, default="True")
     parser.add_argument('--generation', type=bool, default=True)
     config = parser.parse_args()
 

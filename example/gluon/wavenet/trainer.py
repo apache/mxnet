@@ -32,7 +32,7 @@ def setting_ctx(use_gpu):
     """
     Description : setting cpu/gpu
     """
-    if use_gpu:
+    if eval(use_gpu):
         ctx = mx.gpu()
     else:
         ctx = mx.cpu()

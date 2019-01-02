@@ -27,7 +27,7 @@ def load_wav(file_nm):
     """
     Description : load wav file
     """
-    fs, data = wavfile.read(os.getcwd()+'/data/'+file_nm)
+    fs, data = wavfile.read(os.getcwd()+'/dataset/'+file_nm)
     return  fs, data
 
 def data_generation(data, framerate, seq_size, mu, ctx, gen_mode=None):
