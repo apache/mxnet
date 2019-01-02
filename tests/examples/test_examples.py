@@ -53,7 +53,8 @@ def _run_command(test_name, command):
 
 
 def test_cifar_default():
-    example_dir = os.path.join(os.getcwd(), '..', '..', 'example', 'image-classification')
+    example_dir = os.path.join(os.getcwd(), '..', '..', '..', 'example', 'image-classification')
+    print(os.getcwd())
     temp_dir = 'tmpdir'
     example_name = 'test_cifar10'
     working_dir = os.path.join(*([temp_dir] + [example_name]))
@@ -66,7 +67,7 @@ def test_cifar_default():
 
 
 def test_cifar_gpu():
-    example_dir = os.path.join(os.getcwd(), '..', '..', 'example', 'image-classification')
+    example_dir = os.path.join(os.getcwd(), '..', '..', '..', 'example', 'image-classification')
     temp_dir = 'tmpdir'
     example_name = 'test_cifar10'
     working_dir = os.path.join(*([temp_dir] + [example_name]))
