@@ -65,6 +65,8 @@ object MX_PRIMITIVES {
 
   implicit def MX_FloatToFloat(d: MX_FLOAT) : Float = d.data
 
+  implicit def IntToMX_Float(d: Int): MX_FLOAT = new MX_FLOAT(d.toFloat)
+
   /**
     * Mimics Double in Scala.
     * @param data
