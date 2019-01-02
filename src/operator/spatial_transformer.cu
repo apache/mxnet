@@ -35,8 +35,17 @@ template<typename DType>
 __device__ bool between(DType value, int lowerBound, int upperBound) {
   return (value >= lowerBound && value <= upperBound);
 }
+
 template<typename DType>
 __global__ void
+/*
+ * In order to not generate the code that uses too many
+ * registers (resulting in too many resources requested
+ * error) we need to tell the compiler that we will be
+ * launching this kernel with cuda::kMaxThreadsPerBlock
+ * threads per block. Setting __launch_bounds__ ensures
+ * that such configuration can always be launched.
+ */
 __launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
 BilinearSamplingForwardKernel(const int i_c, const int i_h,
                               const int i_w, const DType* data,
@@ -79,6 +88,14 @@ BilinearSamplingForwardKernel(const int i_c, const int i_h,
     }
 }
 
+/*
+ * In order to not generate the code that uses too many
+ * registers (resulting in too many resources requested
+ * error) we need to tell the compiler that we will be
+ * launching this kernel with cuda::kMaxThreadsPerBlock
+ * threads per block. Setting __launch_bounds__ ensures
+ * that such configuration can always be launched.
+ */
 template<typename DType>
 __global__ void
 __launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
