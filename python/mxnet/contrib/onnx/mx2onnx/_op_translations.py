@@ -232,6 +232,17 @@ def convert_fully_connected(node, **kwargs):
 
     fcnode = []
 
+    op_name = "flatten_" + str(kwargs["idx"])
+    flatten_node = onnx.helper.make_node(
+        'Flatten',
+        inputs=[input_nodes[0]],
+        outputs=[op_name],
+        name=op_name
+    )
+
+    input_nodes[0] = op_name
+    fcnode.append(flatten_node)
+
     if no_bias:
         data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype('int64')]
         bias_name = "bias" + str(kwargs["idx"])
@@ -799,7 +810,7 @@ def convert_l2normalization(node, **kwargs):
     mode = attrs.get("mode", "instance")
 
     if mode != "channel":
-        raise AttributeError("ONNX currently supports channel mode only")
+        raise AttributeError("L2Normalization: ONNX currently supports channel mode only")
 
     l2norm_node = onnx.helper.make_node(
         "LpNormalization",
@@ -1291,7 +1302,7 @@ def convert_reshape(node, **kwargs):
 
     for val in output_shape_list:
         if val in not_supported_shape:
-            raise AttributeError("Shape value not supported in ONNX", val)
+            raise AttributeError("Reshape: Shape value not supported in ONNX", val)
 
     reshape_node = onnx.helper.make_node(
         "Reshape",
@@ -1417,7 +1428,7 @@ def convert_squeeze(node, **kwargs):
 
     axis = attrs.get("axis", None)
     if not axis:
-        raise AttributeError("Missing axis attribute: ONNX currently requires axis to "
+        raise AttributeError("Squeeze: Missing axis attribute: ONNX currently requires axis to "
                              "be specified for squeeze operator")
     axis = convert_string_to_list(axis)
 
@@ -1655,3 +1666,26 @@ def convert_size(node, **kwargs):
     and return the created node.
     """
     return create_basic_op_node('Size', node, kwargs)
+
+
+@mx_op.register("log_softmax")
+def convert_logsoftmax(node, **kwargs):
+    """Map MXNet's log_softmax operator attributes to onnx's LogSoftMax operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to int
+    axis = int(attrs.get("axis", -1))
+    temp = attrs.get("temperature", 'None')
+    if temp != 'None':
+        raise AttributeError("LogSoftMax: ONNX supports only temperature=None")
+
+    node = onnx.helper.make_node(
+        'LogSoftmax',
+        input_nodes,
+        [name],
+        axis=axis,
+        name=name
+    )
+    return [node]

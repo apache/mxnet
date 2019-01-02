@@ -273,7 +273,9 @@ if __name__ == '__main__':
     logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
     std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}    
-
+    combine_mean_std = {}
+    combine_mean_std.update(mean_args)
+    combine_mean_std.update(std_args)
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
@@ -294,8 +296,7 @@ if __name__ == '__main__':
                                      shuffle=args.shuffle_dataset,
                                      shuffle_chunk_seed=args.shuffle_chunk_seed,
                                      seed=args.shuffle_seed,
-                                     **mean_args,
-                                     **std_args)
+                                     **combine_mean_std)
 
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,

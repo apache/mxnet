@@ -175,10 +175,11 @@ struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
+bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
-}
+}  // namespace op
 
 static int GetTypeSize(int dtype) {
   int size = -1;
@@ -250,15 +251,24 @@ inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
                                                  int num_groups) {
+  auto ndim = arr.shape().ndim();
+  mkldnn::memory::dims tz = mkldnn::memory::dims{0};
   if (num_groups == 1) {
     return GetMemDesc(arr);
   } else {
-    CHECK_EQ(arr.shape().ndim(), 4U);
-    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
-      static_cast<int>(arr.shape()[0] / num_groups),
-      static_cast<int>(arr.shape()[1]),
-      static_cast<int>(arr.shape()[2]),
-      static_cast<int>(arr.shape()[3])};
+    CHECK((ndim == 3) || (ndim == 4))
+        << "MKL-DNN weight currectly supports 3d and 4d layout";
+    const int N = 0, H = 2, W = 3, C = 1;
+    if (ndim == 3) {
+      tz = mkldnn::memory::dims{
+          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
+          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H])};
+    } else {
+      tz = mkldnn::memory::dims{
+          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
+          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
+          static_cast<int>(arr.shape()[W])};
+    }
     return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
                                 mkldnn::memory::format::any};
   }
