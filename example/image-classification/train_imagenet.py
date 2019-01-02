@@ -39,7 +39,7 @@ if __name__ == '__main__':
     data.add_data_args(parser)
     data.add_data_aug_args(parser)
     # uncomment to set standard augmentations for imagenet training
-    # set_imagenet_aug(parser)
+    set_imagenet_aug(parser)
     parser.set_defaults(
         # network
         network          = 'resnet',
