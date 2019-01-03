@@ -84,10 +84,7 @@ class Train(object):
         #set optimizer
         self.loss_fn = gluon.loss.CTCLoss()
         self.trainer = gluon.Trainer(self.net.collect_params(), \
-                                     optimizer='adam', \
-                                     optimizer_params={'learning_rate':1e4,
-                                                       'beta1':0.9,
-                                                       'beta2':0.999})
+                                     optimizer='SGD')
     def save_model(self, epoch, iter_no, current_loss):
         """
         Description : save parameter of network weight
