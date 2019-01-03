@@ -300,7 +300,8 @@ class DeviceStore {
   ~DeviceStore() {
     if (restore_ &&
         current_device_ != restore_device_ &&
-        current_device_ != -1)
+        current_device_ != -1 &&
+        restore_device_ != -1)
       CUDA_CALL(cudaSetDevice(restore_device_));
   }
 
