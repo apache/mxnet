@@ -468,6 +468,7 @@ NNVM_REGISTER_OP(_backward_Pooling)
   // where CUDA and CUDNN implementations are not available can we be sure the MKLDNN
   // implementation will be employed.  The MKLDNN FInplaceOptions are not compatible
   // with the other (i.e. cpu, cuda and cudnn) implementations.
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
     return std::vector<std::pair<int, int> >{{1, 0}};
 #else
