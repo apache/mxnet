@@ -928,10 +928,7 @@ def scalar_op_helper(node, op_name, **kwargs):
             elif op_name == 'Add':
                 new_initializer = numpy_helper.to_array(i) + scalar_value[0]
             elif op_name == 'Div':
-                if name.startswith("_rdivscalar"):
-                    new_initializer = scalar_value[0] / numpy_helper.to_array(i)
-                else:
-                    new_initializer = numpy_helper.to_array(i) / scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) / scalar_value[0]
             elif op_name == 'Pow':
                 new_initializer = numpy_helper.to_array(i) ** scalar_value[0]
             flag = False

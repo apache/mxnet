@@ -151,8 +151,6 @@ class TestNode(unittest.TestCase):
                 outsym = 2 * ipsym
             if test == "Div":
                 outsym = ipsym / 2
-            if test == "rDiv":
-                outsym = ipsym.__rdiv__(2)
             if test == "Pow":
                 outsym = ipsym ** 2
             forward_op = forward_pass(outsym, None, None, ['input1'], input1)
@@ -188,7 +186,7 @@ test_cases = [
      {'num_hidden': 4, 'name': 'FC'}, True)
 ]
 
-test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'rDiv', 'Pow']
+test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'Pow']
 
 if __name__ == '__main__':
     unittest.main()
