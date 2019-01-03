@@ -24,7 +24,7 @@ import scala.collection.immutable.ListMap
 import scala.util.Random
 
 class SyntheticDataIter(numClasses: Int, val batchSize: Int, datumShape: List[Int],
-                        labelShape: List[Int], maxIter: Int, dtype: DType = DType.Float32
+                        labelShape: List[Int], maxIter: Int, dType: DType = DType.Float32
                        ) extends DataIter {
   var curIter = 0
   val random = new Random()
@@ -35,12 +35,12 @@ class SyntheticDataIter(numClasses: Int, val batchSize: Int, datumShape: List[In
   var label: IndexedSeq[NDArray] = IndexedSeq(
     NDArray.api.random_uniform(Some(0f), Some(maxLabel), shape = Some(batchLabelShape)))
   var data: IndexedSeq[NDArray] = IndexedSeq(
-    NDArray.api.random_uniform(shape = Some(shape)))
+    NDArray.api.random_uniform(shape = Some(shape), dtype = Some(dType.toString)))
 
   val provideDataDesc: IndexedSeq[DataDesc] = IndexedSeq(
-    new DataDesc("data", shape, dtype, Layout.UNDEFINED))
+    new DataDesc("data", shape, data(0).dtype, Layout.UNDEFINED))
   val provideLabelDesc: IndexedSeq[DataDesc] = IndexedSeq(
-    new DataDesc("softmax_label", batchLabelShape, dtype, Layout.UNDEFINED))
+    new DataDesc("softmax_label", batchLabelShape, label(0).dtype, Layout.UNDEFINED))
   val getPad: Int = 0
 
   override def getData(): IndexedSeq[NDArray] = data
