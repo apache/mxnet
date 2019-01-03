@@ -126,7 +126,6 @@ class Classifier(modelPathPrefix: String,
     })
 
     val predictResult = predictResultPar.toArray
-
     var result: ListBuffer[IndexedSeq[(String, Float)]] =
       ListBuffer.empty[IndexedSeq[(String, Float)]]
 
