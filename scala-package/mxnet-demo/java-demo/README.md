@@ -37,6 +37,13 @@ However, you have to define the Classpath before you run the demo code. More inf
 The `CLASSPATH` should point to the jar file you have downloaded.
 
 It will load the library automatically and run the example
+
+In order to use the `Param Object`. We requires user to place this line in the front:
+```
+static NDArray$ NDArray = NDArray$.MODULE$;
+```
+It would help to have the NDArray companion object static and accessable from the outside.
+
 ### Object Detection using Inference API
 We also provide an example to do object detection, which downloads a ImageNet trained resnet50 model and runs inference on an image to return the classification result as
 ```Bash
