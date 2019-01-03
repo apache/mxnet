@@ -78,7 +78,8 @@ object Resnet {
     */
   def resnet(units: List[Int], numStages: Int, filterList: List[Int], numClasses: Int,
              imageShape: List[Int], bottleNeck: Boolean = true, bnMom: Float = 0.9f,
-             workspace: Int = 256, dtype: DType = DType.Float32, memonger: Boolean = false): Symbol = {
+             workspace: Int = 256, dtype: DType = DType.Float32,
+             memonger: Boolean = false): Symbol = {
     assert(units.size == numStages)
     var data = Symbol.Variable("data", shape = Shape(List(4) ::: imageShape), dType = DType.Float32)
     if (dtype == DType.Float32) {

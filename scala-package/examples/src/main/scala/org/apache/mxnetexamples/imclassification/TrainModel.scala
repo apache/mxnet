@@ -91,7 +91,8 @@ object TrainModel {
 
     val dataLoader: (Int, KVStore) => (DataIter, DataIter) = if (benchmark) {
       (batchSize: Int, kv: KVStore) => {
-        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, List(), numExamples, dtype)
+        val iter = new SyntheticDataIter(numClasses, batchSize, datumShape, List(), numExamples,
+          dtype)
         (iter, iter)
       }
     } else {
