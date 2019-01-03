@@ -28,6 +28,7 @@ mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could se
 mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
 mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
+mxnet_option(USE_NGRAPH           "Build with nGraph support" OFF)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
 mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
@@ -230,7 +231,7 @@ if(ENABLE_TESTCOVERAGE)
   if(NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Aborting...")
   endif() # NOT GCOV_PATH
-
+  
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")

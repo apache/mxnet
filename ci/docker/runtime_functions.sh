@@ -555,6 +555,21 @@ build_ubuntu_cpu_mkldnn_mkl() {
         -j$(nproc)
 }
 
+build_ubuntu_cpu_ngraph() {
+    set -ex
+
+    build_ccache_wrappers
+
+    make  \
+        DEV=1                         \
+        ENABLE_TESTCOVERAGE=1         \
+        USE_CPP_PACKAGE=1             \
+        USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
+        USE_NGRAPH=1                  \
+        -j$(nproc)
+}
+
 build_ubuntu_gpu() {
     build_ubuntu_gpu_cuda91_cudnn7
 }
@@ -820,6 +835,15 @@ unittest_ubuntu_tensorrt_gpu() {
     export CUDNN_VERSION=7.0.3
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
+}
+
+unittest_ubuntu_cpu_ngraph() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest -e "test_subgraph_exe" -e "test_make_subgraph" -e "test_monitor" -e "test_op_output_names_monitor" -e "test_zero_prop"
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_ngraph.xml --verbose tests/python/ngraph
 }
 
 # quantization gpu currently only runs on P3 instances

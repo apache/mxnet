@@ -62,7 +62,8 @@ build/tests/cpp/engine/%.o : tests/cpp/engine/%.cc | mkldnn
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/engine/$*.o $(filter %.cc %.a, $^)
 
 $(TEST): $(TEST_OBJ) lib/libmxnet.so gtest.a
-	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o $@ $^ $(TEST_LDFLAGS)
+	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o $@ $^ $(TEST_LDFLAGS) \
+	   $(NGRAPH_LDFLAGS_FOR_CPP_UNIT_TESTS_PROG)
 
 runtest: $(TEST)
 	LD_LIBRARY_PATH=$(shell pwd)/lib:$(LD_LIBRARY_PATH) $(TEST)

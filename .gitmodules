@@ -29,3 +29,6 @@
 [submodule "3rdparty/onnx-tensorrt"]
 	path = 3rdparty/onnx-tensorrt
 	url = https://github.com/onnx/onnx-tensorrt.git
+[submodule "3rdparty/ngraph-mxnet-bridge"]
+	path = 3rdparty/ngraph-mxnet-bridge
+	url = https://github.com/NervanaSystems/ngraph-mxnet-bridge

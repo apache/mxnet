@@ -34,6 +34,7 @@ mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/li
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_ngraph_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so, lib/libmklml_intel.so, lib/libcpu_backend.so, lib/libngraph.so, lib/libtbb.so.2, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_tensorrt_lib = 'build/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
@@ -113,6 +114,20 @@ def compile_unix_openblas_debug_cpu() {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
             utils.pack_lib('cpu_debug', mx_cmake_lib_debug, true)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_ngraph_cpu() {
+    return ['CPU: NGRAPH': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ngraph-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_ngraph', false)
+            utils.pack_lib('ngraph_cpu', mx_ngraph_lib, true)
           }
         }
       }
@@ -711,6 +726,24 @@ def test_unix_python2_mkldnn_cpu() {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
             utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
             utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_mkldnn_cpu_quantization.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_ngraph_cpu() {
+    return ['Python3: nGraph-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ngraph-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.unpack_and_init('ngraph_cpu', mx_ngraph_lib, true)
+              utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_ngraph', false)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_ngraph_cpu.xml')
+            }
           }
         }
       }

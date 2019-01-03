@@ -37,6 +37,7 @@ core_logic: {
     custom_steps.compile_unix_cpu_openblas(),
     custom_steps.compile_unix_openblas_debug_cpu(),
     custom_steps.compile_unix_mkl_cpu(),
+    custom_steps.compile_unix_ngraph_cpu(),
     custom_steps.compile_unix_mkldnn_cpu(),
     custom_steps.compile_unix_mkldnn_mkl_cpu()
   ])
@@ -48,6 +49,7 @@ core_logic: {
     custom_steps.test_unix_python3_mkl_cpu(),
     custom_steps.test_unix_python2_mkldnn_cpu(),
     custom_steps.test_unix_python3_mkldnn_cpu(),
+    custom_steps.test_unix_python3_ngraph_cpu(),
     custom_steps.test_unix_python3_mkldnn_mkl_cpu(),
     custom_steps.test_unix_scala_cpu(),
     custom_steps.test_unix_scala_mkldnn_cpu(),

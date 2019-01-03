@@ -835,13 +835,13 @@ def test_export():
     module.forward(mx.io.DataBatch([data], None), is_train=False)
     mod_out, = module.get_outputs()
 
-    assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
+    assert_almost_equal(out.asnumpy(), mod_out.asnumpy(), atol=1e-5)
 
     model2 = gluon.model_zoo.vision.resnet18_v1(prefix='resnet', ctx=ctx)
     model2.collect_params().load('gluon-0000.params', ctx)
     out2 = model2(data)
 
-    assert_almost_equal(out.asnumpy(), out2.asnumpy())
+    assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-5)
 
 @with_seed()
 def test_import():

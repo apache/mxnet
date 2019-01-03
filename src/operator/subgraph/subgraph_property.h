@@ -105,6 +105,18 @@ class SubgraphProperty {
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const = 0;
   /*!
+   * \brief Create an nnvm node for a given subgraph using graph with attrs. Here users
+   *        can customize how to execute the operators in the subgraph.
+   * \param g the graph with attrs to create subgraph node
+   * \param subgraph_id subgraph id
+   */
+  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Graph &g,
+                                           const int subgraph_id = 0) const {
+    nnvm::Symbol sym;
+    sym.outputs = g.outputs;
+    return CreateSubgraphNode(sym, subgraph_id);
+  }
+  /*!
    * \brief Connect subgraph internal output with external output entries.
    *        By default, each output entry will connect to an unique internal output.
    * \param subgraph_node the subgraph node to connect output
@@ -127,6 +139,12 @@ class SubgraphProperty {
                                      std::vector<nnvm::NodeEntry*>* input_entries,
                                      std::vector<nnvm::NodeEntry>* orig_input_entries) const {
     subgraph_node->inputs = *orig_input_entries;
+  }
+  /*!
+   * \brief Infer subgraph attrs before creating subgraph node, if needed.
+   */
+  virtual bool NeedGraphAttrs() const {
+    return false;
   }
   /*!
    * \brief Set an attr with name in the attr map.

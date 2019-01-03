@@ -51,7 +51,7 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
                      args={'rhs': rhs_arr, 'lhs': lhs_arr},
                      args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
 
-    executor.forward()
+    executor.forward(is_train = True)
     exec3.forward()
     exec4.forward()
     out2 = executor.outputs[0].asnumpy()

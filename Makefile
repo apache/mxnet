@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+.DEFAULT_GOAL := all
 ROOTDIR = $(CURDIR)
 TPARTYDIR = $(ROOTDIR)/3rdparty
 
@@ -59,7 +60,7 @@ endif
 # use customized config file
 include $(config)
 
-ifndef USE_MKLDNN
+ifndef $(USE_MKLDNN)
 ifneq ($(UNAME_S), Darwin)
 ifneq ($(UNAME_S), Windows)
 ifeq ($(UNAME_P), x86_64)
@@ -78,13 +79,17 @@ ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
 	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
 	export USE_MKLML = 1
+	MKLDNN_INCLUDE_DIR = $(MKLDNNROOT)/include
+	MKLDNN_LIB_DIR = $(MKLDNNROOT)/lib
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
-# all tge possible warning tread
-WARNFLAGS= -Wall -Wsign-compare
+include 3rdparty/ngraph-mxnet-bridge/ngraph.mk
+
+# all the possible warning tread
+WARNFLAGS= -Wall -Wsign-compare -Wno-comment
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
@@ -99,7 +104,13 @@ else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
-LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
+LDFLAGS =
+
+ifeq ($(USE_NGRAPH),1)
+    CFLAGS += $(NGRAPH_CFLAGS)
+endif
+
+LDFLAGS += -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
@@ -411,6 +422,10 @@ else
 	EXTRA_CUOBJ =
 endif
 
+ifeq ($(USE_NGRAPH), 1)
+	EXTRA_OBJ += $(NGRAPH_BRIDGE_OBJ)
+endif
+
 # plugin
 PLUGIN_OBJ =
 PLUGIN_CUOBJ =
@@ -473,23 +488,23 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
-build/src/%.o: src/%.cc | mkldnn
+build/src/%.o: src/%.cc | mkldnn ngraph
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
-build/src/%_gpu.o: src/%.cu | mkldnn
+build/src/%_gpu.o: src/%.cu | mkldnn ngraph
 	@mkdir -p $(@D)
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" --generate-dependencies -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
 # A nvcc bug cause it to generate "generic/xxx.h" dependencies from torch headers.
 # Use CXX to generate dependency instead.
-build/plugin/%_gpu.o: plugin/%.cu
+build/plugin/%_gpu.o: plugin/%.cu | ngraph
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
+build/plugin/%.o: plugin/%.cc | ngraph
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -515,7 +530,9 @@ lib/libmxnet.a: $(ALLX_DEP)
 
 lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
+	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) \
+	  $(NGRAPH_LDFLAGS_FOR_SHARED_LIBS) \
+	  $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
@@ -544,7 +561,9 @@ bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) \
+	  $(LDFLAGS) \
+	  $(NGRAPH_LDFLAGS_FOR_PROGS_IN_BIN)
 
 # CPP Package
 ifeq ($(USE_CPP_PACKAGE), 1)
@@ -566,6 +585,10 @@ cpplint:
 
 pylint:
 	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+
+python_clean:
+	$(RM) -r python/build
+	$(RM) -r python/dist
 
 doc: docs
 
@@ -652,7 +675,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: rclean ngraph_clean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
