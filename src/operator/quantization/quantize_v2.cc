@@ -22,6 +22,7 @@
  * \file quantize.cc
  * \brief
  */
+
 #include "./quantize_v2-inl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_quantize_v2-inl.h"
