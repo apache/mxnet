@@ -732,7 +732,12 @@ install(TARGETS ${MXNET_INSTALL_TARGETS}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+# NOTE: Public headers will be installed into ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}, see
+#       https://cmake.org/cmake/help/v3.0/variable/CMAKE_INSTALL_PREFIX.html
+#       https://cmake.org/cmake/help/v3.0/module/GNUInstallDirs.html
+
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY 3rdparty/tvm/nnvm/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if (INSTALL_EXAMPLES)
   install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
 endif()
