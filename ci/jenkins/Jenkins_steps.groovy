@@ -268,7 +268,7 @@ def compile_centos7_cpu_mkldnn() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn', mx_lib, true)
+            utils.pack_lib('centos7_mkldnn', mx_mkldnn_lib, true)
           }
         }
       }

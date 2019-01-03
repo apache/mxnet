@@ -285,6 +285,7 @@ build_centos7_cpu() {
         ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
+        USE_MKLDNN=0 \
         USE_DIST_KVSTORE=1 \
         -j$(nproc)
 }
@@ -320,7 +321,6 @@ build_centos7_mkldnn() {
         ENABLE_TESTCOVERAGE=1 \
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_MKLDNN=1 \
         USE_BLAS=openblas \
         -j$(nproc)
 }
@@ -336,6 +336,7 @@ build_centos7_gpu() {
         USE_LAPACK=1                              \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so   \
         USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
@@ -358,6 +359,7 @@ build_ubuntu_cpu_openblas() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
 }
@@ -371,6 +373,7 @@ build_ubuntu_cpu_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -410,6 +413,7 @@ build_ubuntu_cpu_cmake_asan() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_MKLDNN=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=OFF \
         -DCMAKE_BUILD_TYPE=Debug \
@@ -436,6 +440,7 @@ build_ubuntu_cpu_clang39() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
         USE_OPENMP=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -453,6 +458,7 @@ build_ubuntu_cpu_clang60() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_MKLDNN=0                  \
         USE_OPENMP=1                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
@@ -472,6 +478,7 @@ build_ubuntu_cpu_clang_tidy() {
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
+        -DUSE_MKLDNN=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENCV=ON \
         -DCMAKE_BUILD_TYPE=Debug \
@@ -497,7 +504,6 @@ build_ubuntu_cpu_clang39_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         USE_OPENMP=0                  \
         -j$(nproc)
 }
@@ -514,7 +520,6 @@ build_ubuntu_cpu_clang60_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         USE_OPENMP=1                  \
         -j$(nproc)
 }
@@ -529,7 +534,6 @@ build_ubuntu_cpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=1                  \
         -j$(nproc)
 }
 
@@ -543,7 +547,6 @@ build_ubuntu_cpu_mkldnn_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
-        USE_MKLDNN=1                  \
         -j$(nproc)
 }
 
@@ -603,6 +606,7 @@ build_ubuntu_gpu_tensorrt() {
         USE_CUDA_PATH=/usr/local/cuda                        \
         USE_CUDNN=1                                          \
         USE_OPENCV=0                                         \
+        USE_MKLDNN=0                                         \
         USE_DIST_KVSTORE=0                                   \
         USE_TENSORRT=1                                       \
         USE_JEMALLOC=0                                       \
@@ -622,7 +626,6 @@ build_ubuntu_gpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1                     \
         USE_CPP_PACKAGE=1                         \
         USE_BLAS=openblas                         \
-        USE_MKLDNN=1                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
@@ -639,7 +642,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
         USE_BLAS=openblas                         \
-        USE_MKLDNN=1                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
@@ -655,6 +657,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         DEV=1                                     \
         ENABLE_TESTCOVERAGE=1                     \
         USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
@@ -697,7 +700,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
         -DUSE_MKLML_MKL=1                       \
-        -DUSE_MKLDNN=1                          \
         -DCMAKE_BUILD_TYPE=Release              \
         -DCUDA_ARCH_NAME=Manual                 \
         -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
@@ -911,6 +913,7 @@ unittest_ubuntu_cpu_julia06() {
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
     julia -e 'Pkg.build("MXNet")'
@@ -1236,6 +1239,7 @@ deploy_jl_docs() {
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
     julia -e 'Pkg.build("MXNet")'

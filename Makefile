@@ -24,6 +24,7 @@ ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
 else
 	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
 endif
 
 ifndef config
@@ -59,6 +60,16 @@ endif
 
 # use customized config file
 include $(config)
+
+ifndef $(USE_MKLDNN)
+ifneq ($(UNAME_S), Darwin)
+ifneq ($(UNAME_S), Windows)
+ifeq ($(UNAME_P), x86_64)
+	USE_MKLDNN=1
+endif
+endif
+endif
+endif
 
 ifeq ($(USE_MKL2017), 1)
 $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
