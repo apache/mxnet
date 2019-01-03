@@ -642,7 +642,6 @@ def test_pooling_with_convention():
 
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='7.0.1')
 def test_pooling_nhwc_with_convention():
     def make_pooling_syms(**kwargs):
         # Conventional NCHW layout pooling
@@ -856,7 +855,6 @@ def test_pooling_with_type2():
         check_consistency(sym, ctx_list)
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='7.0.1')
 def test_pooling_nhwc_with_type():
     def make_pooling_syms(**kwargs):
         # Conventional NCHW layout pooling
