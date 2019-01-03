@@ -254,14 +254,17 @@ method backward(
     ----------
     $callback : CodeRef
         Takes a string and an NDArrayHandle.
+    $monitor_all : Bool, default 0
+        If true, monitor both input and output, otherwise monitor output only.
 =cut
 
-method set_monitor_callback(CodeRef $callback)
+method set_monitor_callback(CodeRef $callback, Bool $monitor_all=0)
 {
     check_call(
         AI::MXNetCAPI::ExecutorSetMonitorCallback(
             $self->handle,
-            $callback
+            $callback,
+            $monitor_all
         )
     );
 }
