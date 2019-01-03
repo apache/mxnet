@@ -136,9 +136,6 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
                                                            const NDArray &weights,
                                                            const NDArray *bias,
                                                            const NDArray &output) {
-  CHECK_GE(param.conv_param.stride.ndim(), 2U);
-  CHECK_GE(param.conv_param.pad.ndim(), 2U);
-  CHECK_GE(param.conv_param.dilate.ndim(), 2U);
   auto data_md = GetMemDesc(data);
   auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.mkldnn_param.quantized);
   auto out_md = GetMemDesc(output);
