@@ -46,6 +46,8 @@ class LipsDataset(dataset.Dataset):
         folder_path = glob.glob(os.path.join(root, "*", "*"))
         for folder in folder_path:
             filename = glob.glob(os.path.join(folder, "*"))
+            if len(filename) != 75:
+                continue
             filename.sort()
             label = os.path.split(folder)[-1]
             self.items.append((filename, label))
@@ -53,7 +55,7 @@ class LipsDataset(dataset.Dataset):
         """
         Description : Align to lip position
         """
-        align = Align(self._align_root+file_nm+'.align')
+        align = Align(self._align_root + '/' + file_nm + '.align')
         return nd.array(align.sentence(padding))
     def __getitem__(self, idx):
         img = list()
@@ -69,4 +71,3 @@ class LipsDataset(dataset.Dataset):
 
     def __len__(self):
         return len(self.items)
-    
