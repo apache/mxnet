@@ -645,7 +645,7 @@ def convert_pooling(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     kernel = eval(attrs["kernel"])
-    pool_type = attrs["pool_type"]
+    pool_type = attrs["pool_type"] if attrs.get("pool_type") else "max"
     stride = eval(attrs["stride"]) if attrs.get("stride") else (1, 1)
     global_pool = get_boolean_attribute_value(attrs, "global_pool")
 
