@@ -471,9 +471,8 @@ NNVM_REGISTER_OP(_backward_Pooling)
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
     return std::vector<std::pair<int, int> >{{1, 0}};
-#else
-  return std::vector<std::pair<int, int> >();
 #endif
+  return std::vector<std::pair<int, int> >();
 })
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
