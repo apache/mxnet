@@ -9,7 +9,7 @@ Gluon implementation of [LipNet: End-to-End Sentence-level Lipreading](https://a
 ## Requirements
 - Python 3.6.4
 - MXnet 1.3.0
-
+- The Required Disk Space: 35Gb
 
 ## Test Environment
 - 4 CPU cores
@@ -25,7 +25,7 @@ Gluon implementation of [LipNet: End-to-End Sentence-level Lipreading](https://a
 ### Download the data
 - arguments
   - src_path : Path for videos (default='./data/mp4s/')
-  - align_path : Path for aligns (default='./data/align/')
+  - align_path : Path for aligns (default='./data/')
   - n_process : num of process (default=1)
 
 ```
