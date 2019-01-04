@@ -85,15 +85,13 @@ static mshadow::TypeFlag GetOutputType(const QuantizeV2Param &param) {
 struct quantize_v2_unsigned {
   template <typename DstDType, typename SrcDType>
   MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
-                                  const SrcDType *in, const float *imin_range,
-                                  const float *imax_range, const double min_limit,
+                                  const SrcDType *in, const float imin_range,
+                                  const float imax_range, const double min_limit,
                                   const double max_limit) {
-    using mshadow::red::limits::MaxValue;
-    using mshadow::red::limits::MinValue;
-    const float scale = (max_limit - min_limit) / (*imax_range - *imin_range);
-    out[i] = static_cast<DstDType>((in[i] - *imin_range) * scale + 0.5);
-    *omin_range = *imin_range;
-    *omax_range = *imax_range;
+    const float scale = (max_limit - min_limit) / (imax_range - imin_range);
+    out[i] = static_cast<DstDType>((in[i] - imin_range) * scale + 0.5);
+    *omin_range = imin_range;
+    *omax_range = imax_range;
   }
 };
 
@@ -101,9 +99,9 @@ struct quantize_v2_unsigned {
 struct quantize_v2_zero_centered {
   template <typename DstDType, typename SrcDType>
   MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
-                                  const SrcDType *in, const float *imin_range,
-                                  const float *imax_range, const float quantized_range) {
-    float real_range = MaxAbs(*imin_range, *imax_range);
+                                  const SrcDType *in, const float imin_range,
+                                  const float imax_range, const float quantized_range) {
+    float real_range = MaxAbs(imin_range, imax_range);
     float scale = quantized_range / real_range;
     SrcDType x = in[i];
     out[i] = static_cast<DstDType>(Sign(x) * Min(Abs(x) * scale + 0.5f, quantized_range));
@@ -122,72 +120,48 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   using mshadow::red::limits::MaxValue;
   using mshadow::red::limits::MinValue;
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  SrcDType in_min;
+  SrcDType in_max;
 
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
   auto out_type = GetOutputType(param);
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-    auto in_min = param.min_calib_range.value();
-    auto in_max = param.max_calib_range.value();
-    if (out_type == mshadow::kUint8) {
-      Kernel<quantize_v2_unsigned, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<uint8_t>(),
-                                                outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-                                                inputs[0].dptr<float>(), &in_min, &in_max,
-                                                MinValue<uint8_t>(), MaxValue<uint8_t>());
-    } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
-      Kernel<quantize_v2_zero_centered, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
-          outputs[2].dptr<float>(), inputs[0].dptr<float>(), &in_min, &in_max,
-          MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-    } else {
-      LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
-    }
+    in_min = param.min_calib_range.value();
+    in_max = param.max_calib_range.value();
   } else {  // model is not calibrated
     TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);
-    const size_t actual_quantized_size = sizeof(SrcDType);
     const size_t temp_reduce_size =
         ConfigReduce<xpu, SrcDType>(s, inputs[0].shape_, TShape({1}), &src_shape, &dst_shape);
     Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
-        Shape1(2 * actual_float_size + 2 * actual_quantized_size + temp_reduce_size), s);
-    Tensor<xpu, 1, float> actual_min_float(reinterpret_cast<float *>(temp_space.dptr_), Shape1(1),
-                                           s);
-    Tensor<xpu, 1, float> actual_max_float(reinterpret_cast<float *>(temp_space.dptr_) + 1,
-                                           Shape1(1), s);
-
+        Shape1(2 * actual_float_size + temp_reduce_size), s);
     const int dev_id = ctx.run_ctx.ctx.dev_id;
-    TBlob actual_min_quantized(reinterpret_cast<SrcDType *>(temp_space.dptr_ + 8), Shape1(1),
-                               xpu::kDevMask, dev_id);
-    TBlob actual_max_quantized(reinterpret_cast<SrcDType *>(temp_space.dptr_ + 8) + 1, Shape1(1),
-                               xpu::kDevMask, dev_id);
-    Tensor<xpu, 1, char> workspace(
-        temp_space.dptr_ + 2 * actual_float_size + 2 * actual_quantized_size,
-        Shape1(temp_reduce_size), s);
+    TBlob in_min_t(reinterpret_cast<SrcDType *>(temp_space.dptr_), Shape1(1), xpu::kDevMask,
+                   dev_id);
+    TBlob in_max_t(reinterpret_cast<SrcDType *>(temp_space.dptr_) + 1, Shape1(1), xpu::kDevMask,
+                   dev_id);
+    Tensor<xpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float_size,
+                                   Shape1(temp_reduce_size), s);
     broadcast::Reduce<red::minimum, 2, SrcDType, mshadow::op::identity>(
-        s, actual_min_quantized.reshape(dst_shape), kWriteTo, workspace,
-        inputs[0].reshape(src_shape));
-    Kernel<QuantizedToFloatStruct, xpu>::Launch(s, 1, actual_min_float.dptr_,
-                                                actual_min_quantized.dptr<SrcDType>(),
-                                                inputs[1].dptr<float>(), inputs[2].dptr<float>());
-
+        s, in_min_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
     broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
-        s, actual_max_quantized.reshape(dst_shape), kWriteTo, workspace,
-        inputs[0].reshape(src_shape));
-    Kernel<QuantizedToFloatStruct, xpu>::Launch(s, 1, actual_max_float.dptr_,
-                                                actual_max_quantized.dptr<SrcDType>(),
-                                                inputs[1].dptr<float>(), inputs[2].dptr<float>());
-    if (out_type == mshadow::kUint8) {
-      Kernel<quantize_v2_unsigned, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
-          outputs[2].dptr<float>(), inputs[0].dptr<float>(), actual_min_float.dptr_,
-          actual_max_float.dptr_, MinValue<uint8_t>(), MaxValue<uint8_t>());
-    } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
-      Kernel<quantize_v2_zero_centered, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
-          outputs[2].dptr<float>(), inputs[0].dptr<float>(), actual_min_float.dptr_,
-          actual_max_float.dptr_, MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-    } else {
-      LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
-    }
+        s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
+    in_min = *in_min_t.dptr<float>();
+    in_max = *in_max_t.dptr<float>();
+  }
+
+  if (out_type == mshadow::kUint8) {
+    Kernel<quantize_v2_unsigned, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<uint8_t>(),
+                                              outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+                                              inputs[0].dptr<SrcDType>(), in_min, in_max,
+                                              MinValue<uint8_t>(), MaxValue<uint8_t>());
+  } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+    Kernel<quantize_v2_zero_centered, xpu>::Launch(
+        s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+        outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min, in_max,
+        MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+  } else {
+    LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
   }
 }
 

@@ -91,6 +91,14 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeV2Compute)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", QuantizeV2Compute<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+    const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
+    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+      return std::vector<ResourceRequest>();
+    } else {
+      return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
+    }
+  })
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_arguments(QuantizeV2Param::__FIELDS__());
 
