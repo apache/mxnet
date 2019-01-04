@@ -203,6 +203,19 @@ def get_github_context() {
   return "ci/jenkins/${short_job_name}"
 }
 
+def get_github_affected_paths() {
+    def affected_paths = [:]
+    currentBuild.changeSets.each { cl ->
+        cl.items.eachWithIndex { entry, ei ->
+            entry.affectedPaths.each { path ->
+                affected_paths.put(path, ei)
+            }
+        }
+    }
+
+    return affected_paths
+}
+
 def parallel_stage(stage_name, steps) {
     // Allow to pass an array of steps that will be executed in parallel in a stage
     new_map = [:]

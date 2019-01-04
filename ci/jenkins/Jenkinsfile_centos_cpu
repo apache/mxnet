@@ -31,6 +31,18 @@ node('utility') {
 }
 utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 
+// skip this pipeline if only documentation took place
+String[] skip_pipeline_for_extensions = ['md', 'txt']
+
+def affected_paths = utils.get_github_affected_paths()
+affected_paths.each {
+    println "$it"
+}
+if (true) {
+    currentBuild.result = 'SUCCESS'
+    return
+}
+
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
