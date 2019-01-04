@@ -1030,13 +1030,14 @@ class Adam(Optimizer):
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
     If the storage types of grad is ``row_sparse``, and ``lazy_update`` is True, \
-    **lazy updates** are applied by::
+    **lazy updates** at step t are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
             m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
-            w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
+            lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+            w[row] = w[row] - lr * m[row] / (sqrt(v[row]) + epsilon)
 
     The lazy update only updates the mean and var for the weights whose row_sparse
     gradient indices appear in the current batch, rather than updating it for all indices.
@@ -1044,12 +1045,13 @@ class Adam(Optimizer):
     throughput for some applications. However, it provides slightly different semantics than
     the original update, and may lead to different empirical results.
 
-    Otherwise, **standard updates** are applied by::
+    Otherwise, **standard updates** at step t are applied by::
 
         rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
         m = beta1 * m + (1 - beta1) * rescaled_grad
         v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
-        w = w - learning_rate * m / (sqrt(v) + epsilon)
+        lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+        w = w - lr * m / (sqrt(v) + epsilon)
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
