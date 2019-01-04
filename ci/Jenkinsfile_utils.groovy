@@ -205,14 +205,17 @@ def get_github_context() {
 
 def paths_only_with_extensions(paths, extensions) {
     // Returns true if every path's extension is listed in extensions
-    paths.each { path ->
-        path_ext = path.split('.')[-1]
-        if !(path_ext in extensions) {
+    for (path in paths) {
+        path_elements = path.split("\\.")
+        if (path_elements.length == 0) {
+            return false
+        }
+
+        if (!(path_elements[-1] in extensions)) {
             return false
         }
     }
-
-    return true
+    true
 }
 
 def get_github_affected_paths() {
