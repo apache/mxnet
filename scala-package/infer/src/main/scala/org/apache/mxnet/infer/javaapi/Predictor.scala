@@ -72,6 +72,11 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     predictor.predict(input).toArray
   }
 
+  def predict(input: Array[Array[Double]]):
+  Array[Array[Double]] = {
+    predictor.predict(input).toArray
+  }
+
   /**
     * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
