@@ -17,19 +17,15 @@
 
 package org.apache.mxnet
 
-/**
-  * This defines the basic primitives we can use in Scala for mathematical
-  * computations in NDArrays. This gives us a flexibility to expand to
-  * more supported primitives in the future. Currently Float and Double
-  * are supported.
-  */
 object MX_PRIMITIVES {
 
   /**
     * This defines the basic primitives we can use in Scala for mathematical
     * computations in NDArrays.This gives us a flexibility to expand to
     * more supported primitives in the future. Currently Float and Double
-    * * are supported.
+    * are supported. The functions which accept MX_PRIMITIVE_TYPE as input can also accept
+    * plain old Float and Double data as inputs because of the underlying
+    * implicit conversion between primitives to MX_PRIMITIVE_TYPE.
     */
   trait MX_PRIMITIVE_TYPE extends Ordered[MX_PRIMITIVE_TYPE]{
 
@@ -47,7 +43,7 @@ object MX_PRIMITIVES {
   implicit object MX_PRIMITIVE_TYPE extends MXPrimitiveOrdering
 
   /**
-    * Mimics Float in Scala.
+    * Wrapper over Float in Scala.
     * @param data
     */
   class MX_FLOAT(val data: Float) extends MX_PRIMITIVE_TYPE {
@@ -68,7 +64,7 @@ object MX_PRIMITIVES {
   implicit def IntToMX_Float(d: Int): MX_FLOAT = new MX_FLOAT(d.toFloat)
 
   /**
-    * Mimics Double in Scala.
+    * Wrapper over Double in Scala.
     * @param data
     */
   class MX_Double(val data: Double) extends MX_PRIMITIVE_TYPE {
