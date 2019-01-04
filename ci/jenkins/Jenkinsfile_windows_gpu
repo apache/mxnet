@@ -33,10 +33,10 @@ node('utility') {
 utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 // skip this pipeline if only documentation took place
-String[] skip_extensions = ['md', 'txt']
+String[] skip_extensions = ["md", "txt"]
 
 def affected_paths = utils.get_github_affected_paths()
-def skip_pipeline = utils.paths_only_with_extensions(affected_paths, skip_extensions)
+def skip_pipeline = true // utils.paths_only_with_extensions(affected_paths, skip_extensions)
 
 println affected_paths
 echo affected_paths
