@@ -1,5 +1,23 @@
+;;
+;; Licensed to the Apache Software Foundation (ASF) under one or more
+;; contributor license agreements.  See the NOTICE file distributed with
+;; this work for additional information regarding copyright ownership.
+;; The ASF licenses this file to You under the Apache License, Version 2.0
+;; (the "License"); you may not use this file except in compliance with
+;; the License.  You may obtain a copy of the License at
+;;
+;;    http://www.apache.org/licenses/LICENSE-2.0
+;;
+;; Unless required by applicable law or agreed to in writing, software
+;; distributed under the License is distributed on an "AS IS" BASIS,
+;; WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+;; See the License for the specific language governing permissions and
+;; limitations under the License.
+;;
+
 (ns captcha.train-ocr
-  (:require [clojure.java.io :as io]
+  (:require [captcha.consts :refer :all]
+            [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [org.apache.clojure-mxnet.callback :as callback]
             [org.apache.clojure-mxnet.context :as context]
@@ -12,10 +30,6 @@
             [org.apache.clojure-mxnet.symbol :as sym])
   (:gen-class))
 
-(def batch-size 8)
-(def data-shape [3 30 80])
-(def label-width 4)
-
 (when-not (.exists (io/file "captcha_example/captcha_train.lst"))
   (sh "./get_data.sh"))
 
@@ -25,13 +39,6 @@
                             :batch-size batch-size
                             :label-width label-width
                             :data-shape data-shape
-                            ;:rotate 5
-                            ;:brightness 0.05
-                            ;:contrast 0.05
-                            ;:saturation 0.05
-                            ;:random-h 20
-                            ;:random-s 5
-                            ;:random-l 5
                             :shuffle true
                             :seed 42}))
 
@@ -42,10 +49,15 @@
                             :label-width label-width
                             :data-shape data-shape}))
 
-(defn multi-label-accuracy
-  [label pred]
+(defn accuracy
+  [label pred & {:keys [by-character]
+                 :or {by-character false} :as opts}]
   (let [[nr nc] (ndarray/shape-vec label)
-        label-t (-> label ndarray/transpose (ndarray/reshape [-1]))
+        pred-context (ndarray/context pred)
+        label-t (-> label
+                    ndarray/transpose
+                    (ndarray/reshape [-1])
+                    (ndarray/as-in-context pred-context))
         pred-label (ndarray/argmax pred 1)
         matches (ndarray/equal label-t pred-label)
         [digit-matches] (-> matches
@@ -57,12 +69,14 @@
                                (ndarray/equal label-width)
                                ndarray/sum
                                ndarray/->vec)]
-    ; (float (/ digit-matches nr nc))
-    (float (/ complete-matches nr))))
+    (if by-character
+      (float (/ digit-matches nr nc))
+      (float (/ complete-matches nr)))))
 
 (defn get-data-symbol
   []
   (let [data (sym/variable "data")
+        ;; normalize the input pixels
         scaled (sym/div (sym/- data 127) 128)
 
         conv1 (sym/convolution {:data scaled :kernel [5 5] :num-filter 32})
@@ -83,11 +97,10 @@
 
         flattened (sym/flatten {:data relu4})
         fc1 (sym/fully-connected {:data flattened :num-hidden 256})
-        dropped (sym/dropout {:data fc1 :p 0.1})
-        fc21 (sym/fully-connected {:data dropped :num-hidden 10})
-        fc22 (sym/fully-connected {:data dropped :num-hidden 10})
-        fc23 (sym/fully-connected {:data dropped :num-hidden 10})
-        fc24 (sym/fully-connected {:data dropped :num-hidden 10})]
+        fc21 (sym/fully-connected {:data fc1 :num-hidden num-labels})
+        fc22 (sym/fully-connected {:data fc1 :num-hidden num-labels})
+        fc23 (sym/fully-connected {:data fc1 :num-hidden num-labels})
+        fc24 (sym/fully-connected {:data fc1 :num-hidden num-labels})]
     (sym/concat "concat" nil [fc21 fc22 fc23 fc24] {:dim 0})))
 
 (defn get-label-symbol
@@ -101,29 +114,6 @@
   (let [scores (get-data-symbol)
         labels (get-label-symbol)]
     (sym/softmax-output {:data scores :label labels})))
-
-(comment
-  (def batch (mx-io/next train-data))
-  (mx-io/batch-index batch)
-  (-> batch mx-io/batch-label first ndarray/->vec)
-  (-> batch mx-io/batch-data first ndarray/->vec)
-  (def model (m/module (create-captcha-net)
-                      {:data-names ["data"] :label-names ["label"]}))
-  (m/bind model {:data-shapes (mx-io/provide-data-desc train-data)
-                :label-shapes (mx-io/provide-label-desc train-data)})
-  (m/init-params model
-                 {:initializer (initializer/uniform 0.01)
-                  :force-init true})
-  ; (m/init-params model)
-  (m/forward model batch)
-  (m/output-shapes model)
-  (m/outputs model)
-  (-> batch mx-io/batch-label first ndarray/->vec)
-  ; (-> model m/outputs first first (ndarray/> 0.5) (ndarray/reshape [0 -1 4]) (ndarray/argmax 1) ndarray/->vec)
-  (-> model m/outputs-merged first ndarray/->vec)
-  (m/backward model)
-  (def out-grads (m/grad-arrays model))
-  (map #(-> % first ndarray/shape-vec) out-grads))
 
 (def optimizer
   (optimizer/adam
@@ -150,7 +140,7 @@
                                                      :magnitude 2.34})
                                 :optimizer optimizer
                                 :eval-metric (eval-metric/custom-metric
-                                              #(multi-label-accuracy %1 %2)
+                                              #(accuracy %1 %2)
                                               "accuracy")})})
     (println "Finished the fit")
     model))
@@ -163,4 +153,4 @@
                (mapv #(context/gpu %) (range num-devices))
                (mapv #(context/cpu %) (range num-devices)))
         model (train-ocr devs)]
-    (m/save-checkpoint model {:prefix "ocr" :epoch 0})))
+    (m/save-checkpoint model {:prefix model-prefix :epoch 0})))
