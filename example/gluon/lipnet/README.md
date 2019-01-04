@@ -32,7 +32,7 @@ pip install -r requirements.txt
   - n_process : num of process (default=1)
 
 ```
-cd ./utils && python download_data.py
+cd ./utils && python download_data.py --n_process $(nproc)
 ```
 
 ### Preprocess the Data: Extracting the mouth images from a video and save it.
@@ -41,8 +41,10 @@ cd ./utils && python download_data.py
   - tgt_path : Path for preprocessed images (default='./data/datasets/')
   - n_process : num of process (default=1)
 
+You can run the preprocessing with just one processor, but this will take a long time (>48 hours). To use all of the available processors, use the following command: 
+
 ```
-cd ./utils && python preprocess_data.py
+cd ./utils && python preprocess_data.py --n_process $(nproc)
 ```
 
 ## Data Structure
