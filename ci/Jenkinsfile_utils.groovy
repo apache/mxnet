@@ -203,7 +203,20 @@ def get_github_context() {
   return "ci/jenkins/${short_job_name}"
 }
 
+def paths_only_with_extensions(paths, extensions) {
+    // Returns true if every path's extension is listed in extensions
+    paths.each { path ->
+        path_ext = path.split('.')[-1]
+        if !(path_ext in extensions) {
+            return false
+        }
+    }
+
+    return true
+}
+
 def get_github_affected_paths() {
+    // Returns a unique list of paths that are affected by this change
     def affected_paths = [:]
     currentBuild.changeSets.each { cl ->
         cl.items.eachWithIndex { entry, ei ->
@@ -213,7 +226,7 @@ def get_github_affected_paths() {
         }
     }
 
-    return affected_paths
+    return affected_paths.keySet() as List
 }
 
 def parallel_stage(stage_name, steps) {

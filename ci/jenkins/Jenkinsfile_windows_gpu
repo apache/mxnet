@@ -33,12 +33,20 @@ node('utility') {
 utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 // skip this pipeline if only documentation took place
-String[] skip_pipeline_for_extensions = ['md', 'txt']
+String[] skip_extensions = ['md', 'txt']
 
 def affected_paths = utils.get_github_affected_paths()
+def skip_pipeline = utils.paths_only_with_extensions(affected_paths, skip_extensions)
 affected_paths.each {
     println "$it"
 }
+if (skip_pipeline) {
+    currentBuild.result = "SUCCESS"
+    utils.update_github_commit_status('SUCCESS', 'Job skipped')
+    return
+}
+
+// skip just in case code above does not work
 if (true) {
     currentBuild.result = "SUCCESS"
     utils.update_github_commit_status('SUCCESS', 'Job skipped')
