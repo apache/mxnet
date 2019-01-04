@@ -70,7 +70,6 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
       if (data_mins[i] < data_min) data_min = data_mins[i];
     }
   }
-
   auto out_type = GetOutputType(param);
   if (out_type == mshadow::kUint8) {
     real_range = std::max<SrcType>(0.f, data_max);
