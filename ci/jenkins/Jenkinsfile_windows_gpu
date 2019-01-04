@@ -37,9 +37,10 @@ String[] skip_extensions = ['md', 'txt']
 
 def affected_paths = utils.get_github_affected_paths()
 def skip_pipeline = utils.paths_only_with_extensions(affected_paths, skip_extensions)
-affected_paths.each {
-    println "$it"
-}
+
+println affected_paths
+echo affected_paths
+
 if (skip_pipeline) {
     currentBuild.result = "SUCCESS"
     utils.update_github_commit_status('SUCCESS', 'Job skipped')

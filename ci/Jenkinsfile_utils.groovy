@@ -220,16 +220,14 @@ def paths_only_with_extensions(paths, extensions) {
 
 def get_github_affected_paths() {
     // Returns a unique list of paths that are affected by this change
-    def affected_paths = [:]
-    currentBuild.changeSets.each { cl ->
-        cl.items.eachWithIndex { entry, ei ->
-            entry.affectedPaths.each { path ->
-                affected_paths.put(path, ei)
-            }
+    def affected_paths = []
+    for (cl in currentBuild.changeSets) {
+        for (entry in cl.items) {
+            affected_paths = affected_paths + entry.affectedPaths
         }
     }
 
-    return affected_paths.keySet() as List
+    return affected_paths.toSet()
 }
 
 def parallel_stage(stage_name, steps) {
