@@ -93,6 +93,14 @@ struct quantize_v2_unsigned {
     *omin_range = imin_range;
     *omax_range = imax_range;
   }
+
+  template <typename DstDType, typename SrcDType>
+  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
+                                  const SrcDType *in, const float *imin_range,
+                                  const float *imax_range, const double min_limit,
+                                  const double max_limit) {
+    Map(i, out, omin_range, omax_range, in, *imin_range, *imax_range, min_limit, max_limit);
+  }
 };
 
 // keep zero-center
@@ -108,6 +116,13 @@ struct quantize_v2_zero_centered {
     *omin_range = -real_range;
     *omax_range = real_range;
   }
+
+  template <typename DstDType, typename SrcDType>
+  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
+                                  const SrcDType *in, const float *imin_range,
+                                  const float *imax_range, const float quantized_range) {
+    Map(i, out, omin_range, omax_range, in, *imin_range, *imax_range, quantized_range);
+  }
 };
 
 template <typename xpu>
@@ -120,14 +135,22 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   using mshadow::red::limits::MaxValue;
   using mshadow::red::limits::MinValue;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  SrcDType in_min;
-  SrcDType in_max;
-
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
   auto out_type = GetOutputType(param);
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-    in_min = param.min_calib_range.value();
-    in_max = param.max_calib_range.value();
+    if (out_type == mshadow::kUint8) {
+      Kernel<quantize_v2_unsigned, xpu>::Launch(
+          s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
+          outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
+          param.max_calib_range.value(), MinValue<uint8_t>(), MaxValue<uint8_t>());
+    } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+      Kernel<quantize_v2_zero_centered, xpu>::Launch(
+          s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+          outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
+          param.max_calib_range.value(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+    } else {
+      LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+    }
   } else {  // model is not calibrated
     TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);
@@ -146,22 +169,19 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         s, in_min_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
     broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
         s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
-    in_min = *in_min_t.dptr<float>();
-    in_max = *in_max_t.dptr<float>();
-  }
-
-  if (out_type == mshadow::kUint8) {
-    Kernel<quantize_v2_unsigned, xpu>::Launch(s, outputs[0].Size(), outputs[0].dptr<uint8_t>(),
-                                              outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-                                              inputs[0].dptr<SrcDType>(), in_min, in_max,
-                                              MinValue<uint8_t>(), MaxValue<uint8_t>());
-  } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
-    Kernel<quantize_v2_zero_centered, xpu>::Launch(
-        s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
-        outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min, in_max,
-        MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-  } else {
-    LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+    if (out_type == mshadow::kUint8) {
+      Kernel<quantize_v2_unsigned, xpu>::Launch(
+          s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
+          outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),
+          in_max_t.dptr<float>(), MinValue<uint8_t>(), MaxValue<uint8_t>());
+    } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+      Kernel<quantize_v2_zero_centered, xpu>::Launch(
+          s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+          outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),
+          in_max_t.dptr<float>(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+    } else {
+      LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+    }
   }
 }
 
