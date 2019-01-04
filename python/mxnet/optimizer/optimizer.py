@@ -514,6 +514,13 @@ class SGD(Optimizer):
     provides slightly different semantics than the original update, and
     may lead to different empirical results.
 
+    In the case when ``update_on_kvstore`` is set to False (either globally via
+    MXNET_UPDATE_ON_KVSTORE=0 environment variable or as a parameter in
+    :class:`~mxnet.gluon.Trainer`) SGD optimizer can perform aggregated update
+    of parameters, which may lead to improved performance. The aggregation size
+    is controlled by MXNET_OPTIMIZER_AGGREGATION_SIZE environment variable and
+    defaults to 4.
+
     Otherwise, **standard updates** are applied by::
 
         rescaled_grad = lr * (rescale_grad * clip(grad, clip_gradient) + wd * weight)
