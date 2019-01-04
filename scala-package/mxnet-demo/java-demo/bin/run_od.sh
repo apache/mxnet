@@ -16,5 +16,5 @@
 # under the License.
 #!/bin/bash
 CURR_DIR=$(cd $(dirname $0)/../; pwd)
-CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/target/classes/lib/*
+CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/target/dependency/*
 java -Xmx8G  -cp $CLASSPATH mxnet.ObjectDetection

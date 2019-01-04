@@ -1213,6 +1213,14 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
     nosetests-3.4 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
+nightly_java_demo_test_cpu() {
+    set -ex
+    cd /work/mxnet/scala-package/mxnet-demo/java-demo
+    make javademo
+    ./bin/java_sample.sh
+    ./bin/run_od.sh
+}
+
 
 # Deploy
 
