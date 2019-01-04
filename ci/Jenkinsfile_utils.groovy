@@ -221,13 +221,20 @@ def paths_only_with_extensions(paths, extensions) {
 def get_github_affected_paths() {
     // Returns a unique list of paths that are affected by this change
     def affected_paths = []
-    for (cl in currentBuild.changeSets) {
-        for (entry in cl.items) {
-            affected_paths = affected_paths + entry.affectedPaths
+    def changeLogSets = currentBuild.changeSets
+    for (int i = 0; i < changeLogSets.size(); i++) {
+        def entries = changeLogSets[i].items
+        for (int j = 0; j < entries.length; j++) {
+            def entry = entries[j]
+            def files = new ArrayList(entry.affectedFiles)
+            for (int k = 0; k < files.size(); k++) {
+                def file = files[k]
+                affected_paths.add(file.path)
+            }
         }
     }
 
-    return affected_paths.toSet()
+    return affected_paths //.toSet()
 }
 
 def parallel_stage(stage_name, steps) {

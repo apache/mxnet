@@ -35,9 +35,8 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 String[] skip_pipeline_for_extensions = ['md', 'txt']
 
 def affected_paths = utils.get_github_affected_paths()
-affected_paths.each {
-    println "$it"
-}
+println "$affected_paths"
+
 if (true) {
     currentBuild.result = "SUCCESS"
     utils.update_github_commit_status('SUCCESS', 'Job skipped')
