@@ -99,7 +99,7 @@ USE_LIBJPEG_TURBO_PATH = NONE
 USE_OPENMP = 1
 
 # whether use MKL-DNN library
-USE_MKLDNN = 0
+USE_MKLDNN = 1
 
 # whether use NNPACK library
 USE_NNPACK = 0
