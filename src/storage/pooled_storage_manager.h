@@ -84,6 +84,7 @@ class GPUPooledStorageManager final : public StorageManager {
 
  private:
   void DirectFreeNoLock(Storage::Handle handle) {
+    mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = RoundAllocSize(handle.size);
     // ignore unloading error, as memory has already been recycled
@@ -132,6 +133,7 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
   size_t size = RoundAllocSize(handle->size);
   auto&& reuse_it = memory_pool_.find(size);
   if (reuse_it == memory_pool_.end() || reuse_it->second.size() == 0) {
+    mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
     size_t free, total;
     cudaMemGetInfo(&free, &total);
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)
@@ -252,6 +254,7 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   }
 
   void DirectFreeNoLock(Storage::Handle handle) {
+    mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
     cudaError_t err = cudaFree(handle.dptr);
     size_t size = get_size(get_bucket(handle.size));
     // ignore unloading error, as memory has already been recycled
@@ -288,6 +291,7 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
   size_t size = get_size(bucket);
   auto&& reuse_pool = memory_pool_[bucket];
   if (reuse_pool.size() == 0) {
+    mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
     size_t free, total;
     cudaMemGetInfo(&free, &total);
     if (free <= total * reserve_ / 100 || size > free - total * reserve_ / 100)

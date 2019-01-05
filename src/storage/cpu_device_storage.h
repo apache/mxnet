@@ -43,12 +43,12 @@ class CPUDeviceStorage {
    * \param size Size to allocate.
    * \return Pointer to the storage.
    */
-  inline static void* Alloc(size_t size);
+  inline static void* Alloc(Storage::Handle* handle);
   /*!
    * \brief Deallocation.
    * \param ptr Pointer to deallocate.
    */
-  inline static void Free(void* ptr);
+  inline static void Free(Storage::Handle handle);
 
  private:
   /*!
@@ -63,7 +63,8 @@ class CPUDeviceStorage {
 #endif
 };  // class CPUDeviceStorage
 
-inline void* CPUDeviceStorage::Alloc(size_t size) {
+inline void* CPUDeviceStorage::Alloc(Storage::Handle* handle) {
+  const size_t size = handle->size;
   void* ptr;
 #if _MSC_VER
   ptr = _aligned_malloc(size, alignment_);
@@ -75,7 +76,8 @@ inline void* CPUDeviceStorage::Alloc(size_t size) {
   return ptr;
 }
 
-inline void CPUDeviceStorage::Free(void* ptr) {
+inline void CPUDeviceStorage::Free(Storage::Handle handle) {
+  void * ptr = handle.dptr;
 #if _MSC_VER
   _aligned_free(ptr);
 #else
