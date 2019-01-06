@@ -53,3 +53,4 @@ def only_non_compile_changed(file_list) {
     }
     return true
 }
+return this
