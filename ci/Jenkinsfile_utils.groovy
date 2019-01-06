@@ -203,21 +203,6 @@ def get_github_context() {
   return "ci/jenkins/${short_job_name}"
 }
 
-def paths_only_with_extensions(paths, extensions) {
-    // Returns true if every path's extension is listed in extensions
-    for (path in paths) {
-        path_elements = path.split("\\.")
-        if (path_elements.length == 0) {
-            return false
-        }
-
-        if (!(path_elements[-1] in extensions)) {
-            return false
-        }
-    }
-    true
-}
-
 def parallel_stage(stage_name, steps) {
     // Allow to pass an array of steps that will be executed in parallel in a stage
     new_map = [:]

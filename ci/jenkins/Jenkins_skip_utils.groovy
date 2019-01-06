@@ -19,7 +19,7 @@
 
 def only_non_compile_changed(file_list) {
     // Returns true if only files are changed that do not affect compilation output
-
+    println "Changed files: $file_list"
     // Check if all files belong to the whitelisted extensions
     String[] non_compile_extensions = ['md', 'txt']
 
@@ -31,7 +31,7 @@ def only_non_compile_changed(file_list) {
 
         path_elements[-1] in extensions
     }
-
+    println "Noncompile files: $non_compile_files"
     if (non_compile_files.length != file_list.length) {
         return false
     }
@@ -47,7 +47,7 @@ def only_non_compile_changed(file_list) {
         }
         return true
     }
-
+    println "nonblacklisted files: $non_blacklisted_paths"
     if (non_blacklisted_paths.length != file_list.length) {
         return false
     }
