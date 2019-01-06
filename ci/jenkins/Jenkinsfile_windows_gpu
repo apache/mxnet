@@ -35,6 +35,10 @@ utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', wi
 // skip this pipeline if only documentation took place
 String[] skip_extensions = ["md", "txt"]
 
+// retrieve changed files directly from local git
+commitChangeset = sh(returnStdout: true, script: 'git diff ..master').trim()
+println "Changeset: $commitChangeset"
+
 def affected_paths = utils.get_github_affected_paths()
 def skip_pipeline = utils.paths_only_with_extensions(affected_paths, skip_extensions)
 
