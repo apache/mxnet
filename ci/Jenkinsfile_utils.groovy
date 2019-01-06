@@ -218,25 +218,6 @@ def paths_only_with_extensions(paths, extensions) {
     true
 }
 
-def get_github_affected_paths() {
-    // Returns a unique list of paths that are affected by this change
-    def affected_paths = []
-
-    build = currentBuild
-    while(build != null && build.result != 'SUCCESS') {
-        for (changeLog in build.changeSets) {
-            for(entry in changeLog.items) {
-                for(file in entry.affectedFiles) {
-                    affected_paths.add(file.path)
-                }
-            }
-        }
-        build = build.previousBuild
-    }
-
-    return affected_paths //.toSet()
-}
-
 def parallel_stage(stage_name, steps) {
     // Allow to pass an array of steps that will be executed in parallel in a stage
     new_map = [:]

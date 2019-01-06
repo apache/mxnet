@@ -31,13 +31,6 @@ node('utility') {
 }
 utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3')
 
-// skip this pipeline if only documentation took place
-String[] skip_pipeline_for_extensions = ['md', 'txt']
-
-def affected_paths = utils.get_github_affected_paths()
-affected_paths.each {
-    println "$it"
-}
 if (true) {
     currentBuild.result = "SUCCESS"
     utils.update_github_commit_status('SUCCESS', 'Job skipped')
