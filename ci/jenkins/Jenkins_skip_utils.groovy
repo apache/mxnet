@@ -41,7 +41,7 @@ def only_non_compile_changed(file_list) {
 
     non_blacklisted_paths = file_list.findAll { path ->
         for (b_path in blacklisted_paths) {
-            if (path.startsWith(b_path) {
+            if (path.startsWith(b_path)) {
                 return false
             }
         }
