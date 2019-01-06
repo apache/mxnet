@@ -61,7 +61,7 @@ endif
 # use customized config file
 include $(config)
 
-ifndef $(USE_MKLDNN)
+ifndef USE_MKLDNN
 ifneq ($(UNAME_S), Darwin)
 ifneq ($(UNAME_S), Windows)
 ifeq ($(UNAME_P), x86_64)
