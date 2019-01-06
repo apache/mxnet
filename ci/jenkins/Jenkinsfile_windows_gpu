@@ -29,14 +29,14 @@ node('utility') {
   checkout scm
   utils = load('ci/Jenkinsfile_utils.groovy')
   custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
+
+  // retrieve changed files directly from local git
+  commitChangeset = sh(returnStdout: true, script: 'git diff ..master').trim()
 }
 utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 // skip this pipeline if only documentation took place
 String[] skip_extensions = ["md", "txt"]
-
-// retrieve changed files directly from local git
-commitChangeset = sh(returnStdout: true, script: 'git diff ..master').trim()
 println "Changeset: $commitChangeset"
 
 def affected_paths = utils.get_github_affected_paths()
