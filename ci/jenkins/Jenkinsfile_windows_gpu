@@ -31,7 +31,7 @@ node('utility') {
   custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 
   // retrieve changed files directly from local git
-  commitChangeset = sh(returnStdout: true, script: 'git diff ..master').trim()
+  commitChangeset = sh(returnStdout: true, script: 'git diff --name-only origin/master').trim()
 }
 utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
