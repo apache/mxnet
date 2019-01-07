@@ -582,6 +582,7 @@ def test_poisson_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
+@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13506")
 @with_seed()
 def test_negative_binomial_generator():
     ctx = mx.context.current_context()
