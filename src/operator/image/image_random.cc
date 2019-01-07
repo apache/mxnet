@@ -32,7 +32,6 @@ namespace mxnet {
 namespace op {
 namespace image {
 
-DMLC_REGISTER_PARAMETER(NormalizeParam);
 DMLC_REGISTER_PARAMETER(RandomEnhanceParam);
 DMLC_REGISTER_PARAMETER(AdjustLightingParam);
 DMLC_REGISTER_PARAMETER(RandomLightingParam);
@@ -47,22 +46,6 @@ NNVM_REGISTER_OP(_image_to_tensor)
 .set_attr<FCompute>("FCompute<cpu>", ToTensor)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.");
-
-NNVM_REGISTER_OP(_image_normalize)
-.describe(R"code()code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NormalizeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", NormalizeShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 0}};
-  })
-.set_attr<FCompute>("FCompute<cpu>", Normalize)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
-.add_argument("data", "NDArray-or-Symbol", "The input.")
-.add_arguments(NormalizeParam::__FIELDS__());
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_left_right)
 .describe(R"code()code" ADD_FILELINE)

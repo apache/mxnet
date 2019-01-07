@@ -85,68 +85,6 @@ void ToTensor(const nnvm::NodeAttrs &attrs,
   });
 }
 
-struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
-  nnvm::Tuple<float> mean;
-  nnvm::Tuple<float> std;
-  DMLC_DECLARE_PARAMETER(NormalizeParam) {
-    DMLC_DECLARE_FIELD(mean)
-    .describe("Sequence of mean for each channel.");
-    DMLC_DECLARE_FIELD(std)
-    .describe("Sequence of standard deviations for each channel.");
-  }
-};
-
-inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
-  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-  const auto& dshape = (*in_attrs)[0];
-  if (!dshape.ndim()) return false;
-
-  CHECK_EQ(dshape.ndim(), 3)
-      << "Input tensor must have shape (channels, height, width), but got "
-      << dshape;
-  auto nchannels = dshape[0];
-  CHECK(nchannels == 3 || nchannels == 1)
-      << "The first dimension of input tensor must be the channel dimension with "
-      << "either 1 or 3 elements, but got input with shape " << dshape;
-  CHECK(param.mean.ndim() == 1 || param.mean.ndim() == nchannels)
-      << "Invalid mean for input with shape " << dshape
-      << ". mean must have either 1 or " << nchannels
-      << " elements, but got " << param.mean;
-  CHECK(param.std.ndim() == 1 || param.std.ndim() == nchannels)
-      << "Invalid std for input with shape " << dshape
-      << ". std must have either 1 or " << nchannels
-      << " elements, but got " << param.std;
-
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
-  return true;
-}
-
-void Normalize(const nnvm::NodeAttrs &attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
-  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-
-  int nchannels = inputs[0].shape_[0];
-  int length = inputs[0].shape_[1] * inputs[0].shape_[2];
-
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    DType* input = inputs[0].dptr<DType>();
-    DType* output = outputs[0].dptr<DType>();
-
-    for (int i = 0; i < nchannels; ++i) {
-      DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
-      DType std = param.std[param.std.ndim() > 1 ? i : 0];
-      for (int j = 0; j < length; ++j) {
-        output[i*length + j] = (input[i*length + j] - mean) / std;
-      }
-    }
-  });
-}
-
 template<typename DType>
 inline DType saturate_cast(const float& src) {
   return static_cast<DType>(src);
