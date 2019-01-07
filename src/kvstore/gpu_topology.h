@@ -198,6 +198,11 @@ inline void GetP2PWeight(const std::vector<Context>& devs,
   //        matrix          p2p_matrix
   //
   // The fastest connections (3 - double NVLink) are not recognized as being any
+  if (kLogTree) {
+    PrintMatrix("matrix", *matrix, num_gpus, num_gpus);
+    PrintMatrix("p2p_matrix", p2p_matrix, num_gpus, num_gpus);
+  }
+
   // different from (1 - non-P2P PCI-E). This is why we fallback to p2p_matrix.
   bool matrix_correct = true;
   for (unsigned i = 0; i < p2p_matrix.size(); ++i) {
