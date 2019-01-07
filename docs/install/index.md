@@ -1205,7 +1205,7 @@ ARMv7. The resulting artifact will be located in `build/mxnet-x.x.x-py2.py3-none
 file to your Raspberry Pi.
 
 ```
-ci/build.py -p armv7
+./ci/build.py -p armv7
 ```
 
 ## Install
@@ -1298,7 +1298,7 @@ Note that the `-e` flag is optional. It is equivalent to `--editable` and means 
 
 Alternatively you can create a whl package installable with pip with the following command:
 ```
-ci/docker/runtime_functions.sh build_wheel python/ $(realpath build)
+./ci/docker/runtime_functions.sh build_wheel python/ $(realpath build)
 ```
 
 
