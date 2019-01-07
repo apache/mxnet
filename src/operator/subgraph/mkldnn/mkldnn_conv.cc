@@ -307,19 +307,18 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         CHECK_EQ(data.dtype(), mshadow::kInt8)
             << "Expect int8 when data_min < 0.0, consider quantize model with int8.";
       }
+      auto weight_channelwise_scale = false;
       if (mkldnn_param.min_calib_range.has_value() && mkldnn_param.max_calib_range.has_value()) {
         cached_output_min_ = mkldnn_param.min_calib_range.value();
         cached_output_max_ = mkldnn_param.max_calib_range.value();
         post_requantize_ = true;
-        mkldnn_param.weight_channelwise_scale = true;
-      } else {
-        mkldnn_param.weight_channelwise_scale = false;
+        weight_channelwise_scale = true;
       }
       auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
       data_scale_ = data_range / MaxAbs(cached_data_min_, cached_data_max_);
       MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
         weight_scales_ =
-            GetWeightScales<DType>(cached_weight_, mkldnn_param.weight_channelwise_scale);
+            GetWeightScales<DType>(cached_weight_, weight_channelwise_scale);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
@@ -335,8 +334,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         quantized_out_range = IsOutputUInt8(mkldnn_param) ? kUint8Range : kInt8Range;
         out_range = MaxAbs(cached_output_min_, cached_output_max_);
         output_scale = quantized_out_range / out_range;
-        full_conv_param.requantize_scales.resize(mkldnn_param.weight_channelwise_scale ? channel
-                                                                                       : 1);
+        full_conv_param.requantize_scales.resize(weight_channelwise_scale ? channel : 1);
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
           full_conv_param.requantize_scales[c] = output_scale / data_scale_ / weight_scales_[c];
         }

@@ -91,7 +91,7 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
   attr.set_post_ops(ops);
 
   if (param.mkldnn_param.quantized && param.requantize_scales.size()) {
-    int mask = param.mkldnn_param.weight_channelwise_scale ? 2 : 0;
+    int mask = (param.requantize_scales.size() > 1) ? 2 : 0;
     attr.set_output_scales(mask, param.requantize_scales);
     attr.set_int_output_round_mode(round_nearest);
   }
