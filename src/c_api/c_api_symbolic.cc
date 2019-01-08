@@ -24,11 +24,11 @@
  */
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
-#include <mxnet/c_api_common.h>
 #include <nnvm/c_api.h>
 #include <nnvm/pass.h>
 #include <nnvm/pass_functions.h>
 #include <nnvm/symbolic.h>
+#include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"

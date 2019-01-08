@@ -25,7 +25,6 @@
 
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
-#include <mxnet/c_api_common.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
 #include <mxnet/op_attr_types.h>
@@ -33,6 +32,7 @@
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <string>
+#include "./c_api_common.h"
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"

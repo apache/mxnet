@@ -30,8 +30,8 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <mxnet/kvstore.h>
-#include <mxnet/c_api_common.h>
 #include <stack>
+#include "./c_api_common.h"
 #include "../profiler/profiler.h"
 
 namespace mxnet {

@@ -25,13 +25,13 @@
 #include <dmlc/base.h>
 #include <dmlc/memory_io.h>
 #include <mxnet/c_predict_api.h>
-#include <mxnet/c_api_common.h>
 #include <mxnet/executor.h>
 #include <mxnet/ndarray.h>
 #include <nnvm/pass_functions.h>
 #include <memory>
 #include <unordered_set>
 #include <unordered_map>
+#include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
 

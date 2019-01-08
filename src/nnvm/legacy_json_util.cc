@@ -26,7 +26,6 @@
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
-#include <mxnet/c_api_common.h>
 #include <mxnet/ndarray.h>
 #include <nnvm/node.h>
 #include <nnvm/graph.h>
@@ -34,6 +33,7 @@
 #include <nnvm/op_attr_types.h>
 #include <memory>
 #include <functional>
+#include "../c_api/c_api_common.h"
 
 namespace mxnet {
 using nnvm::Graph;

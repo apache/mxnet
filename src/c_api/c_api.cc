@@ -33,7 +33,6 @@
 #include <mxnet/operator.h>
 #include <mxnet/io.h>
 #include <mxnet/c_api.h>
-#include <mxnet/c_api_common.h>
 #include <mxnet/kvstore.h>
 #include <mxnet/rtc.h>
 #include <mxnet/storage.h>
@@ -44,6 +43,7 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
 
