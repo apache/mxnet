@@ -36,6 +36,11 @@ clean_repo() {
     git submodule update --init --recursive
 }
 
+scala_prepare() {
+    # Clean up maven logs
+    export MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn"
+}
+
 build_ccache_wrappers() {
     set -ex
 
@@ -272,7 +277,6 @@ build_amzn_linux_cpu() {
         -G Ninja /work/mxnet
     ninja -v
 }
-
 
 build_centos7_mkldnn() {
     set -ex
@@ -759,21 +763,24 @@ unittest_ubuntu_python3_quantization_gpu() {
 
 unittest_ubuntu_cpu_scala() {
     set -ex
-    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
-    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    scala_prepare
+    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
+    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
 }
 
 unittest_centos7_cpu_scala() {
     set -ex
     cd /work/mxnet
+    scala_prepare
     make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
     make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
 }
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
-    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    scala_prepare
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
     ./contrib/clojure-package/ci-test.sh
 }
 
@@ -917,8 +924,9 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 
 integrationtest_ubuntu_gpu_scala() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1 ENABLE_TESTCOVERAGE=1
-    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    scala_prepare
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1 ENABLE_TESTCOVERAGE=1 CI=1
+    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -981,7 +989,6 @@ build_docs() {
     tar -zcvf ../artifacts.tgz .
     popd
 }
-
 
 # Functions that run the nightly Tests:
 
@@ -1169,6 +1176,30 @@ deploy_jl_docs() {
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
+}
+
+publish_scala_build() {
+    set -ex
+    pushd .
+    scala_prepare
+    ./scala-package/dev/build.sh
+    popd
+}
+
+publish_scala_test() {
+    set -ex
+    pushd .
+    scala_prepare
+    ./scala-package/dev/test.sh
+    popd
+}
+
+publish_scala_deploy() {
+    set -ex
+    pushd .
+    scala_prepare
+    ./scala-package/dev/deploy.sh
+    popd
 }
 
 # broken_link_checker
