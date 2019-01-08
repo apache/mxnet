@@ -2,14 +2,12 @@
 # Gluon: from experiment to deployment, an end to end example
 
 ## Overview
-MXNet Gluon API comes with a lot of great features and it can provide you everything you need from experiment to deploy the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
+MXNet Gluon API comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
 
-Let's say you need to build a service that provides flower species recognition. A common use case is, you don't have enough data to train a good model. In such cases we use a technique called Transfer Learning.
-In Transfer Learning we make use of a pre-trained model that solves a related task but is trained on a very large standard dataset such as ImageNet from a different domain, we utilize the knowledge in this pre-trained model to perform a new task at hand.
+Let's say you need to build a service that provides flower species recognition. A common problem is that you don't have enough data to train a good model. In such cases, a technique called Transfer Learning can be used to make a more robust model.
+In Transfer Learning we make use of a pre-trained model that solves a related task, and was trained on a very large standard dataset, such as ImageNet. ImageNet is from a different domain, but we can utilize the knowledge in this pre-trained model to perform the new task at hand.
 
-Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In this tutorial we will use the pre-trained model [ResNet50 V2](https://arxiv.org/abs/1603.05027) trained on ImageNet dataset, this model achieves 77.11% top-1 accuracy on ImageNet, we seek to transfer as much knowledge as possible for our task of recognizing different species of Flowers.
-
-In this tutorial we will show you the steps to load pre-trained model from Gluon, tweak the model according to your need, fine-tune the model on your small dataset, and finally deploy the trained model to integrate with your service.
+Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In this tutorial we will use the pre-trained model [ResNet50 V2](https://arxiv.org/abs/1603.05027) trained on ImageNet dataset. This model achieves 77.11% top-1 accuracy on ImageNet. We seek to transfer as much knowledge as possible for our task of recognizing different species of flowers.
 
 
 
@@ -25,8 +23,8 @@ To complete this tutorial, you need:
 
 ## The Data
 
-We will use the [Oxford 102 Category Flower Dateset](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/) as an example to show you the steps. You can use this [script](https://github.com/Arsey/keras-transfer-learning-for-oxford102/blob/master/bootstrap.py) to download and organize your data into train, test, and validation sets. Simply import it and run:
-
+We will use the [Oxford 102 Category Flower Dataset](http://www.robots.ox.ac.uk/~vgg/data/flowers/102/) as an example to show you the steps.
+We have prepared a utility file to help you download and organize your data into train, test, and validation sets. Run the following Python code to download and prepare the data:
 
 
 ```python
@@ -40,7 +38,7 @@ path = './data'
 oxford_102_flower_dataset.get_data(path)
 ```
 
-Now your data will be organized into the following format, all the images belong to the same category will be put together
+Now your data will be organized into the following format, all the images belong to the same category will be put together in the following pattern:
 ```bash
 data
 |--train
@@ -84,7 +82,7 @@ from mxnet.gluon.data.vision import transforms
 from mxnet.gluon.model_zoo.vision import resnet50_v2
 ```
 
-and define the hyper-parameters we will use for fine-tuning, we will use [MXNet learning rate scheduler](https://mxnet.incubator.apache.org/tutorials/gluon/learning_rate_schedules.html) to adjust learning rates during training.
+Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](https://mxnet.incubator.apache.org/tutorials/gluon/learning_rate_schedules.html) to adjust learning rates during training.
 
 
 ```python
@@ -105,7 +103,7 @@ ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 batch_size = per_device_batch_size * max(num_gpus, 1)
 ```
 
-Before the training we will apply data augmentations on training images. It's making minor alterations on training images and our model will consider them as distinct images. This can be very useful for finetuning on relatively small dataset and help improve the model. We can use Gluon [DataSet API](https://mxnet.incubator.apache.org/tutorials/gluon/datasets.html), [DataLoader API](https://mxnet.incubator.apache.org/tutorials/gluon/datasets.html), and [Transform API](https://mxnet.incubator.apache.org/tutorials/gluon/data_augmentation.html) to load the images and apply the follwing data augmentation:
+Now we will apply data augmentations on training images. This makes minor alterations on the training images, and our model will consider them as distinct images. This can be very useful for fine-tuning on a relatively small dataset, and it will help improve the model. We can use the Gluon [DataSet API](https://mxnet.incubator.apache.org/tutorials/gluon/datasets.html), [DataLoader API](https://mxnet.incubator.apache.org/tutorials/gluon/datasets.html), and [Transform API](https://mxnet.incubator.apache.org/tutorials/gluon/data_augmentation.html) to load the images and apply the following data augmentations:
 1. Randomly crop the image and resize it to 224x224
 2. Randomly flip the image horizontally
 3. Randomly jitter color and add noise
@@ -157,9 +155,9 @@ test_data = gluon.data.DataLoader(
 ### Loading pre-trained model
 
 
-We will use pre-trained ResNet50_v2 model which was pre-trained on the [ImageNet Dataset](http://www.image-net.org/) with 1000 classes. All you need to do is re-define the last softmax layer and specify the number of classes to be 102 in our case and initialize the parameters. You can also add layers to the network according to your needs.
+We will use pre-trained ResNet50_v2 model which was pre-trained on the [ImageNet Dataset](http://www.image-net.org/) with 1000 classes. To match the classes in the Flower dataset, we must redefine the last softmax (output) layer to be 102, then initialize the parameters.
 
-Before we go to training, one unique feature Gluon offers is hybridization. It allows you to convert your imperative code to static symbolic graph which is much more efficient to execute. There are two main benefit of hybridizing your model: better performance and easier serialization for deployment. The best part is it's as simple as just calling `net.hybridize()`. To know more about Gluon hybridization, please follow our [tutorials](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html).
+Before we go to training, one unique Gluon feature you should be aware of is hybridization. It allows you to convert your imperative code to a static symbolic graph, which is much more efficient to execute. There are two main benefits of hybridizing your model: better performance and easier serialization for deployment. The best part is that it's as simple as just calling `net.hybridize()`. To know more about Gluon hybridization, please follow the [hybridization tutorial](https://mxnet.incubator.apache.org/tutorials/gluon/hybrid.html).
 
 
 
@@ -246,10 +244,10 @@ Following is the training result:
 [Epoch 40] Train-acc: 0.945, loss: 0.354 | Val-acc: 0.955 | learning-rate: 4.219E-04 | time: 17.8
 [Finished] Test-acc: 0.952
 ```
-We trained the model using a [AWS P3.8XLarge instance](https://aws.amazon.com/ec2/instance-types/p3/) with 4 Tesla V100	GPUs. We were able to reach a test accuracy of 95.2% with 40 epochs in around 12 minutes. This was really fast because our model was pre-trained on a much larger dataset, ImageNet, with around 1.3 million images. It worked really well to capture features on our small dataset.
+In the previous example output, we trained the model using an [AWS p3.8xlarge instance](https://aws.amazon.com/ec2/instance-types/p3/) with 4 Tesla V100 GPUs. We were able to reach a test accuracy of 95.5% with 40 epochs in around 12 minutes. This was really fast because our model was pre-trained on a much larger dataset, ImageNet, with around 1.3 million images. It worked really well to capture features on our small dataset.
 
 
-### Save fine-tuned model
+### Save the fine-tuned model
 
 
 We now have a trained our custom model. This can be serialized into model files using the export function. The export function will export the model architecture into a `.json` file and model parameters into a `.params` file.
@@ -261,25 +259,25 @@ finetune_net.export("flower-recognition", epoch=epochs)
 
 ```
 
-export in this case creates `flower-recognition-symbol.json` and `flower-recognition-0020.params` in the current directory. They can be used for model deployment in the next section.
+`export` creates `flower-recognition-symbol.json` and `flower-recognition-0020.params` (`0020` is for 20 epochs we ran) in the current directory. These files can be used for model deployment in the next section.
 
 
-## Load and inference using C++ API
+## Load the model and run inference using the MXNet C++ API
 
-MXNet provide various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily. Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Java](https://mxnet.incubator.apache.org/api/java/index.html), [Scala](https://mxnet.incubator.apache.org/api/scala/index.html), and [C++](https://mxnet.incubator.apache.org/api/c++/index.html) APIs. In this tutorial, we will focus on the C++ API, for more details, please refer to the [C++ Inference Example](https://github.com/leleamol/incubator-mxnet/tree/inception-example/cpp-package/example/inference).
+MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily. Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Java](https://mxnet.incubator.apache.org/api/java/index.html), [Scala](https://mxnet.incubator.apache.org/api/scala/index.html), and [C++](https://mxnet.incubator.apache.org/api/c++/index.html) APIs. In this tutorial, we will focus on the MXNet C++ API. For more details, please refer to the [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference).
 
 
-### Setup MXNet C++ API
-To use C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](https://mxnet.incubator.apache.org/install/ubuntu_setup.html), and [C++ Package documentation](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
-to enable C++ API.
-In summary you just need to build MXNet from source with `USE_CPP_PACKAGE` flag set to 1 using `make -j USE_CPP_PACKAGE=1`.
+### Setup the MXNet C++ API
+To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](https://mxnet.incubator.apache.org/install/ubuntu_setup.html), and [C++ Package documentation](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
+to enable the C++ API.
+The summary of those two documents is that you need to build MXNet from source with `USE_CPP_PACKAGE` flag set to 1. For example: `make -j USE_CPP_PACKAGE=1`.
 
-### Write Predictor in C++
-Now let's write prediction code in C++.  We will use a Predictor Class to do the following jobs:
-1. Load the pre-trained model,
-2. Load the parameters of pre-trained model,
-3. Load the image to be classified in to NDArray.
-4. Run the forward pass and predict the input image.
+### Write a predictor using the MXNet C++ API
+Now let's add a method to load the input image and convert it to NDArray for prediction.
+1. Load the pre-trained model
+2. Load the parameters of pre-trained model
+3. Load the image to be classified in to NDArray
+4. Run the forward pass and predict the class of the input image
 
 ```cpp
 class Predictor {
@@ -322,7 +320,7 @@ class Predictor {
 
 ### Load network symbol and parameters
 
-In the Predictor constructor, you need a few information including paths to saved json and param files. After that add the following two methods to load the network and its parameters.
+In the Predictor constructor, you need to provide paths to saved json and param files. After that, add the following two methods to load the network and its parameters.
 
 ```cpp
 /*
@@ -395,9 +393,9 @@ NDArray Predictor::LoadInputImage(const std::string& image_file) {
 }
 ```
 
-### Run inference
+### Create a predict image class
 
-Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe, calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API, please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
+Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe. Calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API. Please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
 
 ```cpp
 void Predictor::PredictImage(const std::string& image_file) {
@@ -445,19 +443,19 @@ void Predictor::PredictImage(const std::string& image_file) {
 }
 ```
 
-### Compile and Run Inference Code
+### Compile and run the inference code
 
-You can find the full code [here](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference)
-, and to compile it use this [Makefile](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/Makefile)
+You can find the [full code for the inference example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) in the `cpp-package` folder of the project
+, and to compile it use this [Makefile](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/Makefile).
 
-Now you will be able to compile the run inference, just do `make all` and pass the parameters as follows
+Now you will be able to compile the run inference. Run `make all`. Once this is complete, run inference with the the following parameters:
 
 ```bash
 make all
 LD_LIBRARY_PATH=../incubator-mxnet/lib/ ./inception_inference --symbol "flower-recognition-symbol.json" --params "flower-recognition-0020.params" --image ./data/test/0/image_06736.jpg
 ```
 
-Then it will predict your iamge
+Then it will predict your image:
 
 ```bash
 [22:26:49] inception_inference.cpp:128: Loading the model from flower-recognition-symbol.json
@@ -481,7 +479,7 @@ You can find more ways to run inference and deploy your models here:
 
 ## References
 
-1. [Trasnfer Learning for Oxford102 Flower Dataset](https://github.com/Arsey/keras-transfer-learning-for-oxford102)
+1. [Transfer Learning for Oxford102 Flower Dataset](https://github.com/Arsey/keras-transfer-learning-for-oxford102)
 2. [Gluon tutorial on fine-tuning](https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
 3. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
 4. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)

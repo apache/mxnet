@@ -17,7 +17,7 @@
 
 
 """
-This scripts downloads and prepare the Oxford 102 Category Flower Dataset for training
+This scripts downloads and prepares the Oxford 102 Category Flower Dataset for training
 Dataset is from: http://www.robots.ox.ac.uk/~vgg/data/flowers/102/index.html
 Script is modified from: https://github.com/Arsey/keras-transfer-learning-for-oxford102
 """
