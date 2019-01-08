@@ -23,11 +23,11 @@
  * \author Zhang Rong A
 */
 
+#if MXNET_USE_MKLDNN == 1
 #include "../../softmax_output-inl.h"
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
 
-#if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
