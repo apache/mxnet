@@ -390,3 +390,8 @@ def test_binary_inference_fc():
     np.testing.assert_almost_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
     np.testing.assert_almost_equal(binary_infer_result.asnumpy(), qdense_result.asnumpy())
     # assert_almost_equal(binary_infer_result, qdense_result)
+
+# def test_binary_inference_conv_gpu():
+#     a = mx.nd.ones((1,32,8,8), ctx=mx.gpu(0))
+#     b = mx.nd.ones((1, 1, 5, 5), ctx=mx.gpu(0))
+#     c = mx.ndarray.BinaryInferenceConvolution(data=a, weight=b, kernel=(5,5), num_filter=1, no_bias=True)

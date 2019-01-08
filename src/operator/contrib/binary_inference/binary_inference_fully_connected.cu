@@ -51,12 +51,9 @@ inline void _BinaryInferenceFullyConnectedForward(int m, int n, int k,
   // float *fB = wmat.dptr_;
   float *fC = out.dptr_;  
   BINARY_WORD* binary_row = (BINARY_WORD*) workspace.dptr_;
-  
-  int mem_size = m*n/basic_factor_nchannel_input*sizeof(int);
-  cudaMemset(binary_row, 0, mem_size);
-      
+        
   //concatinates matrix (m x n) -> (m x n/32)
-  int threads_per_block = basic_factor_nchannel_input;
+  int threads_per_block = BLOCK_SIZE_XNOR;
   dim3 conc_block(threads_per_block, 1, 1);
   dim3 conc_grid(m*n/(threads_per_block*basic_factor_nchannel_input)+1,1);
   concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, binary_row, m*n/basic_factor_nchannel_input);

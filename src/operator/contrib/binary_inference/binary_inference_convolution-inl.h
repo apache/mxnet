@@ -134,9 +134,9 @@ namespace mxnet {
               TBlob col_buffer(workspace.dptr_, col_buffer_shape, xpu::kDevMask, DataType<DType>::kFlag);
 
               // initialize weight and col_buffer 3D tensors for using gemm
-              index_t M = conv_out_channels_ / group_;
-              index_t N = conv_out_spatial_dim_;
-              index_t K = kernel_dim_;
+              index_t M = conv_out_channels_ / group_; // number of output channels (num_filter) per group
+              index_t N = conv_out_spatial_dim_;       // number of pixels of output images per channel
+              index_t K = kernel_dim_;                 // number of input channels per group * kernel size
               Tensor<xpu, 3, DType> weight_3d;
               mxnet::op::xnor::BINARY_WORD* wmat_binarized = NULL;
               // binarized weigths

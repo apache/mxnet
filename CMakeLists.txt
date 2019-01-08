@@ -482,11 +482,6 @@ assign_source_group("CUDA" ${GROUP_CUDA})
 
 # add BMXNet to source
 ##========== add BMXNet to source ============##
-#FILE(GLOB_RECURSE SMD_HPI_SOURCE "smd_hpi/src/*.cc" "smd_hpi/src/*.h")
-#FILE(GLOB_RECURSE SMD_HPI_CUDA "smd_hpi/src/*.cu")
-#list(APPEND SOURCE ${SMD_HPI_SOURCE})
-#list(APPEND CUDA ${SMD_HPI_CUDA})
-
 # add build_in popcnt
 INCLUDE(FindSSE)
 FindSSE()

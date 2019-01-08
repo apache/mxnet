@@ -31,7 +31,11 @@ using get_time = std::chrono::steady_clock ;
 
 namespace mshadow {
     using namespace mxnet::op::xnor;
-
+    /*
+     * m: number of output channels (num_filter) per group
+     * n: number of pixels of output images per channel (output dimension)
+     * k: number of input channels per group * kernel size
+     */
     inline void _BinaryConvolutionForward(int m, int n, int k,
                    BINARY_WORD* binary_weights_row,
                    Tensor<cpu, 1, float> &workspace,

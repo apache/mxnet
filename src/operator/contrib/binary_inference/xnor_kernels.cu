@@ -51,7 +51,6 @@ __global__ void concatenate_rows_kernel(float *a, BINARY_WORD *b, int size)
 //concatinate column, processing directions: (COL_left->COL_right {ROW_top->ROW_down} ) 
 /*	this method should give the same result as the following implementation:
  *   for(int y=0; y<(n/BITS_PER_BINARY_WORD); y++){
-      #pragma omp parallel for
       for(int x=0; x < k; ++x){          
         BINARY_WORD rvalue=0;
         BINARY_WORD sign;    
@@ -139,23 +138,3 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
     // Each thread writes one element    
     if(col + blockCol* BLOCK_SIZE_XNOR< k && row + blockRow* BLOCK_SIZE_XNOR< m) Csub[row*k+col] = Cvalue;
 }
-
-
-// TODO: implement a baseline based on the cpu Version
-// // our baseline xnor
-// void xnor_gemm_baseline(int M, int N, int K,
-//                       BINARY_WORD *A, int lda,
-//                       BINARY_WORD *B, int ldb,
-//                       float *C, int ldc){
-//   int m,k,n;
-//   #pragma omp parallel for collapse(2)    
-//   for (m = 0; m < M; ++m) {
-//     for (k = 0; k < K; k++) {
-//       BINARY_WORD A_PART = A[m*lda+k];
-//       #pragma omp parallel for
-//       for (n = 0; n < N; ++n) {
-//         C[m*ldc+n] += __builtin_popcountll(~(A_PART ^ B[k*ldb+n]));
-//       }
-//     }
-//   }
-// }
