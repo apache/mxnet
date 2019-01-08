@@ -26,8 +26,8 @@
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/imperative.h>
+#include <mxnet/c_api_common.h>
 
-#include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../operator/custom/custom-inl.h"
 

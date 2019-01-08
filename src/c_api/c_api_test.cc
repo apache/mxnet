@@ -23,8 +23,8 @@
  * \brief C API of mxnet for the ease of testing backend in Python
  */
 #include <mxnet/c_api_test.h>
+#include <mxnet/c_api_common.h>
 #include <nnvm/pass.h>
-#include "./c_api_common.h"
 #include "../operator/subgraph/subgraph_property.h"
 
 int MXPartitionGraphByOpNames(SymbolHandle sym_handle,

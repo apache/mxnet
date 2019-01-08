@@ -25,7 +25,7 @@
 #include <mxnet/base.h>
 #include <mxnet/c_api.h>
 #include <mxnet/executor.h>
-#include "./c_api_common.h"
+#include <mxnet/c_api_common.h>
 #include "../executor/graph_executor.h"
 #if MXNET_USE_TENSORRT
 #include "../executor/trt_graph_executor.h"

@@ -19,6 +19,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/executor.h>
 #include <mxnet/imperative.h>
+#include <mxnet/c_api_common.h>
 #include <nnvm/pass_functions.h>
 #include <utility>
 #include <algorithm>
@@ -27,7 +28,6 @@
 #include <string>
 #include "../executor/graph_executor.h"
 #include "../executor/exec_pass.h"
-#include "../c_api/c_api_common.h"
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
