@@ -399,6 +399,16 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+// Currently MKLDNN only supports step = 1 or step has no value
+inline bool SupportMKLDNNSlice(const SliceParam& param) {
+  if (param.step.ndim() == 0U) return true;
+  for (uint32_t i = 0; i < param.step.ndim(); ++i) {
+    if (param.step[i].has_value() && param.step[i].value() != 1)
+      return false;
+  }
+  return true;
+}
+
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
                                          DispatchMode* dispatch_mode,
@@ -419,22 +429,18 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       && (!param.step[0].has_value() || param.step[0].value() == 1)) {
     trivial_step = true;
   }
-  if (!dispatched && in_stype == kDefaultStorage && trivial_step) {
+
+  if (in_stype == kDefaultStorage) {
 #if MXNET_USE_MKLDNN == 1
-  if (MKLDNNEnvSet() && dev_mask == Context::kCPU) {
+  if (dev_mask == Context::kCPU && MKLDNNEnvSet() && SupportMKLDNNSlice(param)) {
     dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                      dispatch_mode, dispatch_ex);
-  } else {
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
   }
-#else
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
 #endif
-  } else if (!dispatched && in_stype == kDefaultStorage) {
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
+    if (!dispatched) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                      dispatch_mode, DispatchMode::kFCompute);
+    }
   }
 
   if (!dispatched && in_stype == kCSRStorage && trivial_step) {
