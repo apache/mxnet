@@ -49,6 +49,10 @@
 #define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
+#ifndef MXNET_USE_NCCL
+#define MXNET_USE_NCCL 0
+#endif
+
 /*!
  *\brief whether to use cusolver library
  */
@@ -66,6 +70,23 @@
 
 #ifndef MXNET_USE_TENSORRT
 #define MXNET_USE_TENSORRT 0
+#endif
+
+
+#ifndef MXNET_USE_BLAS_ATLAS
+#define MXNET_USE_BLAS_ATLAS 0
+#endif
+
+#ifndef MXNET_USE_BLAS_OPEN
+#define MXNET_USE_BLAS_OPEN 0
+#endif
+
+#ifndef MXNET_USE_BLAS_MKL
+#define MXNET_USE_BLAS_MKL 0
+#endif
+
+#ifndef MXNET_USE_BLAS_APPLE
+#define MXNET_USE_BLAS_APPLE 0
 #endif
 
 #ifndef MXNET_USE_MKLDNN
@@ -92,9 +113,7 @@
 #define MXNET_USE_SIGNAL_HANDLER 0
 #endif
 
-#ifndef MXNET_USE_NCCL
-#define MXNET_USE_NCCL 0
-#endif
+
 
 
 
@@ -134,6 +153,7 @@ enum : uint32_t {
     BLAS_ATLAS,
     // Intel(R) Math Kernel Library
     BLAS_MKL,
+    BLAS_APPLE,
     // Other math libraries:
     // Linear Algebra PACKage
     LAPACK,

@@ -212,6 +212,16 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+ifeq ($(use_blas), open)
+	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
+else ifeq ($(use_blas), atlas)
+	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
+else ifeq ($(use_blas), mkl)
+	CFLAGS += -DMXNET_USE_BLAS_MKL=1
+else ifeq ($(use_blas), apple)
+	CFLAGS += -DMXNET_USE_BLAS_APPLE=1
+endif
+
 # whether to use F16C instruction set extension for fast fp16 compute on CPU
 # if cross compiling you may want to explicitly turn it off if target system does not support it
 ifndef USE_F16C
