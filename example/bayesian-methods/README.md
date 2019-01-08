@@ -18,6 +18,8 @@ View parameters we can use with the following command.
 python bdk_demo.py -h
 
 
+usage: bdk_demo.py [-h] [-d DATASET] [-l ALGORITHM] [-t TRAINING] [--gpu GPU]
+
 Examples in the paper [NIPS2015]Bayesian Dark Knowledge and [ICML2011]Bayesian
 Learning via Stochastic Gradient Langevin Dynamics
 
@@ -31,6 +33,5 @@ optional arguments:
                         other-->DistilledSGLD
   -t TRAINING, --training TRAINING
                         Number of training samples
-  --gpu GPU             gpu device_id eg: 0, does not support multi-gpus, if
-                        not provided then use cpu
+  --gpu GPU             0 to use GPU, not set to use CPU
 ```

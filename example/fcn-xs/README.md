@@ -60,8 +60,7 @@ optional arguments:
   --init-type INIT_TYPE
                         the init type of fcn-xs model, e.g. vgg16, fcnxs
   --retrain             true means continue training.
-  --gpu GPU             gpu device_id eg: 0, does not support multi-gpus. if
-                        not provide, then use cpu
+  --gpu GPU             0 to use GPU, not set to use CPU
 ```
 
 * It is recommended to train fcn-32s and fcn-16s before training the fcn-8s model
@@ -77,7 +76,7 @@ python -u fcn_xs.py --model=fcn32s --prefix=VGG_FC_ILSVRC_16_layers --epoch=74 -
  python -u fcn_xs.py --model=fcn16s --prefix=FCN32s_VGG16 --epoch=31 --init-type=fcnxs
 ```
 * The output log may look like this(when training fcn-8s):
-```shell
+```c++
 INFO:root:Start training with gpu(3)
 INFO:root:Epoch[0] Batch [50]   Speed: 1.16 samples/sec Train-accuracy=0.894318
 INFO:root:Epoch[0] Batch [100]  Speed: 1.11 samples/sec Train-accuracy=0.904681

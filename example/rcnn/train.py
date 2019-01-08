@@ -127,7 +127,7 @@ def parse_args():
     parser.add_argument('--pretrained', type=str, default='', help='path to pretrained model')
     parser.add_argument('--dataset', type=str, default='voc', help='training dataset')
     parser.add_argument('--imageset', type=str, default='', help='imageset splits')
-    parser.add_argument('--gpus', type=str, help='gpu devices eg: 0,1 , if not provide, then use cpu')
+    parser.add_argument('--gpus', type=str, help='GPU devices, eg: "0,1,2,3" , not set to use CPU')
     parser.add_argument('--epochs', type=int, default=10, help='training epochs')
     parser.add_argument('--lr', type=float, default=0.001, help='base learning rate')
     parser.add_argument('--lr-decay-epoch', type=str, default='7', help='epoch to decay lr')

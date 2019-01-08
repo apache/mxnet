@@ -350,8 +350,7 @@ if __name__ == '__main__':
                         help="Type of algorithm to use. 0 --> SGD, 1 --> SGLD, other-->DistilledSGLD")
     parser.add_argument("-t", "--training", type=int, default=50000,
                         help="Number of training samples")
-    parser.add_argument("--gpu", type=int,
-                        help="gpu device_id eg: 0, does not support multi-gpus, if not provided then use cpu")
+    parser.add_argument("--gpu", type=int, help="0 to use GPU, not set to use CPU")
     args = parser.parse_args()
     training_num = args.training
     if args.dataset == 1:
