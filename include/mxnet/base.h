@@ -26,6 +26,7 @@
 #define MXNET_BASE_H_
 
 #include "dmlc/base.h"
+#include <string>
 #include "dmlc/io.h"
 #include "dmlc/type_traits.h"
 #include "dmlc/parameter.h"
@@ -34,7 +35,6 @@
 #include "nnvm/op.h"
 #include "nnvm/tuple.h"
 #include "nnvm/symbolic.h"
-#include <string>
 #include "mxfeatures.h"
 
 

@@ -24,8 +24,8 @@
  */
 
 #include "mxnet/mxfeatures.h"
-#include "dmlc/logging.h"
 #include <bitset>
+#include "dmlc/logging.h"
 
 
 namespace mxnet {
@@ -33,10 +33,9 @@ namespace features {
 
 
 class Storage {
-public:
+ public:
     Storage():
-        feature_bits()
-    {
+        feature_bits() {
         // GPU
         feature_bits.set(CUDA, MXNET_USE_CUDA);
         feature_bits.set(CUDNN, MXNET_USE_CUDNN);
@@ -101,7 +100,8 @@ public:
         CHECK_LT(feat, MAX_FEATURES);
         return feature_bits.test(feat);
     }
-private:
+
+ private:
     std::bitset<MAX_FEATURES> feature_bits;
 };
 

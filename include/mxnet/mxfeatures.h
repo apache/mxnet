@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include <dmlc/base.h>
-#include <mshadow/base.h>
+#include "dmlc/base.h"
+#include "mshadow/base.h"
 
 /*!
  *\brief whether to use opencv support
@@ -128,7 +128,7 @@ namespace features {
 /// Compile time features
 enum : uint32_t {
     // NVIDIA, CUDA
-    CUDA=0,
+    CUDA = 0,
     CUDNN,
     NCCL,
     CUDA_RTC,
