@@ -246,6 +246,7 @@
     6. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
     7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
     8. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
+    9. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
 
 
     =======================================================================================
@@ -641,4 +642,3 @@
     license to install, use, modify, prepare derivative works, incorporate into
     other computer software, distribute, and sublicense such enhancements or
     derivative works thereof, in binary and source code form.
-
