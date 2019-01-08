@@ -22,8 +22,8 @@
  * \file c_api_error.h
  * \brief Error handling for C API.
  */
-#ifndef MXNET_C_API_COMMON_H_
-#define MXNET_C_API_COMMON_H_
+#ifndef MXNET_C_API_C_API_COMMON_H_
+#define MXNET_C_API_C_API_COMMON_H_
 
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
@@ -143,4 +143,4 @@ extern void on_exit_api();
 
 }  // namespace mxnet
 
-#endif  // MXNET_C_API_COMMON_H_
+#endif  // MXNET_C_API_C_API_COMMON_H_
