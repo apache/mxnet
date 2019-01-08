@@ -89,6 +89,10 @@
 #define MXNET_USE_BLAS_APPLE 0
 #endif
 
+#ifndef MXNET_USE_LAPACK
+#define MXNET_USE_LAPACK 0
+#endif
+
 #ifndef MXNET_USE_MKLDNN
 #define MXNET_USE_MKLDNN 0
 #endif
