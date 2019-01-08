@@ -96,17 +96,20 @@ class Cast(HybridBlock):
 
 
 class ToTensor(HybridBlock):
-    """Converts an image NDArray to a tensor NDArray.
+    """Converts an image NDArray or batch of image NDArray to a tensor NDArray.
 
     Converts an image NDArray of shape (H x W x C) in the range
     [0, 255] to a float32 tensor NDArray of shape (C x H x W) in
     the range [0, 1).
 
+    If batch input, converts a batch image NDArray of shape (N x H x W x C) in the 
+    range [0, 255] to a float32 tensor NDArray of shape (N x C x H x W).
+
     Inputs:
-        - **data**: input tensor with (H x W x C) shape and uint8 type.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
 
     Examples
     --------
