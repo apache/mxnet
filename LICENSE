@@ -228,9 +228,7 @@
     11. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
     12. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
     13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
-    14. clojure-package - For details, see, contrib/clojure-package/LICENSE
-    15. R-package - For details, see, R-package/LICENSE
-    16. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
+    14. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
 
 
     =======================================================================================
