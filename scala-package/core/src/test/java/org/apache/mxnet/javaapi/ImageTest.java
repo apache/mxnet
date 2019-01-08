@@ -6,11 +6,13 @@ import org.junit.Test;
 import java.io.File;
 import java.net.URL;
 
+import static org.junit.Assert.assertArrayEquals;
+
 public class ImageTest {
 
-    private String imLocation;
+    private static String imLocation;
 
-    private void downloadUrl(String url, String filePath, int maxRetry) throws Exception{
+    private static void downloadUrl(String url, String filePath, int maxRetry) throws Exception{
         File tmpFile = new File(filePath);
         Boolean success = false;
         if (!tmpFile.exists()) {
@@ -29,7 +31,7 @@ public class ImageTest {
     }
 
     @BeforeClass
-    public void downloadFile() throws Exception {
+    public static void downloadFile() throws Exception {
         String tempDirPath = System.getProperty("java.io.tmpdir");
         imLocation = tempDirPath + "/inputImages/Pug-Cookie.jpg";
         try {
@@ -42,8 +44,10 @@ public class ImageTest {
 
     @Test
     public void testImageProcess() {
-        NDArray nd = Image.imRead(imLocation, 1, true, null);
-        NDArray nd2 = Image.imResize(nd, 224, 224, null, null);
+        NDArray nd = Image.imRead(imLocation, 1, true);
+        assertArrayEquals(nd.shape().toArray(), new int[]{576, 1024, 3});
+        NDArray nd2 = Image.imResize(nd, 224, 224, null);
+        assertArrayEquals(nd.shape().toArray(), new int[]{224, 224, 3});
         NDArray cropped = Image.fixedCrop(nd, 0, 0, 224, 224);
         Image.toImage(cropped);
     }

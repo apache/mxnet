@@ -98,8 +98,8 @@ public class PredictorExample {
         inputDesc.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
         Predictor predictor = new Predictor(inst.modelPathPrefix, inputDesc, context,0);
         // Prepare data
-        NDArray img = Image.imRead(inst.inputImagePath, 1, true, null);
-        img = Image.imResize(img, 224, 224, null, null);
+        NDArray img = Image.imRead(inst.inputImagePath, 1, true);
+        img = Image.imResize(img, 224, 224, null);
         // predict
         float[][] result = predictor.predict(new float[][]{img.toArray()});
         try {

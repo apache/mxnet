@@ -31,8 +31,8 @@ object Image {
     *               to mxnet's default RGB format (instead of opencv's default BGR).
     * @return NDArray in HWC format
     */
-  def imDecode(buf: Array[Byte], flag: Int, toRGB: Boolean, out: NDArray): NDArray = {
-    org.apache.mxnet.Image.imDecode(buf, flag, toRGB, Some(out))
+  def imDecode(buf: Array[Byte], flag: Int, toRGB: Boolean): NDArray = {
+    org.apache.mxnet.Image.imDecode(buf, flag, toRGB, None)
   }
 
   /**
@@ -40,9 +40,8 @@ object Image {
     * @param inputStream the inputStream of the image
     * @return NDArray in HWC format
     */
-  def imDecode(inputStream: InputStream, flag: Int = 1, toRGB: Boolean = true,
-               out: NDArray): NDArray = {
-    org.apache.mxnet.Image.imDecode(inputStream, flag, toRGB, Some(out))
+  def imDecode(inputStream: InputStream, flag: Int = 1, toRGB: Boolean = true): NDArray = {
+    org.apache.mxnet.Image.imDecode(inputStream, flag, toRGB, None)
   }
 
   /**
@@ -54,8 +53,8 @@ object Image {
     *                 (instead of opencv's default BGR).
     * @return org.apache.mxnet.NDArray in HWC format
     */
-  def imRead(filename: String, flag: Int, toRGB: Boolean = true, out: NDArray): NDArray = {
-    org.apache.mxnet.Image.imRead(filename, Some(flag), Some(toRGB), Some(out))
+  def imRead(filename: String, flag: Int, toRGB: Boolean = true): NDArray = {
+    org.apache.mxnet.Image.imRead(filename, Some(flag), Some(toRGB), None)
   }
 
   /**
@@ -66,9 +65,9 @@ object Image {
     * @param interp  Interpolation method (default=cv2.INTER_LINEAR).
     * @return org.apache.mxnet.NDArray
     */
-  def imResize(src: NDArray, w: Int, h: Int,
-               interp: Integer, out: NDArray): NDArray = {
-    org.apache.mxnet.Image.imResize(src, w, h, Some(interp), Some(out))
+  def imResize(src: NDArray, w: Int, h: Int, interp: Integer): NDArray = {
+    val interpVal = if (interp == null) None else Some(interp.intValue())
+    org.apache.mxnet.Image.imResize(src, w, h, interpVal, None)
   }
 
   /**
