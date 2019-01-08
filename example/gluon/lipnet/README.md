@@ -79,9 +79,9 @@ The training data folder should look like :
   - epochs : Define total epochs (default=100)
   - image_path : Path for lip image files (default='./data/datasets/')
   - align_path : Path for align files (default='./data/align/')
-  - dr_rate : dropout rate(default=0.5)
-  - use_gpu : Use gpu (default=True)
-  - num_workers : num of workers when generating data (default=2)
+  - dr_rate : Dropout rate(default=0.5)
+  - num_gpus : Num of gpus (if num_gpus is 0, then use cpu) (default=1)
+  - num_workers : Num of workers when generating data (default=0)
   
 ```
 python main.py

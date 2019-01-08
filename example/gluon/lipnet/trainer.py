@@ -32,14 +32,14 @@ from utils.common import char_conv, int2char
 # set gpu count
 
 
-def setting_ctx(use_gpu):
+def setting_ctx(num_gpus):
     """
     Description : set gpu module
     """
-    if eval(use_gpu):
-        ctx = mx.gpu()
+    if num_gpus > 0:
+        ctx = [mx.gpu(i) for i in range(num_gpus)]
     else:
-        ctx = mx.cpu()
+        ctx = [mx.cpu()]
     return ctx
 
 
@@ -58,8 +58,9 @@ def char_beam_search(out):
         line_string_proposals = ctcBeamSearch(prob, ALPHABET, None, k=4, beamWidth=25)
         out_conv.append(line_string_proposals[0])
     return out_conv
-# pylint: disable=too-many-instance-attributes
-class Train(object):
+
+# pylint: disable=too-many-instance-attributes, too-many-locals
+class Train:
     """
     Description : Train class for training network
     """
@@ -70,10 +71,11 @@ class Train(object):
         self.image_path = config.image_path
         self.align_path = config.align_path
         self.dr_rate = config.dr_rate
-        self.use_gpu = config.use_gpu
-        self.ctx = setting_ctx(self.use_gpu)
+        self.num_gpus = config.num_gpus
+        self.ctx = setting_ctx(self.num_gpus)
         self.num_workers = config.num_workers
         self.build_model()
+
     def build_model(self):
         """
         Description : build network
@@ -92,47 +94,59 @@ class Train(object):
         file_name = "checkpoint/best_model_epoches_"+str(epoch)+"iter_"+str(iter_no)+ \
         "loss_"+str(round(current_loss, 2))
         self.net.save_parameters(file_name)
+
     def train(self):
         """
         Description : training for LipNet
         """
-        input_transform = transforms.Compose([transforms.ToTensor(),\
-                                             transforms.Normalize((0.7136, 0.4906, 0.3283),
+        input_transform = transforms.Compose([transforms.ToTensor(), \
+                                             transforms.Normalize((0.7136, 0.4906, 0.3283), \
                                                                   (0.1138, 0.1078, 0.0917))])
         training_dataset = LipsDataset(self.image_path, self.align_path, transform=input_transform)
         train_dataloader = mx.gluon.data.DataLoader(training_dataset,
-                                                    batch_size=self.batch_size, shuffle=True,
+                                                    batch_size=self.batch_size,
+                                                    shuffle=True,
                                                     num_workers=self.num_workers)
         best_loss = sys.maxsize
         for epoch in trange(self.epochs):
             iter_no = 0
-            for input_data, label in tqdm(train_dataloader):
+            for input_data, input_label in tqdm(train_dataloader):
                 input_data = nd.transpose(input_data, (0, 2, 1, 3, 4))
+                data = gluon.utils.split_and_load(input_data, self.ctx, even_split=False)
+                label = gluon.utils.split_and_load(input_label, self.ctx, even_split=False)
+
                 # pylint: disable=no-member
-                input_data = input_data.copyto(self.ctx)
-                label = label.copyto(self.ctx)
+                losses = []
+                sum_losses = 0
+                len_losses = 0
                 with autograd.record():
                     with autograd.train_mode():
-                        out = self.net(input_data)
-                        loss_val = self.loss_fn(out, label)
-                        loss_val.backward()
+                        for X, Y in zip(data, label):
+                            current_batch_loss = self.loss_fn(self.net(X), Y)
+                            losses.append(current_batch_loss)
+                            sum_losses += mx.nd.array(current_batch_loss).sum().asscalar()
+                            len_losses += len(current_batch_loss)
+                        for l in losses:
+                            l.backward()
                 self.trainer.step(input_data.shape[0])
                 if iter_no % 20 == 0:
+                    current_loss = sum_losses / len_losses
                     print("epoch:{e} iter:{i} loss:{l}".format(e=epoch,
                                                                i=iter_no,
-                                                               l=loss_val.mean().asscalar()))
-                    self.infer(input_data, label)
-                    current_loss = loss_val.mean().asscalar()
+                                                               l=current_loss))
+                    self.infer(data, label)
                     if best_loss > current_loss:
                         self.save_model(epoch, iter_no, current_loss)
                         best_loss = current_loss
                 iter_no += 1
-    def infer(self, input_data, label):
+
+    def infer(self, input_data, input_label):
         """
         Description : Print sentence for prediction result
         """
-        pred = self.net(input_data)
-        pred_convert = char_beam_search(pred)
-        label_convert = char_conv(label.asnumpy())
-        for target, pred in zip(label_convert, pred_convert):
-            print("target:{t}  pred:{p}".format(t=target, p=pred))
+        for data, label in zip(input_data, input_label):
+            pred = self.net(data)
+            pred_convert = char_beam_search(pred)
+            label_convert = char_conv(label.asnumpy())
+            for target, pred in zip(label_convert, pred_convert):
+                print("target:{t}  pred:{p}".format(t=target, p=pred))
