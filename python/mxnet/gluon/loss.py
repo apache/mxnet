@@ -99,11 +99,11 @@ class Loss(HybridBlock):
 
 
 class L2Loss(Loss):
-    r"""Calculates the mean squared error between `pred` and `label`.
+    r"""Calculates the mean squared error between `label` and `pred`.
 
     .. math:: L = \frac{1}{2} \sum_i \vert {label}_i - {pred}_i \vert^2.
 
-    `pred` and `label` can have arbitrary shape as long as they have the same
+    `label` and `pred` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -137,11 +137,11 @@ class L2Loss(Loss):
 
 
 class L1Loss(Loss):
-    r"""Calculates the mean absolute error between `pred` and `label`.
+    r"""Calculates the mean absolute error between `label` and `pred`.
 
     .. math:: L = \sum_i \vert {label}_i - {pred}_i \vert.
 
-    `pred` and `label` can have arbitrary shape as long as they have the same
+    `label` and `pred` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -195,7 +195,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
             (1 - {label}_i) * \log(1 - {pred}_i)
 
 
-    `pred` and `label` can have arbitrary shape as long as they have the same
+    `label` and `pred` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -344,7 +344,7 @@ class KLDivLoss(Loss):
         L = \sum_i {label}_i * \big[\log({label}_i) - log({pred}_i)\big]
 
 
-    `pred` and `label` can have arbitrary shape as long as they have the same
+    `label` and `pred` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -487,7 +487,7 @@ class HuberLoss(Loss):
                            \text{ otherwise }
             \end{cases}
 
-    `pred` and `label` can have arbitrary shape as long as they have the same
+    `label` and `pred` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -532,7 +532,7 @@ class HingeLoss(Loss):
         L = \sum_i max(0, {margin} - {pred}_i \cdot {label}_i)
 
     where `pred` is the classifier prediction and `label` is the target tensor
-    containing values -1 or 1. `pred` and `label` must have the same number of
+    containing values -1 or 1. `label` and `pred` must have the same number of
     elements.
 
     Parameters
@@ -576,7 +576,7 @@ class SquaredHingeLoss(Loss):
         L = \sum_i max(0, {margin} - {pred}_i \cdot {label}_i)^2
 
     where `pred` is the classifier prediction and `label` is the target tensor
-    containing values -1 or 1. `pred` and `label` can have arbitrary shape as
+    containing values -1 or 1. `label` and `pred` can have arbitrary shape as
     long as they have the same number of elements.
 
     Parameters
@@ -621,7 +621,7 @@ class LogisticLoss(Loss):
 
     where `pred` is the classifier prediction and `label` is the target tensor
     containing values -1 or 1 (0 or 1 if `label_format` is binary).
-    `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
+    `label` and `pred` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------
@@ -666,14 +666,14 @@ class LogisticLoss(Loss):
 
 class TripletLoss(Loss):
     r"""Calculates triplet loss given three input tensors and a positive margin.
-    Triplet loss measures the relative similarity between prediction, a positive
-    example and a negative example:
+    Triplet loss measures the relative similarity between a positive
+    example, a negative example, and prediction:
 
     .. math::
         L = \sum_i \max(\Vert {pos_i}_i - {pred} \Vert_2^2 -
                         \Vert {neg_i}_i - {pred} \Vert_2^2 + {margin}, 0)
 
-    `pred`, `positive` and `negative` can have arbitrary shape as long as they
+    `positive`, `negative`, and 'pred' can have arbitrary shape as long as they
     have the same number of elements.
 
     Parameters
@@ -717,7 +717,7 @@ class PoissonNLLLoss(Loss):
     .. math::
         L = \text{pred} - \text{target} * \log(\text{pred}) +\log(\text{target!})
 
-    `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
+    `target`, 'pred' can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------
