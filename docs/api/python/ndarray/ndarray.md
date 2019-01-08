@@ -659,6 +659,7 @@ The `ndarray` package provides several classes:
     relu
     sigmoid
     erf
+    erfinv
 ```
 
 ### More
