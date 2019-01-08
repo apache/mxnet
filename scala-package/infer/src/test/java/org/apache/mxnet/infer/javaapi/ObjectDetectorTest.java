@@ -33,32 +33,51 @@ import java.util.List;
 
 public class ObjectDetectorTest {
 
-    List<DataDesc> inputDesc;
-    BufferedImage inputImage;
+    private List<DataDesc> inputDesc;
+    private BufferedImage inputImage;
 
-    List<List<ObjectDetectorOutput>> result;
+    private List<List<ObjectDetectorOutput>> expectedResult;
 
-    ObjectDetector objectDetector;
+    private ObjectDetector objectDetector;
+
+    private int batchSize = 1;
+
+    private int channels = 3;
+
+    private int imageHeight = 512;
+
+    private int imageWidth = 512;
+
+    private String dataName = "data";
+
+    private int topK = 5;
+
+    private String predictedClassName = "lion"; // Random string
+
+    private Shape getTestShape() {
+
+        return new Shape(new int[] {batchSize, channels, imageHeight, imageWidth});
+    }
 
     @Before
     public void setUp() {
 
         inputDesc = new ArrayList<>();
-        inputDesc.add(new DataDesc("", new Shape(new int[]{1, 3, 512, 512}), DType.Float32(), Layout.NCHW()));
-        inputImage = new BufferedImage(512, 512, BufferedImage.TYPE_INT_RGB);
+        inputDesc.add(new DataDesc(dataName, getTestShape(), DType.Float32(), Layout.NCHW()));
+        inputImage = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_RGB);
         objectDetector = Mockito.mock(ObjectDetector.class);
-        result = new ArrayList<>();
-        result.add(new ArrayList<ObjectDetectorOutput>());
-        result.get(0).add(new ObjectDetectorOutput("simbaa", new float[]{}));
+        expectedResult = new ArrayList<>();
+        expectedResult.add(new ArrayList<ObjectDetectorOutput>());
+        expectedResult.get(0).add(new ObjectDetectorOutput(predictedClassName, new float[]{}));
     }
 
     @Test
     public void testObjectDetectorWithInputImage() {
 
-        Mockito.when(objectDetector.imageObjectDetect(inputImage, 5)).thenReturn(result);
-        List<List<ObjectDetectorOutput>> actualResult = objectDetector.imageObjectDetect(inputImage, 5);
-        Mockito.verify(objectDetector, Mockito.times(1)).imageObjectDetect(inputImage, 5);
-        Assert.assertEquals(result, actualResult);
+        Mockito.when(objectDetector.imageObjectDetect(inputImage, topK)).thenReturn(expectedResult);
+        List<List<ObjectDetectorOutput>> actualResult = objectDetector.imageObjectDetect(inputImage, topK);
+        Mockito.verify(objectDetector, Mockito.times(1)).imageObjectDetect(inputImage, topK);
+        Assert.assertEquals(expectedResult, actualResult);
     }
 
 
@@ -67,21 +86,21 @@ public class ObjectDetectorTest {
 
         List<BufferedImage> batchImage = new ArrayList<>();
         batchImage.add(inputImage);
-        Mockito.when(objectDetector.imageBatchObjectDetect(batchImage, 5)).thenReturn(result);
-        List<List<ObjectDetectorOutput>> actualResult = objectDetector.imageBatchObjectDetect(batchImage, 5);
-        Mockito.verify(objectDetector, Mockito.times(1)).imageBatchObjectDetect(batchImage, 5);
-        Assert.assertEquals(result, actualResult);
+        Mockito.when(objectDetector.imageBatchObjectDetect(batchImage, topK)).thenReturn(expectedResult);
+        List<List<ObjectDetectorOutput>> actualResult = objectDetector.imageBatchObjectDetect(batchImage, topK);
+        Mockito.verify(objectDetector, Mockito.times(1)).imageBatchObjectDetect(batchImage, topK);
+        Assert.assertEquals(expectedResult, actualResult);
     }
 
     @Test
     public void testObjectDetectorWithNDArrayInput() {
 
-        NDArray inputArr = ObjectDetector.bufferedImageToPixels(inputImage, new Shape(new int[] {1, 3, 512, 512}));
+        NDArray inputArr = ObjectDetector.bufferedImageToPixels(inputImage, getTestShape());
         List<NDArray> inputL = new ArrayList<>();
         inputL.add(inputArr);
-        Mockito.when(objectDetector.objectDetectWithNDArray(inputL, 5)).thenReturn(result);
-        List<List<ObjectDetectorOutput>> actualResult = objectDetector.objectDetectWithNDArray(inputL, 5);
-        Mockito.verify(objectDetector, Mockito.times(1)).objectDetectWithNDArray(inputL, 5);
-        Assert.assertEquals(result, actualResult);
+        Mockito.when(objectDetector.objectDetectWithNDArray(inputL, 5)).thenReturn(expectedResult);
+        List<List<ObjectDetectorOutput>> actualResult = objectDetector.objectDetectWithNDArray(inputL, topK);
+        Mockito.verify(objectDetector, Mockito.times(1)).objectDetectWithNDArray(inputL, topK);
+        Assert.assertEquals(expectedResult, actualResult);
     }
 }

@@ -17,23 +17,29 @@
 
 package org.apache.mxnet.infer.javaapi;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 public class ObjectDetectorOutputTest {
+
+    private String predictedClassName = "lion";
+
+    private float delta = 0.00001f;
 
     @Test
     public void testConstructor() {
 
         float[] arr = new float[]{0f, 1f, 2f, 3f, 4f};
 
-        ObjectDetectorOutput odOutput = new ObjectDetectorOutput("simba", arr);
+        ObjectDetectorOutput odOutput = new ObjectDetectorOutput(predictedClassName, arr);
 
-        assert (odOutput.getClassName().equals("simba"));
-        assert (odOutput.getProbability() == 0);
-        assert (odOutput.getXMin() == 1);
-        assert (odOutput.getXMax() == 2);
-        assert (odOutput.getYMin() == 3);
-        assert (odOutput.getYMax() == 4);
+        Assert.assertEquals(odOutput.getClassName(), predictedClassName);
+        Assert.assertEquals("Threshold not matching", odOutput.getProbability(), 0f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getXMin(), 1f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getXMax(), 2f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getYMin(), 3f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getYMax(), 4f, delta);
+
     }
 
     @Test (expected = ArrayIndexOutOfBoundsException.class)
@@ -41,8 +47,13 @@ public class ObjectDetectorOutputTest {
 
         float[] arr = new float[]{0f, 1f};
 
-        ObjectDetectorOutput odOutput = new ObjectDetectorOutput("simba", arr);
+        ObjectDetectorOutput odOutput = new ObjectDetectorOutput(predictedClassName, arr);
 
-        odOutput.getYMax();
+        Assert.assertEquals(odOutput.getClassName(), predictedClassName);
+        Assert.assertEquals("Threshold not matching", odOutput.getProbability(), 0f, delta);
+        Assert.assertEquals("Threshold not matching", odOutput.getXMin(), 1f, delta);
+
+        // This is where exception will be thrown
+        odOutput.getXMax();
     }
 }

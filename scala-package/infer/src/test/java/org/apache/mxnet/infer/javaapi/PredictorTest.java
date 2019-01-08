@@ -39,7 +39,7 @@ public class PredictorTest {
     }
 
     @Test
-    public void testPredictWithFloatArry() {
+    public void testPredictWithFloatArray() {
 
         float tmp[][] = new float[1][224];
         for (int x = 0; x < 1; x++) {
@@ -50,23 +50,6 @@ public class PredictorTest {
         float [][] expectedResult = new float[][] {{1f, 2f}};
         Mockito.when(mockPredictor.predict(tmp)).thenReturn(expectedResult);
         float[][] actualResult = mockPredictor.predict(tmp);
-
-        Mockito.verify(mockPredictor, Mockito.times(1)).predict(tmp);
-        Assert.assertArrayEquals(expectedResult, actualResult);
-    }
-
-    @Test
-    public void testPredictWithDoubleArry() {
-
-        double tmp[][] = new double[1][224];
-        for (int x = 0; x < 1; x++) {
-            for (int y = 0; y < 224; y++)
-                tmp[x][y] = (int) (Math.random() * 10);
-        }
-
-        double [][] expectedResult = new double[][] {{1d, 2d}};
-        Mockito.when(mockPredictor.predict(tmp)).thenReturn(expectedResult);
-        double[][] actualResult = mockPredictor.predict(tmp);
 
         Mockito.verify(mockPredictor, Mockito.times(1)).predict(tmp);
         Assert.assertArrayEquals(expectedResult, actualResult);
