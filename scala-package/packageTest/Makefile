@@ -43,6 +43,10 @@ else
 	endif
 endif
 
+ifeq ($(CI), 1)
+	MAVEN_ARGS := -B
+endif
+
 PROFILES := -Ptest
 ifeq ($(UNIT), 1)
   PROFILES := "$(PROFILES),unittest"
@@ -59,27 +63,27 @@ endif
 
 
 clean:
-	(mvn clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn $(MAVEN_ARGS) clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
 
 testinstall:
-	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn $(MAVEN_ARGS) integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
     $(PROFILES) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
 
 testlocal:
-	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn $(MAVEN_ARGS) integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
     $(PROFILES),fromLocal \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
 
 testsnapshot:
-	(mvn integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn $(MAVEN_ARGS) integration-test -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
     $(PROFILES),fromSnapshots \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dmxnet.repo=$(MXNET_REPO) \
