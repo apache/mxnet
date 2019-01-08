@@ -22,8 +22,8 @@
  * \file normalize_op-inl.h
  * \brief Image normalization operator
 */
-#ifndef MXNET_OPERATOR_IMAGE_NORMALIZE_INL_H_
-#define MXNET_OPERATOR_IMAGE_NORMALIZE_INL_H_
+#ifndef MXNET_OPERATOR_IMAGE_NORMALIZE_OP_INL_H_
+#define MXNET_OPERATOR_IMAGE_NORMALIZE_OP_INL_H_
 
 
 #include <mxnet/base.h>
@@ -60,15 +60,15 @@ inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-  
+
   const auto& dshape = (*in_attrs)[0];
   if (!dshape.ndim()) return false;
 
   CHECK((dshape.ndim() == 3) || (dshape.ndim() == 4))
       << "Input tensor must have shape (channels, height, width), or "
       << "(N, channels, height, width), but got " << dshape;
-  
-  uint32_t nchannels;
+
+  int32_t nchannels;
   if (dshape.ndim() == 3) {
     nchannels = dshape[0];
     CHECK(nchannels == 3 || nchannels == 1)
@@ -103,7 +103,7 @@ inline bool NormalizeOpType(const nnvm::NodeAttrs& attrs,
 
   // Normalized Tensor will be a float
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
-  return out_attrs->at(0) != -1;                       
+  return out_attrs->at(0) != -1;
 }
 
 template<int req>
@@ -112,7 +112,7 @@ struct normalize_forward {
     MSHADOW_XINLINE static void Map(int j, DType* out_data, const DType* in_data,
                                     const int i, const int length, const int step,
                                     const DType mean, const DType std_dev) {
-        KERNEL_ASSIGN(out_data[step + i*length + j], req, 
+        KERNEL_ASSIGN(out_data[step + i*length + j], req,
                       (in_data[step + i*length + j] - mean) / std_dev);
     }
 };
@@ -139,7 +139,7 @@ void NormalizeImpl(const OpContext &ctx,
             mxnet_op::Kernel<normalize_forward<req_type>, xpu>::Launch(
                 s, length, output, input,
                 i, length, step, mean, std_dev);
-        } 
+        }
       });
     });
 }
@@ -166,7 +166,7 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
     const int batch_size = inputs[0].shape_[0];
     const int length = inputs[0].shape_[2] * inputs[0].shape_[3];
     const int channel = inputs[0].shape_[1];
-    const int step = channel*length;
+    const int step = channel * length;
 
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {
@@ -175,7 +175,7 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
   }
 }
 
-} // namespace image
-} // namespace op
-} // namespace mxnet
-#endif //MXNET_OPERATOR_IMAGE_NORMALIZE_INL_H_
+}  // namespace image
+}  // namespace op
+}  // namespace mxnet
+#endif  // MXNET_OPERATOR_IMAGE_NORMALIZE_OP_INL_H_

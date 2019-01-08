@@ -21,18 +21,16 @@
  * \file normalize_op.cu
  * \brief GPU Implementation of Normalize op
  */
- #include "./normalize_op-inl.h"
+#include "./normalize_op-inl.h"
 
- namespace mxnet {
- namespace op {
- namespace image {
+namespace mxnet {
+namespace op {
+namespace image {
 
- NNVM_REGISTER_OP(_image_normalize)
- .set_attr<FComputeEx>("FComputeEx<gpu>", NormalizeOpForward<gpu>)
- .set_attr<FCompute>("FCompute<gpu>", NormalizeOpForward<gpu>);
- .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
- 
- }  // namespace image
- }  // namespace op
- }  // namespace mxnet
- 
+NNVM_REGISTER_OP(_image_normalize)
+.set_attr<FCompute>("FCompute", NormalizeOpForward<gpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" });
+
+}  // namespace image
+}  // namespace op
+}  // namespace mxnet
