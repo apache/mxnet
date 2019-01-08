@@ -28,8 +28,7 @@ namespace op {
 namespace image {
 
 NNVM_REGISTER_OP(_image_normalize)
-.set_attr<FCompute>("FCompute", NormalizeOpForward<gpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" });
+.set_attr<FCompute>("FCompute<gpu>", NormalizeOpForward<gpu>);
 
 }  // namespace image
 }  // namespace op
