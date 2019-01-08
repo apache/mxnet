@@ -111,14 +111,33 @@ enum : uint32_t {
     CUDA_RTC,
     TENSORRT,
 
+    // CPU Features / optimizations
+    CPU_SSE,
+    CPU_SSE2,
+    CPU_SSE3,
+    CPU_SSE4_1,
+    CPU_SSE4_2,
+    CPU_SSE4A,  // AMD extensions to SSE4
+    CPU_AVX,
+    CPU_AVX2,
+
+
     // Multiprocessing / CPU / System
     OPENMP,
     SSE,
     F16C,
     JEMALLOC,
 
-    // Math libraries
+    // Math libraries & BLAS
+    // Flavour of BLAS
+    BLAS_OPEN,
+    BLAS_ATLAS,
+    // Intel(R) Math Kernel Library
+    BLAS_MKL,
+    // Other math libraries:
+    // Linear Algebra PACKage
     LAPACK,
+    // Intel(R) Math Kernel Library for Deep Neural Networks
     MKLDNN,
 
     // Image processing
@@ -129,6 +148,7 @@ enum : uint32_t {
     PROFILER,
     DIST_KVSTORE,
     CXX14,
+    // Signal handler to print stack traces on exceptions
     SIGNAL_HANDLER,
     DEBUG,
 

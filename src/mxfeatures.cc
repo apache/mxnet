@@ -31,6 +31,7 @@
 namespace mxnet {
 namespace features {
 
+
 class Storage {
 public:
     Storage():
