@@ -101,7 +101,7 @@ public class PredictorExample {
         NDArray img = Image.imRead(inst.inputImagePath, 1, true, null);
         img = Image.imResize(img, 224, 224, null, null);
         // predict
-        float[][] result = predictor.predict(new float[][]{imagePreprocess(img)});
+        float[][] result = predictor.predict(new float[][]{img.toArray()});
         try {
             System.out.println("Predict with Float input");
             System.out.println(printMaximumClass(result[0], inst.modelPathPrefix));
@@ -109,10 +109,7 @@ public class PredictorExample {
             System.err.println(e);
         }
         // predict with NDArray
-        NDArray nd = new NDArray(
-                imagePreprocess(img),
-                new Shape(new int[]{1, 3, 224, 224}),
-                Context.cpu());
+        NDArray nd = img;
         List<NDArray> ndList = new ArrayList<>();
         ndList.add(nd);
         List<NDArray> ndResult = predictor.predictWithNDArray(ndList);
