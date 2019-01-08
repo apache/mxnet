@@ -33,19 +33,13 @@
 using namespace mxnet;
 
 /*!
- * \brief  macro to guard beginning and end section of all functions
- */
-#define MX_API_BEGIN() try { on_enter_api(__FUNCTION__);
-/*!
- * \brief every function starts with API_BEGIN();
- * and finishes with API_END() or API_END_HANDLE_ERROR
- */
-#define MX_API_END() } catch(dmlc::Error &_except_) { on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0;  // NOLINT(*)
-/*!
- * \brief every function starts with API_BEGIN();
- * and finishes with API_END() or API_END_HANDLE_ERROR
+ * \brief Macros to guard beginning and end section of all functions
+ * every function starts with API_BEGIN()
+ * and finishes with API_END() or API_END_HANDLE_ERROR()
  * The finally clause contains procedure to cleanup states when an error happens.
  */
+#define MX_API_BEGIN() try { on_enter_api(__FUNCTION__);
+#define MX_API_END() } catch(dmlc::Error &_except_) { on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0;  // NOLINT(*)
 #define MX_API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0; // NOLINT(*)
 /*!
  * \brief Set the last error message needed by C API

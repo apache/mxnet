@@ -36,25 +36,19 @@
 #include <string>
 
 /*!
- * \brief  macro to guard beginning and end section of all functions 
+ * \brief Macros to guard beginning and end section of all functions
+ * every function starts with API_BEGIN()
+ * and finishes with API_END() or API_END_HANDLE_ERROR()
+ * The finally clause contains procedure to cleanup states when an error happens.
  */
 #ifndef API_BEGIN
 #define API_BEGIN MX_API_BEGIN
 #endif
 
-/*!
- * \brief every function starts with API_BEGIN();
- * and finishes with API_END() or API_END_HANDLE_ERROR
- */
 #ifndef API_END
 #define API_END MX_API_END
 #endif
 
-/*!
- * \brief every function starts with API_BEGIN();
- * and finishes with API_END() or API_END_HANDLE_ERROR
- * The finally clause contains procedure to cleanup states when an error happens.
- */
 #ifndef API_END_HANDLE_ERROR
 #define API_END_HANDLE_ERROR MX_API_END_HANDLE_ERROR
 #endif
