@@ -28,7 +28,7 @@ fi
 # which gpu card to use, -1 means cpu
 GPU=$1
 # you can get the training data file using the following command
-# wget http://data.mxnet.io/data/char_lstm.zip
+# curl -O http://data.mxnet.io/data/char_lstm.zip
 # unzip -o char_lstm.zip
 # for example ./datas/obama.txt
 DATA_PATH=$2
