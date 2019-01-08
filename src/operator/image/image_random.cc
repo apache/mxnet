@@ -38,16 +38,6 @@ DMLC_REGISTER_PARAMETER(AdjustLightingParam);
 DMLC_REGISTER_PARAMETER(RandomLightingParam);
 DMLC_REGISTER_PARAMETER(RandomColorJitterParam);
 
-NNVM_REGISTER_OP(_image_to_tensor)
-.describe(R"code()code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", ToTensorShape)
-.set_attr<nnvm::FInferType>("FInferType", ToTensorType)
-.set_attr<FCompute>("FCompute<cpu>", ToTensor)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
-.add_argument("data", "NDArray-or-Symbol", "The input.");
-
 NNVM_REGISTER_OP(_image_normalize)
 .describe(R"code(Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
     standard deviation.
