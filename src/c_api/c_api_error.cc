@@ -22,6 +22,8 @@
  * \file c_api_error.cc
  * \brief C error handling
  */
+
+#include <mxnet/c_api_common.h>
 #include <nnvm/c_api.h>
 
 const char *MXGetLastError() {
