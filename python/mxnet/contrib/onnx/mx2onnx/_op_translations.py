@@ -586,6 +586,7 @@ def convert_pooling(node, **kwargs):
     pool_type = attrs["pool_type"]
     stride = eval(attrs["stride"]) if attrs.get("stride") else None
     global_pool = get_boolean_attribute_value(attrs, "global_pool")
+    p_value = attrs.get('p_value', 'None')
 
     pooling_convention = attrs.get('pooling_convention', 'valid')
 
@@ -598,26 +599,51 @@ def convert_pooling(node, **kwargs):
 
     pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
     pad_dims = pad_dims + pad_dims
-    pool_types = {"max": "MaxPool", "avg": "AveragePool"}
-    global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool"}
+    pool_types = {"max": "MaxPool", "avg": "AveragePool", "lp": "LpPool"}
+    global_pool_types = {"max": "GlobalMaxPool", "avg": "GlobalAveragePool",
+                         "lp": "GlobalLpPool"}
+
+    if pool_type == 'lp' and p_value == 'None':
+        raise AttributeError('ONNX requires a p value for LpPool and GlobalLpPool')
 
     if global_pool:
-        node = onnx.helper.make_node(
-            global_pool_types[pool_type],
-            input_nodes,  # input
-            [name],
-            name=name
-        )
+        if pool_type == 'lp':
+            node = onnx.helper.make_node(
+                global_pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                p=int(p_value),
+                name=name
+            )
+        else:
+            node = onnx.helper.make_node(
+                global_pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                name=name
+            )
     else:
-        node = onnx.helper.make_node(
-            pool_types[pool_type],
-            input_nodes,  # input
-            [name],
-            kernel_shape=kernel,
-            pads=pad_dims,
-            strides=stride,
-            name=name
-        )
+        if pool_type == 'lp':
+            node = onnx.helper.make_node(
+                pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                p=int(p_value),
+                kernel_shape=kernel,
+                pads=pad_dims,
+                strides=stride,
+                name=name
+            )
+        else:
+            node = onnx.helper.make_node(
+                pool_types[pool_type],
+                input_nodes,  # input
+                [name],
+                kernel_shape=kernel,
+                pads=pad_dims,
+                strides=stride,
+                name=name
+            )
 
     return [node]
 
@@ -1687,5 +1713,28 @@ def convert_logsoftmax(node, **kwargs):
         [name],
         axis=axis,
         name=name
+    )
+    return [node]
+
+
+@mx_op.register("_sample_multinomial")
+def convert_multinomial(node, **kwargs):
+    """Map MXNet's multinomial operator attributes to onnx's
+    Multinomial operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(attrs.get("dtype", 'int32'))]
+    sample_size = convert_string_to_list(attrs.get("shape", '1'))
+    if len(sample_size) < 2:
+        sample_size = sample_size[-1]
+    else:
+        raise AttributeError("ONNX currently supports integer sample_size only")
+    node = onnx.helper.make_node(
+        "Multinomial",
+        input_nodes,
+        [name],
+        dtype=dtype,
+        sample_size=sample_size,
+        name=name,
     )
     return [node]

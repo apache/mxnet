@@ -18,7 +18,7 @@
 # coding: utf-8_
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from ._op_translations import identity, random_uniform, random_normal
+from ._op_translations import identity, random_uniform, random_normal, sample_multinomial
 from ._op_translations import add, subtract, multiply, divide, absolute, negative, add_n
 from ._op_translations import tanh, arccos, arcsin, arctan, _cos, _sin, _tan
 from ._op_translations import softplus, shape, gather, lp_pooling, size
@@ -48,6 +48,7 @@ _convert_map = {
     'RandomNormal'      : random_normal,
     'RandomUniformLike' : random_uniform,
     'RandomNormalLike'  : random_normal,
+    'Multinomial'       : sample_multinomial,
     # Arithmetic Operators
     'Add'               : add,
     'Sub'               : subtract,
