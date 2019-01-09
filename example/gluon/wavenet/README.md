@@ -16,12 +16,12 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 
 - arguments
   - batch_size : Define batch size (defualt=64)
-  - epoches : Define total epoches (default=1000)
+  - epochs : Define the total epoches (default=1000)
   - mu : Define mu (default=128)
   - n_residue : Define number of residue (default=24)
   - dilation_depth : Define dilation depth (default=10)
-  - use_gpu : Use GPU  (default=True)
-  - generation : generate wav file for model (default=True)
+  - use_gpu : whether or not to use the GPU (default=True)
+  - generation : whether or not to generate a wave file for model (default=True)
 
 ###### default setting
 ```
@@ -47,7 +47,7 @@ python main.py --batch_size=32 --epoches=100 ...
 ## Results
 ![perf_loss](assets/loss.png)
 
-## Reference
+## References
 - https://deepmind.com/blog/wavenet-generative-model-raw-audio/
 - https://gist.github.com/lirnli/4282fcdfb383bb160cacf41d8c783c70#file-pytorch-wavenet-ipynb
 
