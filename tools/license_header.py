@@ -82,6 +82,11 @@ _WHITE_LIST = [
                'src/operator/nn/im2col.h',
                'src/operator/nn/im2col.cuh',
 
+               # Licenses in headers
+               'docs/_static/searchtools_custom.js',
+               'docs/_static/js/clipboard.js',
+               'docs/_static/js/clipboard.min.js',
+
                # Licensed under 2-Clause BSD in header
                'example/ssd/dataset/pycocotools/coco.py',
                ]
@@ -91,7 +96,7 @@ _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
           '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
-          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#'}
+          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')

@@ -5,7 +5,6 @@
 .*ipynb
 .*html
 .*json
-.*js
 .*txt
 .*md
 3rdparty/*
