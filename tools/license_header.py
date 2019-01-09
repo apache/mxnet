@@ -183,7 +183,7 @@ def under_git():
 
 def git_files():
     return list(map(os.fsdecode,
-        subprocess.check_output('git ls-tree -r master --name-only -z'.split()).split(b'\0')))
+        subprocess.check_output('git ls-tree -r HEAD --name-only -z'.split()).split(b'\0')))
 
 
 def file_generator(path: str):
