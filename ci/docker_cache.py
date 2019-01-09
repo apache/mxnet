@@ -37,7 +37,7 @@ from util import retry
 DOCKERHUB_LOGIN_NUM_RETRIES = 5
 DOCKERHUB_RETRY_SECONDS = 5
 DOCKER_CACHE_NUM_RETRIES = 3
-DOCKER_CACHE_TIMEOUT_MINS = 5
+DOCKER_CACHE_TIMEOUT_MINS = 15
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
