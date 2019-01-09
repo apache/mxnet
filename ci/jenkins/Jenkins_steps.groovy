@@ -98,7 +98,7 @@ def compile_unix_cpu_openblas() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_dist_lib, true)
+            utils.pack_lib('cpu', mx_lib, true)
           }
         }
       }
@@ -126,7 +126,7 @@ def compile_unix_mkl_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
-            utils.pack_lib('cpu_mkl', mx_dist_lib, true)
+            utils.pack_lib('cpu_mkl', mx_mkldnn_lib, true)
           }
         }
       }
@@ -252,7 +252,7 @@ def compile_centos7_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_dist_lib, true)
+            utils.pack_lib('centos7_cpu', mx_lib, true)
           }
         }
       }

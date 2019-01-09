@@ -66,4 +66,4 @@ nosetests3 --verbose tests/python/train
 
 echo "BUILD scala_test"
 cd scala-package
-mvn install
+mvn integration-test -Dskip.test=false

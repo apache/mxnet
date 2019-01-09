@@ -69,5 +69,5 @@ nosetests3 --verbose tests/python/train || exit 1
 echo "BUILD scala_test"
 export PATH=$PATH:/opt/apache-maven/bin
 cd scala-package
-mvn install || exit 1
+mvn integration-test || exit 1
 
