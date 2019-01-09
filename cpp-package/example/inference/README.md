@@ -41,24 +41,28 @@ Alternatively, The script [unit_test_inception_inference.sh](<https://github.com
 ```
 
 ### [simple_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/simple_rnn.cpp>)
-This example demonstrates sequence prediction workflow with pre-trained RNN model using MXNet C++ API. The purpose of this example is to demonstrate how pre-trained RNN model can be loaded and used to generate an output sequence using C++ API.
-The example performs following tasks.
-- Load the pre-trained RNN model,
+This example demonstrates sequence prediction workflow with pre-trained RNN model using MXNet C++ API. The purpose of this example is to demonstrate how a pre-trained RNN model can be loaded and used to generate an output sequence using C++ API.
+The example performs following tasks
+- Load the pre-trained RNN model.
 - Load the dictionary file that contains word to index mapping.
 - Convert the input string to vector of indices and padded to match the input data length.
 - Run the forward pass and predict the output string.
 
-The example uses a pre-trained RNN model that is trained with the dataset containing speeches given by Obama. The model files can be found here.
+The example uses a pre-trained RNN model that is trained with the dataset containing speeches given by Obama.
+The model consists of :
+- Embedding Layer with the size of embedding to be 650
+- 3 LSTM Layers with hidden dimension size of 650 and sequence length of 35
+- FullyConnected Layer
+- SoftmaxOutput
+The model was trained for 100 epochs.
+
+The model files can be found here.
 - [obama-speaks-symbol.json](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama-speaks-symbol.json>)
 - [obama-speaks-0100.params](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama-speaks-0100.params>)
-- [obama.dictionary.txt](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama.dictionary.txt>) Each line of the dictionary file contains a word and an unique index for that word separated by a space. This dictionary file is created when the RNN model was trained with a particular dataset.
+- [obama.dictionary.txt](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama.dictionary.txt>) Each line of the dictionary file contains a word and a unique index for that word, separated by a space, with a total of 14293 words generated from the training dataset.
+The example downloads the above files while running.
 
-The example downloads the above files while running. The example is intentionally kept specific to a certain model because:
-- Unavailability of pre-trained RNN models that can be successfully imported using C++.
-- C++ API currently does not support bucketing. Hence the shape of input data needs to be fixed and known while loading the model.
-**TODO**: The example can later be enhanced once the above limitations are addressed.
-
-The command line parameters the example can accept are as shown below:
+The example's command line parameters are as shown below:
 
 ```
 ./simple_rnn --help
@@ -68,6 +72,15 @@ simple_rnn
 [--gpu]  Specify this option if workflow needs to be run in gpu context.
 
 ./simple_rnn
+
+or
+
+./simple_rnn --input "Good morning. I appreciate the opportunity to speak here"
+```
+
+The example will output the seqence of 35 words as follows:
+```
+[waters elected Amendment Amendment Amendment Amendment retirement maximize maximize maximize acr citi sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio ]
 ```
 
 Alternatively, user can run [unit_test_simple_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_simple_rnn.sh>) script.

@@ -24,15 +24,8 @@
  * 2. Load the dictionary file that contains word to index mapping.
  * 3. Convert the input string to vector of indices and padded to match the input data length.
  * 4. Run the forward pass and predict the output string.
- * TODO:
- * The purpose of this example is to demonstrate how pre-trained RNN model can be loaded and used
- * to generate an output sequence using C++ API.
  * The example uses a pre-trained RNN model that is trained with the dataset containing speaches
  * given by Obama.
- * The example is intentionally kept specific to a certain model because:
- * 1. Unavailability of pre-trained RNN models that can be successfully imported using C++.
- * 2. C++ API currently does not support bucketing. Hence the shape of input data needs to be
- *    fixed and known while loading the model.
  */
 
 #include <sys/stat.h>
@@ -43,11 +36,8 @@
 #include <string>
 #include <vector>
 #include "mxnet-cpp/MxNetCpp.h"
-#include <opencv2/opencv.hpp>
 
 using namespace mxnet::cpp;
-
-
 
 /*
  * class Predictor
@@ -61,9 +51,9 @@ class Predictor {
     Predictor(const std::string& model_json,
               const std::string& model_params,
               const std::string& input_dictionary,
-              bool gpu_context_type = false,
+              bool use_gpu = false,
               int sequence_length = 35);
-    void PredictText(const std::string& input_sequence);
+    std::string PredictText(const std::string &input_sequence);
     ~Predictor();
 
  private:
@@ -76,6 +66,7 @@ class Predictor {
     }
     void ConverToIndexVector(const std::string& input,
                       std::vector<float> *input_vector);
+    int GetIndexForOutputSymbolName(const std::string& output_symbol_name);
     std::map<std::string, NDArray> args_map;
     std::map<std::string, NDArray> aux_map;
     std::map<std::string, int>  wordToInt;
@@ -104,9 +95,9 @@ class Predictor {
 Predictor::Predictor(const std::string& model_json,
                      const std::string& model_params,
                      const std::string& input_dictionary,
-                     bool gpu_context_type,
+                     bool use_gpu,
                      int sequence_length):sequence_length(sequence_length) {
-  if (gpu_context_type) {
+  if (use_gpu) {
     global_ctx = Context::gpu();
   }
 
@@ -209,7 +200,7 @@ void Predictor::LoadDictionary(const std::string& input_dictionary) {
 void Predictor::ConverToIndexVector(const std::string& input, std::vector<float> *input_vector) {
   std::istringstream input_string(input);
   input_vector->clear();
-  char delimiter = ' ';
+  const char delimiter = ' ';
   std::string token;
   int words = 0;
   while (std::getline(input_string, token, delimiter) && (words <= input_vector->size())) {
@@ -221,53 +212,73 @@ void Predictor::ConverToIndexVector(const std::string& input, std::vector<float>
 
 
 /*
+ * The function returns the index at which the given symbol name will appear
+ * in the output vector of NDArrays obtained after running the forward pass on the executor.
+ */
+int Predictor::GetIndexForOutputSymbolName(const std::string& output_symbol_name) {
+  int index = 0;
+  for (const std::string op : net.ListOutputs()) {
+    if (op == output_symbol_name) {
+      return index;
+    } else {
+      index++;
+    }
+  }
+  throw std::runtime_error("The output symbol name can not be found");
+}
+
+
+/*
  * The following function runs the forward pass on the model.
  * The executor is created in the constructor.
  */
-void Predictor::PredictText(const std::string& input_text) {
+std::string Predictor::PredictText(const std::string& input_text) {
   /*
    * Initialize a vector of length equal to 'sequence_lenght' with 0.
    * Convert the input string to a vector of indices that represent
    * the words in the input string.
    */
-  std::vector<float> array(sequence_length, 0);
-  ConverToIndexVector(input_text, &array);
+  std::vector<float> index_vector(sequence_length, 0);
+  ConverToIndexVector(input_text, &index_vector);
 
   Shape input_shape(sequence_length, 1);
-  NDArray input_data = NDArray(input_shape, global_ctx, false);
-  input_data.SyncCopyFromCPU(array.data(), input_shape.Size());
-  NDArray::WaitAll();
+  NDArray input_data = NDArray(input_shape, Context::cpu(), false);
+  input_data.SyncCopyFromCPU(index_vector.data(), input_shape.Size());
 
   input_data.CopyTo(&(executor->arg_dict()["data"]));
-  NDArray::WaitAll();
+  input_data.WaitToRead();
+
 
   // Run the forward pass.
   executor->Forward(false);
 
-  // The output is available in executor->outputs.
+  /*
+   * The output is available in executor->outputs. It is a vector of
+   * NDArray. We need to find the index in that vector that
+   * corresponds to the output symbol "softmax_layer_output".
+   * The output "softmax_layer_output" has shape [sequence_length, vocab_size]
+   * The vocab_size in this case is equal to the size of dictionary.
+   */
+  int output_index = GetIndexForOutputSymbolName("softmax_layer_output");
   std::vector<NDArray> outputs = executor->outputs;
-  auto arrayout = executor->outputs[4].Copy(global_ctx);
-  NDArray::WaitAll();
+  auto arrayout = executor->outputs[output_index].Copy(global_ctx);
 
   /*
-   * The output is reshaped to [sequence_length, vocab_size]
-   * The vocab_size in this case is equal to the size of dictionary.
    * The output will contain the probability distribution for each of the
    * word in sequence.
    * We will run ArgmaxChannel operator to find out the index with the
    * highest probability. This index will point to word in the predicted
    * output string.
    */
-  arrayout = arrayout.Reshape(Shape(sequence_length, -1));
   arrayout = arrayout.ArgmaxChannel();
-  NDArray::WaitAll();
+  arrayout.WaitToRead();
 
   std::ostringstream oss;
   for (std::size_t i = 0; i < sequence_length; ++i) {
     auto charIndex = arrayout.At(0, i);
     oss << intToWord[charIndex] << " ";
   }
-  LG << "Output String Predicted by Model: [" << oss.str() << "]";
+  return oss.str();
 }
 
 
@@ -278,10 +289,12 @@ Predictor::~Predictor() {
   MXNotifyShutdown();
 }
 
+
 void printUsage() {
     std::cout << "Usage:" << std::endl;
     std::cout << "simple_rnn " << std::endl
-              << "[--input] Input string sequence."  << std::endl
+              << "[--input] Input string sequence. "
+              << "e.g. \"Good morning. I appreciate the opportunity to speak here\""  << std::endl
               << "[--gpu]  Specify this option if workflow needs to be run in gpu context "
               << std::endl;
 }
@@ -298,28 +311,29 @@ void Download_files(const std::vector<std::string> model_files) {
   return;
 }
 
+
 int main(int argc, char** argv) {
   std::string model_file_json = "./obama-speaks-symbol.json";
   std::string model_file_params ="./obama-speaks-0100.params";
   std::string input_dictionary = "./obama.dictionary.txt";
-  std::string input_sequence = "But what they did not understand however was that I had to take "
-                "Mr  Keyes seriously for he claimed to speak for my religion and my God";
+  std::string input_sequence = "Good morning. I appreciate the opportunity to speak here";
+
   int input_sequence_length = 35;
-  bool gpu_context_type = false;
+  bool use_gpu = false;
 
   int index = 1;
-    while (index < argc) {
-      if (strcmp("--input", argv[index]) == 0) {
-            index++;
-            input_sequence = (index < argc ? argv[index]:input_sequence);
-        } else if (strcmp("--gpu", argv[index]) == 0) {
-            gpu_context_type = true;
-        } else if (strcmp("--help", argv[index]) == 0) {
-            printUsage();
-            return 0;
-        }
+  while (index < argc) {
+    if (strcmp("--input", argv[index]) == 0) {
       index++;
+      input_sequence = (index < argc ? argv[index]:input_sequence);
+    } else if (strcmp("--gpu", argv[index]) == 0) {
+      use_gpu = true;
+    } else if (strcmp("--help", argv[index]) == 0) {
+      printUsage();
+      return 0;
     }
+    index++;
+  }
 
   /*
    * Download the trained RNN model file, param file and dictionary file.
@@ -339,13 +353,15 @@ int main(int argc, char** argv) {
 
   try {
     // Initialize the predictor object
-    Predictor predict(model_file_json, model_file_params, input_dictionary, gpu_context_type,
+    Predictor predict(model_file_json, model_file_params, input_dictionary, use_gpu,
                       input_sequence_length);
 
-    // Run the forward pass to predict the image.
-    predict.PredictText(input_sequence);
+    // Run the forward pass to predict the ouput sequence.
+    std::string output_sequence = predict.PredictText(input_sequence);
+    LG << "Output String Predicted by Model: [" << output_sequence << "]";
   } catch (std::runtime_error &error) {
     LG << "Execution failed with ERROR: " << error.what();
+    return 1;
   } catch (...) {
     /*
      * If underlying MXNet code has thrown an exception the error message is
@@ -353,6 +369,7 @@ int main(int argc, char** argv) {
      */
     LG << "Execution failed with following MXNet error";
     LG << MXGetLastError();
+    return 1;
   }
 
   return 0;
