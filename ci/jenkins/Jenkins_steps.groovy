@@ -28,8 +28,6 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdpart
 // Python wheels
 mx_pip = 'build/*.whl'
 
-// for scala build, need to pass extra libs when run with dist_kvstore
-mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
@@ -835,9 +833,9 @@ def test_unix_scala_cpu() {
 }
 
 def test_unix_scala_mkldnn_cpu(){
-  return ['Scala: CPU': {
+  return ['Scala: MKLDNN-CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-cpu') {
+        ws('workspace/ut-scala-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)

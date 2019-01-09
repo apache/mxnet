@@ -848,7 +848,7 @@ unittest_ubuntu_cpu_scala() {
     set -ex
     scala_prepare
     cd scala-package
-    mvn -B install
+    mvn -B integration-test
 }
 
 unittest_centos7_cpu_scala() {
@@ -856,14 +856,15 @@ unittest_centos7_cpu_scala() {
     cd /work/mxnet
     scala_prepare
     cd scala-package
-    mvn -B install
+    mvn -B integration-test
 }
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
     scala_prepare
     cd scala-package
-    mvn -B install
+    mvn -B integration-test
+    cd ..
     ./contrib/clojure-package/ci-test.sh
 }
 

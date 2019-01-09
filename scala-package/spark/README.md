@@ -17,7 +17,7 @@ Compile the Scala Package by
 
 ```bash
 cd scala-package
-mvn install
+mvn package
 ```
 
 This will automatically build the `spark` submodule. Now you can submit Spark job with these built jars.
