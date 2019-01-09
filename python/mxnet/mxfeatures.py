@@ -81,6 +81,12 @@ def has_feature(feature):
 
 
 def features_enabled():
+    """
+    Returns
+    -------
+    features: list of Feature
+        list of enabled features in the back-end
+    """
     res = []
     for f in Feature:
         if has_feature(f.value):
@@ -88,4 +94,10 @@ def features_enabled():
     return res
 
 def features_enabled_str(sep=', '):
+    """
+    Returns
+    -------
+    string with a comma separated list of enabled features in the back-end. For example:
+    "CPU_SSE, OPENMP, F16C, LAPACK, MKLDNN, OPENCV, SIGNAL_HANDLER, DEBUG"
+    """
     return sep.join(map(lambda x: x.name, features_enabled()))
