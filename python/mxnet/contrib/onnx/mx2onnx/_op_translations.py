@@ -643,7 +643,6 @@ def convert_identity(node, **kwargs):
     """
     return create_basic_op_node('ConstantFill', node, kwargs)
 
-
 @mx_op.register("InstanceNorm")
 def convert_instancenorm(node, **kwargs):
     """Map MXNet's InstanceNorm operator attributes to onnx's InstanceNormalization operator
