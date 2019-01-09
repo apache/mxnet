@@ -777,3 +777,14 @@ def lpnormalization(attrs, inputs, proto_obj):
     axis = int(attrs.get("axis", -1))
     new_attrs.update(axis=axis)
     return 'norm', new_attrs, inputs
+
+
+def upsampling(attrs, inputs, proto_obj):
+    """Rearranges blocks of spatial data into depth."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'scales':'scale',
+                                                               'mode':'sample_type'})
+    sample_type = new_attrs.get('sample_type', 'nearest')
+    if sample_type == 'linear':
+        new_attrs.update(sample_type=sample_type)
+
+    return "UpSampling", new_attrs, inputs
