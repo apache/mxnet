@@ -749,4 +749,3 @@ def lpnormalization(attrs, inputs, proto_obj):
     axis = int(attrs.get("axis", -1))
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'axis', axis})
     return 'norm', new_attrs, inputs
-
