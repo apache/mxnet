@@ -32,9 +32,9 @@ namespace mxnet {
 namespace features {
 
 
-class Storage {
+class FeatureSet {
  public:
-    Storage():
+    FeatureSet():
         feature_bits() {
         // GPU
         feature_bits.set(CUDA, MXNET_USE_CUDA);
@@ -105,10 +105,10 @@ class Storage {
     std::bitset<MAX_FEATURES> feature_bits;
 };
 
-static Storage storage;
+static FeatureSet featureSet;
 
 bool is_enabled(const unsigned feat) {
-    return storage.is_enabled(feat);
+    return featureSet.is_enabled(feat);
 }
 
 }  // namespace features
