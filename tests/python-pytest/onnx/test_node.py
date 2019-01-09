@@ -161,6 +161,29 @@ class TestNode(unittest.TestCase):
                 if check_shape:
                     npt.assert_equal(output[0].shape, outputshape)
 
+        input1 = get_rnd((1, 10, 2, 3))
+        ipsym = mx.sym.Variable("input1")
+        for test in test_scalar_ops:
+            if test == 'Add':
+                outsym = 2 + ipsym
+            if test == "Sub":
+                outsym = ipsym - 2
+            if test == "rSub":
+                outsym = ipsym.__rsub__(2)
+            if test == "Mul":
+                outsym = 2 * ipsym
+            if test == "Div":
+                outsym = ipsym / 2
+            if test == "Pow":
+                outsym = ipsym ** 2
+            forward_op = forward_pass(outsym, None, None, ['input1'], input1)
+            converted_model = onnx_mxnet.export_model(outsym, {}, [np.shape(input1)], np.float32,
+                                                      onnx_file_path=outsym.name + ".onnx")
+
+            sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+        result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+
+        npt.assert_almost_equal(result, forward_op)
 
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
 # fix_attributes = {'modify': {mxnet_attr_name: onnx_attr_name},
@@ -186,6 +209,8 @@ test_cases = [
      {'block_size': 2}, False, {}, True, False),
     ("test_softmax", mx.sym.SoftmaxOutput, "Softmax", [get_rnd((1000, 1000)), get_rnd(1000)],
      {'ignore_label': 0, 'use_ignore': False}, True, {}, True, False),
+    ("test_logistic_regression", mx.sym.LogisticRegressionOutput, "Sigmoid",
+     [get_rnd((1000, 1000)), get_rnd((1000, 1000))], {}, True),
     ("test_fullyconnected", mx.sym.FullyConnected, "Gemm", [get_rnd((4, 3)), get_rnd((4, 3)), get_rnd(4)],
      {'num_hidden': 4, 'name': 'FC'}, True, {}, True, False),
     ("test_lppool1", mx.sym.Pooling, "LpPool", [get_rnd((2, 3, 20, 20))],
@@ -210,6 +235,8 @@ test_cases = [
      [np.array([0, 0.1, 0.2, 0.3, 0.4]).astype("float32")],
      {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True)
 ]
+
+test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'Pow']
 
 if __name__ == '__main__':
     unittest.main()
