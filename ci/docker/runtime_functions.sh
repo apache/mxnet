@@ -1234,6 +1234,13 @@ nightly_java_demo_test_cpu() {
     ./bin/run_od.sh
 }
 
+nightly_scala_demo_test_cpu() {
+    set -ex
+    cd /work/mxnet/scala-package/mxnet-demo/scala-demo
+    make scalademo
+    bash bin/demo.sh
+    bash bin/run_im.sh
+}
 
 # Deploy
 

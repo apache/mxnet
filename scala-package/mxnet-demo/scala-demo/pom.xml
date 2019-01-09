@@ -9,6 +9,13 @@
     <name>MXNet Scala Demo</name>
     <packaging>pom</packaging>
 
+    <repositories>
+        <repository>
+            <id>Apache Snapshot</id>
+            <url>https://repository.apache.org/content/groups/snapshots</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.mxnet</groupId>
