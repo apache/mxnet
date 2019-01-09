@@ -25,13 +25,6 @@
 #ifndef MXNET_C_API_ERROR_H_
 #define MXNET_C_API_ERROR_H_
 
-#include <dmlc/base.h>
-#include <dmlc/logging.h>
-#include <mxnet/c_api.h>
-#include <mxnet/base.h>
-
-using namespace mxnet;
-
 /*!
  * \brief Macros to guard beginning and end section of all functions
  * every function starts with API_BEGIN()
