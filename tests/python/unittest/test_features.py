@@ -16,7 +16,9 @@
 # under the License.
 
 import mxnet as mx
+import sys
 from mxnet.mxfeatures import *
+from mxnet.base import MXNetError
 from nose.tools import *
 
 def test_runtime_features():
@@ -27,6 +29,10 @@ def test_runtime_features():
         ok_(type(f) is Feature)
     ok_(type(features_enabled_str()) is str)
     print("Features enabled: {}".format(features_enabled_str()))
+
+@raises(MXNetError)
+def test_has_feature_2large():
+    has_feature(sys.maxsize)
 
 
 if __name__ == "__main__":
