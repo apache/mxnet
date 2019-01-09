@@ -82,7 +82,6 @@ IMPLEMENTED_OPERATORS_TEST = {
     'import': ['test_gather',
                'test_global_lppooling',
                'test_softsign',
-               # 'test_reduce_',
                'test_mean',
                'test_averagepool_1d',
                'test_averagepool_2d_pads_count_include_pad',
