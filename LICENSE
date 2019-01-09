@@ -223,15 +223,12 @@
     6. 3rdparty/dmlc-core - For details, see, 3rdparty/dmlc-core/LICENSE
     7. 3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
     8. 3rdparty/tvm - For details, see, 3rdparty/tvm/LICENSE
-    9. 3rdparty/tvm/dmlc-core - For details, see, 3rdparty/tvm/dmlc-core/LICENSE
-    10. 3rdparty/tvm/dlpack - For details, see, 3rdparty/tvm/3rdparty/dlpack/LICENSE
-    11. 3rdparty/tvm/nnvm - For details, see, 3rdparty/tvm/nnvm/LICENSE
-    12. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
-    13. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
-    14. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
-    15. clojure-package - For details, see, contrib/clojure-package/LICENSE
-    16. R-package - For details, see, R-package/LICENSE
-    17. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
+    9. 3rdparty/tvm/3rdparty/dmlc-core - For details, see, 3rdparty/tvm/3rdparty/dmlc-core/LICENSE
+    10. 3rdparty/tvm/3rdparty/dlpack - For details, see, 3rdparty/tvm/3rdparty/dlpack/LICENSE
+    11. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
+    12. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
+    13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
+    14. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
 
 
     =======================================================================================
@@ -242,11 +239,10 @@
     2. Faster R-CNN - For details, see example/rcnn/LICENSE
     3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
     4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
-    5. HalideIR - For details, see nnvm/tvm/HalideIR/LICENSE
-    6. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
-    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
-    8. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
-    9. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
+    5. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
+    6. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
+    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
+    8. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
 
 
     =======================================================================================
