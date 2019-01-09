@@ -33,6 +33,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "jni_helper_func.h"
 
 JavaVM *_jvm;

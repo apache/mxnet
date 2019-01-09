@@ -54,6 +54,16 @@
     (is (instance? Option x))
     (is (= 1 (.get x)))))
 
+(deftest test->int-option
+  (let [x (util/->int-option 4.5)]
+    (is (instance? Option x))
+    (is (= 4 (.get x)))))
+
+(deftest test-empty->int-option
+  (let [x (util/->int-option nil)]
+    (is (instance? Option x))
+    (is (.isEmpty x))))
+
 (deftest test-option->value
   (is (= 2 (-> (util/->option 2)
                (util/option->value)))))

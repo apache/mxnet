@@ -96,7 +96,7 @@ private[mxnet] abstract class GeneratorBase {
       else if (isSymbol) "org.apache.mxnet.Symbol"
       else "org.apache.mxnet.NDArray"
       val typeAndOption =
-        CToScalaUtils.argumentCleaner(argName, argType, family)
+        CToScalaUtils.argumentCleaner(argName, argType, family, isJava)
       Arg(argName, typeAndOption._1, argDesc, typeAndOption._2)
     }
     val returnType =
@@ -191,7 +191,7 @@ private[mxnet] trait RandomHelpers {
   // unify call targets (random_xyz and sample_xyz) and unify their argument types
   private def unifyRandom(func: Func, isSymbol: Boolean): Func = {
     var typeConv = Set("org.apache.mxnet.NDArray", "org.apache.mxnet.Symbol",
-      "java.lang.Float", "java.lang.Integer")
+      "Float", "Int")
 
     func.copy(
       name = func.name.replaceAll("(random|sample)_", ""),

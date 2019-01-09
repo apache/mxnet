@@ -115,6 +115,8 @@ COMMANDS = OrderedDict([
         CMake(),
         create_virtualenv_default,
     ]),
+    ('[Website and docs build] Will build to docs/_build/html/',
+        "ci/docker/runtime_functions.sh deploy_docs"),
     ('[Docker] sanity_check. Check for linting and code formatting.',
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check"),
     ('[Docker] Python3 CPU unittests',
@@ -225,4 +227,3 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-

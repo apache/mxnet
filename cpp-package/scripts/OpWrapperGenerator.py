@@ -223,14 +223,14 @@ class Op:
             if arg.isEnum and use_name:
                 # comments
                 ret = ret + self.GenDescription(arg.description, \
-                                        '/*! \\breif ', \
+                                        '/*! \\brief ', \
                                         ' *        ')
                 ret = ret + " */\n"
                 # definition
                 ret = ret + arg.enum.GetDefinitionString(indent) + '\n'
         # create function comments
         ret = ret + self.GenDescription(self.description, \
-                                        '/*!\n * \\breif ', \
+                                        '/*!\n * \\brief ', \
                                         ' *        ')
         for arg in self.args:
             if arg.name != 'symbol_name' or use_name:

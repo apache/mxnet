@@ -33,4 +33,7 @@ apt-get install -y openjdk-8-jre
 apt-get update || true
 apt-get install -y \
     maven \
+    gnupg \
+    gnupg2 \
+    gnupg-agent \
     scala

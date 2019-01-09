@@ -18,11 +18,11 @@
 
 set -evx
 
-MXNET_HOME=${PWD}
+MXNET_HOME=$(cd "$(dirname $0)/../.."; pwd)
 EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
 #cd ${MXNET_HOME}/contrib/clojure-package
 #lein test
 #lein cloverage --codecov
-for i in `find ${EXAMPLES_HOME} -name test` ; do
-cd ${i} && lein test
+for test_dir in `find ${EXAMPLES_HOME} -name test` ; do
+  cd ${test_dir} && lein test
 done
