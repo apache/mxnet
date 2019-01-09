@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument
+# pylint: disable=not-an-iterable
 
 """runtime detection of compile time features in the native library"""
 
