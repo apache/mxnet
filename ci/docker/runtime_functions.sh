@@ -863,7 +863,7 @@ unittest_ubuntu_cpu_clojure() {
     set -ex
     scala_prepare
     cd scala-package
-    mvn -B integration-test
+    mvn -B install
     cd ..
     ./contrib/clojure-package/ci-test.sh
 }
