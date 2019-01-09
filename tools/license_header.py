@@ -60,24 +60,26 @@ under the License."""
 _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 
 # the folders or files that will be ignored
-_WHITE_LIST = ['R-package/',
+_WHITE_LIST = ['3rdparty',
                'docker/Dockerfiles',
-               '3rdparty',
-               'src/operator/mkl/',
-               'src/operator/special_functions-inl.h',
-               'src/operator/nn/pool.h',
-               'src/operator/contrib/psroi_pooling-inl.h',
-               'src/operator/contrib/nn/deformable_im2col.h',
-               'src/operator/contrib/nn/deformable_im2col.cuh',
-               'src/operator/nn/im2col.h',
-               'src/operator/nn/im2col.cuh',
-               'example/ssd/dataset/pycocotools/coco.py',
-               'example/rcnn/rcnn/cython/setup.py',
-               'example/rcnn/rcnn/cython/nms_kernel.cu',
-               'prepare_mkl.sh',
                'example/image-classification/predict-cpp/image-classification-predict.cc',
+               'example/rcnn/rcnn/cython/nms_kernel.cu',
+               'example/rcnn/rcnn/cython/setup.py',
+               'example/ssd/dataset/pycocotools/coco.py',
+               'julia/REQUIRE',
+               'prepare_mkl.sh',
+               'R-package/',
+               'scala-package/init-native/src/main/native/org_apache_mxnet_init_native_c_api.h',
+               'scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h',
                'src/operator/contrib/ctc_include/',
-               'julia/REQUIRE'
+               'src/operator/contrib/nn/deformable_im2col.cuh',
+               'src/operator/contrib/nn/deformable_im2col.h',
+               'src/operator/contrib/psroi_pooling-inl.h',
+               'src/operator/mkl/',
+               'src/operator/nn/im2col.cuh',
+               'src/operator/nn/im2col.h',
+               'src/operator/nn/pool.h',
+               'src/operator/special_functions-inl.h'
                ]
 
 # language extensions and the according commment mark

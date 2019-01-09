@@ -108,7 +108,7 @@ def compile_unix_cpu_openblas() {
 }
 
 def compile_unix_openblas_debug_cpu() {
-    return ['CPU: Openblas, debug': {
+    return ['CPU: Openblas, cmake, debug': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-openblas') {
           timeout(time: max_time, unit: 'MINUTES') {
@@ -268,7 +268,7 @@ def compile_centos7_cpu_mkldnn() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn', mx_lib, true)
+            utils.pack_lib('centos7_mkldnn', mx_mkldnn_lib, true)
           }
         }
       }
@@ -882,7 +882,7 @@ def test_unix_cpp_gpu() {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_gpu', mx_cmake_lib, true)
-            utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            utils.docker_run('ubuntu_gpu', 'unittest_cpp', true)
             utils.publish_test_coverage()
           }
         }
@@ -896,7 +896,21 @@ def test_unix_cpp_mkldnn_gpu() {
         ws('workspace/ut-cpp-mkldnn-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_mkldnn_gpu', mx_cmake_mkldnn_lib, true)
-            utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_cpp', true)
+            utils.docker_run('ubuntu_gpu', 'unittest_cpp', true)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_cpp_cpu() {
+    return ['Cpp: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-cpp-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_cpp', false)
             utils.publish_test_coverage()
           }
         }

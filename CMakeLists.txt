@@ -20,7 +20,7 @@ mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) 
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
+mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_SYSTEM_PROCESSOR MATCHES x86_64))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -215,7 +215,7 @@ if(ENABLE_TESTCOVERAGE)
   if(NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Aborting...")
   endif() # NOT GCOV_PATH
-  
+
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")

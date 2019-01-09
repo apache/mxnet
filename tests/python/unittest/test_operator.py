@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 from __future__ import print_function
+from __future__ import division
 import numpy as np
 import mxnet as mx
 import copy
@@ -6899,14 +6900,16 @@ def test_op_roi_align():
                ]
         return val, grad
 
-    def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio, dy):
+    def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio,
+            position_sensitive, dy):
         N, C, H, W = data.shape
         R = rois.shape[0]
         PH, PW = pooled_size
         assert len(rois.shape) == 2
         assert rois.shape[1] == 5
 
-        out = np.zeros((R, C, PH, PW))
+        C_out = C // PH // PW if position_sensitive else C
+        out = np.zeros((R, C_out, PH, PW))
         dx = np.zeros_like(data)
         drois = np.zeros_like(rois)
 
@@ -6924,24 +6927,25 @@ def test_op_roi_align():
                 roi_bin_grid_h = int(np.ceil(roi_h * 1.0 / PH))
                 roi_bin_grid_w = int(np.ceil(roi_w * 1.0 / PW))
             count = roi_bin_grid_h * roi_bin_grid_w
-            for c in range(C):
+            for c in range(C_out):
                 for ph in range(PH):
                     for pw in range(PW):
                         val = 0.0
+                        c_in = c * PH * PW + ph * PW + pw if position_sensitive else c
                         for iy in range(roi_bin_grid_h):
                             y = sh + ph * bin_h + (iy + 0.5) * bin_h / roi_bin_grid_h
                             for ix in range(roi_bin_grid_w):
                                 x = sw + pw * bin_w + (ix + 0.5) * bin_w / roi_bin_grid_w
-                                v, g = bilinear_interpolate(bdata[c], H, W, y, x)
+                                v, g = bilinear_interpolate(bdata[c_in], H, W, y, x)
                                 val += v
                                 # compute grad
                                 for qy, qx, qw in g:
-                                    dx[batch_ind, c, qy, qx] += dy[r, c, ph, pw] * qw * 1.0 / count
+                                    dx[batch_ind, c_in, qy, qx] += dy[r, c, ph, pw] * qw * 1.0 / count
 
                         out[r, c, ph, pw] = val * 1.0 / count
         return out, [dx, drois]
 
-    def test_roi_align_value(sampling_ratio=0):
+    def test_roi_align_value(sampling_ratio=0, position_sensitive=False):
         ctx=default_context()
         dtype = np.float32
 
@@ -6950,6 +6954,7 @@ def test_op_roi_align():
         assert H == W
         R = 7
         pooled_size = (3, 4)
+        C = C * pooled_size[0] * pooled_size[1] if position_sensitive else C
 
         spatial_scale = H * 1.0 / dlen
         data = mx.nd.array(np.arange(N*C*W*H).reshape((N,C,H,W)), ctx=ctx, dtype = dtype)
@@ -6964,11 +6969,14 @@ def test_op_roi_align():
         rois.attach_grad()
         with mx.autograd.record():
             output = mx.nd.contrib.ROIAlign(data, rois, pooled_size=pooled_size,
-                    spatial_scale=spatial_scale, sample_ratio=sampling_ratio)
-        dy = mx.nd.random.uniform(-1, 1, (R, C) + pooled_size, ctx=ctx, dtype = dtype)
+                    spatial_scale=spatial_scale, sample_ratio=sampling_ratio,
+                    position_sensitive=position_sensitive)
+        C_out = C // pooled_size[0] // pooled_size[1] if position_sensitive else C
+        dy = mx.nd.random.uniform(-1, 1, (R, C_out) + pooled_size, ctx=ctx, dtype = dtype)
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
-                                                             spatial_scale, sampling_ratio, dy.asnumpy())
+                                                             spatial_scale, sampling_ratio,
+                                                             position_sensitive, dy.asnumpy())
         assert np.allclose(output.asnumpy(), real_output)
         # It seems that the precision between Cfloat and Pyfloat is different.
         assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-5), np.abs(data.grad.asnumpy() - dx).max()
@@ -6994,7 +7002,8 @@ def test_op_roi_align():
                                numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
 
     test_roi_align_value()
-    test_roi_align_value(2)
+    test_roi_align_value(sampling_ratio=2)
+    test_roi_align_value(position_sensitive=True)
     test_roi_align_autograd()
 
 @with_seed()

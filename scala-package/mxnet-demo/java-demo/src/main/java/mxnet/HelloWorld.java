@@ -20,9 +20,13 @@ import org.apache.mxnet.javaapi.*;
 import java.util.Arrays;
 
 public class HelloWorld {
+    static NDArray$ NDArray = NDArray$.MODULE$;
+
     public static void main(String[] args) {
     	System.out.println("Hello World!");
         NDArray nd = new NDArray(new float[]{2.0f, 3.0f}, new Shape(new int[]{1, 2}), Context.cpu());
         System.out.println(nd.shape());
+        NDArray nd2 = NDArray.dot(NDArray.new dotParam(nd, nd.T()))[0];
+        System.out.println(Arrays.toString(nd2.toArray()));
     }
 }
