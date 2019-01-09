@@ -47,7 +47,7 @@ public class ImageTest {
         NDArray nd = Image.imRead(imLocation, 1, true);
         assertArrayEquals(nd.shape().toArray(), new int[]{576, 1024, 3});
         NDArray nd2 = Image.imResize(nd, 224, 224, null);
-        assertArrayEquals(nd.shape().toArray(), new int[]{224, 224, 3});
+        assertArrayEquals(nd2.shape().toArray(), new int[]{224, 224, 3});
         NDArray cropped = Image.fixedCrop(nd, 0, 0, 224, 224);
         Image.toImage(cropped);
     }
