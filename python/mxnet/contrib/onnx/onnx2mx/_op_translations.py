@@ -38,6 +38,19 @@ def random_normal(attrs, inputs, proto_obj):
     new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
     return 'random_uniform', new_attr, inputs
 
+def sample_multinomial(attrs, inputs, proto_obj):
+    """Draw random samples from a multinomial distribution."""
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
+    new_attrs = translation_utils._remove_attributes(attrs, ['seed'])
+    new_attrs = translation_utils._fix_attribute_names(new_attrs, {'sample_size': 'shape'})
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
+    return 'sample_multinomial', new_attrs, inputs
+
+
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
@@ -382,6 +395,7 @@ def global_lppooling(attrs, inputs, proto_obj):
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'lp',
                                                                 'p_value': p_value})
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
     return 'Pooling', new_attrs, inputs
 
 def linalg_gemm(attrs, inputs, proto_obj):
@@ -671,11 +685,12 @@ def lp_pooling(attrs, inputs, proto_obj):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
                                                         'strides': 'stride',
-                                                        'pads': 'pad',
-                                                        'p_value': p_value
+                                                        'pads': 'pad'
                                                        })
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid',
+                                                         'p_value': p_value
                                                         })
     new_op = translation_utils._fix_pooling('lp', inputs, new_attrs)
     return new_op, new_attrs, inputs

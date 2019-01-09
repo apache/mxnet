@@ -80,7 +80,6 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_reduce_'
              ],
     'import': ['test_gather',
-               'test_global_lppooling',
                'test_softsign',
                'test_mean',
                'test_averagepool_1d',
@@ -89,7 +88,6 @@ IMPLEMENTED_OPERATORS_TEST = {
                'test_averagepool_2d_precomputed_strides',
                'test_averagepool_2d_strides',
                'test_averagepool_3d',
-               'test_LpPool_',
                'test_split_equal',
                'test_hardmax'
                ],
