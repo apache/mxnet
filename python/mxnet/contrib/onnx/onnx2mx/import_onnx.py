@@ -88,7 +88,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         params : dict
             A dict of name: nd.array pairs, used as pretrained weights
         """
-        # get input, output shapes
+        #get input, output shapes
         self.model_metadata = self.get_graph_metadata(graph)
         # parse network inputs, aka parameters
         for init_tensor in graph.initializer:
