@@ -58,7 +58,7 @@ inline void _BinaryConvolutionForward(int m, int n, int k,
 	float *fC = temp_dst.dptr_;					
 	xnor_cuda::BINARY_WORD* binary_col = (xnor_cuda::BINARY_WORD*) workspace.dptr_;	
 
-	//concatinates matrix (n x k) -> (n/32 x k)
+	//concatinates matrix (k x n) -> (k/32 x n)
 	int threads_per_block = xnor_cuda::get_next_block_dim(n);
 	dim3 conc_block(threads_per_block,1,1);
   	dim3 conc_grid(n/threads_per_block+1,1);
@@ -72,8 +72,8 @@ inline void _BinaryConvolutionForward(int m, int n, int k,
 	dim3 block(threads_per_block, threads_per_block, 1);
 	dim3 grid(n/threads_per_block + 1, m/threads_per_block + 1);
 	xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>(wmat_binarized, binary_col, fC, 
-														  m, k/xnor_cuda::BITS_PER_BINARY_WORD, n,
-														  threads_per_block);		
+	                                                       m, k/xnor_cuda::BITS_PER_BINARY_WORD, n, 
+	                                                       threads_per_block);		
 	cudaDeviceSynchronize();	
 }
 }  // namespace cuda
