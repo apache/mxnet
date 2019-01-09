@@ -31,11 +31,10 @@
 namespace mshadow {
 namespace cuda {
 
-
 /*
  * m: number of output channels (num_filter) per group
  * n: number of pixels of output images per channel (output dimension)
- * k: number of input channels per group * kernel size
+ * k: number of input channels per group * kernel size(e.g., 3x3=9)
  */
 inline void _BinaryConvolutionForward(int m, int n, int k,
 										mxnet::op::xnor::BINARY_WORD* wmat_binarized,
@@ -46,42 +45,36 @@ inline void _BinaryConvolutionForward(int m, int n, int k,
 	CHECK_EQ(workspace.shape_.Size() * sizeof(workspace[0]) * CHAR_BIT, n * k);
 
 	// check matrix dims:
-	// temp_dst should have dims (m x n)
-	CHECK_EQ(k, (int)in_col.size(0));
+	// temp_dst should have dims (m x n)	
 	CHECK_EQ((int)temp_dst.size(0), m);
-	CHECK_EQ(n, (int)in_col.size(1));
 	CHECK_EQ((int)temp_dst.size(1), n);	
+	CHECK_EQ(n, (int)in_col.size(1));
+	CHECK_EQ(k, (int)in_col.size(0));
 	
 	cudaStream_t stream = Stream<gpu>::GetStream(temp_dst.stream_);
 	
 	//set memory
 	float *fB = in_col.dptr_;
 	float *fC = temp_dst.dptr_;					
-	BINARY_WORD* binary_col = (BINARY_WORD*) workspace.dptr_;	
+	xnor_cuda::BINARY_WORD* binary_col = (xnor_cuda::BINARY_WORD*) workspace.dptr_;	
 
 	//concatinates matrix (n x k) -> (n/32 x k)
-	int threads_per_block = BLOCK_SIZE_XNOR;
+	int threads_per_block = xnor_cuda::get_next_block_dim(n);
 	dim3 conc_block(threads_per_block,1,1);
   	dim3 conc_grid(n/threads_per_block+1,1);
-	concatenate_cols_kernel<<<conc_grid, conc_block, 0, stream>>>(fB, binary_col, k, n);
+	xnor_cuda::concatenate_cols_kernel<<<conc_grid, conc_block, 0, stream>>>(fB, binary_col, k, n);
 	cudaDeviceSynchronize();
 	
 	//perform xnor gemm
-	threads_per_block = BLOCK_SIZE_XNOR;
+	threads_per_block = xnor_cuda::get_next_block_dim(m, k/xnor_cuda::BITS_PER_BINARY_WORD, n);
+	// Shared memory used to store Asub and Bsub respectively
+  	int memsize = threads_per_block*threads_per_block*sizeof(xnor_cuda::BINARY_WORD)*2;
 	dim3 block(threads_per_block, threads_per_block, 1);
 	dim3 grid(n/threads_per_block + 1, m/threads_per_block + 1);
-	xnor_gemm<<<grid, block, 0, stream>>>(wmat_binarized, binary_col, fC, m, k/BITS_PER_BINARY_WORD, n);		
+	xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>(wmat_binarized, binary_col, fC, 
+														  m, k/xnor_cuda::BITS_PER_BINARY_WORD, n,
+														  threads_per_block);		
 	cudaDeviceSynchronize();	
-
-	// NOTE: gemm not correct for conv layer!!!!
-    // float* bcol_host = (float*)malloc(n*sizeof(float));
-	// cudaMemcpy(bcol_host, fC, n*sizeof(float), cudaMemcpyDeviceToHost);
-	// //print
-	// for (int i=0; i<n; i++) {		
-	// 	std::cout << bcol_host[i] << ' ';
-	// }
-	// std::cout << std::endl;
-	// free(bcol_host);
 }
 }  // namespace cuda
 

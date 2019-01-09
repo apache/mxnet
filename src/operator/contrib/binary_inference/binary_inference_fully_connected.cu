@@ -43,26 +43,30 @@ inline void _BinaryInferenceFullyConnectedForward(int m, int n, int k,
                                                  Tensor<gpu, 2, float> &out) {
                                       
   CHECK_EQ(workspace.shape_.Size() * sizeof(workspace[0]) * CHAR_BIT, n * m);         
-  int basic_factor_nchannel_input = BITS_PER_BINARY_WORD;
   cudaStream_t stream = Stream<gpu>::GetStream(out.stream_);
 
   //set memory
   float *fA = data.dptr_; 
   // float *fB = wmat.dptr_;
   float *fC = out.dptr_;  
-  BINARY_WORD* binary_row = (BINARY_WORD*) workspace.dptr_;
+  xnor_cuda::BINARY_WORD* binary_row = (xnor_cuda::BINARY_WORD*) workspace.dptr_;
         
   //concatinates matrix (m x n) -> (m x n/32)
-  int threads_per_block = BLOCK_SIZE_XNOR;
+  int threads_per_block = xnor_cuda::get_next_block_dim(m*n/xnor_cuda::BITS_PER_BINARY_WORD);
   dim3 conc_block(threads_per_block, 1, 1);
-  dim3 conc_grid(m*n/(threads_per_block*basic_factor_nchannel_input)+1,1);
-  concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, binary_row, m*n/basic_factor_nchannel_input);
+  dim3 conc_grid(m*n/(threads_per_block*xnor_cuda::BITS_PER_BINARY_WORD)+1,1);
+  xnor_cuda::concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, binary_row, m*n/xnor_cuda::BITS_PER_BINARY_WORD);
 
+  //get block size  
+  threads_per_block = xnor_cuda::get_next_block_dim(m, n/xnor_cuda::BITS_PER_BINARY_WORD, k);
+  // Shared memory used to store Asub and Bsub respectively
+  int memsize = threads_per_block*threads_per_block*sizeof(xnor_cuda::BINARY_WORD)*2;
   //perform xnor gemm
-  threads_per_block = BLOCK_SIZE_XNOR;
   dim3 block(threads_per_block, threads_per_block);
-  dim3 grid(k / threads_per_block + 1, m / threads_per_block + 1);
-  xnor_gemm<<<grid, block, 0, stream>>>(binary_row, wmat_binarized, fC, m, n/basic_factor_nchannel_input, k);   
+  dim3 grid(k/threads_per_block + 1, m/threads_per_block + 1);
+  xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>(binary_row, wmat_binarized, fC, 
+                                                  m, n/xnor_cuda::BITS_PER_BINARY_WORD, k, 
+                                                  threads_per_block);   
   cudaDeviceSynchronize();        
 }
 }  // namespace cuda

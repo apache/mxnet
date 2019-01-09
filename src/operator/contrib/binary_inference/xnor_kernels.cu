@@ -26,6 +26,8 @@
 
 #include "./xnor_kernels.h"
 
+namespace xnor_cuda {
+
 // 32 single float array ->  32 bits BINARY_WORD
 __device__ BINARY_WORD concatenate(float* array)
 {
@@ -80,7 +82,7 @@ __global__ void concatenate_cols_kernel(float *a, BINARY_WORD *b, int n, int k)
 // CUDA tutorial: http://www.nvidia.com/docs/IO/116711/sc11-cuda-c-basics.pdf
 // http://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#shared-memory
 // A is shape (m,n), B is shape (n,k) and C is shape (m,k)
-__global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n, int k) {
+__global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n, int k, int block_size) {
     
     // Block row and column
     int blockRow = blockIdx.y;
@@ -91,33 +93,33 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
     int col = threadIdx.x;
 
     // Each thread block computes one sub-matrix Csub of C
-    float* Csub = &C[BLOCK_SIZE_XNOR * k * blockRow + BLOCK_SIZE_XNOR * blockCol];
+    float* Csub = &C[block_size * k * blockRow + block_size * blockCol];
 
     // Shared memory used to store Asub and Bsub respectively
-    __shared__ BINARY_WORD As[BLOCK_SIZE_XNOR][BLOCK_SIZE_XNOR];
-    __shared__ BINARY_WORD Bs[BLOCK_SIZE_XNOR][BLOCK_SIZE_XNOR];
+    extern __shared__ BINARY_WORD sm[];
+    BINARY_WORD* As = sm;
+    BINARY_WORD* Bs = (BINARY_WORD*)&As[block_size*block_size];
     
     // Each thread computes one element of Csub
     // by accumulating results into Cvalue
-    // BLOCK_SIZE_XNOR = 16 -> 256 threads, one per Csub element
     float Cvalue = 0;
     
     // Loop over all the sub-matrices of A and B that are
     // required to compute Csub
     // Multiply each pair of sub-matrices together
     // and accumulate the results
-    for (int i = 0; i < (n / BLOCK_SIZE_XNOR); ++i) {
+    for (int i = 0; i < (n / block_size); ++i) {
     
         // Get sub-matrix Asub of A
-        BINARY_WORD* Asub = &A[BLOCK_SIZE_XNOR * blockRow * n + BLOCK_SIZE_XNOR * i];
+        BINARY_WORD* Asub = &A[block_size * blockRow * n + block_size * i];
         
         // Get sub-matrix Bsub of B
-        BINARY_WORD* Bsub = &B[BLOCK_SIZE_XNOR * k * i + BLOCK_SIZE_XNOR * blockCol];
+        BINARY_WORD* Bsub = &B[block_size * k * i + block_size * blockCol];
         
         // Load Asub and Bsub from device memory to shared memory
         // Each thread loads one element of each sub-matrix
-        As[row][col] = Asub[row*n+col];
-        Bs[row][col] = Bsub[row*k+col];
+        As[row*block_size + col] = Asub[row*n+col];
+        Bs[row*block_size + col] = Bsub[row*k+col];
     
         // Synchronize to make sure the sub-matrices are loaded
         // before starting the computation
@@ -126,7 +128,7 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
         // Multiply Asub and Bsub together
         // apply xnor and popcount: 
         //CUDA has population count intrinsics for both 32-bit and 64-bit types. (__popc() and __popcll())
-        for (int j = 0; j < BLOCK_SIZE_XNOR; ++j) Cvalue += (float)__popc(~(As[row][j]^Bs[j][col]));
+        for (int j = 0; j < block_size; ++j) Cvalue += (float)__popc(~(As[row*block_size + j]^Bs[j*block_size + col]));
         
         // Synchronize to make sure that the preceding
         // computation is done before loading two new
@@ -136,5 +138,6 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
     
     // Write Csub to device memory
     // Each thread writes one element    
-    if(col + blockCol* BLOCK_SIZE_XNOR< k && row + blockRow* BLOCK_SIZE_XNOR< m) Csub[row*k+col] = Cvalue;
+    if(col + blockCol* block_size< k && row + blockRow* block_size< m) Csub[row*k+col] = Cvalue;
 }
+}// namespace xnor_cuda

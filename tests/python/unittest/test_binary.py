@@ -320,14 +320,14 @@ def test_binary_inference_conv():
     size_binary_row = int(weight.size / bits_binary_word)
     weight_concatenated = np.zeros((size_binary_row), dtype='uint32')
     weight_concatenated = mx.nd.array(get_binary_row(weight.reshape(-1), 
-                                                     weight_concatenated, 
-                                                     weight.size, 
-                                                     bits_binary_word), 
-                                      dtype='float64') 
+                                                    weight_concatenated, 
+                                                    weight.size, 
+                                                    bits_binary_word), 
+                                                    dtype='float64') 
     weight_concatenated = weight_concatenated.reshape((weight.shape[0], 
-                                                        -1, 
-                                                        weight.shape[2], 
-                                                        weight.shape[3]))
+                                                    -1, 
+                                                    weight.shape[2], 
+                                                    weight.shape[3]))
     # create binary inference conv layer
     binary_infer_result = mx.ndarray.BinaryInferenceConvolution(data=input_data, 
                             weight=weight_concatenated, kernel=(kernel_dim, kernel_dim), num_filter=output_dim)
@@ -342,9 +342,8 @@ def test_binary_inference_conv():
     qact_result = qact.forward(input_data)
     qconv_result = qconv_layer.hybrid_forward(F, x=qact_result, weight=weight)
 
-    np.testing.assert_almost_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
+    np.testing.assert_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
     np.testing.assert_almost_equal(binary_infer_result.asnumpy(), qconv_result.asnumpy())
-    # assert_almost_equal(binary_infer_result, qconv_result)
 
 def test_binary_inference_fc():
     # setup data
@@ -370,7 +369,7 @@ def test_binary_inference_fc():
                                                     weight_T.shape[0], 
                                                     weight_T.shape[1], 
                                                     bits_binary_word), 
-                                    dtype='float64')
+                                                    dtype='float64')
     weight_concatenated = weight_concatenated.reshape((weight_T.shape[1], -1))
     assert weight_concatenated.shape[0] == num_hidden_fc
     assert weight_concatenated.shape[1] == num_input_features // bits_binary_word
@@ -387,11 +386,82 @@ def test_binary_inference_fc():
     qact_result = qact.forward(input_data)
     qdense_result = qdense_layer.hybrid_forward(F, x=qact_result, weight=weight)
 
-    np.testing.assert_almost_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
+    np.testing.assert_equal(binary_infer_result.asnumpy(), binary_infer_result2.asnumpy())
     np.testing.assert_almost_equal(binary_infer_result.asnumpy(), qdense_result.asnumpy())
-    # assert_almost_equal(binary_infer_result, qdense_result)
 
-# def test_binary_inference_conv_gpu():
-#     a = mx.nd.ones((1,32,8,8), ctx=mx.gpu(0))
-#     b = mx.nd.ones((1, 1, 5, 5), ctx=mx.gpu(0))
-#     c = mx.ndarray.BinaryInferenceConvolution(data=a, weight=b, kernel=(5,5), num_filter=1, no_bias=True)
+def gpu_device(gpu_number=0):
+    try:
+        _ = mx.nd.array([1, 2, 3], ctx=mx.gpu(gpu_number))
+    except mx.MXNetError:
+        return None
+    return mx.gpu(gpu_number)
+
+def test_binary_inference_fc_gpu_cpu():
+    '''
+    compares the outputs of binary_inference_fc from cpu and gpu implementations
+    '''
+    gpu_num = 0
+    if gpu_device(gpu_num):
+        # define variables
+        input_shapes = [(100,2048), (10,1024), (1,512), (1,64), (1,32)]# [(batch size, num of input channels)...]
+        hidden_nums = [1000, 512, 100, 13, 2]        
+        bits_binary_word = 32
+
+        for input_shape in input_shapes:
+            for hidden_num in hidden_nums:                        
+                weight_shape = (hidden_num, (int)(input_shape[1]/bits_binary_word))
+                
+                # create input tensor using gpu
+                input_g = mx.nd.random.uniform(-1, 1, shape=input_shape, ctx=mx.gpu(gpu_num))
+                # create a copy on cpu
+                input_c = mx.nd.array(input_g, dtype='float32', ctx=mx.cpu(0))
+                
+                # create weights
+                weight_np = np.random.randint(0, 2, size=weight_shape)    
+                weight_g = mx.nd.array(weight_np, dtype='int32', ctx=mx.gpu(gpu_num))
+                weight_c = mx.nd.array(weight_np, dtype='int32', ctx=mx.cpu(0))
+
+                # binary inferece forward
+                result_g = mx.ndarray.BinaryInferenceFullyConnected(data=input_g, weight=weight_g, num_hidden=hidden_num)
+                result_c = mx.ndarray.BinaryInferenceFullyConnected(data=input_c, weight=weight_c, num_hidden=hidden_num)
+                
+                np.testing.assert_equal(result_g.asnumpy(), result_c.asnumpy())        
+
+def test_binary_inference_conv_gpu_cpu():
+    '''
+    compares the outputs of binary_inference_conv from cpu and gpu implementations
+    '''
+    gpu_num = 0
+    if gpu_device(gpu_num):
+        # define variables
+        bits_binary_word = 32
+        filter_nums = [1, 5, 32, 64, 128, 512]
+        input_shapes = [(10,64,8,8), (10,256,8,8),(10,1024,8,8), (10,512,8,8),(10,32,51,51),
+                        (10,256,32,32),(10,32,10,10),(1,32,7,7)]# [(batch size, num of input channels, h, w)...]
+        conv_kernels = [(7,7), (3,3), (1,1)]
+
+        for input_shape in input_shapes:
+            for conv_kernel in conv_kernels:
+                for filter_num in filter_nums:
+                    weight_shape = (filter_num,
+                                    (int)(input_shape[1]/bits_binary_word),  # num input channels / bits
+                                    conv_kernel[0], 
+                                    conv_kernel[1])
+                    
+                    # create input tensor using gpu
+                    input_g = mx.nd.random.uniform(-1, 1, shape=input_shape, ctx=mx.gpu(gpu_num))
+                    # create a copy on cpu
+                    input_c = mx.nd.array(input_g, dtype='float32', ctx=mx.cpu(0))
+                    
+                    # create weights
+                    weight_np = np.random.randint(0, 2, size=weight_shape)    
+                    weight_g = mx.nd.array(weight_np, dtype='int32', ctx=mx.gpu(gpu_num))
+                    weight_c = mx.nd.array(weight_np, dtype='int32', ctx=mx.cpu(0))
+
+                    # binary inferece forward
+                    result_g = mx.nd.BinaryInferenceConvolution(data=input_g, weight=weight_g, 
+                                                                kernel=conv_kernel, num_filter=filter_num)
+                    result_c = mx.nd.BinaryInferenceConvolution(data=input_c, weight=weight_c, 
+                                                                kernel=conv_kernel, num_filter=filter_num)
+                    
+                    np.testing.assert_equal(result_g.asnumpy(), result_c.asnumpy())        
