@@ -1698,17 +1698,14 @@ def convert_norm(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mx_axis = attrs.get("axis", None)
-    axes = convert_string_to_list(str(mx_axis)) if mx_axis is not None else None
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis else None
 
     keepdims = get_boolean_attribute_value(attrs, "keepdims")
     ord = int(attrs.get("ord", 2))
 
-    if ord == 1:
-        onnx_op_name = "ReduceL1"
-    else:
-        onnx_op_name = "ReduceL2"
+    onnx_op_name = "ReduceL1" if ord == 1 else "ReduceL2"
 
-    if axes is not None:
+    if axes:
         reduce_node = onnx.helper.make_node(
             onnx_op_name,
             input_nodes,
