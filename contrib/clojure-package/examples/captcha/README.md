@@ -2,10 +2,10 @@
 
 This is the clojure version of [captcha recognition](https://github.com/xlvector/learning-dl/tree/master/mxnet/ocr)
 example by xlvector and mirrors the R captcha example. It can be used as an
-example of multi-label training. For a captcha below, we consider it as an
+example of multi-label training. For the following captcha example, we consider it as an
 image with 4 labels and train a CNN over the data set.
 
-![](captcha_example.png)
+![captcha example](captcha_example.png)
 
 ## Installation
 
@@ -18,19 +18,18 @@ Then you can run `lein install` in this directory.
 ### Training
 
 First the OCR model needs to be trained based on [labeled data](https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/R/data/captcha_example.zip).
-The training can be started using:
+The training can be started using the following:
 ```
 $ lein train [:cpu|:gpu] [num-devices]
 ```
-which downloads the training/evaluation data using the `get_data.sh` script
+This downloads the training/evaluation data using the `get_data.sh` script
 before starting training.
 
-I encountered some out-of-memory issues while training using :gpu on Ubuntu
-linux (18.04). However, the command `lein train` (training on one CPU) worked
-well for me.
+It is possible that you will encounter some out-of-memory issues while training using :gpu on Ubuntu
+linux (18.04). However, the command `lein train` (training on one CPU) may resolve the issue.
 
 The training runs for 10 iterations by default and saves the model with the
-prefix `ocr-`. I was able to achieve an exact match accuracy of ~0.954 and
+prefix `ocr-`. The model achieved an exact match accuracy of ~0.954 and
 ~0.628 on training and validation data respectively.
 
 ### Inference
@@ -52,7 +51,7 @@ INFO  org.apache.mxnet.util.NativeLibraryLoader: Deleting /tmp/mxnet604530827929
 INFO  org.apache.mxnet.util.NativeLibraryLoader: Deleting /tmp/mxnet6045308279291774865/mxnet-scala
 INFO  org.apache.mxnet.util.NativeLibraryLoader: Deleting /tmp/mxnet6045308279291774865
 ```
-The model is run on `captcha_example.png` by default.
+The model runs on `captcha_example.png` by default.
 
 It can be run on other generated captcha images as well. The script
 `gen_captcha.py` generates random captcha images for length 4.
