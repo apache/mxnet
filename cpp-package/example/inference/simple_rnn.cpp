@@ -241,13 +241,7 @@ std::string Predictor::PredictText(const std::string& input_text) {
   std::vector<float> index_vector(sequence_length, 0);
   ConverToIndexVector(input_text, &index_vector);
 
-  Shape input_shape(sequence_length, 1);
-  NDArray input_data = NDArray(input_shape, Context::cpu(), false);
-  input_data.SyncCopyFromCPU(index_vector.data(), input_shape.Size());
-
-  input_data.CopyTo(&(executor->arg_dict()["data"]));
-  input_data.WaitToRead();
-
+  executor->arg_dict()["data"].SyncCopyFromCPU(index_vector.data(), sequence_length);
 
   // Run the forward pass.
   executor->Forward(false);
