@@ -162,7 +162,6 @@ def dev(gpu_id=None):
     return mx.gpu(gpu_id) if gpu_id else mx.cpu()
 
 
-
 def run_mnist_SGD(num_training=50000, gpu_id=None):
     X, Y, X_test, Y_test = load_mnist(num_training)
     minibatch_size = 100
