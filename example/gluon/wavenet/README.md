@@ -48,6 +48,6 @@ python main.py --batch_size=32 --epoches=100 ...
 ![perf_loss](assets/loss.png)
 
 ## References
-- WaveNet: A Generative Model for Raw Audio [blog](https://deepmind.com/blog/wavenet-generative-model-raw-audio/)
-- WaveNet for Pytorch [link[(https://gist.github.com/lirnli/4282fcdfb383bb160cacf41d8c783c70#file-pytorch-wavenet-ipynb)
+- WaveNet: A Generative Model for Raw Audio | Deepmind [blog](https://deepmind.com/blog/wavenet-generative-model-raw-audio/)
+- WaveNet for Pytorch [link](https://gist.github.com/lirnli/4282fcdfb383bb160cacf41d8c783c70#file-pytorch-wavenet-ipynb)
 
