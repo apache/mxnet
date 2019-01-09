@@ -6,7 +6,11 @@ MXNet Scala JNI is a thin wrapper layer of underlying libmxnet.so.
 JNI native code requires a header file that matches the java/scala interface,
 this file is usually generated with javah.
 
-In our case, jni_helper_func.h is generated and will be used to compile native code.
+In our case, org_apache_mxnet_native_c.h is generated and will be used to compile native code.
+
+To improve build performance, we check in generated org_apache_mxnet_native_c.h file.
+And we added a check to detect mismatch with Scala code and generated header. The checker will
+make sure we won't forget to update org_apache_mxnet_native_c.h file.
 
 
 ## Linker options

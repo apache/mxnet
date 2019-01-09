@@ -113,9 +113,9 @@ def build_scala_docs(app):
     scala_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"'
     scala_doc_classpath = ':'.join([
         '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
-        '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `',
-        '`find core -name "*-SNAPSHOT.jar" | tr "\\n" ":" `',
-        '`find infer -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
+        '`find macros -name "*-INTERNAL.jar" | tr "\\n" ":" `',
+        '`find core -name "*-INTERNAL.jar" | tr "\\n" ":" `',
+        '`find infer -name "*-INTERNAL.jar" | tr "\\n" ":" `'
     ])
     # There are unresolvable errors on mxnet 1.2.x. We are ignoring those errors while aborting the ci on newer versions
     scala_ignore_errors = '; exit 0' if '1.2.' in _BUILD_VER else ''
@@ -135,9 +135,9 @@ def build_java_docs(app):
     java_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep \"\/javaapi\" | egrep -v \"Suite\"'
     java_doc_classpath = ':'.join([
         '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
-        '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `',
-        '`find core -name "*-SNAPSHOT.jar" | tr "\\n" ":" `',
-        '`find infer -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
+        '`find macros -name "*-INTERNAL.jar" | tr "\\n" ":" `',
+        '`find core -name "*-INTERNAL.jar" | tr "\\n" ":" `',
+        '`find infer -name "*-INTERNAL.jar" | tr "\\n" ":" `'
     ])
     _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation'
              .format(java_path, java_doc_sources, java_doc_classpath))

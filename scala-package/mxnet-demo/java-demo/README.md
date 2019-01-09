@@ -29,7 +29,7 @@ You can use the following instruction as an alternative to achieve the same resu
 User are required to use `mvn package` to build the package,
  which are shown below:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.3.1-SNAPSHOT
+export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.5.0-SNAPSHOT
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$SCALA_PKG_PROFILE \
 		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE \
@@ -97,5 +97,5 @@ sudo apt install libopencv-imgcodecs3.4
 
 Is there any other version available?
 
-You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~).
+You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0-SNAPSHOT~~).
 Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.
