@@ -210,7 +210,7 @@ test_cases = [
     ("test_softmax", mx.sym.SoftmaxOutput, "Softmax", [get_rnd((1000, 1000)), get_rnd(1000)],
      {'ignore_label': 0, 'use_ignore': False}, True, {}, True, False),
     ("test_logistic_regression", mx.sym.LogisticRegressionOutput, "Sigmoid",
-     [get_rnd((1000, 1000)), get_rnd((1000, 1000))], {}, True),
+     [get_rnd((1000, 1000)), get_rnd((1000, 1000))], {}, True, {}, True, False),
     ("test_fullyconnected", mx.sym.FullyConnected, "Gemm", [get_rnd((4, 3)), get_rnd((4, 3)), get_rnd(4)],
      {'num_hidden': 4, 'name': 'FC'}, True, {}, True, False),
     ("test_lppool1", mx.sym.Pooling, "LpPool", [get_rnd((2, 3, 20, 20))],
