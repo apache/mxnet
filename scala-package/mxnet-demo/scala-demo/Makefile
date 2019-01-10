@@ -17,7 +17,6 @@
 
 SCALA_VERSION_PROFILE := 2.11
 SCALA_VERSION := 2.11.8
-MXNET_VERSION := [1.5.0-SNAPSHOT,\)
 
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
@@ -44,11 +43,14 @@ endif
 scalademo:
 	(mvn package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
+		-Dscala.version=$(SCALA_VERSION))
+
+scalacidemo:
+	(mvn -Pci-nightly package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dscala.version=$(SCALA_VERSION))
 
 scalaclean:
 	(mvn clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION) \
 		-Dscala.version=$(SCALA_VERSION))
