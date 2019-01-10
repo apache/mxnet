@@ -21,12 +21,18 @@ pip install -r requirements.txt
 
 ## The Data
 - The GRID audiovisual sentence corpus (http://spandh.dcs.shef.ac.uk/gridcorpus/)
+  - GRID is a large multitalker audiovisual sentence corpus to support joint computational-behavioral studies in speech perception. In brief, the corpus consists of high-quality audio and video (facial) recordings of 1000 sentences spoken by each of 34 talkers (18 male, 16 female). Sentences are of the form "put red at G9 now". The corpus, together with transcriptions, is freely available for research use.
 - Video: (normal)(480 M each)
+  - Each movie has one sentence consist of 6 words.
 - Align: word alignments(190 K each) 
-
+  - One align has 6 words. Each word has start time and end time. But this tutorial needs just sentence because of using ctc-loss.
+  
 ## Prepare the Data
 ### Download the data
-- arguments
+- Outputs
+  - The Total Moives(mp4): 16GB
+  - The Total Aligns(text): 134MB
+- Arguments
   - src_path : Path for videos (default='./data/mp4s/')
   - align_path : Path for aligns (default='./data/')
   - n_process : num of process (default=1)
@@ -36,7 +42,13 @@ cd ./utils && python download_data.py --n_process $(nproc)
 ```
 
 ### Preprocess the Data: Extracting the mouth images from a video and save it.
-- arguments
+- Outputs
+  - The Total Images(png): 19GB
+- Elapsed time
+  - About 54 Hours using 1 process
+  - If you use the multi-processes, you can finish the number of processes faster.
+    - e.g) 9 hours using 6 processes
+- Arguments
   - src_path : Path for videos (default='./data/mp4s/')
   - tgt_path : Path for preprocessed images (default='./data/datasets/')
   - n_process : num of process (default=1)
