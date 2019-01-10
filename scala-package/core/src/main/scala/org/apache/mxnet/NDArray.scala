@@ -28,6 +28,7 @@ import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.implicitConversions
 import scala.ref.WeakReference
+import scala.util.Try
 
 /**
   * NDArray Object extends from NDArrayBase for abstract function signatures
@@ -718,7 +719,6 @@ object NDArray extends NDArrayBase {
     genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
   }
 
-  // TODO: imdecode
 }
 
 /**
@@ -744,6 +744,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
+
+  private val traceProperty = "mxnet.setNDArrayPrintLength"
+  private lazy val printLength = {
+    val value = Try(System.getProperty(traceProperty).toInt).getOrElse(1000)
+    value
+  }
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -808,13 +814,54 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     checkCall(_LIB.mxNDArraySyncCopyFromCPU(handle, source, source.length))
   }
 
-  private def syncCopyfrom(source: Array[Double]): Unit = {
-    require(source.length == size,
-      s"array size (${source.length}) do not match the size of NDArray ($size)")
-    checkCall(_LIB.mxFloat64NDArraySyncCopyFromCPU(handle, source, source.length))
+  /**
+    * Visualize the internal structure of NDArray
+    * @return String that show the structure
+    */
+  override def toString: String = {
+    val abstractND = buildStringHelper(this, this.shape.length)
+    val otherInfo = s"<NDArray ${this.shape} ${this.context} ${this.dtype}>"
+    s"$abstractND\n$otherInfo"
+  }
 
-  override def toString() : String = {
-    s"<NDArray ${this.shape} ${this.context}>"
+  /**
+    * Helper function to create formatted NDArray output
+    * The NDArray will be represented in a reduced version if too large
+    * @param nd NDArray as the input
+    * @param totalSpace totalSpace of the lowest dimension
+    * @return String format of NDArray
+    */
+  private def buildStringHelper(nd : NDArray, totalSpace : Int) : String = {
+    var result = ""
+    val THRESHOLD = 10      // longest NDArray[NDArray[...]] to show in full
+    val ARRAYTHRESHOLD = printLength   // longest array to show in full
+    val shape = nd.shape
+    val space = totalSpace - shape.length
+    if (shape.length != 1) {
+      val (length, postfix) =
+        if (shape(0) > THRESHOLD) {
+          // reduced NDArray
+          (10, s"\n${" " * (space + 1)}... with length ${shape(0)}\n")
+        } else {
+          (shape(0), "")
+        }
+      for (num <- 0 until length) {
+        val output = buildStringHelper(nd.at(num), totalSpace)
+        result += s"$output\n"
+      }
+      result = s"${" " * space}[\n$result${" " * space}$postfix${" " * space}]"
+    } else {
+      if (shape(0) > ARRAYTHRESHOLD) {
+        // reduced Array
+        val front = nd.slice(0, 10)
+        val back = nd.slice(shape(0) - 10, shape(0) - 1)
+        result = s"""${" " * space}[${front.toArray.mkString(",")}
+             | ... ${back.toArray.mkString(",")}]""".stripMargin
+      } else {
+        result = s"${" " * space}[${nd.toArray.mkString(",")}]"
+      }
+    }
+    result
   }
 
   /**

@@ -21,12 +21,14 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.mxnet.NDArrayConversions._
-import org.apache.mxnet.util.Visualize
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.slf4j.LoggerFactory
 import scala.collection.mutable.ArrayBuffer
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   private val sequence: AtomicInteger = new AtomicInteger(0)
+
+  private val logger = LoggerFactory.getLogger(classOf[NDArraySuite])
 
   test("to java array") {
     val ndarray = NDArray.zeros(2, 2)
@@ -106,10 +108,10 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   }
 
   test("test Visualize") {
-    var nd = NDArray.ones(Shape(1, 2, 100, 1))
-    Visualize.toString(nd)
+    var nd = NDArray.ones(Shape(1, 2, 1000, 1))
+    logger.info(s"Test print large ndarray:\n$nd")
     nd = NDArray.ones(Shape(1, 4))
-    Visualize.toString(nd)
+    logger.info(s"Test print small ndarray:\n$nd")
   }
 
   test("plus") {
