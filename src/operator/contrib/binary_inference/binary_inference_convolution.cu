@@ -92,7 +92,19 @@ inline void _BinaryConvolutionForward(int m, int n, int k,
 									Tensor<gpu, 1, float> &workspace,
 									const Tensor<gpu, 2, float> &in_col,
 									Tensor<gpu, 2, float> &temp_dst) {
-    	CHECK(false) << "cuda for non-concatenated weights not implemented";
+    	cudaStream_t stream = Stream<gpu>::GetStream(temp_dst.stream_);
+    	float *fA = wmat.dptr_;
+    	mxnet::op::xnor::BINARY_WORD *wmat_binarized;
+		cudaMalloc(&wmat_binarized, m*k/xnor_cuda::BITS_PER_BINARY_WORD*sizeof(mxnet::op::xnor::BINARY_WORD));
+    	//concatinates matrix (m x k) -> (m x k/32)
+		int threads_per_block = xnor_cuda::get_next_block_dim(m*k/xnor_cuda::BITS_PER_BINARY_WORD);
+	 	int blocks_per_grid = m * k / (threads_per_block * xnor_cuda::BITS_PER_BINARY_WORD) + 1;
+	 	dim3 conc_block(threads_per_block,1,1);
+  		dim3 conc_grid(blocks_per_grid,1);
+	 	xnor_cuda::concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, wmat_binarized, m * k / xnor_cuda::BITS_PER_BINARY_WORD);
+	 	cudaDeviceSynchronize();
+    	cuda::_BinaryConvolutionForward(m, n, k, wmat_binarized, workspace, in_col, temp_dst);
+    	cudaFree(wmat_binarized);
 	}
 
 	template<typename DType>
