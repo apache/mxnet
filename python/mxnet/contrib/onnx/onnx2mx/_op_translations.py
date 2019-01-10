@@ -742,7 +742,6 @@ def spacetodepth(attrs, inputs, proto_obj):
 
     return "space_to_depth", new_attrs, inputs
 
-
 def hardmax(attrs, inputs, proto_obj):
     """Returns batched one-hot vectors."""
     input_tensor_data = proto_obj.model_metadata.get('input_tensor_data')[0]

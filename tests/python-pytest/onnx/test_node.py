@@ -170,6 +170,30 @@ class TestNode(unittest.TestCase):
                 if check_shape:
                     npt.assert_equal(output[0].shape, outputshape)
 
+        input1 = get_rnd((1, 10, 2, 3))
+        ipsym = mx.sym.Variable("input1")
+        for test in test_scalar_ops:
+            if test == 'Add':
+                outsym = 2 + ipsym
+            if test == "Sub":
+                outsym = ipsym - 2
+            if test == "rSub":
+                outsym = ipsym.__rsub__(2)
+            if test == "Mul":
+                outsym = 2 * ipsym
+            if test == "Div":
+                outsym = ipsym / 2
+            if test == "Pow":
+                outsym = ipsym ** 2
+            forward_op = forward_pass(outsym, None, None, ['input1'], input1)
+            converted_model = onnx_mxnet.export_model(outsym, {}, [np.shape(input1)], np.float32,
+                                                      onnx_file_path=outsym.name + ".onnx")
+
+            sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+        result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+
+        npt.assert_almost_equal(result, forward_op)
+
     def test_imports(self):
         for test in import_test_cases:
             test_name, onnx_name, inputs, np_op, attrs = test
@@ -181,7 +205,6 @@ class TestNode(unittest.TestCase):
                 bkd_rep = backend.prepare(onnx_model, operation='import')
                 mxnet_out = bkd_rep.run(inputs)
                 npt.assert_almost_equal(np_out, mxnet_out)
-
 
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
 # fix_attributes = {'modify': {mxnet_attr_name: onnx_attr_name},
@@ -207,6 +230,8 @@ test_cases = [
      {'block_size': 2}, False, {}, True, False),
     ("test_softmax", mx.sym.SoftmaxOutput, "Softmax", [get_rnd((1000, 1000)), get_rnd(1000)],
      {'ignore_label': 0, 'use_ignore': False}, True, {}, True, False),
+    ("test_logistic_regression", mx.sym.LogisticRegressionOutput, "Sigmoid",
+     [get_rnd((1000, 1000)), get_rnd((1000, 1000))], {}, True, {}, True, False),
     ("test_fullyconnected", mx.sym.FullyConnected, "Gemm", [get_rnd((4, 3)), get_rnd((4, 3)), get_rnd(4)],
      {'num_hidden': 4, 'name': 'FC'}, True, {}, True, False),
     ("test_lppool1", mx.sym.Pooling, "LpPool", [get_rnd((2, 3, 20, 20))],
@@ -240,12 +265,13 @@ test_cases = [
      {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True)
 ]
 
+test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'Pow']
+
 # test_case = ("test_case_name", "ONNX_op_name", [input_list], np_op, attribute map)
 import_test_cases = [
     ("test_lpnormalization_default", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':-1}),
     ("test_lpnormalization_ord1", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':1, 'axis':-1}),
-    ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1}),
-    ("test_lpnormalization_ord_axis", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':1, 'axis':2})
+    ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1})
 ]
 
 if __name__ == '__main__':
