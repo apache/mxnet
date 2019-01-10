@@ -814,6 +814,12 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     checkCall(_LIB.mxNDArraySyncCopyFromCPU(handle, source, source.length))
   }
 
+  private def syncCopyfrom(source: Array[Double]): Unit = {
+    require(source.length == size,
+      s"array size (${source.length}) do not match the size of NDArray ($size)")
+    checkCall(_LIB.mxFloat64NDArraySyncCopyFromCPU(handle, source, source.length))
+  }
+
   /**
     * Visualize the internal structure of NDArray
     * @return String that show the structure
