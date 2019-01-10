@@ -33,15 +33,12 @@ from common import assertRaises, setup_module, with_seed, teardown
 set_default_context(mx.gpu(0))
 
 @with_seed()
-def test_normalize():
+def test_to_tensor():
     # 3D Input
-    data_in_3d = nd.random.uniform(0, 1, (3, 300, 300))
-    out_nd_3d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_3d)
-    data_expected_3d = data_in_3d.asnumpy()
-    data_expected_3d[:][:][0] = data_expected_3d[:][:][0] / 3.0
-    data_expected_3d[:][:][1] = (data_expected_3d[:][:][1] - 1.0) / 2.0
-    data_expected_3d[:][:][2] = data_expected_3d[:][:][2] - 2.0
-    assert_almost_equal(data_expected_3d, out_nd_3d.asnumpy())
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(out_nd.asnumpy(), np.transpose(
+        data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
 
     # 4D Input
     data_in_4d = nd.random.uniform(0, 1, (2, 3, 300, 300))
@@ -129,3 +126,12 @@ def test_resize():
     out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
     assert_almost_equal(out_nd_4d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100), atol=1.0)
 
+    data_in = np.random.uniform(0, 255, (5, 300, 300, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(out_nd.asnumpy(), np.transpose(
+        data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
+    
+    # Invalid Input
+    invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)
+    transformer = transforms.ToTensor()
+    assertRaises(MXNetError, transformer, invalid_data_in)

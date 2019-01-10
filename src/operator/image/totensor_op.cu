@@ -16,3 +16,15 @@
 * specific language governing permissions and limitations
 * under the License.
 */
+#include "./totensor_op-inl.h"
+
+namespace mxnet {
+namespace op {
+namespace image {
+
+NNVM_REGISTER_OP(_image_to_tensor)
+.set_attr<FCompute>("FCompute<gpu>", ToTensorOpForward<gpu>);
+
+}  // namespace image
+}  // namespace op
+}  // namespace mxnet

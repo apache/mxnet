@@ -58,7 +58,7 @@ Example:
   })
 .set_attr<nnvm::FInferShape>("FInferShape", ToTensorShape)
 .set_attr<nnvm::FInferType>("FInferType", ToTensorType)
-.set_attr<FCompute>("FCompute<cpu>", ToTensor)
+.set_attr<FCompute>("FCompute<cpu>", ToTensorOpForward<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};

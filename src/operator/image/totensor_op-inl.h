@@ -75,38 +75,61 @@ inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
 }
 
 // Operator Implementation
-void ToTensorImpl(const std::vector<TBlob> &inputs,
-                        const std::vector<TBlob> &outputs,
-                        const int length,
-                        const int channel,
-                        const int step = 0) {
+
+template<int req>
+struct totensor_forward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int l, float* out_data, const DType* in_data,
+                                  const int c, const int length, const int channel,
+                                  const int step, const float normalize_factor = 255.0f) {
+      KERNEL_ASSIGN(out_data[step + c*length + l], req,
+                    (in_data[step + l*channel + c]) / normalize_factor);
+  }
+};
+
+template<typename xpu>
+void ToTensorImpl(const OpContext &ctx,
+                  const std::vector<TBlob> &inputs,
+                  const std::vector<TBlob> &outputs,
+                  const std::vector<OpReqType> &req,
+                  const int length,
+                  const int channel,
+                  const int step = 0) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       float* output = outputs[0].dptr<float>();
       DType* input = inputs[0].dptr<DType>();
 
-      for (int l = 0; l < length; ++l) {
-        for (int c = 0; c < channel; ++c) {
-          output[step + c*length + l] = static_cast<float>(input[step + l*channel + c]) / 255.0f;
-        }
+      for (int c = 0; c < channel; ++c) {
+        mxnet_op::Kernel<totensor_forward<req_type>, xpu>::Launch(
+          s, length, output, input, c, length, channel, step);
       }
     });
+  });
 }
 
-void ToTensor(const nnvm::NodeAttrs &attrs,
-                     const OpContext &ctx,
-                     const std::vector<TBlob> &inputs,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<TBlob> &outputs) {
-  CHECK_EQ(req[0], kWriteTo)
-    << "`to_tensor` does not support inplace";
+template<typename xpu>
+void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
 
-  // 3D Input - 1 image
+  CHECK_EQ(req[0], kWriteTo)
+    << "`to_tensor` does not support inplace updates";
+
+  // 3D Input - (h, w, c)
   if (inputs[0].ndim() == 3) {
     const int length = inputs[0].shape_[0] * inputs[0].shape_[1];
     const int channel = inputs[0].shape_[2];
-    ToTensorImpl(inputs, outputs, length, channel);
+    ToTensorImpl<xpu>(ctx, inputs, outputs, req, length, channel);
   } else if (inputs[0].ndim() == 4) {
-    // 4D input batch of images
+    // 4D input (n, h, w, c)
     const int batch_size = inputs[0].shape_[0];
     const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
     const int channel = inputs[0].shape_[3];
@@ -114,7 +137,7 @@ void ToTensor(const nnvm::NodeAttrs &attrs,
 
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {
-      ToTensorImpl(inputs, outputs, length, channel, n*step);
+      ToTensorImpl<xpu>(ctx, inputs, outputs, req, length, channel, n*step);
     }
   }
 }
