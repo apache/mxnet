@@ -139,9 +139,18 @@ class TestNode(unittest.TestCase):
             test_name, mxnet_op, onnx_name, inputs, attrs, mxnet_specific, fix_attrs, check_value, check_shape = test
             with self.subTest(test_name):
                 names, input_tensors, inputsym = get_input_tensors(inputs)
-                test_op = mxnet_op(*inputsym, **attrs)
-                mxnet_output = forward_pass(test_op, None, None, names, inputs)
-                outputshape = np.shape(mxnet_output)
+                if inputs:
+                    test_op = mxnet_op(*inputsym, **attrs)
+                    mxnet_output = forward_pass(test_op, None, None, names, inputs)
+                    outputshape = np.shape(mxnet_output)
+                else:
+                    test_op = mxnet_op(**attrs)
+                    shape = attrs.get('shape', (1,))
+                    x = mx.nd.zeros(shape, dtype='float32')
+                    xgrad = mx.nd.zeros(shape, dtype='float32')
+                    exe = test_op.bind(ctx=mx.cpu(), args={'x': x}, args_grad={'x': xgrad})
+                    mxnet_output = exe.forward(is_train=False)[0].asnumpy()
+                    outputshape = np.shape(mxnet_output)
 
                 if mxnet_specific:
                     onnxmodelfile = onnx_mxnet.export_model(test_op, {}, [np.shape(ip) for ip in inputs],
@@ -216,11 +225,19 @@ test_cases = [
      {'kernel': (4, 5), 'pad': (0, 0), 'stride': (1, 1), 'p_value': 2, 'pool_type': 'lp', 'global_pool': True}, False,
      {'modify': {'p_value': 'p'},
       'remove': ['pool_type', 'kernel', 'pad', 'stride', 'global_pool']}, True, False),
+    ("test_roipool", mx.sym.ROIPooling, "MaxRoiPool",
+     [[[get_rnd(shape=(8, 6), low=1, high=100, dtype=np.int32)]], [[0, 0, 0, 4, 4]]],
+     {'pooled_size': (2, 2), 'spatial_scale': 0.7}, False,
+     {'modify': {'pooled_size': 'pooled_shape'}}, True, False),
 
     # since results would be random, checking for shape alone
     ("test_multinomial", mx.sym.sample_multinomial, "Multinomial",
      [np.array([0, 0.1, 0.2, 0.3, 0.4]).astype("float32")],
-     {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True)
+     {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True),
+    ("test_random_normal", mx.sym.random_normal, "RandomNormal", [],
+     {'shape': (2, 2), 'loc': 0, 'scale': 1}, False, {'modify': {'loc': 'mean'}}, False, True),
+    ("test_random_uniform", mx.sym.random_uniform, "RandomUniform", [],
+     {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True)
 ]
 
 # test_case = ("test_case_name", "ONNX_op_name", [input_list], np_op, attribute map)
