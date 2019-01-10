@@ -614,13 +614,13 @@ scalaclean:
 	(cd $(ROOTDIR)/scala-package && mvn clean)
 
 scalapkg:
-	(cd $(ROOTDIR)/scala-package && mvn install -DskipTests)
+	(cd $(ROOTDIR)/scala-package && mvn install -q -DskipTests)
 
 scalainstall:
-	(cd $(ROOTDIR)/scala-package && mvn install)
+	(cd $(ROOTDIR)/scala-package && mvn install -q)
 
 scalaunittest:
-	(cd $(ROOTDIR)/scala-package && mvn install)
+	(cd $(ROOTDIR)/scala-package && mvn install -q)
 
 scalaintegrationtest:
 	(cd $(ROOTDIR)/scala-package && mvn integration-test -DskipTests=false)
