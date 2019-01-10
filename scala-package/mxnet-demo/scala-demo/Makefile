@@ -45,7 +45,7 @@ scalademo:
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dscala.version=$(SCALA_VERSION))
 
-scalacidemo:
+scala_ci_demo:
 	(mvn -Pci-nightly package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
 		-Dscala.version=$(SCALA_VERSION))

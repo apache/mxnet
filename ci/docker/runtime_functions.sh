@@ -1237,7 +1237,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    make scalacidemo
+    make scala_ci_demo
     bash bin/demo.sh
     bash bin/run_im.sh
 }
