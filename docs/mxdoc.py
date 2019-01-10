@@ -118,7 +118,7 @@ def build_scala_docs(app):
         '`find infer -name "*.jar" | tr "\\n" ":" `'
     ])
     # There are unresolvable errors on mxnet 1.2.x. We are ignoring those errors while aborting the ci on newer versions
-    scala_ignore_errors = '; exit 0' if '1.2.' in _BUILD_VER else ''
+    scala_ignore_errors = '; exit 0' if '1.2.' or '1.3.' in _BUILD_VER else ''
     _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation {}'
              .format(scala_path, scala_doc_sources, scala_doc_classpath, scala_ignore_errors))
     dest_path = app.builder.outdir + '/api/scala/docs'
