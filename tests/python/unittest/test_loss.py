@@ -424,7 +424,7 @@ def test_poisson_nllloss_mod():
 @with_seed()
 def test_bce_loss_with_pos_weight():
     #Suppose it's a multi-label classification
-    N = 20
+    N = np.random.randint(5,30)
     data = mx.nd.random.uniform(-1, 1, shape=(N, 20))
     label = mx.nd.array(np.random.randint(2, size=(N, 5)), dtype='float32')
     pos_weight = mx.nd.random.uniform(0, 10, shape=(1, 5))
@@ -442,8 +442,8 @@ def test_bce_loss_with_pos_weight():
             initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
     # Test against npy
-    data = mx.nd.random.uniform(-5, 5, shape=(10, 5))
-    label =mx.nd.array(np.random.randint(2, size=(10, 5)), dtype='float32')
+    data = mx.nd.random.uniform(-5, 5, shape=(N, 5))
+    label =mx.nd.array(np.random.randint(2, size=(N, 5)), dtype='float32')
     pos_weight = mx.nd.random.uniform(0, 10, shape=(1, 5))
     mx_bce_loss = Loss(data, label, pos_weight).asnumpy()
     prob_npy = 1.0 / (1.0 + np.exp(-data.asnumpy()))
