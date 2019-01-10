@@ -23,7 +23,7 @@ set -ex
 # export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
 
 # Run python to configure keys
-python3 $PWD/scala-package/dev/buildkey.py
+python3 ci/publish/scala/buildkey.py
 
 # Updating cache
 mkdir -p ~/.gnupg
@@ -34,11 +34,8 @@ echo "pinentry-mode loopback" >> ~/.gnupg/gpg-agent.conf
 export GPG_TTY=$(tty)
 
 cd scala-package
-VERSION=$(mvn -q -Dexec.executable="echo" -Dexec.args='${project.version}' --non-recursive exec:exec)
-cd ..
 
-# echo "\n\n$VERSION\n" | make scalarelease-dryrun
-make scaladeploy CI=1
+mvn -B deploy -Pnightly
 
 # Clear all password .xml files, exp files, and gpg key files
 rm -rf ~/.m2/*.xml ~/.m2/key.asc ~/.m2/*.exp

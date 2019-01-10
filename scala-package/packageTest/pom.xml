@@ -42,7 +42,7 @@
         <repositories>
           <repository>
             <id>local-snapshot</id>
-            <url>file://${basedir}/../local-snapshot</url>
+            <url>file://${basedir}/../deploy/target/repo</url>
             <snapshots>
               <enabled>true</enabled>
             </snapshots>
