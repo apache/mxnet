@@ -11,7 +11,7 @@
   </parent>
 
   <properties>
-    <skipTests>false</skipTests>
+    <skipJavaTests>false</skipJavaTests>
   </properties>
 
   <artifactId>mxnet-infer</artifactId>

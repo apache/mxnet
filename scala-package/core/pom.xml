@@ -14,7 +14,7 @@
   <name>MXNet Scala Package - Core</name>
 
   <properties>
-    <skipTests>false</skipTests>
+    <skipJavaTests>false</skipJavaTests>
   </properties>
 
   <build>

@@ -42,7 +42,7 @@
     <cxx>g++</cxx>
     <dollar>$</dollar>
     <MXNET_DIR>${project.basedir}/..</MXNET_DIR>
-    <skipTests>true</skipTests>
+    <skipJavaTests>true</skipJavaTests>
   </properties>
 
   <packaging>pom</packaging>
@@ -231,7 +231,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>2.22.0</version>
         <configuration>
-          <skipTests>${skipTests}</skipTests>
+          <skipTests>${skipJavaTests}</skipTests>
             <argLine>
               -Djava.library.path=${project.parent.basedir}/native/target
             </argLine>
