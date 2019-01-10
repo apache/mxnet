@@ -268,8 +268,8 @@ and max thresholds representing the threholds for quantizing the float32 output 
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-.set_attr<FComputeEx>("FComputeEx<cpu>",
-    QuantizedFullyConnectedForward<int8_t>)
+//.set_attr<FComputeEx>("FComputeEx<cpu>",
+//    QuantizedFullyConnectedForward<int8_t>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
