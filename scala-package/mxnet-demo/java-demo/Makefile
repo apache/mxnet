@@ -40,11 +40,11 @@ else
 endif
 
 javademo:
-	(mvn install dependency:copy-dependencies package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn install -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE))
 
 java_ci_demo:
-	(mvn -Pci-nightly install dependency:copy-dependencies package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+	(mvn -Pci-nightly install -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
 		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE))
 
 javaclean:
