@@ -1229,7 +1229,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    make javademo
+    make java_ci_demo
     ./bin/java_sample.sh
     ./bin/run_od.sh
 }
