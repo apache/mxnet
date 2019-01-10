@@ -40,9 +40,11 @@
 (deftest test-single-detection
   (let [detector (create-detector)
         image (infer/load-image-from-file "test/test-images/kitten.jpg")
+        [predictions-all] (infer/detect-objects detector image)
         [predictions] (infer/detect-objects detector image 5)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
+    (is (= 13 (count predictions-all)))
     (is (every? #(= 2 (count %)) predictions))
     (is (every? #(string? (first %)) predictions))
     (is (every? #(= 5 (count (second %))) predictions))
@@ -53,9 +55,11 @@
   (let [detector (create-detector)
         image-batch (infer/load-image-paths ["test/test-images/kitten.jpg"
                                              "test/test-images/Pug-Cookie.jpg"])
+        batch-predictions-all (infer/detect-objects-batch detector image-batch)
         batch-predictions (infer/detect-objects-batch detector image-batch 5)
         predictions (first batch-predictions)]
     (is (some? batch-predictions))
+    (is (= 13 (count (first batch-predictions-all))))
     (is (= 5 (count predictions)))
     (is (every? #(= 2 (count %)) predictions))
     (is (every? #(string? (first %)) predictions))

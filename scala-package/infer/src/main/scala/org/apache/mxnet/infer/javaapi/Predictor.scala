@@ -73,6 +73,30 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
   }
 
   /**
+    * Takes input as Array of one dimensional arrays and creates the NDArray needed for inference
+    * The array will be reshaped based on the input descriptors. Example of calling in Java:
+    *
+    * <pre>
+    * {@code
+    * double tmp[][] = new double[1][224];
+    * for (int x = 0; x < 1; x++)
+    *   for (int y = 0; y < 224; y++)
+    *     tmp[x][y] = (int)(Math.random()*10);
+    * predictor.predict(tmp);
+    * }
+    * </pre>
+    *
+    * @param input:            An Array of a one-dimensional array.
+                              An extra Array is needed for when the model has more than one input.
+    * @return                  Indexed sequence array of outputs
+    */
+
+  def predict(input: Array[Array[Double]]):
+  Array[Array[Double]] = {
+    predictor.predict(input).toArray
+  }
+
+  /**
     * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
     *

@@ -40,7 +40,11 @@
 (deftest test-single-classification
   (let [classifier (create-classifier)
         image (infer/load-image-from-file "test/test-images/kitten.jpg")
-        [predictions] (infer/classify-image classifier image 5)]
+        [predictions-all] (infer/classify-image classifier image)
+        [predictions-with-default-dtype] (infer/classify-image classifier image 10)
+        [predictions] (infer/classify-image classifier image 5 dtype/FLOAT32)]
+    (is (= 1000 (count predictions-all)))
+    (is (= 10 (count predictions-with-default-dtype)))
     (is (some? predictions))
     (is (= 5 (count predictions)))
     (is (every? #(= 2 (count %)) predictions))
@@ -58,8 +62,12 @@
   (let [classifier (create-classifier)
         image-batch (infer/load-image-paths ["test/test-images/kitten.jpg"
                                              "test/test-images/Pug-Cookie.jpg"])
-        batch-predictions (infer/classify-image-batch classifier image-batch 5)
+        batch-predictions-all (infer/classify-image-batch classifier image-batch)
+        batch-predictions-with-default-dtype (infer/classify-image-batch classifier image-batch 10)
+        batch-predictions (infer/classify-image-batch classifier image-batch 5 dtype/FLOAT32)
         predictions (first batch-predictions)]
+    (is (= 1000 (count (first batch-predictions-all))))
+    (is (= 10 (count (first batch-predictions-with-default-dtype))))
     (is (some? batch-predictions))
     (is (= 5 (count predictions)))
     (is (every? #(= 2 (count %)) predictions))
