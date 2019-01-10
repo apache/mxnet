@@ -1230,8 +1230,8 @@ nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
     make java_ci_demo
-    ./bin/java_sample.sh
-    ./bin/run_od.sh
+    bash bin/java_sample.sh
+    bash bin/run_od.sh
 }
 
 nightly_scala_demo_test_cpu() {
