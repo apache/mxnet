@@ -106,35 +106,35 @@ def forward_pass(sym, arg, aux, data_names, input_data):
     return mod.get_outputs()[0].asnumpy()
 
 
+def get_input_tensors(input_data):
+    input_tensor = []
+    input_names = []
+    input_sym = []
+    for idx, ip in enumerate(input_data):
+        name = "input" + str(idx + 1)
+        input_sym.append(mx.sym.Variable(name))
+        input_names.append(name)
+        input_tensor.append(helper.make_tensor_value_info(name,
+                                                          TensorProto.FLOAT, shape=np.shape(ip)))
+    return input_names, input_tensor, input_sym
+
+
+def get_onnx_graph(testname, input_names, inputs, output_name, output_shape, attr):
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=output_shape)]
+
+    nodes = [helper.make_node(output_name, input_names, ["output"], **attr)]
+
+    graph = helper.make_graph(nodes, testname, inputs, outputs)
+
+    model = helper.make_model(graph)
+    return model
+
 class TestNode(unittest.TestCase):
     """ Tests for models.
     Tests are dynamically added.
     Therefore edit test_models to add more tests.
     """
-
     def test_import_export(self):
-        def get_input_tensors(input_data):
-            input_tensor = []
-            input_names = []
-            input_sym = []
-            for idx, ip in enumerate(input_data):
-                name = "input" + str(idx + 1)
-                input_sym.append(mx.sym.Variable(name))
-                input_names.append(name)
-                input_tensor.append(helper.make_tensor_value_info(name,
-                                                                  TensorProto.FLOAT, shape=np.shape(ip)))
-            return input_names, input_tensor, input_sym
-
-        def get_onnx_graph(testname, input_names, inputs, output_name, output_shape, attr):
-            outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=output_shape)]
-
-            nodes = [helper.make_node(output_name, input_names, ["output"], **attr)]
-
-            graph = helper.make_graph(nodes, testname, inputs, outputs)
-
-            model = helper.make_model(graph)
-            return model
-
         for test in test_cases:
             test_name, mxnet_op, onnx_name, inputs, attrs, mxnet_specific, fix_attrs, check_value, check_shape = test
             with self.subTest(test_name):
@@ -160,6 +160,18 @@ class TestNode(unittest.TestCase):
 
                 if check_shape:
                     npt.assert_equal(output[0].shape, outputshape)
+
+    def test_imports(self):
+        for test in import_test_cases:
+            test_name, onnx_name, inputs, np_op, attrs = test
+            with self.subTest(test_name):
+                names, input_tensors, inputsym = get_input_tensors(inputs)
+                np_out = [np_op(*inputs, **attrs)]
+                output_shape = np.shape(np_out)
+                onnx_model = get_onnx_graph(test_name, names, input_tensors, onnx_name, output_shape, attrs)
+                bkd_rep = backend.prepare(onnx_model, operation='import')
+                mxnet_out = bkd_rep.run(inputs)
+                npt.assert_almost_equal(np_out, mxnet_out)
 
 
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
@@ -209,6 +221,14 @@ test_cases = [
     ("test_multinomial", mx.sym.sample_multinomial, "Multinomial",
      [np.array([0, 0.1, 0.2, 0.3, 0.4]).astype("float32")],
      {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True)
+]
+
+# test_case = ("test_case_name", "ONNX_op_name", [input_list], np_op, attribute map)
+import_test_cases = [
+    ("test_lpnormalization_default", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':-1}),
+    ("test_lpnormalization_ord1", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':1, 'axis':-1}),
+    ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1}),
+    ("test_lpnormalization_ord_axis", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':1, 'axis':2})
 ]
 
 if __name__ == '__main__':

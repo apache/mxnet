@@ -755,3 +755,12 @@ def hardmax(attrs, inputs, proto_obj):
     one_hot = symbol.one_hot(amax, depth=new_shape[-1])
     hardmax_op = symbol.reshape(one_hot, input_shape)
     return hardmax_op, attrs, inputs
+
+def lpnormalization(attrs, inputs, proto_obj):
+    """ONNX does not have eps attribute, so cannot map it to L2normalization in MXNet
+     without that, it works as norm operator discussion in PR:
+     https://github.com/onnx/onnx/pull/1330"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'p': 'ord'})
+    axis = int(attrs.get("axis", -1))
+    new_attrs.update(axis=axis)
+    return 'norm', new_attrs, inputs
