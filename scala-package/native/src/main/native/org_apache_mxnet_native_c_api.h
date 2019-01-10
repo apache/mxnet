@@ -177,6 +177,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
 
 /*
  * Class:     org_apache_mxnet_LibInfo
+ * Method:    mxFloat64NDArraySyncCopyFromCPU
+ * Signature: (J[DI)I
+ */
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFloat64NDArraySyncCopyFromCPU
+  (JNIEnv *, jobject, jlong, jdoubleArray, jint);
+
+/*
+ * Class:     org_apache_mxnet_LibInfo
  * Method:    mxNDArrayLoad
  * Signature: (Ljava/lang/String;Lorg/apache/mxnet/Base/RefInt;Lscala/collection/mutable/ArrayBuffer;Lorg/apache/mxnet/Base/RefInt;Lscala/collection/mutable/ArrayBuffer;)I
  */
