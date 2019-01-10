@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 //mxnet libraries
-mx_scala_pub = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, config.mk, scala-package/pom.xml, scala-package/**/pom.xml, scala-package/*/target/test-classes/**, scala-package/local-snapshot/**'
+mx_scala_pub = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, config.mk, scala-package/pom.xml, scala-package/**/pom.xml, scala-package/*/target/**, scala-package/local-snapshot/**'
 
 // timeout in minutes
 max_time = 120
@@ -54,22 +54,23 @@ def labels = ['cpu'] // , 'gpu']
 for (x in labels) {
   def label = x // Required due to language
   toBuild["Scala Build ${label}"] = wrapStep(nodeMap[label], "build-scala-${label}") {
-    env.MAVEN_PUBLISH_OS_TYPE = scalaOSMap[label]
-    utils.init_git()
-    utils.docker_run("ubuntu_${label}", 'publish_scala_build', label == 'gpu', '500m', 'MAVEN_PUBLISH_OS_TYPE')
-    utils.pack_lib("scala_${label}", mx_scala_pub, false)
+    withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}"]) {
+      utils.init_git()
+      utils.docker_run("ubuntu_${label}", 'publish_scala_build', label == 'gpu', '500m', 'MAVEN_PUBLISH_OS_TYPE')
+      utils.pack_lib("scala_${label}", mx_scala_pub, false)
+    }
   }
 }
 
 def toTest = [:]
-def systems = ['ubuntu'] // , 'centos7']
+def systems = ['ubuntu1604', 'ubuntu1804', 'centos7']
 for (x in labels) {
   def label = x // Required due to language
   for (y in systems) {
     def system = y // Required due to language
     toTest["Scala Test ${system} ${label}"] = wrapStep(nodeMap[label], "test-scala-${system}-${label}") {
       utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
-      utils.docker_run("${system}_${label}", 'publish_scala_test', label == 'gpu')
+      utils.docker_run("publish.test.${system}_${label}", 'publish_scala_test', label == 'gpu')
     }
   }
 }
@@ -78,9 +79,10 @@ def toDeploy = [:]
 for (x in labels) {
   def label = x // Required due to language
   toDeploy["Scala Deploy ${label}"] = wrapStep(nodeMap[label], "deploy-scala-${label}") {
-    env.MAVEN_PUBLISH_OS_TYPE = scalaOSMap[label]
-    utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
-    utils.docker_run("ubuntu_${label}", 'publish_scala_deploy', label == 'gpu', '500m', 'MAVEN_PUBLISH_OS_TYPE MAVEN_PUBLISH_SECRET_ENDPOINT_URL MAVEN_PUBLISH_SECRET_NAME_CREDENTIALS MAVEN_PUBLISH_SECRET_NAME_GPG DOCKERHUB_SECRET_ENDPOINT_REGION')
+    withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}"]) {
+      utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
+      utils.docker_run("ubuntu_${label}", 'publish_scala_deploy', label == 'gpu', '500m', 'MAVEN_PUBLISH_OS_TYPE MAVEN_PUBLISH_SECRET_ENDPOINT_URL MAVEN_PUBLISH_SECRET_NAME_CREDENTIALS MAVEN_PUBLISH_SECRET_NAME_GPG DOCKERHUB_SECRET_ENDPOINT_REGION')
+    }
   }
 }
 

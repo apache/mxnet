@@ -76,11 +76,11 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_selu_default',
              'test_elu',
              'test_max_',
-             'test_softplus'
+             'test_softplus',
+             'test_reduce_'
              ],
     'import': ['test_gather',
                'test_softsign',
-               'test_reduce_',
                'test_mean',
                'test_averagepool_1d',
                'test_averagepool_2d_pads_count_include_pad',

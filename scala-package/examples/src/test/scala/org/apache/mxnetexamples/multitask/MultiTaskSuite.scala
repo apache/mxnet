@@ -25,8 +25,7 @@ import org.scalatest.FunSuite
 
 
 /**
-  * Integration test for imageClassifier example.
-  * This will run as a part of "make scalatest"
+  * Integration test for Multi-task example.
   */
 class MultiTaskSuite extends FunSuite {
   test("Multitask Test") {

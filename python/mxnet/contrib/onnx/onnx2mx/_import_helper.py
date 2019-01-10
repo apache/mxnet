@@ -37,7 +37,7 @@ from ._op_translations import clip, reduce_log_sum, reduce_log_sum_exp
 from ._op_translations import reduce_sum_square, reduce_l1, reduce_l2, max_roi_pooling
 from ._op_translations import log_softmax, softsign, lesser, greater, equal
 from ._op_translations import logical_and, logical_or, logical_xor, logical_not
-from ._op_translations import mean, depthtospace, spacetodepth
+from ._op_translations import mean, depthtospace, spacetodepth, lpnormalization
 
 # convert_map defines maps of ONNX operator names to converter functor(callable)
 # defined in the op_translations module.
@@ -146,5 +146,6 @@ _convert_map = {
     'LpPool'            : lp_pooling,
     'DepthToSpace'      : depthtospace,
     'SpaceToDepth'      : spacetodepth,
-    'Hardmax'           : hardmax
+    'Hardmax'           : hardmax,
+    'LpNormalization'   : lpnormalization
 }
