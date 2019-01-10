@@ -20,12 +20,12 @@ from __future__ import print_function
 
 import argparse
 
+import numpy as np
 from ctc_metrics import CtcMetrics
 import cv2
 from hyperparams import Hyperparams
 import lstm
 import mxnet as mx
-import numpy as np
 from ocr_iter import SimpleBatch
 
 
@@ -64,6 +64,9 @@ def load_module(prefix, epoch, data_names, data_shapes):
 
 
 def main():
+    """
+    Program entry point
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("path", help="Path to the CAPTCHA image file")
     parser.add_argument("--prefix", help="Checkpoint prefix [Default 'ocr']", default='ocr')
@@ -86,7 +89,6 @@ def main():
     # Predictions are 1 to 10 for digits 0 to 9 respectively (prediction 0 means no-digit)
     prediction = [p - 1 for p in prediction]
     print("Digits:", prediction)
-    return
 
 
 if __name__ == '__main__':

@@ -22,10 +22,10 @@ This module also provides script for saving captcha images to file using CLI.
 from __future__ import print_function
 import random
 
+import numpy as np
 from captcha.image import ImageCaptcha
 import cv2
 from multiproc_data import MPData
-import numpy as np
 
 
 class CaptchaGen(object):
@@ -197,6 +197,9 @@ if __name__ == '__main__':
     import argparse
 
     def main():
+        """
+        Program entry point
+        """
         parser = argparse.ArgumentParser()
         parser.add_argument("font_path", help="Path to ttf font file")
         parser.add_argument("output", help="Output filename including extension (e.g. 'sample.jpg')")

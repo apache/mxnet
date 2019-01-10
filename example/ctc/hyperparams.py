@@ -48,7 +48,7 @@ class Hyperparams(object):
     @property
     def batch_size(self):
         return self._batch_size
-    
+
     @property
     def num_epoch(self):
         return self._num_epoch

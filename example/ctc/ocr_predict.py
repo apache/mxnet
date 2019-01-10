@@ -21,18 +21,14 @@ from __future__ import print_function
 import argparse
 
 import sys
-import cv2
 import numpy as np
-import mxnet as mx
-from collections import namedtuple
-from ocr_iter import SimpleBatch
-from captcha_generator import DigitCaptcha
-from ctc_metrics import CtcMetrics
-import lstm
-from hyperparams import Hyperparams
+import cv2
 
 
 class lstm_ocr_model(object):
+    """
+    LSTM network for predicting the Optical Character Recognition
+    """
     # Keep Zero index for blank. (CTC request it)
     CONST_CHAR = '0123456789'
 
@@ -67,6 +63,17 @@ class lstm_ocr_model(object):
                                    all_shapes_dict)
 
     def forward_ocr(self, img_):
+        """
+        Forward the image through the LSTM network model
+
+        Parameters
+        ----------
+        img_: int of array
+
+        Returns
+        ----------
+        label_list: string of list
+        """
         img_ = cv2.resize(img_, (80, 30))
         img_ = img_.transpose(1, 0)
         print(img_.shape)
@@ -92,7 +99,7 @@ class lstm_ocr_model(object):
         for i in range(len(label_list)):
             c1 = label_list2[i]
             c2 = label_list2[i+1]
-            if c2 == 0 or c2 == c1:
+            if c2 in (0, c1):
                 continue
             ret.append(c2)
         # change to ascii

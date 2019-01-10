@@ -23,7 +23,12 @@ import mxnet as mx
 
 
 class SimpleBatch(object):
-    def __init__(self, data_names, data, label_names=list(), label=list()):
+    """
+    Batch class for getting label data
+    Operation:
+        - call get_label() to start label data generation
+    """
+    def __init__(self, data_names, data, label_names=None, label=None):
         self._data = data
         self._label = label
         self._data_names = data_names
@@ -59,8 +64,8 @@ class SimpleBatch(object):
 
 def get_label(buf):
     ret = np.zeros(4)
-    for i in range(len(buf)):
-        ret[i] = 1 + int(buf[i])
+    for i, element in enumerate(buf):
+        ret[i] = 1 + int(element)
     if len(buf) == 3:
         ret[3] = 0
     return ret

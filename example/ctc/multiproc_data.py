@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""Contains a class for handling multi-process data generation"""
+
 from __future__ import print_function
 from ctypes import c_bool
 import multiprocessing as mp
@@ -24,9 +26,6 @@ try:
 except ImportError:
     from Queue import Full as QFullExcept
     from Queue import Empty as QEmptyExcept
-
-import numpy as np
-
 
 class MPData(object):
     """
@@ -56,13 +55,6 @@ class MPData(object):
         self.fn = fn
 
     def start(self):
-        """
-        Starts the processes
-        Parameters
-        ----------
-        fn: function
-
-        """
         """
         Starts the processes
         """

@@ -17,27 +17,30 @@
 
 # pylint: skip-file
 from __future__ import print_function
-import sys
+
 import os
-import mxnet as mx
+import logging
 import numpy as np
-import data
-from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans
+from scipy.spatial.distance import cdist
+import mxnet as mx
+import data
 import model
 from autoencoder import AutoEncoderModel
 from solver import Solver, Monitor
-import logging
+
+
 
 def cluster_acc(Y_pred, Y):
     from sklearn.utils.linear_assignment_ import linear_assignment
     assert Y_pred.size == Y.size
     D = max(Y_pred.max(), Y.max())+1
-    w = np.zeros((D,D), dtype=np.int64)
+    w = np.zeros((D, D), dtype=np.int64)
     for i in range(Y_pred.size):
         w[Y_pred[i], int(Y[i])] += 1
     ind = linear_assignment(w.max() - w)
-    return sum([w[i,j] for i,j in ind])*1.0/Y_pred.size, w
+    return sum([w[i, j] for i, j in ind])*1.0/Y_pred.size, w
+
 
 class DECModel(model.MXModel):
     class DECLoss(mx.operator.NumpyOp):
@@ -81,12 +84,12 @@ class DECModel(model.MXModel):
         sep = X.shape[0]*9//10
         X_train = X[:sep]
         X_val = X[sep:]
-        ae_model = AutoEncoderModel(self.xpu, [X.shape[1],500,500,2000,10], pt_dropout=0.2)
+        ae_model = AutoEncoderModel(self.xpu, [X.shape[1], 500, 500, 2000, 10], pt_dropout=0.2)
         if not os.path.exists(save_to+'_pt.arg'):
             ae_model.layerwise_pretrain(X_train, 256, 50000, 'sgd', l_rate=0.1, decay=0.0,
-                                        lr_scheduler=mx.lr_scheduler.FactorScheduler(20000,0.1))
+                                        lr_scheduler=mx.lr_scheduler.FactorScheduler(20000, 0.1))
             ae_model.finetune(X_train, 256, 100000, 'sgd', l_rate=0.1, decay=0.0,
-                              lr_scheduler=mx.lr_scheduler.FactorScheduler(20000,0.1))
+                              lr_scheduler=mx.lr_scheduler.FactorScheduler(20000, 0.1))
             ae_model.save(save_to+'_pt.arg')
             logging.log(logging.INFO, "Autoencoder Training error: %f"%ae_model.eval(X_train))
             logging.log(logging.INFO, "Autoencoder Validation error: %f"%ae_model.eval(X_val))
@@ -98,9 +101,9 @@ class DECModel(model.MXModel):
         label = mx.sym.Variable('label')
         self.feature = self.ae_model.encoder
         self.loss = self.dec_op(data=self.ae_model.encoder, label=label, name='dec')
-        self.args.update({k:v for k,v in self.ae_model.args.items() if k in self.ae_model.encoder.list_arguments()})
+        self.args.update({k: v for k, v in self.ae_model.args.items() if k in self.ae_model.encoder.list_arguments()})
         self.args['dec_mu'] = mx.nd.empty((num_centers, self.ae_model.dims[-1]), ctx=self.xpu)
-        self.args_grad.update({k: mx.nd.empty(v.shape, ctx=self.xpu) for k,v in self.args.items()})
+        self.args_grad.update({k: mx.nd.empty(v.shape, ctx=self.xpu) for k, v in self.args.items()})
         self.args_mult.update({k: k.endswith('bias') and 2.0 or 1.0 for k in self.args})
         self.num_centers = num_centers
 
@@ -117,6 +120,7 @@ class DECModel(model.MXModel):
         kmeans.fit(z)
         args['dec_mu'][:] = kmeans.cluster_centers_
         solver = Solver('sgd', momentum=0.9, wd=0.0, learning_rate=0.01)
+
         def ce(label, pred):
             return np.sum(label*np.log(label/(pred+0.000001)))/label.shape[0]
         solver.set_metric(mx.metric.CustomMetric(ce))
@@ -125,6 +129,7 @@ class DECModel(model.MXModel):
         train_iter = mx.io.NDArrayIter({'data': X}, {'label': label_buff}, batch_size=batch_size,
                                        shuffle=False, last_batch_handle='roll_over')
         self.y_pred = np.zeros((X.shape[0]))
+
         def refresh(i):
             if i%update_interval == 0:
                 z = list(model.extract_feature(self.feature, args, None, test_iter, N, self.xpu).values())[0]
@@ -155,6 +160,7 @@ class DECModel(model.MXModel):
         else:
             return -1
 
+
 def mnist_exp(xpu):
     X, Y = data.get_mnist()
     if not os.path.isdir('data'):
@@ -167,7 +173,7 @@ def mnist_exp(xpu):
     logging.info(str(acc))
     logging.info('Best Clustering ACC: %f at update_interval: %d'%(np.max(acc), 10*(2**np.argmax(acc))))
 
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     mnist_exp(mx.gpu(0))
-

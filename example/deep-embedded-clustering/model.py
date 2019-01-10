@@ -20,7 +20,6 @@ from __future__ import print_function
 
 import numpy as np
 import mxnet as mx
-
 try:
     import cPickle as pickle
 except ImportError:

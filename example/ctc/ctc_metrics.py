@@ -22,6 +22,12 @@ import numpy as np
 
 
 class CtcMetrics(object):
+    """
+    Module for calculating the prediction accuracy during training. Two accuracy measures are implemented:
+    A simple accuracy measure that calculates number of correct predictions divided by total number of predictions
+    and a second accuracy measure based on sum of Longest Common Sequence(LCS) ratio of all predictions divided by total
+    number of predictions
+    """
     def __init__(self, seq_len):
         self.seq_len = seq_len
 
@@ -42,7 +48,7 @@ class CtcMetrics(object):
         for i, _ in enumerate(p):
             c1 = p1[i]
             c2 = p1[i+1]
-            if c2 == 0 or c2 == c1:
+            if c2 in (0, c1):
                 continue
             ret.append(c2)
         return ret
@@ -65,12 +71,16 @@ class CtcMetrics(object):
             return 0
         P = np.array(list(p)).reshape((1, len(p)))
         L = np.array(list(l)).reshape((len(l), 1))
-        M = np.int32(P == L)
+        M = np.ndarray(shape=(len(P), len(L)), dtype=np.int32)
         for i in range(M.shape[0]):
             for j in range(M.shape[1]):
                 up = 0 if i == 0 else M[i-1, j]
                 left = 0 if j == 0 else M[i, j-1]
-                M[i, j] = max(up, left, M[i, j] if (i == 0 or j == 0) else M[i, j] + M[i-1, j-1])
+
+                if i == 0 or j == 0:
+                    M[i, j] = max(up, left, M[i, j])
+                else:
+                    M[i, j] = M[i, j] + M[i - 1, j - 1]
         return M.max()
 
     def accuracy(self, label, pred):
@@ -111,4 +121,3 @@ class CtcMetrics(object):
             total += 1.0
         assert total == batch_size
         return hit / total
-
