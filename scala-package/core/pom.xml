@@ -13,6 +13,10 @@
   <artifactId>mxnet-core</artifactId>
   <name>MXNet Scala Package - Core</name>
 
+  <properties>
+    <skipJavaTests>false</skipJavaTests>
+  </properties>
+
   <build>
     <plugins>
       <plugin>
@@ -112,16 +116,6 @@
           <argLine>
             -Djava.library.path=${project.parent.basedir}/native/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
-          </argLine>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.0</version>
-        <configuration>
-          <argLine>
-            -Djava.library.path=${project.parent.basedir}/native/target
           </argLine>
         </configuration>
       </plugin>
