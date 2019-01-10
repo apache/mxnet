@@ -2,7 +2,7 @@
 
 ## Building C++ Inference examples
 
-The examples in this folder demonstrate the **inference** workflow.
+The examples in this folder demonstrate the **inference** workflow. Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File before building these examples.
 To build examples use following commands:
 
 -  Release: **make all**
@@ -78,7 +78,7 @@ or
 ./simple_rnn --input "Good morning. I appreciate the opportunity to speak here"
 ```
 
-The example will output the seqence of 35 words as follows:
+The example will output the sequence of 35 words as follows:
 ```
 [waters elected Amendment Amendment Amendment Amendment retirement maximize maximize maximize acr citi sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio ]
 ```

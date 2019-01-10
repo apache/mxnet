@@ -144,9 +144,9 @@ void Predictor::LoadParameters(const std::string& model_parameters_file) {
     throw std::runtime_error("Model parameters does not exist");
   }
   LG << "Loading the model parameters from " << model_parameters_file << std::endl;
-  std::map<std::string, NDArray> paramters;
-  NDArray::Load(model_parameters_file, 0, &paramters);
-  for (const auto &k : paramters) {
+  std::map<std::string, NDArray> parameters;
+  NDArray::Load(model_parameters_file, 0, &parameters);
+  for (const auto &k : parameters) {
     if (k.first.substr(0, 4) == "aux:") {
       auto name = k.first.substr(4, k.first.size() - 4);
       aux_map[name] = k.second.Copy(global_ctx);
@@ -202,7 +202,7 @@ void Predictor::ConverToIndexVector(const std::string& input, std::vector<float>
   input_vector->clear();
   const char delimiter = ' ';
   std::string token;
-  int words = 0;
+  size_t words = 0;
   while (std::getline(input_string, token, delimiter) && (words <= input_vector->size())) {
     input_vector->push_back(static_cast<float>(wordToInt[token]));
     words++;
@@ -234,7 +234,7 @@ int Predictor::GetIndexForOutputSymbolName(const std::string& output_symbol_name
  */
 std::string Predictor::PredictText(const std::string& input_text) {
   /*
-   * Initialize a vector of length equal to 'sequence_lenght' with 0.
+   * Initialize a vector of length equal to 'sequence_length' with 0.
    * Convert the input string to a vector of indices that represent
    * the words in the input string.
    */
@@ -253,7 +253,8 @@ std::string Predictor::PredictText(const std::string& input_text) {
    * The output "softmax_layer_output" has shape [sequence_length, vocab_size]
    * The vocab_size in this case is equal to the size of dictionary.
    */
-  int output_index = GetIndexForOutputSymbolName("softmax_layer_output");
+  const std::string output_symbol_name = "softmax_layer_output";
+  int output_index = GetIndexForOutputSymbolName(output_symbol_name);
   std::vector<NDArray> outputs = executor->outputs;
   auto arrayout = executor->outputs[output_index].Copy(global_ctx);
 
@@ -268,7 +269,7 @@ std::string Predictor::PredictText(const std::string& input_text) {
   arrayout.WaitToRead();
 
   std::ostringstream oss;
-  for (std::size_t i = 0; i < sequence_length; ++i) {
+  for (std::size_t i = 0; i < static_cast<size_t>(sequence_length); ++i) {
     auto charIndex = arrayout.At(0, i);
     oss << intToWord[charIndex] << " ";
   }
@@ -300,7 +301,8 @@ void Download_files(const std::vector<std::string> model_files) {
   for (auto &file : model_files) {
     std::ostringstream oss;
     oss << wget_command << s3_url << file << " -O " << file;
-    system(oss.str().c_str());
+    int status = system(oss.str().c_str());
+    LG << "Downloading " << file << " with status " << status;
   }
   return;
 }

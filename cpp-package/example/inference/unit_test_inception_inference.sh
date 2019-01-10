@@ -23,7 +23,7 @@ wget -nc -O model/mean_224.nd https://github.com/dmlc/web-data/raw/master/mxnet/
 tar -xvzf inception-bn.tar.gz -C model
 
 # Building
-make all
+make inception_inference
 
 
 # Running the example with dog image.
