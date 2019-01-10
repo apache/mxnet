@@ -271,8 +271,7 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
           static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
           static_cast<int>(arr.shape()[W])};
     }
-    return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-                                mkldnn::memory::format::any};
+    return mkldnn::memory::desc{tz, get_mkldnn_type(dtype), mkldnn::memory::format::any};
   }
 }
 

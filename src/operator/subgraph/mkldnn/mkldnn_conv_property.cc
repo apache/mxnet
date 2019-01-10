@@ -141,8 +141,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     disable_conv_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
     disable_conv_sum = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
 
-    disable_all =
-        disable_all && disable_conv_bn && disable_conv_relu && disable_conv_sum;
+    disable_all = disable_all || (disable_conv_bn && disable_conv_relu && disable_conv_sum);
     if (disable_all) {
       LOG(INFO) << "MKLDNN Convolution optimization pass is disabled.";
     } else {
