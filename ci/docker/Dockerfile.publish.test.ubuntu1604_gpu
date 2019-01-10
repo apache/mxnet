@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,35 +15,25 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to run MXNet on Ubuntu 16.04 for GPU
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+FROM nvidia/cuda:9.2-cudnn7-devel-ubuntu16.04
 
-set -ex
-apt-get update || true
-apt-get install -y \
-    apt-transport-https \
-    build-essential \
-    ca-certificates \
-    curl \
-    git \
-    libatlas-base-dev \
-    libcurl4-openssl-dev \
-    libjemalloc-dev \
-    liblapack-dev \
-    libopenblas-dev \
-    libopencv-dev \
-    libzmq3-dev \
-    ninja-build \
-    software-properties-common \
-    sudo \
-    unzip \
-    wget
+WORKDIR /work/deps
 
+COPY install/ubuntu_base.sh /work/
+RUN /work/ubuntu_base.sh
 
-# Ubuntu 14.04
-if [[ $(lsb_release -r | grep 14.04) ]]; then
-    apt-get install -y cmake3
-else
-    apt-get install -y cmake
-fi
+COPY install/ubuntu_scala.sh /work/
+RUN /work/ubuntu_scala.sh
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+COPY runtime_functions.sh /work/
+
+WORKDIR /work/mxnet
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

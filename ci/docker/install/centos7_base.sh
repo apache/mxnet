@@ -21,30 +21,13 @@
 # the whole docker cache for the image
 
 set -ex
-apt-get update || true
-apt-get install -y \
-    apt-transport-https \
-    build-essential \
-    ca-certificates \
-    curl \
-    git \
-    libatlas-base-dev \
-    libcurl4-openssl-dev \
-    libjemalloc-dev \
-    liblapack-dev \
-    libopenblas-dev \
-    libopencv-dev \
-    libzmq3-dev \
-    ninja-build \
-    software-properties-common \
-    sudo \
-    unzip \
-    wget
 
-
-# Ubuntu 14.04
-if [[ $(lsb_release -r | grep 14.04) ]]; then
-    apt-get install -y cmake3
-else
-    apt-get install -y cmake
-fi
+# Multipackage installation does not fail in yum
+yum -y install epel-release
+yum -y install git
+yum -y install wget
+yum -y install make
+yum -y install cmake
+yum -y install unzip
+yum -y install ninja-build
+yum -y install gcc-gfortran
