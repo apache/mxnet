@@ -190,7 +190,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(arrPower3.shape === Shape(2, 1))
     assert(arrPower3.toArray === Array(27f, 3125f))
 
-   val arrPower4 = arr ** 2f
+    val arrPower4 = arr ** 2f
     assert(arrPower4.shape === Shape(2, 1))
     assert(arrPower4.toArray === Array(9f, 25f))
 
