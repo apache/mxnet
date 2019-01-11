@@ -119,7 +119,6 @@ if __name__ == '__main__':
     exclude_first_conv = args.exclude_first_conv
     excluded_sym_names = []
     rgb_mean = '123,117,104'
-    calib_layer = lambda name: name.endswith('_output')
     for i in range(1,19):
         excluded_sym_names += ['flatten'+str(i)]
     excluded_sym_names += ['relu4_3_cls_pred_conv',
@@ -127,6 +126,8 @@ if __name__ == '__main__':
                             'relu4_3_loc_pred_conv']
     if exclude_first_conv:
         excluded_sym_names += ['conv1_1']
+
+    excluded_sym_names += ['multibox_loc_pred', 'concat0', 'concat1']
 
     label_name = 'label'
     logger.info('label_name = %s' % label_name)
@@ -156,9 +157,9 @@ if __name__ == '__main__':
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                         calib_mode=calib_mode, calib_data=eval_iter,
                                                         num_calib_examples=num_calib_batches * batch_size,
-                                                        calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
+                                                        calib_layer=None, quantized_dtype=args.quantized_dtype,
                                                         label_names=(label_name,),
-                                                        calib_quantize_op = True,
+                                                        calib_quantize_op=True,
                                                         logger=logger)
         sym_name = '%s-symbol.json' % ('./model/cqssd_vgg16_reduced_300')
         param_name = '%s-%04d.params' % ('./model/cqssd_vgg16_reduced_300', epoch)
