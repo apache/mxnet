@@ -37,7 +37,8 @@ from util import retry
 DOCKERHUB_LOGIN_NUM_RETRIES = 5
 DOCKERHUB_RETRY_SECONDS = 5
 DOCKER_CACHE_NUM_RETRIES = 3
-DOCKER_CACHE_TIMEOUT_MINS = 5
+DOCKER_CACHE_TIMEOUT_MINS = 15
+PARALLEL_BUILDS = 10
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
@@ -52,7 +53,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     if len(platforms) == 0:
         return 0
 
-    platform_results = Parallel(n_jobs=len(platforms), backend="multiprocessing")(
+    platform_results = Parallel(n_jobs=PARALLEL_BUILDS, backend="multiprocessing")(
         delayed(_build_save_container)(platform, registry, load_cache)
         for platform in platforms)
 
