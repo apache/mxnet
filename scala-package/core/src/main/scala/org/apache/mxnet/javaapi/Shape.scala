@@ -24,7 +24,7 @@ import scala.language.implicitConversions
   * Shape of [[NDArray]] or other data
   */
 
-class Shape(val shape: org.apache.mxnet.Shape) {
+class Shape private[mxnet] (val shape: org.apache.mxnet.Shape) {
   def this(dims: java.util.List[java.lang.Integer])
     = this(new org.apache.mxnet.Shape(dims.asScala.map(Int.unbox)))
   def this(dims: Array[Int]) = this(new org.apache.mxnet.Shape(dims))

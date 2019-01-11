@@ -453,7 +453,7 @@ void EyeFill(const nnvm::NodeAttrs& attrs,
 
 struct range_fwd {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int repeat, DType start, DType step,
+  MSHADOW_XINLINE static void Map(index_t i, int repeat, DType start, DType step,
                                   int req, DType* out) {
     KERNEL_ASSIGN(out[i], req, start + (i/repeat) * step);
   }
@@ -471,8 +471,8 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       // Force unsigned params to take two's complement form on ARM to ensure consistency with x86
       // results.  Casting negative floats to unsigned types is undefined in the CPP standard.
-      auto step = std::is_signed<DType>() ? param.step : static_cast<int>(param.step);
-      auto start = std::is_signed<DType>() ? param.start : static_cast<int>(param.start);
+      auto step = std::is_signed<DType>() ? param.step : static_cast<index_t>(param.step);
+      auto start = std::is_signed<DType>() ? param.start : static_cast<index_t>(param.start);
       Kernel<range_fwd, xpu>::Launch(s,
                                      outputs[0].Size(),
                                      static_cast<int>(param.repeat),

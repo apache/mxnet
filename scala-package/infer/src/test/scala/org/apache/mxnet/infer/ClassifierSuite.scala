@@ -22,7 +22,7 @@ import java.nio.file.{Files, Paths}
 import java.util
 
 import org.apache.mxnet.module.Module
-import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
+import org.apache.mxnet.{Context, DType, DataDesc, NDArray, Shape}
 import org.mockito.Matchers._
 import org.mockito.Mockito
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
@@ -127,6 +127,29 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
   }
 
+  test("ClassifierSuite-flatFloat64Array-topK") {
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputData = Array.fill[Double](12)(1d)
+
+    val predictResult : IndexedSeq[Array[Double]] =
+      IndexedSeq[Array[Double]](Array(.98d, 0.97d, 0.96d, 0.99d))
+
+    val testClassifier = new MyClassifier(modelPath, inputDescriptor)
+
+    Mockito.doReturn(predictResult).when(testClassifier.predictor)
+      .predict(any(classOf[IndexedSeq[Array[Double]]]))
+
+    val result: IndexedSeq[(String, Double)] = testClassifier.
+      classify(IndexedSeq(inputData), topK = Some(10))
+
+    assert((result(0)_2).getClass == 1d.getClass)
+
+    assertResult(predictResult(0).sortBy(-_)) {
+      result.map(_._2).toArray
+    }
+
+  }
+
   test("ClassifierSuite-flatArrayInput") {
     val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
     val inputData = Array.fill[Float](12)(1)
@@ -141,6 +164,28 @@ class ClassifierSuite extends FunSuite with BeforeAndAfterAll {
 
     val result: IndexedSeq[(String, Float)] = testClassifier.
           classify(IndexedSeq(inputData))
+
+    assertResult(predictResult(0)) {
+      result.map(_._2).toArray
+    }
+  }
+
+  test("ClassifierSuite-flatArrayFloat64Input") {
+    val inputDescriptor = IndexedSeq[DataDesc](new DataDesc("data", Shape(2, 3, 2, 2)))
+    val inputData = Array.fill[Double](12)(1d)
+
+    val predictResult : IndexedSeq[Array[Double]] =
+      IndexedSeq[Array[Double]](Array(.98d, 0.97d, 0.96d, 0.99d))
+
+    val testClassifier = new MyClassifier(modelPath, inputDescriptor)
+
+    Mockito.doReturn(predictResult).when(testClassifier.predictor)
+      .predict(any(classOf[IndexedSeq[Array[Double]]]))
+
+    val result: IndexedSeq[(String, Double)] = testClassifier.
+      classify(IndexedSeq(inputData))
+
+    assert((result(0)_2).getClass == 1d.getClass)
 
     assertResult(predictResult(0)) {
       result.map(_._2).toArray

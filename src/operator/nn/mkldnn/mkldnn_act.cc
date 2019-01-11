@@ -49,6 +49,15 @@ bool SupportMKLDNNAct(const ActivationParam& param) {
       || param.act_type == activation::kTanh;
 }
 
+bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
+  // MKL-DNN Activation supports 1d, 2d, 3d, 4d data layout
+  if ((input.shape().ndim() < 1) ||
+      (input.shape().ndim() > 4) ||
+      (input.dtype() != mshadow::kFloat32))
+    return false;
+  return SupportMKLDNNAct(param);
+}
+
 static inline mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
   switch (param.act_type) {
     case activation::kReLU:
@@ -147,10 +156,7 @@ static MKLDNNActForward &GetActForward(const ActivationParam& param,
   auto it = fwds.find(key);
   if (it == fwds.end()) {
     MKLDNNActForward fwd(param, ctx.is_train, in_data, in_mem);
-    auto ins_ret = fwds.insert(std::pair<MKLDNNActSignature, MKLDNNActForward>(
-            key, fwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
@@ -261,10 +267,7 @@ static inline MKLDNNActBackward &GetActBackward(const ActivationParam &param,
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNActBackward bwd(param, in_data, in_mem, *out_grad.GetMKLDNNData());
-    auto ins_ret =
-        bwds.insert(std::pair<MKLDNNActSignature, MKLDNNActBackward>(key, bwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }

@@ -1253,7 +1253,8 @@ class ConvRNNCell(BaseConvRNNCell):
 class ConvLSTMCell(BaseConvRNNCell):
     """Convolutional LSTM network cell.
 
-    Reference:
+    References
+    ----------
         Xingjian et al. NIPS2015
 
     Parameters

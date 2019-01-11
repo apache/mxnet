@@ -106,8 +106,16 @@ OpStatePtr Imperative::Invoke(
   SetShapeType(ctx, attrs, inputs, outputs, &dispatch_mode);
   std::vector<OpReqType> req;
   SetWriteInplaceReq(inputs, outputs, &req);
-
-  return InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
+  OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
+  // the followinng loop is used for finding out the correct shape when some shapes are dynamic
+  for (size_t i = 0; i < outputs.size(); i++) {
+    if (outputs[i]->shape().ndim() == 0) {
+      // the WaitToRead overhead here does not seem to be avoidable
+      outputs[i]->WaitToRead();
+      outputs[i]->SetShapeFromChunk();
+    }
+  }
+  return ret;
 }
 
 void Imperative::MarkVariables(
@@ -189,8 +197,8 @@ void Imperative::RecordOp(
     std::vector<bool>* p_save_outputs) {
   MXAPIThreadLocalEntry *local_buff = MXAPIThreadLocalStore::Get();
 
-  for (uint32_t i = 0; i < outputs.size(); ++i) {
-    CHECK(AGInfo::IsNone(*(outputs[i])))
+  for (auto output : outputs) {
+    CHECK(AGInfo::IsNone(*output))
       << "Assigning to NDArrays that are already in a computational graph "
       << "will cause undefined behavior when evaluating gradients. "
       << "Please call backward first to clear the graph or do this out side of "
@@ -247,8 +255,8 @@ void Imperative::RecordOp(
     node->inputs[i] = inputs[i]->entry_;
   }
 
-  for (uint32_t i = 0; i < outputs.size(); ++i) {
-    CHECK(AGInfo::IsNone(*(outputs[i])))
+  for (auto output : outputs) {
+    CHECK(AGInfo::IsNone(*output))
       << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
       << "recording with autograd.";
   }
@@ -348,7 +356,7 @@ std::vector<NDArray*> Imperative::Backward(
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
-  for (const auto &e : g_graph.outputs) {
+  for (const auto& e : g_graph.outputs) {
     if (e.node->op() == nullptr) {
       auto node = Node::Create();
       node->attrs.op = copy_op;
@@ -375,7 +383,9 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<OpStatePtr> states;
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (size_t i = 0; i < buff.size(); ++i) arrays.push_back(&buff[i]);
+  for (auto& buffered_array : buff) {
+    arrays.push_back(&buffered_array);
+  }
   if (create_graph) {
     states.resize(num_forward_nodes);
     nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
@@ -390,12 +400,12 @@ std::vector<NDArray*> Imperative::Backward(
         ref_count[eid] = 1;
       }
     });
-    for (size_t i = 0; i < ograd_entries.size(); ++i) {
-      AGInfo& info = AGInfo::Get(ograd_entries[i].node);
-      if (!idx.exist(ograd_entries[i].node.get())) continue;
-      size_t eid = idx.entry_id(ograd_entries[i]);
+    for (auto& ograd_entry : ograd_entries) {
+      AGInfo& info = AGInfo::Get(ograd_entry.node);
+      if (!idx.exist(ograd_entry.node.get())) continue;
+      size_t eid = idx.entry_id(ograd_entry);
       buff[eid] = info.outputs[0];
-      buff[eid].entry_ = ograd_entries[i];
+      buff[eid].entry_ = ograd_entry;
     }
   } else {
     states.reserve(num_forward_nodes);
@@ -409,10 +419,10 @@ std::vector<NDArray*> Imperative::Backward(
         if (retain_graph || info.grad_req != kNullOp) ref_count[eid] = 1;
       }
     }
-    for (size_t i = 0; i < ograd_entries.size(); ++i) {
-      if (!idx.exist(ograd_entries[i].node.get())) continue;
-      AGInfo& info = AGInfo::Get(ograd_entries[i].node);
-      arrays[idx.entry_id(ograd_entries[i])] = &info.outputs[0];
+    for (auto& ograd_entry : ograd_entries) {
+      if (!idx.exist(ograd_entry.node.get())) continue;
+      AGInfo& info = AGInfo::Get(ograd_entry.node);
+      arrays[idx.entry_id(ograd_entry)] = &info.outputs[0];
     }
   }
   for (size_t i = num_forward_outputs; i < graph.outputs.size(); ++i) {

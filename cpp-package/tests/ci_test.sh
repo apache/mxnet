@@ -36,6 +36,9 @@ cp ../../build/cpp-package/example/lenet_with_mxdataiter .
 cp ../../build/cpp-package/example/resnet .
 ./resnet 5
 
+cp ../../build/cpp-package/example/inception_bn .
+./inception_bn 5
+
 cp ../../build/cpp-package/example/mlp .
 ./mlp
 
@@ -50,3 +53,5 @@ cp ../../build/cpp-package/example/mlp_gpu .
 
 cp ../../build/cpp-package/example/test_score .
 ./test_score 0.93
+
+sh unittests/unit_test_mlp_csv.sh

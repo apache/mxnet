@@ -5,56 +5,74 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-parent_2.11</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-core_2.11</artifactId>
+  <artifactId>mxnet-core</artifactId>
   <name>MXNet Scala Package - Core</name>
 
-  <profiles>
-    <profile>
-      <id>unittest</id>
-      <properties>
-        <skipTests>false</skipTests>
-      </properties>
-    </profile>
-    <profile>
-      <id>integrationtest</id>
-      <properties>
-        <skipTests>true</skipTests>
-      </properties>
-    </profile>
-    <profile>
-      <id>osx-x86_64-cpu</id>
-      <properties>
-        <platform>osx-x86_64-cpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-cpu</id>
-      <properties>
-        <platform>linux-x86_64-cpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-gpu</id>
-      <properties>
-        <platform>linux-x86_64-gpu</platform>
-      </properties>
-    </profile>
-  </profiles>
+  <properties>
+    <skipJavaTests>false</skipJavaTests>
+  </properties>
 
   <build>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <id>javah</id>
+            <phase>verify</phase>
+            <configuration>
+              <javahProvider>default</javahProvider>
+              <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
+              <workingDirectory>${basedir}</workingDirectory>
+              <javahOutputFileName>org_apache_mxnet_native_c_api.h</javahOutputFileName>
+              <javahClassNames>
+                <javahClassName>org.apache.mxnet.LibInfo</javahClassName>
+              </javahClassNames>
+            </configuration>
+            <goals>
+              <goal>javah</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>verify-javah</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>diff</executable>
+              <commandlineArgs>${project.build.directory}/custom-javah/org_apache_mxnet_native_c_api.h ${project.parent.basedir}/native/src/main/native/org_apache_mxnet_native_c_api.h</commandlineArgs>
+            </configuration>
+          </execution>
+          <execution>
+            <id>apidoc-generation</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>java</executable>
+              <workingDirectory>${project.parent.basedir}</workingDirectory>
+              <commandlineArgs>-classpath %classpath:${rootdir}/init/target/classes:${rootdir}/macros/target/classes -Djava.library.path=${rootdir}/native/target org.apache.mxnet.APIDocGenerator ${rootdir}/core/src/main/scala/org/apache/mxnet/</commandlineArgs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -71,22 +89,34 @@
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.scalatest</groupId>
-        <artifactId>scalatest-maven-plugin</artifactId>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.1.0</version>
         <configuration>
-          <skipTests>${skipTests}</skipTests>
-          <argLine>
-            -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
-            -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
-          </argLine>
+          <filesets>
+            <fileset>
+              <directory>src/main/scala/org/apache/mxnet</directory>
+              <includes>
+                <include>NDArrayAPIBase.scala</include>
+                <include>NDArrayBase.scala</include>
+                <include>NDArrayRandomAPIBase.scala</include>
+                <include>javaapi/NDArrayBase.scala</include>
+                <include>SymbolAPIBase.scala</include>
+                <include>SymbolRandomAPIBase.scala</include>
+              </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
         </configuration>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.22.0</version>
+        <groupId>org.scalatest</groupId>
+        <artifactId>scalatest-maven-plugin</artifactId>
         <configuration>
-          <skipTests>false</skipTests>
+          <argLine>
+            -Djava.library.path=${project.parent.basedir}/native/target \
+            -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
+          </argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -98,14 +128,14 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-init_${scala.binary.version}</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
+      <artifactId>mxnet-macros</artifactId>
+      <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-macros_${scala.binary.version}</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
+      <artifactId>mxnet-scala-init</artifactId>
+      <version>INTERNAL</version>
       <scope>provided</scope>
     </dependency>
     <dependency>

@@ -590,6 +590,7 @@ We summarize the interface for each class in the following sections.
     :exclude-members: BaseSparseNDArray, RowSparseNDArray, CSRNDArray
 
 .. automodule:: mxnet.ndarray.sparse
+    :noindex:
     :members: array, zeros, empty
 
 .. automodule:: mxnet.ndarray

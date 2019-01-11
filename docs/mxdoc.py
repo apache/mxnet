@@ -87,10 +87,10 @@ def generate_doxygen(app):
 def build_mxnet(app):
     """Build mxnet .so lib"""
     if not os.path.exists(os.path.join(app.builder.srcdir, '..', 'config.mk')):
-        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1" %
+        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1 USE_MKLDNN=0" %
                 app.builder.srcdir)
     else:
-        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1" %
+        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1 USE_MKLDNN=0" %
                 app.builder.srcdir)
 
 def build_r_docs(app):
@@ -110,13 +110,17 @@ def build_scala(app):
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
     scala_path = app.builder.srcdir + '/../scala-package'
-    scala_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"Suite\"'
+    scala_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep -v \"\/javaapi\"  | egrep -v \"Suite\"'
     scala_doc_classpath = ':'.join([
         '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
-        '`find macros -name "*-SNAPSHOT.jar" | tr "\\n" ":" `'
+        '`find macros -name "*.jar" | tr "\\n" ":" `',
+        '`find core -name "*.jar" | tr "\\n" ":" `',
+        '`find infer -name "*.jar" | tr "\\n" ":" `'
     ])
-    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation'
-             .format(scala_path, scala_doc_sources, scala_doc_classpath))
+    # There are unresolvable errors on mxnet 1.2.x. We are ignoring those errors while aborting the ci on newer versions
+    scala_ignore_errors = '; exit 0' if '1.2.' or '1.3.' in _BUILD_VER else ''
+    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation {}'
+             .format(scala_path, scala_doc_sources, scala_doc_classpath, scala_ignore_errors))
     dest_path = app.builder.outdir + '/api/scala/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)
@@ -127,9 +131,16 @@ def build_scala_docs(app):
 
 def build_java_docs(app):
     """build java docs and then move the outdir"""
-    java_path = app.builder.srcdir + '/../scala-package/core/src/main/scala/org/apache/mxnet/'
-    # scaldoc fails on some apis, so exit 0 to pass the check
-    _run_cmd('cd ' + java_path + '; scaladoc `find . -type f -name "*.scala" | egrep \"\/javaapi\" | egrep -v \"Suite\"`; exit 0')
+    java_path = app.builder.srcdir + '/../scala-package'
+    java_doc_sources = 'find . -type f -name "*.scala" | egrep \"\.\/core|\.\/infer\" | egrep \"\/javaapi\" | egrep -v \"Suite\"'
+    java_doc_classpath = ':'.join([
+        '`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `',
+        '`find macros -name "*.jar" | tr "\\n" ":" `',
+        '`find core -name "*.jar" | tr "\\n" ":" `',
+        '`find infer -name "*.jar" | tr "\\n" ":" `'
+    ])
+    _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation'
+             .format(java_path, java_doc_sources, java_doc_classpath))
     dest_path = app.builder.outdir + '/api/java/docs'
     _run_cmd('rm -rf ' + dest_path)
     _run_cmd('mkdir -p ' + dest_path)

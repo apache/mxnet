@@ -122,8 +122,8 @@ NDArray::Chunk::~Chunk() {
       }
 #endif
       if (mem.h.size > 0) Storage::Get()->Free(mem.h);
-      for (size_t i = 0; i < mem.aux_h.size(); i++) {
-        if (mem.aux_h[i].size > 0) Storage::Get()->Free(mem.aux_h[i]);
+      for (const auto& aux : mem.aux_h) {
+        if (aux.size > 0) Storage::Get()->Free(aux);
       }
     }
   }, shandle.ctx, var);
@@ -330,11 +330,10 @@ struct NDArrayDLManager {
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
+  CHECK(!is_none()) << "NDArray is not initialized";
   NDArrayDLManager* dlmanager(new NDArrayDLManager);
   dlmanager->handle = *this;
-  if (!is_none()) {
-    dlmanager->tensor.dl_tensor = data().dltensor();
-  }
+  dlmanager->tensor.dl_tensor = dlmanager->handle.data().dltensor();
   dlmanager->tensor.manager_ctx = dlmanager;
   dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
     delete static_cast<NDArrayDLManager*>(dlmanager->manager_ctx);
@@ -454,17 +453,10 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
 
   mkldnn::memory::dims dims;
   // These are shapes supprted by MKLDNN.
-  if (shape.ndim() == 1 || shape.ndim() == 2 || shape.ndim() == 4
-      || shape.ndim() == 5) {
+  if (shape.ndim() >= 1 && shape.ndim() <= 5) {
     dims.resize(shape.ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
-  } else if (shape.ndim() == 3) {
-    // If there are 3 dimensions, we'll force it to 4 dimensions.
-    dims.resize(shape.ndim() + 1);
-    dims[0] = 1;
-    for (size_t i = 0; i < shape.ndim(); i++)
-      dims[i + 1] = shape[i];
   } else {
     LOG(FATAL) << "MKLDNN doesn't support " << shape.ndim() << " dimensions";
   }
@@ -472,6 +464,7 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   switch (dims.size()) {
     case 1: layout = mkldnn::memory::format::x; break;
     case 2: layout = mkldnn::memory::format::nc; break;
+    case 3: layout = mkldnn::memory::format::ncw; break;
     case 4: layout = mkldnn::memory::format::nchw; break;
     // This isn't the right layout when the data has 5 dimensions in MXNet.
     // MXNet interprets 5 dimensions as ncdhw, but MKLDNN doesn't have
@@ -1280,17 +1273,17 @@ void CopyFromTo(const NDArray& from, const NDArray *to, int priority) {
 void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority) {
   std::vector<Engine::VarHandle> const_vars;
   const_vars.reserve(source.size());
-  for (size_t i = 0; i < source.size(); ++i) {
-    if (source[i].var() != out->var()) {
-      const_vars.push_back(source[i].var());
+  for (const auto& source_array : source) {
+    if (source_array.var() != out->var()) {
+      const_vars.push_back(source_array.var());
     }
-    CHECK_EQ(source[i].shape() , out->shape())
+    CHECK_EQ(source_array.shape() , out->shape())
         << "operands shape mismatch";
     if (out->ctx().dev_mask() == Context::kCPU) {
-      CHECK_EQ(source[i].ctx().dev_mask(), Context::kCPU)
+      CHECK_EQ(source_array.ctx().dev_mask(), Context::kCPU)
           << "operands context mismatch";
     } else {
-      CHECK_EQ(source[i].ctx(), out->ctx())
+      CHECK_EQ(source_array.ctx(), out->ctx())
           << "operands context mismatch";
     }
   }

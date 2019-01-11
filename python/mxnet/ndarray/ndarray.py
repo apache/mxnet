@@ -157,6 +157,13 @@ def waitall():
     """Wait for all async operations to finish in MXNet.
 
     This function is used for benchmarking only.
+
+    .. warning::
+
+       If your code has exceptions, `waitall` can cause silent failures.
+       For this reason you should avoid `waitall` in your code.
+       Use it only if you are confident that your code is error free.
+       Then make sure you call `wait_to_read` on all outputs after `waitall`.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -998,7 +1005,7 @@ fixed-size items.
 
               Example::
 
-              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be \
                 (40,5).
               - with reverse=1, output shape will be (50,4).
 

@@ -62,6 +62,11 @@ calls. For example let *A*, *B*, *C* be 5 dimensional tensors. Then gemm(*A*, *B
 
 without the overhead of the additional swapaxis operations.
 
+When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
+and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
+pseudo-float16 precision (float32 math with float16 I/O) precision in order to use
+Tensor Cores on suitable NVIDIA GPUs. This can sometimes give significant speedups.
+
 .. note:: The operator supports float32 and float64 data types only.
 
 Examples::
@@ -133,6 +138,11 @@ calls. For example let *A*, *B* be 5 dimensional tensors. Then gemm(*A*, *B*, ax
     C = swapaxis(C, dim1=1, dim2=3)
 
 without the overhead of the additional swapaxis operations.
+
+When the input data is of type float32 and the environment variables MXNET_CUDA_ALLOW_TENSOR_CORE
+and MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION are set to 1, this operator will try to use
+pseudo-float16 precision (float32 math with float16 I/O) precision in order to use
+Tensor Cores on suitable NVIDIA GPUs. This can sometimes give significant speedups.
 
 .. note:: The operator supports float32 and float64 data types only.
 

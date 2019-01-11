@@ -5,63 +5,20 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-parent_2.11</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-macros_2.11</artifactId>
+  <artifactId>mxnet-macros</artifactId>
   <name>MXNet Scala Package - Macros</name>
-
-  <profiles>
-    <profile>
-      <id>unittest</id>
-      <properties>
-        <skiptest>false</skiptest>
-      </properties>
-    </profile>
-    <profile>
-      <id>integrationtest</id>
-      <properties>
-        <skiptest>true</skiptest>
-      </properties>
-    </profile>
-    <profile>
-      <id>osx-x86_64-cpu</id>
-      <properties>
-        <platform>osx-x86_64</platform>
-        <libtype>jnilib</libtype>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-cpu</id>
-      <properties>
-        <platform>linux-x86_64</platform>
-        <libtype>so</libtype>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-gpu</id>
-      <properties>
-        <platform>linux-x86_64</platform>
-        <libtype>so</libtype>
-      </properties>
-    </profile>
-  </profiles>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-init_${scala.binary.version}</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
+      <artifactId>mxnet-scala-init</artifactId>
+      <version>INTERNAL</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.mxnet</groupId>
-      <artifactId>libmxnet-init-scala-${platform}</artifactId>
-      <version>1.3.1-SNAPSHOT</version>
-      <scope>provided</scope>
-      <type>${libtype}</type>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
@@ -70,16 +27,8 @@
     </dependency>
   </dependencies>
 
-
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-deploy-plugin</artifactId>
-        <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
@@ -96,38 +45,14 @@
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
-        <executions>
-          <execution>
-            <id>apidoc-generation</id>
-            <phase>package</phase>
-            <goals>
-              <goal>java</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <additionalClasspathElements>
-            <additionalClasspathElement>${project.parent.basedir}/init/target/classes</additionalClasspathElement>
-          </additionalClasspathElements>
-          <arguments>
-            <argument>${project.parent.basedir}/core/src/main/scala/org/apache/mxnet/</argument>
-          </arguments>
-          <mainClass>org.apache.mxnet.APIDocGenerator</mainClass>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
         <configuration>
-          <skipTests>${skiptest}</skipTests>
           <environmentVariables>
             <MXNET_BASEDIR>${project.parent.basedir}/init-native</MXNET_BASEDIR>
           </environmentVariables>
           <argLine>
-            -Djava.library.path=${project.parent.basedir}/native/${platform}/target \
+            -Djava.library.path=${project.parent.basedir}/native/target \
             -Dlog4j.configuration=file://${project.basedir}/src/test/resources/log4j.properties
           </argLine>
         </configuration>
@@ -138,5 +63,4 @@
       </plugin>
     </plugins>
   </build>
-
 </project>

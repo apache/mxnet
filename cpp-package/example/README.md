@@ -2,7 +2,8 @@
 
 ## Building C++ examples
 
-The examples are built while building the MXNet library and cpp-package from source . However, they can be built manually as follows
+The examples in this folder demonstrate the **training** workflow. The **inference workflow** related examples can be found in [inference](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference>) folder.
+The examples in this folder are built while building the MXNet library and cpp-package from source . However, they can be built manually as follows
 
 From cpp-package/examples directory
 
@@ -18,17 +19,17 @@ The examples that are built to be run on GPU may not work on the non-GPU machine
 The makefile will also download the necessary data files and store in a data folder. (The download will take couple of minutes, but will be done only once on a fresh installation.)
 
 
-## Examples
+## Examples demonstrating training workflow
 
-This directory contains following examples. In order to run the examples, ensure that the path to the MXNet shared library is added to the OS specific environment variable viz. **LD\_LIBRARY\_PATH** for Linux, Mac and Ubuntu OS and **PATH** for Windows OS.
+This directory contains following examples. In order to run the examples, ensure that the path to the MXNet shared library is added to the OS specific environment variable viz. **LD\_LIBRARY\_PATH** for Linux, Mac and Ubuntu OS and **PATH** for Windows OS. For example `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/ubuntu/incubator-mxnet/lib` on ubuntu using gpu.
 
 ### [alexnet.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/alexnet.cpp>)
 
 The example implements the C++ version of AlexNet. The networks trains on MNIST data. The number of epochs can be specified as a command line argument. For example to train with 10 epochs use the following:
 
-	```
-	build/alexnet 10
-	```
+```
+build/alexnet 10
+```
 
 ### [googlenet.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/googlenet.cpp>)
 
@@ -69,7 +70,13 @@ build/mlp_gpu
 The code implements a multilayer perceptron to train the MNIST data. The code demonstrates the use of the "SimpleBind"  C++ API and CSVIter. The CSVIter can iterate data that is in CSV format. The example can be run on CPU or GPU. The example usage is as follows:
 
 ```
-build/mlp_csv --train mnist_training_set.csv --test mnist_test_set.csv --epochs 10 --batch_size 100 --hidden_units "128,64,64 [--gpu]"
+build/mlp_csv --train data/mnist_data/mnist_train.csv --test data/mnist_data/mnist_test.csv --epochs 10 --batch_size 100 --hidden_units "128 64 64" --gpu
+```
+* To get the `mnist_training_set.csv` and `mnist_test_set.csv` please run the following command:
+```python
+# in incubator-mxnet/cpp-package/example directory
+python mnist_to_csv.py ./data/mnist_data/train-images-idx3-ubyte ./data/mnist_data/train-labels-idx1-ubyte ./data/mnist_data/mnist_train.csv 60000
+python mnist_to_csv.py ./data/mnist_data/t10k-images-idx3-ubyte ./data/mnist_data/t10k-labels-idx1-ubyte ./data/mnist_data/mnist_test.csv 10000
 ```
 
 ### [resnet.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/resnet.cpp>)
@@ -97,7 +104,7 @@ build/lenet_with_mxdataiter 10
 
 In addition, there is `run_lenet_with_mxdataiter.sh` that downloads the mnist data and run `lenet_with_mxdataiter` example.
 
-###[inception_bn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inception_bn.cpp>)
+### [inception_bn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inception_bn.cpp>)
 
 The code implements an Inception network using the C++ API with batch normalization. The example uses MNIST data to train the network. The model trains for 100 epochs. The example can be run by executing the following command:
 

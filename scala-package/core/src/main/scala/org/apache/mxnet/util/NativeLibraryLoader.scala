@@ -85,12 +85,18 @@ private[mxnet] object NativeLibraryLoader {
       }
     logger.debug(s"Attempting to load $loadLibname")
     val libFileInJar = libPathInJar + loadLibname
-    val is: InputStream = getClass.getResourceAsStream(libFileInJar)
-    if (is == null) {
-      throw new UnsatisfiedLinkError(s"Couldn't find the resource $loadLibname")
-    }
-    logger.info(s"Loading $loadLibname from $libPathInJar copying to $libname")
-    loadLibraryFromStream(libname, is)
+    saveLibraryToTemp("libmxnet.so", "/lib/native/libmxnet.so", true)
+    saveLibraryToTemp("libgfortran.so.3", "/lib/native/libgfortran.so.3", false)
+    saveLibraryToTemp("libquadmath.so.0", "/lib/native/libquadmath.so.0", false)
+    saveLibraryToTemp("libiomp5.so", "/lib/native/libiomp5.so", false)
+    saveLibraryToTemp("libiomp5.dylib", "/lib/native/libiomp5.dylib", false)
+    saveLibraryToTemp("libmklml_intel.so", "/lib/native/libmklml_intel.so", false)
+    saveLibraryToTemp("libmklml.dylib", "/lib/native/libmklml.dylib", false)
+    saveLibraryToTemp("libmkldnn.so.0", "/lib/native/libmkldnn.so.0", false)
+    saveLibraryToTemp("libmkldnn.0.dylib", "/lib/native/libmkldnn.0.dylib", false)
+    val tempfile: File = saveLibraryToTemp(libname, libFileInJar, true)
+
+    loadLibraryFromFile(libname, tempfile)
   }
 
   /**
@@ -109,7 +115,7 @@ private[mxnet] object NativeLibraryLoader {
 
   @throws(classOf[IOException])
   private def createTempFile(name: String): File = {
-    new File(_tempDir + File.separator + name)
+    new File(_tempDir, name)
   }
 
   /**
@@ -117,34 +123,56 @@ private[mxnet] object NativeLibraryLoader {
    * and loads from there.
    *
    * @param libname name of the library (just used in constructing the library name)
-   * @param is      InputStream pointing to the library
+   * @param tempfile File pointing to the library
    */
-  private def loadLibraryFromStream(libname: String, is: InputStream) {
+  private def loadLibraryFromFile(libname: String, tempfile: File) {
     try {
-      val tempfile: File = createTempFile(libname)
-      val os: OutputStream = new FileOutputStream(tempfile)
-      logger.debug("tempfile.getPath() = {}", tempfile.getPath)
-      val savedTime: Long = System.currentTimeMillis
-      val buf: Array[Byte] = new Array[Byte](8192)
-      var len: Int = is.read(buf)
-      while (len > 0) {
-        os.write(buf, 0, len)
-        len = is.read(buf)
-      }
-      os.flush()
-      val lock: InputStream = new FileInputStream(tempfile)
-      os.close()
-      val seconds: Double = (System.currentTimeMillis - savedTime).toDouble / 1e3
-      logger.debug(s"Copying took $seconds seconds.")
       logger.debug("Loading library from {}", tempfile.getPath)
       System.load(tempfile.getPath)
-      lock.close()
     } catch {
-      case io: IOException =>
-        logger.error("Could not create the temp file: {}", io.toString)
       case ule: UnsatisfiedLinkError =>
         logger.error("Couldn't load copied link file: {}", ule.toString)
         throw ule
+    }
+  }
+
+  /**
+    * Load a system library from a stream. Copies the library to a temp file
+    * and loads from there.
+    *
+    * @param libname name of the library (just used in constructing the library name)
+    * @param resource String resource path in the jar file
+    * @param required true if library is required
+    */
+  private def saveLibraryToTemp(libname: String, resource: String, required: Boolean): File = {
+    try {
+      val is: InputStream = getClass.getResourceAsStream(resource)
+      if (is == null) {
+        if (required) {
+          throw new UnsatisfiedLinkError(s"Couldn't find the resource $resource")
+        } else {
+          null
+        }
+      } else {
+        val tempfile: File = new File(_tempDir, libname)
+        val os: OutputStream = new FileOutputStream(tempfile)
+        logger.debug("tempfile.getPath() = {}", tempfile.getPath)
+        val savedTime: Long = System.currentTimeMillis
+        val buf: Array[Byte] = new Array[Byte](8192)
+        var len: Int = is.read(buf)
+        while (len > 0) {
+          os.write(buf, 0, len)
+          len = is.read(buf)
+        }
+        os.close()
+        is.close()
+        val seconds: Double = (System.currentTimeMillis - savedTime).toDouble / 1e3
+        logger.debug(s"Copying $libname took $seconds seconds.")
+        tempfile
+      }
+    } catch {
+      case io: IOException =>
+        throw new UnsatisfiedLinkError(s"Could not create temp file for $libname")
     }
   }
 }

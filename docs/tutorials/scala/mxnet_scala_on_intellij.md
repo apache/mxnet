@@ -385,14 +385,14 @@ If you chose to "Build from Source" when following the [install instructions](ht
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-core_${scala.version}-${platform}-sources</artifactId>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.3.1-SNAPSHOT-sources.jar</systemPath>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.5.0-SNAPSHOT-sources.jar</systemPath>
     </dependency>
 
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_${scala.version}-${platform}</artifactId>
       <scope>system</scope>
-      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+      <systemPath>/PathToMXNetSource/incubator-mxnet/scala-package/assembly/osx-x86_64-cpu/target/mxnet-full_${scala.version}-osx-x86_64-cpu-1.5.0-SNAPSHOT.jar</systemPath>
     </dependency>
 ```
 

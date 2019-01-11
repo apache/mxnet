@@ -18,12 +18,11 @@
 ROOTDIR = $(CURDIR)
 TPARTYDIR = $(ROOTDIR)/3rdparty
 
-SCALA_VERSION_PROFILE := scala-2.11
-
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
 else
 	UNAME_S := $(shell uname -s)
+	UNAME_P := $(shell uname -p)
 endif
 
 ifndef config
@@ -59,6 +58,16 @@ endif
 
 # use customized config file
 include $(config)
+
+ifndef USE_MKLDNN
+ifneq ($(UNAME_S), Darwin)
+ifneq ($(UNAME_S), Windows)
+ifeq ($(UNAME_P), x86_64)
+	USE_MKLDNN=1
+endif
+endif
+endif
+endif
 
 ifeq ($(USE_MKL2017), 1)
 $(warning "USE_MKL2017 is deprecated. We will switch to USE_MKLDNN.")
@@ -341,7 +350,7 @@ endif
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
 ifeq ($(CUDA_ARCH),)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70 75
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
@@ -397,18 +406,13 @@ PLUGIN_OBJ =
 PLUGIN_CUOBJ =
 include $(MXNET_PLUGINS)
 
-ifeq ($(UNAME_S), Windows)
-	# TODO(yizhi) currently scala package does not support windows
-	SCALA_PKG_PROFILE := windows
-else
+ifneq ($(UNAME_S), Windows)
 	ifeq ($(UNAME_S), Darwin)
 		WHOLE_ARCH= -all_load
 		NO_WHOLE_ARCH= -noall_load
-		SCALA_PKG_PROFILE := osx-x86_64
 	else
 		WHOLE_ARCH= --whole-archive
 		NO_WHOLE_ARCH= --no-whole-archive
-		SCALA_PKG_PROFILE := linux-x86_64
 	endif
 endif
 
@@ -427,7 +431,6 @@ ifeq ($(USE_CUDA), 1)
 	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
-	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-gpu
 	ifeq ($(USE_NCCL), 1)
 		ifneq ($(USE_NCCL_PATH), NONE)
 			CFLAGS += -I$(USE_NCCL_PATH)/include
@@ -439,7 +442,6 @@ ifeq ($(USE_CUDA), 1)
 		CFLAGS += -DMXNET_USE_NCCL=0
 	endif
 else
-	SCALA_PKG_PROFILE := $(SCALA_PKG_PROFILE)-cpu
 	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
@@ -454,6 +456,10 @@ else
 	CFLAGS += -DMXNET_USE_LIBJPEG_TURBO=0
 endif
 
+ifeq ($(CI), 1)
+	MAVEN_ARGS := -B
+endif
+
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
@@ -463,7 +469,7 @@ build/src/%.o: src/%.cc | mkldnn
 
 build/src/%_gpu.o: src/%.cu | mkldnn
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" -M -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" --generate-dependencies -MT build/src/$*_gpu.o $< >build/src/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
 # A nvcc bug cause it to generate "generic/xxx.h" dependencies from torch headers.
@@ -479,12 +485,17 @@ build/plugin/%.o: plugin/%.cc
 
 %_gpu.o: %.cu
 	@mkdir -p $(@D)
-	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" -M -MT $*_gpu.o $< >$*_gpu.d
+	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" --generate-dependencies -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
+
+# Set install path for libmxnet.so on Mac OS
+ifeq ($(UNAME_S), Darwin)
+        LDFLAGS += -Wl,-install_name,@rpath/libmxnet.so
+endif
 
 # NOTE: to statically link libmxnet.a we need the option
 # --Wl,--whole-archive -lmxnet --Wl,--no-whole-archive
@@ -580,83 +591,42 @@ rpkg:
 	cp -rf lib/libmxnet.so R-package/inst/libs
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
+	rm R-package/inst/include/dmlc
+	rm R-package/inst/include/nnvm
 	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
 	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
+	Rscript -e "if(!require(devtools)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
-	Rscript -e "if (!require('roxygen2')||packageVersion('roxygen2') < '5.0.1'){\
-	    devtools::install_version('roxygen2',version='5.0.1',\
-	    repos='https://cloud.r-project.org/',quiet=TRUE)}"
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
 	rm R-package/NAMESPACE
-	Rscript -e "require(roxygen2); roxygen2::roxygenise('R-package'); warnings()"
+	Rscript -e "devtools::document('R-package'); warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
-	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file("r-package_coverage.json");writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
+	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn clean -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE))
+	(cd $(ROOTDIR)/scala-package && mvn clean)
 
 scalapkg:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn package -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -Dcxx="$(CXX)" \
-		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dcurrent_libdir="$(ROOTDIR)/lib" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
-
-scalaunittest:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),unittest -Dcxx="$(CXX)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
-
-scalaintegrationtest:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn integration-test -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE),integrationtest -Dcxx="$(CXX)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a" $(SCALA_TEST_ARGS))
+	(cd $(ROOTDIR)/scala-package && mvn install -DskipTests)
 
 scalainstall:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn install -P$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) -DskipTests=true -Dcxx="$(CXX)" \
-		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+	(cd $(ROOTDIR)/scala-package && mvn install)
 
-scalarelease-dryrun:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn release:clean release:prepare -DdryRun=true -DautoVersionSubmodules=true \
-		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
+scalaunittest:
+	(cd $(ROOTDIR)/scala-package && mvn install)
 
-scalarelease-prepare:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn release:clean release:prepare -DautoVersionSubmodules=true \
-		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
-
-scalarelease-perform:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn release:perform -DautoVersionSubmodules=true \
-		-Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \
-		-Darguments=""-Dbuild\.platform=\""$(SCALA_PKG_PROFILE)\""\ -DskipTests=true\ -Dcflags=\""$(CFLAGS)\""\ -Dcxx=\""$(CXX)\""\ -Dldflags=\""$(LDFLAGS)\""\ -Dlddeps=\""$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a\"""")
-
-scaladeploy:
-	(cd $(ROOTDIR)/scala-package; \
-		mvn deploy -Papache-release,$(SCALA_PKG_PROFILE),$(SCALA_VERSION_PROFILE) \-DskipTests=true -Dcxx="$(CXX)" \
-		    -Dbuild.platform="$(SCALA_PKG_PROFILE)" \
-			-Dcflags="$(CFLAGS)" -Dldflags="$(LDFLAGS)" \
-			-Dlddeps="$(LIB_DEP) $(ROOTDIR)/lib/libmxnet.a")
+scalaintegrationtest:
+	(cd $(ROOTDIR)/scala-package && mvn integration-test -DskipTests=false)
 
 jnilint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src
+	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src --exclude_path scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h
 
 rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
@@ -664,7 +634,7 @@ rclean:
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

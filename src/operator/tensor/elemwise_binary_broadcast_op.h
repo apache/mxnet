@@ -190,7 +190,7 @@ namespace mxnet_op {
 template<int ndim, typename DType, typename OP>
 struct binary_broadcast_kernel {
   /*! \brief Map function for binary_broadcast_kernel */
-  MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
+  MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, DType *lhs, DType *rhs,
                                   DType *out) {
@@ -199,7 +199,7 @@ struct binary_broadcast_kernel {
     auto ridx = static_cast<index_t>(dot(coord, rstride));
     KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
     // starts from 1 to avoid extra inc at end of loop
-    for (int i = 1; i < length; ++i) {
+    for (index_t i = 1; i < length; ++i) {
       inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
       // When tuning, don't actually run the op, since it's not going to be tuned against
       // the actual op we'll eventually be using
@@ -208,7 +208,7 @@ struct binary_broadcast_kernel {
   }
 
   /*! \brief Map function for binary_broadcast_kernel */
-  MSHADOW_XINLINE static void Map(int base, int length, OpReqType req,
+  MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, DType lhs, DType *rhs,
                                   DType *out) {
@@ -217,7 +217,7 @@ struct binary_broadcast_kernel {
     auto ridx = static_cast<index_t>(dot(coord, rstride));
     KERNEL_ASSIGN(out[base], req, OP::Map(lhs, rhs[ridx]));
     // starts from 1 to avoid extra inc at end of loop
-    for (int i = 1; i < length; ++i) {
+    for (index_t i = 1; i < length; ++i) {
       inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
       // When tuning, don't actually run the op, since it's not going to be tuned against
       // the actual op we'll eventually be using
@@ -238,7 +238,7 @@ struct csr_dns_csr_broadcast_kernel {
    * \param out          ptr to the data buffer of the result csr matrix
    */
   template<typename DType, typename CType, typename RType>
-  MSHADOW_XINLINE static void Map(int row, const DType *csr_data, const CType *csr_indices,
+  MSHADOW_XINLINE static void Map(index_t row, const DType *csr_data, const CType *csr_indices,
                                   const RType *csr_indptr, const DType *dns, DType *out) {
     const nnvm::dim_t curr_row_i = csr_indptr[row];
     const nnvm::dim_t next_row_i = csr_indptr[row + 1];
@@ -257,7 +257,7 @@ struct csr_dns_csr_broadcast_kernel {
    * \param nnz         number of non-zero elements in input csr matrix
    */
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *csr_data, const DType* scalar_ptr,
+  MSHADOW_XINLINE static void Map(index_t i, const DType *csr_data, const DType* scalar_ptr,
                                   DType *out, const nnvm::dim_t nnz) {
     const DType scale = scalar_ptr[0];
     if (i < nnz) {
@@ -269,7 +269,7 @@ struct csr_dns_csr_broadcast_kernel {
 template<int req, typename OP, bool reverse = false>
 struct csr_dns_map_kernel {
   template <typename DType, typename CType, typename RType>
-  MSHADOW_XINLINE static void Map(int row, const DType *csr_data, const CType *csr_indices,
+  MSHADOW_XINLINE static void Map(index_t row, const DType *csr_data, const CType *csr_indices,
                                   const RType *csr_indptr, DType *out, const nnvm::dim_t num_rows,
                                   const nnvm::dim_t num_cols) {
     if (row < num_rows) {

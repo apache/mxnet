@@ -77,6 +77,10 @@ def _dataset_transform_fn(x, y):
     """Named transform function since lambda function cannot be pickled."""
     return x, y
 
+def _dataset_transform_first_fn(x):
+    """Named transform function since lambda function cannot be pickled."""
+    return x
+
 @with_seed()
 def test_recordimage_dataset_with_data_loader_multiworker():
     recfile = prepare_record()
@@ -95,17 +99,13 @@ def test_recordimage_dataset_with_data_loader_multiworker():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
-    # try limit recursion depth
-    import sys
-    old_limit = sys.getrecursionlimit()
-    sys.setrecursionlimit(500)  # this should be smaller than any default value used in python
-    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
+    # with transform_first
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform_first(_dataset_transform_first_fn)
     loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
-    sys.setrecursionlimit(old_limit)
 
 @with_seed()
 def test_sampler():
@@ -156,9 +156,10 @@ class Dataset(gluon.data.Dataset):
 @with_seed()
 def test_multi_worker():
     data = Dataset()
-    loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5)
-    for i, batch in enumerate(loader):
-        assert (batch.asnumpy() == i).all()
+    for thread_pool in [True, False]:
+        loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5, thread_pool=thread_pool)
+        for i, batch in enumerate(loader):
+            assert (batch.asnumpy() == i).all()
 
 class _Dummy(Dataset):
     """Dummy dataset for randomized shape arrays."""
@@ -243,6 +244,17 @@ def test_multi_worker_forked_data_loader():
     for epoch in range(1):
         for i, data in enumerate(loader):
             pass
+
+@with_seed()
+def test_multi_worker_dataloader_release_pool():
+    # will trigger too many open file if pool is not released properly
+    for _ in range(100):
+        A = np.random.rand(999, 2000)
+        D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)
+        the_iter = iter(D)
+        next(the_iter)
+        del the_iter
+        del D
 
 if __name__ == '__main__':
     import nose

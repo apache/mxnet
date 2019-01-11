@@ -248,12 +248,12 @@ class GridGeneratorProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(type == dtype ||
+              type == -1) <<
                 "Non-uniform data type in GridGenerator";
         }
       }
