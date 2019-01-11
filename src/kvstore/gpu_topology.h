@@ -213,6 +213,8 @@ inline void GetP2PWeight(const std::vector<Context>& devs,
   }
 
   if (!matrix_correct) {
+    LOG(WARNING) << "cudaDeviceGetP2PAttribute incorrect. "
+                 << "Falling back to cudaDeviceEnablePeerAccess for topology detection";
     for (unsigned i = 0; i < p2p_matrix.size(); ++i) {
       if (p2p_matrix[i] > 0)
         (*matrix)[i] = 2;
