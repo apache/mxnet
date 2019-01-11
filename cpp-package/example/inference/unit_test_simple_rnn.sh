@@ -16,9 +16,6 @@
 # under the License.
 
 
-# Building
-make simple_rnn
-
 
 # Running the example with dog image.
 if [ "$(uname)" == "Darwin" ]; then
