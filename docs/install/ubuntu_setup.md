@@ -79,18 +79,6 @@ Alternatively, you can use the table below to select the package that suits your
 #### pip Package Availability
 
 The following table presents the pip packages that are recommended for each version of MXNet.
-<!-- Table does not render - using a picture alternative
-| Package / MXNet Version | 1.3.0 | 1.2.1 | 1.1.0 | 1.0.0 | 0.12.1 | 0.11.0 |
-|-|:-:|:-:|:-:|:-:|:-:|:-:|
-| mxnet-cu92mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu92 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu90mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu90 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="far fa-times-circle"></i> |
-| mxnet-cu80mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet-cu80 | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet-mkl | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
-| mxnet | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> | <i class="fas fa-check"></i> |
--->
 
 ![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages.png)
 
@@ -165,7 +153,9 @@ If building on CPU and using OpenBLAS:
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+    echo "USE_OPENCV = 1" >> ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    make -j $(nproc)
 ```
 
 If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source.html#math-library-selection) and [MKL-DNN README](https://github.com/apache/incubator-mxnet/blob/master/MKLDNN_README.md)):
@@ -173,7 +163,11 @@ If building on CPU and using MKL and MKL-DNN (make sure MKL is installed accordi
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=mkl USE_MKLDNN=1
+    echo "USE_OPENCV = 1" >> ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    echo "USE_CUDA = 0" >> ./config.mk
+    echo "USE_MKLDNN = 1" >> ./config.mk
+    make -j $(nproc)
 ```
 
 If building on GPU and you want OpenCV and OpenBLAS (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
@@ -181,7 +175,12 @@ If building on GPU and you want OpenCV and OpenBLAS (make sure you have installe
 ```bash
     git clone --recursive https://github.com/apache/incubator-mxnet.git
     cd incubator-mxnet
-    make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1
+    echo "USE_OPENCV = 1" >> ./config.mk
+    echo "USE_BLAS = openblas" >> ./config.mk
+    echo "USE_CUDA = 1" >> ./config.mk
+    echo "USE_CUDA_PATH = /usr/local/cuda" >> ./config.mk
+    echo "USE_CUDNN = 1" >> ./config.mk
+    make -j $(nproc)
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk` and also review common [usage examples](build_from_source.html#usage-examples).
@@ -351,7 +350,9 @@ $ sudo apt-get install -y libopencv-dev
 ```bash
 $ git clone --recursive https://github.com/apache/incubator-mxnet
 $ cd incubator-mxnet
-$ make -j $(nproc) USE_OPENCV=1 USE_BLAS=openblas
+$ echo "USE_OPENCV = 1" >> ./config.mk
+$ echo "USE_BLAS = openblas" >> ./config.mk
+$ make -j $(nproc)
 ```
 
 *Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
@@ -404,7 +405,7 @@ If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on
 
 To use the MXNet-Java package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Java Setup Instructions](java.html).
+Further information is in the [MXNet-Java Setup Instructions](java_setup.html).
 
 If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](../tutorials/java/mxnet_java_on_intellij.html) instead.
 <hr>

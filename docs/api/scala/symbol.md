@@ -20,14 +20,14 @@ You can configure the graphs either at the level of neural network layer operati
 The following example configures a two-layer neural network.
 
 ```scala
-    scala> import org.apache.mxnet._
-    scala> val data = Symbol.Variable("data")
-    scala> val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
-    scala> val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
-    scala> val fc2 = Symbol.api.FullyConnected(some(act1), num_hidden = 64, name = "fc2")
-    scala> val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
-    scala> :type net
-    org.apache.mxnet.Symbol
+    import org.apache.mxnet._
+    val data = Symbol.Variable("data")
+    val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
+    val fc2 = Symbol.api.FullyConnected(some(act1), num_hidden = 64, name = "fc2")
+    val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
+    :type net
+    // org.apache.mxnet.Symbol
 ```
 
 The basic arithmetic operators (plus, minus, div, multiplication) are overloaded for
@@ -36,10 +36,10 @@ The basic arithmetic operators (plus, minus, div, multiplication) are overloaded
 The following example creates a computation graph that adds two inputs together.
 
 ```scala
-    scala> import org.apache.mxnet._
-    scala> val a = Symbol.Variable("a")
-    scala> val b = Symbol.Variable("b")
-    scala> val c = a + b
+    import org.apache.mxnet._
+    val a = Symbol.Variable("a")
+    val b = Symbol.Variable("b")
+    val c = a + b
 ```
 
 ## Symbol Attributes
@@ -54,7 +54,7 @@ For proper communication with the C++ backend, both the key and values of the at
 
 ```
     data.attr("mood")
-    res6: Option[String] = Some(angry)
+    // Option[String] = Some(angry)
 ```
 
 To attach attributes, you can use ```AttrScope```. ```AttrScope``` automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:
@@ -71,7 +71,7 @@ To attach attributes, you can use ```AttrScope```. ```AttrScope``` automatically
 
     val exceedScopeData = Symbol.Variable("data3")
     assert(exceedScopeData.attr("group") === None, "No group attr in global attr scope")
-```  
+```
 
 ## Serialization
 
@@ -83,14 +83,14 @@ Refer to [API documentation](http://mxnet.incubator.apache.org/api/scala/docs/in
 The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.
 
 ```scala
-    scala> import org.apache.mxnet._
-    scala> val a = Symbol.Variable("a")
-    scala> val b = Symbol.Variable("b")
-    scala> val c = a + b
-    scala> c.save("s3://my-bucket/symbol-c.json")
-    scala> val c2 = Symbol.load("s3://my-bucket/symbol-c.json")
-    scala> c.toJson == c2.toJson
-    Boolean = true
+    import org.apache.mxnet._
+    val a = Symbol.Variable("a")
+    val b = Symbol.Variable("b")
+    val c = a + b
+    c.save("s3://my-bucket/symbol-c.json")
+    val c2 = Symbol.load("s3://my-bucket/symbol-c.json")
+    c.toJson == c2.toJson
+    // Boolean = true
 ```
 
 ## Executing Symbols
@@ -101,25 +101,25 @@ handled by the high-level [Model class](model.md) and the [`fit()`] function.
 
 For neural networks used in "feed-forward", "prediction", or "inference" mode (all terms for the same
 thing: running a trained network), the input arguments are the
-input data, and the weights of the neural network that were learned during training.  
+input data, and the weights of the neural network that were learned during training.
 
 To manually execute a set of symbols, you need to create an [`Executor`] object,
-which is typically constructed by calling the [`simpleBind(<parameters>)`] method on a symbol.  
+which is typically constructed by calling the [`simpleBind(<parameters>)`] method on a symbol.
 
 ## Multiple Outputs
 
 To group the symbols together, use the [mxnet.symbol.Group](#mxnet.symbol.Group) function.
 
 ```scala
-    scala> import org.apache.mxnet._
-    scala> val data = Symbol.Variable("data")
-    scala> val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
-    scala> val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
-    scala> val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
-    scala> val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
-    scala> val group = Symbol.Group(fc1, net)
-    scala> group.listOutputs()
-    IndexedSeq[String] = ArrayBuffer(fc1_output, out_output)
+    import org.apache.mxnet._
+    val data = Symbol.Variable("data")
+    val fc1 = Symbol.api.FullyConnected(Some(data), num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
+    val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
+    val net = Symbol.api.SoftmaxOutput(Some(fc2), name = "out")
+    val group = Symbol.Group(fc1, net)
+    group.listOutputs()
+    // IndexedSeq[String] = ArrayBuffer(fc1_output, out_output)
 ```
 
 After you get the ```group```, you can bind on ```group``` instead.

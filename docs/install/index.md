@@ -473,15 +473,15 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
     <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>1.4.0</version>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.4.0-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 
@@ -492,15 +492,15 @@ You can use the Maven packages defined in the following dependency to include MX
 <br/>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
     <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>1.4.0</version>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>
@@ -535,7 +535,6 @@ Refer to the <a href="ubuntu_setup.html#install-the-mxnet-package-for-perl">Perl
 </div> <!-- End of cpu gpu -->
 </div> <!-- END - C++-->
 <hr>
-For more installation options, refer to the <a href="ubuntu_setup.html">MXNet Ubuntu installation guide</a>.
 
 </div> <!-- END - Linux -->
 
@@ -698,13 +697,13 @@ To run MXNet you also should have OpenCV and OpenBLAS installed. You may install
 
 ```bash
 brew install opencv
-brew install openblas@0.3.1
+brew install openblas
 ```
 
-Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+To ensure MXNet R package runs with the version of OpenBLAS installed, create a symbolic link as follows:
 
 ```bash
-ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
@@ -777,15 +776,15 @@ Not available at this time. <br>
 </br>
 You can use the Maven packages defined in the following dependency to include MXNet in your Java project. The Java API is provided as a subset of the Scala API and is intended for inference only. Please refer to the <a href="java_setup.html">MXNet-Java setup guide</a> for a detailed set of instructions to help you with the setup process.
 
-<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.3.1-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
+<a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
 
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
     <scope>system</scope>
-    <version>1.3.1</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.3.1-SNAPSHOT.jar</systemPath>
+    <version>1.4.0</version>
+    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
 </dependency>
 ```
 <br>

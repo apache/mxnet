@@ -16,7 +16,7 @@
 # under the License.
 
 SCALA_VERSION_PROFILE := 2.11
-MXNET_VERSION := 1.3.1-SNAPSHOT
+MXNET_VERSION := [1.5.0-SNAPSHOT,\)
 
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows

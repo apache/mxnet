@@ -16,7 +16,8 @@ Checkout the [Installation Guide](http://mxnet.io/get_started/setup.html) contai
 Compile the Scala Package by
 
 ```bash
-make scalapkg
+cd scala-package
+mvn package
 ```
 
 This will automatically build the `spark` submodule. Now you can submit Spark job with these built jars.

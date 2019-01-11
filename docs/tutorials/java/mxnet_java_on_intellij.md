@@ -102,7 +102,7 @@ Also, add this under the `dependencies` tag :
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.3.1-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
 </dependency>
 ```
 The official Java Packages will be released with the release of MXNet 1.4 and will be available on  [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).

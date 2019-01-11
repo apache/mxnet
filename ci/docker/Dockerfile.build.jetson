@@ -77,10 +77,16 @@ RUN JETPACK_DOWNLOAD_PREFIX=https://developer.download.nvidia.com/devzone/devcen
     dpkg -i --force-architecture  $ARM_NVINFER_INSTALLER_PACKAGE && \
     dpkg -i --force-architecture  $ARM_NVINFER_DEV_INSTALLER_PACKAGE && \
     apt update -y || true && apt install -y cuda-libraries-dev-9-0 libcudnn7-dev libnvinfer-dev
+RUN ln -s /usr/include/aarch64-linux-gnu/cudnn_v7.h /usr/include/aarch64-linux-gnu/cudnn.h
 ENV PATH $PATH:/usr/local/cuda/bin
 ENV NVCCFLAGS "-m64"
 ENV CUDA_ARCH "-gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62"
 ENV NVCC /usr/local/cuda/bin/nvcc
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet

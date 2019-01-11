@@ -2,3 +2,4 @@
 mock
 nose
 nose-timer
+ipython

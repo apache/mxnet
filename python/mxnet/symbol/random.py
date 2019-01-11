@@ -23,7 +23,7 @@ from .symbol import Symbol
 
 
 __all__ = ['uniform', 'normal', 'poisson', 'exponential', 'gamma', 'multinomial',
-           'negative_binomial', 'generalized_negative_binomial', 'shuffle']
+           'negative_binomial', 'generalized_negative_binomial', 'shuffle', 'randint']
 
 
 def _random_helper(random, sampler, params, shape, dtype, kwargs):
