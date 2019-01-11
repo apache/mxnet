@@ -28,7 +28,15 @@
 #define MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_KERNELS_H
 
 namespace xnor_cuda {
+// typedef unsigned int BINARY_WORD;
+//uint32_t, uint64_t
+#if BINARY_WORD_32 == 1
 typedef unsigned int BINARY_WORD;
+#endif
+#if BINARY_WORD_64 == 1
+typedef unsigned long long int BINARY_WORD;
+#endif
+
 const int BITS_PER_BINARY_WORD (sizeof(BINARY_WORD) * CHAR_BIT);
 
 __device__ unsigned int concatenate(float* array);
@@ -37,14 +45,6 @@ __global__ void concatenate_cols_kernel(float *a, unsigned int *b, int m, int n)
 __global__ void xnor_gemm(unsigned int* A, unsigned int* B, float* C, int m, int n, int k, int block_size);
 
 inline int get_next_block_dim(int c){
-	if (c%128 == 0)
-		return 128;	
-	if (c%64 == 0)
-		return 64;	
-	if (c%32 == 0)
-		return 32;
-	if (c%16 == 0)
-		return 16;
 	if (c%8 == 0)
 		return 8;
 	if (c%4 == 0)
@@ -54,7 +54,7 @@ inline int get_next_block_dim(int c){
 	return 1;											
 }
 
-inline int get_next_block_dim(int m, int n, int k){
+inline int get_next_block_dim(int m, int n, int k){	
 	if (m%128 == 0 && n%128 == 0 && k%128 == 0)
 		return 128;
 	if (m%64 == 0 && n%64 == 0 && k%64 == 0)
