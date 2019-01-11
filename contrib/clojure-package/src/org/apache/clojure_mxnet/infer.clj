@@ -103,11 +103,14 @@
 
 (s/def ::nil-or-int (s/nilable int?))
 
-(defn- format-predictions [predictions]
+(defn- format-detection-predictions [predictions]
   (mapv (fn [[c p]]
           (let [[prob xmin ymin xmax ymax] (mapv float p)]
             {:class c :prob prob :x-min xmin :y-min ymin :x-max xmax :y-max ymax}))
         predictions))
+
+(defn- format-classification-predictions [predictions]
+  (mapv (fn [[c p]] {:class c :prob p}) predictions))
 
 (extend-protocol AClassifier
   WrappedClassifier
@@ -181,11 +184,13 @@
      (util/validate! ::image image "Invalid image")
      (util/validate! ::nil-or-int topk "Invalid top-K")
      (util/validate! ::dtype dtype "Invalid dtype")
-     (util/coerce-return-recursive
-      (.classifyImage (:image-classifier wrapped-image-classifier)
-                      image
-                      (util/->int-option topk)
-                      dtype))))
+     (-> (.classifyImage (:image-classifier wrapped-image-classifier)
+                         image
+                         (util/->int-option topk)
+                         dtype)
+         (util/coerce-return-recursive)
+         (first)
+         (format-classification-predictions))))
   (classify-image-batch
     ([wrapped-image-classifier images]
      (classify-image-batch wrapped-image-classifier images nil dtype/FLOAT32))
@@ -196,11 +201,13 @@
                      "Invalid classifier")
      (util/validate! ::nil-or-int topk "Invalid top-K")
      (util/validate! ::dtype dtype "Invalid dtype")
-     (util/coerce-return-recursive
-      (.classifyImageBatch (:image-classifier wrapped-image-classifier)
-                           images
-                           (util/->int-option topk)
-                           dtype)))))
+     (-> (.classifyImageBatch (:image-classifier wrapped-image-classifier)
+                              images
+                              (util/->int-option topk)
+                              dtype)
+         (util/coerce-return-recursive)
+         (first)
+         (format-classification-predictions)))))
 
 (extend-protocol AObjectDetector
   WrappedObjectDetector
@@ -217,7 +224,7 @@
                               (util/->int-option topk))
           (util/coerce-return-recursive)
           (first)
-          (format-predictions))))
+          (format-detection-predictions))))
   (detect-objects-batch
     ([wrapped-detector images]
      (detect-objects-batch wrapped-detector images nil))
@@ -230,7 +237,7 @@
                                    (util/->int-option topk))
           (util/coerce-return-recursive)
           (first)
-          (format-predictions))))
+          (format-detection-predictions))))
   (detect-objects-with-ndarrays
     ([wrapped-detector input-arrays]
      (detect-objects-with-ndarrays wrapped-detector input-arrays nil))
@@ -245,7 +252,7 @@
                                     (util/->int-option topk))
           (util/coerce-return-recursive)
           (first)
-          (format-predictions)))))
+          (format-detection-predictions)))))
 
 (defprotocol AInferenceFactory
   (create-predictor [factory] [factory opts])
