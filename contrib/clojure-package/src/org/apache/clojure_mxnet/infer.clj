@@ -99,19 +99,22 @@
     [wrapped-predictor inputs]
     (util/validate! ::wrapped-predictor wrapped-predictor
                     "Invalid predictor")
-    (util/validate! ::vec-of-float-arrays inputs
+    (util/validate! ::vvec-of-numbers inputs
                     "Invalid inputs")
-    (util/coerce-return-recursive
-     (.predict (:predictor wrapped-predictor)
-               (util/vec->indexed-seq inputs))))
+    (->> (.predict (:predictor wrapped-predictor)
+                   (util/vec->indexed-seq [(float-array (first inputs))]))
+        (util/coerce-return-recursive)
+        (first)
+        (mapv float)))
   (predict-with-ndarray [wrapped-predictor input-arrays]
     (util/validate! ::wrapped-predictor wrapped-predictor
                     "Invalid predictor")
     (util/validate! ::vec-of-ndarrays input-arrays
                     "Invalid input arrays")
-    (util/coerce-return-recursive
-     (.predictWithNDArray (:predictor wrapped-predictor)
-                          (util/vec->indexed-seq input-arrays)))))
+    (-> (.predictWithNDArray (:predictor wrapped-predictor)
+                             (util/vec->indexed-seq input-arrays))
+        (util/coerce-return-recursive)
+        (first))))
 
 (s/def ::nil-or-int (s/nilable int?))
 
@@ -355,10 +358,12 @@
 
 (defn buffered-image-to-pixels
   "Convert input BufferedImage to NDArray of input shape"
-  [image input-shape-vec]
-  (util/validate! ::image image "Invalid image")
-  (util/validate! (s/coll-of int?) input-shape-vec "Invalid shape vector")
-  (ImageClassifier/bufferedImageToPixels image (shape/->shape input-shape-vec) dtype/FLOAT32))
+  ([image input-shape-vec]
+   (buffered-image-to-pixels image input-shape-vec dtype/FLOAT32))
+  ([image input-shape-vec dtype]
+   (util/validate! ::image image "Invalid image")
+   (util/validate! (s/coll-of int?) input-shape-vec "Invalid shape vector")
+   (ImageClassifier/bufferedImageToPixels image (shape/->shape input-shape-vec) dtype/FLOAT32)))
 
 (s/def ::image-path string?)
 (s/def ::image-paths (s/coll-of ::image-path))
@@ -375,13 +380,3 @@
   (util/validate! ::image-paths image-paths "Invalid image paths")
   (util/scala-vector->vec
    (ImageClassifier/loadInputBatch (util/convert-vector image-paths))))
-
-(defn reshape-image
-  "Reshapes a buffered image"
-  [buffered-image width height]
-  (ImageClassifier/reshapeImage buffered-image (int width) (int height)))
-
-(defn buffered-image-to-pixels
-  "Turns the buffered image into a ndarray allowing to specify shape and type"
-  [buffered-image shape-vec dtype]
-  (ImageClassifier/bufferedImageToPixels buffered-image (mx-shape/->shape shape-vec) dtype))
