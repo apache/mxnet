@@ -92,7 +92,7 @@ def parse_args():
     parser.add_argument('--params', type=str, default='', help='path to trained model')
     parser.add_argument('--dataset', type=str, default='voc', help='training dataset')
     parser.add_argument('--image', type=str, default='', help='path to test image')
-    parser.add_argument('--gpu', type=str, default='', help='gpu device eg. 0')
+    parser.add_argument('--gpu', type=str, default='', help='GPU devices, eg."0,1,2,3" , not set to use CPU.')
     parser.add_argument('--vis', action='store_true', help='display results')
     parser.add_argument('--vis-thresh', type=float, default=0.7, help='threshold display boxes')
     # faster rcnn params
