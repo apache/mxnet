@@ -15,16 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-using Documenter, MXNet
+using Documenter
+using DocumenterMarkdown
+using MXNet
 
 makedocs(
   sitename = "MXNet.jl",
-  modules = MXNet,
-  doctest = false
-)
-
-deploydocs(
-  deps = Deps.pip("pygments", "mkdocs", "mkdocs-material", "python-markdown-math"),
-  repo = "github.com/dmlc/MXNet.jl.git",
-  julia = "1.0",
+  modules  = MXNet,
+  doctest  = false,
+  format   = Markdown(),
 )
