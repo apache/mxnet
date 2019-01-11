@@ -206,6 +206,7 @@ class TestNode(unittest.TestCase):
                 mxnet_out = bkd_rep.run(inputs)
                 npt.assert_almost_equal(np_out, mxnet_out, decimal=4)
 
+
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
 # fix_attributes = {'modify': {mxnet_attr_name: onnx_attr_name},
 #                   'remove': [attr_name],
