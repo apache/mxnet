@@ -16,7 +16,7 @@
 # under the License.
 
 CPPEX_SRC = $(wildcard cpp-package/example/inference/*.cpp)
-CPPEX_EXE = $(patsubst cpp-package/example/inference/%.cpp, build/cpp-package/example/inference/%, $(CPPEX_SRC))
+CPPEX_EXE = $(patsubst cpp-package/example/inference/%.cpp, build/cpp-package/example/%, $(CPPEX_SRC))
 
 CPPEX_CFLAGS += -Icpp-package/include
 CPPEX_EXTRA_LDFLAGS := -L$(ROOTDIR)/lib -lmxnet
@@ -28,9 +28,9 @@ EXTRA_PACKAGES_CLEAN += cpp-package-inference-example-clean
 
 cpp-package-inference-example-all: cpp-package-all $(CPPEX_EXE)
 
-build/cpp-package/example/inference/% : cpp-package/example/inference/%.cpp lib/libmxnet.so $(CPP_PACKAGE_OP_H_FILE)
+build/cpp-package/example/% : cpp-package/example/inference/%.cpp lib/libmxnet.so $(CPP_PACKAGE_OP_H_FILE)
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) $(CPPEX_CFLAGS) -MM -MT cpp-package/example/inference/$* $< >build/cpp-package/example/inference/$*.d
+	$(CXX) -std=c++11 $(CFLAGS) $(CPPEX_CFLAGS) -MM -MT cpp-package/example/inference/$* $< >build/cpp-package/example/$*.d
 	$(CXX) -std=c++11 $(CFLAGS) $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(LDFLAGS) $(CPPEX_EXTRA_LDFLAGS)
 
 cpp-package-inference-example-clean:

@@ -57,9 +57,9 @@ cp ../../build/cpp-package/example/test_score .
 sh unittests/unit_test_mlp_csv.sh
 
 cd inference
-cp ../../../build/cpp-package/example/inference/inception_inference .
+cp ../../build/cpp-package/example/inference/inception_inference .
 ./unit_test_inception_inference.sh
 
-cp ../../../build/cpp-package/example/inference/simple_rnn .
+cp ../../build/cpp-package/example/inference/simple_rnn .
 ./unit_test_simple_rnn.sh
 cd ..

@@ -55,6 +55,7 @@ The model consists of :
 - FullyConnected Layer
 - SoftmaxOutput
 The model was trained for 100 epochs.
+The visual representation of the model is [here](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/obama-speaks.pdf>).
 
 The model files can be found here.
 - [obama-speaks-symbol.json](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama-speaks-symbol.json>)
