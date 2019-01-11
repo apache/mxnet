@@ -18,7 +18,6 @@
 all:
 	julia --color=yes --project=./ -e \
 	  'using Pkg; \
-	  Pkg.instantiate(); \
-	  Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
+	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
 	julia --color=yes --project=./ ./make.jl
 	mkdocs build
