@@ -1245,7 +1245,7 @@ deploy_jl_docs() {
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
 
-    make -C docs
+    make -C julia/docs
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
