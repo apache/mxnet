@@ -17,7 +17,6 @@
 (ns org.apache.clojure-mxnet.infer.objectdetector-test
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
-            [org.apache.clojure-mxnet.image :as image]
             [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.layout :as layout]
             [clojure.java.io :as io]
@@ -68,11 +67,10 @@
 
 (deftest test-detection-with-ndarrays
   (let [detector (create-detector)
-        image     (-> (image/read-image "test/test-images/kitten.jpg" {:to-rbg true})
-                      (image/resize-image 512 512)
-                      (ndarray/transpose)
-                      (ndarray/expand-dims 0)
-                      (ndarray/cast dtype/FLOAT32))
+        image (-> (infer/load-image-from-file "test/test-images/kitten.jpg")
+                  (infer/reshape-image 512 512)
+                  (infer/buffered-image-to-pixels [3 512 512] dtype/FLOAT32)
+                  (ndarray/expand-dims 0))
         predictions-all (infer/detect-objects-with-ndarrays detector [image])
         predictions (infer/detect-objects-with-ndarrays detector [image] 1)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]

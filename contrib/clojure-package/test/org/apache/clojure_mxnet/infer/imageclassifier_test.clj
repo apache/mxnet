@@ -19,6 +19,7 @@
             [org.apache.clojure-mxnet.dtype :as dtype]
             [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.layout :as layout]
+            [org.apache.clojure-mxnet.ndarray :as ndarray]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.test :refer :all]))
@@ -62,3 +63,67 @@
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
     (is (= (< 0 (:prob (first predictions)) 1)))))
+
+(deftest test-single-classification-with-ndarray
+  (let [classifier (create-classifier)
+        image (-> (infer/load-image-from-file "test/test-images/kitten.jpg")
+                  (infer/reshape-image 224 224)
+                  (infer/buffered-image-to-pixels [3 224 224] dtype/FLOAT32)
+                  (ndarray/expand-dims 0))
+        predictions-all (infer/classify-with-ndarray classifier [image])
+        predictions (infer/classify-with-ndarray classifier [image] 5)]
+    (is (= 1000 (count predictions-all)))
+    (is (= 5 (count predictions)))
+    (is (= "n02123159 tiger cat" (:class (first predictions))))
+    (is (= (< 0 (:prob (first predictions)) 1)))))
+
+(deftest test-single-classify
+  (let [classifier (create-classifier)
+        image (-> (infer/load-image-from-file "test/test-images/kitten.jpg")
+                  (infer/reshape-image 224 224)
+                  (infer/buffered-image-to-pixels [3 224 224] dtype/FLOAT32)
+                  (ndarray/expand-dims 0))
+        predictions-all (infer/classify classifier [(ndarray/->vec image)])
+        predictions (infer/classify classifier [(ndarray/->vec image)] 5)]
+    (is (= 1000 (count predictions-all)))
+    (is (= 5 (count predictions)))
+    (is (= "n02123159 tiger cat" (:class (first predictions))))
+    (is (= (< 0 (:prob (first predictions)) 1)))))
+
+(deftest test-base-classification-with-ndarray
+  (let [descriptors [{:name "data"
+                      :shape [1 3 224 224]
+                      :layout layout/NCHW
+                      :dtype dtype/FLOAT32}]
+        factory (infer/model-factory model-path-prefix descriptors)
+        classifier (infer/create-classifier factory)
+        image (-> (infer/load-image-from-file "test/test-images/kitten.jpg")
+                  (infer/reshape-image 224 224)
+                  (infer/buffered-image-to-pixels [3 224 224] dtype/FLOAT32)
+                  (ndarray/expand-dims 0))
+        predictions-all (infer/classify-with-ndarray classifier [image])
+        predictions (infer/classify-with-ndarray classifier [image] 5)]
+    (is (= 1000 (count predictions-all)))
+    (is (= 5 (count predictions)))
+    (is (= "n02123159 tiger cat" (:class (first predictions))))
+    (is (= (< 0 (:prob (first predictions)) 1)))))
+
+(deftest test-base-single-classify
+  (let [descriptors [{:name "data"
+                      :shape [1 3 224 224]
+                      :layout layout/NCHW
+                      :dtype dtype/FLOAT32}]
+        factory (infer/model-factory model-path-prefix descriptors)
+        classifier (infer/create-classifier factory)
+        image (-> (infer/load-image-from-file "test/test-images/kitten.jpg")
+                  (infer/reshape-image 224 224)
+                  (infer/buffered-image-to-pixels [3 224 224] dtype/FLOAT32)
+                  (ndarray/expand-dims 0))
+        predictions-all (infer/classify classifier [(ndarray/->vec image)])
+        predictions (infer/classify classifier [(ndarray/->vec image)] 5)]
+    (is (= 1000 (count predictions-all)))
+    (is (= 5 (count predictions)))
+    (is (= "n02123159 tiger cat" (:class (first predictions))))
+    (is (= (< 0 (:prob (first predictions)) 1)))))
+
+
