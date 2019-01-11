@@ -7329,31 +7329,35 @@ def test_invalid_max_pooling_pad_type_same():
 @with_seed()
 def test_digitize():
     def f(x, bins, right):
-        a = np.zeros_like(x)
-        if bins.ndim == 1:
-            a = np.digitize(x, bins, right=right)
-        elif bins.ndim == 2:
-            # verify x.shape[0] == bins.shape[0]
-            for idx, batch in enumerate(zip(x, bins)):
-                a[idx] = np.digitize(batch[0], batch[1], right=right)
+        x = x.asnumpy()
+        bins = bins.asnumpy()
 
-        return a
+        N = bins.ndim
+        x1 = x.reshape((-1,) + x.shape[N-1:])
+        x2 = np.atleast_2d((x1.reshape(x1.shape[0], -1)))
+        b1 = np.atleast_2d(bins.reshape(-1, bins.shape[-1]))
+        out = np.zeros_like(x2)
+
+        for idx,batch in enumerate(zip(x2, b1)):
+            out[idx] = np.digitize(batch[0], batch[1])
+
+        return out.reshape(x.shape)
 
     data = mx.symbol.Variable('data')
-    dig_sym = mx.sym.tensor.digitize(data=data)
-    x = np.random.randn(100, 200) * 100
+    dig_sym = mx.sym.digitize(data=data)
+    x = mx.nd.array(np.random.randn(100, 200) * 100)
 
     # Test with 1D bin vector
-    bins = np.linspace(0, np.random.randint(90)+10, np.random.randint(20))
+    bins = mx.nd.array(np.linspace(0, np.random.randint(90)+10, np.random.randint(20)))
 
     # right = False (default)
-    output = mx.nd.tensor.digitize([mx.nd.array(x), bins])
+    output = mx.nd.digitize(x, bins)
     expected = f(x, bins, False)
     assert_equal(output.asnumpy(), expected)
-    check_symbolic_forward(dig_sym, [x, bins], [expected])  # TODO: Should the symbolic op be checked in all cases?
+    check_symbolic_forward(dig_sym, [x, bins], [expected])
 
     # right = True
-    output = mx.nd.tensor.digitize([mx.nd.array(x), bins], right=True)
+    output = mx.nd.digitize(x, bins, right=True)
     expected = f(x, bins, True)
     assert_equal(output.asnumpy(), expected)
 
@@ -7361,27 +7365,20 @@ def test_digitize():
     x = np.random.randn(2, 200) * 100
     bins = np.vstack(np.linspace(np.linspace(0, np.random.randint(90)+10, np.random.randint(20)),
                                  np.linspace(0, np.random.randint(90) + 10, np.random.randint(20))))
-    output = mx.nd.tensor.digitize([mx.nd.array(x), bins])
+    output = mx.nd.digitize(x, bins)
     assert_equal(output.asnumpy(), f(x, bins, False))
 
     # Test exception raising
     def test_invalid_inputs():
-        # For all the assert_exception below:
-        # TODO: Check exception type
-        # TODO 2: Verify the arguments are right
-
         # bins not monotonic and ascending
-        bins = np.ones(10)
-        assert_exception(mx.nd.tensor.digitize, MXNetError, [x, bins])
+        bins = mx.nd.ones(10)
+        assert_exception(mx.nd.digitize, MXNetError, [x, bins])
 
-        # bins.ndim > 2
-        bins = np.tile(np.linspace(0, 10, 10), (4, 1))
-        assert_exception(mx.nd.tensor.digitize, MXNetError, [x, bins])
 
-        # bins.ndim > data.ndim (only applies when bins.ndim=2, data.ndim=1)
-        bins = np.tile(np.linspace(0, 10, 10), (2, 1))
-        x = np.random.randn(100) * 100
-        assert_exception(mx.nd.tensor.digitize, MXNetError, [x, bins])
+        # bins.ndim > data.ndim
+        bins = mx.nd.array(np.tile(np.linspace(0, 10, 10), (2, 1)))
+        x = mx.nd.array(np.random.randn(100) * 100)
+        assert_exception(mx.nd.digitize, MXNetError, [x, bins])
 
     test_invalid_inputs()
 

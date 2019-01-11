@@ -84,7 +84,7 @@ bin edges. Within this last dimension, bins must be strictly monotonically incre
                                      [](const NodeAttrs &attrs) {
                                        return std::vector<std::string>{ "data", "bins" };
                                      })
-    .set_attr<nnvm::FInferShape>("FInferShape", InferShape)
+    .set_attr<nnvm::FInferShape>("FInferShape", DigitizeOpShape)
     .set_attr<nnvm::FInferType>("FInferType", DigitizeOpType)
     .set_attr<FCompute>("FCompute", DigitizeOpForward<cpu>)
     .add_argument("data", "NDArray-or-Symbol", "Input data ndarray")

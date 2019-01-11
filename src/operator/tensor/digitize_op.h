@@ -55,7 +55,7 @@ struct DigitizeParam : public dmlc::Parameter<DigitizeParam> {
   }
 };
 
-bool InferShape(const nnvm::NodeAttrs &attrs,
+inline bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
                 std::vector<TShape> *in_attrs,
                 std::vector<TShape> *out_attrs) {
   using namespace mshadow;
@@ -178,10 +178,12 @@ struct ForwardKernel<cpu> {
 
 template<typename DType>
 struct CheckMonotonic {
-  static MSHADOW_XINLINE void Map(int i, int bins_length, DType *bins) {
+  static MSHADOW_XINLINE void Map(int i, int bins_length, DType *bins, bool* mono) {
     if ((i + 1) % bins_length != 0) {
-      CHECK_LT(bins[i], bins[i + 1]) << "Bins vector is not strictly monotonic and increasing";
-    } // TODO: Make sure the next element in bins is actually bins[i+1]
+      if(bins[i] >= bins[i + 1]){
+        *mono = false;
+      }
+    }
   }
 
   return true;
@@ -224,17 +226,20 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
 
     // Verify bins is strictly monotonic
+    bool mono = true;
     auto bins_length = bins.shape_[bins.ndim() - 1];
     mxnet_op::Kernel<CheckMonotonic<DType>, xpu>::Launch(s, bins.Size(), bins_length,
-                                                         bins.dptr<DType>());
+                                                         bins.dptr<DType>(), &mono);
+    CHECK(mono) << "Bins vector is not strictly monotonic and increasing";
+
 
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         auto batch_size = data.shape_.ProdShape(bins.ndim() - 1, data.ndim());
 
         mxnet_op::Kernel<ForwardKernel<xpu>, xpu>::Launch(s,
-        outputs[ 0 ].Size(),
+        outputs[0].Size(),
         data.dptr<DType>(),
-        outputs[ 0 ].dptr<OType>(),
+        outputs[0].dptr<OType>(),
         bins.dptr<DType>(),
         batch_size,
         bins_length,

@@ -34,7 +34,7 @@ namespace op {
 
 template<>
 struct ForwardKernel<gpu> {
-  template<typename DType, typename BType>
+  template<typename DType, typename OType>
   static MSHADOW_XINLINE void Map(int i,
                                   DType *in_data,
                                   OType *out_data,
