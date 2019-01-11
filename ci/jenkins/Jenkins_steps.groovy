@@ -934,7 +934,7 @@ def test_unix_julia07_cpu() {
 def test_unix_julia10_cpu() {
     return ['Julia 1.0: CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-julia07-cpu') {
+        ws('workspace/ut-julia10-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia10', false)
