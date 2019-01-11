@@ -123,11 +123,12 @@ if __name__ == '__main__':
         excluded_sym_names += ['flatten'+str(i)]
     excluded_sym_names += ['relu4_3_cls_pred_conv',
                             'relu7_cls_pred_conv',
-                            'relu4_3_loc_pred_conv']
+                            'relu4_3_loc_pred_conv',
+                            'multibox_loc_pred',
+                            'concat0',
+                            'concat1']
     if exclude_first_conv:
         excluded_sym_names += ['conv1_1']
-
-    excluded_sym_names += ['multibox_loc_pred', 'concat0', 'concat1']
 
     label_name = 'label'
     logger.info('label_name = %s' % label_name)
