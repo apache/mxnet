@@ -17,11 +17,13 @@
 (ns org.apache.clojure-mxnet.infer.objectdetector-test
   (:require [org.apache.clojure-mxnet.context :as context]
             [org.apache.clojure-mxnet.dtype :as dtype]
+            [org.apache.clojure-mxnet.image :as image]
             [org.apache.clojure-mxnet.infer :as infer]
             [org.apache.clojure-mxnet.layout :as layout]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.ndarray :as ndarray]))
 
 (def model-dir "data/")
 (def model-path-prefix (str model-dir "resnet50_ssd/resnet50_ssd_model"))
@@ -40,28 +42,43 @@
 (deftest test-single-detection
   (let [detector (create-detector)
         image (infer/load-image-from-file "test/test-images/kitten.jpg")
-        [predictions-all] (infer/detect-objects detector image)
-        [predictions] (infer/detect-objects detector image 5)]
+        predictions-all (infer/detect-objects detector image)
+        predictions (infer/detect-objects detector image 5)
+        {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
     (is (= 13 (count predictions-all)))
-    (is (every? #(= 2 (count %)) predictions))
-    (is (every? #(string? (first %)) predictions))
-    (is (every? #(= 5 (count (second %))) predictions))
-    (is (every? #(< 0 (first (second %)) 1) predictions))
-    (is (= "cat" (first (first predictions))))))
+    (is (= "cat" class))
+    (is (< 0.8 prob))
+    (every? #(< 0 % 1) [x-min x-max y-min y-max])))
 
 (deftest test-batch-detection
   (let [detector (create-detector)
         image-batch (infer/load-image-paths ["test/test-images/kitten.jpg"
                                              "test/test-images/Pug-Cookie.jpg"])
         batch-predictions-all (infer/detect-objects-batch detector image-batch)
-        batch-predictions (infer/detect-objects-batch detector image-batch 5)
-        predictions (first batch-predictions)]
-    (is (some? batch-predictions))
-    (is (= 13 (count (first batch-predictions-all))))
+        predictions (infer/detect-objects-batch detector image-batch 5)
+        {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
+    (is (some? predictions))
+    (is (= 13 (count batch-predictions-all)))
     (is (= 5 (count predictions)))
-    (is (every? #(= 2 (count %)) predictions))
-    (is (every? #(string? (first %)) predictions))
-    (is (every? #(= 5 (count (second %))) predictions))
-    (is (every? #(< 0 (first (second %)) 1) predictions))))
+    (is (= "cat" class))
+    (is (< 0.8 prob))
+    (every? #(< 0 % 1) [x-min x-max y-min y-max])))
+
+(deftest test-detection-with-ndarrays
+  (let [detector (create-detector)
+        image     (-> (image/read-image "test/test-images/kitten.jpg" {:to-rbg true})
+                      (image/resize-image 512 512)
+                      (ndarray/transpose)
+                      (ndarray/expand-dims 0)
+                      (ndarray/cast dtype/FLOAT32))
+        predictions-all (infer/detect-objects-with-ndarrays detector [image])
+        predictions (infer/detect-objects-with-ndarrays detector [image] 1)
+        {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
+        (is (some? predictions-all))
+        (is (= 1 (count predictions)))
+        (is (= "cat" class))
+        (is (< 0.8 prob))
+        (every? #(< 0 % 1) [x-min x-max y-min y-max])))
+

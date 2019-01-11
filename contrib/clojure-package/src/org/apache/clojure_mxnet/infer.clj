@@ -103,6 +103,12 @@
 
 (s/def ::nil-or-int (s/nilable int?))
 
+(defn- format-predictions [predictions]
+  (mapv (fn [[c p]]
+          (let [[prob xmin ymin xmax ymax] (mapv float p)]
+            {:class c :prob prob :x-min xmin :y-min ymin :x-max xmax :y-max ymax}))
+        predictions))
+
 (extend-protocol AClassifier
   WrappedClassifier
   (classify
@@ -206,10 +212,12 @@
                     "Invalid object detector")
      (util/validate! ::image image "Invalid image")
      (util/validate! ::nil-or-int topk "Invalid top-K")
-     (util/coerce-return-recursive
-      (.imageObjectDetect (:object-detector wrapped-detector)
-                          image
-                          (util/->int-option topk)))))
+     (->> (.imageObjectDetect (:object-detector wrapped-detector)
+                              image
+                              (util/->int-option topk))
+          (util/coerce-return-recursive)
+          (first)
+          (format-predictions))))
   (detect-objects-batch
     ([wrapped-detector images]
      (detect-objects-batch wrapped-detector images nil))
@@ -217,10 +225,12 @@
      (util/validate! ::wrapped-detector wrapped-detector
                      "Invalid object detector")
      (util/validate! ::nil-or-int topk "Invalid top-K")
-     (util/coerce-return-recursive
-      (.imageBatchObjectDetect (:object-detector wrapped-detector)
-                               images
-                               (util/->int-option topk)))))
+     (->> (.imageBatchObjectDetect (:object-detector wrapped-detector)
+                                   images
+                                   (util/->int-option topk))
+          (util/coerce-return-recursive)
+          (first)
+          (format-predictions))))
   (detect-objects-with-ndarrays
     ([wrapped-detector input-arrays]
      (detect-objects-with-ndarrays wrapped-detector input-arrays nil))
@@ -230,10 +240,12 @@
      (util/validate! ::vec-of-ndarrays input-arrays
                      "Invalid inputs")
      (util/validate! ::nil-or-int topk "Invalid top-K")
-     (util/coerce-return-recursive
-      (.objectDetectWithNDArray (:object-detector wrapped-detector)
-                                (util/vec->indexed-seq input-arrays)
-                                (util/->int-option topk))))))
+     (->> (.objectDetectWithNDArray (:object-detector wrapped-detector)
+                                    (util/vec->indexed-seq input-arrays)
+                                    (util/->int-option topk))
+          (util/coerce-return-recursive)
+          (first)
+          (format-predictions)))))
 
 (defprotocol AInferenceFactory
   (create-predictor [factory] [factory opts])
