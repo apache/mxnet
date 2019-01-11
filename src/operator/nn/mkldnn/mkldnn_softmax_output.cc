@@ -33,17 +33,13 @@ namespace op {
 
 static mkldnn::softmax_forward::primitive_desc GetSoftmaxOutputFwdDescImpl(
                const SoftmaxOutputParam& param, bool is_train,
-               const NDArray &data, const mkldnn::memory &input_mem) {
+               const int axis, const mkldnn::memory &input_mem) {
   mkldnn::memory::primitive_desc data_mpd = input_mem.get_primitive_desc();
   mkldnn::memory::desc data_md = data_mpd.desc();
   auto cpu_engine = CpuEngine::Get()->get_engine();
-  //  softmax_output has no axis parameter, so use it as it original implement.
-  int axis = data.shape().ndim() - 1;
-  mkldnn::softmax_forward::desc desc = is_train
-      ? mkldnn::softmax_forward::desc(mkldnn::prop_kind::forward_training,
-                                      data_md, axis)
-      : mkldnn::softmax_forward::desc(mkldnn::prop_kind::forward_scoring,
-                                      data_md, axis);
+  auto prop = is_train ? mkldnn::prop_kind::forward_training
+                       : mkldnn::prop_kind::forward_scoring;
+  auto desc = mkldnn::softmax_forward::desc(prop, data_md, axis);
   return mkldnn::softmax_forward::primitive_desc(desc, cpu_engine);
 }
 
@@ -58,8 +54,8 @@ class MKLDNNSoftmaxOutputFwd {
   const mkldnn::softmax_forward::primitive_desc fwd_pd;
 
   MKLDNNSoftmaxOutputFwd(const SoftmaxOutputParam& param, bool is_train,
-                         const NDArray &data, const mkldnn::memory &mem): fwd_pd(
-                         GetSoftmaxOutputFwdDescImpl(param, is_train, data, mem)) {
+                         const int axis, const mkldnn::memory &mem): fwd_pd(
+                         GetSoftmaxOutputFwdDescImpl(param, is_train, axis, mem)) {
   }
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &output) {
@@ -89,7 +85,7 @@ class MKLDNNSoftmaxOutputFwd {
 
 static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam& param,
                                                        const OpContext &ctx,
-                                                       const NDArray &in_data,
+                                                       const int axis,
                                                        const mkldnn::memory &in_mem) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local
@@ -100,16 +96,17 @@ static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam&
 #endif
   MKLDNNSoftmaxOuputSignature key(param);
   key.AddSign(ctx.is_train);
-  key.AddSign(in_data);
+  key.AddSign(axis);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
-    MKLDNNSoftmaxOutputFwd fwd(param, ctx.is_train, in_data, in_mem);
+    MKLDNNSoftmaxOutputFwd fwd(param, ctx.is_train, axis, in_mem);
     it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
 
+//  This is only used for forward. For backward ,need double check compatibility
 bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param) {
   return param.multi_output ? false : true;
 }
@@ -123,6 +120,8 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
 
   NDArray idata = in_data[softmaxout_enum::kData];
   NDArray odata = out_data[softmaxout_enum::kOut];
+  //  softmax_output has no axis parameter, so use it as it original implement.
+  int axis = idata.shape().ndim() - 1;
   if (in_data[softmaxout_enum::kData].IsView() && in_data[softmaxout_enum::kData].IsMKLDNNData()) {
     idata = in_data[softmaxout_enum::kData].Reorder2Default();
   }
@@ -130,7 +129,7 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
   auto input_mem = idata.GetMKLDNNData();
   auto output_mem = odata.GetMKLDNNData();
 
-  MKLDNNSoftmaxOutputFwd &fwd = GetSoftmaxOutputForward(param, ctx, idata, *input_mem);
+  MKLDNNSoftmaxOutputFwd &fwd = GetSoftmaxOutputForward(param, ctx, axis, *input_mem);
   fwd.SetNewMem(*input_mem, *output_mem);
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(fwd.GetFwd());

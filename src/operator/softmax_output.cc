@@ -50,9 +50,8 @@ struct SoftmaxOutputGrad {
   gnode->attrs.op = nnvm::Op::Get("_backward_SoftmaxOutput");
   gnode->attrs.name = n->attrs.name + "_backward";
   std::vector<nnvm::NodeEntry> in_grad(2);
-  for (uint32_t i = 0; i < 2; ++i) {
-    in_grad[i] = nnvm::NodeEntry{gnode, i, 0};
-  }
+  in_grad[0] = nnvm::NodeEntry{gnode, 0, 0};
+  in_grad[1] = nnvm::NodeEntry{gnode, 1, 0};
   return in_grad;
   }
 };
@@ -65,7 +64,7 @@ static inline std::vector<std::string> ListArguments() {
 static bool SoftmaxOutputType(const nnvm::NodeAttrs& attrs,
                               std::vector<int> *in_type,
                               std::vector<int> *out_type) {
-  CHECK_GE(in_type->size(), 2U);
+  CHECK_EQ(in_type->size(), 2U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
   for (size_t i = 0; i < in_type->size(); ++i) {
@@ -143,7 +142,6 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 2U);
   const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
-  // MKLDNN softmaxOutput only works well on the special MKLDNN layout.
   if (SupportMKLDNN(inputs[0]) && !ctx.is_train && SupportMKLDNNSoftmaxOutput(param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNSoftmaxOutputForward(attrs, ctx, inputs, req, outputs);
