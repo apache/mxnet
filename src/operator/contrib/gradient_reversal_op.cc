@@ -31,7 +31,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(GradientReversalParam);
 
 NNVM_REGISTER_OP(_contrib_gradientreversal)
-.describe(R"code(This operators implements the gradient reversal function.
+.describe(R"code(This operator implements the gradient reversal function.
 In forward pass it acts as an identity tranform. During backpropagation it 
 multiplies the gradient from the subsequent level by a negative factor and passes it to
 the preceding layer.
