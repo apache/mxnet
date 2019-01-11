@@ -18,6 +18,7 @@
 """Read and write for the RecordIO data format."""
 from __future__ import absolute_import
 from collections import namedtuple
+from multiprocessing import current_process
 
 import ctypes
 import struct
@@ -65,6 +66,7 @@ class MXRecordIO(object):
         self.uri = c_str(uri)
         self.handle = RecordIOHandle()
         self.flag = flag
+        self.pid = None
         self.is_open = False
         self.open()
 
@@ -78,6 +80,7 @@ class MXRecordIO(object):
             self.writable = False
         else:
             raise ValueError("Invalid flag %s"%self.flag)
+        self.pid = current_process().pid
         self.is_open = True
 
     def __del__(self):
@@ -109,6 +112,14 @@ class MXRecordIO(object):
         if is_open:
             self.open()
 
+    def _check_pid(self, allow_reset=False):
+        """Check process id to ensure integrity, reset if in new process."""
+        if not self.pid == current_process().pid:
+            if allow_reset:
+                self.reset()
+            else:
+                raise RuntimeError("Forbidden operation in multiple processes")
+
     def close(self):
         """Closes the record file."""
         if not self.is_open:
@@ -118,6 +129,7 @@ class MXRecordIO(object):
         else:
             check_call(_LIB.MXRecordIOReaderFree(self.handle))
         self.is_open = False
+        self.pid = None
 
     def reset(self):
         """Resets the pointer to first item.
@@ -156,6 +168,7 @@ class MXRecordIO(object):
             Buffer to write.
         """
         assert self.writable
+        self._check_pid(allow_reset=False)
         check_call(_LIB.MXRecordIOWriterWriteRecord(self.handle,
                                                     ctypes.c_char_p(buf),
                                                     ctypes.c_size_t(len(buf))))
@@ -182,6 +195,9 @@ class MXRecordIO(object):
             Buffer read.
         """
         assert not self.writable
+        # trying to implicitly read from multiple processes is forbidden,
+        # there's no elegant way to handle unless lock is introduced
+        self._check_pid(allow_reset=False)
         buf = ctypes.c_char_p()
         size = ctypes.c_size_t()
         check_call(_LIB.MXRecordIOReaderReadRecord(self.handle,
@@ -255,6 +271,7 @@ class MXIndexedRecordIO(MXRecordIO):
         This function is internally called by `read_idx(idx)` to find the current
         reader pointer position. It doesn't return anything."""
         assert not self.writable
+        self._check_pid(allow_reset=True)
         pos = ctypes.c_size_t(self.idx[idx])
         check_call(_LIB.MXRecordIOReaderSeek(self.handle, pos))
 

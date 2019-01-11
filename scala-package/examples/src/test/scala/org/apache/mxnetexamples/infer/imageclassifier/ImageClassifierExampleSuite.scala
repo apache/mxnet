@@ -20,10 +20,7 @@ package org.apache.mxnetexamples.infer.imageclassifier
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.net.URL
-
-import org.apache.commons.io.FileUtils
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 
 import sys.process.Process
