@@ -50,8 +50,8 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
     .describe("Size of new image. Could be (width, height) or (size)");
     DMLC_DECLARE_FIELD(keep_ratio)
     .describe("Whether to resize the short edge or both edges to `size`, "
-      "if size is give as an integer.");
-    .set_default(false)
+      "if size is give as an integer.")
+    .set_default(false);
     DMLC_DECLARE_FIELD(interp)
     .set_default(1)
     .describe("Interpolation method for resizing. By default uses bilinear interpolation"
@@ -73,7 +73,7 @@ inline SizeParam GetHeightAndWidth(int data_h,
   int resized_w;
   if (param.size.ndim() == 1) {
     CHECK_GT(param.size[0], 0)
-      << "Input size should greater than 0, but got "
+      << "Input size should be greater than 0, but got "
       << param.size[0];
     if (!param.keep_ratio) {
       resized_h = param.size[0];
@@ -89,10 +89,10 @@ inline SizeParam GetHeightAndWidth(int data_h,
     }
   } else {
     CHECK_GT(param.size[0], 0)
-        << "Input width should greater than 0, but got "
+        << "Input width should be greater than 0, but got "
         << param.size[0];
     CHECK_GT(param.size[1], 0)
-        << "Input height should greater than 0, but got "
+        << "Input height should be greater than 0, but got "
         << param.size[1];
     resized_h = param.size[1];
     resized_w = param.size[0];
