@@ -255,24 +255,22 @@
           Portions Copyright [2007-2009] Google Inc.
     14. MXNet clojure-package - For details, see, contrib/clojure-package/LICENSE
           Copyright 2018 by Contributors
-    15. MXNet R-package - For details, see, R-package/LICENSE
-          Copyright (c) 2015 by Contributors
-    16. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
+    15. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
           Copyright 2015 Google Inc. All rights reserved.
           Copyright 2016 Ismael Jimenez Martinez. All rights reserved.
           Copyright 2017 Roman Lebedev. All rights reserved.
-    17. Dockerfiles - For details, see docker/Dockerfiles/License.md
-    18. MXNet Julia Package - For details, see julia/LICENSE.md
+    16. Dockerfiles - For details, see docker/Dockerfiles/License.md
+    17. MXNet Julia Package - For details, see julia/LICENSE.md
           Copyright (c) 2015-2018 by Chiyuan Zhang
-    19. Benchdnn - For details, see 3rdparty/mkldnn/tests/benchdnn/README.md
+    18. Benchdnn - For details, see 3rdparty/mkldnn/tests/benchdnn/README.md
           Copyright 2017-2018 Intel Corporation
-    20. MXNet perl-package - For details, see perl-package/README
-    21. MXNet perl-package AI-MXNET - For details, see perl-package/AI-MXNet/README
-    22. MXNet perl-package AI-MXNET Gluon Contrib - For details, see perl-package/AI-MXNet-Gluon-Contrib/README
-    23. MXNet perl-package AI-MXNET Gluon ModelZoo - For details, see perl-package/AI-MXNet-Gluon-ModelZoo/README
-    24. MXNet perl-package AI-MXNETCAPI - For details, see perl-package/AI-MXNetCAPI/README
-    25. MXNet perl-package AI-NNVMCAPI - For details, see perl-package/AI-NNVMCAPI/README
-    26. Cephes Library Functions - For details, see src/operator/special_functions-inl.h
+    19. MXNet perl-package - For details, see perl-package/README
+    20. MXNet perl-package AI-MXNET - For details, see perl-package/AI-MXNet/README
+    21. MXNet perl-package AI-MXNET Gluon Contrib - For details, see perl-package/AI-MXNet-Gluon-Contrib/README
+    22. MXNet perl-package AI-MXNET Gluon ModelZoo - For details, see perl-package/AI-MXNet-Gluon-ModelZoo/README
+    23. MXNet perl-package AI-MXNETCAPI - For details, see perl-package/AI-MXNetCAPI/README
+    24. MXNet perl-package AI-NNVMCAPI - For details, see perl-package/AI-NNVMCAPI/README
+    25. Cephes Library Functions - For details, see src/operator/special_functions-inl.h
           Copyright (c) 2015 by Contributors
           Copyright 1984, 1987, 1992 by Stephen L. Moshier
 
