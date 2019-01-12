@@ -46,7 +46,7 @@ The example performs the following tasks
 - Loads the pre-trained RNN model.
 - Loads the dictionary file containing the word to index mapping.
 - Converts the input string to vector of indices that's padded to match the input data length.
-- Run the forward pass and predict the output string.
+- Runs the forward pass and predicts the output string.
 
 The example uses a pre-trained RNN model that is trained with the dataset containing speeches given by Obama.
 The model consists of :
