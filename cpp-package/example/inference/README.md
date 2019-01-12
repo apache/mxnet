@@ -84,4 +84,4 @@ The example will output the sequence of 35 words as follows:
 [waters elected Amendment Amendment Amendment Amendment retirement maximize maximize maximize acr citi sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio ]
 ```
 
-Alternatively, user can run [unit_test_simple_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_simple_rnn.sh>) script.
+Alternatively, you can run the [unit_test_simple_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_simple_rnn.sh>) script.
