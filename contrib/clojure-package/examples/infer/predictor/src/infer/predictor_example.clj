@@ -59,7 +59,7 @@
 (defn do-inference
   "Run inference using given predictor"
   [predictor image]
-  (let [[predictions] (infer/predict-with-ndarray predictor [image])]
+  (let [predictions (infer/predict-with-ndarray predictor [image])]
     predictions))
 
 (defn postprocess
