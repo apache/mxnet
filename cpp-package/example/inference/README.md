@@ -43,7 +43,7 @@ Alternatively, The script [unit_test_inception_inference.sh](<https://github.com
 ### [simple_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/simple_rnn.cpp>)
 This example demonstrates how you can load a pre-trained RNN model and use it to generate an output sequence with the MXNet C++ API.
 The example performs the following tasks
-- Load the pre-trained RNN model.
+- Loads the pre-trained RNN model.
 - Load the dictionary file that contains word to index mapping.
 - Convert the input string to vector of indices and padded to match the input data length.
 - Run the forward pass and predict the output string.
