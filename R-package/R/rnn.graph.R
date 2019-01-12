@@ -195,7 +195,7 @@ gru.cell <- function(num_hidden, indata, prev.state, param, seqidx, layeridx, dr
 }
 
 
-#' unroll representation of RNN running on non CUDA device
+#' Unroll representation of RNN running on non CUDA device
 #' 
 #' @param config Either seq-to-one or one-to-one
 #' @param cell_type Type of RNN cell: either gru or lstm
