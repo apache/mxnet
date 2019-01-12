@@ -168,7 +168,7 @@ class Normalize(HybridBlock):
         return F.image.normalize(x, self._mean, self._std)
 
 
-class RandomResizedCrop(Block):
+class RandomResizedCrop(HybridBlock):
     """Crop the input image with random scale and aspect ratio.
 
     Makes a crop of the original image with random size (default: 0.08
@@ -198,12 +198,13 @@ class RandomResizedCrop(Block):
     def __init__(self, size, scale=(0.08, 1.0), ratio=(3.0/4.0, 4.0/3.0),
                  interpolation=1):
         super(RandomResizedCrop, self).__init__()
-        if isinstance(size, numeric_types):
-            size = (size, size)
-        self._args = (size, scale, ratio, interpolation)
+        self._size = size
+        self._scale = scale
+        self._ratio = ratio
+        self._interp = interpolation
 
-    def forward(self, x):
-        return image.random_size_crop(x, *self._args)[0]
+    def hybrid_forward(self, F, x):
+        return F.image.random_resize_crop(x, self._size, self._scale, self._ratio, self._interp)
 
 
 class CenterCrop(Block):

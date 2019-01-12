@@ -46,6 +46,30 @@ def test_normalize():
 
 
 @with_seed()
+def test_random_resize_crop():
+    def _test_random_resize_crop_with_diff_type(dtype):
+        # test normal case
+        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
+        out_nd = transforms.RandomResizedCrop((100, 120))(data_in)
+        assert out_nd.shape == (120, 100, 3), out_nd.shape
+        # test 4D input
+        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
+        out_batch_nd = transforms.RandomResizedCrop((50, 70))(data_bath_in)
+        assert out_batch_nd.shape == (3, 70, 50, 3), out_nd.shape
+        # test normal case
+        data_in = nd.random.uniform(0, 255, (50, 30, 3)).astype(dtype)
+        out_nd = transforms.RandomResizedCrop((140, 100))(data_in)
+        assert out_nd.shape == (100, 140, 3), out_nd.shape
+         # test size is larger than input image 4D
+        data_in = nd.random.uniform(0, 255, (4, 50, 30, 3)).astype(dtype)
+        out_nd = transforms.RandomResizedCrop((100, 140))(data_in)
+        assert out_nd.shape == (4, 140, 100, 3), out_nd.shape
+
+    for dtype in ['uint8', 'int8', 'float32', 'float64']:
+        _test_random_resize_crop_with_diff_type(dtype)
+
+
+@with_seed()
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     flip_in = data_in[:, ::-1, :]
