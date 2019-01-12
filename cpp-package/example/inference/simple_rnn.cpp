@@ -79,7 +79,7 @@ class Predictor {
 
 
 /*
- * The constructor takes following parameters as input:
+ * The constructor takes the following parameters as input:
  * 1. model_json:  The RNN model in json formatted file.
  * 2. model_params: File containing model parameters
  * 3. input_dictionary: File containing the word and associated index.
