@@ -62,8 +62,8 @@
    (util/validate! ::optional-color-flag color-flag "Invalid color flag")
    (util/validate! ::optional-to-rgb to-rgb "Invalid conversion flag")
    (util/validate! ::output output "Invalid output")
-   (Image/imRead 
-    filename 
+   (Image/imRead
+    filename
     ($/option color-flag)
     ($/option to-rgb)
     ($/option output)))
@@ -89,7 +89,7 @@
 
 (defn apply-border
   "Pad image border"
-  ([input top bottom left right 
+  ([input top bottom left right
     {:keys [fill-type value values output]
      :or {fill-type nil value nil values nil output nil}
      :as opts}]

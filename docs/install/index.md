@@ -697,13 +697,13 @@ To run MXNet you also should have OpenCV and OpenBLAS installed. You may install
 
 ```bash
 brew install opencv
-brew install openblas@0.3.1
+brew install openblas
 ```
 
-Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+To ensure MXNet R package runs with the version of OpenBLAS installed, create a symbolic link as follows:
 
 ```bash
-ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).

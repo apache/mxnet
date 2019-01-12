@@ -12,7 +12,7 @@ You can use the following instruction as an alternative to achieve the same resu
 User are required to use `mvn package` to build the package,
  which are shown below:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.4.0-SNAPSHOT
+export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.5.0-SNAPSHOT
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$SCALA_PKG_PROFILE \
 		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE \
@@ -37,6 +37,13 @@ However, you have to define the Classpath before you run the demo code. More inf
 The `CLASSPATH` should point to the jar file you have downloaded.
 
 It will load the library automatically and run the example
+
+In order to use the `Param Object`. We requires user to place this line in the front:
+```
+static NDArray$ NDArray = NDArray$.MODULE$;
+```
+It would help to have the NDArray companion object static and accessable from the outside.
+
 ### Object Detection using Inference API
 We also provide an example to do object detection, which downloads a ImageNet trained resnet50 model and runs inference on an image to return the classification result as
 ```Bash
@@ -80,5 +87,5 @@ sudo apt install libopencv-imgcodecs3.4
 
 Is there any other version available?
 
-You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.4.0-SNAPSHOT~~).
+You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0-SNAPSHOT~~).
 Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.

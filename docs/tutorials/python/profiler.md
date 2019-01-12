@@ -94,10 +94,10 @@ Let's define a method that will run one training iteration given data and label.
 
 ```python
 # Use GPU if available
-try:
-    mx.test_utils.list_gpus(); ctx = mx.gpu()
-except:
-    ctx = mx.cpu()
+if len(mx.test_utils.list_gpus())!=0:
+    ctx=mx.gpu()
+else:
+    ctx=mx.cpu()
 
 # Initialize the parameters with random weights
 net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)

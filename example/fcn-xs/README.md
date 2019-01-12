@@ -40,14 +40,33 @@ this is the fully convolution style of the origin
 Once you completed all these steps, your working directory should contain a ```.\VOC2012``` directory, which contains the following: ```JPEGImages folder```, ```SegmentationClass folder```, ```train.lst```, ```val.lst```
 
 #### Step 3: Train the fcn-xs model
-* Based on your hardware, configure GPU or CPU for training in `fcn_xs.py`. It is recommended to use GPU due to the computational complexity and data load.
-```python
-# ctx = mx.cpu(0)
-ctx = mx.gpu(0)
+* Based on your hardware, configure CPU or GPU for training by parameter ```--gpu```. It is recommended to use GPU due to the computational complexity and data load. 
+View parameters we can use with the following command.
+```shell
+python fcn_xs.py -h
+
+
+usage: fcn_xs.py [-h] [--model MODEL] [--prefix PREFIX] [--epoch EPOCH]
+                 [--init-type INIT_TYPE] [--retrain] [--gpu GPU]
+
+Convert vgg16 model to vgg16fc model.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model MODEL         The type of fcn-xs model, e.g. fcnxs, fcn16s, fcn8s.
+  --prefix PREFIX       The prefix(include path) of vgg16 model with mxnet
+                        format.
+  --epoch EPOCH         The epoch number of vgg16 model.
+  --init-type INIT_TYPE
+                        the init type of fcn-xs model, e.g. vgg16, fcnxs
+  --retrain             true means continue training.
+  --gpu GPU             0 to use GPU, not set to use CPU
 ```
+
 * It is recommended to train fcn-32s and fcn-16s before training the fcn-8s model
 
 To train the fcn-32s model, run the following:
+
 ```shell
 python -u fcn_xs.py --model=fcn32s --prefix=VGG_FC_ILSVRC_16_layers --epoch=74 --init-type=vgg16
 ```

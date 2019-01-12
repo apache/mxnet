@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 120
+max_time = 180
 
 node('restricted-utility') {
   // Loading the utilities requires a node context unfortunately

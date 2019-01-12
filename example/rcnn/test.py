@@ -35,7 +35,7 @@ def test_net(sym, imdb, args):
     logger.info('called with args\n{}'.format(pprint.pformat(vars(args))))
 
     # setup context
-    ctx = mx.gpu(args.gpu)
+    ctx = mx.cpu() if not args.gpu else mx.gpu(args.gpu)
 
     # load testing data
     test_data = TestLoader(imdb.roidb, batch_size=1, short=args.img_short_side, max_size=args.img_long_side,
@@ -94,7 +94,7 @@ def parse_args():
     parser.add_argument('--params', type=str, default='', help='path to trained model')
     parser.add_argument('--dataset', type=str, default='voc', help='training dataset')
     parser.add_argument('--imageset', type=str, default='', help='imageset splits')
-    parser.add_argument('--gpu', type=int, default=0, help='gpu device eg. 0')
+    parser.add_argument('--gpu', type=int, default=0, help='0 to use GPU, not set to use CPU')
     # faster rcnn params
     parser.add_argument('--img-short-side', type=int, default=600)
     parser.add_argument('--img-long-side', type=int, default=1000)

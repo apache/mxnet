@@ -68,6 +68,10 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
     val result = ImageClassifier.bufferedImageToPixels(image2, Shape(3, 2, 2))
 
     assert(result.shape == inputDescriptor(0).shape.drop(1))
+    assert(result.dtype == DType.Float32)
+
+    val resultFloat64 = ImageClassifier.bufferedImageToPixels(image2, Shape(3, 2, 2), DType.Float64)
+    assert(resultFloat64.dtype == DType.Float64)
   }
 
   test("ImageClassifierSuite-testWithInputImage") {
@@ -106,7 +110,9 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
         predictResult(i).map(_._2).toArray
       }
     }
+
   }
+
 
   test("ImageClassifierSuite-testWithInputBatchImage") {
     val dType = DType.Float32
@@ -152,4 +158,5 @@ class ImageClassifierSuite extends ClassifierSuite with BeforeAndAfterAll {
       }
     }
   }
+
 }

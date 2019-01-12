@@ -12,11 +12,14 @@
 *			@apache/mxnet-committers
 
 # Language bindings
-/R-package/                @thirdwing
-/scala-package/            @yzhliu @nswamy @pllarroy
-/perl-package/             @sergeykolychev
-/python/                   @szha @pllarroy
-/contrib/clojure-package/  @gigasquid
+/R-package/                       @thirdwing
+/scala-package/                   @yzhliu @nswamy @pllarroy
+/perl-package/                    @sergeykolychev
+/python/                          @szha @pllarroy
+/python/mxnet/kvstore.py          @eric-haibin-lin
+/python/mxnet/optimizer/          @eric-haibin-lin
+/python/mxnet/gluon/trainer.py    @eric-haibin-lin
+/contrib/clojure-package/         @gigasquid
 
 # C++ base
 /src/kvstore/     @rahul003 @anirudh2290
@@ -31,6 +34,7 @@
 /src/nnvm/        @anirudh2290
 /src/operator/    @anirudh2290
 /src/profiler/    @anirudh2290
+/src/kvstore/     @eric-haibin-lin
 /src/storage/     @anirudh2290
 /tests/cpp/       @anirudh2290
 /cpp-package/     @nswamy @pllarroy
