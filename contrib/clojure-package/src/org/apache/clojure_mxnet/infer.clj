@@ -102,10 +102,9 @@
     (util/validate! ::vvec-of-numbers inputs
                     "Invalid inputs")
     (->> (.predict (:predictor wrapped-predictor)
-                   (util/vec->indexed-seq [(float-array (first inputs))]))
-        (util/coerce-return-recursive)
-        (first)
-        (mapv float)))
+                   (util/vec->indexed-seq (mapv float-array inputs)))
+         (util/coerce-return-recursive)
+         (mapv #(mapv float %))))
   (predict-with-ndarray [wrapped-predictor input-arrays]
     (util/validate! ::wrapped-predictor wrapped-predictor
                     "Invalid predictor")
@@ -113,8 +112,7 @@
                     "Invalid input arrays")
     (-> (.predictWithNDArray (:predictor wrapped-predictor)
                              (util/vec->indexed-seq input-arrays))
-        (util/coerce-return-recursive)
-        (first))))
+        (util/coerce-return-recursive))))
 
 (s/def ::nil-or-int (s/nilable int?))
 

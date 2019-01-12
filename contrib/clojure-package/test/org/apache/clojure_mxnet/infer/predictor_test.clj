@@ -24,7 +24,8 @@
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [clojure.string :refer [split]]
-            [clojure.test :refer :all]))
+            [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.util :as util]))
 
 (def model-dir "data/")
 (def model-path-prefix (str model-dir "resnet-18/resnet-18"))
@@ -45,16 +46,16 @@
 (deftest predictor-test-with-ndarray
   (let [predictor (create-predictor)
         image-ndarray (-> "test/test-images/kitten.jpg"
-                          infer/load-image-from-file
-                          (infer/reshape-image width height)
-                          (infer/buffered-image-to-pixels [3 width height])
-                          (ndarray/expand-dims 0))
+                           infer/load-image-from-file
+                           (infer/reshape-image width height)
+                           (infer/buffered-image-to-pixels [3 width height])
+                           (ndarray/expand-dims 0))
         predictions (infer/predict-with-ndarray predictor [image-ndarray])
         synset-file (-> (io/file model-path-prefix)
                         (.getParent)
                         (io/file "synset.txt"))
         synset-names (split (slurp synset-file) #"\n")
-        [best-index] (ndarray/->int-vec (ndarray/argmax predictions 1))
+        [best-index] (ndarray/->int-vec (ndarray/argmax (first predictions) 1))
         best-prediction (synset-names best-index)]
     (is (= "n02123159 tiger cat" best-prediction))))
 
@@ -70,7 +71,7 @@
                         (.getParent)
                         (io/file "synset.txt"))
         synset-names (split (slurp synset-file) #"\n")
-        ndarray-preds (ndarray/array predictions [1 1000])
+        ndarray-preds (ndarray/array (first predictions) [1 1000])
         [best-index] (ndarray/->int-vec (ndarray/argmax ndarray-preds 1))
         best-prediction (synset-names best-index)]
     (is (= "n02123159 tiger cat" best-prediction))))
