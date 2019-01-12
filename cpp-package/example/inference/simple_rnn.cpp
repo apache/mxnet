@@ -87,7 +87,7 @@ class Predictor {
  *
  * The constructor will:
  *  1. Load the model and parameter files.
- *  2. Load the dictionary file to create index to word and word to index maps.
+ *  2. Loads the dictionary file to create index to word and word to index maps.
  *  3. Invokes the SimpleBind to bind the input argument to the model and create an executor.
  *
  *  The SimpleBind is expected to be invoked only once.
