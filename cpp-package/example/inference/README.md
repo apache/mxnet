@@ -45,7 +45,7 @@ This example demonstrates how you can load a pre-trained RNN model and use it to
 The example performs the following tasks
 - Loads the pre-trained RNN model.
 - Loads the dictionary file containing the word to index mapping.
-- Convert the input string to vector of indices and padded to match the input data length.
+- Converts the input string to vector of indices that's padded to match the input data length.
 - Run the forward pass and predict the output string.
 
 The example uses a pre-trained RNN model that is trained with the dataset containing speeches given by Obama.
