@@ -49,8 +49,7 @@ MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam &param,
     dims[i] = oshape[i];
     offsets[i] = s;
   }
-  auto in_mem = in.GetMKLDNNData();
-  auto in_mem_pd = in_mem->get_primitive_desc();
+  auto in_mem_pd = in.GetMKLDNNData()->get_primitive_desc();
   auto out_mem_pd = out.GetMKLDNNData()->get_primitive_desc();
   auto view_pd = mkldnn::view::primitive_desc(in_mem_pd, dims, offsets);
   auto reorder_pd = reorder::primitive_desc(view_pd.dst_primitive_desc(), out_mem_pd);
@@ -68,15 +67,17 @@ const mkldnn::reorder &MKLDNNSliceFwd::GetPd() const {
   return *fwd_;
 }
 
-MKLDNNSliceFwd &GetSliceForward(const SliceParam &param,
-    const NDArray &in_data, const NDArray &out_data) {
+MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
+                                const NDArray &in_data, const NDArray &out_data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNSliceSignature, MKLDNNSliceFwd, OpHash> fwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNSliceSignature, MKLDNNSliceFwd, OpHash> fwds;
 #endif
   MKLDNNSliceSignature key(param);
+  key.AddSign(is_train);
   key.AddSign(in_data);
+  key.AddSign(out_data);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
@@ -88,7 +89,7 @@ MKLDNNSliceFwd &GetSliceForward(const SliceParam &param,
 
 void MKLDNNSlice(const SliceParam &param, const OpContext& ctx,
                  const NDArray &in, OpReqType req, const NDArray &out) {
-  MKLDNNSliceFwd &fwd = GetSliceForward(param, in, out);
+  MKLDNNSliceFwd &fwd = GetSliceForward(param, ctx.is_train, in, out);
   auto in_mem = in.GetMKLDNNData();
   auto out_mem_pd = out.GetMKLDNNData()->get_primitive_desc();
   auto out_mem = CreateMKLDNNMem(out, out_mem_pd, req);
