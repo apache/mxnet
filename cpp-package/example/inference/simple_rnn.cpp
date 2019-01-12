@@ -86,7 +86,7 @@ class Predictor {
  * 4. sequence_length: Sequence length for which the RNN was trained.
  *
  * The constructor:
- *  1. Load the model and parameter files.
+ *  1. Loads the model and parameter files.
  *  2. Loads the dictionary file to create index to word and word to index maps.
  *  3. Invokes the SimpleBind to bind the input argument to the model and create an executor.
  *
