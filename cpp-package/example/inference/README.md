@@ -48,7 +48,7 @@ The example performs the following tasks
 - Converts the input string to vector of indices that's padded to match the input data length.
 - Runs the forward pass and predicts the output string.
 
-The example uses a pre-trained RNN model that is trained with the dataset containing speeches given by Obama.
+The example uses a pre-trained RNN model trained with a dataset containing speeches given by Obama.
 The model consists of :
 - Embedding Layer with the size of embedding to be 650
 - 3 LSTM Layers with hidden dimension size of 650 and sequence length of 35
