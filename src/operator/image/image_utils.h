@@ -26,6 +26,7 @@
 #ifndef MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
 #define MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
 
+#include <vector>
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -88,7 +89,7 @@ inline void CropImpl(const std::vector<TBlob> &inputs,
                       int x,
                       int y,
                       int height,
-                      int width, 
+                      int width,
                       const SizeParam &size,
                       int interp,
                       int input_index = 0,
@@ -97,7 +98,8 @@ inline void CropImpl(const std::vector<TBlob> &inputs,
   CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "opencv doesn't support fp16";
   // mapping to opencv matrix element type according to channel
   const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
-  const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[(inputs[0].ndim() == 3) ? C : kC]);
+  const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_],
+    inputs[0].shape_[(inputs[0].ndim() == 3) ? C : kC]);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     cv::Mat buf(inputs[0].shape_[(inputs[0].ndim() == 3) ? H : kH],
       inputs[0].shape_[(inputs[0].ndim() == 3) ? W : kW], cv_type,
@@ -106,7 +108,8 @@ inline void CropImpl(const std::vector<TBlob> &inputs,
       outputs[0].shape_[(inputs[0].ndim() == 3) ? W : kW], cv_type,
       outputs[0].dptr<DType>() + output_index);
     cv::Rect roi(x, y, width, height);
-    if ((size.height != 0 && size.width != 0) && ((height != size.height) || (width != size.width))) {
+    if ((size.height != 0 && size.width != 0) &&
+      ((height != size.height) || (width != size.width))) {
       cv::resize(buf(roi), dst, cv::Size(size.width, size.height), 0, 0, interp);
     } else {
       buf(roi).copyTo(dst);
@@ -148,7 +151,8 @@ inline void CenterCropImpl(const std::vector<TBlob> &inputs,
     }
     #pragma omp parallel for
     for (auto i = 0; i < batch_size; ++i) {
-      CropImpl(inputs, outputs, x0, y0, new_size.height, new_size.width, size, interp, input_step * i, output_step * i);
+      CropImpl(inputs, outputs, x0, y0, new_size.height, new_size.width,
+        size, interp, input_step * i, output_step * i);
     }
   }
 }
