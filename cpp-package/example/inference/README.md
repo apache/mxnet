@@ -50,7 +50,7 @@ The example performs the following tasks
 
 The example uses a pre-trained RNN model trained with a dataset containing speeches given by Obama.
 The model consists of :
-- Embedding Layer with the size of embedding to be 650
+- Embedding Layer with the size of embedding set at 650
 - 3 LSTM Layers with hidden dimension size of 650 and sequence length of 35
 - FullyConnected Layer
 - SoftmaxOutput
