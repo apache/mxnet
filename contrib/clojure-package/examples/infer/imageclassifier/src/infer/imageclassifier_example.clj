@@ -96,6 +96,7 @@
                     factory {:contexts [(context/default-context)]})]
     (println "Classifying a single image")
     (print-predictions (classify-single-image classifier input-image))
+    (println "\n")
     (println "Classifying images in a directory")
     (doseq [predictions (classify-images-in-dir classifier input-dir)]
       (print-predictions predictions))))
