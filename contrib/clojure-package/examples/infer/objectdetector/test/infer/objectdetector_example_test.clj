@@ -49,7 +49,7 @@
     (is (= 5 (count predictions)))
     (is (string? class))
     (is (< 0.8 prob))
-    (every? #(< 0 % 1) [x-min x-max y-min y-max])
+    (is (every? #(< 0 % 1) [x-min x-max y-min y-max]))
     (is (= #{"dog" "person" "bicycle" "car"} (set (mapv :class predictions))))))
 
 (deftest test-batch-detection

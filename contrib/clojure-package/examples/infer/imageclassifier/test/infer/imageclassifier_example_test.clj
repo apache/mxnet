@@ -46,16 +46,13 @@
         predictions (classify-single-image classifier image-file)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
-    (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
     (is (= (< 0 (:prob (first predictions)) 1)))))
 
 (deftest test-batch-classification
   (let [classifier (create-classifier)
-        batch-predictions (classify-images-in-dir classifier image-dir)
-        predictions (first batch-predictions)]
-    (is (some? batch-predictions))
-    (is (= 5 (count predictions)))
+        predictions (first (classify-images-in-dir classifier image-dir))]
+    (is (some? predictions))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))
     (is (= (< 0 (:prob (first predictions)) 1)))))

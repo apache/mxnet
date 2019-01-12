@@ -363,7 +363,7 @@
   ([image input-shape-vec dtype]
    (util/validate! ::image image "Invalid image")
    (util/validate! (s/coll-of int?) input-shape-vec "Invalid shape vector")
-   (ImageClassifier/bufferedImageToPixels image (shape/->shape input-shape-vec) dtype/FLOAT32)))
+   (ImageClassifier/bufferedImageToPixels image (shape/->shape input-shape-vec) dtype)))
 
 (s/def ::image-path string?)
 (s/def ::image-paths (s/coll-of ::image-path))
