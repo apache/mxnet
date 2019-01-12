@@ -194,7 +194,7 @@ void Predictor::LoadDictionary(const std::string& input_dictionary) {
 
 
 /*
- * The function populates the input vector with indices from dictionary that are
+ * The function populates the input vector with indices from the dictionary that
  * correspond to the words in the input string.
  */
 void Predictor::ConverToIndexVector(const std::string& input, std::vector<float> *input_vector) {
