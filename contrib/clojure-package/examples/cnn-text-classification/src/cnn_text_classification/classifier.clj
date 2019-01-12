@@ -97,8 +97,7 @@
     (sym/softmax-output "softmax" {:data fc})))
 
 (defn train-convnet [{:keys [devs embedding-size batch-size test-size
-                             num-epoch max-examples pretrained-embedding]
-                      :or {pretrained-embedding nil}}]
+                             num-epoch max-examples pretrained-embedding]}]
   (let [ms-dataset (data-helper/load-ms-with-embeddings mr-dataset-path max-examples embedding-size {:pretrained-embedding pretrained-embedding})
         sentence-size (:sentence-size ms-dataset)
         vocab-size (:vocab-size ms-dataset)
