@@ -54,8 +54,15 @@
   "Print image detector predictions for the given input file"
   [predictions width height]
   (println (apply str (repeat 80 "=")))
-  (doseq [p predictions]
-    (println p))
+  (doseq [{:keys [class prob x-min y-min x-max y-max]} predictions]
+    (println (format
+              "Class: %s Prob=%.5f Coords=(%.3f, %.3f, %.3f, %.3f)"
+              class
+              prob
+              (* x-min width)
+              (* y-min height)
+              (* x-max width)
+              (* y-max height))))
   (println (apply str (repeat 80 "="))))
 
 (defn detect-single-image
