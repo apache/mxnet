@@ -43,7 +43,7 @@
 
 (deftest test-single-classification
   (let [classifier (create-classifier)
-        predictions (classify-single-image classifier image-file)]
+        [[predictions]] (classify-single-image classifier image-file)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
     (is (= "n02123159 tiger cat" (:class (first predictions))))

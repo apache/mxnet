@@ -70,7 +70,7 @@
   [detector input-image]
   (let [image (infer/load-image-from-file input-image)
         topk 5
-        predictions (infer/detect-objects detector image topk)]
+        [predictions] (infer/detect-objects detector image topk)]
     predictions))
 
 (defn detect-images-in-dir
@@ -84,10 +84,10 @@
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (for [image-files image-file-batches]
-      (let [image-batch (infer/load-image-paths image-files)
-            topk 5]
-        (infer/detect-objects-batch detector image-batch topk)))))
+    (apply concat (for [image-files image-file-batches]
+                    (let [image-batch (infer/load-image-paths image-files)
+                          topk 5]
+                      (infer/detect-objects-batch detector image-batch topk))))))
 
 (defn run-detector
   "Runs an image detector based on options provided"

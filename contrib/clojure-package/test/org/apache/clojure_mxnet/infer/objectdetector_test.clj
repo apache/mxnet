@@ -41,8 +41,8 @@
 (deftest test-single-detection
   (let [detector (create-detector)
         image (infer/load-image-from-file "test/test-images/kitten.jpg")
-        predictions-all (infer/detect-objects detector image)
-        predictions (infer/detect-objects detector image 5)
+        [predictions-all] (infer/detect-objects detector image)
+        [predictions] (infer/detect-objects detector image 5)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
@@ -55,8 +55,8 @@
   (let [detector (create-detector)
         image-batch (infer/load-image-paths ["test/test-images/kitten.jpg"
                                              "test/test-images/Pug-Cookie.jpg"])
-        batch-predictions-all (infer/detect-objects-batch detector image-batch)
-        predictions (infer/detect-objects-batch detector image-batch 5)
+        [batch-predictions-all] (infer/detect-objects-batch detector image-batch)
+        [predictions] (infer/detect-objects-batch detector image-batch 5)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? predictions))
     (is (= 13 (count batch-predictions-all)))
@@ -71,8 +71,8 @@
                   (infer/reshape-image 512 512)
                   (infer/buffered-image-to-pixels [3 512 512] dtype/FLOAT32)
                   (ndarray/expand-dims 0))
-        predictions-all (infer/detect-objects-with-ndarrays detector [image])
-        predictions (infer/detect-objects-with-ndarrays detector [image] 1)
+        [predictions-all] (infer/detect-objects-with-ndarrays detector [image])
+        [predictions] (infer/detect-objects-with-ndarrays detector [image] 1)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
         (is (some? predictions-all))
         (is (= 1 (count predictions)))

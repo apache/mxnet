@@ -65,7 +65,7 @@
   (let [image (infer/load-image-from-file input-image)
         topk 5
         predictions (infer/classify-image classifier image topk)]
-    predictions))
+    [predictions]))
 
 (defn classify-images-in-dir
   "Classify all jpg images in the directory"
@@ -78,10 +78,10 @@
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (for [image-files image-file-batches]
-      (let [image-batch (infer/load-image-paths image-files)
-            topk 5]
-        (infer/classify-image-batch classifier image-batch topk)))))
+    (apply concat (for [image-files image-file-batches]
+                    (let [image-batch (infer/load-image-paths image-files)
+                          topk 5]
+                      (infer/classify-image-batch classifier image-batch topk))))))
 
 (defn run-classifier
   "Runs an image classifier based on options provided"
