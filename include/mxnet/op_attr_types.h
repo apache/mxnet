@@ -254,7 +254,7 @@ using FNDArrayFunction = std::function<void (const nnvm::NodeAttrs& attrs,
                                              const std::vector<NDArray>& inputs,
                                              std::vector<NDArray>* outputs)>;
 /*!
- * \brief Resiger a compute function for simple stateless forward only operator
+ * \brief Register a compute function for simple stateless forward only operator
  *
  * \note Register under "FCompute<cpu>" and "FCompute<gpu>"
  */
@@ -264,7 +264,7 @@ using FCompute = std::function<void (const nnvm::NodeAttrs& attrs,
                                      const std::vector<OpReqType>& req,
                                      const std::vector<TBlob>& outputs)>;
 /*!
- * \brief Resiger an NDArray compute function for simple stateless forward only operator
+ * \brief Register an NDArray compute function for simple stateless forward only operator
  * \note Register under "FComputeEx<xpu>" and "FComputeEx<xpu>"
  *       Dispatched only when inferred dispatch_mode is FDispatchComputeEx
  */
@@ -275,7 +275,7 @@ using FComputeEx = std::function<void (const nnvm::NodeAttrs& attrs,
                                        const std::vector<NDArray>& outputs)>;
 
 /*!
- * \brief Resiger a storage and dispatch mode inference function based on
+ * \brief Register a storage and dispatch mode inference function based on
  *        storage types of the inputs and outputs, and the dev_mask for the operator.
  *
  * \note Register under "FInferStorageType"
