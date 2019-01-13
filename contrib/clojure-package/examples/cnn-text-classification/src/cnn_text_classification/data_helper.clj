@@ -72,7 +72,7 @@
      (let [word-size (Integer/parseInt (r-string dis))
            dim  (Integer/parseInt (r-string dis))
            {:keys [max-vectors vocab] :or {max-vectors word-size}} opts
-           _  (println "Processing with " {:dim dim :word-size word-size} " loading max vectors " (if vocab (count vocab) max-vectors))
+           _  (println "Processing with " {:dim dim :word-size word-size} " loading max vectors " max-vectors)
            _ (if (not= embedding-size dim)
                (throw (ex-info "Mismatch in embedding size"
                       {:input-embedding-size embedding-size
