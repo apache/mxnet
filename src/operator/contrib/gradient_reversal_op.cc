@@ -72,7 +72,7 @@ static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
 
 MXNET_OPERATOR_REGISTER_UNARY(_contrib_gradientreversal)
 .describe(R"code(This operator implements the gradient reversal function.
-In forward pass it acts as an identity tranform. During backpropagation it 
+In forward pass it acts as an identity transform. During backpropagation it
 multiplies the gradient from the subsequent level by a negative factor and passes it to
 the preceding layer.
 )code" ADD_FILELINE)
@@ -82,7 +82,7 @@ the preceding layer.
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_gradientreversal"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_contrib_backward_gradientreversal"})
 .set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
