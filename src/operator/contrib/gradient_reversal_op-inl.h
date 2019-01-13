@@ -41,7 +41,7 @@ struct GradientReversalParam : public dmlc::Parameter<GradientReversalParam> {
   float l;
   DMLC_DECLARE_PARAMETER(GradientReversalParam) {
     DMLC_DECLARE_FIELD(l)
-      .set_default(0.0)
+      .set_default(1.0)
       .describe("Lambda coefficient of the gradient reversal function.");
   }
 };
