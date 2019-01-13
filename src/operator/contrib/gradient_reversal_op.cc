@@ -23,29 +23,62 @@
  * \brief
  * \author Istvan Fehervari
 */
-#include "./gradient_reversal_op-inl.h"
 #include "../tensor/elemwise_unary_op.h"
+#include "../tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(GradientReversalParam);
+static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
+                                    const int dev_mask,
+                                    DispatchMode* dispatch_mode,
+                                    std::vector<int> *in_attrs,
+                                    std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  const auto in_stype = in_attrs->at(0);
+  auto &out_stype = out_attrs->at(0);
+  bool dispatched = false;
+  if (!dispatched && (in_stype == kDefaultStorage)) {
+    // dense -> dense
+    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                     dispatch_mode, DispatchMode::kFCompute);
+  }
+  if (!dispatched && in_stype == kRowSparseStorage) {
+    // row sparse -> row sparse
+    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+    // FComputeEx can handle dns output on cpu, too
+    if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+      dispatched = true;
+    }
+  }
+  if (!dispatched && in_stype == kCSRStorage) {
+    // csr -> csr
+    dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                     dispatch_mode, DispatchMode::kFComputeEx);
+    // FComputeEx can handle dns output on cpu, too
+    if (dev_mask == cpu::kDevMask && out_stype == kDefaultStorage) {
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+      dispatched = true;
+    }
+  }
+  if (!dispatched) {
+    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+  }
+  return dispatched;
+}
 
-NNVM_REGISTER_OP(_contrib_gradientreversal)
+MXNET_OPERATOR_REGISTER_UNARY(_contrib_gradientreversal)
 .describe(R"code(This operator implements the gradient reversal function.
 In forward pass it acts as an identity tranform. During backpropagation it 
 multiplies the gradient from the subsequent level by a negative factor and passes it to
 the preceding layer.
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<GradientReversalParam>)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
+.set_attr_parser([](NodeAttrs* attrs) {
+    attrs->parsed = std::stod(attrs->dict["scalar"]);
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
@@ -54,16 +87,13 @@ the preceding layer.
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(GradientReversalParam::__FIELDS__());
+.add_argument("scalar", "float", "scalar input");
 
-NNVM_REGISTER_OP(_contrib_backward_gradientreversal)
-.set_attr_parser(ParamParser<GradientReversalParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
+MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_contrib_backward_gradientreversal)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", GradientReversalOpBackward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>);
+.set_attr<FInferStorageType>("FInferStorageType", BinaryScalarStorageType)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::mul>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", BinaryScalarOp::ComputeEx<cpu, op::mshadow_op::mul>);
 
 }  // namespace op
 }  // namespace mxnet

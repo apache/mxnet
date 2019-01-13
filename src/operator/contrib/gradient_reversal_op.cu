@@ -23,8 +23,8 @@
  * \brief
  * \author Istvan Fehervari
 */
-#include "./gradient_reversal_op-inl.h"
 #include "../tensor/elemwise_unary_op.h"
+#include "../tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
@@ -34,7 +34,8 @@ NNVM_REGISTER_OP(_contrib_gradientreversal)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_gradientreversal)
-.set_attr<FCompute>("FCompute<gpu>", GradientReversalOpBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, op::mshadow_op::mul>);
 
 }  // namespace op
 }  // namespace mxnet
