@@ -309,9 +309,11 @@ You can quickly build MXNet-R with the following two scripts found in the `/docs
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet/docs/install
-./install_mxnet_ubuntu_python.sh
+./install_mxnet_ubuntu_without_mkldnn.sh
 ./install_mxnet_ubuntu_r.sh
 ```
+
+*Note* - Temporary disable MKL-DNN for R.
 
 Or you can go through a manual process described next.
 
@@ -355,7 +357,7 @@ $ echo "USE_BLAS = openblas" >> ./config.mk
 $ make -j $(nproc)
 ```
 
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
+*Note* - Temporary disable MKL-DNN for R. USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
 
 <br/>
 
