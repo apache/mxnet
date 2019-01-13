@@ -218,6 +218,15 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
   - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
 
+* MXNET_CUDA_NUM_RAND_STATES
+  - Values: Int ```(default=32768)```
+  - The number of parallel random states used for random number generation.
+  - When the array size is large, increasing this value may improve random number generation speed on GPU. However, larger values leads to higher GPU memory usage.
+
+* MXNET_CUDA_MIN_NUM_RAND_PER_THREAD
+  - Values: Int ```(default=64)```
+  - The minimum number of random number to generate per CUDA thread. Reducing this value may increase parallelism at the cost of higher scheduling overhead.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
