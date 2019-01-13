@@ -24,6 +24,7 @@
  * \author Istvan Fehervari
 */
 #include "./gradient_reversal_op-inl.h"
+#include "../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
@@ -43,14 +44,15 @@ the preceding layer.
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", GradientReversalOpShape)
-.set_attr<nnvm::FInferType>("FInferType", GradientReversalOpType)
-.set_attr<FInferStorageType>("FInferStorageType", GradientReversalOpStorageType)
-.set_attr<FCompute>("FCompute<cpu>", GradientReversalOpForward<cpu>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_gradientreversal"})
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::pair<int, int> >{{0, 0}};
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+  [](const NodeAttrs& attrs){
+    return std::vector<bool>{true};
   })
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(GradientReversalParam::__FIELDS__());
@@ -61,7 +63,7 @@ NNVM_REGISTER_OP(_contrib_backward_gradientreversal)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", GradientReversalOpBackward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", GradientReversalOpForwardEx<cpu>);
+.set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

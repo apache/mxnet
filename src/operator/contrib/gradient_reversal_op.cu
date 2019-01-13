@@ -24,13 +24,14 @@
  * \author Istvan Fehervari
 */
 #include "./gradient_reversal_op-inl.h"
+#include "../tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_contrib_gradientreversal)
-.set_attr<FComputeEx>("FComputeEx<gpu>", GradientReversalOpForwardEx<gpu>)
-.set_attr<FCompute>("FCompute<gpu>", GradientReversalOpForward<gpu>);
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_gradientreversal)
 .set_attr<FCompute>("FCompute<gpu>", GradientReversalOpBackward<gpu>);
