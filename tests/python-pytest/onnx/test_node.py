@@ -106,42 +106,51 @@ def forward_pass(sym, arg, aux, data_names, input_data):
     return mod.get_outputs()[0].asnumpy()
 
 
+def get_input_tensors(input_data):
+    input_tensor = []
+    input_names = []
+    input_sym = []
+    for idx, ip in enumerate(input_data):
+        name = "input" + str(idx + 1)
+        input_sym.append(mx.sym.Variable(name))
+        input_names.append(name)
+        input_tensor.append(helper.make_tensor_value_info(name,
+                                                          TensorProto.FLOAT, shape=np.shape(ip)))
+    return input_names, input_tensor, input_sym
+
+
+def get_onnx_graph(testname, input_names, inputs, output_name, output_shape, attr):
+    outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=output_shape)]
+
+    nodes = [helper.make_node(output_name, input_names, ["output"], **attr)]
+
+    graph = helper.make_graph(nodes, testname, inputs, outputs)
+
+    model = helper.make_model(graph)
+    return model
+
 class TestNode(unittest.TestCase):
     """ Tests for models.
     Tests are dynamically added.
     Therefore edit test_models to add more tests.
     """
-
     def test_import_export(self):
-        def get_input_tensors(input_data):
-            input_tensor = []
-            input_names = []
-            input_sym = []
-            for idx, ip in enumerate(input_data):
-                name = "input" + str(idx + 1)
-                input_sym.append(mx.sym.Variable(name))
-                input_names.append(name)
-                input_tensor.append(helper.make_tensor_value_info(name,
-                                                                  TensorProto.FLOAT, shape=np.shape(ip)))
-            return input_names, input_tensor, input_sym
-
-        def get_onnx_graph(testname, input_names, inputs, output_name, output_shape, attr):
-            outputs = [helper.make_tensor_value_info("output", TensorProto.FLOAT, shape=output_shape)]
-
-            nodes = [helper.make_node(output_name, input_names, ["output"], **attr)]
-
-            graph = helper.make_graph(nodes, testname, inputs, outputs)
-
-            model = helper.make_model(graph)
-            return model
-
         for test in test_cases:
             test_name, mxnet_op, onnx_name, inputs, attrs, mxnet_specific, fix_attrs, check_value, check_shape = test
             with self.subTest(test_name):
                 names, input_tensors, inputsym = get_input_tensors(inputs)
-                test_op = mxnet_op(*inputsym, **attrs)
-                mxnet_output = forward_pass(test_op, None, None, names, inputs)
-                outputshape = np.shape(mxnet_output)
+                if inputs:
+                    test_op = mxnet_op(*inputsym, **attrs)
+                    mxnet_output = forward_pass(test_op, None, None, names, inputs)
+                    outputshape = np.shape(mxnet_output)
+                else:
+                    test_op = mxnet_op(**attrs)
+                    shape = attrs.get('shape', (1,))
+                    x = mx.nd.zeros(shape, dtype='float32')
+                    xgrad = mx.nd.zeros(shape, dtype='float32')
+                    exe = test_op.bind(ctx=mx.cpu(), args={'x': x}, args_grad={'x': xgrad})
+                    mxnet_output = exe.forward(is_train=False)[0].asnumpy()
+                    outputshape = np.shape(mxnet_output)
 
                 if mxnet_specific:
                     onnxmodelfile = onnx_mxnet.export_model(test_op, {}, [np.shape(ip) for ip in inputs],
@@ -161,6 +170,41 @@ class TestNode(unittest.TestCase):
                 if check_shape:
                     npt.assert_equal(output[0].shape, outputshape)
 
+        input1 = get_rnd((1, 10, 2, 3))
+        ipsym = mx.sym.Variable("input1")
+        for test in test_scalar_ops:
+            if test == 'Add':
+                outsym = 2 + ipsym
+            if test == "Sub":
+                outsym = ipsym - 2
+            if test == "rSub":
+                outsym = ipsym.__rsub__(2)
+            if test == "Mul":
+                outsym = 2 * ipsym
+            if test == "Div":
+                outsym = ipsym / 2
+            if test == "Pow":
+                outsym = ipsym ** 2
+            forward_op = forward_pass(outsym, None, None, ['input1'], input1)
+            converted_model = onnx_mxnet.export_model(outsym, {}, [np.shape(input1)], np.float32,
+                                                      onnx_file_path=outsym.name + ".onnx")
+
+            sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
+        result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
+
+        npt.assert_almost_equal(result, forward_op)
+
+    def test_imports(self):
+        for test in import_test_cases:
+            test_name, onnx_name, inputs, np_op, attrs = test
+            with self.subTest(test_name):
+                names, input_tensors, inputsym = get_input_tensors(inputs)
+                np_out = [np_op(*inputs, **attrs)]
+                output_shape = np.shape(np_out)
+                onnx_model = get_onnx_graph(test_name, names, input_tensors, onnx_name, output_shape, attrs)
+                bkd_rep = backend.prepare(onnx_model, operation='import')
+                mxnet_out = bkd_rep.run(inputs)
+                npt.assert_almost_equal(np_out, mxnet_out)
 
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
 # fix_attributes = {'modify': {mxnet_attr_name: onnx_attr_name},
@@ -186,6 +230,8 @@ test_cases = [
      {'block_size': 2}, False, {}, True, False),
     ("test_softmax", mx.sym.SoftmaxOutput, "Softmax", [get_rnd((1000, 1000)), get_rnd(1000)],
      {'ignore_label': 0, 'use_ignore': False}, True, {}, True, False),
+    ("test_logistic_regression", mx.sym.LogisticRegressionOutput, "Sigmoid",
+     [get_rnd((1000, 1000)), get_rnd((1000, 1000))], {}, True, {}, True, False),
     ("test_fullyconnected", mx.sym.FullyConnected, "Gemm", [get_rnd((4, 3)), get_rnd((4, 3)), get_rnd(4)],
      {'num_hidden': 4, 'name': 'FC'}, True, {}, True, False),
     ("test_lppool1", mx.sym.Pooling, "LpPool", [get_rnd((2, 3, 20, 20))],
@@ -204,11 +250,28 @@ test_cases = [
      {'kernel': (4, 5), 'pad': (0, 0), 'stride': (1, 1), 'p_value': 2, 'pool_type': 'lp', 'global_pool': True}, False,
      {'modify': {'p_value': 'p'},
       'remove': ['pool_type', 'kernel', 'pad', 'stride', 'global_pool']}, True, False),
+    ("test_roipool", mx.sym.ROIPooling, "MaxRoiPool",
+     [[[get_rnd(shape=(8, 6), low=1, high=100, dtype=np.int32)]], [[0, 0, 0, 4, 4]]],
+     {'pooled_size': (2, 2), 'spatial_scale': 0.7}, False,
+     {'modify': {'pooled_size': 'pooled_shape'}}, True, False),
 
     # since results would be random, checking for shape alone
     ("test_multinomial", mx.sym.sample_multinomial, "Multinomial",
      [np.array([0, 0.1, 0.2, 0.3, 0.4]).astype("float32")],
-     {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True)
+     {'shape': (10,)}, False, {'modify': {'shape': 'sample_size'}}, False, True),
+    ("test_random_normal", mx.sym.random_normal, "RandomNormal", [],
+     {'shape': (2, 2), 'loc': 0, 'scale': 1}, False, {'modify': {'loc': 'mean'}}, False, True),
+    ("test_random_uniform", mx.sym.random_uniform, "RandomUniform", [],
+     {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True)
+]
+
+test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'Pow']
+
+# test_case = ("test_case_name", "ONNX_op_name", [input_list], np_op, attribute map)
+import_test_cases = [
+    ("test_lpnormalization_default", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':-1}),
+    ("test_lpnormalization_ord1", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':1, 'axis':-1}),
+    ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1})
 ]
 
 if __name__ == '__main__':

@@ -43,27 +43,16 @@
 
 (deftest test-single-classification
   (let [classifier (create-classifier)
-        predictions (classify-single-image classifier image-file)]
+        [[predictions]] (classify-single-image classifier image-file)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
-    (is (every? #(= 2 (count %)) predictions))
-    (is (every? #(string? (first %)) predictions))
-    (is (every? #(float? (second %)) predictions))
-    (is (every? #(< 0 (second %) 1) predictions))
-    (is (= ["n02123159 tiger cat"
-            "n02124075 Egyptian cat"
-            "n02123045 tabby, tabby cat"
-            "n02127052 lynx, catamount"
-            "n02128757 snow leopard, ounce, Panthera uncia"]
-           (map first predictions)))))
+    (is (= "n02123159 tiger cat" (:class (first predictions))))
+    (is (= (< 0 (:prob (first predictions)) 1)))))
 
 (deftest test-batch-classification
   (let [classifier (create-classifier)
-        batch-predictions (classify-images-in-dir classifier image-dir)
-        predictions (first batch-predictions)]
-    (is (some? batch-predictions))
+        predictions (first (classify-images-in-dir classifier image-dir))]
+    (is (some? predictions))
     (is (= 5 (count predictions)))
-    (is (every? #(= 2 (count %)) predictions))
-    (is (every? #(string? (first %)) predictions))
-    (is (every? #(float? (second %)) predictions))
-    (is (every? #(< 0 (second %) 1) predictions))))
+    (is (= "n02123159 tiger cat" (:class (first predictions))))
+    (is (= (< 0 (:prob (first predictions)) 1)))))

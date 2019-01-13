@@ -92,22 +92,24 @@ def get_dockerfiles_path():
 
 def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
     """Get a list of architectures given our dockerfiles"""
-    dockerfiles = glob.glob(os.path.join(path, "Dockerfile.build.*"))
+    dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
-    files = list(map(lambda x: re.sub(r"Dockerfile.build.(.*)", r"\1", x), dockerfiles))
+    files = list(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
+    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
-    return "{0}/build.{1}".format(registry, platform)
+    return "{0}/{1}".format(registry, platform)
 
 
 def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
-    return os.path.join(path, "Dockerfile.build.{0}".format(platform))
+    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
+    return os.path.join(path, "Dockerfile.{0}".format(platform))
 
 
 def get_docker_binary(use_nvidia_docker: bool) -> str:
@@ -523,6 +525,7 @@ def main() -> int:
 
     elif args.all:
         platforms = get_platforms()
+        platforms = [platform for platform in platforms if 'build.' in platform]
         logging.info("Building for all architectures: %s", platforms)
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:

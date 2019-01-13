@@ -77,9 +77,6 @@ class CommDeviceTree : public CommDevice {
       //  BroadcastRowSparse
       InitMergeBuffer(devs_);
       InitMergeBufferTree();
-      if (dmlc::GetEnv("MXNET_ENABLE_GPU_P2P", 1)) {
-        EnableP2P();
-      }
     }
   }
 
@@ -328,7 +325,7 @@ class CommDeviceTree : public CommDevice {
   }
 
  private:
-  void EnableP2P() {
+  void EnableP2P(std::vector<int>* p2p) {
 #if MXNET_USE_CUDA
     std::vector<int> gpus;
     for (const auto& d : devs_) {
@@ -338,7 +335,8 @@ class CommDeviceTree : public CommDevice {
     }
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
-    std::vector<int> p2p(n*n);
+    p2p->clear();
+    p2p->resize(n*n, 0);
     for (int i = 0; i < n; ++i) {
       mxnet::common::cuda::DeviceStore device_store(gpus[i]);
       for (int j = 0; j < n; j++) {
@@ -348,7 +346,7 @@ class CommDeviceTree : public CommDevice {
           cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
           if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
             ++enabled;
-            p2p[i*n+j] = 1;
+            (*p2p)[i*n+j] = 1;
           }
         }
       }
@@ -362,7 +360,7 @@ class CommDeviceTree : public CommDevice {
       std::string access(n, '.');
       for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-          access[j] = p2p[i*n+j] ? 'v' : '.';
+          access[j] = (*p2p)[i*n+j] ? 'v' : '.';
         }
         LOG(WARNING) << access;
       }
@@ -373,7 +371,9 @@ class CommDeviceTree : public CommDevice {
   void QueryTopology() {
 #if MXNET_USE_CUDA
     std::vector<float> link_matrix(devs_.size()*devs_.size());
-    GetP2PWeight(devs_, &link_matrix);
+    std::vector<int> p2p_matrix(devs_.size()*devs_.size());
+    EnableP2P(&p2p_matrix);
+    GetP2PWeight(devs_, p2p_matrix, &link_matrix);
     if (backtrack_)
       LOG(INFO) << "Using Backtracking to generate trees";
     else

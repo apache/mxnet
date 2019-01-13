@@ -656,11 +656,18 @@ def convert_exp(node, **kwargs):
     return create_basic_op_node('Exp', node, kwargs)
 
 @mx_op.register("_copy")
-def convert_identity(node, **kwargs):
+def convert_copy(node, **kwargs):
     """Map MXNet's _copy operator attributes to onnx's Identity operator
     and return the created node.
     """
     return create_basic_op_node('Identity', node, kwargs)
+
+@mx_op.register("identity")
+def convert_identity(node, **kwargs):
+    """Map MXNet's identity operator attributes to onnx's ConstantFill operator
+    and return the created node.
+    """
+    return create_basic_op_node('ConstantFill', node, kwargs)
 
 @mx_op.register("InstanceNorm")
 def convert_instancenorm(node, **kwargs):
@@ -752,6 +759,31 @@ def convert_softmax_output(node, **kwargs):
 
     return [softmax_node]
 
+@mx_op.register("LogisticRegressionOutput")
+def convert_logistic_regression_output(node, **kwargs):
+    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
+    and return the created node.
+    """
+    name = node["name"]
+    input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
+    input1 = kwargs["proc_nodes"][input1_idx]
+    sigmoid_node = onnx.helper.make_node(
+        "Sigmoid",
+        [input1.name],
+        [name],
+        name=name
+    )
+    return [sigmoid_node]
+
+@mx_op.register("BlockGrad")
+def convert_blockgrad(node, **kwargs):
+    """ Skip operator  """
+    return create_basic_op_node('ConstantFill', node, kwargs)
+
+@mx_op.register("MakeLoss")
+def convert_makeloss(node, **kwargs):
+    """ Skip operator  """
+    return create_basic_op_node('ConstantFill', node, kwargs)
 
 @mx_op.register("Concat")
 def convert_concat(node, **kwargs):
@@ -898,7 +930,7 @@ def convert_clip(node, **kwargs):
 def scalar_op_helper(node, op_name, **kwargs):
     """Helper function for scalar arithmetic operations"""
     name, input_nodes, attrs = get_inputs(node, kwargs)
-
+    from onnx import numpy_helper
     input_type = kwargs["in_type"]
     scalar_value = np.array([attrs.get("scalar", 1)],
                             dtype=onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[input_type])
@@ -910,13 +942,21 @@ def scalar_op_helper(node, op_name, **kwargs):
     for i in initializer:
         if i.name == input_nodes[0]:
             if op_name == 'Mul':
-                new_initializer = onnx.numpy_helper.to_array(i) * scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) * scalar_value[0]
             elif op_name == 'Sub':
-                new_initializer = onnx.numpy_helper.to_array(i) - scalar_value[0]
+                if name.startswith("_rminusscalar"):
+                    new_initializer = scalar_value[0] - numpy_helper.to_array(i)
+                else:
+                    new_initializer = numpy_helper.to_array(i) - scalar_value[0]
             elif op_name == 'Add':
-                new_initializer = onnx.numpy_helper.to_array(i) + scalar_value[0]
+                new_initializer = numpy_helper.to_array(i) + scalar_value[0]
             elif op_name == 'Div':
-                new_initializer = onnx.numpy_helper.to_array(i) / scalar_value[0]
+                if name.startswith("_rdivscalar"):
+                    new_initializer = scalar_value[0] / numpy_helper.to_array(i)
+                else:
+                    new_initializer = numpy_helper.to_array(i) / scalar_value[0]
+            elif op_name == 'Pow':
+                new_initializer = numpy_helper.to_array(i) ** scalar_value[0]
             flag = False
             break
 
@@ -982,6 +1022,13 @@ def convert_minus_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Sub', **kwargs)
 
+@mx_op.register("_rminus_scalar")
+def convert_rminus_scalar(node, **kwargs):
+    """Map MXNet's _rminus_scalar operator attributes to onnx's Sub operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Sub', **kwargs)
 
 # Convert scalar value into node and pass it as input to mul_node
 @mx_op.register("_plus_scalar")
@@ -1001,6 +1048,21 @@ def convert_div_scalar(node, **kwargs):
     """
     return scalar_op_helper(node, 'Div', **kwargs)
 
+@mx_op.register("_rdiv_scalar")
+def convert_rdiv_scalar(node, **kwargs):
+    """Map MXNet's _rdiv_scalar operator attributes to onnx's Div operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Div', **kwargs)
+
+@mx_op.register("_power_scalar")
+def convert_pow_scalar(node, **kwargs):
+    """Map MXNet's _pow_scalar operator attributes to onnx's Pow operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Pow', **kwargs)
 
 # Sorting and Searching
 @mx_op.register("argmax")
@@ -1716,6 +1778,40 @@ def convert_logsoftmax(node, **kwargs):
     )
     return [node]
 
+@mx_op.register("norm")
+def convert_norm(node, **kwargs):
+    """Map MXNet's norm operator attributes to onnx's ReduceL1 and ReduceL2 operators
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    mx_axis = attrs.get("axis", None)
+    axes = convert_string_to_list(str(mx_axis)) if mx_axis else None
+
+    keepdims = get_boolean_attribute_value(attrs, "keepdims")
+    ord = int(attrs.get("ord", 2))
+
+    onnx_op_name = "ReduceL1" if ord == 1 else "ReduceL2"
+
+    if axes:
+        reduce_node = onnx.helper.make_node(
+            onnx_op_name,
+            input_nodes,
+            [name],
+            axes=axes,
+            keepdims=keepdims,
+            name=name
+        )
+        return [reduce_node]
+    else:
+        reduce_node = onnx.helper.make_node(
+            onnx_op_name,
+            input_nodes,
+            [name],
+            keepdims=keepdims,
+            name=name
+        )
+        return [reduce_node]
 
 @mx_op.register("_sample_multinomial")
 def convert_multinomial(node, **kwargs):
@@ -1736,5 +1832,78 @@ def convert_multinomial(node, **kwargs):
         dtype=dtype,
         sample_size=sample_size,
         name=name,
+    )
+    return [node]
+
+
+@mx_op.register("_random_uniform")
+def convert_random_uniform(node, **kwargs):
+    """Map MXNet's random_uniform operator attributes to onnx's RandomUniform
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to float32
+    low = float(attrs.get("low", 0))
+    high = float(attrs.get("high", 1.0))
+    shape = convert_string_to_list(attrs.get('shape', '[]'))
+    dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(attrs.get('dtype', 'float32'))]
+
+    node = onnx.helper.make_node(
+        'RandomUniform',
+        input_nodes,
+        [name],
+        low=low,
+        high=high,
+        dtype=dtype,
+        shape=shape,
+        name=name
+    )
+    return [node]
+
+
+@mx_op.register("_random_normal")
+def convert_random_normal(node, **kwargs):
+    """Map MXNet's random_normal operator attributes to onnx's RandomNormal
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    # Converting to float32
+    mean = float(attrs.get("loc", 0))
+    scale = float(attrs.get("scale", 1.0))
+    shape = convert_string_to_list(attrs.get('shape', '[]'))
+    dtype = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[np.dtype(attrs.get('dtype', 'float32'))]
+
+    node = onnx.helper.make_node(
+        'RandomNormal',
+        input_nodes,
+        [name],
+        mean=mean,
+        scale=scale,
+        dtype=dtype,
+        shape=shape,
+        name=name
+    )
+    return [node]
+
+
+@mx_op.register("ROIPooling")
+def convert_roipooling(node, **kwargs):
+    """Map MXNet's ROIPooling operator attributes to onnx's MaxRoiPool
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    pooled_shape = convert_string_to_list(attrs.get('pooled_size'))
+    scale = float(attrs.get("spatial_scale"))
+
+    node = onnx.helper.make_node(
+        'MaxRoiPool',
+        input_nodes,
+        [name],
+        pooled_shape=pooled_shape,
+        spatial_scale=scale,
+        name=name
     )
     return [node]

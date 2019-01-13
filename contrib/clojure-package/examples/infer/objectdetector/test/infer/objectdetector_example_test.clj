@@ -43,23 +43,23 @@
 
 (deftest test-single-detection
   (let [detector (create-detector)
-        predictions (detect-single-image detector image-file)]
+        predictions (detect-single-image detector image-file)
+        {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? predictions))
     (is (= 5 (count predictions)))
-    (is (every? #(= 2 (count %)) predictions))
-    (is (every? #(string? (first %)) predictions))
-    (is (every? #(= 5 (count (second %))) predictions))
-    (is (every? #(< 0 (first (second %)) 1) predictions))
-    (is (= ["car" "bicycle" "dog" "bicycle" "person"]
-           (map first predictions)))))
+    (is (string? class))
+    (is (< 0.8 prob))
+    (is (every? #(< 0 % 1) [x-min x-max y-min y-max]))
+    (is (= #{"dog" "person" "bicycle" "car"} (set (mapv :class predictions))))))
 
 (deftest test-batch-detection
   (let [detector (create-detector)
         batch-predictions (detect-images-in-dir detector image-dir)
-        predictions (first batch-predictions)]
+        predictions (first batch-predictions)
+        {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? batch-predictions))
     (is (= 5 (count predictions)))
-    (is (every? #(= 2 (count %)) predictions))
-    (is (every? #(string? (first %)) predictions))
-    (is (every? #(= 5 (count (second %))) predictions))
-    (is (every? #(< 0 (first (second %)) 1) predictions))))
+    (is (string? class))
+    (is (< 0.8 prob))
+    (every? #(< 0 % 1) [x-min x-max y-min y-max])
+    (is (= #{"dog" "person" "bicycle" "car"} (set (mapv :class predictions))))))

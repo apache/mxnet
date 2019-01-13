@@ -65,5 +65,5 @@ nosetests3 --verbose tests/python/train
 #julia -e 'try Pkg.clone("MXNet"); catch end; Pkg.checkout("MXNet"); Pkg.build("MXNet"); Pkg.test("MXNet")' || exit -1
 
 echo "BUILD scala_test"
-make scalapkg
-make scalatest
+cd scala-package
+mvn integration-test
