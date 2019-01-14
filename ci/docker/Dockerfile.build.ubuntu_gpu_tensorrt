@@ -20,9 +20,6 @@
 
 FROM nvidia/cuda:10.0-cudnn7-devel
 
-# Avoid interactive package installers.
-ENV DEBIAN_FRONTEND noninteractive
-
 WORKDIR /work/deps
 
 COPY install/ubuntu_core.sh /work/
