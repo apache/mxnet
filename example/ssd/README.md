@@ -25,6 +25,7 @@ remarkable traits of MXNet.
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
 
 ### What's new
+* Support uint8 inference on CPU with MKL-DNN backend, and achieved 0.8364 mAP.
 * Added live camera capture and detection display (run with --camera flag). Example:
     `./demo.py --camera --cpu --frame-resize 0.5`
 * Added multiple trained models.
