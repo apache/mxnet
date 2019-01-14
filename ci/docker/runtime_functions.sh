@@ -907,34 +907,44 @@ unittest_ubuntu_gpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
-unittest_ubuntu_cpu_julia06() {
+unittest_ubuntu_cpu_julia() {
     set -ex
-    export PATH="/work/julia/bin:$PATH"
+    export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
-    export JULIA_PKGDIR='/work/julia-pkg'
-    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
-    julia -e 'versioninfo()'
-    julia -e 'Pkg.init()'
+    julia -e 'using InteractiveUtils; versioninfo()'
 
     # install package
-    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
+    mkdir -p $DEVDIR
+    ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
 
-    # install dependencies
-    julia -e 'Pkg.resolve()'
+    # register MXNet.jl and dependencies
+    julia -e 'using Pkg; Pkg.develop("MXNet")'
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'Pkg.build("MXNet")'
+    julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
-    julia -e 'Pkg.test("MXNet")'
+    julia -e 'using Pkg; Pkg.test("MXNet")'
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
     julia -e 'using MXNet; mx._sig_checker()'
+}
+
+unittest_ubuntu_cpu_julia07() {
+    set -ex
+    unittest_ubuntu_cpu_julia /work/julia07
+}
+
+unittest_ubuntu_cpu_julia10() {
+    set -ex
+    unittest_ubuntu_cpu_julia /work/julia10
 }
 
 unittest_centos7_cpu() {
@@ -1248,25 +1258,19 @@ deploy_docs() {
 
 deploy_jl_docs() {
     set -ex
-    export PATH="/work/julia/bin:$PATH"
+    export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
-    export JULIA_PKGDIR='/work/julia-pkg'
-    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
-    julia -e 'versioninfo()'
-    julia -e 'Pkg.init()'
-    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
-    julia -e 'Pkg.resolve()'
+    julia -e 'using InteractiveUtils; versioninfo()'
+    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-    # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'Pkg.build("MXNet")'
-    # build docs
-    julia -e 'Pkg.add("Documenter")'
-    julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'
+    make -C julia/docs
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...

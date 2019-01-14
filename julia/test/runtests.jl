@@ -15,29 +15,33 @@
 # specific language governing permissions and limitations
 # under the License.
 
+using Test
 using MXNet
-using Base.Test
 
 # run test in the whole directory, latest modified files
 # are run first, this makes waiting time shorter when writing
 # or modifying unit-tests
 function test_dir(dir)
-  jl_files = sort(filter(x -> ismatch(r".*\.jl$", x), readdir(dir)), by = fn -> stat(joinpath(dir,fn)).mtime)
-  map(reverse(jl_files)) do file
+  jl_files = sort(
+    filter(x -> occursin(r".*\.jl$", x), readdir(dir)),
+           by = fn -> stat(joinpath(dir, fn)).mtime)
+  foreach(reverse(jl_files)) do file
     include("$dir/$file")
   end
 end
 
-info("libmxnet version => $(mx.LIB_VERSION)")
+@info "libmxnet version => $(mx.LIB_VERSION[])"
 
-include(joinpath(dirname(@__FILE__), "common.jl"))
+const BASEDIR = joinpath(@__DIR__, "..")
+
+include(joinpath(@__DIR__, "common.jl"))
 @testset "MXNet Test" begin
-  test_dir(joinpath(dirname(@__FILE__), "unittest"))
+  test_dir(joinpath(@__DIR__, "unittest"))
 
   # run the basic MNIST mlp example
   if haskey(ENV, "CONTINUOUS_INTEGRATION")
     @testset "MNIST Test" begin
-      include(joinpath(Pkg.dir("MXNet"), "examples", "mnist", "mlp-test.jl"))
+      include(joinpath(BASEDIR, "examples", "mnist", "mlp-test.jl"))
     end
   end
 end
