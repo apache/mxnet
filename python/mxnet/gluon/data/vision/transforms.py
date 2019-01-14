@@ -178,7 +178,7 @@ class Normalize(HybridBlock):
       [-1.4711051  -1.5200229 ]]]
     <NDArray 3x4x2 @cpu(0)>
     """
-    def __init__(self, mean, std):
+    def __init__(self, mean=0.0, std=1.0):
         super(Normalize, self).__init__()
         self._mean = mean
         self._std = std

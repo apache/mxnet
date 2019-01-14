@@ -33,13 +33,16 @@ NNVM_REGISTER_OP(_image_normalize)
 .describe(R"code(Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
     standard deviation.
 
-    Given mean `(m1, ..., mn)` and std `(s1, ..., sn)` for `n` channels,
+    Given mean `(m1, ..., mn)` and std `(s\ :sub:`1`\ , ..., s\ :sub:`n`)` for `n` channels,
     this transform normalizes each channel of the input tensor with:
+
 .. math::
-        
-        output[i] = (input[i] - mi) / si
-    
+
+        output[i] = (input[i] - m\ :sub:`i`\ ) / s\ :sub:`i`
+
     If mean or std is scalar, the same value will be applied to all channels.
+
+    Default value for mean is 0.0 and stand deviation is 1.0.
 
 Example:
 

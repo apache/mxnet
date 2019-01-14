@@ -26,15 +26,7 @@
 #define MXNET_OPERATOR_IMAGE_NORMALIZE_OP_INL_H_
 
 
-#include <mxnet/base.h>
-#include <algorithm>
 #include <vector>
-#include <cmath>
-#include <limits>
-#include <algorithm>
-#include <utility>
-#include "../mxnet_op.h"
-#include "../operator_common.h"
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
@@ -44,12 +36,19 @@ namespace image {
 // Parameter registration for image Normalize operator
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   nnvm::Tuple<float> mean;
+  nnvm::Tuple<float> default_mean = {0.0f, 0.0f, 0.0f, 0.0f};
   nnvm::Tuple<float> std;
+  nnvm::Tuple<float> default_std = {1.0f, 1.0f, 1.0f, 1.0f};
+
   DMLC_DECLARE_PARAMETER(NormalizeParam) {
     DMLC_DECLARE_FIELD(mean)
-    .describe("Sequence of means for each channel.");
+    .set_default(default_mean)
+    .describe("Sequence of means for each channel. "
+              "Default value is 0.");
     DMLC_DECLARE_FIELD(std)
-    .describe("Sequence of standard deviations for each channel.");
+    .set_default(default_std)
+    .describe("Sequence of standard deviations for each channel. "
+              "Default value is 1.");
   }
 };
 

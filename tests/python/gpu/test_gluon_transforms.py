@@ -55,6 +55,12 @@ def test_normalize():
     data_expected_4d[1][:][:][2] = data_expected_4d[1][:][:][2] - 2.0
     assert_almost_equal(data_expected_4d, out_nd_4d.asnumpy())
 
+    # Default normalize values i.e., mean=0, std=1
+    data_in_3d_def = nd.random.uniform(0, 1, (3, 300, 300))
+    out_nd_3d_def = transforms.Normalize()(data_in_3d_def)
+    data_expected_3d_def = data_in_3d.asnumpy()
+    assert_almost_equal(data_expected_3d_def, out_nd_3d_def.asnumpy())
+
     # Invalid Input - Neither 3D or 4D input
     invalid_data_in = nd.random.uniform(0, 1, (5, 5, 3, 300, 300))
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
