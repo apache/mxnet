@@ -16,29 +16,33 @@
 ;;
 
 (ns cnn-text-classification.classifier-test
-	(:require 
-		[clojure.test :refer :all]
-		[org.apache.clojure-mxnet.module :as module]
-		[org.apache.clojure-mxnet.ndarray :as ndarray]
-		[org.apache.clojure-mxnet.util :as util]
-		[org.apache.clojure-mxnet.context :as context]
-		[cnn-text-classification.classifier :as classifier]))
+  (:require [clojure.test :refer :all]
+            [org.apache.clojure-mxnet.module :as module]
+            [org.apache.clojure-mxnet.ndarray :as ndarray]
+            [org.apache.clojure-mxnet.util :as util]
+            [org.apache.clojure-mxnet.context :as context]
+            [cnn-text-classification.classifier :as classifier]))
 
-;
-; The one and unique classifier test
-;
-(deftest classifier-test
-	(let [train
-    (classifier/train-convnet 
-    	{:devs [(context/default-context)]
-         :embedding-size 50 
-         :batch-size 10 
-         :test-size 100 
-         :num-epoch 1 
-         :max-examples 1000})]
+(deftest classifier-with-embeddings-test
+  (let [train (classifier/train-convnet
+               {:devs [(context/default-context)]
+                :embedding-size 50
+                :batch-size 10
+                :test-size 100
+                :num-epoch 1
+                :max-examples 1000
+                :pretrained-embedding :glove})]
     (is (= ["data"] (util/scala-vector->vec (module/data-names train))))
-    (is (= 20 (count (ndarray/->vec (-> train module/outputs first first)))))))
-    ;(prn (util/scala-vector->vec (data-shapes train)))	
-    ;(prn (util/scala-vector->vec (label-shapes train)))
-    ;(prn (output-names train))
-    ;(prn (output-shapes train))
+    (is (= 20 (count (ndarray/->vec (-> train module/outputs ffirst)))))))
+
+(deftest classifier-without-embeddings-test
+  (let [train (classifier/train-convnet
+               {:devs [(context/default-context)]
+                :embedding-size 50
+                :batch-size 10
+                :test-size 100
+                :num-epoch 1
+                :max-examples 1000
+                :pretrained-embedding nil})]
+    (is (= ["data"] (util/scala-vector->vec (module/data-names train))))
+    (is (= 20 (count (ndarray/->vec (-> train module/outputs ffirst)))))))

@@ -55,8 +55,8 @@
   "Print image classifier predictions for the given input file"
   [predictions]
   (println (apply str (repeat 80 "=")))
-  (doseq [[label probability] predictions]
-    (println (format "Class: %s Probability=%.8f" label probability)))
+  (doseq [p predictions]
+    (println p))
   (println (apply str (repeat 80 "="))))
 
 (defn classify-single-image
@@ -64,8 +64,8 @@
   [classifier input-image]
   (let [image (infer/load-image-from-file input-image)
         topk 5
-        [predictions] (infer/classify-image classifier image topk)]
-    predictions))
+        predictions (infer/classify-image classifier image topk)]
+    [predictions]))
 
 (defn classify-images-in-dir
   "Classify all jpg images in the directory"
@@ -78,12 +78,10 @@
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (apply
-     concat
-     (for [image-files image-file-batches]
-       (let [image-batch (infer/load-image-paths image-files)
-             topk 5]
-         (infer/classify-image-batch classifier image-batch topk))))))
+    (apply concat (for [image-files image-file-batches]
+                    (let [image-batch (infer/load-image-paths image-files)
+                          topk 5]
+                      (infer/classify-image-batch classifier image-batch topk))))))
 
 (defn run-classifier
   "Runs an image classifier based on options provided"
@@ -98,6 +96,7 @@
                     factory {:contexts [(context/default-context)]})]
     (println "Classifying a single image")
     (print-predictions (classify-single-image classifier input-image))
+    (println "\n")
     (println "Classifying images in a directory")
     (doseq [predictions (classify-images-in-dir classifier input-dir)]
       (print-predictions predictions))))
