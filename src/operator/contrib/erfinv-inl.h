@@ -1,43 +1,44 @@
-/* The next function is taken from 
-https://github.com/antelopeusersgroup/antelope_contrib/blob/master/lib/location/libgenloc/erfinv.c.
-Below is the copyright. Output was modified to be inf or -inf when input is 1 or -1.
-
-    Copyright (c) 2014 Indiana University
-    All rights reserved.
-    Written by Prof. Gary L. Pavlis, Dept. of Geol. Sci.,
-            Indiana University, Bloomington, IN
-    This software is licensed under the New BSD license:
-    Redistribution and use in source and binary forms,
-    with or without modification, are permitted provided
-    that the following conditions are met:
-    Redistributions of source code must retain the above
-    copyright notice, this list of conditions and the
-    following disclaimer.
-    Redistributions in binary form must reproduce the
-    above copyright notice, this list of conditions and
-    the following disclaimer in the documentation and/or
-    other materials provided with the distribution.
-    Neither the name of Indiana University nor
-    the names of its contributors may be used to endorse
-    or promote products derived from this software without
-    specific prior written permission.
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-    CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-    WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
-    PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-    THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-    PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
-    USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-    IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-    USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-    POSSIBILITY OF SUCH DAMAGE.
-*/
-
+/*
+ * Copyright (c) 2014 Indiana University
+ * All rights reserved.
+ * Written by Prof. Gary L. Pavlis, Dept. of Geol. Sci.,
+ *           Indiana University, Bloomington, IN
+ * This software is licensed under the New BSD license:
+ * Redistribution and use in source and binary forms,
+ * with or without modification, are permitted provided
+ * that the following conditions are met:
+ * Redistributions of source code must retain the above
+ * copyright notice, this list of conditions and the
+ * following disclaimer.
+ * Redistributions in binary form must reproduce the
+ * above copyright notice, this list of conditions and
+ * the following disclaimer in the documentation and/or
+ * other materials provided with the distribution.
+ * Neither the name of Indiana University nor
+ * the names of its contributors may be used to endorse
+ * or promote products derived from this software without
+ * specific prior written permission.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+ * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+ * THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+ * USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+/*
+ * The next function is taken from
+ * https://github.com/antelopeusersgroup/antelope_contrib/blob/master/lib/location/libgenloc/erfinv.c.
+ * Output was modified to be inf or -inf when input is 1 or -1.
+ */
 #ifndef MXNET_OPERATOR_CONTRIB_ERFINV_INL_H_
 #define MXNET_OPERATOR_CONTRIB_ERFINV_INL_H_
 
@@ -76,9 +77,9 @@ struct erfinv : public mxnet_op::tunable {
     double d[2]={ 3.543889200,  1.637067800};
     if (fabs(y) > 1.0) {
       /* This needs IEEE constant*/
-      return DType(atof("NaN"));
+      return DType(10000);
     } else if (fabs(y) == 1.0) {
-      return DType((copysign(1.0, y))*atof("INFINITY"));
+      return DType((copysign(1.0, y))*10000);
     } else if (fabs(y) <= CENTRAL_RANGE) {
             z = y*y;
             num = (((a[3]*z + a[2])*z + a[1])*z + a[0]);
