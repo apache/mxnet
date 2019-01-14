@@ -1273,6 +1273,67 @@ Base.prod(x::NDArray; dims = :) = _prod(x, dims)
 @_remap _prod(x::NDArray, ::Colon) prod(x)
 @_remap _prod(x::NDArray, dims)    prod(x; axis = 0 .- dims, keepdims = true)
 
+# TODO: support CartesianIndex ?
+"""
+    argmax(x::NDArray; dims) -> indices
+
+Note that `NaN` is skipped during comparison.
+This is different from Julia `Base.argmax`.
+
+## Examples
+
+```julia-repl
+julia> x = NDArray([0. 1 2; 3 4 5])
+2×3 NDArray{Float64,2} @ CPU0:
+ 0.0  1.0  2.0
+ 3.0  4.0  5.0
+
+julia> argmax(x, dims = 1)
+1×3 NDArray{Float64,2} @ CPU0:
+ 2.0  2.0  2.0
+
+julia> argmax(x, dims = 2)
+2×1 NDArray{Float64,2} @ CPU0:
+ 3.0
+ 3.0
+```
+
+See also [`argmin`](@ref mx.argmin).
+"""
+Base.argmax(x::NDArray; dims = :) = _argmax(x, dims) .+ 1
+@_remap _argmax(x::NDArray, ::Colon) argmax(x)
+@_remap _argmax(x::NDArray, dims)    argmax(x; axis = 0 .- dims, keepdims = true)
+
+"""
+    argmin(x::NDArray; dims) -> indices
+
+Note that `NaN` is skipped during comparison.
+This is different from Julia `Base.argmin`.
+
+## Examples
+
+```julia-repl
+julia> x = NDArray([0. 1 2; 3 4 5])
+2×3 NDArray{Float64,2} @ CPU0:
+ 0.0  1.0  2.0
+ 3.0  4.0  5.0
+
+julia> argmax(x, dims = 1)
+1×3 NDArray{Float64,2} @ CPU0:
+ 2.0  2.0  2.0
+
+julia> argmax(x, dims = 2)
+2×1 NDArray{Float64,2} @ CPU0:
+ 3.0
+ 3.0
+```
+
+See also [`argmax`](@ref mx.argmax).
+"""
+Base.argmin(x::NDArray; dims = :) = _argmin(x, dims) .+ 1
+@_remap _argmin(x::NDArray, ::Colon) argmin(x)
+@_remap _argmin(x::NDArray, dims)    argmin(x; axis = 0 .- dims, keepdims = true)
+
 _nddoc[:clip] = _nddoc[:clip!] =
 """
     clip(x::NDArray, min, max)
@@ -1734,6 +1795,10 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_axis",
     "broadcast_axes",
     "broadcast_hypot",
+
+    # reduction
+    "argmax",
+    "argmin",
 ]
 
 macro _import_ndarray_functions()
