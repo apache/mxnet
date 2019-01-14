@@ -36,8 +36,7 @@ const int RandGenerator<gpu, float>::kMinNumRandomPerThread =
   dmlc::GetEnv("MXNET_CUDA_MIN_NUM_RAND_PER_THREAD", 64);
 
 template<>
-const int RandGenerator<gpu, float>::kNumRandomStates =
-  dmlc::GetEnv("MXNET_CUDA_NUM_RAND_STATES", 32768);
+const int RandGenerator<gpu, float>::kNumRandomStates = 32768;
 
 __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_,
                                            const int size,
