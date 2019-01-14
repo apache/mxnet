@@ -210,40 +210,7 @@ python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quant
 
 <h3 id='10'>SSD-VGG</h3>
 
-Follow the [SSD example's instructions](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model) in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [SSD-VGG16 pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip). Extract the zip files, then rename the directories to `model` and `data` respectively. Then, rename the files in directories as follows.
-
-```
-data/
-|---val.rec
-|---val.lxt
-|---val.idx
-model/
-|---ssd_vgg16_reduced_300-0000.params
-|---ssd_vgg16_reduced_300-symbol.json
-```
-
-Then, use the following command for quantization. By default, this script uses 5 batches (32 samples per batch) for naive calibration:
-
-```
-python quantization.py
-```
-
-After quantization, INT8 models will be saved in `model/` dictionary.  Use the following command to launch inference.
-
-```
-# USE MKLDNN AS SUBGRAPH BACKEND
-export MXNET_SUBGRAPH_BACKEND=MKLDNN
-
-# Launch FP32 Inference 
-python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/ssd_
-
-# Launch INT8 Inference
-python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/cqssd_
-
-# Launch dummy data Inference
-python benchmark_score.py --deploy --prefix=./model/ssd_
-python benchmark_score.py --deploy --prefix=./model/cqssd_
-```
+SSD model is located in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd), follow [the insturctions](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#quantize-model) to run quantized SSD model.
 
 <h3 id='11'>Custom Model</h3>
 
