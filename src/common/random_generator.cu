@@ -32,7 +32,8 @@ namespace common {
 namespace random {
 
 template<>
-const int RandGenerator<gpu, float>::kMinNumRandomPerThread = 64;
+const int RandGenerator<gpu, float>::kMinNumRandomPerThread =
+  dmlc::GetEnv("MXNET_CUDA_MIN_NUM_RAND_PER_THREAD", 64);
 
 template<>
 const int RandGenerator<gpu, float>::kNumRandomStates =
