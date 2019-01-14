@@ -9,6 +9,25 @@
     <name>MXNet Scala Demo</name>
     <packaging>pom</packaging>
 
+    <profiles>
+        <profile>
+            <id>ci-nightly</id>
+            <repositories>
+                <repository>
+                    <id>Apache Snapshot</id>
+                    <url>https://repository.apache.org/content/groups/snapshots</url>
+                </repository>
+            </repositories>
+            <properties>
+                <mxnet.version>[1.5.0-SNAPSHOT, )</mxnet.version>
+            </properties>
+        </profile>
+    </profiles>
+
+    <properties>
+        <mxnet.version>[1.3.1, )</mxnet.version>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.mxnet</groupId>
