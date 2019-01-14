@@ -23,30 +23,37 @@
  * \author Da Zheng
 */
 
-#include "../fully_connected-inl.h"
-#include "./mkldnn_base-inl.h"
+#include "mkldnn_fully_connected-inl.h"
 
 #if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
-inline static mkldnn::inner_product_forward::primitive_desc GetIPFwd(
+mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const mkldnn::memory::desc &out_md, const bool is_train) {
+    const mkldnn::memory::desc &out_md, const bool is_train, MKLDNNFCFullParam &param) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
   auto engine = CpuEngine::Get()->get_engine();
   auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
+
+  mkldnn::primitive_attr attr;
+  if (param.mkldnn_param.quantized && param.requantize_scales.size()) {
+    int mask = 0;
+    attr.set_output_scales(mask, param.requantize_scales);
+    attr.set_int_output_round_mode(round_nearest);
+  }
+
   if (bias) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::inner_product_forward::desc ipFwd_desc(propagation,
         data_md, weight_md, bias_md, out_md);
-    return mkldnn::inner_product_forward::primitive_desc(ipFwd_desc, engine);
+    return mkldnn::inner_product_forward::primitive_desc(ipFwd_desc, attr, engine);
   } else {
     mkldnn::inner_product_forward::desc ipFwd_desc(propagation,
         data_md, weight_md, out_md);
-    return mkldnn::inner_product_forward::primitive_desc(ipFwd_desc, engine);
+    return mkldnn::inner_product_forward::primitive_desc(ipFwd_desc, attr, engine);
   }
 }
 
@@ -82,69 +89,47 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetIPBwdWei
   }
 }
 
-class MKLDNNFullyConnectForward {
-  std::shared_ptr<mkldnn::memory> data;
-  std::shared_ptr<mkldnn::memory> weight;
-  std::shared_ptr<mkldnn::memory> out;
-  std::shared_ptr<mkldnn::memory> bias;
-  std::shared_ptr<mkldnn::inner_product_forward> ipFwd;
+void MKLDNNFullyConnectForward::SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
+                                          const mkldnn::memory *bias, const mkldnn::memory &output) {
+  if (this->data == nullptr)
+    this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+            ipFwd_pd.src_primitive_desc(), data.get_data_handle()));
+  else
+    this->data->set_data_handle(data.get_data_handle());
 
- public:
-  mkldnn::inner_product_forward::primitive_desc ipFwd_pd;
+  if (this->weight == nullptr)
+    this->weight = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+            ipFwd_pd.weights_primitive_desc(), weight.get_data_handle()));
+  else
+    this->weight->set_data_handle(weight.get_data_handle());
 
-  MKLDNNFullyConnectForward(const FullyConnectedParam &param, bool is_train,
-                            const NDArray &data, const NDArray &weight,
-                            const NDArray *bias,
-                            const mkldnn::memory::desc &output)
-      : ipFwd_pd(GetIPFwd(data, weight, bias, output, is_train)) {}
+  if (this->out == nullptr)
+    this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+            ipFwd_pd.dst_primitive_desc(), output.get_data_handle()));
+  else
+    this->out->set_data_handle(output.get_data_handle());
 
-  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
-                 const mkldnn::memory *bias, const mkldnn::memory &output) {
-    if (this->data == nullptr)
-      this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-              ipFwd_pd.src_primitive_desc(), data.get_data_handle()));
+  if (bias != nullptr) {
+    if (this->bias == nullptr)
+      this->bias = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+      ipFwd_pd.bias_primitive_desc(), bias->get_data_handle()));
     else
-      this->data->set_data_handle(data.get_data_handle());
-
-    if (this->weight == nullptr)
-      this->weight = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-              ipFwd_pd.weights_primitive_desc(), weight.get_data_handle()));
-    else
-      this->weight->set_data_handle(weight.get_data_handle());
-
-    if (this->out == nullptr)
-      this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-              ipFwd_pd.dst_primitive_desc(), output.get_data_handle()));
-    else
-      this->out->set_data_handle(output.get_data_handle());
-
-    if (bias != nullptr) {
-      if (this->bias == nullptr)
-        this->bias = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
-        ipFwd_pd.bias_primitive_desc(), bias->get_data_handle()));
-      else
-        this->bias->set_data_handle(bias->get_data_handle());
-      if (this->ipFwd == nullptr)
-        this->ipFwd = std::shared_ptr<mkldnn::inner_product_forward>(
-            new mkldnn::inner_product_forward(
-                ipFwd_pd, mkldnn::primitive::at(*this->data),
-                mkldnn::primitive::at(*this->weight),
-                mkldnn::primitive::at(*this->bias), *this->out));
-    } else if (this->ipFwd == nullptr) {
+      this->bias->set_data_handle(bias->get_data_handle());
+    if (this->ipFwd == nullptr)
       this->ipFwd = std::shared_ptr<mkldnn::inner_product_forward>(
           new mkldnn::inner_product_forward(
               ipFwd_pd, mkldnn::primitive::at(*this->data),
-              mkldnn::primitive::at(*this->weight), *this->out));
-    }
+              mkldnn::primitive::at(*this->weight),
+              mkldnn::primitive::at(*this->bias), *this->out));
+  } else if (this->ipFwd == nullptr) {
+    this->ipFwd = std::shared_ptr<mkldnn::inner_product_forward>(
+        new mkldnn::inner_product_forward(
+            ipFwd_pd, mkldnn::primitive::at(*this->data),
+            mkldnn::primitive::at(*this->weight), *this->out));
   }
-  const mkldnn::inner_product_forward &GetIpFwd() const {
-    return *ipFwd;
-  }
-};
+}
 
-typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
-
-static inline MKLDNNFullyConnectForward &GetFCFwd(
+MKLDNNFullyConnectForward &GetFCFwd(
     const nnvm::NodeAttrs &attrs, const NDArray &data, const NDArray &weight,
     const NDArray *bias, const mkldnn::memory::desc &output,
     const bool is_train) {
@@ -166,12 +151,11 @@ static inline MKLDNNFullyConnectForward &GetFCFwd(
 
   auto it = fcFwds.find(key);
   if (it == fcFwds.end()) {
-    MKLDNNFullyConnectForward fcFwd(param, is_train, data, weight, bias,
-                                    output);
-    auto ins_ret = fcFwds.insert(
-        std::pair<MKLDNNFullyconSignature, MKLDNNFullyConnectForward>(key, fcFwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    MKLDNNFCFullParam full_param;
+    full_param.fc_param = param;
+    full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
+    MKLDNNFullyConnectForward fcFwd(full_param, is_train, data, weight, bias, output);
+    it = AddToCache(&fcFwds, key, fcFwd);
   }
   return it->second;
 }

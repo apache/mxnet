@@ -24,7 +24,7 @@
  */
 
 #if MXNET_USE_MKLDNN == 1
-#include "../../nn/fully_connected-inl.h"
+#include "../../nn/mkldnn/mkldnn_fully_connected-inl.h"
 #include "../quantization_utils.h"
 
 namespace mxnet {
@@ -44,7 +44,7 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs, c
   CHECK_EQ(out_data.size(), 3U);
 
   NDArray weight = in_data[fullc::kWeight]
-  auto &fwd = GetFCFwd()
+  auto &fwd = GetFCFwd();
 
   // Collect data min/max and output_neg_min, output_pos_max
   std::vector<float> data_min(param_.num_args);
