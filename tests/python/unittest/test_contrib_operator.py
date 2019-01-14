@@ -261,8 +261,8 @@ def test_multibox_target_op():
     assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
-def test_gradient_reversal_op():
-    # We use the quadratic function in combination with gradient reversal
+def test_gradient_multiplier_op():
+    # We use the quadratic function in combination with gradient multiplier
     def f(x, a, b, c):
         return a * x**2 + b * x + c
 
@@ -273,7 +273,7 @@ def test_gradient_reversal_op():
     
     data = mx.symbol.Variable('data')
     quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
-    gr_q_sym = mx.sym.contrib.gradientreversal(quad_sym, scalar=l)
+    gr_q_sym = mx.sym.contrib.gradientmultiplier(quad_sym, scalar=l)
 
     for dtype in [np.float16, np.float32, np.float64]:
         for ndim in range(1, 6):
@@ -284,7 +284,7 @@ def test_gradient_reversal_op():
 
             # check imperative forward
             output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
-            output = mx.nd.contrib.gradientreversal(output, scalar=l)
+            output = mx.nd.contrib.gradientmultiplier(output, scalar=l)
             assert_almost_equal(output.asnumpy(), expected,
                                 rtol=1e-2 if dtype is np.float16 else 1e-5,
                                 atol=1e-2 if dtype is np.float16 else 1e-5)

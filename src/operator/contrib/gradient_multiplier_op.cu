@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2018 by Contributors
- * \file gradient_reversal_op.cu
+ * \file gradient_multiplier_op.cu
  * \brief
  * \author Istvan Fehervari
 */
@@ -29,11 +29,11 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_contrib_gradientreversal)
+NNVM_REGISTER_OP(_contrib_gradientmultiplier)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_contrib_backward_gradientreversal)
+NNVM_REGISTER_OP(_contrib_backward_gradientmultiplier)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, op::mshadow_op::mul>);
 
