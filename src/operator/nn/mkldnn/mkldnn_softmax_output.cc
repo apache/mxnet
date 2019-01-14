@@ -96,7 +96,7 @@ static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam&
 #endif
   MKLDNNSoftmaxOuputSignature key(param);
   key.AddSign(ctx.is_train);
-  key.AddSign(axis);
+  key.AddSign(in_mem);
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
@@ -127,10 +127,12 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
   }
 
   auto input_mem = idata.GetMKLDNNData();
-  auto output_mem = odata.GetMKLDNNData();
+  auto out_mem = CreateMKLDNNMem(out_data[softmaxout_enum::kOut],
+                            input_mem->get_primitive_desc(), req[softmaxout_enum::kOut]);
 
   MKLDNNSoftmaxOutputFwd &fwd = GetSoftmaxOutputForward(param, ctx, axis, *input_mem);
-  fwd.SetNewMem(*input_mem, *output_mem);
+  fwd.SetNewMem(*input_mem, *out_mem.second);
+
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(fwd.GetFwd());
   stream->Submit();
