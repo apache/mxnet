@@ -21,7 +21,7 @@
 
 import mxnet as mx
 from mxnet import nd
-from mxnet import gluon
+from mxnet import gluon, autograd
 from mxnet.gluon import Block
 
 
