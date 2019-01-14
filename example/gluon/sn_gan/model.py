@@ -68,7 +68,8 @@ class SNConv2D(Block):
         if sigma == 0.:
             sigma = EPSILON
 
-        self.params.setattr('u', _u)
+        with autograd.pause():
+            self.u.set_data(_u)
 
         return w / sigma
 
