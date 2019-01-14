@@ -34,7 +34,7 @@ The following models have been tested on Linux systems.
 |[Inception V3](#7)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.49%/93.10% |76.38%/93% |
 |[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.76%/93.03%|76.48%/92.96%|
 |[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.09%/90.60%|72.00%/90.53%|
-| [SSD-VGG](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.8366 mAP  | 0.8364 mAP  |
+| [SSD-VGG16](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.8366 mAP  | 0.8364 mAP  |
 
 <h3 id='3'>ResNet50-V1</h3>
 
@@ -208,7 +208,7 @@ python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbo
 python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
 ```
 
-<h3 id='10'>SSD-VGG</h3>
+<h3 id='10'>SSD-VGG16</h3>
 
 SSD model is located in [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd), follow [the insturctions](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#quantize-model) to run quantized SSD model.
 
