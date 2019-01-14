@@ -1556,12 +1556,13 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data.
+ * \param calib_quantize **Deperated**. quantize op will always be calibrated if could.
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
                                const char **excluded_symbols,
                                const mx_uint num_offline, const char **offline_params,
-                               const char *quantized_dtype);
+                               const char *quantized_dtype, const bool calib_quantize);
 
 /*!
  * \brief Set calibration table to node attributes in the sym
@@ -1837,7 +1838,7 @@ MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
                                            void* callback_handle,
-                                           bool monitor_all = false);
+                                           bool monitor_all);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

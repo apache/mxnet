@@ -694,6 +694,13 @@ class NDArray {
   /*
    * Create NDArray from mkldnn memory.
    * mkldnn_mem The mkldnn memory to be managed.
+   * static_data If true, mkldnn memory won't be freed on destruction.
+   */
+  explicit NDArray(const mkldnn::memory *mkldnn_mem, bool static_data = true);
+
+  /*
+   * Create NDArray from mkldnn memory.
+   * mkldnn_mem The mkldnn memory to be managed.
    */
   explicit NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem);
   /*
