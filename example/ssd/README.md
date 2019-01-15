@@ -25,6 +25,7 @@ remarkable traits of MXNet.
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
 
 ### What's new
+* Support uint8 inference on CPU with MKL-DNN backend. Uint8 inference achieves 0.8364 mAP, which is a comparable accuracy to FP32 (0.8366 mAP).
 * Added live camera capture and detection display (run with --camera flag). Example:
     `./demo.py --camera --cpu --frame-resize 0.5`
 * Added multiple trained models.
@@ -153,6 +154,43 @@ Make sure you have val.rec as validation dataset. It's the same one as used in t
 ```
 # cd /path/to/incubator-mxnet/example/ssd
 python evaluate.py --gpus 0,1 --batch-size 128 --epoch 0
+```
+
+### Quantize model
+
+Follow the [Train instructions](https://github.com/apache/incubator-mxnet/tree/master/example/ssd#train-the-model) to train a FP32 `SSD-VGG16_reduced_300x300` model based on Pascal VOC dataset. You can also download our [SSD-VGG16 pre-trained model](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/models/ssd_vgg16_reduced_300-dd479559.zip) and [packed binary data](http://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/ssd-val-fc19a535.zip). Create `model` and `data` directories if they're not exist, extract the zip files, then rename the uncompressed files as follows (eg, rename `ssd-val-fc19a535.idx` to `val.idx`, `ssd-val-fc19a535.lst` to `val.lst`, `ssd-val-fc19a535.rec` to `val.rec`, `ssd_vgg16_reduced_300-dd479559.params` to `ssd_vgg16_reduced_300-0000.params`, `ssd_vgg16_reduced_300-symbol-dd479559.json` to `ssd_vgg16_reduced_300-symbol.json`.)
+
+```
+data/
+|---val.rec
+|---val.lxt
+|---val.idx
+model/
+|---ssd_vgg16_reduced_300-0000.params
+|---ssd_vgg16_reduced_300-symbol.json
+```
+
+Then, use the following command for quantization. By default, this script uses 5 batches (32 samples per batch) for naive calibration:
+
+```
+python quantization.py
+```
+
+After quantization, INT8 models will be saved in `model/` dictionary.  Use the following command to launch inference.
+
+```
+# USE MKLDNN AS SUBGRAPH BACKEND
+export MXNET_SUBGRAPH_BACKEND=MKLDNN
+
+# Launch FP32 Inference
+python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/ssd_
+
+# Launch INT8 Inference
+python evaluate.py --cpu --num-batch 10 --batch-size 224 --deploy --prefix=./model/cqssd_
+
+# Launch dummy data Inference
+python benchmark_score.py --deploy --prefix=./model/ssd_
+python benchmark_score.py --deploy --prefix=./model/cqssd_
 ```
 ### Convert model to deploy mode
 This simply removes all loss layers, and attach a layer for merging results and non-maximum suppression.
