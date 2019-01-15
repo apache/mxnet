@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-doc"""
+@doc doc"""
     SGD(; kwargs...)
 
 Stochastic gradient descent optimizer.
@@ -69,7 +69,7 @@ SGD
 create_state(sgd::SGD, ::Int, W::NDArray) =
   isa(sgd.μ_sched, Momentum.Null) ? nothing : zeros(size(W), context(W))
 
-function update!(sgd::SGD, ::Int, W::NDArray, ∇::NDArray, ::Void)
+function update!(sgd::SGD, ::Int, W::NDArray, ∇::NDArray, ::Nothing)
   η = get(sgd.η_sched)
   normgrad!(sgd, W, ∇)
   @inplace W += -η * ∇

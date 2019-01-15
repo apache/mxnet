@@ -96,7 +96,7 @@ The file called ```osx.mk``` has the configuration required for building MXNet o
 To build with MKLDNN
 
 ```bash
-echo "CC=$(brew --prefix llvm)/bin/clang++" >> ./config.mk
+echo "CC=$(brew --prefix llvm)/bin/clang" >> ./config.mk
 echo "CXX=$(brew --prefix llvm)/bin/clang++" >> ./config.mk
 echo "USE_OPENCV=1" >> ./config.mk
 echo "USE_OPENMP=1" >> ./config.mk

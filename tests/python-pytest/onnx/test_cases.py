@@ -76,12 +76,11 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_selu_default',
              'test_elu',
              'test_max_',
-             'test_softplus'
+             'test_softplus',
+             'test_reduce_'
              ],
     'import': ['test_gather',
-               'test_global_lppooling',
                'test_softsign',
-               'test_reduce_',
                'test_mean',
                'test_averagepool_1d',
                'test_averagepool_2d_pads_count_include_pad',
@@ -89,7 +88,6 @@ IMPLEMENTED_OPERATORS_TEST = {
                'test_averagepool_2d_precomputed_strides',
                'test_averagepool_2d_strides',
                'test_averagepool_3d',
-               'test_LpPool_',
                'test_split_equal',
                'test_hardmax'
                ],
