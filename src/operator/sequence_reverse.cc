@@ -43,8 +43,9 @@ Operator *SequenceReverseProp::CreateOperatorEx(
     Context ctx, std::vector<TShape> *in_shape,
     std::vector<int> *in_type) const {
 
-  if (in_type->size() >= 2 && (*in_type)[1] != -1)
+  if (in_type->size() >= 2 && (*in_type)[1] != -1) {
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
+  }
 
   // sequence_length not passed in, so fall back to using input array dtype for second input argument
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[0]);
