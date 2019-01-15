@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-total_timeout = 300
+total_timeout = 6
 
 node('restricted-utility') {
   // Loading the utilities requires a node context unfortunately
@@ -35,7 +35,7 @@ core_logic: {
   stage("Docker cache build & publish") {
     node(NODE_LINUX_CPU) {
       ws('workspace/docker_cache') {
-        timeout(time: total_timeout, unit: 'MINUTES') {
+        timeout(time: total_timeout, unit: 'HOURS') {
           utils.init_git()
           sh "ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY}"
         }

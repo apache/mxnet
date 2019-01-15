@@ -19,9 +19,7 @@
 # under the License.
 
 """
-Utility to handle distributed docker cache. This is done by keeping the entire image chain of a docker container
-on an S3 bucket. This utility allows cache creation and download. After execution, the cache will be in an identical
-state as if the container would have been built locally already.
+Utility to build and populate the CI docker cache.
 """
 
 import os
@@ -34,11 +32,11 @@ from typing import *
 import build as build_util
 from util import retry
 
-DOCKERHUB_LOGIN_NUM_RETRIES = 5
-DOCKERHUB_RETRY_SECONDS = 5
-DOCKER_CACHE_NUM_RETRIES = 3
-DOCKER_CACHE_TIMEOUT_MINS = 15
-PARALLEL_BUILDS = 10
+DOCKERHUB_LOGIN_NUM_RETRIES =   int(os.environ.get('DOCKER_CACHE_DOCKERHUB_LOGIN_NUM_RETRIES', '5'))
+DOCKERHUB_RETRY_SECONDS =       int(os.environ.get('DOCKER_CACHE_DOCKERHUB_RETRY_SECONDS', '5'))
+DOCKER_CACHE_NUM_RETRIES =      int(os.environ.get('DOCKER_CACHE_DOCKER_CACHE_NUM_RETRIES', '3'))
+DOCKER_CACHE_TIMEOUT_MINS =     int(os.environ.get('DOCKER_CACHE_DOCKER_CACHE_TIMEOUT_MINS', '15'))
+PARALLEL_BUILDS =               int(os.environ.get('DOCKER_CACHE_PARALLEL_BUILDS', '10'))
 
 
 def build_save_containers(platforms, registry, load_cache) -> int:
@@ -53,7 +51,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     if len(platforms) == 0:
         return 0
 
-    platform_results = Parallel(n_jobs=PARALLEL_BUILDS, backend="multiprocessing")(
+    platform_results = Parallel(n_jobs=PARALLEL_BUILDS, backend="threading")(
         delayed(_build_save_container)(platform, registry, load_cache)
         for platform in platforms)
 
@@ -113,12 +111,12 @@ def _upload_image(registry, docker_tag, image_id) -> None:
 
 @retry(target_exception=subprocess.CalledProcessError, tries=DOCKERHUB_LOGIN_NUM_RETRIES,
        delay_s=DOCKERHUB_RETRY_SECONDS)
-def _login_dockerhub():
+def _login_dockerhub(secret_name, region):
     """
     Login to the Docker Hub account
     :return: None
     """
-    dockerhub_credentials = _get_dockerhub_credentials()
+    dockerhub_credentials = _get_dockerhub_credentials_secretsmanager(secret_name, region)
 
     logging.info('Logging in to DockerHub')
     # We use password-stdin instead of --password to avoid leaking passwords in case of an error.
@@ -187,18 +185,14 @@ def delete_local_docker_cache(docker_tag):
         logging.debug('Error during local cache deletion %s', error)
 
 
-def _get_dockerhub_credentials():  # pragma: no cover
+def _get_dockerhub_credentials_secretsmanager(secret_name, region_name):  # pragma: no cover
     import boto3
     import botocore
-    secret_name = os.environ['DOCKERHUB_SECRET_NAME']
-    endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
-    region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
 
     session = boto3.Session()
     client = session.client(
         service_name='secretsmanager',
-        region_name=region_name,
-        endpoint_url=endpoint_url
+        region_name=region_name
     )
     try:
         get_secret_value_response = client.get_secret_value(
@@ -240,16 +234,36 @@ def main() -> int:
     logging.basicConfig(format='{}: %(asctime)-15s %(message)s'.format(script_name()))
 
     parser = argparse.ArgumentParser(description="Utility for preserving and loading Docker cache", epilog="")
+
     parser.add_argument("--docker-registry",
                         help="Docker hub registry name",
-                        type=str,
-                        required=True)
+                        default="mxnetci",
+                        type=str)
+
+    parser.add_argument("--docker-secret-name",
+                        help="secrets manager name",
+                        default="prod/DockerCache/DockerHubCredentials",
+                        type=str)
+
+    parser.add_argument("--docker-secret-region",
+                        help="secretsmanager region for docker secrets",
+                        default="us-west-2",
+                        type=str)
+
+    parser.add_argument("-p", "--platform",
+                        help="platform to build",
+                        action="append",
+                        type=str)
 
     args = parser.parse_args()
 
-    platforms = build_util.get_platforms()
+    if args.platform:
+        platforms = args.platform
+    else:
+        platforms = build_util.get_platforms()
+        logging.info("Building platforms:\n\t%s", '\n\t'.join(platforms))
     try:
-        _login_dockerhub()
+        _login_dockerhub(args.docker_secret_name, args.docker_secret_region)
         return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
     finally:
         _logout_dockerhub()

@@ -1,1 +1,2 @@
 docker==3.5.0
+joblib
