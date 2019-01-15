@@ -172,8 +172,16 @@ finetune_net.output.initialize(init.Xavier(), ctx=ctx)
 # hybridize for better performance
 finetune_net.hybridize()
 
-trainer = gluon.Trainer(finetune_net.collect_params(), 'sgd', {
-    'learning_rate': lr, 'momentum': momentum, 'wd': wd})
+num_batch = len(train_data)
+
+# setup learning rate scheduler
+iterations_per_epoch = math.ceil(num_batch)
+# learning rate change at following steps
+lr_steps = [epoch * iterations_per_epoch for epoch in lr_epochs]
+schedule = mx.lr_scheduler.MultiFactorScheduler(step=lr_steps, factor=lr_factor, base_lr=lr)
+
+# setup optimizer with learning rate scheduler, metric, and loss function
+sgd_optimizer = mx.optimizer.SGD(learning_rate=lr, lr_scheduler=schedule, momentum=momentum, wd=wd)
 metric = mx.metric.Accuracy()
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
@@ -194,15 +202,7 @@ def test(net, val_data, ctx):
         metric.update(label, outputs)
     return metric.get()
 
-
-num_batch = len(train_data)
-iteration_idx = 1
-
-# setup learning rate scheduler
-iterations_per_epoch = math.ceil(num_batch)
-# learning rate change at following steps
-lr_steps = [epoch * iterations_per_epoch for epoch in lr_epochs]
-schedule = mx.lr_scheduler.MultiFactorScheduler(step=lr_steps, factor=lr_factor, base_lr=lr)
+trainer = gluon.Trainer(finetune_net.collect_params(), optimizer=sgd_optimizer)
 
 # start with epoch 1 for easier learning rate calculation
 for epoch in range(1, epochs + 1):
@@ -221,12 +221,9 @@ for epoch in range(1, epochs + 1):
         for l in loss:
             l.backward()
 
-        lr = schedule(iteration_idx)
-        trainer.set_learning_rate(lr)
         trainer.step(batch_size)
         train_loss += sum([l.mean().asscalar() for l in loss]) / len(loss)
         metric.update(label, outputs)
-        iteration_idx += 1
 
     _, train_acc = metric.get()
     train_loss /= num_batch
