@@ -71,7 +71,7 @@ inline void _BinaryConvolutionForward(int m, int n, int k,
   	int memsize = threads_per_block*threads_per_block*sizeof(xnor_cuda::BINARY_WORD)*2;
 	dim3 block(threads_per_block, threads_per_block, 1);
 	dim3 grid(n/threads_per_block + 1, m/threads_per_block + 1);
-	xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>(wmat_binarized, binary_col, fC, 
+	xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>((xnor_cuda::BINARY_WORD*)wmat_binarized, binary_col, fC, 
 	                                                       m, k/xnor_cuda::BITS_PER_BINARY_WORD, n, 
 	                                                       threads_per_block);		
 	cudaDeviceSynchronize();	
@@ -101,7 +101,7 @@ inline void _BinaryConvolutionForward(int m, int n, int k,
 	 	int blocks_per_grid = m * k / (threads_per_block * xnor_cuda::BITS_PER_BINARY_WORD) + 1;
 	 	dim3 conc_block(threads_per_block,1,1);
   		dim3 conc_grid(blocks_per_grid,1);
-	 	xnor_cuda::concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, wmat_binarized, m * k / xnor_cuda::BITS_PER_BINARY_WORD);
+	 	xnor_cuda::concatenate_rows_kernel<<<conc_grid, conc_block, 0, stream>>>(fA, (xnor_cuda::BINARY_WORD*)wmat_binarized, m * k / xnor_cuda::BITS_PER_BINARY_WORD);
 	 	cudaDeviceSynchronize();
     	cuda::_BinaryConvolutionForward(m, n, k, wmat_binarized, workspace, in_col, temp_dst);
     	cudaFree(wmat_binarized);

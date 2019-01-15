@@ -64,7 +64,7 @@ inline void _BinaryInferenceFullyConnectedForward(int m, int n, int k,
 	//perform xnor gemm
 	dim3 block(threads_per_block, threads_per_block);
 	dim3 grid(k/threads_per_block + 1, m/threads_per_block + 1);
-	xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>(binary_row, wmat_binarized, fC, 
+	xnor_cuda::xnor_gemm<<<grid, block, memsize, stream>>>(binary_row, (xnor_cuda::BINARY_WORD*)wmat_binarized, fC, 
 	                                              m, n/xnor_cuda::BITS_PER_BINARY_WORD, k, 
 	                                              threads_per_block);   
 	cudaDeviceSynchronize();      
@@ -94,7 +94,7 @@ inline void _BinaryInferenceFullyConnectedForward(int m, int n, int k,
 		int blocks_per_grid = k / threads_per_block + 1;
 		dim3 conc_block(threads_per_block,1,1);
   		dim3 conc_grid(blocks_per_grid,1);
-		xnor_cuda::concatenate_cols_kernel<<<conc_grid, conc_block, 0, stream>>>(fB, wmat_binarized, n, k);
+		xnor_cuda::concatenate_cols_kernel<<<conc_grid, conc_block, 0, stream>>>(fB, (xnor_cuda::BINARY_WORD*)wmat_binarized, n, k);
 		cudaDeviceSynchronize();
 		cuda::_BinaryInferenceFullyConnectedForward(m, n, k, data, workspace, wmat_binarized, out);
 		cudaFree(wmat_binarized);

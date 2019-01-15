@@ -28,21 +28,19 @@
 #define MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_KERNELS_H
 
 namespace xnor_cuda {
-// typedef unsigned int BINARY_WORD;
-//uint32_t, uint64_t
 #if BINARY_WORD_32 == 1
-typedef unsigned int BINARY_WORD;
+	typedef unsigned int BINARY_WORD;
 #endif
 #if BINARY_WORD_64 == 1
-typedef unsigned long long int BINARY_WORD;
+	typedef unsigned long long int BINARY_WORD;
 #endif
 
 const int BITS_PER_BINARY_WORD (sizeof(BINARY_WORD) * CHAR_BIT);
 
-__device__ unsigned int concatenate(float* array);
-__global__ void concatenate_rows_kernel(float *a, unsigned int *b, int size);
-__global__ void concatenate_cols_kernel(float *a, unsigned int *b, int m, int n);
-__global__ void xnor_gemm(unsigned int* A, unsigned int* B, float* C, int m, int n, int k, int block_size);
+__device__ BINARY_WORD concatenate(float* array);
+__global__ void concatenate_rows_kernel(float *a, BINARY_WORD *b, int size);
+__global__ void concatenate_cols_kernel(float *a, BINARY_WORD *b, int m, int n);
+__global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n, int k, int block_size);
 
 inline int get_next_block_dim(int c){
 	if (c%8 == 0)

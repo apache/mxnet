@@ -128,7 +128,13 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
         // Multiply Asub and Bsub together
         // apply xnor and popcount: 
         //CUDA has population count intrinsics for both 32-bit and 64-bit types. (__popc() and __popcll())
-        for (int j = 0; j < block_size; ++j) Cvalue += (float)__popc(~(As[row*block_size + j]^Bs[j*block_size + col]));
+        for (int j = 0; j < block_size; ++j){
+            #if BINARY_WORD_64 == 1
+                Cvalue += (float)__popcll(~(As[row*block_size + j]^Bs[j*block_size + col]));
+            #else //BINARY_WORD_32 == 1
+                Cvalue += (float)__popc(~(As[row*block_size + j]^Bs[j*block_size + col]));
+            #endif            
+        }
         
         // Synchronize to make sure that the preceding
         // computation is done before loading two new
