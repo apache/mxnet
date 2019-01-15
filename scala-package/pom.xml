@@ -146,7 +146,7 @@
                 </goals>
                 <configuration>
                   <executable>bash</executable>
-                  <commandlineArgs>-c 'mkdir -p ${project.build.directory}; if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda.so | wc -l) == "0" ]]; then echo flavor=cpu &gt; ${project.build.directory}/flavor.properties; else echo flavor=gpu &gt; ${project.build.directory}/flavor.properties; fi'</commandlineArgs>
+                  <commandlineArgs>-c 'mkdir -p ${project.build.directory}; if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda | wc -l) == "0" ]]; then echo flavor=cpu &gt; ${project.build.directory}/flavor.properties; else echo flavor=gpu &gt; ${project.build.directory}/flavor.properties; fi'</commandlineArgs>
                 </configuration>
               </execution>
             </executions>
