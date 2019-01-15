@@ -1,5 +1,6 @@
 package org.apache.mxnetexamples.javaapi.infer.predictor;
 
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.apache.mxnetexamples.Util;
@@ -8,9 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 
-public class PredictorExampleSuite {
+public class PredictorExampleTest {
 
-    final static Logger logger = LoggerFactory.getLogger(PredictorExampleSuite.class);
+    final static Logger logger = LoggerFactory.getLogger(PredictorExampleTest.class);
     private static String modelPathPrefix = "";
     private static String inputImagePath = "";
 

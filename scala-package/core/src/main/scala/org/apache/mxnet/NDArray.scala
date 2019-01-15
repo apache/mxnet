@@ -97,9 +97,11 @@ object NDArray extends NDArrayBase {
           case ndArr: Seq[NDArray @unchecked] =>
             if (ndArr.head.isInstanceOf[NDArray]) (ndArr.toArray, ndArr.toArray.map(_.handle))
             else throw new IllegalArgumentException(
-              "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
+              s"""Unsupported out ${output.getClass} type,
+                 | should be NDArray or subclass of Seq[NDArray]""".stripMargin)
           case _ => throw new IllegalArgumentException(
-            "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
+            s"""Unsupported out ${output.getClass} type,
+               | should be NDArray or subclass of Seq[NDArray]""".stripMargin)
         }
       } else {
         (null, null)

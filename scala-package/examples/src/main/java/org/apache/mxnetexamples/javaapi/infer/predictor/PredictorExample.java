@@ -45,6 +45,7 @@ public class PredictorExample {
     private String inputImagePath = "/images/dog.jpg";
 
     final static Logger logger = LoggerFactory.getLogger(PredictorExample.class);
+    private static NDArray$ NDArray = NDArray$.MODULE$;
 
     /**
      * Helper class to print the maximum prediction result
@@ -110,6 +111,9 @@ public class PredictorExample {
         }
         // predict with NDArray
         NDArray nd = img;
+        nd = NDArray.transpose(nd, new Shape(new int[]{2, 0, 1}), null)[0];
+        nd = NDArray.expand_dims(nd, 0, null)[0];
+        nd = nd.asType(DType.Float32());
         List<NDArray> ndList = new ArrayList<>();
         ndList.add(nd);
         List<NDArray> ndResult = predictor.predictWithNDArray(ndList);
