@@ -47,7 +47,7 @@ Operator *SequenceReverseProp::CreateOperatorEx(
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
   }
 
-  // sequence_length not passed in, so fall back to using input array dtype for second input argument
+  // sequence_length not passed in, so fall back to using input array dtype for second argument
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[0]);
 }
 

@@ -32,8 +32,8 @@ template <> Operator *CreateOp<gpu>(SequenceLastParam param, int dtype, int ityp
   Operator *op = NULL;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
-	  op = new SequenceLastOp<gpu, DType, IType>(param);
-	});
+          op = new SequenceLastOp<gpu, DType, IType>(param);
+        });
     });
   return op;
 }
