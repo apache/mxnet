@@ -38,7 +38,6 @@
 #include <nnvm/pass_functions.h>
 
 #include <NvInfer.h>
-#include <onnx/onnx.pb.h>
 
 #include <algorithm>
 #include <iostream>
@@ -49,6 +48,7 @@
 #include <utility>
 #include <string>
 
+#include "nnvm_to_onnx-inl.h"
 #include "../operator_common.h"
 #include "../../common/utils.h"
 #include "../../common/serialization.h"
@@ -60,49 +60,15 @@ namespace mxnet {
 namespace op {
 
 using namespace nnvm;
-using namespace ::onnx;
 using int64 = ::google::protobuf::int64;
 
-namespace tensorrt {
-  enum class TypeIO { Inputs = 0, Outputs = 1 };
-  using NameToIdx_t = std::map<std::string, int32_t>;
-  using InferenceTuple_t = std::tuple<uint32_t, TShape, int, int>;
-  using InferenceMap_t = std::map<std::string, InferenceTuple_t>;
-}  // namespace tensorrt
 
 using trt_name_to_idx = std::map<std::string, uint32_t>;
 
-struct TRTParam : public dmlc::Parameter<TRTParam> {
-  std::string serialized_onnx_graph;
-  std::string serialized_input_map;
-  std::string serialized_output_map;
-  tensorrt::NameToIdx_t input_map;
-  tensorrt::InferenceMap_t output_map;
-  ::onnx::ModelProto onnx_pb_graph;
-
-  TRTParam() {}
-
-  TRTParam(const ::onnx::ModelProto& onnx_graph,
-           const tensorrt::InferenceMap_t& input_map,
-           const tensorrt::NameToIdx_t& output_map) {
-    common::Serialize(input_map, &serialized_input_map);
-    common::Serialize(output_map, &serialized_output_map);
-    onnx_graph.SerializeToString(&serialized_onnx_graph);
-  }
-
-DMLC_DECLARE_PARAMETER(TRTParam) {
-    DMLC_DECLARE_FIELD(serialized_onnx_graph)
-    .describe("Serialized ONNX graph");
-    DMLC_DECLARE_FIELD(serialized_input_map)
-    .describe("Map from inputs to topological order as input.");
-    DMLC_DECLARE_FIELD(serialized_output_map)
-    .describe("Map from outputs to order in g.outputs.");
-  }
-};
 
 struct TRTEngineParam {
   nvinfer1::IExecutionContext* trt_executor;
-  std::vector<std::pair<uint32_t, tensorrt::TypeIO> > binding_map;
+  std::vector<std::pair<uint32_t, nnvm_to_onnx::TypeIO> > binding_map;
 };
 
 }  // namespace op

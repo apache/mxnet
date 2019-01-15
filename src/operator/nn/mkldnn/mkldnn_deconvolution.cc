@@ -262,12 +262,14 @@ void MKLDNNDeconvForward::SetDataHandle(const DeconvolutionParam& param,
     // For inference, we want to reorder the weight array so we don't need to
     // reorder data every time.
     if (weight.IsDefaultData()) {
+      weight_mem = GetWeights(weight, fwd_pd.weights_primitive_desc(), param.num_group);
       // We also need to modify the layout on the original weight array. The
       // data conversion happens after the weight array is used.
       const_cast<NDArray&>(weight).MKLDNNDataReorderAsync(fwd_pd.weights_primitive_desc());
+    } else {
+      weight_mem = weight.GetMKLDNNData();
+      CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
     }
-    weight_mem = weight.GetMKLDNNData();
-    CHECK(weight_mem->get_primitive_desc() == fwd_pd.weights_primitive_desc());
   }
   auto out_mem = CreateMKLDNNMem(out_data[deconv::kOut],
       fwd_pd.diff_src_primitive_desc(), req[deconv::kOut]);
@@ -328,10 +330,7 @@ static inline MKLDNNDeconvForward &GetDeconvFwd(
   if (it == fwds.end()) {
     bool has_bias = (bias != nullptr);
     MKLDNNDeconvForward fwd(param, data, weights, has_bias, output);
-    auto ins_ret = fwds.insert(
-        std::pair<DeconvSignature, MKLDNNDeconvForward>(key, fwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&fwds, key, fwd);
   }
   return it->second;
 }
@@ -425,10 +424,7 @@ static inline MKLDNNDeconvBackwardData &GetDeconvBwdData(
   auto it = bwds.find(key);
   if (it == bwds.end()) {
     MKLDNNDeconvBackwardData bwd(param, data, weights, output);
-    auto ins_ret = bwds.insert(
-        std::pair<MKLDNNDeconvSignature, MKLDNNDeconvBackwardData>(key, bwd));
-    CHECK(ins_ret.second);
-    it = ins_ret.first;
+    it = AddToCache(&bwds, key, bwd);
   }
   return it->second;
 }

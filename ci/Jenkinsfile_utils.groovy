@@ -64,7 +64,7 @@ def init_git_win() {
 
 // pack libraries for later use
 def pack_lib(name, libs, include_gcov_data = false) {
-  sh """
+  sh returnStatus: true, script: """
 set +e
 echo "Packing ${libs} into ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
@@ -83,7 +83,7 @@ return 0
 def unpack_and_init(name, libs, include_gcov_data = false) {
   init_git()
   unstash name
-  sh """
+  sh returnStatus: true, script: """
 set +e
 echo "Unpacked ${libs} from ${name}"
 echo ${libs} | sed -e 's/,/ /g' | xargs md5sum
@@ -147,8 +147,9 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 }
 
 
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
-  def command = "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "") {
+  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  command = command.replaceAll('%ENV_VARS%', env_vars.length() > 0 ? "-e ${env_vars}" : '')
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -161,12 +162,11 @@ def docker_run(platform, function_name, use_nvidia, shared_mem = '500m') {
 // Credit to https://plugins.jenkins.io/github
 def get_repo_url() {
   checkout scm
-  sh "git config --get remote.origin.url > .git/remote-url"
-  return readFile(".git/remote-url").trim()
+  return sh(returnStdout: true, script: "git config --get remote.origin.url").trim()
 }
 
 def update_github_commit_status(state, message) {
-  node(NODE_LINUX_CPU) {
+  node(NODE_UTILITY) {
     // NOTE: https://issues.jenkins-ci.org/browse/JENKINS-39482
     //The GitHubCommitStatusSetter requires that the Git Server is defined under 
     //*Manage Jenkins > Configure System > GitHub > GitHub Servers*. 
@@ -234,6 +234,7 @@ def assign_node_labels(args) {
   NODE_LINUX_GPU_P3 = args.linux_gpu_p3
   NODE_WINDOWS_CPU = args.windows_cpu
   NODE_WINDOWS_GPU = args.windows_gpu
+  NODE_UTILITY = args.utility
 }
 
 def main_wrapper(args) {
@@ -253,17 +254,20 @@ def main_wrapper(args) {
     currentBuild.result = "SUCCESS"
     update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
-    node(NODE_LINUX_CPU) {
+    node(NODE_UTILITY) {
       sh "echo caught ${caughtError}"
       err = caughtError
       currentBuild.result = "FAILURE"
       update_github_commit_status('FAILURE', 'Job failed')
     }
   } finally {
-    node(NODE_LINUX_CPU) {
+    node(NODE_UTILITY) {
       // Call failure handler
       args['failure_handler']()
-      
+
+      // Clean workspace to reduce space requirements
+      cleanWs()
+
       // Remember to rethrow so the build is marked as failing
       if (err) {
         throw err

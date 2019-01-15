@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM mxnetci/dockcross-linux-armv7:09182018
+FROM mxnetcipinned/dockcross-linux-armv7:11262018
 
 ENV ARCH armv7l
 ENV HOSTCC gcc
@@ -37,6 +37,11 @@ ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet

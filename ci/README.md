@@ -172,11 +172,12 @@ nosetests-3.4 -v -s tests/python/unittest/test_ndarray.py
 
 
 # Debug with cgdb
-
+sudo apt install -y libstdc++6-6-dbg
 cgdb build/tests/mxnet_unit_tests
 
 (gdb) !pwd
 /home/qemu/mxnet
 (gdb) set substitute-path /work /home/qemu
+(gdb) set substitute-path /build/gcc-6-6mK9AW/gcc-6-6.3.0/build/arm-linux-gnueabihf/libstdc++-v3/include/ /usr/include/c++/6/
 (gdb) r --gtest_filter="ACTIVATION_PERF.ExecuteBidirectional"
 ```

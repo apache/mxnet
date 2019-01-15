@@ -125,7 +125,9 @@ net ;=> #object[org.apache.mxnet.Symbol 0x5c78c8c2 "org.apache.mxnet.Symbol@5c78
     (first)
     (ndarray/->vec));=>  [2.0 2.0 2.0 2.0]
 
-;; We can evaluate the same symbol on GPU with different data.
-;; (To do this you must have the correct native library jar defined as a dependency.)
-(def ex (sym/bind c (context/gpu 0) {"a" (ndarray/ones [2 2])
-                                     "b" (ndarray/ones [2 2])}))
+(comment
+  ;; We can evaluate the same symbol on GPU with different data.
+  ;; (To do this you must have the correct native library jar defined as a dependency.)
+  (def ex (sym/bind c (context/gpu 0) {"a" (ndarray/ones [2 2])
+                                       "b" (ndarray/ones [2 2])}))
+)

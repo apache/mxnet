@@ -27,9 +27,9 @@
 (def profiler-mode "symbolic") ;; can be symbolic, imperative, api, mem
 (def output-path ".") ;; the profile file output directory
 (def profiler-name "profile-matmul-20iter.json")
-(def iter-num 100)
-(def begin-profiling-iter 50)
-(def end-profiling-iter 70)
+(def iter-num 5)
+(def begin-profiling-iter 0)
+(def end-profiling-iter 1)
 (def gpu? false)
 
 (defn run []

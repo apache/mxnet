@@ -17,7 +17,7 @@
 
 module TestVisualize
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: mlp2
 
@@ -26,7 +26,7 @@ using ..Main: mlp2
 ################################################################################
 
 function test_basic()
-  info("Visualize::basic")
+  @info("Visualize::basic")
 
   mlp = mlp2()
 

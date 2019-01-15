@@ -20,6 +20,7 @@
 # -*- coding: utf-8 -*-
 """Tool to ease working with the build system and reproducing test results"""
 
+import argparse
 import os
 import sys
 from subprocess import check_call
@@ -29,6 +30,11 @@ from typing import List
 from collections import OrderedDict
 import logging
 import yaml
+import shutil
+
+DEFAULT_PYENV=os.environ.get('DEFAULT_PYENV','py3_venv')
+DEFAULT_PYTHON=os.environ.get('DEFAULT_PYTHON','python3')
+DEFAULT_CMAKE_OPTIONS=os.environ.get('DEFAULT_CMAKE_OPTIONS','cmake_options.yml')
 
 class Confirm(object):
     def __init__(self, cmds):
@@ -46,8 +52,12 @@ class Confirm(object):
                 resp = input("Please answer yes or no: ")
 
 class CMake(object):
-    def __init__(self, cmake_options_yaml='cmake/cmake_options.yml'):
-        self.cmake_options_yaml = cmake_options_yaml
+    def __init__(self, cmake_options_yaml=DEFAULT_CMAKE_OPTIONS, cmake_options_yaml_default='cmake/cmake_options.yml'):
+        if os.path.exists(cmake_options_yaml):
+            self.cmake_options_yaml = cmake_options_yaml
+        else:
+            self.cmake_options_yaml = cmake_options_yaml_default
+        logging.info('Using {} for CMake configuration'.format(self.cmake_options_yaml))
         self.cmake_options = None
         self.read_config()
 
@@ -58,13 +68,8 @@ class CMake(object):
 
     def _cmdlineflags(self):
         res = []
-        def _bool_ON_OFF(x):
-            if x:
-                return 'ON'
-            else:
-                return 'OFF'
         for opt,v in self.cmake_options.items():
-            res.append('-D{}={}'.format(opt,_bool_ON_OFF(v)))
+            res.append('-D{}={}'.format(opt,v))
         return res
 
     def cmake_command(self) -> str:
@@ -88,10 +93,34 @@ class CMake(object):
             logging.info('Now building')
             check_call(shlex.split(build_cmd))
 
+def create_virtualenv(venv_exe, pyexe, venv) -> None:
+    logging.info("Creating virtualenv in %s with python %s", venv, pyexe)
+    if not (venv_exe and pyexe and venv):
+        logging.warn("Skipping creation of virtualenv")
+        return
+    check_call([venv_exe, '-p', pyexe, venv])
+    activate_this_py = os.path.join(venv, 'bin', 'activate_this.py')
+    # Activate virtualenv in this interpreter
+    exec(open(activate_this_py).read(), dict(__file__=activate_this_py))
+    check_call(['pip', 'install', '--upgrade','--force-reinstall', '-e', 'python'])
+    check_call(['pip', 'install', '-r', 'tests/requirements.txt'])
 
+def create_virtualenv_default():
+    create_virtualenv('virtualenv', DEFAULT_PYTHON, DEFAULT_PYENV)
+    logging.info("You can use the virtualenv by executing 'source %s/bin/activate'", DEFAULT_PYENV)
 
 COMMANDS = OrderedDict([
-    ('[Docker] sanity_check',
+    ('[Local] BUILD CMake/Ninja (using cmake_options.yaml (cp cmake/cmake_options.yml .) and edit) ({} virtualenv in "{}")'.format(DEFAULT_PYTHON, DEFAULT_PYENV),
+    [
+        CMake(),
+        create_virtualenv_default,
+    ]),
+    ('[Local] Python Unit tests',
+        "./py3_venv/bin/nosetests -v tests/python/unittest/"
+    ),
+    ('[Website and docs build] Will build to docs/_build/html/',
+        "ci/docker/runtime_functions.sh deploy_docs"),
+    ('[Docker] sanity_check. Check for linting and code formatting.',
         "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh sanity_check"),
     ('[Docker] Python3 CPU unittests',
     [
@@ -103,8 +132,21 @@ COMMANDS = OrderedDict([
         "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu",
         "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
     ]),
-    ('[Local] CMake build (using cmake/cmake_options.yaml)',
-        CMake()),
+    ('[Docker] Python3 GPU+MKLDNN unittests',
+    [
+        "ci/build.py --platform ubuntu_gpu /work/runtime_functions.sh build_ubuntu_gpu_cmake_mkldnn",
+        "ci/build.py --nvidiadocker --platform ubuntu_gpu /work/runtime_functions.sh unittest_ubuntu_python3_gpu",
+    ]),
+    ('[Docker] Python3 CPU Intel MKLDNN unittests',
+    [
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh build_ubuntu_cpu_mkldnn",
+        "ci/build.py --platform ubuntu_cpu /work/runtime_functions.sh unittest_ubuntu_python3_cpu",
+    ]),
+    ('[Docker] Python3 ARMv7 unittests (QEMU)',
+    [
+        "ci/build.py -p armv7",
+        "ci/build.py -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu"
+    ]),
     ('Clean (RESET HARD) repository (Warning! erases local changes / DATA LOSS)',
        Confirm("ci/docker/runtime_functions.sh clean_repo"))
 ])
@@ -114,6 +156,7 @@ def clip(x, mini, maxi):
 
 @retry((ValueError, RuntimeError), 3, delay_s = 0)
 def show_menu(items: List[str], header=None) -> int:
+    print('\n-- MXNet dev menu --\n')
     def hr():
         print(''.join(['-']*30))
     if header:
@@ -142,13 +185,55 @@ def handle_commands(cmds) -> None:
     else:
         raise RuntimeError("handle_commands(cmds): argument should be str or List[str] but is %s", type(cmds))
 
+def use_menu_ui(args) -> None:
+    command_list = list(COMMANDS.keys())
+    if hasattr(args, 'choice') and args.choice and args.choice[0].isdigit():
+        choice = int(args.choice[0]) - 1
+    else:
+        choice = show_menu(command_list, 'Available actions')
+    handle_commands(COMMANDS[command_list[choice]])
+
+def build(args) -> None:
+    """Build using CMake"""
+    venv_exe = shutil.which('virtualenv')
+    pyexe = shutil.which(args.pyexe)
+    if not venv_exe:
+        logging.warn("virtualenv wasn't found in path, it's recommended to install virtualenv to manage python environments")
+    if not pyexe:
+        logging.warn("Python executable %s not found in path", args.pyexe)
+    if args.cmake_options:
+        cmake = CMake(args.cmake_options)
+    else:
+        cmake = CMake()
+    cmake()
+    create_virtualenv(venv_exe, pyexe, args.venv)
+
 def main():
     logging.getLogger().setLevel(logging.INFO)
-    command_list = list(COMMANDS.keys())
-    choice = show_menu(command_list, 'Available actions')
-    handle_commands(COMMANDS[command_list[choice]])
+    parser = argparse.ArgumentParser(description="""Utility for compiling and testing MXNet easily""")
+    parser.set_defaults(command='use_menu_ui')
+
+    subparsers = parser.add_subparsers(help='sub-command help')
+    build_parser = subparsers.add_parser('build', help='build with the specified flags from file')
+    build_parser.add_argument('cmake_options', nargs='?',
+        help='File containing CMake options in YAML')
+    build_parser.add_argument('-v', '--venv',
+        type=str,
+        default=DEFAULT_PYENV,
+        help='virtualenv dir')
+    build_parser.add_argument('-p', '--pyexe',
+        type=str,
+        default=DEFAULT_PYTHON,
+        help='python executable')
+    build_parser.set_defaults(command='build')
+
+    menu_parser = subparsers.add_parser('menu', help='jump to menu option #')
+    menu_parser.set_defaults(command='use_menu_ui')
+    menu_parser.add_argument('choice', nargs=1)
+
+    args = parser.parse_args()
+    globals()[args.command](args)
     return 0
 
 if __name__ == '__main__':
     sys.exit(main())
-

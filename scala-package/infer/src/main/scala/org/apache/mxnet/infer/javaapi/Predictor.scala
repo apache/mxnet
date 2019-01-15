@@ -51,7 +51,17 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
 
   /**
     * Takes input as Array of one dimensional arrays and creates the NDArray needed for inference
-    * The array will be reshaped based on the input descriptors.
+    * The array will be reshaped based on the input descriptors. Example of calling in Java:
+    *
+    * <pre>
+    * {@code
+    * float tmp[][] = new float[1][224];
+    * for (int x = 0; x < 1; x++)
+    *   for (int y = 0; y < 224; y++)
+    *     tmp[x][y] = (int)(Math.random()*10);
+    * predictor.predict(tmp);
+    * }
+    * </pre>
     *
     * @param input:            An Array of a one-dimensional array.
                               An extra Array is needed for when the model has more than one input.
@@ -63,6 +73,30 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
   }
 
   /**
+    * Takes input as Array of one dimensional arrays and creates the NDArray needed for inference
+    * The array will be reshaped based on the input descriptors. Example of calling in Java:
+    *
+    * <pre>
+    * {@code
+    * double tmp[][] = new double[1][224];
+    * for (int x = 0; x < 1; x++)
+    *   for (int y = 0; y < 224; y++)
+    *     tmp[x][y] = (int)(Math.random()*10);
+    * predictor.predict(tmp);
+    * }
+    * </pre>
+    *
+    * @param input:            An Array of a one-dimensional array.
+                              An extra Array is needed for when the model has more than one input.
+    * @return                  Indexed sequence array of outputs
+    */
+
+  def predict(input: Array[Array[Double]]):
+  Array[Array[Double]] = {
+    predictor.predict(input).toArray
+  }
+
+  /**
     * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
     *
@@ -70,10 +104,11 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
                               An extra List is needed for when the model has more than one input.
     * @return                  Indexed sequence array of outputs
     */
-  def predict(input: java.util.List[java.util.List[Float]]):
-  java.util.List[java.util.List[Float]] = {
+  def predict(input: java.util.List[java.util.List[java.lang.Float]]):
+  java.util.List[java.util.List[java.lang.Float]] = {
     val in = JavaConverters.asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq
-    (predictor.predict(in map {a => a.asScala.toArray}) map {b => b.toList.asJava}).asJava
+    (predictor.predict(in map {a => a.asScala.map(Float2float).toArray})
+      map {b => b.map(float2Float).toList.asJava}).asJava
   }
 
 
@@ -83,7 +118,7 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     * This method is useful when the input is a batch of data
     * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
     *
-    * @param input       List of NDArrays
+    * @param input             List of NDArrays
     * @return                  Output of predictions as NDArrays
     */
   def predictWithNDArray(input: java.util.List[NDArray]):

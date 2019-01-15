@@ -55,17 +55,30 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
       << "kernel size (" << param.kernel[1]
       << ") exceeds input (" << dshape[W]
       << " padded to " << (dshape[W] + 2*param.pad[1]) << ")";
-  // only support valid convention
+
   oshape[N] = dshape[N];
   oshape[C] = dshape[C];
   if (param.global_pool) {
     oshape[H] = 1;
     oshape[W] = 1;
   } else {
-    oshape[H] = 1 + (dshape[H] + 2 * param.pad[0] - param.kernel[0]) /
-        param.stride[0];
-    oshape[W] = 1 + (dshape[W] + 2 * param.pad[1] - param.kernel[1]) /
-        param.stride[1];
+    if (param.pooling_convention == pool_enum::kValid) {
+      oshape[H] = 1 +
+                  (dshape[H] + 2 * param.pad[0] - param.kernel[0]) /
+                      param.stride[0];
+      oshape[W] = 1 +
+                  (dshape[W] + 2 * param.pad[1] - param.kernel[1]) /
+                      param.stride[1];
+    } else {
+      oshape[H] = 1 + static_cast<int>(std::ceil(
+                          static_cast<float>(dshape[H] + 2 * param.pad[0] -
+                                             param.kernel[0]) /
+                          param.stride[0]));
+      oshape[W] = 1 + static_cast<int>(std::ceil(
+                          static_cast<float>(dshape[W] + 2 * param.pad[1] -
+                                             param.kernel[1]) /
+                          param.stride[1]));
+    }
   }
 
   SHAPE_ASSIGN_CHECK(*in_shape, 1, TShape{1});
