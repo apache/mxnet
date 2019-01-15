@@ -6978,9 +6978,9 @@ def test_op_roi_align():
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
                                                              spatial_scale, sampling_ratio, dy.asnumpy())
-        assert_almost_equal(output.asnumpy(), real_output, atol=1e-5)
-        assert_almost_equal(data.grad.asnumpy(), dx, atol=1e-5)
-        assert_almost_equal(rois.grad.asnumpy(), drois, atol=1e-5)
+        assert_almost_equal(output.asnumpy(), real_output, atol=1e-3)
+        assert_almost_equal(data.grad.asnumpy(), dx, atol=1e-3)
+        assert_almost_equal(rois.grad.asnumpy(), drois, atol=1e-3)
 
     # modified from test_roipooling()
     def test_roi_align_autograd(sampling_ratio=0):
