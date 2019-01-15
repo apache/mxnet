@@ -269,22 +269,22 @@ def test_gradient_multiplier_op():
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
-    l = np.random.random_sample() - 0.5
+    m = np.random.random_sample() - 0.5
     
     data = mx.symbol.Variable('data')
     quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
-    gr_q_sym = mx.sym.contrib.gradientmultiplier(quad_sym, scalar=l)
+    gr_q_sym = mx.sym.contrib.gradientmultiplier(quad_sym, scalar=m)
 
     for dtype in [np.float16, np.float32, np.float64]:
         for ndim in range(1, 6):
             shape = rand_shape_nd(ndim, 5)
             data_np = np.random.randn(*shape).astype(dtype)
             expected = f(data_np, a, b, c)
-            backward_expected = (2 * a * data_np + b) * l
+            backward_expected = (2 * a * data_np + b) * m
 
             # check imperative forward
             output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
-            output = mx.nd.contrib.gradientmultiplier(output, scalar=l)
+            output = mx.nd.contrib.gradientmultiplier(output, scalar=m)
             assert_almost_equal(output.asnumpy(), expected,
                                 rtol=1e-2 if dtype is np.float16 else 1e-5,
                                 atol=1e-2 if dtype is np.float16 else 1e-5)
