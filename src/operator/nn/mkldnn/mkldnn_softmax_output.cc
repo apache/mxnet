@@ -85,8 +85,7 @@ class MKLDNNSoftmaxOutputFwd {
 
 static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam& param,
                                                        const OpContext &ctx,
-                                                       const int axis,
-                                                       const mkldnn::memory &in_mem) {
+                                                       const NDArray &in_data) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local
     std::unordered_map<MKLDNNSoftmaxOuputSignature, MKLDNNSoftmaxOutputFwd, OpHash> fwds;
@@ -96,10 +95,14 @@ static MKLDNNSoftmaxOutputFwd &GetSoftmaxOutputForward(const SoftmaxOutputParam&
 #endif
   MKLDNNSoftmaxOuputSignature key(param);
   key.AddSign(ctx.is_train);
-  key.AddSign(in_mem);
+  key.AddSign(in_data);
+
+  //  softmax_output has no axis parameter, so use it as it original implement.
+  int axis = in_data.shape().ndim() - 1;
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
+    auto in_mem = *(in_data.GetMKLDNNData());
     MKLDNNSoftmaxOutputFwd fwd(param, ctx.is_train, axis, in_mem);
     it = AddToCache(&fwds, key, fwd);
   }
@@ -120,8 +123,6 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
 
   NDArray idata = in_data[softmaxout_enum::kData];
   NDArray odata = out_data[softmaxout_enum::kOut];
-  //  softmax_output has no axis parameter, so use it as it original implement.
-  int axis = idata.shape().ndim() - 1;
   if (in_data[softmaxout_enum::kData].IsView() && in_data[softmaxout_enum::kData].IsMKLDNNData()) {
     idata = in_data[softmaxout_enum::kData].Reorder2Default();
   }
@@ -130,7 +131,7 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
   auto out_mem = CreateMKLDNNMem(out_data[softmaxout_enum::kOut],
                             input_mem->get_primitive_desc(), req[softmaxout_enum::kOut]);
 
-  MKLDNNSoftmaxOutputFwd &fwd = GetSoftmaxOutputForward(param, ctx, axis, *input_mem);
+  MKLDNNSoftmaxOutputFwd &fwd = GetSoftmaxOutputForward(param, ctx, idata);
   fwd.SetNewMem(*input_mem, *out_mem.second);
 
   MKLDNNStream *stream = MKLDNNStream::Get();
