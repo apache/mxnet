@@ -194,6 +194,7 @@ List of Contributors
 * [Harsh Patel](https://github.com/harshp8l)
 * [Xiao Wang](https://github.com/BeyonderXX)
 * [Ming Yang](http://ufoym.com)
+* [Piyush Ghai](https://github.com/piyushghai)
 
 Label Bot
 ---------

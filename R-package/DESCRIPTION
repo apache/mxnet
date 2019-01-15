@@ -29,7 +29,7 @@ Suggests:
     imager,
     covr
 Depends:
-    R (>= 3.3.0)
+    R (>= 3.4.4)
 LinkingTo: Rcpp
 VignetteBuilder: knitr
-RoxygenNote: 6.1.0
+RoxygenNote: 6.1.1

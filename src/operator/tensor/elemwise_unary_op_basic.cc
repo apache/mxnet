@@ -236,6 +236,20 @@ NNVM_REGISTER_OP(_backward_copy)
     return std::vector<bool>{true};
   });
 
+NNVM_REGISTER_OP(_backward_reshape)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                [](const NodeAttrs& attrs){
+                                  return std::vector<std::pair<int, int> >{{0, 0}};
+                                })
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+                                  [](const NodeAttrs& attrs){
+                                    return std::vector<bool>{true};
+                                  });
+
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 MXNET_ADD_SPARSE_OP_ALIAS(stop_gradient)
 .add_alias("stop_gradient")

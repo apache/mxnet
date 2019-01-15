@@ -47,7 +47,6 @@
 #include "../../operator/nn/fully_connected-inl.h"
 #include "../../operator/nn/pooling-inl.h"
 #include "../../operator/softmax_output-inl.h"
-#include "./tensorrt-inl.h"
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
 #include <onnx/checker.h>
@@ -55,14 +54,17 @@
 
 namespace mxnet {
 namespace op {
+
+DMLC_REGISTER_PARAMETER(ONNXParam);
+
 namespace nnvm_to_onnx {
 
-op::TRTParam ConvertNnvmGraphToOnnx(
+op::ONNXParam ConvertNnvmGraphToOnnx(
     const nnvm::Graph& g,
     std::unordered_map<std::string, NDArray>* const shared_buffer) {
-    op::TRTParam trt_param;
-    op::tensorrt::NameToIdx_t trt_input_map;
-    op::tensorrt::InferenceMap_t trt_output_map;
+    op::ONNXParam onnx_param;
+    op::nnvm_to_onnx::NameToIdx_t onnx_input_map;
+    op::nnvm_to_onnx::InferenceMap_t onnx_output_map;
 
   const nnvm::IndexedGraph& ig = g.indexed_graph();
   const auto& storage_types = g.GetAttr<StorageTypeVector>("storage_type");
@@ -105,7 +107,7 @@ op::TRTParam ConvertNnvmGraphToOnnx(
           current_input++;
           continue;
         }
-        trt_input_map.emplace(node_name, current_input++);
+        onnx_input_map.emplace(node_name, current_input++);
         ConvertPlaceholder(node_name, placeholder_shapes, graph_proto);
       } else {
         // If it's not a placeholder, then by exclusion it's a constant.
@@ -140,23 +142,23 @@ op::TRTParam ConvertNnvmGraphToOnnx(
       auto out_iter = output_lookup.find(node_name);
       // We found an output
       if (out_iter != output_lookup.end()) {
-        ConvertOutput(&trt_output_map, graph_proto, out_iter, node_name, g,
+        ConvertOutput(&onnx_output_map, graph_proto, out_iter, node_name, g,
                       storage_types, dtypes);
       }  // output found
     }    // conversion function exists
   }      // loop over i from 0 to num_nodes
 
-  model_proto.SerializeToString(&trt_param.serialized_onnx_graph);
-  common::Serialize<op::tensorrt::NameToIdx_t>(trt_input_map,
-                                          &trt_param.serialized_input_map);
-  common::Serialize<op::tensorrt::InferenceMap_t>(trt_output_map,
-                                             &trt_param.serialized_output_map);
+  model_proto.SerializeToString(&onnx_param.serialized_onnx_graph);
+  common::Serialize<op::nnvm_to_onnx::NameToIdx_t>(onnx_input_map,
+                                          &onnx_param.serialized_input_map);
+  common::Serialize<op::nnvm_to_onnx::InferenceMap_t>(onnx_output_map,
+                                             &onnx_param.serialized_output_map);
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
   onnx::checker::check_model(model_proto);
 #endif  // MXNET_USE_TENSORRT_ONNX_CHECKER
 
-  return trt_param;
+  return onnx_param;
 }
 
 void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
@@ -489,7 +491,7 @@ void ConvertConstant(
 }
 
 void ConvertOutput(
-    op::tensorrt::InferenceMap_t* const trt_output_map,
+    op::nnvm_to_onnx::InferenceMap_t* const output_map,
     GraphProto* const graph_proto,
     const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
     const std::string& node_name, const nnvm::Graph& g,
@@ -501,10 +503,10 @@ void ConvertOutput(
   int dtype = dtypes[out_idx];
 
   // This should work with fp16 as well
-  op::tensorrt::InferenceTuple_t out_tuple{out_iter->second, out_shape, storage_type,
+  op::nnvm_to_onnx::InferenceTuple_t out_tuple{out_iter->second, out_shape, storage_type,
                                       dtype};
 
-  trt_output_map->emplace(node_name, out_tuple);
+  output_map->emplace(node_name, out_tuple);
 
   auto graph_out = graph_proto->add_output();
   auto tensor_type = graph_out->mutable_type()->mutable_tensor_type();

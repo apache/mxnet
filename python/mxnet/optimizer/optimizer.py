@@ -43,39 +43,43 @@ class Optimizer(object):
 
     Parameters
     ----------
-    rescale_grad : float, optional
+    rescale_grad : float, optional, default 1.0
         Multiply the gradient with `rescale_grad` before updating. Often
         choose to be ``1.0/batch_size``.
 
-    param_idx2name : dict from int to string, optional
+    param_idx2name : dict from int to string, optional, default None
         A dictionary that maps int index to string name.
 
-    clip_gradient : float, optional
+    clip_gradient : float, optional, default None
         Clip the gradient by projecting onto the box ``[-clip_gradient, clip_gradient]``.
 
-    learning_rate : float, optional
+    learning_rate : float, optional, default 0.01
         The initial learning rate.
 
-    lr_scheduler : LRScheduler, optional
+    lr_scheduler : LRScheduler, optional, default None
         The learning rate scheduler.
 
-    wd : float, optional
+    wd : float, optional, default 0.0
         The weight decay (or L2 regularization) coefficient. Modifies objective
         by adding a penalty for having large weights.
 
-    sym: Symbol, optional
+    sym: Symbol, optional, default None
         The Symbol this optimizer is applying to.
 
-    begin_num_update : int, optional
+    begin_num_update : int, optional, default 0
         The initial number of updates.
 
-    multi_precision : bool, optional
+    multi_precision : bool, optional, default False
        Flag to control the internal precision of the optimizer.::
 
            False: results in using the same precision as the weights (default),
            True: makes internal 32-bit copy of the weights and applies gradients
            in 32-bit precision even if actual weights used in the model have lower precision.
            Turning this on can improve convergence and accuracy when training with float16.
+
+    param_dict : dict of int -> gluon.Parameter, default None
+        Dictionary of parameter index to gluon.Parameter, used to lookup parameter attributes
+        such as lr_mult, wd_mult, etc. param_dict shall not be deep copied.
 
     Properties
     ----------
@@ -1026,13 +1030,14 @@ class Adam(Optimizer):
     Stochastic Optimization*, available at http://arxiv.org/abs/1412.6980.
 
     If the storage types of grad is ``row_sparse``, and ``lazy_update`` is True, \
-    **lazy updates** are applied by::
+    **lazy updates** at step t are applied by::
 
         for row in grad.indices:
             rescaled_grad[row] = clip(grad[row] * rescale_grad + wd * weight[row], clip_gradient)
             m[row] = beta1 * m[row] + (1 - beta1) * rescaled_grad[row]
             v[row] = beta2 * v[row] + (1 - beta2) * (rescaled_grad[row]**2)
-            w[row] = w[row] - learning_rate * m[row] / (sqrt(v[row]) + epsilon)
+            lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+            w[row] = w[row] - lr * m[row] / (sqrt(v[row]) + epsilon)
 
     The lazy update only updates the mean and var for the weights whose row_sparse
     gradient indices appear in the current batch, rather than updating it for all indices.
@@ -1040,12 +1045,13 @@ class Adam(Optimizer):
     throughput for some applications. However, it provides slightly different semantics than
     the original update, and may lead to different empirical results.
 
-    Otherwise, **standard updates** are applied by::
+    Otherwise, **standard updates** at step t are applied by::
 
         rescaled_grad = clip(grad * rescale_grad + wd * weight, clip_gradient)
         m = beta1 * m + (1 - beta1) * rescaled_grad
         v = beta2 * v + (1 - beta2) * (rescaled_grad**2)
-        w = w - learning_rate * m / (sqrt(v) + epsilon)
+        lr = learning_rate * sqrt(1 - beta1**t) / (1 - beta2**t)
+        w = w - lr * m / (sqrt(v) + epsilon)
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
