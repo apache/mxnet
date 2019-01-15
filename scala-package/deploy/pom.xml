@@ -19,6 +19,7 @@
   </description>
 
   <properties>
+    <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
     <ARTIFACT_ID>mxnet-full_2.11-${platform}-${flavor}</ARTIFACT_ID>
     <revision>1.5.0-SNAPSHOT</revision>
     <repositoryId>apache.snapshots.https</repositoryId>
