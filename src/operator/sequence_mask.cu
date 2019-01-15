@@ -33,7 +33,7 @@ template <> Operator *CreateOp<gpu>(SequenceMaskParam param, int dtype, int ityp
   Operator *op = NULL;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
       MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceMaskOp<gpu, DType>(param);
+          op = new SequenceMaskOp<gpu, DType, IType>(param);
         });
     });
   return op;
