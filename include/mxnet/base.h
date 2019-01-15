@@ -262,6 +262,10 @@ struct RunContext {
    */
   void *stream;
   /*!
+   * \brief indicator of whether this execution is run in bulk mode
+   */
+  bool is_bulk;
+  /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream
    * \tparam xpu the device type of the stream
