@@ -1,5 +1,11 @@
 Revision history for Perl extension AI::MXNet
 
+1.4     Mon Feb 18 11:54:07 PST 2019
+        - Two more gluon loss classes
+        - Visualization fixes
+        - Gluon rnn rework, including hybridization
+        - Exposed GPU memory info to perl level.
+
 1.33    Thu Oct  4 13:25:56 PDT 2018
         - Added randn function.
         - Internal SELU function on C++ layer.
