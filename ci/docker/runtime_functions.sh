@@ -133,7 +133,7 @@ build_jetson() {
     set -ex
     pushd .
 
-    build_ccache_wrappers
+    #build_ccache_wrappers
 
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
@@ -1188,7 +1188,7 @@ nightly_straight_dope_python3_multi_gpu_tests() {
 nightly_tutorial_test_ubuntu_python3_gpu() {
     set -ex
     cd /work/mxnet/docs
-    export BUILD_VER=tutorial 
+    export BUILD_VER=tutorial
     export MXNET_DOCS_BUILD_MXNET=0
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -1218,7 +1218,7 @@ deploy_docs() {
     set -ex
     pushd .
 
-    make docs
+    make docs SPHINXOPTS=-W
 
     popd
 }
@@ -1274,5 +1274,3 @@ EOF
     declare -F | cut -d' ' -f3
     echo
 fi
-
-
