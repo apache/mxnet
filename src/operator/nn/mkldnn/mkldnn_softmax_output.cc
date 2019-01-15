@@ -136,6 +136,7 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
 
   MKLDNNStream *stream = MKLDNNStream::Get();
   stream->RegisterPrim(fwd.GetFwd());
+
   CommitOutput(out_data[softmaxout_enum::kOut], out_mem);
   stream->Submit();
 }
