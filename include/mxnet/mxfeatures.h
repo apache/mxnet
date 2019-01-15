@@ -119,65 +119,63 @@
 
 
 
-
-
 namespace mxnet {
 namespace features {
 // Check compile flags such as CMakeLists.txt
 
 /// Compile time features
 enum : uint32_t {
-    // NVIDIA, CUDA
-    CUDA = 0,
-    CUDNN,
-    NCCL,
-    CUDA_RTC,
-    TENSORRT,
+  // NVIDIA, CUDA
+  CUDA = 0,
+  CUDNN,
+  NCCL,
+  CUDA_RTC,
+  TENSORRT,
 
-    // CPU Features / optimizations
-    CPU_SSE,
-    CPU_SSE2,
-    CPU_SSE3,
-    CPU_SSE4_1,
-    CPU_SSE4_2,
-    CPU_SSE4A,  // AMD extensions to SSE4
-    CPU_AVX,
-    CPU_AVX2,
+  // CPU Features / optimizations
+  CPU_SSE,
+  CPU_SSE2,
+  CPU_SSE3,
+  CPU_SSE4_1,
+  CPU_SSE4_2,
+  CPU_SSE4A,  // AMD extensions to SSE4
+  CPU_AVX,
+  CPU_AVX2,
 
 
-    // Multiprocessing / CPU / System
-    OPENMP,
-    SSE,
-    F16C,
-    JEMALLOC,
+  // Multiprocessing / CPU / System
+  OPENMP,
+  SSE,
+  F16C,
+  JEMALLOC,
 
-    // Math libraries & BLAS
-    // Flavour of BLAS
-    BLAS_OPEN,
-    BLAS_ATLAS,
-    // Intel(R) Math Kernel Library
-    BLAS_MKL,
-    BLAS_APPLE,
-    // Other math libraries:
-    // Linear Algebra PACKage
-    LAPACK,
-    // Intel(R) Math Kernel Library for Deep Neural Networks
-    MKLDNN,
+  // Math libraries & BLAS
+  // Flavour of BLAS
+  BLAS_OPEN,
+  BLAS_ATLAS,
+  // Intel(R) Math Kernel Library
+  BLAS_MKL,
+  BLAS_APPLE,
+  // Other math libraries:
+  // Linear Algebra PACKage
+  LAPACK,
+  // Intel(R) Math Kernel Library for Deep Neural Networks
+  MKLDNN,
 
-    // Image processing
-    OPENCV,
+  // Image processing
+  OPENCV,
 
-    // Misc
-    CAFFE,
-    PROFILER,
-    DIST_KVSTORE,
-    CXX14,
-    // Signal handler to print stack traces on exceptions
-    SIGNAL_HANDLER,
-    DEBUG,
+  // Misc
+  CAFFE,
+  PROFILER,
+  DIST_KVSTORE,
+  CXX14,
+  // Signal handler to print stack traces on exceptions
+  SIGNAL_HANDLER,
+  DEBUG,
 
-    // size indicator
-    MAX_FEATURES
+  // size indicator
+  MAX_FEATURES
 };
 
 
