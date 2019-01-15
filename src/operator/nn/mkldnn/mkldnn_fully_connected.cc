@@ -38,10 +38,18 @@ mkldnn::inner_product_forward::primitive_desc GetIPFwd(
   auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
 
-  mkldnn::primitive_attr attr;
-  if (param.mkldnn_param.quantized && param.requantize_scales.size()) {
+  mkldnn::primitive_attr attr = nullptr;
+  if (param.mkldnn_param.quantized) {
     int mask = 0;
-    attr.set_output_scales(mask, param.requantize_scales);
+    if (param.output_scales.size()) {
+      auto scale = param.output_scales[0];
+    } else if (param.requantize_scales.siz())e {
+      auto scale = param.requantize_scales[0];
+    } else {
+      LOG(FATAL) << "Must specified either output_scales or requantize_scales!";
+    }
+
+    attr.set_output_scales(mask, scale); 
     attr.set_int_output_round_mode(round_nearest);
   }
 
@@ -130,7 +138,7 @@ void MKLDNNFullyConnectForward::SetNewMem(const mkldnn::memory &data, const mkld
 }
 
 MKLDNNFullyConnectForward &GetFCFwd(
-    const nnvm::NodeAttrs &attrs, const NDArray &data, const NDArray &weight,
+    const MKLDNNFCFullParam &param, const NDArray &data, const NDArray &weight,
     const NDArray *bias, const mkldnn::memory::desc &output,
     const bool is_train) {
 #if DMLC_CXX11_THREAD_LOCAL
@@ -140,7 +148,6 @@ MKLDNNFullyConnectForward &GetFCFwd(
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNFullyconSignature,
               MKLDNNFullyConnectForward, OpHash> fcFwds;
 #endif
-  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   MKLDNNFullyconSignature key(param);
   key.AddSign(data);
   key.AddSign(weight);
@@ -151,16 +158,13 @@ MKLDNNFullyConnectForward &GetFCFwd(
 
   auto it = fcFwds.find(key);
   if (it == fcFwds.end()) {
-    MKLDNNFCFullParam full_param;
-    full_param.fc_param = param;
-    full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-    MKLDNNFullyConnectForward fcFwd(full_param, is_train, data, weight, bias, output);
+    MKLDNNFullyConnectForward fcFwd(param, is_train, data, weight, bias, output);
     it = AddToCache(&fcFwds, key, fcFwd);
   }
   return it->second;
 }
 
-void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data) {
@@ -190,8 +194,12 @@ void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data[fullc::kOut].dtype()),
       mkldnn::memory::format::any);
   }
+
+  MKLDNNFCFullParam full_param;
+  full_param.fc_param = param;
+  full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
   MKLDNNFullyConnectForward &FCFwd =
-      GetFCFwd(attrs, data, weight, param.no_bias ? nullptr : &in_data[fullc::kBias],
+      GetFCFwd(full_param, data, weight, param.no_bias ? nullptr : &in_data[fullc::kBias],
                out_md, ctx.is_train);
   auto data_mem = data.GetMKLDNNDataReorder(FCFwd.ipFwd_pd.src_primitive_desc());
   auto weight_mem = weight.GetMKLDNNDataReorder(FCFwd.ipFwd_pd.weights_primitive_desc());

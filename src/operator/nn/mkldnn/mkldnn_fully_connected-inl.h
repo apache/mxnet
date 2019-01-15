@@ -59,6 +59,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
 struct MKLDNNFCFullParam {
   FullyConnectedParam fc_param;
   MKLDNNFCParam mkldnn_param;
+  std::vector<float> output_scales;
   std::vector<float> requantize_scales;
 }
 
@@ -67,12 +68,6 @@ mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     const mkldnn::memory::desc &out_md, const bool is_train, MKLDNNFCFullParam &param);
 
 class MKLDNNFullyConnectForward {
-  std::shared_ptr<mkldnn::memory> data;
-  std::shared_ptr<mkldnn::memory> weight;
-  std::shared_ptr<mkldnn::memory> out;
-  std::shared_ptr<mkldnn::memory> bias;
-  std::shared_ptr<mkldnn::inner_product_forward> ipFwd;
-
  public:
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd;
 
@@ -89,16 +84,23 @@ class MKLDNNFullyConnectForward {
   const mkldnn::inner_product_forward &GetIpFwd() const {
     return *ipFwd;
   }
+
+ private:
+  std::shared_ptr<mkldnn::inner_product_forward> ipFwd;
+  std::shared_ptr<mkldnn::memory> data;
+  std::shared_ptr<mkldnn::memory> weight;
+  std::shared_ptr<mkldnn::memory> bias;
+  std::shared_ptr<mkldnn::memory> out;
 };
 
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
 
 MKLDNNFullyConnectForward &GetFCFwd(
-    const nnvm::NodeAttrs &attrs, const NDArray &data, const NDArray &weight,
+    const MKLDNNFCFullParam &param, const NDArray &data, const NDArray &weight,
     const NDArray *bias, const mkldnn::memory::desc &output,
     const bool is_train);
 
-void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
