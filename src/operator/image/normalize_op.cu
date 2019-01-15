@@ -30,6 +30,10 @@ namespace image {
 NNVM_REGISTER_OP(_image_normalize)
 .set_attr<FCompute>("FCompute<gpu>", NormalizeOpForward<gpu>);
 
+NNVM_REGISTER_OP(_backward_image_normalize)
+.set_attr<FCompute>("FCompute<gpu>", NormalizeOpBackward<gpu>);
+
+
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet

@@ -77,9 +77,17 @@ Example:
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_image_normalize"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NormalizeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_image_normalize)
+.set_attr_parser(ParamParser<NormalizeParam>)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NormalizeOpBackward<cpu>);
+
 
 }  // namespace image
 }  // namespace op
