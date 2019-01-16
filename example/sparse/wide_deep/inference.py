@@ -25,7 +25,7 @@ import time
 
 parser = argparse.ArgumentParser(description="Run sparse wide and deep inference",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument('--num-infer-batch', type=int, default=10,
+parser.add_argument('--num-infer-batch', type=int, default=100,
                     help='number of batches to inference')
 parser.add_argument('--load-epoch', type=int, default=0,
                     help='loading the params of the corresponding training epoch.')
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     data_dir = os.path.join(os.getcwd(), 'data')
     val_data = os.path.join(data_dir, ADULT['test'])
     val_csr, val_dns, val_label = get_uci_adult(data_dir, ADULT['test'], ADULT['url'])
-
+    # load parameters and symbol
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, load_epoch)
     # data iterator
     eval_data = mx.io.NDArrayIter({'csr_data': val_csr, 'dns_data': val_dns},
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     mod.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label)
     # get the sparse weight parameter
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
-    
+
     data_iter = iter(eval_data)
     if accuracy:
         logging.info('Inference started ...')

@@ -5,5 +5,6 @@ The example demonstrates how to train [wide and deep model](https://arxiv.org/ab
 The final accuracy should be around 85%.
 For training:
 - `python train.py`
+
 For inference:
 - `python inference.py`
