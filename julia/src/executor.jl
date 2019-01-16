@@ -28,7 +28,7 @@ mutable struct Executor
   handle :: MX_ExecutorHandle
   symbol :: SymbolicNode
   arg_arrays  :: VecOfNDArray
-  grad_arrays :: Vector{Union{Void,<:NDArray}}
+  grad_arrays :: Vector{Union{Cvoid,<:NDArray}}
   aux_arrays  :: VecOfNDArray
   outputs     :: VecOfNDArray
   arg_dict    :: Dict{Symbol}
@@ -73,17 +73,17 @@ function _get_ndarray_inputs(arg_key::AbstractString, args::Dict{Symbol},
   args_vec = map(arg_names) do name
     arr = get(args, name, nothing)
     if !allow_missing
-      @assert(!isa(arr, Void), "Must specify all arguments in $arg_key ($name is missing)")
+      @assert(!isa(arr, Cvoid), "Must specify all arguments in $arg_key ($name is missing)")
     end
     arr
   end
   # help the type inference
   if allow_missing
-    args_vec = Union{NDArray,Void}[args_vec...]
+    args_vec = Union{NDArray,Cvoid}[args_vec...]
   else
     args_vec = NDArray[args_vec...]
   end
-  args_hdr = MX_handle[(isa(x,Void) ? MX_handle(0) : x) for x in args_vec]
+  args_hdr = MX_handle[(isa(x,Cvoid) ? MX_handle(0) : x) for x in args_vec]
   return (args_hdr, args_vec)
 end
 
@@ -115,12 +115,12 @@ function bind(self::SymbolicNode, ctx::Context, args;
   aux_args_hdr, aux_states = _get_ndarray_inputs("aux_states", aux_states, list_auxiliary_states(self), false)
 
   if isa(grad_req, GRAD_REQ)
-    reqs = MX_uint[grad_req for i=1:length(args)]
+    reqs = MX_uint[MX_uint(grad_req) for i=1:length(args)]
   elseif isa(grad_req, Vector{GRAD_REQ})
     @assert(length(grad_req) == length(args))
-    reqs = MX_uint[grad_req...]
+    reqs = MX_uint[MX_uint.(grad_req)...]
   elseif isa(grad_req, Dict{Symbol, GRAD_REQ})
-    reqs = MX_uint[get(grad_req, name, GRAD_NOP) for name in arg_names]
+    reqs = MX_uint[MX_uint(get(grad_req, name, GRAD_NOP)) for name in arg_names]
   end
 
   ref_hdr = Ref{MX_handle}(0)
@@ -129,7 +129,7 @@ function bind(self::SymbolicNode, ctx::Context, args;
            MX_uint, Ptr{MX_handle}, Ref{MX_handle}),
           self, ctx.device_type, ctx.device_id, length(args), args_hdr,
           args_grad_hdr, reqs, length(aux_states), aux_args_hdr, ref_hdr)
-  args_grad = convert(Vector{Union{Void,NDArray}}, args_grad)
+  args_grad = convert(Vector{Union{Cvoid,NDArray}}, args_grad)
   executor = Executor(MX_ExecutorHandle(ref_hdr[]), self,
                       args, args_grad, aux_states)
 end
@@ -145,7 +145,7 @@ function simple_bind(self::SymbolicNode, ctx::Context;
                      grad_req::Union{GRAD_REQ,Dict{Symbol,GRAD_REQ}} = GRAD_WRITE,
                      kwargs...)
   arg_shapes, out_shapes, aux_shapes = infer_shape(self; kwargs...)
-  @assert(!isa(arg_shapes, Void), "Information not enough to perform complete shape inference")
+  @assert(!isa(arg_shapes, Cvoid), "Information not enough to perform complete shape inference")
 
   arg_arrays = NDArray[zeros(shape, ctx) for shape in arg_shapes]
   arg_names  = list_arguments(self)
@@ -228,7 +228,7 @@ julia> x = mx.Variable(:x)
 MXNet.mx.SymbolicNode x
 
 julia> exec = mx.bind(x + 1, mx.cpu(), Dict(:x => mx.ones(2,3)))
-mx.Executor Ptr{Void} @0x000055c3dee9eb30
+mx.Executor Ptr{Nothing} @0x000055c3dee9eb30
 
 julia> print(exec)
 Symbol Outputs:

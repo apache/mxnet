@@ -10,6 +10,10 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
+  <properties>
+    <skipJavaTests>false</skipJavaTests>
+  </properties>
+
   <artifactId>mxnet-infer</artifactId>
   <name>MXNet Scala Package - Inference</name>
 
@@ -60,5 +64,13 @@
       <version>1.10.19</version>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 </project>

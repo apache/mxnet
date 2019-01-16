@@ -22,23 +22,10 @@ set -ex
 # MAVEN_PUBLISH_OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
 # export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
 
-# Run python to configure keys
-python3 $PWD/scala-package/dev/buildkey.py
+source tools/staticbuild/build.sh $mxnet_variant maven
 
-# Updating cache
-mkdir -p ~/.gnupg
-echo "default-cache-ttl 14400" > ~/.gnupg/gpg-agent.conf
-echo "max-cache-ttl 14400" >> ~/.gnupg/gpg-agent.conf
-echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-echo "pinentry-mode loopback" >> ~/.gnupg/gpg-agent.conf
-export GPG_TTY=$(tty)
+set -ex
 
+# Compile tests for discovery later
 cd scala-package
-VERSION=$(mvn -q -Dexec.executable="echo" -Dexec.args='${project.version}' --non-recursive exec:exec)
-cd ..
-
-# echo "\n\n$VERSION\n" | make scalarelease-dryrun
-make scaladeploy CI=1
-
-# Clear all password .xml files, exp files, and gpg key files
-rm -rf ~/.m2/*.xml ~/.m2/key.asc ~/.m2/*.exp
+mvn -B deploy

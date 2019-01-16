@@ -19,6 +19,7 @@
   (:require [clojure.spec.alpha :as s]
             [t6.from-scala.core :refer [$ $$] :as $]
             [clojure.string :as string]
+            [org.apache.clojure-mxnet.primitives :as primitives]
             [org.apache.clojure-mxnet.shape :as mx-shape])
   (:import (org.apache.mxnet NDArray)
            (scala Product Tuple2 Tuple3)
@@ -36,7 +37,8 @@
                            "byte<>" "byte-array"
                            "java.lang.String<>" "vec-or-strings"
                            "org.apache.mxnet.NDArray" "ndarray"
-                           "org.apache.mxnet.Symbol" "sym"})
+                           "org.apache.mxnet.Symbol" "sym"
+                           "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE" "double-or-float"})
 
 (def symbol-param-coerce {"java.lang.String" "sym-name"
                           "float" "num"
@@ -144,6 +146,8 @@
     (and (get targets "int<>") (vector? param)) (int-array param)
     (and (get targets "float<>") (vector? param)) (float-array param)
     (and (get targets "java.lang.String<>") (vector? param)) (into-array param)
+    (and (get targets "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE") (instance? Float param)) (primitives/mx-float param)
+    (and (get targets "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE") (number? param)) (primitives/mx-double param)
     :else param))
 
 (defn nil-or-coerce-param [param targets]
@@ -177,6 +181,7 @@
     (instance? Map return-val) (scala-map->map return-val)
     (instance? Tuple2 return-val) (tuple->vec return-val)
     (instance? Tuple3 return-val) (tuple->vec return-val)
+    (primitives/primitive? return-val) (primitives/->num return-val)
     :else return-val))
 
 (defn coerce-return-recursive [return-val]

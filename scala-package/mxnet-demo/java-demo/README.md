@@ -12,13 +12,12 @@ You can use the following instruction as an alternative to achieve the same resu
 User are required to use `mvn package` to build the package,
  which are shown below:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.5.0-SNAPSHOT
+export SCALA_VERSION_PROFILE=2.11
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$SCALA_PKG_PROFILE \
-		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE \
-		-Dmxnet.version=$MXNET_VERSION
+		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE
 ```
-These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`)
+These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`)
 should be set before executing the line above.
 The `SCALA_PKG_PROFILE` should be chosen from `osx-x86_64-cpu`, `linux-x86_64-cpu` or `linux-x86_64-gpu`.
 

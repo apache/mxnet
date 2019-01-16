@@ -28,15 +28,13 @@ mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdpart
 // Python wheels
 mx_pip = 'build/*.whl'
 
-// for scala build, need to pass extra libs when run with dist_kvstore
-mx_dist_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
+mx_tensorrt_lib = 'build/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
 
@@ -100,7 +98,7 @@ def compile_unix_cpu_openblas() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_dist_lib, true)
+            utils.pack_lib('cpu', mx_lib, true)
           }
         }
       }
@@ -128,7 +126,7 @@ def compile_unix_mkl_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
-            utils.pack_lib('cpu_mkl', mx_dist_lib, true)
+            utils.pack_lib('cpu_mkl', mx_mkldnn_lib, true)
           }
         }
       }
@@ -254,7 +252,7 @@ def compile_centos7_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_dist_lib, true)
+            utils.pack_lib('centos7_cpu', mx_lib, true)
           }
         }
       }
@@ -825,7 +823,21 @@ def test_unix_scala_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_dist_lib, true)
+            utils.unpack_and_init('cpu', mx_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_scala_mkldnn_cpu(){
+  return ['Scala: MKLDNN-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-scala-mkldnn-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_scala', false)
             utils.publish_test_coverage()
           }
@@ -839,7 +851,7 @@ def test_unix_scala_gpu() {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('gpu', mx_dist_lib, true)
+            utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'integrationtest_ubuntu_gpu_scala', true)
             utils.publish_test_coverage()
           }
@@ -853,7 +865,7 @@ def test_unix_clojure_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-clojure-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_dist_lib, true)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
             utils.publish_test_coverage()
           }
@@ -932,13 +944,26 @@ def test_unix_r_gpu() {
     }]
 }
 
-def test_unix_julia_cpu() {
-    return ['Julia 0.6: CPU': {
+def test_unix_julia07_cpu() {
+    return ['Julia 0.7: CPU': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/ut-julia06-cpu') {
+        ws('workspace/ut-julia07-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cpu', mx_lib)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia06', false)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia07', false)
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_julia10_cpu() {
+    return ['Julia 1.0: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-julia10-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia10', false)
           }
         }
       }
@@ -1029,7 +1054,7 @@ def test_centos7_scala_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-scala-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('centos7_cpu', mx_dist_lib, true)
+            utils.unpack_and_init('centos7_cpu', mx_lib, true)
             utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
             utils.publish_test_coverage()
           }

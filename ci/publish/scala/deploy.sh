@@ -18,6 +18,24 @@
 
 set -ex
 
-# Test
-cd scala-package/packageTest
-make scalaintegrationtestlocal CI=1
+# On Jenkins, run python script to configure keys
+if [[ $BUILD_ID ]]; then
+    python3 ci/publish/scala/buildkey.py
+fi
+
+# Updating cache
+mkdir -p ~/.gnupg
+echo "default-cache-ttl 14400" > ~/.gnupg/gpg-agent.conf
+echo "max-cache-ttl 14400" >> ~/.gnupg/gpg-agent.conf
+echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+echo "pinentry-mode loopback" >> ~/.gnupg/gpg-agent.conf
+export GPG_TTY=$(tty)
+
+cd scala-package
+
+mvn -B deploy -Pnightly
+
+# On Jenkins, clear all password .xml files, exp files, and gpg key files
+if [[ $BUILD_ID ]]; then
+    rm -rf ~/.m2/*.xml ~/.m2/key.asc ~/.m2/*.exp
+fi

@@ -54,15 +54,15 @@
   "Print image detector predictions for the given input file"
   [predictions width height]
   (println (apply str (repeat 80 "=")))
-  (doseq [[label prob-and-bounds] predictions]
+  (doseq [{:keys [class prob x-min y-min x-max y-max]} predictions]
     (println (format
               "Class: %s Prob=%.5f Coords=(%.3f, %.3f, %.3f, %.3f)"
-              label
-              (aget prob-and-bounds 0)
-              (* (aget prob-and-bounds 1) width)
-              (* (aget prob-and-bounds 2) height)
-              (* (aget prob-and-bounds 3) width)
-              (* (aget prob-and-bounds 4) height))))
+              class
+              prob
+              (* x-min width)
+              (* y-min height)
+              (* x-max width)
+              (* y-max height))))
   (println (apply str (repeat 80 "="))))
 
 (defn detect-single-image
@@ -84,12 +84,10 @@
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (apply
-     concat
-     (for [image-files image-file-batches]
-       (let [image-batch (infer/load-image-paths image-files)
-             topk 5]
-         (infer/detect-objects-batch detector image-batch topk))))))
+    (apply concat (for [image-files image-file-batches]
+                    (let [image-batch (infer/load-image-paths image-files)
+                          topk 5]
+                      (infer/detect-objects-batch detector image-batch topk))))))
 
 (defn run-detector
   "Runs an image detector based on options provided"
@@ -107,6 +105,7 @@
                   {:contexts [(context/default-context)]})]
     (println "Object detection on a single image")
     (print-predictions (detect-single-image detector input-image) width height)
+    (println "\n")
     (println "Object detection on images in a directory")
     (doseq [predictions (detect-images-in-dir detector input-dir)]
       (print-predictions predictions width height))))

@@ -602,23 +602,23 @@ build_ubuntu_gpu_tensorrt() {
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
-    rm -rf build
-    make \
-        DEV=1                                                \
-        ENABLE_TESTCOVERAGE=1                                \
-        USE_BLAS=openblas                                    \
-        USE_CUDA=1                                           \
-        USE_CUDA_PATH=/usr/local/cuda                        \
-        USE_CUDNN=1                                          \
-        USE_OPENCV=0                                         \
-        USE_MKLDNN=0                                         \
-        USE_DIST_KVSTORE=0                                   \
-        USE_TENSORRT=1                                       \
-        USE_JEMALLOC=0                                       \
-        USE_GPERFTOOLS=0                                     \
-        ONNX_NAMESPACE=onnx                                  \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
-        -j$(nproc)
+    cd /work/build
+    cmake -DUSE_CUDA=1                            \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+          -DUSE_CUDNN=1                           \
+          -DUSE_OPENCV=1                          \
+          -DUSE_TENSORRT=1                        \
+          -DUSE_OPENMP=0                          \
+          -DUSE_MKLDNN=0                          \
+          -DUSE_MKL_IF_AVAILABLE=OFF              \
+          -DENABLE_TESTCOVERAGE=ON                \
+          -DCUDA_ARCH_NAME=Manual                 \
+          -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+          -G Ninja                                \
+          /work/mxnet
+
+    ninja -v
 }
 
 build_ubuntu_gpu_mkldnn() {
@@ -847,23 +847,24 @@ unittest_ubuntu_python3_quantization_gpu() {
 unittest_ubuntu_cpu_scala() {
     set -ex
     scala_prepare
-    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
-    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
+    cd scala-package
+    mvn -B integration-test
 }
 
 unittest_centos7_cpu_scala() {
     set -ex
     cd /work/mxnet
     scala_prepare
-    make scalapkg USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
-    make scalaunittest USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    cd scala-package
+    mvn -B integration-test
 }
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
     scala_prepare
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
-    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
+    cd scala-package
+    mvn -B install
+    cd ..
     ./contrib/clojure-package/ci-test.sh
 }
 
@@ -906,34 +907,44 @@ unittest_ubuntu_gpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
-unittest_ubuntu_cpu_julia06() {
+unittest_ubuntu_cpu_julia() {
     set -ex
-    export PATH="/work/julia/bin:$PATH"
+    export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
-    export JULIA_PKGDIR='/work/julia-pkg'
-    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
-    julia -e 'versioninfo()'
-    julia -e 'Pkg.init()'
+    julia -e 'using InteractiveUtils; versioninfo()'
 
     # install package
-    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
+    mkdir -p $DEVDIR
+    ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
 
-    # install dependencies
-    julia -e 'Pkg.resolve()'
+    # register MXNet.jl and dependencies
+    julia -e 'using Pkg; Pkg.develop("MXNet")'
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'Pkg.build("MXNet")'
+    julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
-    julia -e 'Pkg.test("MXNet")'
+    julia -e 'using Pkg; Pkg.test("MXNet")'
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
     julia -e 'using MXNet; mx._sig_checker()'
+}
+
+unittest_ubuntu_cpu_julia07() {
+    set -ex
+    unittest_ubuntu_cpu_julia /work/julia07
+}
+
+unittest_ubuntu_cpu_julia10() {
+    set -ex
+    unittest_ubuntu_cpu_julia /work/julia10
 }
 
 unittest_centos7_cpu() {
@@ -1008,8 +1019,9 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 integrationtest_ubuntu_gpu_scala() {
     set -ex
     scala_prepare
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 USE_DIST_KVSTORE=1 SCALA_ON_GPU=1 ENABLE_TESTCOVERAGE=1 CI=1
-    make scalaintegrationtest USE_OPENCV=1 USE_BLAS=openblas USE_CUDA=1 USE_CUDA_PATH=/usr/local/cuda USE_CUDNN=1 SCALA_TEST_ON_GPU=1 USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1 CI=1
+    cd scala-package
+    export SCALA_TEST_ON_GPU=1
+    mvn -B integration-test -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -1227,11 +1239,18 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    make javademo
-    ./bin/java_sample.sh
-    ./bin/run_od.sh
+    make java_ci_demo
+    bash bin/java_sample.sh
+    bash bin/run_od.sh
 }
 
+nightly_scala_demo_test_cpu() {
+    set -ex
+    cd /work/mxnet/scala-package/mxnet-demo/scala-demo
+    make scala_ci_demo
+    bash bin/demo.sh
+    bash bin/run_im.sh
+}
 
 # Deploy
 
@@ -1246,25 +1265,19 @@ deploy_docs() {
 
 deploy_jl_docs() {
     set -ex
-    export PATH="/work/julia/bin:$PATH"
+    export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
-    export JULIA_PKGDIR='/work/julia-pkg'
-    export DEPDIR=`julia -e 'print(Pkg.dir())'`
+    export JULIA_DEPOT_PATH='/work/julia-depot'
+    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
-    julia -e 'versioninfo()'
-    julia -e 'Pkg.init()'
-    ln -sf ${MXNET_HOME}/julia ${DEPDIR}/MXNet
-    julia -e 'Pkg.resolve()'
+    julia -e 'using InteractiveUtils; versioninfo()'
+    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-    # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'Pkg.build("MXNet")'
-    # build docs
-    julia -e 'Pkg.add("Documenter")'
-    julia -e 'cd(Pkg.dir("MXNet")); include(joinpath("docs", "make.jl"))'
+    make -C julia/docs
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
@@ -1274,7 +1287,7 @@ publish_scala_build() {
     set -ex
     pushd .
     scala_prepare
-    ./scala-package/dev/build.sh
+    ./ci/publish/scala/build.sh
     popd
 }
 
@@ -1282,7 +1295,7 @@ publish_scala_test() {
     set -ex
     pushd .
     scala_prepare
-    ./scala-package/dev/test.sh
+    ./ci/publish/scala/test.sh
     popd
 }
 
@@ -1290,7 +1303,7 @@ publish_scala_deploy() {
     set -ex
     pushd .
     scala_prepare
-    ./scala-package/dev/deploy.sh
+    ./ci/publish/scala/deploy.sh
     popd
 }
 
