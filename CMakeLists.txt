@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.0.2)
 
+# workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
+if(CMAKE_CROSSCOMPILING)
+  set(__CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING})
+  set(__CMAKE_CROSSCOMPILING_OVERRIDE ON)
+endif()
+
 project(mxnet C CXX)
+
+if(__CMAKE_CROSSCOMPILING_OVERRIDE)
+  set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
+endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
@@ -20,7 +30,7 @@ mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) 
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_SYSTEM_PROCESSOR MATCHES x86_64))
+mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (SYSTEM_ARCHITECTURE STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
