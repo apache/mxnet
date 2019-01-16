@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,28 +15,35 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+set -euo pipefail
+
 unameOut="$(uname -s)"
 case "${unameOut}" in
-    Linux*)     CMD='wget';;
-    Darwin*)    CMD='curl -o';;
-    CYGWIN*)    CMD='wget';;
-    MINGW*)     CMD='wget';;
+    Linux*)     CMD='wget -q';;
+    Darwin*)    CMD='curl -sO';;
+    CYGWIN*)    CMD='wget -q';;
+    MINGW*)     CMD='wget -q';;
     *)          CMD=""
 esac
 
-if [ ! -d "./data" ]; then
-    mkdir data
-fi
-
+mkdir -p data
 if [ ! -d "./data/mnist_data" ]; then
-  mkdir ./data/mnist_data
-
-  (cd data/mnist_data; $CMD train-images-idx3-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz)
-  (cd data/mnist_data; $CMD train-labels-idx1-ubyte.gz https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz)
-  (cd data/mnist_data; $CMD t10k-images-idx3-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz)
-  (cd data/mnist_data; $CMD t10k-labels-idx1-ubyte.gz  https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz)
-  (cd data/mnist_data; $CMD mnist_train.csv.gz         http://data.mxnet.io/data/mnist_train.csv.gz)
-  (cd data/mnist_data; gzip -d *.gz)
+    mkdir ./data/mnist_data
+    pushd .
+    cd data/mnist_data
+    echo "Downloading MNIST dataset"
+    echo "train-images-idx3-ubyte.gz"
+    $CMD https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-images-idx3-ubyte.gz
+    echo "train-labels-idx1-ubyte.gz"
+    $CMD https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/train-labels-idx1-ubyte.gz
+    echo "t10k-images-idx3-ubyte.gz"
+    $CMD https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-images-idx3-ubyte.gz
+    echo "t10k-labels-idx1-ubyte.gz"
+    $CMD https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/gluon/dataset/mnist/t10k-labels-idx1-ubyte.gz
+    echo "mnist_train.csv.gz"
+    $CMD http://data.mxnet.io/data/mnist_train.csv.gz
+    gzip -d *.gz
+    popd
 fi
 
 
