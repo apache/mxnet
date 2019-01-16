@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet"""
+"""
+Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet
+"""
 
 import itertools
 import os
@@ -84,7 +86,6 @@ def pad_sentences(sentences, padding_word="</s>"):
     sequence_length = max(len(x) for x in sentences)
     padded_sentences = []
     for i, sentence in enumerate(sentences):
-        print(i, sentence)
         num_padding = sequence_length - len(sentence)
         new_sentence = sentence + [padding_word] * num_padding
         padded_sentences.append(new_sentence)
