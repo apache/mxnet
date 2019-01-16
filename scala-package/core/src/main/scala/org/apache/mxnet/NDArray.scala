@@ -512,29 +512,34 @@ object NDArray extends NDArrayBase {
 
   /**
     * Create a new NDArray based on the structure of source Array
-    * @param sourceArr Array[Array...Array[Float]...]
+    * @param sourceArr Array[Array...Array[MX_PRIMITIVE_TYPE]...]
     * @param ctx context like to pass in
     * @return an NDArray with the same shape of the input
     */
   def toNDArray(sourceArr: Array[_], ctx : Context = null) : NDArray = {
     val shape = ArrayBuffer[Int]()
     shapeGetter(sourceArr, shape, 0)
-    val finalArr = new Array[Float](shape.product)
-    arrayCombiner(sourceArr, finalArr, 0, finalArr.length - 1)
-    array(finalArr, Shape(shape), ctx)
+    val container = new Array[Any](shape.product)
+    arrayCombiner(sourceArr, container, 0, container.length - 1)
+    val finalArr = container(0) match {
+      case f: Float => array(container.map(_.asInstanceOf[Float]), Shape(shape), ctx)
+      case d: Double => array(container.map(_.asInstanceOf[Double]), Shape(shape), ctx)
+      case _ => throw new IllegalArgumentException(s"Unsupported type ${container(0).getClass}")
+    }
+    finalArr
   }
 
   private def shapeGetter(sourceArr : Any,
                           shape : ArrayBuffer[Int], shapeIdx : Int) : Unit = {
     sourceArr match {
-      case arrFloat : Array[Float] => {
-        val arrLength = arrFloat.length
+      case arr: Array[_] if MX_PRIMITIVES.isValidType(arr(0)) => {
+        val arrLength = arr.length
         if (shape.length == shapeIdx) {
           shape += arrLength
         }
         require(shape(shapeIdx) == arrLength, "Each Array should have equal length")
       }
-      case arr : Array[Any] => {
+      case arr: Array[_] => {
         val arrLength = arr.length
         if (shape.length == shapeIdx) {
           shape += arrLength
@@ -547,12 +552,13 @@ object NDArray extends NDArrayBase {
     }
   }
 
-  private def arrayCombiner(sourceArr : Any, arr : Array[Float], start : Int, end : Int) : Unit = {
+  private def arrayCombiner(sourceArr : Any, arr : Array[Any],
+                            start : Int, end : Int) : Unit = {
     sourceArr match {
-      case arrFloat : Array[Float] => {
-        for (i <- arrFloat.indices) arr(start + i) = arrFloat(i)
+      case arrValid: Array[_] if MX_PRIMITIVES.isValidType(arrValid(0)) => {
+        for (i <- arrValid.indices) arr(start + i) = arrValid(i)
       }
-      case arrAny : Array[Any] => {
+      case arrAny: Array[_] => {
         val fragment = (end - start + 1) / arrAny.length
         for (i <- arrAny.indices)
           arrayCombiner(arrAny(i), arr, start + i * fragment, start + (i + 1) * fragment)
@@ -746,10 +752,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
 
   private val traceProperty = "mxnet.setNDArrayPrintLength"
-  private lazy val printLength = {
-    val value = Try(System.getProperty(traceProperty).toInt).getOrElse(1000)
-    value
-  }
+  private lazy val printLength = Try(System.getProperty(traceProperty).toInt).getOrElse(1000)
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]

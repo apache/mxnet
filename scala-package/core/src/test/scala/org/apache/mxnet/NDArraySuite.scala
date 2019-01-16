@@ -90,28 +90,44 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   }
 
   test("create NDArray based on Java Matrix") {
-    val arrBuf = ArrayBuffer[Array[Float]]()
-    for (i <- 0 until 100) arrBuf += Array(1.0f, 1.0f, 1.0f, 1.0f)
-    val arr = Array(
+    def arrayGen(num : Any) : Array[Any] = {
+      val arrayBuf = num match {
+        case f: Float =>
+          val arr = ArrayBuffer[Array[Float]]()
+          for (_ <- 0 until 100) arr += Array(1.0f, 1.0f, 1.0f, 1.0f)
+          arr
+        case d: Double =>
+          val arr = ArrayBuffer[Array[Double]]()
+          for (_ <- 0 until 100) arr += Array(1.0d, 1.0d, 1.0d, 1.0d)
+          arr
+        case _ => throw new IllegalArgumentException(s"Unsupported Type ${num.getClass}")
+      }
       Array(
-        arrBuf.toArray
-      ),
-      Array(
-        arrBuf.toArray
+        Array(
+          arrayBuf.toArray
+        ),
+        Array(
+          arrayBuf.toArray
         )
-    )
-    var nd = NDArray.toNDArray(arr)
+      )
+    }
+    val floatData = 1.0f
+    var nd = NDArray.toNDArray(arrayGen(floatData))
     require(nd.shape == Shape(2, 1, 100, 4))
     val arr2 = Array(1.0f, 1.0f, 1.0f, 1.0f)
     nd = NDArray.toNDArray(arr2)
     require(nd.shape == Shape(4))
+    val doubleData = 1.0d
+    nd = NDArray.toNDArray(arrayGen(doubleData))
+    require(nd.shape == Shape(2, 1, 100, 4))
+    require(nd.dtype == DType.Float64)
   }
 
   test("test Visualize") {
     var nd = NDArray.ones(Shape(1, 2, 1000, 1))
-    logger.info(s"Test print large ndarray:\n$nd")
+    require(nd.toString.split("\n").length == 33)
     nd = NDArray.ones(Shape(1, 4))
-    logger.info(s"Test print small ndarray:\n$nd")
+    require(nd.toString.split("\n").length == 4)
   }
 
   test("plus") {
