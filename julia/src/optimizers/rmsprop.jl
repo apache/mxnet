@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-doc"""
+@doc doc"""
     RMSProp(; kwargs...)
 
 Scale learning rates by dividing with the moving average of the root mean
