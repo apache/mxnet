@@ -23,33 +23,35 @@
  * \author Da Zheng
 */
 
+#if MXNET_USE_MKLDNN == 1
 #include "mkldnn_fully_connected-inl.h"
 
-#if MXNET_USE_MKLDNN == 1
 namespace mxnet {
 namespace op {
 
 mkldnn::inner_product_forward::primitive_desc GetIPFwd(
+    MKLDNNFCFullParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const mkldnn::memory::desc &out_md, const bool is_train, MKLDNNFCFullParam &param) {
+    const mkldnn::memory::desc &out_md) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
   auto engine = CpuEngine::Get()->get_engine();
   auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
 
-  mkldnn::primitive_attr attr = nullptr;
+  mkldnn::primitive_attr attr;
   if (param.mkldnn_param.quantized) {
     int mask = 0;
+    std::vector<float> scales = {0.0};
     if (param.output_scales.size()) {
-      auto scale = param.output_scales[0];
-    } else if (param.requantize_scales.siz())e {
-      auto scale = param.requantize_scales[0];
+      scales[0] = param.output_scales[0];
+    } else if (param.requantize_scales.size()) {
+      scales[0] = param.requantize_scales[0];
     } else {
       LOG(FATAL) << "Must specified either output_scales or requantize_scales!";
     }
 
-    attr.set_output_scales(mask, scale); 
+    attr.set_output_scales(mask, scales);
     attr.set_int_output_round_mode(round_nearest);
   }
 
@@ -138,9 +140,9 @@ void MKLDNNFullyConnectForward::SetNewMem(const mkldnn::memory &data, const mkld
 }
 
 MKLDNNFullyConnectForward &GetFCFwd(
-    const MKLDNNFCFullParam &param, const NDArray &data, const NDArray &weight,
-    const NDArray *bias, const mkldnn::memory::desc &output,
-    const bool is_train) {
+    MKLDNNFCFullParam &param, const bool is_train,
+    const NDArray &data, const NDArray &weight,
+    const NDArray *bias, const mkldnn::memory::desc &output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNFullyconSignature,
               MKLDNNFullyConnectForward, OpHash> fcFwds;
@@ -148,7 +150,7 @@ MKLDNNFullyConnectForward &GetFCFwd(
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNFullyconSignature,
               MKLDNNFullyConnectForward, OpHash> fcFwds;
 #endif
-  MKLDNNFullyconSignature key(param);
+  MKLDNNFullyconSignature key(param.fc_param);
   key.AddSign(data);
   key.AddSign(weight);
   key.AddSign(is_train);
@@ -199,8 +201,8 @@ void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   full_param.fc_param = param;
   full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
   MKLDNNFullyConnectForward &FCFwd =
-      GetFCFwd(full_param, data, weight, param.no_bias ? nullptr : &in_data[fullc::kBias],
-               out_md, ctx.is_train);
+      GetFCFwd(full_param, ctx.is_train, data, weight,
+               param.no_bias ? nullptr : &in_data[fullc::kBias], out_md);
   auto data_mem = data.GetMKLDNNDataReorder(FCFwd.ipFwd_pd.src_primitive_desc());
   auto weight_mem = weight.GetMKLDNNDataReorder(FCFwd.ipFwd_pd.weights_primitive_desc());
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
@@ -243,8 +245,11 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     out_grad = out_grad.MKLDNNDataReshape(Shape2(oshape[0],
                                              oshape.ProdShape(1, oshape.ndim())));
 
-  mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(data, weight,
-      param.no_bias ? nullptr : &in_grad[fullc::kBias], GetMemDesc(out_grad), ctx.is_train);
+  MKLDNNFCFullParam full_param;
+  full_param.fc_param = param;
+  full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
+  mkldnn::inner_product_forward::primitive_desc ipFwd_pd = GetIPFwd(full_param, ctx.is_train,
+      data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias], GetMemDesc(out_grad));
 
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   if (req[fullc::kData]) {

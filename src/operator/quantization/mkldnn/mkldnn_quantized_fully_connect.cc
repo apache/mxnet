@@ -30,59 +30,66 @@
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(MKLDNNFCParam);
+
 namespace quantized_fully_connected_enum {
 enum QuantizedFullyConnectedOutputs { kOut, kMin, kMax };
 }
 
-static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
-                                                 const OpContext& ctx,
-                                                 const std::vector<NDArray>& in_data,
-                                                 const std::vector<OpReqType>& req,
-                                                 const std::vector<NDArray>& out_data) {
-  TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace])
-  const FullyConnected & param_ = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  CHECK_EQ(in_data.size(), static_cast<size_t>(param_.num_args * 3));
+static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
+                                                 const OpContext &ctx,
+                                                 const std::vector<NDArray> &in_data,
+                                                 const std::vector<OpReqType> &req,
+                                                 const std::vector<NDArray> &out_data) {
+  TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
+  const FullyConnectedParam &param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const size_t num_inputs = param.no_bias ? 2 : 3;
+
+  CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
   CHECK_EQ(out_data.size(), 3U);
 
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
 
-  const size_t num_inputs = param.no_bias ? 2 : 3;
   float data_min = in_data[num_inputs].data().dptr<float>()[0];
   float data_max = in_data[num_inputs + 1].data().dptr<float>()[0];
-  float weight_min = in_data[num_inputs + 2].data().dtpr<float>()[0];
+  float weight_min = in_data[num_inputs + 2].data().dptr<float>()[0];
   float weight_max = in_data[num_inputs + 3].data().dptr<float>()[0];
 
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   float data_scale = data_range / MaxAbs(data_min, data_max);
   float weight_scale = kInt8Range / MaxAbs(weight_min, weight_max);
 
+  NDArray quantized_bias;
   if (!param.no_bias) {
     NDArray bias = in_data[fullc::kBias];
     float bias_min = in_data[num_inputs + 4].data().dptr<float>()[0];
-    float bias_max = in_data[num_inputs + 5].data().dtpr<float>()[0];
+    float bias_max = in_data[num_inputs + 5].data().dptr<float>()[0];
     float bias_int32_rescale = data_scale * weight_scale * MaxAbs(bias_min, bias_max) / kInt8Range;
 
-    NDArray quantized_bias = NDArray(bias->storage_type(), bias->shape(),
-                                     bias->ctx(), true, mshadow::kInt32);
-    int8_t *bias_ptr = bias.data().dtpr<int8_t>();
+    quantized_bias = NDArray(bias.storage_type(), bias.shape(),
+                             bias.ctx(), true, mshadow::kInt32);
+    int8_t *bias_ptr = bias.data().dptr<int8_t>();
     int32_t *quantized_bias_ptr = quantized_bias.data().dptr<int32_t>();
+   size_t bias_size = bias.shape().Size();
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (size_t i = 0; i < param.num_hidden; ++i) {
+    for (size_t i = 0; i < bias_size; ++i) {
       quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
     }
   }
-  
+
   MKLDNNFCFullParam full_param;
-  full_param.fc_param = param_;
+  full_param.fc_param = param;
   full_param.mkldnn_param.quantized = true;
-  full_param.output_scales = 1 / data_scale / weight_scale;
+  full_param.output_scales[0] = 1.0 / data_scale / weight_scale;
   full_param.requantize_scales.resize(0);
 
-  auto &fwd = GetFCFwd(full_param, data, weight,
-      param.no_bias ? nullptr : quantized_bias, out_data[], false);
-  
+  auto out_md = GetMemDesc(out_data[fullc::kOut]);
+  bool is_train = false;
+  auto &fwd = GetFCFwd(full_param, is_train, data, weight,
+      param.no_bias ? nullptr : &quantized_bias, out_md);
+
   auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(fwd.ipFwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem = nullptr;
 
@@ -97,15 +104,15 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   const mkldnn::memory *bias_mem = nullptr;
   if (!param.no_bias)
     bias_mem = in_data[fullc::kBias].GetMKLDNNDataReorder(fwd.ipFwd_pd.bias_primitive_desc());
-  
+
   fwd.SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
   MKLDNNStream::Get()->RegisterPrim(fwd.GetIpFwd());
-  
+
   CommitOutput(out_data[fullc::kOut], out_mem);
-  MKLDNNStream::Get()->Submit()
+  MKLDNNStream::Get()->Submit();
 }
 
-NNVM_REGISTER_OP(_contrib_fully_connected)
+NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedFullyConnectedForward)
 .set_attr<bool>("TIsMKLDNN", true);
 

@@ -36,11 +36,10 @@ namespace op {
 
 struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
-  
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
 
-  DMLC_DECLARE_PARAMETER(MKLDNNFullyConnectedParam) {
+  DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
     .describe("enable quantization");
     DMLC_DECLARE_FIELD(min_calib_range)
@@ -59,23 +58,24 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
 struct MKLDNNFCFullParam {
   FullyConnectedParam fc_param;
   MKLDNNFCParam mkldnn_param;
-  std::vector<float> output_scales;
-  std::vector<float> requantize_scales;
-}
+  std::vector<float> output_scales = {0.0};
+  std::vector<float> requantize_scales = {0.0};
+};
 
 mkldnn::inner_product_forward::primitive_desc GetIPFwd(
+    MKLDNNFCFullParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const mkldnn::memory::desc &out_md, const bool is_train, MKLDNNFCFullParam &param);
+    const mkldnn::memory::desc &out_md);
 
 class MKLDNNFullyConnectForward {
  public:
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd;
 
-  MKLDNNFullyConnectForward(const MKLDNNFCFullParam &param, bool is_train,
+  MKLDNNFullyConnectForward(MKLDNNFCFullParam &param, bool is_train,
                             const NDArray &data, const NDArray &weight,
                             const NDArray *bias,
                             const mkldnn::memory::desc &output)
-      : ipFwd_pd(GetIPFwd(data, weight, bias, output, is_train, param)) {}
+      : ipFwd_pd(GetIPFwd(param, is_train, data, weight, bias, output)) {}
 
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
@@ -96,9 +96,9 @@ class MKLDNNFullyConnectForward {
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
 
 MKLDNNFullyConnectForward &GetFCFwd(
-    const MKLDNNFCFullParam &param, const NDArray &data, const NDArray &weight,
-    const NDArray *bias, const mkldnn::memory::desc &output,
-    const bool is_train);
+    MKLDNNFCFullParam &param, const bool is_train,
+    const NDArray &data, const NDArray &weight,
+    const NDArray *bias, const mkldnn::memory::desc &output);
 
 void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
