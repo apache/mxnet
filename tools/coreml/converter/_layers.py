@@ -472,11 +472,14 @@ def convert_batchnorm(net, node, module, builder):
     inputs = node['inputs']
 
 
-    eps = 1e-3 # Default value of eps for MXNet.
-    use_global_stats = False # Default value of use_global_stats for MXNet.
+    eps = 1e-3  # Default value of eps for MXNet.
+    use_global_stats = False  # Default value of use_global_stats for MXNet.
+    fix_gamma = True  # Default value of fix_gamma for MXNet.
     attrs = _get_attrs(node)
     if 'eps' in attrs:
         eps = literal_eval(attrs['eps'])
+    if 'fix_gamma' in attrs:
+        fix_gamma = literal_eval(attrs['fix_gamma'])
 
     args, aux = module.get_params()
     gamma = args[_get_node_name(net, inputs[1][0])].asnumpy()
@@ -484,6 +487,8 @@ def convert_batchnorm(net, node, module, builder):
     mean = aux[_get_node_name(net, inputs[3][0])].asnumpy()
     variance = aux[_get_node_name(net, inputs[4][0])].asnumpy()
     nb_channels = gamma.shape[0]
+    if fix_gamma:
+        gamma.fill(1.)
     builder.add_batchnorm(
         name=name,
         channels=nb_channels,
