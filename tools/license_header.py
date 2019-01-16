@@ -60,24 +60,31 @@ under the License."""
 _LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
 
 # the folders or files that will be ignored
-_WHITE_LIST = ['R-package/',
+_WHITE_LIST = [
+               # Licensed under docker/Dockerfiles/License.md
                'docker/Dockerfiles',
+
+               # Git submodules under different licenses
                '3rdparty',
-               'src/operator/mkl/',
+
+               # Code shared with project by author - see file for details
                'src/operator/special_functions-inl.h',
+
+               # Licensed under Caffe header
                'src/operator/nn/pool.h',
                'src/operator/contrib/psroi_pooling-inl.h',
                'src/operator/contrib/nn/deformable_im2col.h',
                'src/operator/contrib/nn/deformable_im2col.cuh',
                'src/operator/nn/im2col.h',
                'src/operator/nn/im2col.cuh',
+
+               # Licenses in headers
+               'docs/_static/searchtools_custom.js',
+               'docs/_static/js/clipboard.js',
+               'docs/_static/js/clipboard.min.js',
+
+               # Licensed under 2-Clause BSD in header
                'example/ssd/dataset/pycocotools/coco.py',
-               'example/rcnn/rcnn/cython/setup.py',
-               'example/rcnn/rcnn/cython/nms_kernel.cu',
-               'prepare_mkl.sh',
-               'example/image-classification/predict-cpp/image-classification-predict.cc',
-               'src/operator/contrib/ctc_include/',
-               'julia/REQUIRE'
                ]
 
 # language extensions and the according commment mark
@@ -85,7 +92,7 @@ _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
           '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
-          '.t':'#', '.ps1':'#', '.jl':'#'}
+          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
