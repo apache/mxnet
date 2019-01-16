@@ -51,12 +51,8 @@ public class ImageTest {
     public static void downloadFile() throws Exception {
         String tempDirPath = System.getProperty("java.io.tmpdir");
         imLocation = tempDirPath + "/inputImages/Pug-Cookie.jpg";
-        try {
-            downloadUrl("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg",
-                    imLocation, 3);
-        } catch (Exception e) {
-            throw e;
-        }
+        downloadUrl("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg",
+                imLocation, 3);
     }
 
     @Test
