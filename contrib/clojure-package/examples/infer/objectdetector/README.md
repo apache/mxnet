@@ -16,6 +16,9 @@ $ ./scripts/get_ssd_data.sh
 $
 $ lein run -- --help
 $ lein run -- -m models/resnet50_ssd/resnet50_ssd_model -i images/dog.jpg -d images/
+$ 
+$ # or the available lein alias
+$ lein run-detector
 $
 $ lein uberjar
 $ java -jar target/objectdetector-0.1.0-SNAPSHOT-standalone.jar --help
