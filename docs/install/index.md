@@ -478,10 +478,8 @@ You can use the Maven packages defined in the following dependency to include MX
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-    <scope>system</scope>
-    <version>1.4.0</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.4.0-SNAPSHOT.jar</systemPath>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <version>LATEST</version>
 </dependency>
 ```
 
@@ -781,10 +779,8 @@ You can use the Maven packages defined in the following dependency to include MX
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <version>1.4.0</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <version>LATEST</version>
 </dependency>
 ```
 <br>
@@ -795,30 +791,6 @@ Not available at this time. <br>
 
 </div>
 </div> <!-- End of java -->
-
-
-<div class="clojure">
-<div class="cpu">
-</br>
-You can use the Maven packages defined in the following `dependency` to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
-
-<a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
-
-```html
-<dependency>
-    <groupId>org.apache.mxnet.contrib.clojure</groupId>
-    <artifactId>clojure-mxnet-osx-cpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of cpu  -->
-<div class="gpu">
-
-Not available at this time. <br>
-
-</div> <!-- End of gpu -->
-</div> <!-- End of clojure -->
-
 
 
 <div class="julia">
