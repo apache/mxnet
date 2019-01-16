@@ -7340,7 +7340,7 @@ def test_corner_pooling():
                                     atol = 1e-4)
         check_numeric_gradient(sym=test, location=[x],
                                grad_nodes={'data':'write'},
-                               numeric_eps=1e-5, rtol=1e-1, atol=1e-4)
+                               numeric_eps=1e-5, rtol=1e-1, atol=1e-4) 
 
 
 @with_seed()
