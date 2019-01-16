@@ -20,6 +20,7 @@
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.util :as util]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
+            [org.apache.clojure-mxnet.primitives :as primitives]
             [org.apache.clojure-mxnet.symbol :as sym]
             [org.apache.clojure-mxnet.test-util :as test-util]
             [clojure.spec.alpha :as s])
@@ -53,6 +54,16 @@
   (let [x (util/->option 1)]
     (is (instance? Option x))
     (is (= 1 (.get x)))))
+
+(deftest test->int-option
+  (let [x (util/->int-option 4.5)]
+    (is (instance? Option x))
+    (is (= 4 (.get x)))))
+
+(deftest test-empty->int-option
+  (let [x (util/->int-option nil)]
+    (is (instance? Option x))
+    (is (.isEmpty x))))
 
 (deftest test-option->value
   (is (= 2 (-> (util/->option 2)
@@ -123,6 +134,9 @@
   (is (= "[F"  (->> (util/coerce-param [1 2] #{"float<>"}) str (take 2) (apply str))))
   (is (= "[L"  (->> (util/coerce-param [1 2] #{"java.lang.String<>"}) str (take 2) (apply str))))
 
+  (is (primitives/primitive? (util/coerce-param 1.0 #{"org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE"})))
+  (is (primitives/primitive? (util/coerce-param (float 1.0) #{"org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE"})))
+
   (is (= 1 (util/coerce-param 1 #{"unknown"}))))
 
 (deftest test-nil-or-coerce-param
@@ -161,6 +175,12 @@
                 (util/convert-tuple [1 2]))))
   (is (= [1 2 3] (util/coerce-return
                   (util/convert-tuple [1 2 3]))))
+
+  (is (instance? Double (util/coerce-return (primitives/mx-double 3))))
+  (is (= 3.0 (util/coerce-return (primitives/mx-double 3))))
+  (is (instance? Float (util/coerce-return (primitives/mx-float 2))))
+  (is (= 2.0 (util/coerce-return (primitives/mx-float 2))))
+
   (is (= "foo" (util/coerce-return "foo"))))
 
 (deftest test-translate-keyword-shape

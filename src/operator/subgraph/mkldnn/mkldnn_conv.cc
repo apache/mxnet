@@ -626,8 +626,12 @@ std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
 }
 
 nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
+  auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   nnvm::NodePtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
+  CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
+      << "Quantized Convolution of MKL-DNN only supports 2D kernel currently."
+      <<  "Please exclude this layer from the quantized model.";
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
   node->attrs.dict["quantized"] = "true";

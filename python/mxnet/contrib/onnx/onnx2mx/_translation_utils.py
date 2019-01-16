@@ -94,6 +94,7 @@ def _fix_pooling(pool_type, inputs, new_attr):
     stride = new_attr.get('stride')
     kernel = new_attr.get('kernel')
     padding = new_attr.get('pad')
+    p_value = new_attr.get('p_value')
 
     # Adding default stride.
     if stride is None:
@@ -138,7 +139,10 @@ def _fix_pooling(pool_type, inputs, new_attr):
             new_pad_op = symbol.pad(curr_sym, mode='constant', pad_width=pad_width)
 
     # Apply pooling without pads.
-    new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel)
+    if pool_type == 'lp':
+        new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel, p_value=p_value)
+    else:
+        new_pooling_op = symbol.Pooling(new_pad_op, pool_type=pool_type, stride=stride, kernel=kernel)
     return new_pooling_op
 
 def _fix_bias(op_name, attrs, num_inputs):

@@ -193,8 +193,8 @@ The outcome of this step will be a shared library `lib/libmxnet.so` that is used
 - Build and install the Scala package in your local Maven directory using the following commands:
 
   ```bash
-  make scalapkg
-  make scalainstall
+  cd scala-package
+  mvn install
   ```
 
 #### Building the Clojure jar

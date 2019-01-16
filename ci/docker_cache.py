@@ -30,12 +30,16 @@ import argparse
 import sys
 import subprocess
 import json
-import time
 from typing import *
 import build as build_util
+from util import retry
 
 DOCKERHUB_LOGIN_NUM_RETRIES = 5
 DOCKERHUB_RETRY_SECONDS = 5
+DOCKER_CACHE_NUM_RETRIES = 3
+DOCKER_CACHE_TIMEOUT_MINS = 15
+PARALLEL_BUILDS = 10
+
 
 def build_save_containers(platforms, registry, load_cache) -> int:
     """
@@ -49,7 +53,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     if len(platforms) == 0:
         return 0
 
-    platform_results = Parallel(n_jobs=len(platforms), backend="multiprocessing")(
+    platform_results = Parallel(n_jobs=PARALLEL_BUILDS, backend="multiprocessing")(
         delayed(_build_save_container)(platform, registry, load_cache)
         for platform in platforms)
 
@@ -107,6 +111,8 @@ def _upload_image(registry, docker_tag, image_id) -> None:
     subprocess.check_call(push_cmd)
 
 
+@retry(target_exception=subprocess.CalledProcessError, tries=DOCKERHUB_LOGIN_NUM_RETRIES,
+       delay_s=DOCKERHUB_RETRY_SECONDS)
 def _login_dockerhub():
     """
     Login to the Docker Hub account
@@ -114,30 +120,19 @@ def _login_dockerhub():
     """
     dockerhub_credentials = _get_dockerhub_credentials()
 
-    for i in range(DOCKERHUB_LOGIN_NUM_RETRIES):
-        logging.info('Logging in to DockerHub')
-        # We use password-stdin instead of --password to avoid leaking passwords in case of an error.
-        # This method will produce the following output:
-        # > WARNING! Your password will be stored unencrypted in /home/jenkins_slave/.docker/config.json.
-        # > Configure a credential helper to remove this warning. See
-        # > https://docs.docker.com/engine/reference/commandline/login/#credentials-store
-        # Since we consider the restricted slaves a secure environment, that's fine. Also, using this will require
-        # third party applications which would need a review first as well.
-        p = subprocess.run(['docker', 'login', '--username', dockerhub_credentials['username'], '--password-stdin'],
-                           stdout=subprocess.PIPE, input=str.encode(dockerhub_credentials['password']))
-        logging.info(p.stdout)
-        if p.returncode != 0:
-            logging.error('Error logging in to DockerHub')
-            logging.error(p.stderr)
+    logging.info('Logging in to DockerHub')
+    # We use password-stdin instead of --password to avoid leaking passwords in case of an error.
+    # This method will produce the following output:
+    # > WARNING! Your password will be stored unencrypted in /home/jenkins_slave/.docker/config.json.
+    # > Configure a credential helper to remove this warning. See
+    # > https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+    # Since we consider the restricted slaves a secure environment, that's fine. Also, using this will require
+    # third party applications which would need a review first as well.
+    p = subprocess.run(['docker', 'login', '--username', dockerhub_credentials['username'], '--password-stdin'],
+                       stdout=subprocess.PIPE, input=str.encode(dockerhub_credentials['password']))
+    logging.info(p.stdout)
+    logging.info('Successfully logged in to DockerHub')
 
-            # Linear backoff
-            time.sleep(1000 * DOCKERHUB_RETRY_SECONDS * (i + 1))
-        else:
-            logging.info('Successfully logged in to DockerHub')
-            break
-    else:
-        logging.error('DockerHub login not possible after %d retries, aborting', DOCKERHUB_LOGIN_NUM_RETRIES)
-        raise Exception('Unable to log in to DockerHub')
 
 def _logout_dockerhub():
     """
@@ -149,6 +144,8 @@ def _logout_dockerhub():
     logging.info('Successfully logged out of DockerHub')
 
 
+@retry(target_exception=subprocess.TimeoutExpired, tries=DOCKER_CACHE_NUM_RETRIES,
+       delay_s=DOCKERHUB_RETRY_SECONDS)
 def load_docker_cache(registry, docker_tag) -> None:
     """
     Load the precompiled docker cache from the registry
@@ -163,7 +160,10 @@ def load_docker_cache(registry, docker_tag) -> None:
 
     logging.info('Loading Docker cache for %s from %s', docker_tag, registry)
     pull_cmd = ['docker', 'pull', docker_tag]
-    subprocess.call(pull_cmd)  # Don't throw an error if the image does not exist
+
+    # Don't throw an error if the image does not exist
+    subprocess.run(pull_cmd, timeout=DOCKER_CACHE_TIMEOUT_MINS*60)
+    logging.info('Successfully pulled docker cache')
 
 
 def delete_local_docker_cache(docker_tag):
@@ -211,8 +211,7 @@ def _get_dockerhub_credentials():  # pragma: no cover
             logging.exception("The request was invalid due to:")
         elif client_error.response['Error']['Code'] == 'InvalidParameterException':
             logging.exception("The request had invalid params:")
-        else:
-            raise
+        raise
     else:
         secret = get_secret_value_response['SecretString']
         secret_dict = json.loads(secret)
