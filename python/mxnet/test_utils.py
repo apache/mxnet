@@ -654,8 +654,8 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) if isinstance(v, np.ndarray) \
-               else v for k, v in location.items()}
+    location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+               if isinstance(v, np.ndarray) else v for k, v in location.items()}
     return location
 
 
@@ -719,7 +719,8 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) for k, v in aux_states.items()}
+        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+                      for k, v in aux_states.items()}
     return aux_states
 
 
@@ -997,7 +998,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
                                    dtype=dtype)
     if isinstance(expected, dict):
         expected = [expected[k] for k in sym.list_outputs()]
-    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) for k, v in location.items()}
+    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+                      for k, v in location.items()}
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
