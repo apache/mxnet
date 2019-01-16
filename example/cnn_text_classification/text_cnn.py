@@ -19,7 +19,9 @@
 
 # -*- coding: utf-8 -*-
 
-"""Implementing CNN + Highway Network for Text Classification in MXNet"""
+"""
+Implementing CNN + Highway Network for Text Classification in MXNet
+"""
 
 import os
 import logging
