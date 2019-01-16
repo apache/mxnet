@@ -367,14 +367,6 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-However, if grad's storage type is ``row_sparse``, ``lazy_update`` is True and weight's storage
-type is the same as momentum's storage type,
-only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
-
-  for row in gradient.indices:
-      v[row] = momentum[row] * v[row] - learning_rate * gradient[row]
-      weight[row] += v[row]
-
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
     const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
@@ -472,14 +464,6 @@ It updates the weights using::
   weight += v
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
-
-However, if grad's storage type is ``row_sparse``, ``lazy_update`` is True and weight's storage
-type is the same as momentum's storage type,
-only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
-
-  for row in gradient.indices:
-      v[row] = momentum[row] * v[row] - learning_rate * gradient[row]
-      weight[row] += v[row]
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {

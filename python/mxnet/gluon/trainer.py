@@ -60,7 +60,8 @@ class Trainer(object):
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     update_on_kvstore : bool, default None
         Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
-        suitable option depending on the type of kvstore.
+        suitable option depending on the type of kvstore. If the `update_on_kvstore` argument is
+        provided, environment variable `MXNET_UPDATE_ON_KVSTORE` will be ignored.
 
     Properties
     ----------
