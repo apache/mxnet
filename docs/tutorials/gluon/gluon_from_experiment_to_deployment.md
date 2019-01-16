@@ -1,8 +1,9 @@
 
-# Gluon: from experiment to deployment, an end to end example
+# Gluon: from experiment to deployment, an end to end tutorial
 
 ## Overview
 MXNet Gluon API comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
+This tutorial covers training and inference in Python, please continue to [C++ inference part](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/c++/mxnet_cpp_inference_tutorial.md) after you finish.
 
 Let's say you need to build a service that provides flower species recognition. A common problem is that you don't have enough data to train a good model. In such cases, a technique called Transfer Learning can be used to make a more robust model.
 In Transfer Learning we make use of a pre-trained model that solves a related task, and was trained on a very large standard dataset, such as ImageNet. ImageNet is from a different domain, but we can utilize the knowledge in this pre-trained model to perform the new task at hand.
@@ -18,7 +19,6 @@ To complete this tutorial, you need:
 
 - [Build MXNet from source](https://mxnet.incubator.apache.org/install/ubuntu_setup.html#build-mxnet-from-source) with Python(Gluon) and C++ Packages
 - Learn the basics about Gluon with [A 60-minute Gluon Crash Course](https://gluon-crash-course.mxnet.io/)
-- Learn the basics about [MXNet C++ API](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
 
 
 ## The Data
@@ -28,6 +28,7 @@ We have prepared a utility file to help you download and organize your data into
 
 
 ```python
+import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
 base_url = "https://raw.githubusercontent.com/roywei/incubator-mxnet/gluon_tutorial/docs/tutorial_utils/data/{}?raw=true"
 mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
@@ -42,20 +43,20 @@ Now your data will be organized into the following format, all the images belong
 ```bash
 data
 |--train
-|   |-- 0
+|   |-- class0
 |   |   |-- image_06736.jpg
 |   |   |-- image_06741.jpg
 ...
-|   |-- 1
+|   |-- class1
 |   |   |-- image_06755.jpg
 |   |   |-- image_06899.jpg
 ...
 |-- test
-|   |-- 0
+|   |-- class0
 |   |   |-- image_00731.jpg
 |   |   |-- image_0002.jpg
 ...
-|   |-- 1
+|   |-- class1
 |   |   |-- image_00036.jpg
 |   |   |-- image_05011.jpg
 
@@ -74,7 +75,6 @@ import os
 import time
 from multiprocessing import cpu_count
 
-import mxnet as mx
 from mxnet import autograd
 from mxnet import gluon, init
 from mxnet.gluon import nn
@@ -107,14 +107,18 @@ Now we will apply data augmentations on training images. This makes minor altera
 1. Randomly crop the image and resize it to 224x224
 2. Randomly flip the image horizontally
 3. Randomly jitter color and add noise
-4. Transpose the data from height*width*num_channels to num_channels*height*width, and map values from [0, 255] to [0, 1]
+4. Transpose the data from `[height, width, num_channels]` to `[num_channels, height, width]`, and map values from [0, 255] to [0, 1]
 5. Normalize with the mean and standard deviation from the ImageNet dataset.
 
-
+For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/c++/mxnet_cpp_inference_tutorial.md).
 
 ```python
 jitter_param = 0.4
 lighting_param = 0.1
+
+# mean and std for normalizing image value in range (0,1)
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
 
 training_transformer = transforms.Compose([
     transforms.RandomResizedCrop(224),
@@ -123,16 +127,20 @@ training_transformer = transforms.Compose([
                                  saturation=jitter_param),
     transforms.RandomLighting(lighting_param),
     transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    transforms.Normalize(mean, std)
 ])
 
 validation_transformer = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
     transforms.ToTensor(),
-    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    transforms.Normalize(mean, std)
 ])
 
+# save mean and std NDArray values for inference
+mean_img = mx.nd.stack(*[mx.nd.full((224, 224), m) for m in mean])
+std_img = mx.nd.stack(*[mx.nd.full((224, 224), s) for s in std])
+mx.nd.save('mean_std_224.nd', {"mean_img": mean_img, "std_img": std_img})
 
 train_path = os.path.join(path, 'train')
 val_path = os.path.join(path, 'valid')
@@ -256,219 +264,60 @@ finetune_net.export("flower-recognition", epoch=epochs)
 
 ```
 
-`export` creates `flower-recognition-symbol.json` and `flower-recognition-0020.params` (`0020` is for 20 epochs we ran) in the current directory. These files can be used for model deployment in the next section.
+`export` creates `flower-recognition-symbol.json` and `flower-recognition-0040.params` (`0040` is for 40 epochs we ran) in the current directory. These files can be used for model deployment in the next section.
 
+## Load the model and run inference using the MXNet Module API
 
-## Load the model and run inference using the MXNet C++ API
+MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily.
+Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python](https://mxnet.incubator.apache.org/api/python/module/module.html),    [Java](https://mxnet.incubator.apache.org/api/java/index.html), [Scala](https://mxnet.incubator.apache.org/api/scala/index.html), and [C++](https://mxnet.incubator.apache.org/api/c++/index.html) APIs.
 
-MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily. Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Java](https://mxnet.incubator.apache.org/api/java/index.html), [Scala](https://mxnet.incubator.apache.org/api/scala/index.html), and [C++](https://mxnet.incubator.apache.org/api/c++/index.html) APIs. In this tutorial, we will focus on the MXNet C++ API. For more details, please refer to the [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference).
+Here we will briefly introduce how to run inference using Module API in Python. There is more detailed explanation available in the [Predict Image Tutorial](https://mxnet.incubator.apache.org/tutorials/python/predict_image.html).
+In general, prediction consists of the following steps:
+1. Load the model architecture (symbol file) and trained parameter values (params file)
+2. Load the synset file for label names
+3. Load the image and apply the same transformation we did on validation dataset during training
+4. Run a forward pass on the image data
+5. Convert output probabilities to predicted label name
 
+```python
+import numpy as np
+from collections import namedtuple
 
-### Setup the MXNet C++ API
-To use the C++ API in MXNet, you need to build MXNet from source with C++ package. Please follow the [built from source guide](https://mxnet.incubator.apache.org/install/ubuntu_setup.html), and [C++ Package documentation](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
-to enable the C++ API.
-The summary of those two documents is that you need to build MXNet from source with `USE_CPP_PACKAGE` flag set to 1. For example: `make -j USE_CPP_PACKAGE=1`.
+ctx = mx.cpu()
+# load model symbol and params
+sym, arg_params, aux_params = mx.model.load_checkpoint('flower-recognition', epochs)
+mod = mx.mod.Module(symbol=sym, context=ctx, label_names=None)
+mod.bind(for_training=False, data_shapes=[('data', (1, 3, 224, 224))], label_shapes=mod._label_shapes)
+mod.set_params(arg_params, aux_params, allow_missing=True)
 
-### Write a predictor using the MXNet C++ API
-Now let's add a method to load the input image and convert it to NDArray for prediction.
-1. Load the pre-trained model
-2. Load the parameters of pre-trained model
-3. Load the image to be classified in to NDArray
-4. Run the forward pass and predict the class of the input image
+# load synset for label names
+with open('synset.txt', 'r') as f:
+    labels = [l.rstrip() for l in f]
 
-```cpp
-class Predictor {
- public:
-    Predictor() {}
-    Predictor(const std::string& model_json_file,
-              const std::string& model_params_file,
-              const Shape& input_shape,
-              bool gpu_context_type = false,
-              const std::string& synset_file = "",
-              const std::string& mean_image_file = "");
-    void PredictImage(const std::string& image_file);
-    ~Predictor();
-
- private:
-    void LoadModel(const std::string& model_json_file);
-    void LoadParameters(const std::string& model_parameters_file);
-    void LoadSynset(const std::string& synset_file);
-    NDArray LoadInputImage(const std::string& image_file);
-    void LoadMeanImageData();
-    void LoadDefaultMeanImageData();
-    void NormalizeInput(const std::string& mean_image_file);
-    inline bool FileExists(const std::string& name) {
-        struct stat buffer;
-        return (stat(name.c_str(), &buffer) == 0);
-    }
-    NDArray mean_img;
-    std::map<std::string, NDArray> args_map;
-    std::map<std::string, NDArray> aux_map;
-    std::vector<std::string> output_labels;
-    Symbol net;
-    Executor *executor;
-    Shape input_shape;
-    NDArray mean_image_data;
-    NDArray std_dev_image_data;
-    Context global_ctx = Context::cpu();
-    std::string mean_image_file;
-};
+# load an image for prediction
+img = mx.image.imread('./data/test/lotus/image_01832.jpg')
+# apply transform we did during training
+img = validation_transformer(img)
+# batchify
+img = img.expand_dims(axis=0)
+Batch = namedtuple('Batch', ['data'])
+mod.forward(Batch([img]))
+prob = mod.get_outputs()[0].asnumpy()
+prob = np.squeeze(prob)
+idx = np.argmax(prob)
+print('probability=%f, class=%s' % (prob[idx], labels[idx]))
 ```
 
-### Load network symbol and parameters
-
-In the Predictor constructor, you need to provide paths to saved json and param files. After that, add the following two methods to load the network and its parameters.
-
-```cpp
-/*
- * The following function loads the model from json file.
- */
-void Predictor::LoadModel(const std::string& model_json_file) {
-  if (!FileExists(model_json_file)) {
-    LG << "Model file " << model_json_file << " does not exist";
-    throw std::runtime_error("Model file does not exist");
-  }
-  LG << "Loading the model from " << model_json_file << std::endl;
-  net = Symbol::Load(model_json_file);
-}
-
-
-/*
- * The following function loads the model parameters.
- */
-void Predictor::LoadParameters(const std::string& model_parameters_file) {
-  if (!FileExists(model_parameters_file)) {
-    LG << "Parameter file " << model_parameters_file << " does not exist";
-    throw std::runtime_error("Model parameters does not exist");
-  }
-  LG << "Loading the model parameters from " << model_parameters_file << std::endl;
-  std::map<std::string, NDArray> parameters;
-  NDArray::Load(model_parameters_file, 0, &parameters);
-  for (const auto &k : parameters) {
-    if (k.first.substr(0, 4) == "aux:") {
-      auto name = k.first.substr(4, k.first.size() - 4);
-      aux_map[name] = k.second.Copy(global_ctx);
-    }
-    if (k.first.substr(0, 4) == "arg:") {
-      auto name = k.first.substr(4, k.first.size() - 4);
-      args_map[name] = k.second.Copy(global_ctx);
-    }
-  }
-  /*WaitAll is need when we copy data between GPU and the main memory*/
-  NDArray::WaitAll();
-}
-```
-
-### Load Input Image
-
-Now let's add a method to load the input image we want to predict and converts it to NDArray for prediction.
-```cpp
-NDArray Predictor::LoadInputImage(const std::string& image_file) {
-  if (!FileExists(image_file)) {
-    LG << "Image file " << image_file << " does not exist";
-    throw std::runtime_error("Image file does not exist");
-  }
-  LG << "Loading the image " << image_file << std::endl;
-  std::vector<float> array;
-  cv::Mat mat = cv::imread(image_file);
-  /*resize pictures to (224, 224) according to the pretrained model*/
-  int height = input_shape[2];
-  int width = input_shape[3];
-  int channels = input_shape[1];
-  cv::resize(mat, mat, cv::Size(height, width));
-  for (int c = 0; c < channels; ++c) {
-    for (int i = 0; i < height; ++i) {
-      for (int j = 0; j < width; ++j) {
-        array.push_back(static_cast<float>(mat.data[(i * height + j) * 3 + c]));
-      }
-    }
-  }
-  NDArray image_data = NDArray(input_shape, global_ctx, false);
-  image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
-  NDArray::WaitAll();
-  return image_data;
-}
-```
-
-### Create a predict image class
-
-Finally, let's run the inference. It's basically using MXNet executor to do a forward pass. To run predictions on multiple images, you can load the images in a list of NDArrays and run prediction in batches. Note that the Predictor class may not be thread safe. Calling it in multi-threaded environments was not tested. To utilize multi-threaded prediction, you need to use the C predict API. Please follow the [C predict example](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/predict-cpp).
-
-```cpp
-void Predictor::PredictImage(const std::string& image_file) {
-  // Load the input image
-  NDArray image_data = LoadInputImage(image_file);
-
-  // Normalize the image
-  image_data.Slice(0, 1) -= mean_image_data;
-
-  LG << "Running the forward pass on model to predict the image";
-  /*
-   * The executor->arg_arrays represent the arguments to the model.
-   *
-   * Copying the image_data that contains the NDArray of input image
-   * to the arg map of the executor. The input is stored with the key "data" in the map.
-   *
-   */
-  image_data.CopyTo(&(executor->arg_dict()["data"]));
-  NDArray::WaitAll();
-
-  // Run the forward pass.
-  executor->Forward(false);
-
-  // The output is available in executor->outputs.
-  auto array = executor->outputs[0].Copy(global_ctx);
-  NDArray::WaitAll();
-
-  /*
-   * Find out the maximum accuracy and the index associated with that accuracy.
-   * This is done by using the argmax operator on NDArray.
-   */
-  auto predicted = array.ArgmaxChannel();
-  NDArray::WaitAll();
-
-  int best_idx = predicted.At(0, 0);
-  float best_accuracy = array.At(0, best_idx);
-
-  if (output_labels.empty()) {
-    LG << "The model predicts the highest accuracy of " << best_accuracy << " at index "
-       << best_idx;
-  } else {
-    LG << "The model predicts the input image to be a [" << output_labels[best_idx]
-       << " ] with Accuracy = " << best_accuracy << std::endl;
-  }
-}
-```
-
-### Compile and run the inference code
-
-You can find the [full code for the inference example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) in the `cpp-package` folder of the project
-, and to compile it use this [Makefile](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/Makefile).
-
-Now you will be able to compile the run inference. Run `make all`. Once this is complete, run inference with the the following parameters:
-
+Following is the output, you can see the image has been classified as lotus correctly.
 ```bash
-make all
-LD_LIBRARY_PATH=../incubator-mxnet/lib/ ./inception_inference --symbol "flower-recognition-symbol.json" --params "flower-recognition-0020.params" --image ./data/test/0/image_06736.jpg
+probability=9.798435, class=lotus
 ```
-
-Then it will predict your image:
-
-```bash
-[22:26:49] inception_inference.cpp:128: Loading the model from flower-recognition-symbol.json
-
-[22:26:49] inception_inference.cpp:137: Loading the model parameters from flower-recognition-0020.params
-
-[22:26:50] inception_inference.cpp:179: Loading the image ./data/test/0/image_06736.jpg
-
-[22:26:50] inception_inference.cpp:230: Running the forward pass on model to predict the image
-[22:26:50] inception_inference.cpp:260: The model predicts the highest accuracy of 7.17001 at index 3
-```
-
 
 ## What's next
 
-You can find more ways to run inference and deploy your models here:
+You can continue to the [next tutorial](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/c++/mxnet_cpp_inference_tutorial.md) on how to load the model we just trained and run inference using MXNet C++ API.
+
+You can also find more ways to run inference and deploy your models here:
 1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 2. [Scala Inference examples](https://mxnet.incubator.apache.org/tutorials/scala/)
 3. [ONNX model inference examples](https://mxnet.incubator.apache.org/tutorials/onnx/inference_on_onnx_model.html)
@@ -477,8 +326,9 @@ You can find more ways to run inference and deploy your models here:
 ## References
 
 1. [Transfer Learning for Oxford102 Flower Dataset](https://github.com/Arsey/keras-transfer-learning-for-oxford102)
-2. [Gluon tutorial on fine-tuning](https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
-3. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
-4. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
+2. [Gluon book on fine-tuning](https://gluon.mxnet.io/chapter08_computer-vision/fine-tuning.html)
+3. [Gluon CV transfer learning tutorial](https://gluon-cv.mxnet.io/build/examples_classification/transfer_learning_minc.html)
+4. [Gluon crash course](https://gluon-crash-course.mxnet.io/)
+5. [Gluon CPP inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

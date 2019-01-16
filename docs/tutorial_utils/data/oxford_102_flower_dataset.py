@@ -31,6 +31,110 @@ import numpy as np
 from mxnet import gluon
 from scipy.io import loadmat
 
+label_names = [
+    'pink primrose',
+    'hard-leaved pocket orchid',
+    'canterbury bells',
+    'sweet pea',
+    'english marigold',
+    'tiger lily',
+    'moon orchid',
+    'bird of paradise',
+    'monkshood',
+    'globe thistle',
+    'snapdragon',
+    "colt's foot",
+    'king protea',
+    'spear thistle',
+    'yellow iris',
+    'globe-flower',
+    'purple coneflower',
+    'peruvian lily',
+    'balloon flower',
+    'giant white arum lily',
+    'fire lily',
+    'pincushion flower',
+    'fritillary',
+    'red ginger',
+    'grape hyacinth',
+    'corn poppy',
+    'prince of wales feathers',
+    'stemless gentian',
+    'artichoke',
+    'sweet william',
+    'carnation',
+    'garden phlox',
+    'love in the mist',
+    'mexican aster',
+    'alpine sea holly',
+    'ruby-lipped cattleya',
+    'cape flower',
+    'great masterwort',
+    'siam tulip',
+    'lenten rose',
+    'barbeton daisy',
+    'daffodil',
+    'sword lily',
+    'poinsettia',
+    'bolero deep blue',
+    'wallflower',
+    'marigold',
+    'buttercup',
+    'oxeye daisy',
+    'common dandelion',
+    'petunia',
+    'wild pansy',
+    'primula',
+    'sunflower',
+    'pelargonium',
+    'bishop of llandaff',
+    'gaura',
+    'geranium',
+    'orange dahlia',
+    'pink-yellow dahlia?',
+    'cautleya spicata',
+    'japanese anemone',
+    'black-eyed susan',
+    'silverbush',
+    'californian poppy',
+    'osteospermum',
+    'spring crocus',
+    'bearded iris',
+    'windflower',
+    'tree poppy',
+    'gazania',
+    'azalea',
+    'water lily',
+    'rose',
+    'thorn apple',
+    'morning glory',
+    'passion flower',
+    'lotus',
+    'toad lily',
+    'anthurium',
+    'frangipani',
+    'clematis',
+    'hibiscus',
+    'columbine',
+    'desert-rose',
+    'tree mallow',
+    'magnolia',
+    'cyclamen',
+    'watercress',
+    'canna lily',
+    'hippeastrum ',
+    'bee balm',
+    'ball moss',
+    'foxglove',
+    'bougainvillea',
+    'camellia',
+    'mallow',
+    'mexican petunia',
+    'bromelia',
+    'blanket flower',
+    'trumpet creeper',
+    'blackberry lily'
+]
 
 def download_data():
     data_url = 'http://www.robots.ox.ac.uk/~vgg/data/flowers/102/'
@@ -47,6 +151,7 @@ def download_data():
         os.mkdir(data_path)
     if not os.path.isfile(image_path):
         gluon.utils.download(url=data_url + image_file_name, path=data_path)
+    if not os.path.exists(os.path.join(data_path, 'jpg')):
         print("Extracting downloaded dataset...")
         tarfile.open(image_path).extractall(path=data_path)
     if not os.path.isfile(label_path):
@@ -57,7 +162,7 @@ def download_data():
 
 def prepare_data():
     # Read .mat file containing training, testing, and validation sets.
-    global data_path, image_path, label_path, setid_path
+    global data_path, image_path, label_path, setid_path, label_names
     setid = loadmat(setid_path)
 
     idx_train = setid['trnid'][0] - 1
@@ -70,6 +175,8 @@ def prepare_data():
     # Subtract one to get 0-based labels
     image_labels -= 1
 
+    # convert label from number to flower names
+    image_labels = [label_names[i] for i in image_labels]
     # extracted images are stored in folder 'jpg'
     files = sorted(glob.glob(os.path.join(data_path, 'jpg', '*.jpg')))
     file_label_pairs = np.array([i for i in zip(files, image_labels)])
@@ -79,13 +186,14 @@ def prepare_data():
     move_files('test', file_label_pairs[idx_train, :])
     move_files('valid', file_label_pairs[idx_valid, :])
 
+
 def move_files(dir_name, file_label_pairs):
     data_segment_dir = os.path.join(data_path, dir_name)
     if not os.path.exists(data_segment_dir):
         os.mkdir(data_segment_dir)
 
-    for i in range(0, 102):
-        class_dir = os.path.join(data_segment_dir, str(i))
+    for label in label_names:
+        class_dir = os.path.join(data_segment_dir, label)
         if not os.path.exists(class_dir):
             os.mkdir(class_dir)
 
@@ -95,8 +203,17 @@ def move_files(dir_name, file_label_pairs):
         copyfile(src, dst)
 
 
+def generate_synset():
+    with open('synset.txt', 'w') as f:
+        # Gluon Dataset API will load synset in sorted order
+        for label in sorted(label_names):
+            f.write(label.strip() + '\n')
+        f.close()
+
+
 def get_data(dir_name):
     global data_path
     data_path = dir_name
     download_data()
     prepare_data()
+    generate_synset()
