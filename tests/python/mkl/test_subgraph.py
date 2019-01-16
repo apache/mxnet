@@ -103,7 +103,6 @@ def check_quantize(sym, data_shape, check_conv=True):
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
                                                                    calib_layer=calib_layer,
-                                                                   calib_quantize_op=True,
                                                                    num_calib_examples=5)
   qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
   if check_conv:

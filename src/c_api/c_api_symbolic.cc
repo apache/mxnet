@@ -650,8 +650,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const char **excluded_op_names,
                      const mx_uint num_offline,
                      const char **offline_params,
-                     const char *quantized_dtype,
-                     const bool calib_quantize) {
+                     const char *quantized_dtype) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol*>(sym_handle);
@@ -668,7 +667,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
-  g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(calib_quantize);
+  g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(true);
   g = ApplyPass(std::move(g), "QuantizeGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;

@@ -81,7 +81,7 @@ def _quantize_params(qsym, params, th_dict):
     return quantized_params
 
 def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
-                     quantized_dtype='int8', calib_quantize_op=False):
+                     quantized_dtype='int8'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -98,8 +98,6 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
         avoided.
     quantized_dtype: str
         The quantized destination type for input data.
-    calib_quantize_op : bool
-        Whether perform offline calibration for quantize op.
     """
     num_excluded_symbols = 0
     if excluded_symbols is not None:
@@ -122,8 +120,7 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
                                      c_str_array(excluded_symbols),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
-                                     c_str(quantized_dtype),
-                                     ctypes.c_bool(calib_quantize_op)))
+                                     c_str(quantized_dtype)))
     return Symbol(out)
 
 
@@ -424,7 +421,7 @@ def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None, calib_layer=None,
-                   quantized_dtype='int8', calib_quantize_op=False, logger=logging):
+                   quantized_dtype='int8', logger=logging):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -477,8 +474,6 @@ def quantize_model(sym, arg_params, aux_params,
     quantized_dtype : str
         The quantized destination type for input data. Currently support 'int8'
         and 'uint8', default value is 'int8'.
-    calib_quantize_op: bool
-        Whether calibrate quantize op with its input calibration data. The quantize op's input should be in calib_layer
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -501,8 +496,7 @@ def quantize_model(sym, arg_params, aux_params,
                          ' expected `int8` or `uint8`' % quantized_dtype)
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
-                            quantized_dtype=quantized_dtype,
-                            calib_quantize_op=calib_quantize_op)
+                            quantized_dtype=quantized_dtype)
 
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
