@@ -7,7 +7,7 @@ This is an project created to run the test suite on a fully packaged mxnet jar. 
 To setup the packageTest, you must first build your tests. To build the tests, follow these steps from the mxnet main directory:
 
 1. Build MXNet and the scala package from source following the directions [here](https://mxnet.incubator.apache.org/install/scala_setup.html#source)
-2. Build the tests by running `make scalatestcompile`.
+2. Build the tests by running `mvn test-compile`.
 3. Follow setup instructions below for your testing goal
 
 ## Running
@@ -18,13 +18,13 @@ There are three different modes of operation for testing based on the location o
 
 If you have a jar file, you can install it to your maven cache repository(`~/.m2/repository`). This might be useful if you acquire the .jar file from elsewhere. To install, it is easiest to use `mvn install:install-file -Dfile=<path-to-file> -DpomFile=<path-to-pomfile>`. If the pom file is not available, you can also run `mvn install:install-file -Dfile=<path-to-file> -DgroupId=<group-id> -DartifactId=<artifact-id> -Dversion=<version> -Dpackaging=<packaging>`. With the full mxnet jar, this might look like `mvn install:install-file -Dfile=<path-to-file> -DgroupId=org.apache.mxnet -DartifactId=mxnet-full_2.11-linux-x86_64-cpu -Dversion=1.3.0 -Dpackaging=jar`.
 
-You can also run `make scalainstall` to install from a local build.
+You can also run `mvn install` to install from a local build.
 
 After installing, run `make testinstall` in the package test directory to run the tests.  Note that unless you also install an additional mxnetexamples jar, you can only run the unit tests.
 
 ### Test Local Deployment
 
-To test the jars that would be produced by a deployment, you can run `make scaladeploylocal` from the main mxnet directory. This produces a local snapshot located at `scala-package/local-snapshot`. To test this local snapshot, run `make testlocal`.
+To test the jars that would be produced by a deployment, you can run `mvn deploy` from the main mxnet directory. This produces a local snapshot located at `scala-package/deploy/target/repo`. To test this local snapshot, run `make testlocal`.  It also installs the component packages needed for testing the examples in `scala-package/*/target/repo`.
 
 ### Remote Repository Snapshot
 
@@ -36,11 +36,13 @@ Test the snapshot repo using `make testsnapshot` or a different repo using `make
 
 You are able to run unit tests, integration tests, or both using this utility. To run the unit tests, add the flag `UNIT=1` to make (e.g. `make testsnapshot UNIT=1`). Use `INTEGRATION=1` for integration tests. The default behavior is to run both the unit and integration tests. However, the integration tests require that the mxnet examples be installed in addition to the full mxnet package (see test mode instructions above).
 
+For running on GPU, add the flag `USE_CUDA=1`.
+
 An additional option, you can specify the mxnet version with `MXNET_VERSION=1.3.1-SNAPSHOT`.
 
 ## Cleaning Up
 
-You can clean temporary files and target artifacts by running `make scalaclean`.
+You can clean temporary files and target artifacts by running `make clean`.
 
 ## Troubleshooting
 

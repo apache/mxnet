@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 //mxnet libraries
-mx_scala_pub = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, config.mk, scala-package/pom.xml, scala-package/**/pom.xml, scala-package/*/target/**, scala-package/local-snapshot/**'
+mx_scala_pub = 'lib/**, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, config.mk, scala-package/pom.xml, scala-package/**/pom.xml, scala-package/**/target/**, scala-package/*/target/repo/**'
 
 // timeout in minutes
 max_time = 120
@@ -34,8 +34,9 @@ node('restricted-utility') {
 utils.assign_node_labels(utility: 'restricted-utility', linux_cpu: 'restricted-mxnetlinux-cpu', linux_gpu: 'restricted-mxnetlinux-gpu', linux_gpu_p3: 'restricted-mxnetlinux-gpu-p3', windows_cpu: 'restricted-mxnetwindows-cpu', windows_gpu: 'restricted-mxnetwindows-gpu')
 
 // CPU and GPU. OSX nodes are not currently supported by Jenkins
-def nodeMap = ['cpu': NODE_LINUX_CPU, 'gpu': NODE_LINUX_GPU]
+def nodeMap = ['cpu': NODE_LINUX_CPU, 'gpu': NODE_LINUX_GPU_P3]
 def scalaOSMap = ['cpu': 'linux-x86_64-cpu', 'gpu': 'linux-x86_64-gpu']
+def scalaVariantMap = ['cpu': 'cpu', 'gpu': 'cu92']
 
 def wrapStep(nodeToRun, workspaceName, step) {
   return {
@@ -50,13 +51,13 @@ def wrapStep(nodeToRun, workspaceName, step) {
 }
 
 def toBuild = [:]
-def labels = ['cpu'] // , 'gpu']
+def labels = ['cpu', 'gpu']
 for (x in labels) {
   def label = x // Required due to language
-  toBuild["Scala Build ${label}"] = wrapStep(nodeMap[label], "build-scala-${label}") {
-    withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}"]) {
+  toBuild["Scala Build ${label}"] = wrapStep(nodeMap['cpu'], "build-scala-${label}") {
+    withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}", "mxnet_variant=${scalaVariantMap[label]}"]) {
       utils.init_git()
-      utils.docker_run("ubuntu_${label}", 'publish_scala_build', label == 'gpu', '500m', 'MAVEN_PUBLISH_OS_TYPE')
+      utils.docker_run("publish.ubuntu1404_cpu", 'publish_scala_build', false, '500m', 'MAVEN_PUBLISH_OS_TYPE mxnet_variant')
       utils.pack_lib("scala_${label}", mx_scala_pub, false)
     }
   }
@@ -69,8 +70,10 @@ for (x in labels) {
   for (y in systems) {
     def system = y // Required due to language
     toTest["Scala Test ${system} ${label}"] = wrapStep(nodeMap[label], "test-scala-${system}-${label}") {
-      utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
-      utils.docker_run("publish.test.${system}_${label}", 'publish_scala_test', label == 'gpu')
+      withEnv(["mxnet_variant=${scalaVariantMap[label]}"]) {
+        utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
+        utils.docker_run("publish.test.${system}_${label}", 'publish_scala_test', label == 'gpu', '500m', 'mxnet_variant')
+      }
     }
   }
 }
@@ -78,10 +81,10 @@ for (x in labels) {
 def toDeploy = [:]
 for (x in labels) {
   def label = x // Required due to language
-  toDeploy["Scala Deploy ${label}"] = wrapStep(nodeMap[label], "deploy-scala-${label}") {
-    withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}"]) {
+  toDeploy["Scala Deploy ${label}"] = wrapStep(nodeMap['cpu'], "deploy-scala-${label}") {
+    withEnv(["MAVEN_PUBLISH_OS_TYPE=${scalaOSMap[label]}", "mxnet_variant=${scalaVariantMap[label]}"]) {
       utils.unpack_and_init("scala_${label}", mx_scala_pub, false)
-      utils.docker_run("ubuntu_${label}", 'publish_scala_deploy', label == 'gpu', '500m', 'MAVEN_PUBLISH_OS_TYPE MAVEN_PUBLISH_SECRET_ENDPOINT_URL MAVEN_PUBLISH_SECRET_NAME_CREDENTIALS MAVEN_PUBLISH_SECRET_NAME_GPG DOCKERHUB_SECRET_ENDPOINT_REGION')
+      utils.docker_run("publish.ubuntu1604_cpu", 'publish_scala_deploy', false, '500m', 'MAVEN_PUBLISH_OS_TYPE MAVEN_PUBLISH_SECRET_ENDPOINT_URL MAVEN_PUBLISH_SECRET_NAME_CREDENTIALS MAVEN_PUBLISH_SECRET_NAME_GPG DOCKERHUB_SECRET_ENDPOINT_REGION mxnet_variant')
     }
   }
 }
@@ -101,7 +104,7 @@ core_logic: {
 ,
 failure_handler: {
   if (currentBuild.result == "FAILURE") {
-    // emailext body: 'Generating the nightly maven has failed. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[NIGHTLY MAVEN FAILED] Build ${BUILD_NUMBER}', to: '${EMAIL}'
+    emailext body: 'Generating the nightly maven has failed. Please view the build at ${BUILD_URL}', replyTo: '${EMAIL}', subject: '[NIGHTLY MAVEN FAILED] Build ${BUILD_NUMBER}', to: '${EMAIL}'
   }
 }
 )

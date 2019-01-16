@@ -36,9 +36,6 @@ apt-get install -y \
     openjdk-8-jdk \
     openjdk-8-jre \
     software-properties-common \
-    gnupg \
-    gnupg2 \
-    gnupg-agent \
     scala
 
 # Ubuntu 14.04

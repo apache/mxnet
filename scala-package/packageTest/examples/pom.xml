@@ -21,6 +21,53 @@
           <skipTests>false</skipTests>
         </properties>
       </profile>
+      <profile>
+        <id>fromLocal</id>
+        <repositories>
+          <repository>
+            <id>parent</id>
+            <url>file://${basedir}/../../target/repo</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+          <repository>
+            <id>init</id>
+            <url>file://${basedir}/../../init/target/repo</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+          <repository>
+            <id>macros</id>
+            <url>file://${basedir}/../../macros/target/repo</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+          <repository>
+            <id>core</id>
+            <url>file://${basedir}/../../core/target/repo</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+          <repository>
+            <id>infer</id>
+            <url>file://${basedir}/../../infer/target/repo</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+          <repository>
+            <id>examples</id>
+            <url>file://${basedir}/../../examples/target/repo</url>
+            <snapshots>
+              <enabled>true</enabled>
+            </snapshots>
+          </repository>
+        </repositories>
+      </profile>
     </profiles>
 
     <build>
@@ -39,8 +86,8 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.mxnet</groupId>
-            <artifactId>mxnet-examples_${mxnet.scalaprofile}</artifactId>
-            <version>${mxnet.version}</version>
+            <artifactId>mxnet-examples</artifactId>
+            <version>INTERNAL</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -41,7 +41,7 @@
         <id>fromLocal</id>
         <repositories>
           <repository>
-            <id>local-snapshot</id>
+            <id>full</id>
             <url>file://${basedir}/../deploy/target/repo</url>
             <snapshots>
               <enabled>true</enabled>

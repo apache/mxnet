@@ -146,6 +146,7 @@ tools/pip_package/mxnet
 
 # temporary path for building dependencies when building wheel
 ./deps/
+./staticdeps/
 bld
 ./tmp/*
 *.jar
