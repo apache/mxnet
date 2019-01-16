@@ -16,7 +16,6 @@
 # under the License.
 
 SCALA_VERSION_PROFILE := 2.11
-MXNET_VERSION := [1.5.0-SNAPSHOT,\)
 
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
@@ -41,11 +40,13 @@ else
 endif
 
 javademo:
-	(mvn install dependency:copy-dependencies package -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION))
+	(mvn install -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE))
+
+java_ci_demo:
+	(mvn -Pci-nightly install -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
+		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE))
 
 javaclean:
 	(mvn clean -Dmxnet.profile=$(SCALA_PKG_PROFILE) \
-		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE) \
-		-Dmxnet.version=$(MXNET_VERSION))
+		-Dmxnet.scalaprofile=$(SCALA_VERSION_PROFILE))

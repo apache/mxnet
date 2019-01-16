@@ -204,7 +204,7 @@ class TestNode(unittest.TestCase):
                 onnx_model = get_onnx_graph(test_name, names, input_tensors, onnx_name, output_shape, attrs)
                 bkd_rep = backend.prepare(onnx_model, operation='import')
                 mxnet_out = bkd_rep.run(inputs)
-                npt.assert_almost_equal(np_out, mxnet_out)
+                npt.assert_almost_equal(np_out, mxnet_out, decimal=4)
 
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
 # fix_attributes = {'modify': {mxnet_attr_name: onnx_attr_name},

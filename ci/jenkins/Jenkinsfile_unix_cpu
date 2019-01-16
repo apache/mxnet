@@ -39,7 +39,7 @@ core_logic: {
     custom_steps.compile_unix_mkl_cpu(),
     custom_steps.compile_unix_mkldnn_cpu(),
     custom_steps.compile_unix_mkldnn_mkl_cpu()
-  ]) 
+  ])
 
   utils.parallel_stage('Tests', [
     custom_steps.test_unix_python2_cpu(),
@@ -53,7 +53,8 @@ core_logic: {
     custom_steps.test_unix_scala_mkldnn_cpu(),
     custom_steps.test_unix_clojure_cpu(),
     custom_steps.test_unix_r_cpu(),
-    custom_steps.test_unix_julia_cpu(),
+    custom_steps.test_unix_julia07_cpu(),
+    custom_steps.test_unix_julia10_cpu(),
     custom_steps.test_unix_onnx_cpu(),
     custom_steps.test_unix_cpp_cpu(),
     /*  Disabled due to master build failure:

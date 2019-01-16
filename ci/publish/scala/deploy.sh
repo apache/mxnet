@@ -18,12 +18,10 @@
 
 set -ex
 
-# Setup Environment Variables
-# MAVEN_PUBLISH_OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
-# export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
-
-# Run python to configure keys
-python3 ci/publish/scala/buildkey.py
+# On Jenkins, run python script to configure keys
+if [[ $BUILD_ID ]]; then
+    python3 ci/publish/scala/buildkey.py
+fi
 
 # Updating cache
 mkdir -p ~/.gnupg
@@ -37,5 +35,7 @@ cd scala-package
 
 mvn -B deploy -Pnightly
 
-# Clear all password .xml files, exp files, and gpg key files
-rm -rf ~/.m2/*.xml ~/.m2/key.asc ~/.m2/*.exp
+# On Jenkins, clear all password .xml files, exp files, and gpg key files
+if [[ $BUILD_ID ]]; then
+    rm -rf ~/.m2/*.xml ~/.m2/key.asc ~/.m2/*.exp
+fi

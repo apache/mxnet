@@ -76,8 +76,13 @@ randn(dims::Int...; μ = 0, σ = 1, context = cpu()) =
   randn!(empty(dims, context), μ = μ, σ = σ)
 
 """
-    srand(seed::Int)
+    seed!(seed::Int)
 
 Set the random seed of libmxnet
 """
-srand(seed_state::Int) = @mxcall(:MXRandomSeed, (Cint,), seed_state)
+seed!(s::Int) = @mxcall :MXRandomSeed (Cint,) s
+
+function srand(s::Int)
+  @warn "`mx.srand` is deprecated, use `mx.seed!` instead."
+  seed!(s)
+end
