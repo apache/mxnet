@@ -26,4 +26,5 @@ python setup.py bdist_wheel
 
 wheel_name=$(ls -t dist | head -n 1)
 pip install -U --user --force-reinstall dist/$wheel_name
-python sanity_test.py
+cd ..
+python nosetests -v $(ls tests/python/unittest/test_gluon*.py | grep -v data | grep -v model_zoo | grep -v utils | grep -v rnn)
