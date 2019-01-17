@@ -73,7 +73,7 @@ static bool BinaryScalarStorageType(const nnvm::NodeAttrs& attrs,
 MXNET_OPERATOR_REGISTER_UNARY(_contrib_gradientmultiplier)
 .describe(R"code(This operator implements the gradient multiplier function.
 In forward pass it acts as an identity transform. During backpropagation it
-multiplies the gradient from the subsequent level by a scalar factor and passes it to
+multiplies the gradient from the subsequent level by a scalar factor lambda and passes it to
 the preceding layer.
 )code" ADD_FILELINE)
 .set_attr_parser([](NodeAttrs* attrs) {
@@ -87,7 +87,7 @@ the preceding layer.
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.add_argument("scalar", "float", "scalar input");
+.add_argument("scalar", "float", "lambda multiplier");
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_contrib_backward_gradientmultiplier)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
