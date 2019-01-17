@@ -208,7 +208,7 @@ class NaiveEngine final : public Engine {
 
  private:
   // callback to oncomplete
-  static void OnComplete(Engine *engine, void *param) {
+  static void OnComplete(Engine *engine, void *param, const char* error_msg) {
     static_cast<NaiveEngine*>(engine)->req_completed_ = true;
   }
   // whether action is completed
