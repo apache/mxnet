@@ -47,10 +47,16 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
 
   CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
   CHECK_EQ(out_data.size(), 3U);
+  CHECK(param.flatten) << "QuantizedFullyConnected Op only supports flatten=true for now.";
 
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
+  const TShape &ishape = data.shape();
   CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
+
+  if (ishape.ndim() != 2) {
+    data = data.MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
+  }
 
   float data_min = in_data[num_inputs].data().dptr<float>()[0];
   float data_max = in_data[num_inputs + 1].data().dptr<float>()[0];
@@ -103,7 +109,7 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut], fwd.ipFwd_pd.dst_primitive_desc(), req[fullc::kOut]);
   const mkldnn::memory *bias_mem = nullptr;
   if (!param.no_bias)
-    bias_mem = in_data[fullc::kBias].GetMKLDNNDataReorder(fwd.ipFwd_pd.bias_primitive_desc());
+    bias_mem = quantized_bias.GetMKLDNNDataReorder(fwd.ipFwd_pd.bias_primitive_desc());
 
   fwd.SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
   MKLDNNStream::Get()->RegisterPrim(fwd.GetIpFwd());

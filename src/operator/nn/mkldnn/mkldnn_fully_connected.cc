@@ -40,6 +40,7 @@ mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
 
   mkldnn::primitive_attr attr;
+  /*
   if (param.mkldnn_param.quantized) {
     int mask = 0;
     std::vector<float> scales = {0.0};
@@ -54,6 +55,7 @@ mkldnn::inner_product_forward::primitive_desc GetIPFwd(
     attr.set_output_scales(mask, scales);
     attr.set_int_output_round_mode(round_nearest);
   }
+  */
 
   if (bias) {
     auto bias_md = GetMemDesc(*bias);

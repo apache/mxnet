@@ -72,7 +72,9 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), num_inputs * 3);
   CHECK_EQ(out_type->size(), 3U);
 
-  for (size_t i = 0; i < num_inputs; ++i) {
+  //FIXME(ciyong), intput data could be int8 or uint8
+  //TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
+  for (size_t i = 1; i < num_inputs; ++i) {
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kInt8);
   }
   for (size_t i = num_inputs; i < 3 * num_inputs; ++i) {
