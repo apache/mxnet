@@ -224,7 +224,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
           sample_weight should have shape (64, 1).
         - **pos_weight**:a weighting tensor of positive examples.Must be a vector with length
           equal to the number of classes.For example, if pred has shape (64, 10)
-          pos_weight should have shape (1, 10). 
+          pos_weight should have shape (1, 10).
 
     Outputs:
         - **loss**: loss tensor with shape (batch_size,). Dimenions other than
