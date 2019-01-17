@@ -1258,6 +1258,8 @@ deploy_docs() {
     set -ex
     pushd .
 
+    export CC="ccache gcc"
+    export CXX="ccache g++"
     make docs SPHINXOPTS=-W
 
     popd
