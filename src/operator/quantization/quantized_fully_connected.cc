@@ -38,7 +38,6 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
                                   mxnet::ShapeVector *in_shape,
                                   mxnet::ShapeVector *out_shape) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  CHECK(param.flatten) << "QuantizedFullyConnectedOp only supports flatten=true for now";
   using namespace mshadow;
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_shape->size(), num_inputs * 3);
@@ -48,6 +47,10 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
     << "QuantizedFullyConnectedOp input data shape must be given";
   const mxnet::TShape& dshape = in_shape->at(0);
   mxnet::TShape wshape = Shape2(param.num_hidden, dshape.ProdShape(1, dshape.ndim()));
+  if (dshape.ndim() != 2) {
+      CHECK(param.flatten)
+        << "QuantizedFullyConnectedOp only supports flatten=true when input_shape!=2 for now. ";
+  }
   SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
   if (!param.no_bias) {
     mxnet::TShape bshape = Shape1(param.num_hidden);
@@ -92,25 +95,13 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
                                         DispatchMode* dispatch_mode,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
-  *dispatch_mode = DispatchMode::kFCompute;
-  if (dev_mask == mshadow::cpu::kDevMask) {
-    *dispatch_mode = DispatchMode::kFComputeEx;
-  }
+  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  uint32_t num_inputs = param.no_bias ? 2 : 3;
+  CHECK_EQ(in_attrs->size(), num_inputs * 3);
+  CHECK_EQ(out_attrs->size(), 3);
 
-  for (auto &v : *out_attrs) {
-    v = kDefaultStorage;
-    if (common::stype_string(v).compare("unknown") == 0) {
-      return false;
-    }
-  }
-
-  for (auto &v : *in_attrs) {
-    v = kDefaultStorage;
-    if (common::stype_string(v).compare("unknown") == 0) {
-      return false;
-    }
-  }
-  return true;
+  return MKLDNNStorageType(attrs, dev_mask, true,
+                           dispatch_mode, in_attrs, out_attrs);
 }
 
 struct QuantizedSumInitKernelWithBias {
@@ -139,28 +130,34 @@ struct QuantizedSumInitKernelWithBias {
 };
 
 
-template<typename SrcType>
-void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
-                                    const OpContext &ctx,
-                                    const std::vector<NDArray> &in_data,
-                                    const std::vector<OpReqType> &req,
-                                    const std::vector<NDArray> &out_data) {
+void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
+                                       const OpContext &ctx,
+                                       const std::vector<TBlob> &in_data,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<TBlob> &out_data) {
 #if MSHADOW_USE_MKL == 1
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   using namespace mxnet_op;
+  Stream<cpu> *s = ctx.get_stream<cpu>();
   size_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_data.size(),  num_inputs * 3);
   CHECK_EQ(out_data.size(), 3U);
-  const NDArray& data = in_data[0];
-  const NDArray& weight = in_data[1];
-  const NDArray& out = out_data[0];
-  mxnet::TShape dshape = data.shape();
-  mxnet::TShape wshape = weight.shape();
-  mxnet::TShape oshape = out.shape();
-  auto output_temp = out.data().dptr<int32_t>();
-  auto weight_temp = weight.data().dptr<SrcType>();
-  auto data_temp = data.data().dptr<SrcType>();
+
+  const mxnet::TShape &dshape = in_data[fullc::kData].shape_;
+  const mxnet::TShape &wshape = in_data[fullc::kWeight].shape_;
+
+  if (dshape.ndim() != 2)
+    CHECK(param.flatten)
+      << "QuantizedFullyConnectedOp only supports flatten=true when input_shape!=2 for now. ";
+
+  Tensor<cpu, 2, int8_t> data = in_data[fullc::kData].get<cpu, 2, int8_t>(s);
+  Tensor<cpu, 2, int8_t> weight = in_data[fullc::kWeight].get<cpu, 2, int8_t>(s);
+  Tensor<cpu, 2, int32_t> out = out_data[fullc::kOut].get<cpu, 2, int32_t>(s);
+
+  auto data_temp = data.dptr_;
+  auto weight_temp = weight.dptr_;
+  auto output_temp = out.dptr_;
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   const float alpha = 1.0f;
   const float beta  = 1.0f;
@@ -169,7 +166,6 @@ void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   const MKL_INT8 ob = 0;
   MKL_INT32 oc = 0;
   const int m = dshape[0], n = wshape[0], k = dshape.ProdShape(1, dshape.ndim());
-  Stream<cpu> *s = ctx.get_stream<cpu>();
   //  cblas_gemm_s8u8s32 required first matrix must be uint8
   //  shift data from int8(from -128 to 127) to uint8 (from 0 to 255)
   int shift = 128;
@@ -180,17 +176,24 @@ void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < m * k; ++i) {
     shiftdata.dptr_[i] = data_temp[i] + shift;
   }
-
-  Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
-      out_data[1].data().dptr<float>(), out_data[2].data().dptr<float>(),
-      in_data[num_inputs].data().dptr<float>(), in_data[num_inputs+1].data().dptr<float>(),
-      in_data[num_inputs+2].data().dptr<float>(), in_data[num_inputs+3].data().dptr<float>());
+  
+  Tensor<cpu, 1, float> out_min = out_data[1].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> out_max = out_data[2].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> data_min = in_data[num_inputs].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> data_max = in_data[num_inputs + 1].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> weight_min = in_data[num_inputs + 2].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> weight_max = in_data[num_inputs + 3].get<cpu, 1, float>(s);
+  
+  Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1, out_min.dptr_, 
+      out_max.dptr_, data_min.dptr_, data_max.dptr_, weight_min.dptr_, weight_max.dptr_);
   if (!param.no_bias) {
-    const NDArray& bias = in_data[2];
-    Kernel<QuantizedSumInitKernelWithBias, cpu>::Launch(s, n, out.data().dptr<int32_t>(),
-        bias.data().dptr<int8_t>(), out_data[1].data().dptr<float>(),
-        out_data[2].data().dptr<float>(), in_data[7].data().dptr<float>(),
-        in_data[8].data().dptr<float>());
+    Tensor<cpu, 1, int8_t> bias = in_data[fullc::kBias].get_with_shape<cpu, 1, int8_t>(
+      Shape1(wshape[0]), s);
+    Tensor<cpu, 1, float> bias_min = in_data[num_inputs + 7].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> bias_max = in_data[num_inputs + 8].get<cpu, 1, float>(s);
+    
+    Kernel<QuantizedSumInitKernelWithBias, cpu>::Launch(s, n, out.dptr_,
+        bias.dptr_, out_min.dptr_, out_max.dptr_, bias_min.dptr_, bias_max.dptr_);
   } else {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < m * n; ++i) {
@@ -218,11 +221,11 @@ void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
                      shiftdata.dptr_,
                      k,
                      oa,
-                     weight.data().dptr<SrcType>(),
+                     weight.dptr_,
                      k,
                      ob,
                      beta,
-                     out.data().dptr<int32_t>(),
+                     out.dptr_,
                      n,
                      &oc);
 #else
@@ -270,8 +273,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-//.set_attr<FComputeEx>("FComputeEx<cpu>",
-//    QuantizedFullyConnectedForward<int8_t>)
+.set_attr<FCompute>("FCompute<cpu>", QuantizedFullyConnectedForwardCPU)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
