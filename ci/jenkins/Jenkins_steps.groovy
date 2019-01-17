@@ -521,6 +521,19 @@ def compile_windows_gpu_mkldnn() {
     }]
 }
 
+def test_static_scala_cpu() {
+  return ['Static build CPU 14.04 Scala' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/ut-publish-scala-cpu') {
+          withEnv(["MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu", "mxnet_variant=mkl"]) {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_cpu", 'publish_scala_build', false, '500m', 'MAVEN_PUBLISH_OS_TYPE mxnet_variant')
+          }
+        }
+    }
+  }]
+}
+
 def test_unix_python2_cpu() {
     return ['Python2: CPU': {
       node(NODE_LINUX_CPU) {
