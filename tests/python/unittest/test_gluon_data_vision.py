@@ -33,13 +33,13 @@ def test_to_tensor():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(out_nd.asnumpy(), np.transpose(
-        data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
+                        data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
 
     # 4D Input
     data_in = np.random.uniform(0, 255, (5, 300, 300, 3)).astype(dtype=np.uint8)
     out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(out_nd.asnumpy(), np.transpose(
-        data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
+                        data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
     
     # Invalid Input
     invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)

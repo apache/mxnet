@@ -26,14 +26,7 @@
 #define MXNET_OPERATOR_IMAGE_TOTENSOR_OP_INL_H_
 
 
-#include <mxnet/base.h>
-#include <algorithm>
 #include <vector>
-#include <cmath>
-#include <limits>
-#include <utility>
-#include "../mxnet_op.h"
-#include "../operator_common.h"
 #include "../elemwise_op_common.h"
 
 namespace mxnet {
