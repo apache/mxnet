@@ -479,7 +479,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-    <version>LATEST</version>
+    <version>[1.4.0, )</version>
 </dependency>
 ```
 
@@ -496,7 +496,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <version>LATEST</version>
+    <version>[1.4.0, )</version>
 </dependency>
 ```
 <br>
@@ -778,7 +778,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <version>LATEST</version>
+    <version>[1.4.0, )</version>
 </dependency>
 ```
 <br>
