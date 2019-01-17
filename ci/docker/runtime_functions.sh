@@ -1295,6 +1295,7 @@ deploy_jl_docs() {
     # ...
 }
 
+<<<<<<< HEAD
 build_scala_static_mkl() {
     set -ex
     pushd .
@@ -1305,7 +1306,7 @@ build_scala_static_mkl() {
     popd
 }
 
-build_static_python() {
+build_static_python_mkl() {
     set -ex
     pushd .
     export mxnet_variant=mkl
