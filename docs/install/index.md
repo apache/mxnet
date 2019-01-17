@@ -496,9 +496,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <version>1.4.0</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
+    <version>LATEST</version>
 </dependency>
 ```
 <br>
