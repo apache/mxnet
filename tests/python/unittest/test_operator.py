@@ -6970,7 +6970,6 @@ def test_op_roi_align():
         spatial_scale = H * 1.0 / dlen
         data = mx.nd.array(
             np.arange(N * C * W * H).reshape((N, C, H, W)), ctx=ctx, dtype=dtype)
-        # data = mx.nd.random.uniform(0, 1, (N, C, H, W), dtype = dtype)
         center_xy = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype=dtype)
         wh = mx.nd.random.uniform(0, dlen, (R, 2), ctx=ctx, dtype=dtype)
         batch_ind = mx.nd.array(np.random.randint(0, N, size=(R, 1)), ctx=ctx)
