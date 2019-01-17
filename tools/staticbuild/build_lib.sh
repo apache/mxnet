@@ -52,13 +52,6 @@ if [[ $VARIANT == *mkl ]]; then
     cp 3rdparty/mkldnn/LICENSE ./MKLML_LICENSE
 fi
 
-if [[ $VARIANT == *mkl ]]; then
-    >&2 echo "Copying MKL license."
-    rm lib/libmkldnn.{so,dylib}
-    rm lib/libmkldnn.0.*.dylib
-    rm lib/libmkldnn.so.0.*
-fi
-
 >&2 echo "Now building mxnet..."
 $MAKE DEPS_PATH=$DEPS_PATH
 

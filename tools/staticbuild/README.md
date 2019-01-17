@@ -8,7 +8,7 @@ This script is a wrapper around `build_lib.sh` aimed to simplify the usage of it
 ```
 tools/staticbuild/build.sh cu92 maven
 ```
-This would build the mxnet package based on CUDA9.0 and Maven (Scala) build setttings.
+This would build the mxnet package based on CUDA9.2 and Maven (Scala) build setttings.
 ```
 tools/staticbuild/build.sh mkl pip
 ```
