@@ -478,7 +478,7 @@ You can use the Maven packages defined in the following dependency to include MX
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
     <version>LATEST</version>
 </dependency>
 ```
