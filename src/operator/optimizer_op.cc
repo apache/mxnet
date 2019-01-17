@@ -316,7 +316,7 @@ inline bool SGDStorageType(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(sgd_update)
 MXNET_ADD_SPARSE_OP_ALIAS(sgd_update)
-.describe(R"code(Update function for Stochastic Gradient Descent (SDG) optimizer.
+.describe(R"code(Update function for Stochastic Gradient Descent (SGD) optimizer.
 
 It updates the weights using::
 
