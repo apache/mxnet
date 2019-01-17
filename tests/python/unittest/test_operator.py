@@ -3997,21 +3997,21 @@ def test_cast():
 # Test requires all platforms to round float32->float16 with same round-to-nearest-even policy.
 @with_seed()
 def test_cast_float32_to_float16():
-    fp16_fraction_bits = 10
-    fp32_fraction_bits = 23
-    fp32_exp_min = -126
-    fp32_exp_max = 127
+    FP16_FRACTION_BITS = 10
+    FP32_FRACTION_BITS = 23
+    FP32_EXP_MIN = -126
+    FP32_EXP_MAX = 127
     # generate test cases in the vicinity of representable float16 mantissas
     # and mid-way between them, but over the full range of float32 exponents.
     def get_data():
         for sign_bit in [0, 1]:
-            for exponent in range(fp32_exp_min - fp32_fraction_bits - 1, fp32_exp_max + 2):
-                denominator = 2**(fp16_fraction_bits + 1)
+            for exponent in range(FP32_EXP_MIN - FP32_FRACTION_BITS - 1, FP32_EXP_MAX + 2):
+                denominator = 2**(FP16_FRACTION_BITS + 1)
                 for numerator in range(0, denominator):
+                    fraction = numerator / float(denominator)
                     for y in [-1.0, 0.0, 1.0]:
-                        small_delta = y / 2**fp32_fraction_bits
-                        val = (-1.0)**sign_bit * 2.0**exponent * (1.0 +
-                              numerator / float(denominator) + small_delta)
+                        small_delta = y / 2**FP32_FRACTION_BITS
+                        val = (-1.0)**sign_bit * 2.0**exponent * (1.0 + fraction + small_delta)
                         yield val
 
     input_np = np.array(list(get_data())).astype(np.float32)
@@ -4027,9 +4027,9 @@ def test_cast_float32_to_float16():
     exe.forward(is_train=False)
     sym_output = exe.outputs[0].asnumpy()
     for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
-        if model_fp16_val != np_fp16_val:
-            raise RuntimeError('fp32->fp16 cast mismatches seen, e.g. with val {}, model_fp16 = {},'
-                               ' numpy_fp16 = {}'.format(fp32_val, model_fp16_val, np_fp16_val))
+        assert model_fp16_val == np_fp16_val, \
+            'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
+                fp32_val, model_fp16_val, np_fp16_val)
 
 
 @with_seed()
