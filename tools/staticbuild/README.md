@@ -21,7 +21,7 @@ This script would clone the most up-to-date master and build the MXNet backend w
 
 - `DEPS_PATH` Path to your static dependencies
 - `STATIC_BUILD_TARGET` Either `pip` or `maven` as your publish platform
-- `PLATFORM` linux, osx
+- `PLATFORM` linux, darwin
 - `VARIANT` cpu, cu*, cu*mkl, mkl
 
 It is not recommended to run this file alone since there are a bunch of variables need to be set.
