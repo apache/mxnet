@@ -261,8 +261,12 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     }
     if (!inplace_) {
       auto in_mkl_mem = inputs[in_sum].GetMKLDNNData();
-      const_cast<NDArray &>(outputs[kOut]).CopyFrom(*in_mkl_mem);
-      output = NDArray(outputs[kOut].GetMKLDNNData());
+      auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
+      mkldnn_mem_ptr tmp_mem(
+          new mkldnn::memory(in_mkl_mem->get_primitive_desc(), out_mkl_mem->get_data_handle()));
+      MKLDNNStream::Get()->RegisterMem(tmp_mem);
+      mxnet::MKLDNNCopy(*in_mkl_mem, tmp_mem.get());
+      output = NDArray(tmp_mem);
     }
   }
 
@@ -388,7 +392,9 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
   if (mkldnn_param.with_sum) {
     auto out = const_cast<NDArray &>(outputs[kOut]);
-    out.UpdateMKLDNNMemDesc();
+    auto format = static_cast<mkldnn::memory::format>(
+        fwd_->fwd_pd.dst_primitive_desc().desc().data.format);
+    out.UpdateMKLDNNMemDesc(format);
   }
 }
 
