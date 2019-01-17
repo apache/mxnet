@@ -22,8 +22,6 @@ function setVersion(anchor){
         if (arguments.length==0) {
             anchor = window.location.hash
         };
-        console.log('anchor: ', anchor, arguments.length, window.location.hash, window.location.search);
-        //let doc = window.location.pathname.match(/^\/(api\/.*)$/) || window.location.pathname.match(/^\/versions\/[^*]+\/(api\/.*)$/);
         let doc = window.location.pathname.match(/^\/versions\/[^\/]+\/([^*]+.*)$/);
         if (doc) {
             if (document.getElementById('dropdown-menu-position-anchor-version')) {
@@ -31,10 +29,8 @@ function setVersion(anchor){
                     $(versionNav).each( function( index, el ) {
                             currLink = $( el ).attr('href');
                             version = currLink.match(/\/versions\/([^\/]+)\//);
-                            console.log(version);
                             if (version) {
                                     versionedDoc = '/versions/' + version[1] + '/' + doc[1] + (anchor || '') + (window.location.search || '');
-                                    console.log(versionedDoc);
                                     $( el ).attr('href', versionedDoc);
                             }
                     });
