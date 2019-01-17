@@ -97,9 +97,10 @@ __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n
 
     // Shared memory used to store Asub and Bsub respectively
     extern __shared__ BINARY_WORD sm[];
+
     BINARY_WORD* As = sm;
     BINARY_WORD* Bs = (BINARY_WORD*)&As[block_size*block_size];
-    
+
     // Each thread computes one element of Csub
     // by accumulating results into Cvalue
     float Cvalue = 0;

@@ -26,7 +26,10 @@
 
 #ifndef MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_KERNELS_H
 #define MXNET_OPERATOR_CONTRIB_BINARY_INFERENCE_XNOR_KERNELS_H
-
+#include <vector>
+#include <iostream>
+#include <mshadow/tensor.h>
+#include <algorithm>
 namespace xnor_cuda {
 #if BINARY_WORD_32 == 1
 	typedef unsigned int BINARY_WORD;
@@ -42,31 +45,46 @@ __global__ void concatenate_rows_kernel(float *a, BINARY_WORD *b, int size);
 __global__ void concatenate_cols_kernel(float *a, BINARY_WORD *b, int m, int n);
 __global__ void xnor_gemm(BINARY_WORD* A, BINARY_WORD* B, float* C, int m, int n, int k, int block_size);
 
+inline std::vector<int> get_divisors(int num){
+	std::vector<int> dv;
+	int square_root = (int) sqrt(num) + 1;
+	for (int i = 1; i < square_root; i++) { 
+		if (num % i == 0 && i*i==num){
+			dv.push_back(i);
+		}else if (num % i == 0 && i*i!=num){
+	    	dv.push_back(i);
+	    	dv.push_back(num/i);
+		}
+	}
+	return dv;
+}
+
 inline int get_next_block_dim(int c){
-	if (c%8 == 0)
-		return 8;
-	if (c%4 == 0)
-		return 4;
-	if (c%2 == 0)
-		return 2;
+	std::vector<int> divs = get_divisors(c);
+	if (!divs.empty()){
+		int dim = divs.at(divs.size()-1) < mshadow::cuda::kMaxThreadsPerBlock ? divs.at(divs.size()-1) : mshadow::cuda::kMaxThreadsPerBlock;
+		return dim;
+	}
 	return 1;											
 }
 
+/*
+ * m: number of output channels (num_filter) per group
+ * n: number of input channels per group * kernel size(e.g., 3x3=9) / BITS_PER_BINARY_WORD
+ * k: number of pixels of output images per channel (output dimension)
+ */
 inline int get_next_block_dim(int m, int n, int k){	
-	if (m%128 == 0 && n%128 == 0 && k%128 == 0)
-		return 128;
-	if (m%64 == 0 && n%64 == 0 && k%64 == 0)
-		return 64;
-	if (m%32 == 0 && n%32 == 0 && k%32 == 0)
-		return 32;			
-	if (m%16 == 0 && n%16 == 0 && k%16 == 0)
-		return 16;
-	if (m%8 == 0 && n%8 == 0 && k%8 == 0)
-		return 8;
-	if (m%4 == 0 && n%4 == 0 && k%4 == 0)
-		return 4;
-	if (m%2 == 0 && n%2 == 0 && k%2 == 0)
-		return 2;
+	std::vector<int> divs = get_divisors(n);
+	if (!divs.empty()){
+		std::sort(divs.begin(), divs.end());
+		for (int i = divs.size()-1; i > -1 ; --i){
+			int val = divs[i];			
+			int sel_mid =  val < mshadow::cuda::kMaxThreadsPerBlock ? val : mshadow::cuda::kMaxThreadsPerBlock;
+			if (sel_mid < m/2 && sel_mid < k/2){
+				return sel_mid;
+			}
+		}					
+	}
 	return 1;											
 }
 } // namespace xnor_cuda

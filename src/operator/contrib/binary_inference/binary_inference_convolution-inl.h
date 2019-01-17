@@ -166,11 +166,21 @@ namespace mxnet {
 
                   Tensor<xpu, 2, DType> temp_dst_gid = output_3d[g];                  
                   CHECK(g == 0) << "groups not yet supported for pre-binarized weights";
+                  
+                  //====== testing code =======//
+                  // using ns = std::chrono::nanoseconds;
+                  // using get_time = std::chrono::steady_clock;
+                  // auto start = std::chrono::high_resolution_clock::now();
+                  
                   BinaryConvolutionForward(M, N, K,
                                       wmat_binarized,
                                       binary_inputs_workspace,
                                       col_buffer_3d[g],
-                                      temp_dst_gid);                                
+                                      temp_dst_gid);   
+                  
+                  // auto finish = std::chrono::high_resolution_clock::now();
+                  // std::chrono::duration<double> elapsed = finish - start;
+                  // std::cout << "Binary Conv Elapsed time: " << elapsed.count() << " s\n";           
                 }
               }
             }

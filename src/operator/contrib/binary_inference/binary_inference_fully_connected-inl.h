@@ -115,7 +115,16 @@ class BinaryInferenceFullyConnectedOp : public Operator {
             ctx.requested[binary_inference_fullc::kTempSpace].get_space_typed<xpu, 1, DType>(
                     Shape1(n * m / (sizeof(DType) * CHAR_BIT)), s);
 
+    //====== testing code =======//
+    // using ns = std::chrono::nanoseconds;
+    // using get_time = std::chrono::steady_clock;
+    // auto start = std::chrono::high_resolution_clock::now();
+    
     BinaryInferenceFullyConnectedForward(m, n, k, data, binary_inputs_workspace, wmat_binarized, out);
+
+    // auto finish = std::chrono::high_resolution_clock::now();
+    // std::chrono::duration<double> elapsed = finish - start;
+    // std::cout << "Binary FC elapsed time: " << elapsed.count() << " s\n"; 
   }
 
   virtual void Backward(const OpContext &ctx,
