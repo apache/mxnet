@@ -540,7 +540,7 @@ def test_static_python_cpu() {
         ws('workspace/ut-publish-python-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run("publish.ubuntu1404_cpu", 'publish_python_build', false)
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python', false)
           }
         }
     }
