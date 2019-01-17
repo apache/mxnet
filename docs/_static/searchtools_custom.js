@@ -457,7 +457,7 @@ var Search = {
                 highlightstring + item[2]).html(item[1]));
             } else {
                 // normal html builders
-                var baseURL = 'https://' + window.location.hostname + '/';
+                var baseURL = window.location.protocol + '//' + window.location.hostname + '/';
                 var urlHref = window.location.href;
                 let urlSplits = urlHref.split("/");
                 let versionString = '';
