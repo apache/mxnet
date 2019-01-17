@@ -28,7 +28,7 @@
 
 #include "./onnx_to_tensorrt.h"
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include <NvInfer.h>
 #include <google/protobuf/io/coded_stream.h>
