@@ -181,8 +181,9 @@ struct normalize_backward {
   MSHADOW_XINLINE static void Map(int j, DType* in_grad, const DType* out_grad,
                                   const DType* in_data, const int i, const int length,
                                   const int step, const DType std_dev) {
-    // d/dx{(x - mean) / std_dev} is (1 / std_dev)
-    KERNEL_ASSIGN(in_grad[step + i*length + j], req, out_grad[i] * (1.0 / std_dev));
+    // d/dx{(x - mean) / std_dev} => (1 / std_dev)
+    KERNEL_ASSIGN(in_grad[step + i*length + j], req,
+                  out_grad[step + i*length + j] * (1.0 / std_dev));
   }
 };
 
@@ -201,9 +202,6 @@ void NormalizeBackwardImpl(const OpContext &ctx,
     const TBlob& in_grad = outputs[0];
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        DType* input = inputs[0].dptr<DType>();
-        DType* output = outputs[0].dptr<DType>();
-
         for (int i = 0; i < channel; ++i) {
             DType std_dev = param.std[param.std.ndim() > 1 ? i : 0];
             mxnet_op::Kernel<normalize_backward<req_type>, xpu>::Launch(
