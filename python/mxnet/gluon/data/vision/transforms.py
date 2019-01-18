@@ -485,3 +485,49 @@ class RandomLighting(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.image.random_lighting(x, self._alpha)
+
+
+class ListToBatch(HybridBlock):
+    """Joins a list of tensors of shape (C x H x W) into a single 
+    tensor of shape (N x C x H x W) where N is the number of input
+    tensors.
+
+    This transformer is useful when transformation pipeline is fused into
+    neural network graph resulting in single model/graph. When running 
+    mini batch inference on such graph, raw input tensors, before transformations,
+    can be of different shapes, hence, cannot be batched into single tensor. Hence,
+    input to the graph will be list of Tensors that can be batched after Resize
+    transformation.
+
+    For example, a typical graph can look like below:
+
+    Imdecode -> Resize -> ListToBatch -> ToTensor -> Normalize -> Network
+    
+    Parameters
+    ----------
+    axis : int, optional, default=0
+        The axis in the output tensor along which the input tensors
+        are stacked.
+
+    Inputs:
+        - **data**: input tensors with (C x H x W) shape.
+
+    Outputs:
+        - **out**: output stacked tensor with the shape as (N x C x H x W).
+    
+    Examples
+    --------
+    >>> transformer = transforms.ListToBatch()
+    >>> image1 = mx.nd.random.uniform(0, 1, shape=(3, 28, 28))
+    >>> image2 = mx.nd.random.uniform(0, 1, shape=(3, 28, 28))
+    >>> image3 = mx.nd.random.uniform(0, 1, shape=(3, 28, 28))
+    >>> batched = transformer(image1, image2, image3)
+    >>> batched.shape
+    (3, 3, 28, 28)
+    """
+    def __init__(self, axis=0):
+        super(ListToBatch, self).__init__()
+        self._axis = axis
+
+    def hybrid_forward(self, F, *data):
+        return F.stack(*data, axis=self._axis)
