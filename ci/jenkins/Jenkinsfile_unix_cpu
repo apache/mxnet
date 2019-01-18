@@ -57,6 +57,7 @@ core_logic: {
     custom_steps.test_unix_julia10_cpu(),
     custom_steps.test_unix_onnx_cpu(),
     custom_steps.test_unix_cpp_cpu(),
+    custom_steps.test_static_scala_cpu(),
     /*  Disabled due to master build failure:
      *  http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/incubator-mxnet/detail/master/1221/pipeline/
      *  https://github.com/apache/incubator-mxnet/issues/11801
