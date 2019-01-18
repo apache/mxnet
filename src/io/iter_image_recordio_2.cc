@@ -519,6 +519,13 @@ inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* 
       cv::Mat res;
       rec.Load(blob.dptr, blob.size);
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+
+      // If augmentation seed is supplied
+      // Re-seed RNG to guarantee reproducible results
+      if (param_.seed_aug.has_value()) {
+        prnds_[tid]->seed(idx + param_.seed_aug.value() + kRandMagic);
+      }
+
       switch (param_.data_shape[0]) {
        case 1:
 #if MXNET_USE_LIBJPEG_TURBO

@@ -40,6 +40,15 @@ public class NDArrayTest {
                 new Shape(new int[]{1, 3}),
                 new Context("cpu", 0));
         assertTrue(Arrays.equals(nd.shape().toArray(), arr));
+
+        List<Double> list2 = Arrays.asList(1d, 1d, 1d);
+        nd = NDArray.arrayWithDouble(list2,
+                new Shape(new int[]{1, 3}),
+                new Context("cpu", 0));
+
+        // Float64 assertion
+        assertTrue(nd.dtype() == DType.Float64());
+
     }
 
     @Test
@@ -64,6 +73,12 @@ public class NDArrayTest {
         nd = nd.subtract(nd2);
         float[] lesser = new float[]{0, 0, 0};
         assertTrue(Arrays.equals(nd.greater(nd2).toArray(), lesser));
+
+        NDArray nd3 = new NDArray(new double[]{1.0, 2.0, 3.0}, new Shape(new int[]{3}), new Context("cpu", 0));
+        nd3 = nd3.add(1.0);
+        double[] smaller = new double[] {2, 3, 4};
+        assertTrue(Arrays.equals(smaller, nd3.toFloat64Array()));
+
     }
 
     @Test

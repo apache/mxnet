@@ -110,11 +110,14 @@ def create_virtualenv_default():
     logging.info("You can use the virtualenv by executing 'source %s/bin/activate'", DEFAULT_PYENV)
 
 COMMANDS = OrderedDict([
-    ('[Local build] CMake/Ninja build (using cmake_options.yaml (cp cmake/cmake_options.yml .) and edit) (creates {} virtualenv in "{}")'.format(DEFAULT_PYTHON, DEFAULT_PYENV),
+    ('[Local] BUILD CMake/Ninja (using cmake_options.yaml (cp cmake/cmake_options.yml .) and edit) ({} virtualenv in "{}")'.format(DEFAULT_PYTHON, DEFAULT_PYENV),
     [
         CMake(),
         create_virtualenv_default,
     ]),
+    ('[Local] Python Unit tests',
+        "./py3_venv/bin/nosetests -v tests/python/unittest/"
+    ),
     ('[Website and docs build] Will build to docs/_build/html/',
         "ci/docker/runtime_functions.sh deploy_docs"),
     ('[Docker] sanity_check. Check for linting and code formatting.',
@@ -184,7 +187,10 @@ def handle_commands(cmds) -> None:
 
 def use_menu_ui(args) -> None:
     command_list = list(COMMANDS.keys())
-    choice = show_menu(command_list, 'Available actions')
+    if hasattr(args, 'choice') and args.choice and args.choice[0].isdigit():
+        choice = int(args.choice[0]) - 1
+    else:
+        choice = show_menu(command_list, 'Available actions')
     handle_commands(COMMANDS[command_list[choice]])
 
 def build(args) -> None:
@@ -192,7 +198,7 @@ def build(args) -> None:
     venv_exe = shutil.which('virtualenv')
     pyexe = shutil.which(args.pyexe)
     if not venv_exe:
-        logging.warn("virtualenv wasn't found in path, it's recommended to install virutalenv to manage python environments")
+        logging.warn("virtualenv wasn't found in path, it's recommended to install virtualenv to manage python environments")
     if not pyexe:
         logging.warn("Python executable %s not found in path", args.pyexe)
     if args.cmake_options:
@@ -219,8 +225,12 @@ def main():
         type=str,
         default=DEFAULT_PYTHON,
         help='python executable')
-
     build_parser.set_defaults(command='build')
+
+    menu_parser = subparsers.add_parser('menu', help='jump to menu option #')
+    menu_parser.set_defaults(command='use_menu_ui')
+    menu_parser.add_argument('choice', nargs=1)
+
     args = parser.parse_args()
     globals()[args.command](args)
     return 0

@@ -71,7 +71,7 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
 
 // relu
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(relu, cpu, mshadow_op::relu)
-.describe(R"code(Computes rectified linear.
+.describe(R"code(Computes rectified linear activation.
 
 .. math::
    max(features, 0)
