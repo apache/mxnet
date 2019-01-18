@@ -426,7 +426,7 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   }
   // Mark complete for write variables.
   for (auto&& i : threaded_opr->mutable_vars) {
-    if (threaded_opr->opr_exception && *threaded_opr->opr_exception) {
+    if (threaded_opr->opr_exception != nullptr) {
       i->var_exception = threaded_opr->opr_exception;
     }
     const bool debug_info = (engine_info_ && debug_wait_var_ == i);
@@ -470,21 +470,20 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
 }
 
 inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
-  if (threaded_var->var_exception && *threaded_var->var_exception) {
-    std::exception_ptr tmp = *threaded_var->var_exception;
-    *threaded_var->var_exception = nullptr;
+  if (threaded_var->var_exception != nullptr) {
+    auto tmp = threaded_var->var_exception;
+    threaded_var->var_exception = nullptr;
     std::rethrow_exception(tmp);
   }
   return;
 }
 
 void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
-                                      const dmlc::Error* error) {
+                                      const dmlc::Error *error) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
   if (error != nullptr) {
-    auto ex_p = std::make_exception_ptr(*error);
-    threaded_opr->opr_exception = std::make_shared<std::exception_ptr>(ex_p);
+    threaded_opr->opr_exception = std::make_exception_ptr(*error);
   }
   if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp

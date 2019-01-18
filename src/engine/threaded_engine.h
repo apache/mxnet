@@ -177,7 +177,7 @@ class ThreadedVar final
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
   /*! \brief exception_ptr associated with the ThreadedVar */
-  std::shared_ptr<std::exception_ptr> var_exception;
+  std::exception_ptr var_exception;
 
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
@@ -254,7 +254,7 @@ struct ThreadedOpr final : public Opr,
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
   /*! \brief exception_ptr associated with the ThreadedOpr */
-  std::shared_ptr<std::exception_ptr> opr_exception;
+  std::exception_ptr opr_exception;
 };  // struct ThreadedOpr
 
 /*!
@@ -359,16 +359,14 @@ class ThreadedEngine : public Engine {
           LOG(INFO) << "ExecuteOprFn ";
         }
         try {
-          if (!(threaded_opr->opr_exception && *threaded_opr->opr_exception) ||
+          if (threaded_opr->opr_exception == nullptr ||
               threaded_opr->wait) {
             threaded_opr->fn(run_ctx, callback);
           } else {
             callback();
           }
-        } catch (dmlc::Error& e) {
-          threaded_opr->opr_exception =
-              std::make_shared<std::exception_ptr>(std::current_exception());
-          callback();
+        } catch (const dmlc::Error& e) {
+          callback(&e);
         }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
@@ -450,14 +448,14 @@ class ThreadedEngine : public Engine {
    */
   inline void OnStart(ThreadedOpr* threaded_opr) {
     for (auto&& i : threaded_opr->const_vars) {
-      if (i->var_exception && *i->var_exception) {
+      if (i->var_exception != nullptr) {
         threaded_opr->opr_exception = i->var_exception;
         break;
       }
     }
-    if (!(threaded_opr->opr_exception && *threaded_opr->opr_exception)) {
+    if (threaded_opr->opr_exception == nullptr) {
       for (auto&& i : threaded_opr->mutable_vars) {
-        if (i->var_exception && *i->var_exception) {
+        if (i->var_exception != nullptr) {
           threaded_opr->opr_exception = i->var_exception;
           break;
         }
@@ -466,7 +464,7 @@ class ThreadedEngine : public Engine {
   }
 
   static void OnCompleteStatic(Engine *engine, void *threaded_opr,
-                               const dmlc::Error* error);
+                               const dmlc::Error *error);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
