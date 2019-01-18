@@ -26,6 +26,7 @@ from common import with_seed
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
 import unittest
+import operator
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -278,8 +279,15 @@ def test_quantized_pooling():
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if mx.current_context().device_type != 'gpu':
-            print('skipped testing quantized_fc on cpu since it is not supported yet')
-            return
+            hasMKL = False;
+            for key in os.environ.keys():
+                if operator.eq(key, "BUILD_TAG"):
+                    if os.environ['BUILD_TAG'].find("MKL") != -1:
+                        hasMKL = True
+                    break
+            if hasMKL == False:
+                print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
+                return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return
@@ -291,16 +299,16 @@ def test_quantized_fc():
         fc_fp32_exe = fc_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
         if qdtype == 'uint8':
             data_low = 0.0
-            data_high = 127.0
+            data_high = 63.0
         else:
-            data_low = -127.0
-            data_high = 127.0
+            data_low = -63.0
+            data_high = 63.0
         fc_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
                                                                      shape=data_shape).astype('int32')
-        fc_fp32_exe.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
+        fc_fp32_exe.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
                                                                      shape=arg_shapes[1]).astype('int32')
         if not no_bias:
-            fc_fp32_exe.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=-127.0, high=127.0,
+            fc_fp32_exe.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
                                                                          shape=arg_shapes[2]).astype('int32')
         output = fc_fp32_exe.forward()[0]
 
@@ -343,6 +351,10 @@ def test_quantized_fc():
         check_quantized_fc((32, 111, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 512, 2, 2), 100, False, qdtype)
         check_quantized_fc((32, 111, 2, 2), 100, False, qdtype)
+        check_quantized_fc((256, 2048, 2, 2), 800, False, qdtype)
+        check_quantized_fc((256, 111, 2, 2), 800, False, qdtype)
+        check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype)
+        check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
 
 @with_seed()
 def test_quantized_flatten():
@@ -406,12 +418,16 @@ def get_fp32_sym():
 
 def get_fp32_residual():
     data = mx.sym.Variable('data')
-    conv = mx.sym.Convolution(data=data, num_filter=4, kernel=(1,1), pad=(0,0),
-                              no_bias=True, name='conv')
-    bn = mx.sym.BatchNorm(data=conv, fix_gamma=False, eps=2e-5, momentum=0.9, name='bn')
-    act = mx.sym.Activation(data=bn + data, act_type='relu', name='relu')
-    pool = mx.sym.Pooling(act, kernel=(4, 4), pool_type='avg', name='pool')
-    fc = mx.sym.FullyConnected(pool, num_hidden=10, flatten=True, name='fc')
+    conv0 = mx.sym.Convolution(data=data, num_filter=4, kernel=(1,1), pad=(0,0),
+                               no_bias=True, name='conv0')
+    bn = mx.sym.BatchNorm(data=conv0, fix_gamma=False, eps=2e-5, momentum=0.9, name='bn')
+    act0 = mx.sym.Activation(data=bn + data, act_type='relu', name='relu0')
+    pool0 = mx.sym.Pooling(act0, kernel=(4, 4), pool_type='avg', name='pool0')
+    conv1 = mx.sym.Convolution(data=pool0, num_filter=4, kernel=(1,1), pad=(0,0),
+                               no_bias=False, name='conv1')
+    act1 = mx.sym.Activation(data=conv1, act_type='relu', name='relu1')
+    pool1 = mx.sym.Pooling(act1, kernel=(4, 4), pool_type='avg', name='pool1')
+    fc = mx.sym.FullyConnected(pool1, num_hidden=10, flatten=True, name='fc')
     sym = mx.sym.SoftmaxOutput(fc, grad_scale=1, ignore_label=-1, multi_output=False,
                                out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
     return sym
@@ -574,38 +590,47 @@ def test_quantize_model_with_forward():
 
             mod.init_params()
             arg_params, aux_params = mod.get_params()
-            excluded_sym_names = []
+            excluded_names = []
             if mx.current_context() == mx.cpu():
-               excluded_sym_names += ['fc']
-            excluded_sym_names += ['concat']
-            qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
-                                                                             arg_params=arg_params,
-                                                                             aux_params=aux_params,
-                                                                             excluded_sym_names=excluded_sym_names,
-                                                                             ctx=mx.current_context(),
-                                                                             quantized_dtype=qdtype,
-                                                                             calib_mode='none')
-            check_params(arg_params, qarg_params, qsym)
-            check_params(aux_params, qaux_params)
-            check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
+               excluded_names += ['fc']
+            excluded_names += ['concat']
 
-            calib_data = mx.nd.random.uniform(shape=dshape)
-            calib_data = NDArrayIter(data=calib_data, batch_size=batch_size)
-            calib_data = DummyIter(calib_data)
-            qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
-                                                                             arg_params=arg_params,
-                                                                             aux_params=aux_params,
-                                                                             excluded_sym_names=excluded_sym_names,
-                                                                             ctx=mx.current_context(),
-                                                                             quantized_dtype=qdtype,
-                                                                             calib_mode='naive',
-                                                                             calib_data=calib_data,
-                                                                             num_calib_examples=20)
-            check_params(arg_params, qarg_params, qsym)
-            check_params(aux_params, qaux_params)
-            check_qsym_calibrated(qsym)
-            check_qsym_qdtype(qsym, qdtype)
-            check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
+            optional_names = ['pool0']
+            for skip_optional_names in [False, True]:
+                exclude_sym_names = []
+                if skip_optional_names:
+                    excluded_sym_names = excluded_names
+                else:
+                    excluded_sym_names = excluded_names + optional_names
+
+                qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
+                                                                                 arg_params=arg_params,
+                                                                                 aux_params=aux_params,
+                                                                                 excluded_sym_names=excluded_sym_names,
+                                                                                 ctx=mx.current_context(),
+                                                                                 quantized_dtype=qdtype,
+                                                                                 calib_mode='none')
+                check_params(arg_params, qarg_params, qsym)
+                check_params(aux_params, qaux_params)
+                check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
+
+                calib_data = mx.nd.random.uniform(shape=dshape)
+                calib_data = NDArrayIter(data=calib_data, batch_size=batch_size)
+                calib_data = DummyIter(calib_data)
+                qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
+                                                                                 arg_params=arg_params,
+                                                                                 aux_params=aux_params,
+                                                                                 excluded_sym_names=excluded_sym_names,
+                                                                                 ctx=mx.current_context(),
+                                                                                 quantized_dtype=qdtype,
+                                                                                 calib_mode='naive',
+                                                                                 calib_data=calib_data,
+                                                                                 num_calib_examples=20)
+                check_params(arg_params, qarg_params, qsym)
+                check_params(aux_params, qaux_params)
+                check_qsym_calibrated(qsym)
+                check_qsym_qdtype(qsym, qdtype)
+                check_qsym_forward(qsym, qarg_params, qaux_params, dshape, lshape)
 
     for qdtype in ['int8', 'uint8']:
         check_quantize_model(qdtype)

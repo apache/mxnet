@@ -36,14 +36,15 @@ class MacrosSuite extends FunSuite with BeforeAndAfterAll {
     )
     val output = List(
       ("org.apache.mxnet.Symbol", true),
-      ("java.lang.Integer", false),
+      ("Int", false),
       ("org.apache.mxnet.Shape", true),
       ("String", true),
       ("Any", false)
     )
 
     for (idx <- input.indices) {
-      val result = CToScalaUtils.argumentCleaner("Sample", input(idx), "org.apache.mxnet.Symbol")
+      val result = CToScalaUtils.argumentCleaner("Sample", input(idx),
+        "org.apache.mxnet.Symbol", false)
       assert(result._1 === output(idx)._1 && result._2 === output(idx)._2)
     }
   }

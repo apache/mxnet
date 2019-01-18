@@ -22,7 +22,7 @@ init.context.default <- function() {
 
 #' Set/Get default context for array creation.
 #'
-#' @param new, optional takes \code{mx.cpu()} or \code{mx.gpu(id)}, new default ctx.
+#' @param new optional takes \code{mx.cpu()} or \code{mx.gpu(id)}, new default ctx.
 #' @return The default context.
 #'
 #' @export

@@ -25,7 +25,7 @@ from .ndarray import NDArray
 
 __all__ = ['uniform', 'normal', 'randn', 'poisson', 'exponential', 'gamma',
            'multinomial', 'negative_binomial', 'generalized_negative_binomial',
-           'shuffle']
+           'shuffle', 'randint']
 
 
 def _random_helper(random, sampler, params, shape, dtype, ctx, out, kwargs):

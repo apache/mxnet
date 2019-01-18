@@ -8,6 +8,21 @@
     <version>1.0-SNAPSHOT</version>
     <name>MXNet Java Demo</name>
 
+    <profiles>
+        <profile>
+            <id>ci-nightly</id>
+            <repositories>
+                <repository>
+                    <id>Apache Snapshot</id>
+                    <url>https://repository.apache.org/content/groups/snapshots</url>
+                </repository>
+            </repositories>
+            <properties>
+                <mxnet.version>[1.5.0-SNAPSHOT, )</mxnet.version>
+            </properties>
+        </profile>
+    </profiles>
+
     <repositories>
         <repository>
             <id>Apache Snapshot</id>
@@ -18,6 +33,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
+        <mxnet.version>[1.5.0-SNAPSHOT, )</mxnet.version>
     </properties>
 
     <dependencies>
@@ -32,5 +48,24 @@
             <version>2.4</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>2.9</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

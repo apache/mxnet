@@ -146,6 +146,7 @@ tools/pip_package/mxnet
 
 # temporary path for building dependencies when building wheel
 ./deps/
+./staticdeps/
 bld
 ./tmp/*
 *.jar
@@ -167,13 +168,11 @@ python/.eggs
 tests/Makefile
 tests/mxnet_unit_tests
 
-# generated wrappers for ccache
-cc
-cxx
-
 # Code coverage related
 .coverage
 *.gcov
 *.gcno
 coverage.xml
 
+# Local CMake build config
+cmake_options.yml

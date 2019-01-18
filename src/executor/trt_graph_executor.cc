@@ -21,7 +21,7 @@
 
 #include "trt_graph_executor.h"
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 #include <NvInfer.h>
 #include "./onnx_to_tensorrt.h"
 #include "../operator/contrib/tensorrt-inl.h"
@@ -407,14 +407,7 @@ nnvm::Symbol TrtGraphExecutor::GetOptimizedSymbol() {
   Symbol ret;
   ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
                                              graph_.outputs.begin() + num_forward_outputs_);
-  ret = ret.Copy();
-  static const Op* trt_op = Op::Get("_trt_op");
-  DFSVisit(ret.outputs, [](const nnvm::NodePtr n) {
-    if (n->op() == trt_op) {
-      n->attrs.dict.clear();
-    }
-  });
-  return ret;
+  return ret.Copy();
 }
 
 Executor *TrtGraphExecutor::TensorRTBind(nnvm::Symbol symbol,

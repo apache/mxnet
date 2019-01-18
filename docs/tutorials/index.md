@@ -78,6 +78,7 @@ Select API:&nbsp;
         * NDArray
             * [NDArray API](/tutorials/gluon/ndarray.html) ([Alternative](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
+            * [Difference between reshape and transpose](/tutorials/basic/reshape_transpose.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)

@@ -31,12 +31,14 @@ In the rest of this document, we list routines provided by the `ndarray.random` 
     exponential
     gamma
     generalized_negative_binomial
+    multinomial
     negative_binomial
     normal
     poisson
-    uniform
-    multinomial
+    randint
+    randn
     shuffle
+    uniform
     mxnet.random.seed
 ```
 

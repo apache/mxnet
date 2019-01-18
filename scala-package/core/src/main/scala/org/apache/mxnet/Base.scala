@@ -18,7 +18,9 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.util.NativeLibraryLoader
-import org.slf4j.{LoggerFactory, Logger}
+import org.slf4j.{Logger, LoggerFactory}
+
+import scala.Specializable.Group
 
 private[mxnet] object Base {
   private val logger: Logger = LoggerFactory.getLogger("MXNetJVM")
@@ -57,6 +59,9 @@ private[mxnet] object Base {
 
   val MX_REAL_TYPE = DType.Float32
 
+  // The primitives currently supported for NDArray operations
+  val MX_PRIMITIVES = new Group ((Double, Float))
+
   try {
     try {
       tryLoadLibraryOS("mxnet-scala")
@@ -67,6 +72,8 @@ private[mxnet] object Base {
           "Consider installing the library somewhere in the path " +
           "(for Windows: PATH, for Linux: LD_LIBRARY_PATH), " +
           "or specifying by Java cmd option -Djava.library.path=[lib path].")
+        logger.warn("LD_LIBRARY_PATH=" + System.getenv("LD_LIBRARY_PATH"))
+        logger.warn("java.library.path=" + System.getProperty("java.library.path"))
         NativeLibraryLoader.loadLibrary("mxnet-scala")
     }
   } catch {
@@ -87,35 +94,8 @@ private[mxnet] object Base {
 
   @throws(classOf[UnsatisfiedLinkError])
   private def tryLoadLibraryOS(libname: String): Unit = {
-    try {
-      logger.info(s"Try loading $libname from native path.")
-      System.loadLibrary(libname)
-    } catch {
-      case e: UnsatisfiedLinkError =>
-        val os = System.getProperty("os.name")
-        // ref: http://lopica.sourceforge.net/os.html
-        if (os.startsWith("Linux")) {
-          tryLoadLibraryXPU(libname, "linux-x86_64")
-        } else if (os.startsWith("Mac")) {
-          tryLoadLibraryXPU(libname, "osx-x86_64")
-        } else {
-          // TODO(yizhi) support windows later
-          throw new UnsatisfiedLinkError()
-        }
-    }
-  }
-
-  @throws(classOf[UnsatisfiedLinkError])
-  private def tryLoadLibraryXPU(libname: String, arch: String): Unit = {
-    try {
-      // try gpu first
-      logger.info(s"Try loading $libname-$arch-gpu from native path.")
-      System.loadLibrary(s"$libname-$arch-gpu")
-    } catch {
-      case e: UnsatisfiedLinkError =>
-        logger.info(s"Try loading $libname-$arch-cpu from native path.")
-        System.loadLibrary(s"$libname-$arch-cpu")
-    }
+    logger.info(s"Try loading $libname from native path.")
+    System.loadLibrary(libname)
   }
 
   // helper function definitions
@@ -153,3 +133,21 @@ private[mxnet] object Base {
 }
 
 class MXNetError(val err: String) extends Exception(err)
+
+// Some type-classes to ease the work in Symbol.random and NDArray.random modules
+
+class SymbolOrScalar[T](val isScalar: Boolean)
+object SymbolOrScalar {
+  def apply[T](implicit ev: SymbolOrScalar[T]): SymbolOrScalar[T] = ev
+  implicit object FloatWitness extends SymbolOrScalar[Float](true)
+  implicit object IntWitness extends SymbolOrScalar[Int](true)
+  implicit object SymbolWitness extends SymbolOrScalar[Symbol](false)
+}
+
+class NDArrayOrScalar[T](val isScalar: Boolean)
+object NDArrayOrScalar {
+  def apply[T](implicit ev: NDArrayOrScalar[T]): NDArrayOrScalar[T] = ev
+  implicit object FloatWitness extends NDArrayOrScalar[Float](true)
+  implicit object IntWitness extends NDArrayOrScalar[Int](true)
+  implicit object NDArrayWitness extends NDArrayOrScalar[NDArray](false)
+}

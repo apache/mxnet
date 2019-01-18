@@ -20,6 +20,7 @@ package org.apache.mxnet
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 class SymbolSuite extends FunSuite with BeforeAndAfterAll {
+
   test("symbol compose") {
     val data = Symbol.Variable("data")
 
@@ -70,5 +71,26 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     val data = Symbol.Variable("data")
     val data2 = data.clone()
     assert(data.toJson === data2.toJson)
+  }
+
+  test("Symbol random module is generated properly") {
+    val lam = Symbol.Variable("lam")
+    val rnd = Symbol.random.poisson(lam = Some(lam), shape = Some(Shape(2, 2)))
+    val rnd2 = Symbol.random.poisson(lam = Some(1f), shape = Some(Shape(2, 2)))
+    // scalastyle:off println
+    println(s"Symbol.random.poisson debug info: ${rnd.debugStr}")
+    println(s"Symbol.random.poisson debug info: ${rnd2.debugStr}")
+    // scalastyle:on println
+  }
+
+  test("Symbol random module is generated properly - special case of 'normal'") {
+    val loc = Symbol.Variable("loc")
+    val scale = Symbol.Variable("scale")
+    val rnd = Symbol.random.normal(mu = Some(loc), sigma = Some(scale), shape = Some(Shape(2, 2)))
+    val rnd2 = Symbol.random.normal(mu = Some(1f), sigma = Some(2f), shape = Some(Shape(2, 2)))
+    // scalastyle:off println
+    println(s"Symbol.random.sample_normal debug info: ${rnd.debugStr}")
+    println(s"Symbol.random.random_normal debug info: ${rnd2.debugStr}")
+    // scalastyle:on println
   }
 }

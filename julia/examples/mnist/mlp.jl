@@ -70,6 +70,6 @@ labels = reduce(
 labels .= labels .+ 1
 
 # Now we use compute the accuracy
-pred = map(i -> indmax(probs[1:10, i]), 1:size(probs, 2))
+pred = map(i -> argmax(probs[1:10, i]), 1:size(probs, 2))
 correct = sum(pred .== labels)
 @printf "Accuracy on eval set: %.2f%%\n" 100correct/length(labels)

@@ -158,7 +158,7 @@ inline void Operator::Invoke(NDArray &output) {
   Invoke(outputs);
 }
 
-inline Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
+inline Operator &Operator::SetInput(const std::string &name, const Symbol &symbol) {
     if (symbol.GetHandle()) {
       input_keys_.push_back(name.c_str());
       input_symbols_.push_back(symbol.GetHandle());
@@ -166,7 +166,7 @@ inline Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
     return *this;
 }
 
-inline Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
+inline Operator &Operator::SetInput(const std::string &name, const NDArray &ndarray) {
   input_keys_.push_back(name.c_str());
   input_ndarrays_.push_back(ndarray.GetHandle());
   return *this;
