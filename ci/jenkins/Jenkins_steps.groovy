@@ -489,6 +489,19 @@ def compile_windows_gpu_mkldnn() {
     }]
 }
 
+def test_static_scala_cpu() {
+  return ['Static build CPU 14.04 Scala' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/ut-publish-scala-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_scala_static_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
 def test_unix_python2_cpu() {
     return ['Python2: CPU': {
       node(NODE_LINUX_CPU) {
