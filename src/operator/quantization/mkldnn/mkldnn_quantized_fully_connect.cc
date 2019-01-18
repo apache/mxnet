@@ -52,7 +52,10 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   const TShape &ishape = data.shape();
-  CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
+  //CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8); //FIXME, MKLDNN only support uint8 currently.
+  CHECK(data.dtype() == mshadow::kUint8)
+    << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
+    << mxnet::op::type_string(data.dtype());
 
   if (ishape.ndim() != 2) {
     data = data.MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
