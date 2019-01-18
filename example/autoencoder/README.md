@@ -2,9 +2,11 @@
 
 Autoencoder architectures are often used for unsupervised feature learning. This [link](http://ufldl.stanford.edu/tutorial/unsupervised/Autoencoders/) contains an introduction tutorial to autoencoders. This example illustrates a simple autoencoder using a stack of convolutional layers for both the encoder and the decoder. 
 
+
 ![](https://cdn-images-1.medium.com/max/800/1*LSYNW5m3TN7xRX61BZhoZA.png)
 
 ([Diagram source](https://towardsdatascience.com/autoencoders-introduction-and-implementation-3f40483b0a85))
+
 
 The idea of an autoencoder is to learn to use bottleneck architecture to encode the input and then try to decode it to reproduce the original. By doing so, the network learns to effectively compress the information of the input, the resulting embedding representation can then be used in several domains. For example as featurized representation for visual search, or in anomaly detection.
 
