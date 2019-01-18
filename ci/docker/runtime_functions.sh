@@ -386,6 +386,8 @@ build_ubuntu_cpu_openblas() {
         USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_mkl() {
@@ -401,11 +403,6 @@ build_ubuntu_cpu_mkl() {
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
         -j$(nproc)
-    
-    export CC="gcc"
-    export CXX="g++"
-    make cython PYTHON=python2
-    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_cmake_debug() {
