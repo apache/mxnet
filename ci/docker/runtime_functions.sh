@@ -1260,7 +1260,7 @@ deploy_docs() {
 
     export CC="ccache gcc"
     export CXX="ccache g++"
-    make docs SPHINXOPTS=-W
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
     popd
 }
