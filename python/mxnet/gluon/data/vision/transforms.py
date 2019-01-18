@@ -488,15 +488,15 @@ class RandomLighting(HybridBlock):
 
 
 class Batchify(HybridBlock):
-    """Joins a list of tensors of shape (C x H x W) into a single 
+    """Joins a list of tensors of shape (C x H x W) into a single
     tensor of shape (N x C x H x W) where N is the number of input
-    tensors. 
+    tensors.
 
     If the input is a single tensor of shape (C x H x W) it is bathchified
     to a tensor of shape (1 x C x H x W).
 
     This transformer is useful when transformation pipeline is fused into
-    neural network graph resulting in single model/graph. When running 
+    neural network graph resulting in single model/graph. When running
     mini batch inference on such graph, raw input tensors, before transformations,
     can be of different shapes, hence, cannot be batched into single tensor. Hence,
     input to the graph will be list of Tensors that can be batched after Resize
@@ -505,7 +505,7 @@ class Batchify(HybridBlock):
     For example, a typical graph can look like below:
 
     Imdecode -> Resize -> Batchify -> ToTensor -> Normalize -> Network
-    
+
     Parameters
     ----------
     axis : int, optional, default=0
@@ -517,7 +517,7 @@ class Batchify(HybridBlock):
 
     Outputs:
         - **out**: output stacked tensor with the shape as (N x C x H x W).
-    
+
     Examples
     --------
     >>> transformer = transforms.Batchify()
