@@ -529,7 +529,7 @@ class Batchify(HybridBlock):
     (3, 3, 28, 28)
     """
     def __init__(self, axis=0):
-        super(ListToBatch, self).__init__()
+        super(Batchify, self).__init__()
         self._axis = axis
 
     def hybrid_forward(self, F, *data):

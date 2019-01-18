@@ -83,7 +83,7 @@ def test_transformer():
     transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
 
-@with_seed
+@with_seed()
 def test_batchify():
     transformer = transforms.Batchify()
     im1 = nd.random.uniform(0, 1, (3, 28, 28))
@@ -93,10 +93,14 @@ def test_batchify():
     # Single input batchify
     batchified = transformer(im1)
     assert (batchified.shape == (1,) + im1.shape)
+    assert_almost_equal(im1.asnumpy(), batchified[0].asnumpy())
 
     # Multiple input batchify
     batchified = transformer(im1, im2, im3)
     assert (batchified.shape == (3,) + im1.shape)
+    assert_almost_equal(im1.asnumpy(), batchified[0].asnumpy())
+    assert_almost_equal(im2.asnumpy(), batchified[1].asnumpy())
+    assert_almost_equal(im3.asnumpy(), batchified[2].asnumpy())
 
 
 if __name__ == '__main__':
