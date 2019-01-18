@@ -75,12 +75,12 @@ inline int get_next_block_dim(int c){
  */
 inline int get_next_block_dim(int m, int n, int k){	
 	std::vector<int> divs = get_divisors(n);
+	int square_root_max_threads = (int) sqrt(mshadow::cuda::kMaxThreadsPerBlock) + 1;
 	if (!divs.empty()){
 		std::sort(divs.begin(), divs.end());
 		for (int i = divs.size()-1; i > -1 ; --i){
-			int val = divs[i];			
-			int sel_mid =  val < mshadow::cuda::kMaxThreadsPerBlock ? val : mshadow::cuda::kMaxThreadsPerBlock;
-			if (sel_mid < m/2 && sel_mid < k/2){
+			int sel_mid = divs[i];						
+			if (sel_mid < m/2 && sel_mid < k/2 && sel_mid <= square_root_max_threads){
 				return sel_mid;
 			}
 		}					
