@@ -61,3 +61,4 @@ REQUIRE
 include/*
 */test/test-symbol.json.ref
 */profiler/test/profile-matmul-20iter.json.ref
+erfinv-inl.h
