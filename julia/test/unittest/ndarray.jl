@@ -1434,6 +1434,50 @@ function test_hypot()
   @test copy(z) == C
 end  # function test_hypot
 
+function test_argmax()
+  @info "NDArray::argmax"
+  let
+    A = [1. 5 3;
+         4 2 6]
+    x = NDArray(A)
+
+    @test copy(argmax(x, dims = 1)) == [2 1 2]
+    @test copy(argmax(x, dims = 2)) == reshape([2, 3], :, 1)
+  end
+
+  @info "NDArray::argmax::NaN"
+  let
+    A = [1.  5 3;
+         NaN 2 6]
+    x = NDArray(A)
+
+    @test copy(argmax(x, dims = 1)) == [1 1 2]
+    @test copy(argmax(x, dims = 2)) == reshape([2, 3], :, 1)
+  end
+end
+
+function test_argmin()
+  @info "NDArray::argmin"
+  let
+    A = [1. 5 3;
+         4 2 6]
+    x = NDArray(A)
+
+    @test copy(argmin(x, dims = 1)) == [1 2 1]
+    @test copy(argmin(x, dims = 2)) == reshape([1, 2], :, 1)
+  end
+
+  @info "NDArray::argmin::NaN"
+  let
+    A = [1.  5 3;
+         NaN 2 6]
+    x = NDArray(A)
+
+    @test copy(argmin(x, dims = 1)) == [1 2 1]
+    @test copy(argmin(x, dims = 2)) == reshape([1, 2], :, 1)
+  end
+end
+
 ################################################################################
 # Run tests
 ################################################################################
@@ -1479,6 +1523,8 @@ end  # function test_hypot
   test_broadcast_to()
   test_broadcast_axis()
   test_hypot()
+  test_argmax()
+  test_argmin()
 end
 
 end
