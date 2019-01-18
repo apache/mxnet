@@ -487,10 +487,13 @@ class RandomLighting(HybridBlock):
         return F.image.random_lighting(x, self._alpha)
 
 
-class ListToBatch(HybridBlock):
+class Batchify(HybridBlock):
     """Joins a list of tensors of shape (C x H x W) into a single 
     tensor of shape (N x C x H x W) where N is the number of input
-    tensors.
+    tensors. 
+
+    If the input is a single tensor of shape (C x H x W) it is bathchified
+    to a tensor of shape (1 x C x H x W).
 
     This transformer is useful when transformation pipeline is fused into
     neural network graph resulting in single model/graph. When running 
@@ -501,7 +504,7 @@ class ListToBatch(HybridBlock):
 
     For example, a typical graph can look like below:
 
-    Imdecode -> Resize -> ListToBatch -> ToTensor -> Normalize -> Network
+    Imdecode -> Resize -> Batchify -> ToTensor -> Normalize -> Network
     
     Parameters
     ----------
@@ -517,7 +520,7 @@ class ListToBatch(HybridBlock):
     
     Examples
     --------
-    >>> transformer = transforms.ListToBatch()
+    >>> transformer = transforms.Batchify()
     >>> image1 = mx.nd.random.uniform(0, 1, shape=(3, 28, 28))
     >>> image2 = mx.nd.random.uniform(0, 1, shape=(3, 28, 28))
     >>> image3 = mx.nd.random.uniform(0, 1, shape=(3, 28, 28))
