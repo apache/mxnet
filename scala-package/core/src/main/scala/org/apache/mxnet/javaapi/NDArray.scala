@@ -91,17 +91,26 @@ object NDArray extends NDArrayBase {
   def full(shape: Shape, value: Float, ctx: Context): NDArray
   = org.apache.mxnet.NDArray.full(shape, value, ctx)
 
+  def full(shape: Shape, value: Double, ctx: Context): NDArray
+  = org.apache.mxnet.NDArray.full(shape, value, ctx)
+
   def power(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
   def power(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
   def power(lhs: Float, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
+  def power(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
+  def power(lhs: Double, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.power(lhs, rhs)
 
   def maximum(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.maximum(lhs, rhs)
   def maximum(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.maximum(lhs, rhs)
   def maximum(lhs: Float, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.maximum(lhs, rhs)
+  def maximum(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.maximum(lhs, rhs)
+  def maximum(lhs: Double, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.maximum(lhs, rhs)
 
   def minimum(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.minimum(lhs, rhs)
   def minimum(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.minimum(lhs, rhs)
   def minimum(lhs: Float, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.minimum(lhs, rhs)
+  def minimum(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.minimum(lhs, rhs)
+  def minimum(lhs: Double, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.minimum(lhs, rhs)
 
 
   /**
@@ -111,6 +120,7 @@ object NDArray extends NDArrayBase {
     */
   def equal(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.equal(lhs, rhs)
   def equal(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.equal(lhs, rhs)
+  def equal(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.equal(lhs, rhs)
 
   /**
     * Returns the result of element-wise **not equal to** (!=) comparison operation
@@ -120,6 +130,7 @@ object NDArray extends NDArrayBase {
     */
   def notEqual(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.notEqual(lhs, rhs)
   def notEqual(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.notEqual(lhs, rhs)
+  def notEqual(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.notEqual(lhs, rhs)
 
   /**
     * Returns the result of element-wise **greater than** (>) comparison operation
@@ -129,6 +140,7 @@ object NDArray extends NDArrayBase {
     */
   def greater(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.greater(lhs, rhs)
   def greater(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.greater(lhs, rhs)
+  def greater(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.greater(lhs, rhs)
 
   /**
     * Returns the result of element-wise **greater than or equal to** (>=) comparison
@@ -140,6 +152,8 @@ object NDArray extends NDArrayBase {
   = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
   def greaterEqual(lhs: NDArray, rhs: Float): NDArray
   = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
+  def greaterEqual(lhs: NDArray, rhs: Double): NDArray
+  = org.apache.mxnet.NDArray.greaterEqual(lhs, rhs)
 
   /**
     * Returns the result of element-wise **lesser than** (<) comparison operation
@@ -149,6 +163,7 @@ object NDArray extends NDArrayBase {
     */
   def lesser(lhs: NDArray, rhs: NDArray): NDArray = org.apache.mxnet.NDArray.lesser(lhs, rhs)
   def lesser(lhs: NDArray, rhs: Float): NDArray = org.apache.mxnet.NDArray.lesser(lhs, rhs)
+  def lesser(lhs: NDArray, rhs: Double): NDArray = org.apache.mxnet.NDArray.lesser(lhs, rhs)
 
   /**
     * Returns the result of element-wise **lesser than or equal to** (<=) comparison
@@ -159,6 +174,8 @@ object NDArray extends NDArrayBase {
   def lesserEqual(lhs: NDArray, rhs: NDArray): NDArray
   = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
   def lesserEqual(lhs: NDArray, rhs: Float): NDArray
+  = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
+  def lesserEqual(lhs: NDArray, rhs: Double): NDArray
   = org.apache.mxnet.NDArray.lesserEqual(lhs, rhs)
 
   /**
@@ -171,6 +188,18 @@ object NDArray extends NDArrayBase {
   def array(sourceArr: java.util.List[java.lang.Float], shape: Shape, ctx: Context = null): NDArray
   = org.apache.mxnet.NDArray.array(
     sourceArr.asScala.map(ele => Float.unbox(ele)).toArray, shape, ctx)
+
+  /**
+    * Create a new NDArray that copies content from source_array.
+    * @param sourceArr Source data (list of Doubles) to create NDArray from.
+    * @param shape shape of the NDArray
+    * @param ctx The context of the NDArray, default to current default context.
+    * @return The created NDArray.
+    */
+  def arrayWithDouble(sourceArr: java.util.List[java.lang.Double], shape: Shape,
+                      ctx: Context = null): NDArray
+  = org.apache.mxnet.NDArray.array(
+    sourceArr.asScala.map(ele => Double.unbox(ele)).toArray, shape)
 
   /**
     * Returns evenly spaced values within a given interval.
@@ -202,6 +231,10 @@ object NDArray extends NDArrayBase {
 class NDArray private[mxnet] (val nd: org.apache.mxnet.NDArray ) {
 
   def this(arr: Array[Float], shape: Shape, ctx: Context) = {
+    this(org.apache.mxnet.NDArray.array(arr, shape, ctx))
+  }
+
+  def this(arr: Array[Double], shape: Shape, ctx: Context) = {
     this(org.apache.mxnet.NDArray.array(arr, shape, ctx))
   }
 
@@ -304,41 +337,59 @@ class NDArray private[mxnet] (val nd: org.apache.mxnet.NDArray ) {
     * @return Current NDArray
     */
   def set(value: Float): NDArray = nd.set(value)
+  def set(value: Double): NDArray = nd.set(value)
   def set(other: NDArray): NDArray = nd.set(other)
   def set(other: Array[Float]): NDArray = nd.set(other)
+  def set(other: Array[Double]): NDArray = nd.set(other)
 
   def add(other: NDArray): NDArray = this.nd + other.nd
   def add(other: Float): NDArray = this.nd + other
+  def add(other: Double): NDArray = this.nd + other
   def addInplace(other: NDArray): NDArray = this.nd += other
   def addInplace(other: Float): NDArray = this.nd += other
+  def addInplace(other: Double): NDArray = this.nd += other
   def subtract(other: NDArray): NDArray = this.nd - other
   def subtract(other: Float): NDArray = this.nd - other
+  def subtract(other: Double): NDArray = this.nd - other
   def subtractInplace(other: NDArray): NDArray = this.nd -= other
   def subtractInplace(other: Float): NDArray = this.nd -= other
+  def subtractInplace(other: Double): NDArray = this.nd -= other
   def multiply(other: NDArray): NDArray = this.nd * other
   def multiply(other: Float): NDArray = this.nd * other
+  def multiply(other: Double): NDArray = this.nd * other
   def multiplyInplace(other: NDArray): NDArray = this.nd *= other
   def multiplyInplace(other: Float): NDArray = this.nd *= other
+  def multiplyInplace(other: Double): NDArray = this.nd *= other
   def div(other: NDArray): NDArray = this.nd / other
   def div(other: Float): NDArray = this.nd / other
+  def div(other: Double): NDArray = this.nd / other
   def divInplace(other: NDArray): NDArray = this.nd /= other
   def divInplace(other: Float): NDArray = this.nd /= other
+  def divInplace(other: Double): NDArray = this.nd /= other
   def pow(other: NDArray): NDArray = this.nd ** other
   def pow(other: Float): NDArray = this.nd ** other
+  def pow(other: Double): NDArray = this.nd ** other
   def powInplace(other: NDArray): NDArray = this.nd **= other
   def powInplace(other: Float): NDArray = this.nd **= other
+  def powInplace(other: Double): NDArray = this.nd **= other
   def mod(other: NDArray): NDArray = this.nd % other
   def mod(other: Float): NDArray = this.nd % other
+  def mod(other: Double): NDArray = this.nd % other
   def modInplace(other: NDArray): NDArray = this.nd %= other
   def modInplace(other: Float): NDArray = this.nd %= other
+  def modInplace(other: Double): NDArray = this.nd %= other
   def greater(other: NDArray): NDArray = this.nd > other
   def greater(other: Float): NDArray = this.nd > other
+  def greater(other: Double): NDArray = this.nd > other
   def greaterEqual(other: NDArray): NDArray = this.nd >= other
   def greaterEqual(other: Float): NDArray = this.nd >= other
+  def greaterEqual(other: Double): NDArray = this.nd >= other
   def lesser(other: NDArray): NDArray = this.nd < other
   def lesser(other: Float): NDArray = this.nd < other
+  def lesser(other: Double): NDArray = this.nd < other
   def lesserEqual(other: NDArray): NDArray = this.nd <= other
   def lesserEqual(other: Float): NDArray = this.nd <= other
+  def lesserEqual(other: Double): NDArray = this.nd <= other
 
   /**
     * Return a copied flat java array of current array (row-major).
@@ -347,12 +398,26 @@ class NDArray private[mxnet] (val nd: org.apache.mxnet.NDArray ) {
   def toArray: Array[Float] = nd.toArray
 
   /**
+    * Return a copied flat java array of current array (row-major).
+    * @return  A copy of array content.
+    */
+  def toFloat64Array: Array[Double] = nd.toFloat64Array
+
+  /**
     * Return a CPU scalar(float) of current ndarray.
     * This ndarray must have shape (1,)
     *
     * @return The scalar representation of the ndarray.
     */
   def toScalar: Float = nd.toScalar
+
+  /**
+    * Return a CPU scalar(float) of current ndarray.
+    * This ndarray must have shape (1,)
+    *
+    * @return The scalar representation of the ndarray.
+    */
+  def toFloat64Scalar: Double = nd.toFloat64Scalar
 
   /**
     * Copy the content of current array to other.

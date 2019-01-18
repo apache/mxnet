@@ -96,7 +96,7 @@ function speedometer(;frequency::Int = 50)
       cl_tic = time()
     else
       speed = frequency * state.batch_size / (time() - cl_tic)
-      info(format("Speed: {1:>6.2f} samples/sec", speed))
+      @info(format("Speed: {1:>6.2f} samples/sec", speed))
       cl_tic = time()
     end
   end

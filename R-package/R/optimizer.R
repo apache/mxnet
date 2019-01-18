@@ -21,7 +21,7 @@
 #' @param learning.rate float, default=0.01
 #'      The initial learning rate.
 #' @param momentum float, default=0
-#'      The momentumvalue
+#'      The momentum value
 #' @param wd float, default=0.0
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0

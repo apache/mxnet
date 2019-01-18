@@ -61,7 +61,8 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
            dataName: String = "data", labelName: String = "label") {
-    this(IO.initDataDesc(data, allowEmpty = false, dataName, MX_REAL_TYPE, Layout.UNDEFINED),
+    this(IO.initDataDesc(data, allowEmpty = false, dataName,
+      if (data == null || data.isEmpty)  MX_REAL_TYPE else data(0).dtype, Layout.UNDEFINED),
       IO.initDataDesc(label, allowEmpty = true, labelName, MX_REAL_TYPE, Layout.UNDEFINED),
       dataBatchSize, shuffle, lastBatchHandle)
   }
@@ -272,7 +273,7 @@ object NDArrayIter {
      */
     def addData(name: String, data: NDArray): Builder = {
       this.data = this.data ++ IndexedSeq((new DataDesc(name,
-        data.shape, DType.Float32, Layout.UNDEFINED), data))
+        data.shape, data.dtype, Layout.UNDEFINED), data))
       this
     }
 
@@ -284,7 +285,7 @@ object NDArrayIter {
      */
     def addLabel(name: String, label: NDArray): Builder = {
       this.label = this.label ++ IndexedSeq((new DataDesc(name,
-        label.shape, DType.Float32, Layout.UNDEFINED), label))
+        label.shape, label.dtype, Layout.UNDEFINED), label))
       this
     }
 

@@ -16,13 +16,14 @@
 # under the License.
 
 # Simple data provider that load text
-using Iterators
+using Base.Iterators
 using MXNet
 
-function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString; max_vocab=10000)
+function build_vocabulary(corpus_fn::AbstractString, vocab_fn::AbstractString;
+                          max_vocab = 10000)
   if isfile(vocab_fn)
-    info("Vocabulary already exists, reusing $vocab_fn...")
-    vocab = Dict{Char,Int}(w => i for (i,w) in enumerate(readstring(vocab_fn)))
+    @info("Vocabulary already exists, reusing $vocab_fn...")
+    vocab = Dict{Char,Int}(w => i for (i,w) in enumerate(read(vocab_fn, String)))
   else
     # count symbol frequency
     dict = Dict{Char,Int}()
@@ -99,8 +100,8 @@ function mx.eachbatch(p::CharSeqProvider)
 
     for idx_batch in partition(idx_all, p.batch_size*p.seq_len)
       for i = 1:p.seq_len
-        data_jl[i][:] = 0
-        label_jl[i][:] = 0
+        data_jl[i][:] .= 0
+        label_jl[i][:] .= 0
       end
 
       for (i, idx_seq) in enumerate(partition(idx_batch, p.seq_len))

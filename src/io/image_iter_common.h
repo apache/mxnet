@@ -131,6 +131,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   size_t shuffle_chunk_size;
   /*! \brief the seed for chunk shuffling*/
   int shuffle_chunk_seed;
+  /*! \brief random seed for augmentations */
+  dmlc::optional<int> seed_aug;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
@@ -165,6 +167,8 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("The data shuffle buffer size in MB. Only valid if shuffle is true.");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
         .describe("The random seed for shuffling");
+    DMLC_DECLARE_FIELD(seed_aug).set_default(dmlc::optional<int>())
+        .describe("Random seed for augmentations.");
   }
 };
 

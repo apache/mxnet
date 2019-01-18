@@ -60,7 +60,7 @@
 #include "mxnet/op_attr_types.h"
 using namespace mkldnn;
 namespace mxnet {
-extern bool EnableMkldnnWarnGenerated();
+
 // =====  CpuEngine =======================================
 // cpu_engine singleton
 class CpuEngine {

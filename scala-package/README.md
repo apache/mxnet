@@ -10,7 +10,7 @@ The MXNet Scala/Java Package brings flexible and efficient GPU/CPU computing and
 - The Scala/Java Inferece APIs provides an easy out of the box solution for loading pre-trained MXNet models and running inference on them.
   
 Pre-Built Maven Packages
-------------
+------------------------
 
 ### Stable ###
 
@@ -114,30 +114,51 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 **Note:** ```<version>[1.5.0,)<\version>``` indicates that we will fetch packages with version 1.5.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
 
 Build From Source
-------------
+-----------------
 
-Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet package and build it from source.
-If you have built MXNet from source and are looking to setup Scala from that point, you may simply run the following from the MXNet source root:
+Checkout the [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet package and build it from source. Scala maven build assume you already have a ``lib/libmxnet.so`` file.
+If you have built MXNet from source and are looking to setup Scala from that point, you may simply run the following from the MXNet source root, Scala build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
 
 ```bash
-make scalapkg
+cd scala-package
+mvn install
 ```
 
 You can also run the unit tests and integration tests on the Scala Package by :
 
 ```bash
-make scalaunittest
-make scalaintegrationtest
+cd scala-package
+mvn integration-test -DskipTests=false
 ```
 
 Or run a subset of unit tests, for e.g.,
 
 ```bash
-make SCALA_TEST_ARGS=-Dsuites=org.apache.mxnet.NDArraySuite scalaunittest
+cd scala-package
+mvn -Dsuites=org.apache.mxnet.NDArraySuite integration-test
 ```
 
 If everything goes well, you will find jars for `assembly`, `core` and `example` modules.
-Also it produces the native library in `native/{your-architecture}/target`, which you can use to cooperate with the `core` module.
+Also it produces the native library in `native/target`, which you can use to cooperate with the `core` module.
+
+Deploy to repository
+--------------------
+
+By default, `maven deploy` will deploy artifacts to local file system, you can file then in: ``scala-package/deploy/target/repo`` folder.
+
+For nightly build in CI, a snapshot build will be uploaded to apache repository with follow command:
+
+```bash
+cd scala-package
+mvn deploy -Pnightly
+```
+
+Use following command to deploy release build (push artifacts to apache staging repository):
+
+```bash
+cd scala-package
+mvn deploy -Pstaging
+```
 
 Examples & Usage
 -------
@@ -175,3 +196,7 @@ More details about JVM Memory Management are available [here](https://github.com
 License
 -------
 MXNet Scala Package is licensed under [Apache-2](https://github.com/apache/incubator-mxnet/blob/master/scala-package/LICENSE) license.
+
+MXNet uses some 3rd party softwares. Following 3rd party license files are bundled inside Scala jar file:
+* cub/LICENSE.TXT
+* mkldnn/external/mklml_mac_2019.0.1.20180928/license.txt
