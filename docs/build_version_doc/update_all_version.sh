@@ -91,7 +91,14 @@ function update_mxnet_css {
   echo "Update fixes complete.."
 }
 
-
+function update_error_pages {
+  tag=$1
+  # Static error pages avoid many issues with redirects and templating
+  echo "Copying error pages from artifacts folder..."
+  cp "artifacts/404.html"  "$built/versions/$tag/error"
+  cp "artifacts/api.html"  "$built/versions/$tag/error"
+  echo "Error copies complete..."
+}
 
 # Update the specified tags with the Versions dropdown
 # Add various artifacts depending on the version
@@ -108,6 +115,7 @@ for tag in $tag_list; do
         if [ -d $built/versions/$tag ]; then
             echo "The $tag is going to be updated with new css and install pages."
             update_mxnet_css $tag
+            update_error_pages $tag
         fi
     fi
 
