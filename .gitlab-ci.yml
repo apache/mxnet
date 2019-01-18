@@ -1,26 +1,27 @@
 stages:
-  - image
-  - build-test
-  - release
+  - base
+  - test
+  - tag
 
 variables:
-  CONTAINER_TEST_IMAGE: bmxnet-v2/build.ubuntu_cpu:$CI_COMMIT_REF_SLUG
-  CONTAINER_RELEASE_IMAGE: bmxnet-v2/build.ubuntu_cpu:latest
+  BASE_IMAGE: bmxnet2-base/build.ubuntu_cpu
+  BASE_TEMPORARY_IMAGE: bmxnet2-base/build.ubuntu_cpu:$CI_PIPELINE_ID
+  BASE_LATEST_IMAGE: bmxnet2-base/build.ubuntu_cpu:latest
 
-build_docker_image:
-  stage: image
+build_base_image:
+  stage: base
   image: docker:stable
   before_script:
     - docker info
   script:
     - cd ci
-    - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from bmxnet-v2/build.ubuntu_cpu -t $CONTAINER_TEST_IMAGE docker
+    - docker build -f docker/Dockerfile.build.ubuntu_cpu --build-arg USER_ID=1000 --build-arg GROUP_ID=1000 --cache-from $BASE_IMAGE -t $BASE_TEMPORARY_IMAGE docker
 
 build_and_test:
   variables:
     GIT_SUBMODULE_STRATEGY: recursive
-  stage: build-test
-  image: $CONTAINER_TEST_IMAGE
+  stage: test
+  image: $BASE_TEMPORARY_IMAGE
   before_script:
     - ls && pwd
     - export PYTHONPATH=./python/
@@ -31,10 +32,11 @@ build_and_test:
     - make DEV=1 USE_CPP_PACKAGE=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 -j$(nproc)
     - pytest tests/python/unittest/test_binary.py
 
-release-image:
-  stage: release
+tag_image:
+  stage: tag
   image: docker:stable
   script:
-    - docker tag $CONTAINER_TEST_IMAGE $CONTAINER_RELEASE_IMAGE
+    - docker tag $BASE_TEMPORARY_IMAGE $BASE_LATEST_IMAGE
+    - docker image rm $BASE_TEMPORARY_IMAGE
   only:
     - master
