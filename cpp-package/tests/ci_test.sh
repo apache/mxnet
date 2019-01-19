@@ -60,6 +60,6 @@ cd inference
 cp ../../../build/cpp-package/example/inception_inference .
 ./unit_test_inception_inference.sh
 
-cp ../../../build/cpp-package/example/simple_rnn .
-./unit_test_simple_rnn.sh
+cp ../../../build/cpp-package/example/sentiment_analysis_rnn .
+./unit_test_sentiment_analysis_rnn.sh
 cd ..

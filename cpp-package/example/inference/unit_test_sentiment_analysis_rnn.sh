@@ -16,21 +16,22 @@
 # under the License.
 
 
+set -e # exit on the first error
+export EXE_NAME=sentiment_analysis_rnn
 
 # Running the example with dog image.
 if [ "$(uname)" == "Darwin" ]; then
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./simple_rnn  2&> simple_rnn.log
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./${EXE_NAME} --input "This movie is so amazing" 2&> ${EXE_NAME}.log
 else
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./simple_rnn  2&> simple_rnn.log
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./${EXE_NAME} --input "This movie is so amazing" 2&> ${EXE_NAME}.log
 fi
-predicted_line=`grep -o '\[[^]]*\]$' simple_rnn.log`
-num_words=`echo $predicted_line | cut -d '[' -f 2 | cut -d ']' -f 1 | awk -F ' ' '{print NF}'`
-if [ $num_words == 35 ];
+result=`grep "The sentiment score between 0 and 1.*\=" sentiment_analysis_rnn.log | cut -d '=' -f2`
+myresult=$(echo "$result>0.5" | bc)
+if [ $myresult ==  1 ];
 then
-    echo "PASS: simple_rnn correctly predicted following sequence of $num_words words."
-    echo "Sequence: $predicted_line"
+    echo "PASS: ${EXE_NAME} correctly predicted the sentiment with score = $result"
     exit 0
 else
-    echo "FAIL: simple_rnn FAILED to predict the output sequence."
+    echo "FAIL: ${EXE_NAME} FAILED to predict the sentiment with score = $result"
     exit 1
 fi
