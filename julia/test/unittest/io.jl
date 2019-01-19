@@ -38,8 +38,8 @@ function test_mnist()
   n_batch = 0
   for batch in mnist_provider
     if n_batch == 0
-      data_array  = mx.empty(28,28,1,batch_size)
-      label_array = mx.empty(batch_size)
+      data_array  = NDArray(undef, 28, 28, 1, batch_size)
+      label_array = NDArray(undef, batch_size)
       # have to use "for i=1:1" to get over the legacy "feature" of using
       # [ ] to do concatenation in Julia
       data_targets = [[(1:batch_size, data_array)] for i = 1:1]
