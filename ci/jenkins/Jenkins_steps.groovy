@@ -888,6 +888,20 @@ def test_unix_clojure_cpu() {
 }
 
 def test_unix_r_cpu() {
+    return ['R: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-r-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_perl_cpu() {
     return ['Perl: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-perl-cpu') {
@@ -943,13 +957,27 @@ def test_unix_cpp_cpu() {
     }]
 }
 
-def test_unix_r_gpu() {
+def test_unix_perl_gpu() {
     return ['Perl: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_r_gpu() {
+    return ['R: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/ut-r-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('gpu', mx_lib, true)
+            utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
           }
         }
