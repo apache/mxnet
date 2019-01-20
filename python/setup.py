@@ -19,6 +19,7 @@ setup(name='mxnet',
       description=open(os.path.join(CURRENT_DIR, 'README.md')).read(),
       install_requires=[
           'numpy',
+          'sklearn',
       ],
       zip_safe=False,
       packages=['mxnet'],
