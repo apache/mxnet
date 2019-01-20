@@ -62,6 +62,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
   float p;
   int mode;
   TShape axes;
+  dmlc::optional<bool> cudnn_off;
   DMLC_DECLARE_PARAMETER(DropoutParam) {
     DMLC_DECLARE_FIELD(p).set_default(0.5)
     .set_range(0, 1)
@@ -73,6 +74,8 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .describe("Whether to only turn on dropout during training or to also turn on for inference.");
     DMLC_DECLARE_FIELD(axes).set_default(TShape())
     .describe("Axes for variational dropout kernel.");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(false))
+    .describe("Whether to turn off cudnn in dropout operator.");
   }
 };  // struct DropoutParam
 
@@ -216,6 +219,7 @@ class DropoutOp {
     this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
     this->axes_ = param.axes;
 #if MXNET_USE_CUDNN == 1
+    this->cudnn_off_ = param.cudnn_off && param.cudnn_off.value();
     this->ctx_ = ctx;
     if (ctx.dev_type == kGPU && this->pkeep_ > 0) {
       init_cudnn_ = false;
@@ -361,9 +365,11 @@ class DropoutOp {
           if (this->axes_.ndim() == 0) {
             // standard case for dropout
 #if MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
-            if (this->pkeep_ > 0) {  // existing dropout produces inf with pkeep=0
+            if (this->pkeep_ > 0 && !this->cudnn_off_) {
               CuDNNForward(ctx, in_data[dropout::kData], out);
             } else {
+              // existing dropout produces inf with pkeep=0,
+              // thus revert to existing GPU kernel for consistency.
               LaunchRNG<DropoutKernel, xpu>(s, pgen, out.Size(),
                                             out.dptr<DType>(),
                                             mask.dptr<DType>(),
@@ -440,7 +446,7 @@ class DropoutOp {
           // standard case for dropout
           CHECK_EQ(grad.Size(), mask.Size());
 #if MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
-          if (this->pkeep_ > 0) {
+          if (this->pkeep_ > 0 && !this->cudnn_off_) {
             CuDNNBackward(ctx, grad, gdata);
           } else {
             MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
@@ -499,6 +505,7 @@ class DropoutOp {
   dropout::DropoutOpMode mode_;
   TShape axes_;
 #if MXNET_USE_CUDNN == 1
+  bool cudnn_off_;
   Context ctx_;
   cudnnDataType_t dtype_;
   cudnnDropoutDescriptor_t dropout_desc_;
