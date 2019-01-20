@@ -31,6 +31,12 @@ echo "deb http://cran.rstudio.com/bin/linux/ubuntu trusty/" >> /etc/apt/sources.
 
 apt-key add r.gpg
 
+# We have to install some dependencies during runtime - if somebody knows a better solution,
+# please don't hesitate to replace this!
+# This script is supposed to only be run within Docker, so this should be "safe" to do.
+mkdir -p /usr/local/lib/R/site-library
+chmod 777 /usr/local/lib/R/site-library
+
 # Installing the latest version (3.3+) that is compatible with MXNet
 add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
 
