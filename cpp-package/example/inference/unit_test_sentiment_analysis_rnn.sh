@@ -26,8 +26,7 @@ else
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./${EXE_NAME} --input "This movie is so amazing" 2&> ${EXE_NAME}.log
 fi
 result=`grep "The sentiment score between 0 and 1.*\=" sentiment_analysis_rnn.log | cut -d '=' -f2`
-myresult=$(echo "$result>0.5" | bc)
-if [ $myresult ==  1 ];
+if [ $result ==  "0.986632" ];
 then
     echo "PASS: ${EXE_NAME} correctly predicted the sentiment with score = $result"
     exit 0

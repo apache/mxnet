@@ -40,48 +40,49 @@ Alternatively, The script [unit_test_inception_inference.sh](<https://github.com
 ./unit_test_inception_inference.sh
 ```
 
-### [simple_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/simple_rnn.cpp>)
-This example demonstrates how you can load a pre-trained RNN model and use it to generate an output sequence with the MXNet C++ API.
-The example performs the following tasks
+### [sentiment_analysis_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/sentiment_analysis_rnn.cpp>)
+This example demonstrates how you can load a pre-trained RNN model and use it to predict the sentiment expressed in the given line of the movie review with the MXNet C++ API. The example performs the following tasks
 - Loads the pre-trained RNN model.
 - Loads the dictionary file containing the word to index mapping.
-- Converts the input string to vector of indices that's padded to match the input data length.
-- Runs the forward pass and predicts the output string.
+- Converts the input string to vector of indices that's truncated or padded to match the input data length.
+- Runs the forward pass and predicts the sentiment score between 0 to 1 where 1 represents positive sentiment.
 
-The example uses a pre-trained RNN model trained with a dataset containing speeches given by Obama.
+The example uses a pre-trained RNN model trained with a IMDB dataset. The RNN model was built by exercising the [GluonNLP Sentiment Analysis Tutorial](<http://gluon-nlp.mxnet.io/examples/sentiment_analysis/sentiment_analysis.html#>). The tutorial uses 'standard_lstm_lm_200' available in Gluon Model Zoo and fine tunes it for the IMDB dataset
 The model consists of :
-- Embedding Layer with the size of embedding set at 650
-- 3 LSTM Layers with hidden dimension size of 650 and sequence length of 35
-- FullyConnected Layer
-- SoftmaxOutput
-The model was trained for 100 epochs.
-The visual representation of the model is [here](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/obama-speaks.pdf>).
+- Embedding Layer
+- 2 LSTM Layers with hidden dimension size of 200
+- Average pooling layer
+- Sigmoid output layer
+The model was trained for 10 epochs to achieve 85% test accuracy.
+The visual representation of the model is [here](<http://gluon-nlp.mxnet.io/examples/sentiment_analysis/sentiment_analysis.html#Sentiment-analysis-model-with-pre-trained-language-model-encoder>).
 
 The model files can be found here.
-- [obama-speaks-symbol.json](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama-speaks-symbol.json>)
-- [obama-speaks-0100.params](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama-speaks-0100.params>)
-- [obama.dictionary.txt](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/obama.dictionary.txt>) Each line of the dictionary file contains a word and a unique index for that word, separated by a space, with a total of 14293 words generated from the training dataset.
+- [sentiment_analysis-symbol.json](< https://s3.amazonaws.com/mxnet-cpp/RNN_model/sentiment_analysis-symbol.json>)
+- [sentiment_analysis-0010.params](< https://s3.amazonaws.com/mxnet-cpp/RNN_model/sentiment_analysis-0010.params>)
+- [sentiment_token_to_idx.txt](<https://s3.amazonaws.com/mxnet-cpp/RNN_model/sentiment_token_to_idx.txt>) Each line of the dictionary file contains a word and a unique index for that word, separated by a space, with a total of 32787 words generated from the training dataset.
 The example downloads the above files while running.
 
 The example's command line parameters are as shown below:
 
 ```
-./simple_rnn --help
+./sentiment_analysis_rnn --help
 Usage:
-simple_rnn
-[--input] Input string sequence.
-[--gpu]  Specify this option if workflow needs to be run in gpu context.
+sentiment_analysis_rnn
+--input Input movie review line.e.g. "This movie is the best"
+[--max_num_words]  The number of words in the sentence to be considered for sentiment analysis. Default is 5
+[--gpu]  Specify this option if workflow needs to be run in gpu context
 
-./simple_rnn
+```
 
 or
 
-./simple_rnn --input "Good morning. I appreciate the opportunity to speak here"
+```
+./sentiment_analysis_rnn --input "This movie is so amazing"
 ```
 
-The example will output the sequence of 35 words as follows:
+The example will output the sentiment score as follows:
 ```
-[waters elected Amendment Amendment Amendment Amendment retirement maximize maximize maximize acr citi sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio sophisticatio ]
+The sentiment score between 0 and 1, (1 being positive)=0.986632
 ```
 
-Alternatively, you can run the [unit_test_simple_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_simple_rnn.sh>) script.
+Alternatively, you can run the [unit_test_sentiment_analysis_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_sentiment_analysis_rnn.sh>) script.

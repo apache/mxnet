@@ -220,7 +220,6 @@ int Predictor::ConverToIndexVector(const std::string& input, std::vector<float> 
   std::string token;
   size_t words = 0;
   while (std::getline(input_string, token, delimiter) && (words <= input_vector->size())) {
-    LG << token << " " << static_cast<float>(wordToIndex[token]);
     input_vector->push_back(GetIndexForWord(token));
     words++;
   }
@@ -301,7 +300,7 @@ Predictor::~Predictor() {
  */
 void printUsage() {
     std::cout << "Usage:" << std::endl;
-    std::cout << "simple_rnn " << std::endl
+    std::cout << "sentiment_analysis_rnn " << std::endl
               << "--input Input movie review line."
               << "e.g. \"This movie is the best\""  << std::endl
               << "[--max_num_words]  "
@@ -330,7 +329,7 @@ void Download_files(const std::vector<std::string> model_files) {
 
 int main(int argc, char** argv) {
   std::string model_file_json = "./sentiment_analysis-symbol.json";
-  std::string model_file_params ="./sentiment_analysis-0001.params";
+  std::string model_file_params ="./sentiment_analysis-0010.params";
   std::string input_dictionary = "./sentiment_token_to_idx.txt";
   std::string input_review = "This movie is the best";
 
