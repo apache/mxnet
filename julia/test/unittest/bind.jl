@@ -33,10 +33,10 @@ function test_arithmetic(::Type{T}, uf, gf) where T <: mx.DType
   ret = uf(lhs, rhs)
   @test mx.list_arguments(ret) == [:lhs, :rhs]
 
-  lhs_arr  = mx.NDArray(rand(T, shape))
-  rhs_arr  = mx.NDArray(rand(T, shape))
-  lhs_grad = mx.empty(T, shape)
-  rhs_grad = mx.empty(T, shape)
+  lhs_arr  = NDArray(rand(T, shape))
+  rhs_arr  = NDArray(rand(T, shape))
+  lhs_grad = NDArray{T}(undef, shape)
+  rhs_grad = NDArray{T}(undef, shape)
 
   exec2 = mx.bind(ret, mx.Context(mx.CPU), [lhs_arr, rhs_arr], args_grad=[lhs_grad, rhs_grad])
   exec3 = mx.bind(ret, mx.Context(mx.CPU), [lhs_arr, rhs_arr])
