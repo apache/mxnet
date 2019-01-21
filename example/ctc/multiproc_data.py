@@ -141,4 +141,5 @@ class MPData(object):
         print("Queue size on reset: {}".format(qsize))
         for i, p in enumerate(self.proc):
             p.join()
-        self.proc.clear()
+        if len(self.proc) > 0:
+            self.proc.clear()
