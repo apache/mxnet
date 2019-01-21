@@ -168,16 +168,28 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_MKLDNN == 1
 
-NDArray::NDArray(const mkldnn::memory *mkldnn_mem, bool static_data)
+NDArray::NDArray(mkldnn::memory::primitive_desc mem_pd)
+    : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+  auto mem_desc = mem_pd.desc();
+  shape_ = TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
+  dtype_ = get_mxnet_type(mem_desc.data.data_type);
+  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+  ptr_->CheckAndAlloc(mem_pd.get_size());
+  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mem_pd, ptr_->shandle.dptr);
+}
+
+NDArray::NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem)
     : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
   auto mem_pd = mkldnn_mem->get_primitive_desc();
   auto mem_desc = mem_pd.desc();
   shape_ = TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_ = get_mxnet_type(mem_desc.data.data_type);
-  auto data = TBlob(mkldnn_mem->get_data_handle(), shape_, cpu::kDevMask, dtype_);
-  ptr_ = std::make_shared<Chunk>(data, 0);
-  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mem_pd, ptr_->shandle.dptr);
-  ptr_->static_data = static_data;
+  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+  ptr_->shandle.dptr = mkldnn_mem->get_data_handle();
+  ptr_->shandle.size = mem_pd.get_size();
+  ptr_->delay_alloc = false;
+  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mkldnn_mem);
+  ptr_->static_data = true;
 }
 
 NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
@@ -717,19 +729,16 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
   return ptr_->mkl_mem_->GetRaw();
 }
 
-void NDArray::UpdateMKLDNNMemDesc() {
+void NDArray::UpdateMKLDNNMemDesc(mkldnn::memory::format format) {
   const mkldnn::memory *mem = GetMKLDNNData();
   auto mem_desc = mem->get_primitive_desc().desc();
   auto this_dtype = get_mkldnn_type(dtype());
-  if (this_dtype != mem_desc.data.data_type) {
-    mkldnn::memory::desc data_md(
-        mkldnn::memory::dims(mem_desc.data.dims,
-                             mem_desc.data.dims + mem_desc.data.ndims),
-        this_dtype, static_cast<mkldnn::memory::format>(mem_desc.data.format));
-    mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
-    ptr_->mkl_mem_.reset(new MKLDNNMemory(pd, ptr_->shandle.dptr));
-    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
-  }
+  mkldnn::memory::desc data_md(
+      mkldnn::memory::dims(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims),
+      this_dtype, format);
+  mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
+  ptr_->mkl_mem_.reset(new MKLDNNMemory(pd, ptr_->shandle.dptr));
+  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
 }
 #endif
 
