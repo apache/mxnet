@@ -77,7 +77,6 @@ _WHITE_LIST = [
 
                # Licensed under Caffe header
                'src/operator/nn/pool.h',
-               'src/operator/contrib/erfinv-inl.h',
                'src/operator/contrib/psroi_pooling-inl.h',
                'src/operator/contrib/nn/deformable_im2col.h',
                'src/operator/contrib/nn/deformable_im2col.cuh',
@@ -85,6 +84,7 @@ _WHITE_LIST = [
                'src/operator/nn/im2col.cuh',
 
                # Licenses in headers
+               'src/operator/contrib/erfinv-inl.h',
                'docs/_static/searchtools_custom.js',
                'docs/_static/js/clipboard.js',
                'docs/_static/js/clipboard.min.js',
