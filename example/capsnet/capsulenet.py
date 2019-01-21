@@ -266,7 +266,9 @@ def random_shift(x, width_shift_fraction, height_shift_fraction):
 
 
 def _shuffle(data, idx):
-    """Shuffle the data."""
+    """
+    Shuffle the data.
+    """
     shuffle_data = []
 
     for idx_k, idx_v in data:
