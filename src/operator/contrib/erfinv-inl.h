@@ -43,7 +43,6 @@
 #define MXNET_OPERATOR_CONTRIB_ERFINV_INL_H_
 
 #define _USE_MATH_DEFINES
-#define CENTRAL_RANGE 0.7
 
 #include <mxnet/base.h>
 #include <limits>
@@ -64,7 +63,9 @@ struct erfinv : public mxnet_op::tunable {
     Author:  Gary L. Pavlis, Indiana University
     Date:  February 1996
     */
+    const double central_range = 0.7;
     double y = static_cast<double>(v);
+    double y_fab = std::fabs(y);
     /*working variables */
     double x = 0.0;
     double z, num, dem;
@@ -73,18 +74,18 @@ struct erfinv : public mxnet_op::tunable {
     double b[4]={-2.118377725,  1.442710462, -0.329097515,  0.012229801};
     double c[4]={-1.970840454, -1.624906493,  3.429567803,  1.641345311};
     double d[2]={ 3.543889200,  1.637067800};
-    if (fabs(y) > 1.0) {
+    if (y_fab > 1.0) {
       /* This needs IEEE constant*/
       return DType(std::numeric_limits<double>::quiet_NaN());
-    } else if (fabs(y) == 1.0) {
+    } else if (y_fab == 1.0) {
       return DType((std::copysign(1.0, y))*std::numeric_limits<double>::infinity());
-    } else if (fabs(y) <= CENTRAL_RANGE) {
+    } else if (y_fab <= central_range) {
             z = y*y;
             num = (((a[3]*z + a[2])*z + a[1])*z + a[0]);
             dem = ((((b[3]*z + b[2])*z + b[1])*z +b[0])*z + 1.0);
             x = y*num/dem;
     } else {
-            z = std::sqrt(-std::log((1.0-fabs(y))/2.0));
+            z = std::sqrt(-std::log((1.0-y_fab)/2.0));
             num = ((c[3]*z + c[2])*z + c[1])*z + c[0];
             dem = (d[1]*z + d[0])*z + 1.0;
             x = (std::copysign(1.0, y))*num/dem;
@@ -96,7 +97,6 @@ struct erfinv : public mxnet_op::tunable {
     return DType(x);
   }
 };
-#undef CENTRAL_RANGE
 
 }  // namespace mshadow_op
 }  // namespace op
