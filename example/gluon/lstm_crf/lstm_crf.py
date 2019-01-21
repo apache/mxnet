@@ -14,7 +14,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+"""This example demonstrates how the LSTM-CRF model can be implemented
+in Gluon to perform noun-phrase chunking as a sequence labeling task.
+"""
 import mxnet as mx
 from mxnet import autograd as ag, ndarray as nd, gluon
 from mxnet.gluon import Block, nn, rnn
@@ -26,22 +28,27 @@ import sys
 
 mx.random.seed(1)
 
+
 # Helper functions to make the code more readable.
 def to_scalar(x):
     return int(x.asscalar())
+
 
 def argmax(vec):
     # return the argmax as a python int
     idx = nd.argmax(vec, axis=1)
     return to_scalar(idx)
 
+
 def prepare_sequence(seq, word2idx):
     return nd.array([word2idx[w] for w in seq])
+
 
 # Compute log sum exp is numerically more stable than multiplying probabilities
 def log_sum_exp(vec):
     max_score = nd.max(vec).asscalar()
     return nd.log(nd.sum(nd.exp(vec - max_score))) + max_score
+
 
 # Model
 class BiLSTM_CRF(Block):
@@ -173,6 +180,7 @@ class BiLSTM_CRF(Block):
         # Find the best path, given the features.
         score, tag_seq = self._viterbi_decode(lstm_feats)
         return score, tag_seq
+
 
 # Run training
 START_TAG = "<START>"
