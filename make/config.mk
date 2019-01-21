@@ -98,8 +98,10 @@ USE_LIBJPEG_TURBO_PATH = NONE
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# whether use MKL-DNN library
-USE_MKLDNN = 0
+# whether use MKL-DNN library: 0 = disabled, 1 = enabled
+# if USE_MKLDNN is not defined, MKL-DNN will be enabled by default on x86 Linux.
+# you can disable it explicity with USE_MKLDNN = 0
+USE_MKLDNN =
 
 # whether use NNPACK library
 USE_NNPACK = 0

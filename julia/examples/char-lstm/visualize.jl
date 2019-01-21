@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-include(joinpath(dirname(@__FILE__), "config.jl"))
-include(joinpath(dirname(@__FILE__), "lstm.jl"))
+include(joinpath(@__DIR__, "config.jl"))
+include(joinpath(@__DIR__, "lstm.jl"))
 
 using MXNet
 

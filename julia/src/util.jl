@@ -19,7 +19,7 @@
 # Dataset related utilities
 ################################################################################
 function get_data_dir()
-  data_dir = joinpath(Pkg.dir("MXNet"), "data")
+  data_dir = joinpath(@__DIR__, "..", "data")
   mkpath(data_dir)
   data_dir
 end
@@ -32,7 +32,7 @@ function get_mnist_ubyte()
                    :train_label => "train-labels-idx1-ubyte",
                    :test_data   => "t10k-images-idx3-ubyte",
                    :test_label  => "t10k-labels-idx1-ubyte")
-  filenames = Dict(map((x) -> x[1] => joinpath(mnist_dir, x[2]), filenames))
+  filenames = Dict((x[1] => joinpath(mnist_dir, x[2]) for x ∈ pairs(filenames)))
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
       mnist_dir = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
@@ -40,7 +40,7 @@ function get_mnist_ubyte()
           run(`unzip -u $mnist_dir`)
         catch
           try
-            run(pipe(`7z x $mnist_dir`,stdout=DevNull))
+            run(pipe(`7z x $mnist_dir`,stdout = devnull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end
@@ -63,7 +63,7 @@ function get_cifar10()
           run(`unzip -u cifar10.zip`)
         catch
           try
-            run(pipeline(`7z x cifar10.zip`, stdout=DevNull))
+            run(pipeline(`7z x cifar10.zip`, stdout = devnull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end
@@ -149,9 +149,8 @@ function _get_libmx_op_description(name::String, handle::MX_OpHandle)
   return desc, key_narg
 end
 
-function _format_typestring(typestr :: String)
-  replace(typestr, r"\bSymbol\b", "SymbolicNode")
-end
+_format_typestring(s::String) = replace(s, r"\bSymbol\b" => "SymbolicNode")
+
 function _format_docstring(narg::Int, arg_names::Ref{char_pp}, arg_types::Ref{char_pp}, arg_descs::Ref{char_pp}, remove_dup::Bool=true)
   param_keys = Set{String}()
 
@@ -184,15 +183,14 @@ end
 Extract the line of `Defined in ...`
 
 julia> mx._getdocdefine("sgd_update")
-"Defined in src/operator/optimizer_op.cc:L53"
-```
+"Defined in `src/operator/optimizer_op.cc:L53`"
 """
 function _getdocdefine(name::String)
   op = _get_libmx_op_handle(name)
   str = _get_libmx_op_description(name, op)[1]
   lines = split(str, '\n')
-  for m ∈ match.(r"^Defined in .*$", lines)
-    m != nothing && return m.match
+  for m ∈ match.(Ref(r"^Defined in ([\S]+)$"), lines)
+    m != nothing && return "Defined in `$(m.captures[1])`"
   end
   ""
 end
@@ -227,7 +225,7 @@ function _sig_checker()
       return
     end
 
-    warn(_sig)
+    @warn(_sig)
 
   end
 end
@@ -253,3 +251,20 @@ function _firstarg(sig::Expr)
 end
 
 _firstarg(s::Symbol) = s
+
+const _import_map = Dict{Symbol,Union{Missing,Module}}(
+  :diag    => LinearAlgebra,
+  :dot     => LinearAlgebra,
+  :norm    => LinearAlgebra,
+
+  :shuffle => Random,
+
+  :mean    => Statistics,
+
+  :gamma   => missing,
+)
+
+function _import_expr(func_name::Symbol)
+  mod = get(_import_map, func_name, Base)
+  isdefined(mod, func_name) ? :(import $(Symbol(mod)): $func_name) : :()
+end

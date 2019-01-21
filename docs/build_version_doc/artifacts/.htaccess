@@ -1,28 +1,25 @@
 RewriteEngine on
-RewriteRule ^get_started/why_mxnet.html$ /faq/why_mxnet.html [R=301,L]
-RewriteRule ^get_started.*$ /install/ [R=301,L]
-RewriteRule ^how_to.*$ /faq/ [R=301,L]
-RewriteRule ^api/python/symbol.html$ /api/python/symbol/symbol.html [R=301,L]
-RewriteRule ^community/index.html$ /community/contribute.html [R=301,L]
+RewriteRule .* - [E=default_version:/versions/master]
+RewriteRule ^get_started/why_mxnet.html$ %{ENV:default_version}/faq/why_mxnet.html [R=301,L]
+RewriteRule ^get_started.*$ %{ENV:default_version}/install/ [R=301,L]
+RewriteRule ^how_to.*$ %{ENV:default_version}/faq/ [R=301,L]
+RewriteRule ^api/python/symbol.html$ %{ENV:default_version}/api/python/symbol/symbol.html [R=301,L]
+RewriteRule ^(?:versions\/[^\/]+\/)?community/index.html$ %{ENV:default_version}/community/contribute.html [R=301,L]
 
 # Navigation bar redirects to latest info
-RewriteRule ^versions/[^\/]+/architecture/.*$ /architecture/ [R=301,L]
-RewriteRule ^versions/[^\/]+/community/.*$ /community/ [R=301,L]
-RewriteRule ^versions/[^\/]+/faq/.*$ /faq/ [R=301,L]
-RewriteRule ^versions/[^\/]+/gluon/.*$ /gluon/ [R=301,L]
-RewriteRule ^versions/[^\/]+/install/.*$ /install/ [R=301,L]
-RewriteRule ^versions/[^\/]+/tutorials/(.*)$ /tutorials/$1 [R=301,L]
+RewriteCond %{ENV:default_version}#\/$1 !^([^#]+)#\1$
+RewriteRule ^(versions\/[^\/]+)?(?:\/)?(faq|community|install|gluon|tutorials|architecture)(.*)?$ %{ENV:default_version}/$2$3 [R=301,L]
 
 # Redirect navbar APIs that did not exist
-RewriteRule ^versions/0.11.0/api/python/contrib/onnx.html /error/api.html [R=301,L]
-RewriteRule ^versions/0.12.1/api/python/contrib/onnx.html /error/api.html [R=301,L]
-RewriteRule ^versions/1.0.0/api/python/contrib/onnx.html /error/api.html [R=301,L]
-RewriteRule ^versions/1.1.0/api/python/contrib/onnx.html /error/api.html [R=301,L]
+RewriteRule ^versions/0.11.0/api/python/contrib/onnx.html %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/0.12.1/api/python/contrib/onnx.html %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/1.0.0/api/python/contrib/onnx.html %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/1.1.0/api/python/contrib/onnx.html %{ENV:default_version}/error/api.html [R=301,L]
 
-RewriteRule ^versions/0.11.0/api/clojure/.*$ /error/api.html [R=301,L]
-RewriteRule ^versions/0.12.1/api/clojure/.*$ /error/api.html [R=301,L]
-RewriteRule ^versions/1.0.0/api/clojure/.*$ /error/api.html [R=301,L]
-RewriteRule ^versions/1.1.0/api/clojure/.*$ /error/api.html [R=301,L]
-RewriteRule ^versions/1.2.1/api/clojure/.*$ /error/api.html [R=301,L]
+RewriteRule ^versions/0.11.0/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/0.12.1/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/1.0.0/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/1.1.0/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
+RewriteRule ^versions/1.2.1/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
 
 ErrorDocument 404 https://mxnet.incubator.apache.org/error/404.html

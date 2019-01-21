@@ -13,6 +13,16 @@ The `predict-image.clj` file loads up the pre-trained resnet-152 model and uses 
 
 *To use run download-reset-152.sh to get the model params and json *
 
+Run the example with the available leiningen alias:
+
+```
+$ lein predict-image
+#
+# or with your own image:
+#
+$ lein predict-image <url_or_path_to_image>
+```
+
 
 ## Fine Tune from pretrained models
 

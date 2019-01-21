@@ -19,23 +19,8 @@
 
 set -e
 
-echo $OSTYPE
-
-hw_type=cpu
-if [[ $1 = gpu ]]
-then
-    hw_type=gpu
-fi
-
-platform=linux-x86_64
-
-if [[ $OSTYPE = [darwin]* ]]
-then
-    platform=osx-x86_64
-fi
-
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/$platform-$hw_type/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*:$MXNET_ROOT/scala-package/infer/target/*
 
 MODEL_NAME=$2
 

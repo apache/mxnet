@@ -17,6 +17,7 @@
 
 # pylint: skip-file
 from __future__ import print_function
+from __future__ import division
 import numpy as np
 import mxnet as mx
 import copy
@@ -1602,33 +1603,33 @@ def test_batchnorm_training():
 def test_convolution_grouping():
     for dim in [1, 2, 3]:
         num_filter = 4
-        num_group = 2
-        kernel = (3,) * dim
-        shape = (1, 4) + (9,) * dim
+        for num_group in [1, 2]:
+            kernel = (3,) * dim
+            shape = (1, 4) + (9,) * dim
 
-        x = mx.sym.Variable('x')
-        w = mx.sym.Variable('w')
-        b = mx.sym.Variable('b')
-        y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
-        xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
-        wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
-        bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
-        y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
-                                                num_filter=num_filter//num_group, kernel=kernel)
-                           for i in range(num_group)])
+            x = mx.sym.Variable('x')
+            w = mx.sym.Variable('w')
+            b = mx.sym.Variable('b')
+            y1 = mx.sym.Convolution(data=x, weight=w, bias=b, num_filter=num_filter, num_group=num_group, kernel=kernel)
+            xslice = mx.sym.SliceChannel(data=x, num_outputs=num_group, axis=1)
+            wslice = mx.sym.SliceChannel(data=w, num_outputs=num_group, axis=0)
+            bslice = mx.sym.SliceChannel(data=b, num_outputs=num_group, axis=0)
+            y2 = mx.sym.Concat(*[mx.sym.Convolution(data=xslice[i], weight=wslice[i], bias=bslice[i],
+                                                    num_filter=num_filter//num_group, kernel=kernel)
+                            for i in range(num_group)])
 
-        exe1 = y1.simple_bind(default_context(), x=shape)
-        exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
-        for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
-            arr1[:] = np.float32(np.random.normal(size=arr1.shape))
-            arr2[:] = arr1
-        exe1.forward(is_train=True)
-        exe1.backward(exe1.outputs[0])
-        exe2.forward(is_train=True)
-        exe2.backward(exe2.outputs[0])
+            exe1 = y1.simple_bind(default_context(), x=shape)
+            exe2 = y2.simple_bind(default_context(), x=shape, w=(num_filter, shape[1]//num_group) + kernel, b=(num_filter,))
+            for arr1, arr2 in zip(exe1.arg_arrays, exe2.arg_arrays):
+                arr1[:] = np.float32(np.random.normal(size=arr1.shape))
+                arr2[:] = arr1
+            exe1.forward(is_train=True)
+            exe1.backward(exe1.outputs[0])
+            exe2.forward(is_train=True)
+            exe2.backward(exe2.outputs[0])
 
-        for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-            np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
+            for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
+                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
 @unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12203")
@@ -4390,6 +4391,7 @@ def test_where():
     test_1d_cond()
 
 
+@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13600")
 @with_seed()
 def test_softmin():
     for ndim in range(1, 5):
@@ -6772,7 +6774,7 @@ def test_op_output_names_monitor():
 
 @with_seed()
 def test_activation():
-    shape=(9, 10)
+    shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
     dtype_l = [np.float64, np.float32, np.float16]
     rtol_l = [1e-7, 1e-6, 1e-2]
     atol_l = [1e-7, 1e-6, 1e-2]
@@ -6803,17 +6805,19 @@ def test_activation():
     }
     # Loop over operators
     for name, op in unary_ops.items():
-        # Loop over dtype's
-        for ind in range(len(dtype_l)):
-            dtype = dtype_l[ind]
-            rtol = rtol_l[ind]
-            atol = atol_l[ind]
-            compare_forw_backw_unary_op(
-                name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
-                dtype)
-        # Finite difference testing
-        finite_diff_unary_op(
-            name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
+        # Loop over shapes
+        for shape in shapes:
+            # Loop over dtype's
+            for ind in range(len(dtype_l)):
+                dtype = dtype_l[ind]
+                rtol = rtol_l[ind]
+                atol = atol_l[ind]
+                compare_forw_backw_unary_op(
+                    name, op[0], op[1], op[2], shape, op[3], op[4], rtol, atol,
+                    dtype)
+            # Finite difference testing
+            finite_diff_unary_op(
+                name, op[0], shape, op[3], op[4], rtol_fd, atol_fd, num_eps)
 
 @with_seed()
 def test_ravel():
@@ -6897,14 +6901,16 @@ def test_op_roi_align():
                ]
         return val, grad
 
-    def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio, dy):
+    def roialign_forward_backward(data, rois, pooled_size, spatial_scale, sampling_ratio,
+            position_sensitive, dy):
         N, C, H, W = data.shape
         R = rois.shape[0]
         PH, PW = pooled_size
         assert len(rois.shape) == 2
         assert rois.shape[1] == 5
 
-        out = np.zeros((R, C, PH, PW))
+        C_out = C // PH // PW if position_sensitive else C
+        out = np.zeros((R, C_out, PH, PW))
         dx = np.zeros_like(data)
         drois = np.zeros_like(rois)
 
@@ -6922,24 +6928,25 @@ def test_op_roi_align():
                 roi_bin_grid_h = int(np.ceil(roi_h * 1.0 / PH))
                 roi_bin_grid_w = int(np.ceil(roi_w * 1.0 / PW))
             count = roi_bin_grid_h * roi_bin_grid_w
-            for c in range(C):
+            for c in range(C_out):
                 for ph in range(PH):
                     for pw in range(PW):
                         val = 0.0
+                        c_in = c * PH * PW + ph * PW + pw if position_sensitive else c
                         for iy in range(roi_bin_grid_h):
                             y = sh + ph * bin_h + (iy + 0.5) * bin_h / roi_bin_grid_h
                             for ix in range(roi_bin_grid_w):
                                 x = sw + pw * bin_w + (ix + 0.5) * bin_w / roi_bin_grid_w
-                                v, g = bilinear_interpolate(bdata[c], H, W, y, x)
+                                v, g = bilinear_interpolate(bdata[c_in], H, W, y, x)
                                 val += v
                                 # compute grad
                                 for qy, qx, qw in g:
-                                    dx[batch_ind, c, qy, qx] += dy[r, c, ph, pw] * qw * 1.0 / count
+                                    dx[batch_ind, c_in, qy, qx] += dy[r, c, ph, pw] * qw * 1.0 / count
 
                         out[r, c, ph, pw] = val * 1.0 / count
         return out, [dx, drois]
 
-    def test_roi_align_value(sampling_ratio=0):
+    def test_roi_align_value(sampling_ratio=0, position_sensitive=False):
         ctx=default_context()
         dtype = np.float32
 
@@ -6948,6 +6955,7 @@ def test_op_roi_align():
         assert H == W
         R = 7
         pooled_size = (3, 4)
+        C = C * pooled_size[0] * pooled_size[1] if position_sensitive else C
 
         spatial_scale = H * 1.0 / dlen
         data = mx.nd.array(np.arange(N*C*W*H).reshape((N,C,H,W)), ctx=ctx, dtype = dtype)
@@ -6962,11 +6970,14 @@ def test_op_roi_align():
         rois.attach_grad()
         with mx.autograd.record():
             output = mx.nd.contrib.ROIAlign(data, rois, pooled_size=pooled_size,
-                    spatial_scale=spatial_scale, sample_ratio=sampling_ratio)
-        dy = mx.nd.random.uniform(-1, 1, (R, C) + pooled_size, ctx=ctx, dtype = dtype)
+                    spatial_scale=spatial_scale, sample_ratio=sampling_ratio,
+                    position_sensitive=position_sensitive)
+        C_out = C // pooled_size[0] // pooled_size[1] if position_sensitive else C
+        dy = mx.nd.random.uniform(-1, 1, (R, C_out) + pooled_size, ctx=ctx, dtype = dtype)
         output.backward(dy)
         real_output, [dx, drois] = roialign_forward_backward(data.asnumpy(), rois.asnumpy(), pooled_size,
-                                                             spatial_scale, sampling_ratio, dy.asnumpy())
+                                                             spatial_scale, sampling_ratio,
+                                                             position_sensitive, dy.asnumpy())
         assert np.allclose(output.asnumpy(), real_output)
         # It seems that the precision between Cfloat and Pyfloat is different.
         assert np.allclose(data.grad.asnumpy(), dx, atol = 1e-5), np.abs(data.grad.asnumpy() - dx).max()
@@ -6992,7 +7003,8 @@ def test_op_roi_align():
                                numeric_eps=1e-4, rtol=1e-1, atol=1e-4, ctx=ctx)
 
     test_roi_align_value()
-    test_roi_align_value(2)
+    test_roi_align_value(sampling_ratio=2)
+    test_roi_align_value(position_sensitive=True)
     test_roi_align_autograd()
 
 @with_seed()
