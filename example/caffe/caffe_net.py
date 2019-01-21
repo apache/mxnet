@@ -25,7 +25,7 @@ import train_model
 
 def get_mlp():
     """
-    multi-layer perceptron
+    Get multi-layer perceptron
     """
     data = mx.symbol.Variable('data')
     fc1 = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1',
