@@ -1,9 +1,9 @@
 # MXNet Publish Settings
 
-This folder contains the configuration of restricted node on Jenkins for the publish. It also contains a folder called `scala` that contains everything required for scala publish. In this `README`, we would bring a brief walkthrough of the Jenkins configuration as well as the usages of the scala deployment files.
+This folder contains the configuration for restricted nodes on Jenkins for the publishing MXNet artifacts. It also contains a folder called `scala` that contains everything required for publishing to Maven. In this `README`, we provide a brief walkthrough of the Jenkins configuration as well as the usage of the Scala deployment files. Python publishing is TBD.
 
 ## Jenkins
-Currently, Jenkins contains three build stages, namely `Build Packages`, `Test Packages` and `Deploy Packages`. During the `build package` stages, all dependencies will be built and a Scala package would be created. In the second stage, the package created from the previous stage would move to this stage to specifically run the tests. In the final stage, the packages passed the test would be deployed by the instances.
+Currently, Jenkins contains three build stages, namely `Build Packages`, `Test Packages` and `Deploy Packages`. During the `build package` stages, all dependencies are built and a Scala package are created. In the second stage, the package created from the previous stage moves to this stage to specifically run the tests. In the final stage, the packages that pass the tests are deployed by the instances.
 
 The job is scheduled to be triggered every 24 hours on a [restricted instance](http://jenkins.mxnet-ci.amazon-ml.com/blue/organizations/jenkins/restricted-publish-artifacts).
 
@@ -17,11 +17,11 @@ All packages are currently built in `Ubuntu 14.04`. All Dockerfile used for publ
 
 Apart from that, the script used to create the environment and publish are available under `ci/docker/install`:
 
-- `ubuntu_publish.sh` install all required dependencies for Ubuntu 14.04 for publishing
-- `ubuntu_base.sh` install minimum dependencies required to run the published packages
+- `ubuntu_publish.sh` installs all required dependencies for Ubuntu 14.04 for publishing
+- `ubuntu_base.sh` installs minimum dependencies required to run the published packages
 
-## Scala publish
-Currently Scala publish on Linux is fully supported on jenkins. The `scala/` folder contains all files needed to do the publish. Here is a breif instroduction of the files:
+## Scala publishing
+Currently Scala publish on Linux is fully supported on Jenkins. The `scala/` folder contains all files needed for publishing. Here is a brief introduction of the files:
 
 - `build.sh` Main executable files to build the backend as well as scala package
 - `buildkey.py` Main file used to extract password from the system and configure the maven
@@ -29,5 +29,5 @@ Currently Scala publish on Linux is fully supported on jenkins. The `scala/` fol
 - `fullDeploy.sh` Used by CI to make full publish
 - `test.sh` Make Scala test on CI
 
-## Python
-We plans to support Python build on Jenkins soon
+## Python publishing
+Python build support is TBD.
