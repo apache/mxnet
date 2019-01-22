@@ -78,32 +78,44 @@
 
 (defn detect-single-image
   "Detect objects in a single image and print top-5 predictions"
-  [detector input-image output-dir]
+  ([detector input-dir] (detect-single-image detector input-dir "results"))
+  ([detector input-image output-dir]
+    (.mkdir (io/file output-dir))
   (let [image (infer/load-image-from-file input-image)
-        topk 5]
+        topk 5
+        res (infer/detect-objects detector image topk)
+        ]
     (process-results
      [input-image]
-     (infer/detect-objects detector image topk)
-     output-dir)))
+     res
+     output-dir)
+    (first res)
+    )))
 
 (defn detect-images-in-dir
   "Detect objects in all jpg images in the directory"
-  [detector input-dir output-dir]
+  ([detector input-dir] (detect-images-in-dir detector input-dir "results"))
+  ([detector input-dir output-dir]
+  (.mkdir (io/file output-dir))
   (let [batch-size 20
         image-file-batches (->> input-dir
                                 io/file
                                 file-seq
+                                sort
                                 (filter #(.isFile %))
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))
                                 (partition-all batch-size))]
-    (doall
+    (apply concat
      (for [image-files image-file-batches]
-       (let [image-batch (infer/load-image-paths image-files) topk 5]
+       (let [image-batch (infer/load-image-paths image-files) 
+             topk 5 
+             res (infer/detect-objects-batch detector image-batch topk) ]
          (process-results
           image-files
-          (infer/detect-objects-batch detector image-batch topk)
-          output-dir))))))
+          res
+          output-dir) 
+         res))))))
 
 (defn run-detector
   "Runs an image detector based on options provided"
@@ -119,7 +131,7 @@
         detector (infer/create-object-detector
                   factory
                   {:contexts [(context/default-context)]})]
-    (println "Output results to:" output-dir ":" (.mkdir (io/file output-dir)))
+    (println "Output results to:" output-dir ":")
     (println "Object detection on a single image")
     (detect-single-image detector input-image output-dir)
     (println "Object detection on images in a directory")
