@@ -34,14 +34,19 @@
 namespace mxnet{
 namespace op {
 
+/*
 struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
+  dmlc::optional<bool> fuse_dequantize;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
     .describe("enable quantization");
+    DMLC_DECLARE_FIELD(fuse_dequantize)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether to fuse dequantize");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -61,9 +66,10 @@ struct MKLDNNFCFullParam {
   std::vector<float> output_scales = {0.0};
   std::vector<float> requantize_scales = {0.0};
 };
+*/
 
 mkldnn::inner_product_forward::primitive_desc GetIPFwd(
-    MKLDNNFCFullParam &param, const bool is_train,
+    const FullyConnectedParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const mkldnn::memory::desc &out_md);
 
@@ -71,7 +77,7 @@ class MKLDNNFullyConnectForward {
  public:
   mkldnn::inner_product_forward::primitive_desc ipFwd_pd;
 
-  MKLDNNFullyConnectForward(MKLDNNFCFullParam &param, bool is_train,
+  MKLDNNFullyConnectForward(const FullyConnectedParam &param, bool is_train,
                             const NDArray &data, const NDArray &weight,
                             const NDArray *bias,
                             const mkldnn::memory::desc &output)
@@ -96,7 +102,7 @@ class MKLDNNFullyConnectForward {
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
 
 MKLDNNFullyConnectForward &GetFCFwd(
-    MKLDNNFCFullParam &param, const bool is_train,
+    const FullyConnectedParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight,
     const NDArray *bias, const mkldnn::memory::desc &output);
 

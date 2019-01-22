@@ -52,6 +52,16 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
   int num_hidden;
   bool no_bias;
   bool flatten;
+#if MXNET_USE_MKLDNN == 1
+  bool quantized;
+  dmlc::optional<bool> fuse_requantize;
+  dmlc::optional<bool> fuse_dequantize;
+  dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
+  dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  std::vector<float> output_scales = {0.0};
+  std::vector<float> requantize_scales = {0.0};
+#endif
+
   DMLC_DECLARE_PARAMETER(FullyConnectedParam) {
     // TODO(bing) add support for boolean
     DMLC_DECLARE_FIELD(num_hidden).set_lower_bound(1)
@@ -60,6 +70,26 @@ struct FullyConnectedParam : public dmlc::Parameter<FullyConnectedParam> {
     .describe("Whether to disable bias parameter.");
     DMLC_DECLARE_FIELD(flatten).set_default(true)
     .describe("Whether to collapse all but the first axis of the input data tensor.");
+#if MXNET_USE_MKLDNN == 1
+    DMLC_DECLARE_FIELD(quantized).set_default(false)
+    .describe("enable quantization");
+    DMLC_DECLARE_FIELD(fuse_requantize)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether to fuse requantize");
+    DMLC_DECLARE_FIELD(fuse_dequantize)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether to fuse dequantize");
+    DMLC_DECLARE_FIELD(min_calib_range)
+    .set_default(dmlc::optional<float>())
+    .describe("The minimum scalar value in the form of float32 obtained "
+              "through calibration. If present, it will be used to by "
+              "quantized fullyconnected op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(max_calib_range)
+    .set_default(dmlc::optional<float>())
+    .describe("The maximum scalar value in the form of float32 obtained "
+              "through calibration. If present, it will be used to by "
+              "quantized fullyconnected op to calculate primitive scale");
+#endif
   }
   bool operator==(const FullyConnectedParam& other) const {
     return this->num_hidden == other.num_hidden &&

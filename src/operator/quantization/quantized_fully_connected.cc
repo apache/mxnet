@@ -26,6 +26,9 @@
 #include <vector>
 #include "quantization_utils.h"
 #include "../nn/fully_connected-inl.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../nn/mkldnn/mkldnn_fully_connected-inl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -41,7 +44,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_shape->size(), num_inputs * 3);
-  CHECK_EQ(out_shape->size(), 3U);
+  CHECK_EQ(out_shape->size(), param.fuse_dequantize ? 1U : 3U);
 
   CHECK(!shape_is_none(in_shape->at(0)))
     << "QuantizedFullyConnectedOp input data shape must be given";
@@ -73,7 +76,7 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_type->size(), num_inputs * 3);
-  CHECK_EQ(out_type->size(), 3U);
+  CHECK_EQ(out_type->size(), param.fuse_dequantize ? 1U : 3U);
 
   //FIXME(ciyong), intput data could be int8 or uint8
   //TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
@@ -84,9 +87,13 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kFloat32);
   }
 
-  TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt32);
-  TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
+  if (param.fuse_dequantize) {
+    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kFloat32);
+  } else {
+    TYPE_ASSIGN_CHECK(*out_type, 0, param.fuse_requantize ? mshadow::kInt8 : mshadow::kInt32);
+    TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
+    TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
+  }
   return true;
 }
 
@@ -98,7 +105,7 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), num_inputs * 3);
-  CHECK_EQ(out_attrs->size(), 3);
+  CHECK_EQ(out_attrs->size(), param.fuse_dequantize ? 1U : 3U);
 
   return MKLDNNStorageType(attrs, dev_mask, true,
                            dispatch_mode, in_attrs, out_attrs);
@@ -249,7 +256,12 @@ and max thresholds representing the threholds for quantizing the float32 output 
     const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
     return param.no_bias? 6 : 9;
   })
-.set_num_outputs(3)
+//.set_num_outputs(3)
+.set_num_outputs(
+  [](const NodeAttrs& attrs) {
+    const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+    return param.fuse_dequantize ? 1 : 3;
+  })
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
@@ -264,7 +276,12 @@ and max thresholds representing the threholds for quantizing the float32 output 
   })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"output", "min_output", "max_output"};
+    const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+    if (param.fuse_dequantize) {
+      return std::vector<std::string>{"output"};
+    } else {
+      return std::vector<std::string>{"output", "min_output", "max_output"};
+    }
   })
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizedFullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedFullyConnectedType)

@@ -30,8 +30,6 @@
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(MKLDNNFCParam);
-
 namespace quantized_fully_connected_enum {
 enum QuantizedFullyConnectedOutputs { kOut, kMin, kMax };
 }
@@ -42,7 +40,7 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
                                                  const std::vector<OpReqType> &req,
                                                  const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
-  const FullyConnectedParam &param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs = param.no_bias ? 2 : 3;
 
   CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
@@ -52,7 +50,8 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   const TShape &ishape = data.shape();
-  //CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8); //FIXME, MKLDNN only support uint8 currently.
+  //TODO, MKLDNN only support uint8 currently, need fallback to
+  //CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
   CHECK(data.dtype() == mshadow::kUint8)
     << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
     << mxnet::op::type_string(data.dtype());
@@ -65,6 +64,8 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   float data_max = in_data[num_inputs + 1].data().dptr<float>()[0];
   float weight_min = in_data[num_inputs + 2].data().dptr<float>()[0];
   float weight_max = in_data[num_inputs + 3].data().dptr<float>()[0];
+  float *out_min = out_data[1].data().dptr<float>();
+  float *out_max = out_data[2].data().dptr<float>();
 
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   float data_scale = data_range / MaxAbs(data_min, data_max);
@@ -81,22 +82,36 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
                              bias.ctx(), true, mshadow::kInt32);
     int8_t *bias_ptr = bias.data().dptr<int8_t>();
     int32_t *quantized_bias_ptr = quantized_bias.data().dptr<int32_t>();
-   size_t bias_size = bias.shape().Size();
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    size_t bias_size = bias.shape().Size();
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (size_t i = 0; i < bias_size; ++i) {
       quantized_bias_ptr[i] = bias_ptr[i] * bias_int32_rescale;
     }
   }
 
-  MKLDNNFCFullParam full_param;
-  full_param.fc_param = param;
-  full_param.mkldnn_param.quantized = true;
-  full_param.output_scales[0] = 1.0 / data_scale / weight_scale;
-  full_param.requantize_scales.resize(0);
+  if (param.fuse_dequantize.has_value() && param.fuse_dequantize.value() == true) {
+    param.output_scales[0] = 1.0 / data_scale / weight_scale;
+    param.requantize_scales.resize(0);
+  } else if (param.fuse_requantize.has_value() && param.fuse_requantize.value() == true) {
+    param.output_scales.resize(0);
+    if (param.min_calib_range.has_value() &&
+        param.max_calib_range.has_value()) {
+        *out_min = param.min_calib_range.value();
+        *out_max = param.max_calib_range.value();
+        // TODO, requantize to int8 by default, fused relu will have uint8 output
+        param.requantize_scales[0] = kInt8 / MaxAbs(*out_min, *out_max) / data_scale / weight_scale;
+    } else {
+      LOG(FATAL) << "min_calib_range and max_calib_range must be set for fusing requantize op.";
+    }
+  } else {
+    Stream<cpu> *s = ctx.get_stream<cpu>();
+    mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
+      out_min, out_max, &data_min, &data_max, &weight_min, &weight_max);
+  }
 
   auto out_md = GetMemDesc(out_data[fullc::kOut]);
   bool is_train = false;
-  auto &fwd = GetFCFwd(full_param, is_train, data, weight,
+  auto &fwd = GetFCFwd(param, is_train, data, weight,
       param.no_bias ? nullptr : &quantized_bias, out_md);
 
   auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(fwd.ipFwd_pd.src_primitive_desc());
