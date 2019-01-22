@@ -31,12 +31,14 @@ parser.add_argument('--load-epoch', type=int, default=0,
                     help='loading the params of the corresponding training epoch.')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
-parser.add_argument('--accuracy', action='store_true', default=False,
+parser.add_argument('--accuracy', action='store_true', default=True,
+                    help='run the script for inference accuracy, not set for benchmark.')
+parser.add_argument('--benchmark', action='store_true', default=False,
                     help='run the script for inference accuracy, not set for benchmark.')
 parser.add_argument('--verbose', action='store_true', default=False,
                     help='accurcy for each batch will be logged if set')
-parser.add_argument('--cuda', action='store_true', default=False,
-                    help='Train on GPU with CUDA')
+parser.add_argument('--gpu', action='store_true', default=False,
+                    help='Inference on GPU with CUDA')
 parser.add_argument('--model-prefix', type=str, default='checkpoint',
                     help='the model prefix')
 
@@ -63,10 +65,11 @@ if __name__ == '__main__':
     num_iters = args.num_infer_batch
     batch_size = args.batch_size
     accuracy = args.accuracy
+    benchmark = args.benchmark
     verbose = args.verbose
     model_prefix = args.model_prefix
     load_epoch = args.load_epoch
-    ctx = mx.gpu(0) if args.cuda else mx.cpu()
+    ctx = mx.gpu(0) if args.gpu else mx.cpu()
 
     # dataset    
     data_dir = os.path.join(os.getcwd(), 'data')
@@ -87,22 +90,7 @@ if __name__ == '__main__':
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
 
     data_iter = iter(eval_data)
-    if accuracy:
-        logging.info('Inference started ...')
-        # use accuracy as the metric
-        metric = mx.metric.create(['acc'])
-        accuracy_avg = 0.0
-        nbatch = 0
-        for batch in data_iter:
-            nbatch += 1
-            metric.reset()
-            mod.forward(batch, is_train=False)
-            mod.update_metric(metric, batch.label)
-            accuracy_avg += metric.get()[1][0]
-            if args.verbose:
-                logging.info('batch %d, accuracy = %s' % (nbatch, metric.get()))
-        logging.info('averged accuracy on eval set is %.5f' % (accuracy_avg/nbatch))
-    else:
+    if benchmark:
         logging.info('Inference benchmark started ...')
         nbatch = 0
         tic = time.time()
@@ -118,4 +106,19 @@ if __name__ == '__main__':
                 nbatch+=1
         score = (nbatch*batch_size)/(time.time() - tic)
         logging.info('batch size %d, process %s samples/s' % (batch_size, score))
+    elif accuracy:
+        logging.info('Inference started ...')
+        # use accuracy as the metric
+        metric = mx.metric.create(['acc'])
+        accuracy_avg = 0.0
+        nbatch = 0
+        for batch in data_iter:
+            nbatch += 1
+            metric.reset()
+            mod.forward(batch, is_train=False)
+            mod.update_metric(metric, batch.label)
+            accuracy_avg += metric.get()[1][0]
+            if args.verbose:
+                logging.info('batch %d, accuracy = %s' % (nbatch, metric.get()))
+        logging.info('averged accuracy on eval set is %.5f' % (accuracy_avg/nbatch))
 
