@@ -34,7 +34,7 @@ parser.add_argument('--batch-size', type=int, default=100,
 parser.add_argument('--accuracy', action='store_true', default=True,
                     help='run the script for inference accuracy, not set for benchmark.')
 parser.add_argument('--benchmark', action='store_true', default=False,
-                    help='run the script for inference accuracy, not set for benchmark.')
+                    help='run the script for benchmark mode.')
 parser.add_argument('--verbose', action='store_true', default=False,
                     help='accurcy for each batch will be logged if set')
 parser.add_argument('--gpu', action='store_true', default=False,
