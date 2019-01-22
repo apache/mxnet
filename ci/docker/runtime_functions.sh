@@ -1295,7 +1295,6 @@ deploy_jl_docs() {
     # ...
 }
 
-<<<<<<< HEAD
 build_scala_static_mkl() {
     set -ex
     pushd .
