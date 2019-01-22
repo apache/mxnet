@@ -18,11 +18,15 @@
 
 set -evx
 
-MXNET_HOME=$(cd "$(dirname $0)/../.."; pwd)
+MXNET_HOME=${PWD}
+cd ${MXNET_HOME}/contrib/clojure-package
+# first build the package and install it
+lein install
+
+# then run through the examples 
 EXAMPLES_HOME=${MXNET_HOME}/contrib/clojure-package/examples
-#cd ${MXNET_HOME}/contrib/clojure-package
-#lein test
-#lein cloverage --codecov
-for test_dir in `find ${EXAMPLES_HOME} -name test` ; do
-  cd ${test_dir} && lein test
+# use AWK pattern for blacklisting
+TEST_CASES=`find ${EXAMPLES_HOME} -name test | awk '!/dontselect1|dontselect2/'`
+for i in $TEST_CASES ; do
+ cd ${i} && lein test
 done
