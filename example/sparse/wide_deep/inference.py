@@ -17,6 +17,7 @@
 
 import mxnet as mx
 from mxnet.test_utils import *
+from config import *
 from data import get_uci_adult
 from model import wide_deep_model
 import argparse
@@ -41,18 +42,6 @@ parser.add_argument('--gpu', action='store_true', default=False,
                     help='Inference on GPU with CUDA')
 parser.add_argument('--model-prefix', type=str, default='checkpoint',
                     help='the model prefix')
-
-# Related to feature engineering, please see preprocess in data.py
-ADULT = {
-    'train': 'adult.data',
-    'test': 'adult.test',
-    'url': 'https://archive.ics.uci.edu/ml/machine-learning-databases/adult/',
-    'num_linear_features': 3000,
-    'num_embed_features': 2,
-    'num_cont_features': 38,
-    'embed_input_dims': [1000, 1000],
-    'hidden_units': [8, 50, 100],
-}
 
 if __name__ == '__main__':
     import logging
