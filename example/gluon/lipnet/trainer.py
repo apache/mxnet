@@ -87,6 +87,7 @@ class Train:
         self.loss_fn = gluon.loss.CTCLoss()
         self.trainer = gluon.Trainer(self.net.collect_params(), \
                                      optimizer='SGD')
+
     def save_model(self, epoch, iter_no, current_loss):
         """
         Description : save parameter of network weight
@@ -116,16 +117,13 @@ class Train:
                 label = gluon.utils.split_and_load(input_label, self.ctx, even_split=False)
 
                 # pylint: disable=no-member
-                losses = []
                 sum_losses = 0
                 len_losses = 0
                 with autograd.record():
-                    for X, Y in zip(data, label):
-                        current_batch_loss = self.loss_fn(self.net(X), Y)
-                        losses.append(current_batch_loss)
-                        sum_losses += mx.nd.array(current_batch_loss).sum().asscalar()
-                        len_losses += len(current_batch_loss)
+                    losses = [self.loss_fn(self.net(X), Y) for X, Y in zip(data, label)]         
                 for l in losses:
+                    sum_losses += mx.nd.array(l).sum().asscalar()
+                    len_losses += len(l)
                     l.backward()
                 self.trainer.step(input_data.shape[0])
                 if iter_no % 20 == 0:
