@@ -28,6 +28,8 @@ def test_runtime_features():
     for f in features_enabled():
         ok_(type(f) is Feature)
     ok_(type(features_available()) is list)
+    ok_(len(features_available()) > 0)
+    ok_(len(Feature) > 0)
     print("Features available: {}".format(features_available()))
 
 @raises(MXNetError)
