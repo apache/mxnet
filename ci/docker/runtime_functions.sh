@@ -922,29 +922,21 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-
-    # install package
-    mkdir -p $DEVDIR
-    ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
-
-    # register MXNet.jl and dependencies
-    julia -e 'using Pkg; Pkg.develop("MXNet")'
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'using Pkg; Pkg.build("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
-    julia -e 'using Pkg; Pkg.test("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.test("MXNet")'
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
-    julia -e 'using MXNet; mx._sig_checker()'
+    julia --project=./julia -e 'using MXNet; mx._sig_checker()'
 }
 
 unittest_ubuntu_cpu_julia07() {
@@ -1280,10 +1272,8 @@ deploy_jl_docs() {
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'

@@ -1210,6 +1210,34 @@ def test_windows_python3_cpu() {
     }]
 }
 
+def test_windows_julia07_cpu() {
+    return ['Julia 0.7: CPU Win': {
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/ut-julia07-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            unstash 'windows_package_cpu'
+            powershell 'ci/windows/test_jl07_cpu.ps1'
+          }
+        }
+      }
+    }]
+}
+
+def test_windows_julia10_cpu() {
+    return ['Julia 1.0: CPU Win': {
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/ut-julia10-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            unstash 'windows_package_cpu'
+            powershell 'ci/windows/test_jl10_cpu.ps1'
+          }
+        }
+      }
+    }]
+}
+
 def test_qemu_armv7_cpu() {
     return ['ARMv7 QEMU': {
       node(NODE_LINUX_CPU) {
