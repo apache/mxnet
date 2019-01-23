@@ -14,78 +14,181 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Finds the OpenBLAS library.
+#
+# The following variables are set after configuration is done:
+#
+# - OpenBLAS_FOUND
+# - OpenBLAS_INCLUDE_DIRS
+# - OpenBLAS_LIBRARIES
+#
+# This script will try to find the OpenBLAS library using the following RESULT_VARs in this order:
+#
+# 1 - Use find_package(OpenBLAS) in Config mode.
+# 2 - Find the files manually
+#
+# At each step that was just described, in order to guarantee that the library was found correctly,
+# this script tries to compile this simple program:
+#
+#   #include <cblas.h>
+#   int main() {
+#     cblas_sasum(0, (float*)0, 0);
+#     return 0;
+#   }
+#
+# If this simple program can't be compiled with the OpenBLAS library discovered in the previous
+# step, then it assumes the step failed and moves on to the next step.
+#
+# To control where OpenBLAS should be searched for, one can set the environment variable
+# `OpenBLAS_HOME` point to the installation directory of OpenBLAS:
+#
+#   set OpenBLAS_HOME=c:\mxnet
 
-file(TO_CMAKE_PATH "$ENV{OpenBLAS_HOME}" OpenBLAS_HOME)
-file(TO_CMAKE_PATH "$ENV{OpenBLAS}" OpenBLAS_DIR)
+include(CheckCSourceCompiles)
+function(check_openblas_compiles RESULT_VAR)
+  message(STATUS "Testing a simple OpenBLAS program with: (${RESULT_VAR}, "
+                                                          "includes: ${OpenBLAS_INCLUDE_DIRS}, "
+                                                          "libs: ${OpenBLAS_LIBRARIES})")
+  set(CMAKE_REQUIRED_INCLUDES "${OpenBLAS_INCLUDE_DIRS}")
+  set(CMAKE_REQUIRED_LIBRARIES "${OpenBLAS_LIBRARIES}")
 
-SET(Open_BLAS_INCLUDE_SEARCH_PATHS
-  /usr/include
-  /usr/include/openblas
-  /usr/include/openblas-base
-  /usr/local/include
-  /usr/local/include/openblas
-  /usr/local/include/openblas-base
-  /opt/OpenBLAS/include
-  /usr/local/opt/openblas/include
-  ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/include
-  ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/include
-  ${OpenBLAS_HOME}
-  ${OpenBLAS_HOME}/include
-)
+  check_c_source_compiles("
+      #include <cblas.h>
+      int main() { cblas_sasum(0, (float*)0, 0); return 0; }
+  " OPENBLAS_CAN_COMPILE)
 
-SET(Open_BLAS_LIB_SEARCH_PATHS
-        /lib/
-        /lib/openblas-base
-        /lib64/
-        /usr/lib
-        /usr/lib/openblas-base
-        /usr/lib64
-        /usr/local/lib
-        /usr/local/lib64
-        /opt/OpenBLAS/lib
-        /usr/local/opt/openblas/lib
-        ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
-        ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
-	${OpenBLAS_DIR}
-	${OpenBLAS_DIR}/lib
-        ${OpenBLAS_HOME}
-        ${OpenBLAS_HOME}/lib
- )
+  unset(CMAKE_REQUIRED_INCLUDES CACHE)
+  unset(CMAKE_REQUIRED_LIBRARIES CACHE)
 
-FIND_PATH(OpenBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Open_BLAS_INCLUDE_SEARCH_PATHS})
-FIND_LIBRARY(OpenBLAS_LIB NAMES openblas PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
-IF(NOT OpenBLAS_LIB)
-	FIND_FILE(OpenBLAS_LIB NAMES libopenblas.dll.a PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
-ENDIF()
+  if (NOT ${CAN_COMPILE})
+    message(WARNING "Couldn't compile a simple program to test for OpenBLAS presence using the '${RESULT_VAR}' RESULT_VAR. "
+            "To verify the error from the compiler, run cmake with the flag `--debug-trycompile`. "
+            "Check that the include directories are correct and contain the 'cblas.h' file: ${OpenBLAS_INCLUDE_DIRS} "
+            "Check that the library directory also contains the compiled library: '${OpenBLAS_LIBRARIES}'.")
+  else()
+    message(STATUS "Found OpenBLAS via ${RESULT_VAR} (include: ${OpenBLAS_INCLUDE_DIRS})")
+    message(STATUS "Found OpenBLAS via ${RESULT_VAR} (lib: ${OpenBLAS_LIBRARIES})")
+  endif()
 
-SET(OpenBLAS_FOUND ON)
+  set(${RESULT_VAR} ${OPENBLAS_CAN_COMPILE} PARENT_SCOPE)
+  unset(OPENBLAS_CAN_COMPILE CACHE)
+endfunction()
 
-#    Check include files
-IF(NOT OpenBLAS_INCLUDE_DIR)
-    SET(OpenBLAS_FOUND OFF)
-    MESSAGE(STATUS "Could not find OpenBLAS include. Turning OpenBLAS_FOUND off")
-ENDIF()
+macro(unset_openblas_variables)
+  unset(OpenBLAS_FOUND)
+  unset(OpenBLAS_FOUND CACHE)
+  unset(OpenBLAS_LIBRARIES)
+  unset(OpenBLAS_LIBRARIES CACHE)
+  unset(OpenBLAS_INCLUDE_DIRS)
+  unset(OpenBLAS_INCLUDE_DIRS CACHE)
+endmacro()
 
-#    Check libraries
-IF(NOT OpenBLAS_LIB)
-    SET(OpenBLAS_FOUND OFF)
-    MESSAGE(STATUS "Could not find OpenBLAS lib. Turning OpenBLAS_FOUND off")
-ENDIF()
+# Try config-mode
+find_package(OpenBLAS
+             NO_MODULE  # Forcing Config mode, otherwise this would be an infinite loop.
+             PATHS $ENV{OpenBLAS_HOME}
+             )
+if (OpenBLAS_FOUND)
+  check_openblas_compiles(OpenBLAS_CONFIG_MODE)
+  if (OpenBLAS_CONFIG_MODE)
+    return()
+  else()
+    unset_openblas_variables()
+  endif()
+endif()
 
-IF (OpenBLAS_FOUND)
-  IF (NOT OpenBLAS_FIND_QUIETLY)
-    MESSAGE(STATUS "Found OpenBLAS libraries: ${OpenBLAS_LIB}")
-    MESSAGE(STATUS "Found OpenBLAS include: ${OpenBLAS_INCLUDE_DIR}")
-  ENDIF (NOT OpenBLAS_FIND_QUIETLY)
-ELSE (OpenBLAS_FOUND)
-  IF (OpenBLAS_FIND_REQUIRED)
-    MESSAGE(FATAL_ERROR "Could not find OpenBLAS")
-  ENDIF (OpenBLAS_FIND_REQUIRED)
-ENDIF (OpenBLAS_FOUND)
+# Try finding the files manually
+if(CMAKE_CROSSCOMPILING)
+  set(OpenBLAS_INCLUDE_SEARCH_PATHS
+      ${OpenBLAS_INCLUDE_SEARCH_PATHS}
 
-MARK_AS_ADVANCED(
-    OpenBLAS_INCLUDE_DIR
-    OpenBLAS_LIB
-    OpenBLAS
-)
+      "$ENV{CROSS_ROOT}"
+      "${CROSS_ROOT}"
+      )
+endif()
 
+set(OpenBLAS_INCLUDE_SEARCH_PATHS
+    ${OpenBLAS_INCLUDE_SEARCH_PATHS}
+
+    "$ENV{OpenBLAS_HOME}"
+    "${OpenBLAS_HOME}"
+    "${OpenBLAS_ROOT}"
+
+    /usr
+    /usr/include/openblas
+    /usr/include/openblas-base
+    /usr/local
+    /usr/local/include/openblas
+    /usr/local/include/openblas-base
+    /opt/OpenBLAS
+    /usr/local/opt/openblas
+
+    "${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS"
+    "${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS"
+    )
+
+if(CMAKE_CROSSCOMPILING)
+  set(Open_BLAS_LIB_SEARCH_PATHS
+      ${Open_BLAS_LIB_SEARCH_PATHS}
+
+      "$ENV{CROSS_ROOT}"
+      "${CROSS_ROOT}"
+      )
+endif()
+
+set(OpenBLAS_LIB_SEARCH_PATHS
+    ${OpenBLAS_LIB_SEARCH_PATHS}
+
+    "$ENV{OpenBLAS_HOME}"
+    "${OpenBLAS_HOME}"
+    "${OpenBLAS_ROOT}"
+
+    /
+    /lib/openblas-base
+    /usr
+    /usr/lib/openblas-base
+    /usr/local/
+    /opt/OpenBLAS
+    /usr/local/opt/openblas
+
+    "${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS"
+    "${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS"
+    )
+
+find_path(OpenBLAS_INCLUDE_DIRS
+          NAMES cblas.h
+          PATHS ${OpenBLAS_INCLUDE_SEARCH_PATHS}
+          PATH_SUFFIXES include include/openblas)
+
+set(OpenBLAS_LIB_NAMES openblas libopenblas)
+
+if(CMAKE_CROSSCOMPILING)
+  message(STATUS "Will try to link to OpenBLAS statically")
+  set(OpenBLAS_LIB_NAMES libopenblas.a ${OpenBLAS_LIB_NAMES})
+endif()
+
+if(MSVC)
+  # The OpenBLAS distributed in SourceForge has this non-standard file extension: *.a
+  # From the README there, it shows:
+  #   libopenblas.dll       The shared library for Visual Studio and GCC.
+  #   libopenblas.a         The static library. Only work with GCC.
+  #   libopenblas.dll.a     The import library for Visual Studio.
+  # We have to use `libopenblas.dll.a` since this is the library file compiled for Visual
+  # Studio. This might not be ideal for Windows users since they will also need the DLL to be on
+  # their PATH, but that's how this distribution of OpenBLAS is.
+  list(APPEND CMAKE_FIND_LIBRARY_SUFFIXES .dll.a)
+endif()
+
+find_library(OpenBLAS_LIBRARIES
+             NAMES ${OpenBLAS_LIB_NAMES}
+             PATHS ${OpenBLAS_LIB_SEARCH_PATHS}
+             PATH_SUFFIXES lib lib64)
+
+check_openblas_compiles(OpenBLAS_MANUAL_MODE)
+if (NOT OpenBLAS_MANUAL_MODE)
+  unset_openblas_variables()
+endif()
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(OpenBLAS DEFAULT_MSG OpenBLAS_INCLUDE_DIRS OpenBLAS_LIBRARIES)
