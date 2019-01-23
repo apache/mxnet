@@ -25,7 +25,7 @@ using namespace std;
 using namespace mxnet::features;
 
 /*
- * Test that different Context have different hash values
+ * Test that enum and string values are in sync
  */
 TEST(RuntimeTest, RuntimeTestAll) {
   EXPECT_EQ(EnumNames::names.size(), MAX_FEATURES);
