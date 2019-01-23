@@ -901,6 +901,20 @@ def test_unix_r_cpu() {
     }]
 }
 
+def test_unix_r_mkldnn_cpu() {
+    return ['R: MKLDNN-CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-r-mkldnn-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_perl_cpu() {
     return ['Perl: CPU': {
       node(NODE_LINUX_CPU) {
@@ -977,6 +991,20 @@ def test_unix_r_gpu() {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib, true)
+            utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_r_mkldnn_gpu() {
+    return ['R: MKLDNN-GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/ut-r-mkldnn-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
           }
