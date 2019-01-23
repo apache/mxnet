@@ -43,7 +43,7 @@
 #include "mxnet/kvstore.h"
 #include "mxnet/rtc.h"
 #include "mxnet/storage.h"
-#include "mxnet/mxfeatures.h"
+#include "mxnet/mxruntime.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
@@ -87,9 +87,25 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
-int MXHasFeature(const mx_uint feature, bool* out) {
+int MXRuntimeHasFeature(const mx_uint feature, bool *out) {
   API_BEGIN();
   *out = features::is_enabled(feature);
+  API_END();
+}
+
+int MXRuntimeFeatureList(size_t *size, const char ***names) {
+  API_BEGIN();
+  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
+  ret->ret_vec_str.resize(0);
+  ret->ret_vec_charp.resize(0);
+  ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
+  std::copy(features::EnumNames::names.cbegin(), features::EnumNames::names.cend(),
+      std::back_inserter(ret->ret_vec_str));
+  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
+    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
+  }
+  *names = dmlc::BeginPtr(ret->ret_vec_charp);
+  *size = ret->ret_vec_str.size();
   API_END();
 }
 

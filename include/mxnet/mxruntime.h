@@ -1,4 +1,4 @@
-/*
+        /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,12 +19,13 @@
 
 /*!
  *  Copyright (c) 2018 by Contributors
- * \file mxfeatures.h
+ * \file mxruntime.h
  * \brief check MXNet features including compile time support
  */
 
 #pragma once
 
+#include <string>
 #include "dmlc/base.h"
 #include "mshadow/base.h"
 
@@ -124,6 +125,7 @@ namespace features {
 // Check compile flags such as CMakeLists.txt
 
 /// Compile time features
+// ATTENTION: When changing this enum, match the strings in mxruntime.cc!!!
 enum : uint32_t {
   // NVIDIA, CUDA
   CUDA = 0,
@@ -178,6 +180,10 @@ enum : uint32_t {
   MAX_FEATURES
 };
 
+
+struct EnumNames {
+  static const std::vector<std::string> names;
+};
 
 /*!
  * \return true if the given feature is supported

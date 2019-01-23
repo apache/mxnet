@@ -35,7 +35,7 @@
 #include "nnvm/op.h"
 #include "nnvm/tuple.h"
 #include "nnvm/symbolic.h"
-#include "mxfeatures.h"
+#include "mxruntime.h"
 
 
 /*!
