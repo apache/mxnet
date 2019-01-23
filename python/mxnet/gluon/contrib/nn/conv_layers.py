@@ -26,7 +26,7 @@ from ....base import numeric_types
 from ...nn import Activation
 
 class Deformable_Convolution(HybridBlock):
-    """Deformable Convolution v_1
+    """2-D Deformable Convolution v_1
 
     Normal Convolution uses sampling points in a regular grid, while the sampling points of Deformable Convolution[1]
     can be offset. The offset is learned with a separately convolution layer during the training. Both the convolution
@@ -34,25 +34,25 @@ class Deformable_Convolution(HybridBlock):
 
     Parameters
     ----------
-    channels : int, default 0
+    channels : int
         The dimensionality of the output space
         i.e. the number of output channels in the convolution.
-    kernel_size : int or tuple/list of n ints
+    kernel_size : int or tuple/list of 2 ints, default (1,1)
         Specifies the dimensions of the convolution window.
-    strides: int or tuple/list of n ints,
+    strides: int or tuple/list of 2 ints, default (1,1)
         Specifies the strides of the convolution.
-    padding : int or tuple/list of n ints,
+    padding : int or tuple/list of 2 ints, default (0,0)
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation: int or tuple/list of n ints,
+    dilation: int or tuple/list of 2 ints, default (1,1)
         Specifies the dilation rate to use for dilated convolution.
-    groups : int
+    groups : int, default 1
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two convolution
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    num_deformable_group : int
+    num_deformable_group : int, default 1
         Number of deformable group partitions.
     layout : str, (default NCHW)
         Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
