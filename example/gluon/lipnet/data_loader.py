@@ -51,12 +51,14 @@ class LipsDataset(dataset.Dataset):
             filename.sort()
             label = os.path.split(folder)[-1]
             self.items.append((filename, label))
+
     def align_generation(self, file_nm, padding=75):
         """
         Description : Align to lip position
         """
         align = Align(self._align_root + '/' + file_nm + '.align')
         return nd.array(align.sentence(padding))
+
     def __getitem__(self, idx):
         img = list()
         for image_name in self.items[idx][0]:
