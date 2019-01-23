@@ -44,7 +44,7 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   const size_t num_inputs = param.no_bias ? 2 : 3;
 
   CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
-  CHECK_EQ(out_data.size(), 3U);
+  CHECK_EQ(out_data.size(), param.fuse_dequantize ? 1U : 3U);
   CHECK(param.flatten) << "QuantizedFullyConnected Op only supports flatten=true for now.";
 
   NDArray data = in_data[fullc::kData];
@@ -60,12 +60,16 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
     data = data.MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
   }
 
-  float data_min = in_data[num_inputs].data().dptr<float>()[0];
-  float data_max = in_data[num_inputs + 1].data().dptr<float>()[0];
-  float weight_min = in_data[num_inputs + 2].data().dptr<float>()[0];
-  float weight_max = in_data[num_inputs + 3].data().dptr<float>()[0];
-  float *out_min = out_data[1].data().dptr<float>();
-  float *out_max = out_data[2].data().dptr<float>();
+  const float data_min = in_data[num_inputs].data().dptr<float>()[0];
+  const float data_max = in_data[num_inputs + 1].data().dptr<float>()[0];
+  const float weight_min = in_data[num_inputs + 2].data().dptr<float>()[0];
+  const float weight_max = in_data[num_inputs + 3].data().dptr<float>()[0];
+  float *out_min = nullptr;
+  float *out_max = nullptr;
+  if (!param.fuse_dequantize) {
+    out_min = out_data[1].data().dptr<float>();
+    out_max = out_data[2].data().dptr<float>();
+  }
 
   auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
   float data_scale = data_range / MaxAbs(data_min, data_max);

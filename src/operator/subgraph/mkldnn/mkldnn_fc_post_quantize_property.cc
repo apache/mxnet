@@ -41,12 +41,15 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 
  private:
   bool disable_all;
+  bool disable_fuse_dequantize;
   SelectStatus status;
   std::vector<const nnvm::Node *> matched_list;
 
  public:
-  explicit SgMKLDNNFCPostQuantizeSelector(int dis_all)
-      : disable_all(dis_all) {}
+  explicit SgMKLDNNFCPostQuantizeSelector(const bool dis_all,
+                                          const bool dis_fuse_dequantize)
+      : disable_all(dis_all),
+        disable_fuse_dequantize(dis_fuse_dequantize) {}
 
   bool Select(const nnvm::Node &n) override {
     if ((!disable_all) && n.op() == Op::Get(QUANTIZED_FC_NAME)) {
@@ -97,7 +100,7 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
           }
         }
       case kRequantize:
-        if (new_node.op() == Op::Get("_contrib_dequantize")) {
+        if ((!disable_fuse_dequantize) && (new_node.op() == Op::Get("_contrib_dequantize"))) {
             matched_list.push_back(&new_node);
             status = kSuccess;
             return true;
@@ -131,11 +134,15 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCPostQuantizeProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_POST_OPT", 0);
+    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_POST_OPT", false);
+    disable_fuse_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL", false);
+    disable_fuse_dequantize = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_QFC_FUSE_DEQUANTIZE", false);
+
+    disable_all = disable_all || disable_fuse_all;
     if (disable_all) {
-      LOG(INFO) << "MKLDNN Fully Connection post-quantization optimization pass is disabled.";
+      LOG(INFO) << "MKLDNN FullyConnected post-quantization optimization pass is disabled.";
     } else {
-      LOG(INFO) << "Start to execute MKLDNN Fully Connection post-quantization optimization pass.";
+      LOG(INFO) << "Start to execute MKLDNN FullyConected post-quantization optimization pass.";
     }
   }
 
@@ -169,11 +176,11 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 
     // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
     // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
-    fc_node->attrs.dict["quantized"] = true;
+    fc_node->attrs.dict["quantized"] = "True";
     if (dequantize_node != nullptr) {
-      fc_node->attrs.dict["fuse_dequantize"] = true;
+      fc_node->attrs.dict["fuse_dequantize"] = "True";
     } else {
-      fc_node->attrs.dict["fuse_requantize"] = true;
+      fc_node->attrs.dict["fuse_requantize"] = "True";
       fc_node->attrs.dict["min_calib_range"] =
           std::to_string(requantize_param.min_calib_range.value());
       fc_node->attrs.dict["max_calib_range"] =
@@ -185,7 +192,8 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     auto selector =
-        std::make_shared<SgMKLDNNFCPostQuantizeSelector>(disable_all);
+        std::make_shared<SgMKLDNNFCPostQuantizeSelector>(disable_all,
+                                                         disable_fuse_dequantize);
     return selector;
   }
 
@@ -199,7 +207,9 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
   }
 
  private:
-  int disable_all;
+  bool disable_all;
+  bool disable_fuse_all;
+  bool disable_fuse_dequantize;
 };
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_FC_QUANTIZE, SgMKLDNNFCPostQuantizeProperty);
