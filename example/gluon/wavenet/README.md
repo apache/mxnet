@@ -15,8 +15,8 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 ## Usage
 
 - arguments
-  - batch_size : Define batch size (defualt=64)
-  - epochs : Define the total epoches (default=1000)
+  - batch_size : Define batch size (default=64)
+  - epochs : Define the total number of epochs (default=1000)
   - mu : Define mu value for [mu-law algorithm](https://en.wikipedia.org/wiki/%CE%9C-law_algorithm) (default=128)
   - n_residue : Define number of residue (default=24)
   - dilation_depth : Define dilation depth (default=10)
@@ -31,7 +31,7 @@ or
 
 ###### manual setting
 ```
-python main.py --batch_size=32 --epoches=100 ...
+python main.py --batch_size=32 --epochs=100 ...
 ```
 ## Train progress
 ###### 0 epoch
