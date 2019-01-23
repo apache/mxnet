@@ -217,7 +217,6 @@ MXNET_DLL const char *MXGetLastError();
  */
 MXNET_DLL int MXRuntimeHasFeature(const mx_uint feature, bool *out);
 
-
 /*!
  * \brief Return a list of supported runtime features not enabled inclusive.
  * \param size  size of the returned array

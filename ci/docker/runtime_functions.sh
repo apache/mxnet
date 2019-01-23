@@ -868,6 +868,14 @@ unittest_ubuntu_cpu_clojure() {
     ./contrib/clojure-package/ci-test.sh
 }
 
+unittest_ubuntu_cpu_clojure_integration() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    ./contrib/clojure-package/integration-tests.sh
+}
+
+
 unittest_ubuntu_cpugpu_perl() {
     set -ex
     ./perl-package/test.sh
@@ -883,6 +891,7 @@ unittest_ubuntu_cpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg                           \
@@ -898,6 +907,7 @@ unittest_ubuntu_gpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg                           \
@@ -1258,7 +1268,9 @@ deploy_docs() {
     set -ex
     pushd .
 
-    make docs SPHINXOPTS=-W
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
     popd
 }
@@ -1281,6 +1293,16 @@ deploy_jl_docs() {
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
+}
+
+build_scala_static_mkl() {
+    set -ex
+    pushd .
+    scala_prepare
+    export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
+    export mxnet_variant=mkl
+    ./ci/publish/scala/build.sh
+    popd
 }
 
 publish_scala_build() {

@@ -37,7 +37,7 @@ DEBUG = 0
 USE_PROFILER = 1
 
 # whether to turn on signal handler (e.g. segfault logger)
-USE_SIGNAL_HANDLER = 0
+USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
 ADD_LDFLAGS += -L$(DEPS_PATH)/lib $(DEPS_PATH)/lib/libculibos.a -lpng -ltiff -ljpeg -lz -ldl -lgfortran -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
@@ -86,7 +86,7 @@ USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
 
 # whether use MKL-DNN library
-USE_MKLDNN = 0
+USE_MKLDNN = 1
 
 
 # MKL ML Library for Intel CPU/Xeon Phi

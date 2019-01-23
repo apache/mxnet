@@ -110,19 +110,46 @@ mutable struct NDArray{T,N}
   handle   :: MX_NDArrayHandle
   writable :: Bool
 
-  NDArray{T,N}(handle, writable = true) where {T,N} = new(handle, writable)
+  NDArray{T,N}(handle::MX_NDArrayHandle, writable::Bool = true) where {T,N} =
+    new(handle, writable)
 end
+
+# UndefInitializer constructors
+NDArray{T,N}(::UndefInitializer, dims::NTuple{N,Integer};
+             writable = true, ctx::Context = cpu()) where {T,N} =
+  NDArray{T,N}(_ndarray_alloc(T, dims, ctx, false), writable)
+NDArray{T,N}(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {T,N} =
+  NDArray{T,N}(undef, dims; kw...)
+
+NDArray{T}(::UndefInitializer, dims::NTuple{N,Integer}; kw...) where {T,N} =
+  NDArray{T,N}(undef, dims; kw...)
+NDArray{T}(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {T,N} =
+  NDArray{T,N}(undef, dims; kw...)
+
+NDArray(::UndefInitializer, dims::NTuple{N,Integer}; kw...) where {N} =
+  NDArray{DEFAULT_DTYPE,N}(undef, dims; kw...)
+NDArray(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {N} =
+  NDArray{DEFAULT_DTYPE,N}(undef, dims; kw...)
 
 NDArray(x::AbstractArray{<:DType}) = copy(collect(x), cpu())
 NDArray(x::Array{<:DType})         = copy(x, cpu())
+
 NDArray(::Type{T}, x::AbstractArray) where {T<:DType} =
   copy(convert(AbstractArray{T}, x), cpu())
+
 NDArray(handle, writable = true) =
   NDArray{eltype(handle), ndims(handle)}(handle, writable)
 
 # type aliases
 const NDArrayOrReal = Union{NDArray,Real}
 const VecOfNDArray = AbstractVector{<:NDArray}
+
+Base.unsafe_convert(::Type{MX_handle}, x::NDArray) =
+  Base.unsafe_convert(MX_handle, x.handle)
+Base.convert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
+Base.cconvert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
+
+MX_handle(x::NDArray) = Base.convert(MX_handle, x)
 
 function Base.show(io::IO, x::NDArray)
   print(io, "NDArray(")
@@ -138,13 +165,6 @@ function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T,N}) where 
   print(io, "$size_ $type_ @ $(context(x))", (n == 0) ? "" : ":\n")
   Base.print_array(io, try_get_shared(x, sync = :read))
 end
-
-Base.unsafe_convert(::Type{MX_handle}, x::NDArray) =
-  Base.unsafe_convert(MX_handle, x.handle)
-Base.convert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
-Base.cconvert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
-
-MX_handle(x::NDArray) = Base.convert(MX_handle, x)
 
 ################################################################################
 # NDArray functions exported to the users
@@ -163,34 +183,14 @@ function context(x::NDArray)
 end
 
 """
-    empty(DType, dims[, ctx::Context = cpu()])
-    empty(DType, dims)
-    empty(DType, dim1, dim2, ...)
-
-Allocate memory for an uninitialized `NDArray` with a specified type.
-"""
-empty(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType} =
-  NDArray{T,N}(_ndarray_alloc(T, dims, ctx, false))
-empty(::Type{T}, dims::Int...) where {T<:DType} = empty(T, dims)
-
-"""
-    empty(dims::Tuple[, ctx::Context = cpu()])
-    empty(dim1, dim2, ...)
-
-Allocate memory for an uninitialized `NDArray` with specific shape of type Float32.
-"""
-empty(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
-  NDArray(_ndarray_alloc(dims, ctx, false))
-empty(dims::Int...) = empty(dims)
-
-"""
-    similar(x::NDArray)
+    similar(x::NDArray; writable, ctx)
 
 Create an `NDArray` with similar shape, data type,
 and context with the given one.
 Note that the returned `NDArray` is uninitialized.
 """
-Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
+Base.similar(x::NDArray{T,N}; writable = x.writable, ctx = context(x)) where {T,N} =
+  NDArray{T,N}(undef, size(x)...; writable = writable, ctx = ctx)
 
 """
     zeros([DType], dims, [ctx::Context = cpu()])
@@ -200,7 +200,7 @@ Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
 Create zero-ed `NDArray` with specific shape and type.
 """
 function zeros(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
-  x = empty(T, dims, ctx)
+  x = NDArray{T}(undef, dims..., ctx = ctx)
   x[:] = zero(T)
   x
 end
@@ -222,7 +222,7 @@ Base.zeros(x::NDArray)::typeof(x) = zeros_like(x)
 Create an `NDArray` with specific shape & type, and initialize with 1.
 """
 function ones(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
-  arr = empty(T, dims, ctx)
+  arr = NDArray{T}(undef, dims..., ctx = ctx)
   arr[:] = one(T)
   arr
 end
@@ -504,10 +504,10 @@ copy(x::NDArray{T,D}, ctx::Context) where {T,D} =
 
 # Create copy: Julia Array -> NDArray in a given context
 copy(x::Array{T}, ctx::Context) where {T<:DType} =
-  copy!(empty(T, size(x), ctx), x)
+  copy!(NDArray{T}(undef, size(x); ctx = ctx), x)
 
 copy(x::AbstractArray, ctx::Context) =
-  copy!(empty(eltype(x), size(x), ctx), collect(x))
+  copy!(NDArray{eltype(x)}(undef, size(x); ctx = ctx), collect(x))
 
 """
     convert(::Type{Array{<:Real}}, x::NDArray)
@@ -866,8 +866,8 @@ end
 
 Create an `NDArray` filled with the value `x`, like `Base.fill`.
 """
-function fill(x, dims::NTuple{N,Integer}, ctx::Context=cpu()) where N
-  arr = empty(typeof(x), dims, ctx)
+function fill(x::T, dims::NTuple{N,Integer}, ctx::Context = cpu()) where {T,N}
+  arr = NDArray{T}(undef, dims, ctx = ctx)
   arr[:] = x
   arr
 end
@@ -1272,6 +1272,67 @@ Base.minimum(x::NDArray; dims = :) = _nd_minimum(x, dims)
 Base.prod(x::NDArray; dims = :) = _prod(x, dims)
 @_remap _prod(x::NDArray, ::Colon) prod(x)
 @_remap _prod(x::NDArray, dims)    prod(x; axis = 0 .- dims, keepdims = true)
+
+# TODO: support CartesianIndex ?
+"""
+    argmax(x::NDArray; dims) -> indices
+
+Note that `NaN` is skipped during comparison.
+This is different from Julia `Base.argmax`.
+
+## Examples
+
+```julia-repl
+julia> x = NDArray([0. 1 2; 3 4 5])
+2×3 NDArray{Float64,2} @ CPU0:
+ 0.0  1.0  2.0
+ 3.0  4.0  5.0
+
+julia> argmax(x, dims = 1)
+1×3 NDArray{Float64,2} @ CPU0:
+ 2.0  2.0  2.0
+
+julia> argmax(x, dims = 2)
+2×1 NDArray{Float64,2} @ CPU0:
+ 3.0
+ 3.0
+```
+
+See also [`argmin`](@ref mx.argmin).
+"""
+Base.argmax(x::NDArray; dims = :) = _argmax(x, dims) .+ 1
+@_remap _argmax(x::NDArray, ::Colon) argmax(x)
+@_remap _argmax(x::NDArray, dims)    argmax(x; axis = 0 .- dims, keepdims = true)
+
+"""
+    argmin(x::NDArray; dims) -> indices
+
+Note that `NaN` is skipped during comparison.
+This is different from Julia `Base.argmin`.
+
+## Examples
+
+```julia-repl
+julia> x = NDArray([0. 1 2; 3 4 5])
+2×3 NDArray{Float64,2} @ CPU0:
+ 0.0  1.0  2.0
+ 3.0  4.0  5.0
+
+julia> argmax(x, dims = 1)
+1×3 NDArray{Float64,2} @ CPU0:
+ 2.0  2.0  2.0
+
+julia> argmax(x, dims = 2)
+2×1 NDArray{Float64,2} @ CPU0:
+ 3.0
+ 3.0
+```
+
+See also [`argmax`](@ref mx.argmax).
+"""
+Base.argmin(x::NDArray; dims = :) = _argmin(x, dims) .+ 1
+@_remap _argmin(x::NDArray, ::Colon) argmin(x)
+@_remap _argmin(x::NDArray, dims)    argmin(x; axis = 0 .- dims, keepdims = true)
 
 _nddoc[:clip] = _nddoc[:clip!] =
 """
@@ -1734,6 +1795,10 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_axis",
     "broadcast_axes",
     "broadcast_hypot",
+
+    # reduction
+    "argmax",
+    "argmin",
 ]
 
 macro _import_ndarray_functions()

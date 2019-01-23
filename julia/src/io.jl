@@ -360,7 +360,7 @@ function ArrayDataProvider(data, label; batch_size::Int = 0, shuffle::Bool = fal
   function gen_batch_nds(arrs :: Vector{Array{MX_float}}, bsize :: Int)
     map(arrs) do arr
       shape = size(arr)
-      empty(shape[1:end-1]..., bsize)
+      NDArray(undef, shape[1:end-1]..., bsize)
     end
   end
 

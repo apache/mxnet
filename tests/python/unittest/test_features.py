@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,27 +15,26 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+import mxnet as mx
+import sys
+from mxnet.mxfeatures import *
+from mxnet.base import MXNetError
+from nose.tools import *
 
-set -ex
+def test_runtime_features():
+    for f in Feature:
+        res = has_feature(f.value)
+        ok_(type(res) is bool)
+    for f in features_enabled():
+        ok_(type(f) is Feature)
+    ok_(type(features_enabled_str()) is str)
+    print("Features enabled: {}".format(features_enabled_str()))
 
-function install_julia() {
-    local suffix=`echo $1 | sed 's/\.//'`  # 0.7 -> 07; 1.0 -> 10
-    local JLBINARY="julia-$1.tar.gz"
-    local JULIADIR="/work/julia$suffix"
-    local JULIA="${JULIADIR}/bin/julia"
+@raises(MXNetError)
+def test_has_feature_2large():
+    has_feature(sys.maxsize)
 
-    mkdir -p $JULIADIR
-    # The julia version in Ubuntu repo is too old
-    # We download the tarball from the official link:
-    #   https://julialang.org/downloads/
-    wget -qO $JLBINARY https://julialang-s3.julialang.org/bin/linux/x64/$1/julia-$2-linux-x86_64.tar.gz
-    tar xzf $JLBINARY -C $JULIADIR --strip 1
-    rm $JLBINARY
 
-    $JULIA -e 'using InteractiveUtils; versioninfo()'
-}
-
-install_julia 0.7 0.7.0
-install_julia 1.0 1.0.3
+if __name__ == "__main__":
+    import nose
+    nose.runmodule()

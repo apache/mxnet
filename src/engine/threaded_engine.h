@@ -465,7 +465,8 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
+                               const dmlc::Error* error);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,

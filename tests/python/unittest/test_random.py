@@ -882,7 +882,7 @@ def test_randint_generator():
 @with_seed()
 def test_randint_without_dtype():
     a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
-    assert(a.dtype, 'int32')
+    assert a.dtype == np.int32
 
 if __name__ == '__main__':
     import nose

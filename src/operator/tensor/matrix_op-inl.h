@@ -37,6 +37,7 @@
 #include "broadcast_reduce_op.h"
 #include "./init_op.h"
 #include "../../common/static_array.h"
+#include "./slice-inl.h"
 
 #if MXNET_USE_CUDA
 #include <thrust/device_vector.h>
@@ -398,19 +399,15 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-struct SliceParam : public dmlc::Parameter<SliceParam> {
-  nnvm::Tuple<dmlc::optional<int>> begin, end;
-  nnvm::Tuple<dmlc::optional<int>> step;
-  DMLC_DECLARE_PARAMETER(SliceParam) {
-    DMLC_DECLARE_FIELD(begin)
-    .describe("starting indices for the slice operation, supports negative indices.");
-    DMLC_DECLARE_FIELD(end)
-    .describe("ending indices for the slice operation, supports negative indices.");
-    DMLC_DECLARE_FIELD(step)
-    .set_default(nnvm::Tuple<dmlc::optional<int>>())
-    .describe("step for the slice operation, supports negative values.");
+// Currently MKLDNN only supports step = 1 or step has no value
+inline bool SupportMKLDNNSlice(const SliceParam& param) {
+  if (param.step.ndim() == 0U) return true;
+  for (uint32_t i = 0; i < param.step.ndim(); ++i) {
+    if (param.step[i].has_value() && param.step[i].value() != 1)
+      return false;
   }
-};
+  return true;
+}
 
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -432,9 +429,19 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       && (!param.step[0].has_value() || param.step[0].value() == 1)) {
     trivial_step = true;
   }
-  if (!dispatched && in_stype == kDefaultStorage) {
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
+
+  if (in_stype == kDefaultStorage) {
+#if MXNET_USE_MKLDNN == 1
+    if (dev_mask == Context::kCPU && MKLDNNEnvSet()
+        && SupportMKLDNNSlice(param)) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, dispatch_ex);
+    }
+#endif
+    if (!dispatched) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
   }
 
   if (!dispatched && in_stype == kCSRStorage && trivial_step) {
