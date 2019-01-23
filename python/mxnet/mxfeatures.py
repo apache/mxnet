@@ -76,7 +76,7 @@ def has_feature(feature):
         True if the feature is enabled, false otherwise
     """
     res = ctypes.c_bool()
-    check_call(_LIB.MXHasFeature(mx_uint(feature), ctypes.byref(res)))
+    check_call(_LIB.MXRuntimeHasFeature(mx_uint(feature), ctypes.byref(res)))
     return res.value
 
 
