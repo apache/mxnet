@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -100,14 +102,14 @@ def ctcBeamSearch(mat, classes, lm, k, beamWidth):
         # get beam-labelings of best beams
         bestLabelings = last.sort()[0:beamWidth]
 
-	# go over best beams
+	    # go over best beams
         for labeling in bestLabelings:
 
-	    # probability of paths ending with a non-blank
+	        # probability of paths ending with a non-blank
             prNonBlank = 0
-	    # in case of non-empty beam
+	        # in case of non-empty beam
             if labeling:
-		# probability of paths with repeated last char at the end
+		       # probability of paths with repeated last char at the end
                 try: 
                     prNonBlank = last.entries[labeling].prNonBlank * mat[t, labeling[-1]]
                 except FloatingPointError:
@@ -138,15 +140,15 @@ def ctcBeamSearch(mat, classes, lm, k, beamWidth):
                 else:
                     prNonBlank = mat[t, c] * last.entries[labeling].prTotal
 
-		# add beam at current time-step if needed
+		        # add beam at current time-step if needed
                 addBeam(curr, newLabeling)
 				
-		# fill in data
+		        # fill in data
                 curr.entries[newLabeling].labeling = newLabeling
                 curr.entries[newLabeling].prNonBlank += prNonBlank
                 curr.entries[newLabeling].prTotal += prNonBlank
 				
-		# apply LM
+		        # apply LM
                 applyLM(curr.entries[labeling], curr.entries[newLabeling], classes, lm)
 
         # set new beam state
