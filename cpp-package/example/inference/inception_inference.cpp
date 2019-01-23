@@ -299,21 +299,26 @@ void Predictor::PredictImage(const std::string& image_file) {
    *
    */
   image_data.CopyTo(&(executor->arg_dict()["data"]));
-  NDArray::WaitAll();
 
   // Run the forward pass.
   executor->Forward(false);
 
   // The output is available in executor->outputs.
   auto array = executor->outputs[0].Copy(global_ctx);
-  NDArray::WaitAll();
 
   /*
    * Find out the maximum accuracy and the index associated with that accuracy.
    * This is done by using the argmax operator on NDArray.
    */
   auto predicted = array.ArgmaxChannel();
-  NDArray::WaitAll();
+
+  /*
+   * Wait until all the previous write operations on the 'predicted'
+   * NDArray to be complete before we read it.
+   * This method guarantees that all previous write operations that pushed into the backend engine
+   * for execution are actually finished.
+   */
+  predicted.WaitToRead();
 
   int best_idx = predicted.At(0, 0);
   float best_accuracy = array.At(0, best_idx);
