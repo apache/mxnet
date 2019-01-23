@@ -492,11 +492,10 @@ class SGD(Optimizer):
         if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
         Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, lazy_update=True, **kwargs):
         super(SGD, self).__init__(**kwargs)
@@ -707,11 +706,10 @@ class LBSGD(Optimizer):
         The momentum value.
     multi_precision: bool, optional
         Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
 
     warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
     warmup_epochs: unsigned, default: 5
