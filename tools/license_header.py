@@ -84,6 +84,7 @@ _WHITE_LIST = [
                'src/operator/nn/im2col.cuh',
 
                # Licenses in headers
+               'src/operator/contrib/erfinv-inl.h',
                'docs/_static/searchtools_custom.js',
                'docs/_static/js/clipboard.js',
                'docs/_static/js/clipboard.min.js',

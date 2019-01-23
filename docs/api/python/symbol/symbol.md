@@ -659,6 +659,7 @@ Composite multiple symbols into a new one by an operator.
     relu
     sigmoid
     erf
+    erfinv
 ```
 
 ### More

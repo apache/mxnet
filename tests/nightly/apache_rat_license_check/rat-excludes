@@ -35,6 +35,7 @@ _mask.pyx
 coco.py
 base.pyi
 special_functions-inl.h
+erfinv-inl.h
 im2col.cuh
 im2col.h
 pool.h
