@@ -120,14 +120,13 @@ class Train:
                 sum_losses = 0
                 len_losses = 0
                 with autograd.record():
-                    with autograd.train_mode():
-                        for X, Y in zip(data, label):
-                            current_batch_loss = self.loss_fn(self.net(X), Y)
-                            losses.append(current_batch_loss)
-                            sum_losses += mx.nd.array(current_batch_loss).sum().asscalar()
-                            len_losses += len(current_batch_loss)
-                        for l in losses:
-                            l.backward()
+                    for X, Y in zip(data, label):
+                        current_batch_loss = self.loss_fn(self.net(X), Y)
+                        losses.append(current_batch_loss)
+                        sum_losses += mx.nd.array(current_batch_loss).sum().asscalar()
+                        len_losses += len(current_batch_loss)
+                for l in losses:
+                    l.backward()
                 self.trainer.step(input_data.shape[0])
                 if iter_no % 20 == 0:
                     current_loss = sum_losses / len_losses
