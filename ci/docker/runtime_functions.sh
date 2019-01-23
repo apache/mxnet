@@ -1295,6 +1295,14 @@ build_scala_static_mkl() {
     popd
 }
 
+build_static_python_mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
+    popd
+}
+
 publish_scala_build() {
     set -ex
     pushd .
