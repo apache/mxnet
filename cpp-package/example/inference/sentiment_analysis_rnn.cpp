@@ -39,7 +39,7 @@
 
 using namespace mxnet::cpp;
 
-static const int DEFAULT_NUM_WORDS = 5;
+static const int DEFAULT_NUM_WORDS = 10;
 static const char DEFAULT_S3_URL[] = "https://s3.amazonaws.com/mxnet-cpp/RNN_model/";
 
 /*
@@ -302,7 +302,8 @@ void printUsage() {
     std::cout << "Usage:" << std::endl;
     std::cout << "sentiment_analysis_rnn " << std::endl
               << "--input Input movie review line."
-              << "e.g. \"This movie is the best\""  << std::endl
+              << "e.g. \"This movie is the best.\" "
+              << "The input is trimmed or padded with 0s to match the max_num_words."  << std::endl
               << "[--max_num_words]  "
               << "The number of words in the sentence to be considered for sentiment analysis. "
               << "Default is " << DEFAULT_NUM_WORDS << std::endl

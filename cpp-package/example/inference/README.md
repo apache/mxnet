@@ -68,21 +68,43 @@ The example's command line parameters are as shown below:
 ./sentiment_analysis_rnn --help
 Usage:
 sentiment_analysis_rnn
---input Input movie review line.e.g. "This movie is the best"
-[--max_num_words]  The number of words in the sentence to be considered for sentiment analysis. Default is 5
+--input Input movie review line.e.g. "This movie is the best." The input is trimmed or padded with 0s to match the max_num_words.
+[--max_num_words]  The number of words in the sentence to be considered for sentiment analysis. Default is 10
 [--gpu]  Specify this option if workflow needs to be run in gpu context
 
 ```
 
-or
+The following command line shows running the example with input line containing less number of words than max_num_words.
+The input will be padded to match the max_num_words.
 
 ```
-./sentiment_analysis_rnn --input "This movie is so amazing"
+./sentiment_analysis_rnn --input "This movie has the great story and best acting"
 ```
 
-The example will output the sentiment score as follows:
+The above command will output the sentiment score as follows:
 ```
-The sentiment score between 0 and 1, (1 being positive)=0.986632
+The sentiment score between 0 and 1, (1 being positive)=0.910454
+```
+
+The following command line shows invoking the example with input having negative sentiment.
+
+```
+./sentiment_analysis_rnn --input "The movie is worst" --max_num_words 4
+```
+The above command will output the sentiment score as follows:
+```
+The sentiment score between 0 and 1, (1 being positive)=0.0315846
+```
+
+The following command line shows running the example with input line containing more number of words than max_num_words.
+The input will be trimmed to match the max_num_words.
+
+```
+./sentiment_analysis_rnn --input "The best movie ever made in the history of cinema" --max_num_words 5
+```
+The above command will output the sentiment score as follows:
+```
+The sentiment score between 0 and 1, (1 being positive)=0.716847
 ```
 
 Alternatively, you can run the [unit_test_sentiment_analysis_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_sentiment_analysis_rnn.sh>) script.
