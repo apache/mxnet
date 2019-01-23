@@ -33,7 +33,7 @@
  *\brief whether to use opencv support
  */
 #ifndef MXNET_USE_OPENCV
-#define MXNET_USE_OPENCV 1
+#define MXNET_USE_OPENCV 0
 #endif
 
 /*!
