@@ -215,7 +215,6 @@ void Predictor::LoadMeanImageData() {
   mean_image_data.SyncCopyFromCPU(
         NDArray::LoadToMap(mean_image_file)["mean_img"].GetData(),
         input_shape.Size());
-  NDArray::WaitAll();
 }
 
 
@@ -244,7 +243,6 @@ void Predictor::LoadDefaultMeanImageData() {
   }
   mean_image_data = NDArray(input_shape, global_ctx, false);
   mean_image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
-  NDArray::WaitAll();
 }
 
 
@@ -273,7 +271,6 @@ NDArray Predictor::LoadInputImage(const std::string& image_file) {
   }
   NDArray image_data = NDArray(input_shape, global_ctx, false);
   image_data.SyncCopyFromCPU(array.data(), input_shape.Size());
-  NDArray::WaitAll();
   return image_data;
 }
 
