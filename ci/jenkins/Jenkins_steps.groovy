@@ -999,20 +999,6 @@ def test_unix_r_gpu() {
     }]
 }
 
-def test_unix_r_mkldnn_gpu() {
-    return ['R: MKLDNN-GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/ut-r-mkldnn-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib, true)
-            utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_julia07_cpu() {
     return ['Julia 0.7: CPU': {
       node(NODE_LINUX_CPU) {
