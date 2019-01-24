@@ -25,9 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class PredictorTest {
 
@@ -76,6 +74,31 @@ public class PredictorTest {
         List<NDArray> actualOutput = mockPredictor.predictWithNDArray(inputList);
 
         Mockito.verify(mockPredictor, Mockito.times(1)).predictWithNDArray(inputList);
+
+        Assert.assertEquals(expectedResult, actualOutput);
+    }
+
+    @Test
+    public void testPredictWithIterablesNDArray() {
+
+        float[] tmpArr = new float[224];
+        for (int y = 0; y < 224; y++)
+            tmpArr[y] = (int) (Math.random() * 10);
+
+        NDArray arr = new org.apache.mxnet.javaapi.NDArray(tmpArr, new Shape(new int[] {1, 1, 1, 224}), new Context("cpu", 0));
+
+        Set<NDArray> inputSet = new HashSet<>();
+        inputSet.add(arr);
+
+        NDArray expected = new NDArray(tmpArr, new Shape(new int[] {1, 1, 1, 224}), new Context("cpu", 0));
+        List<NDArray> expectedResult = new ArrayList<>();
+        expectedResult.add(expected);
+
+        Mockito.when(mockPredictor.predictWithNDArray(inputSet)).thenReturn(expectedResult);
+
+        List<NDArray> actualOutput = mockPredictor.predictWithNDArray(inputSet);
+
+        Mockito.verify(mockPredictor, Mockito.times(1)).predictWithNDArray(inputSet);
 
         Assert.assertEquals(expectedResult, actualOutput);
     }
