@@ -421,7 +421,7 @@
     <dependency>
       <groupId>org.scalatest</groupId>
       <artifactId>scalatest_2.11</artifactId>
-      <version>3.0.4</version>
+      <version>3.0.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -456,7 +456,12 @@
     <dependency>
       <groupId>org.scala-lang.modules</groupId>
       <artifactId>scala-parser-combinators_2.11</artifactId>
-      <version>1.0.4</version>
+      <version>1.0.5</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-xml_2.11</artifactId>
+      <version>1.0.6</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
