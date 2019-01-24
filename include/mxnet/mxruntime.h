@@ -26,6 +26,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include "dmlc/base.h"
 #include "mshadow/base.h"
 
