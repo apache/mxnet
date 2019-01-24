@@ -1,11 +1,13 @@
 # MXNet Scala Sample Project
 This is an project created to use Maven-published Scala package with two Scala examples.
 ## Setup
-User are required to use maven to build the package, by simply run
+User are required to use maven to build the package, by simply running
 ```
 mvn package
 ```
 This command will pick the default values specified in the pom file.
+
+Note: If you are planning to use GPU, please add `-DSCALA_PKG_PROFILE=linux-x86_64-gpu`
 
 ### Use customized version set
  which are shown below:

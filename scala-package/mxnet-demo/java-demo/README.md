@@ -1,11 +1,13 @@
 # MXNet Java Sample Project
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
-User are required to use maven to build the package, by simply run
+User are required to use maven to build the package, by simply running
 ```
 mvn package
 ```
 This command will pick the default values specified in the pom file.
+
+Note: If you are planning to use GPU, please add `-DSCALA_PKG_PROFILE=linux-x86_64-gpu`
 
 ### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:
@@ -77,7 +79,7 @@ mvn clean
 ```
 
 ## Run in Eclipse
-You can convert the maven project to the eclipse one by simply do:
+You can convert the maven project to the eclipse one by running
 ```
 mvn eclipse:eclipse
 ```
