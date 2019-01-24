@@ -29,12 +29,13 @@ class LipsDataset(dataset.Dataset):
     """
     Description : DataSet class for lip images
     """
-    def __init__(self, root, align_root, flag=1, transform=None):
+    def __init__(self, root, align_root, flag=1, transform=None, seq_len=75):
         self._root = os.path.expanduser(root)
         self._align_root = align_root
         self._flag = flag
         self._transform = transform
         self._exts = ['.jpg', '.jpeg', '.png']
+        self._seq_len = seq_len
         self._list_images(self._root)
 
     def _list_images(self, root):
@@ -46,7 +47,7 @@ class LipsDataset(dataset.Dataset):
         folder_path = glob.glob(os.path.join(root, "*", "*"))
         for folder in folder_path:
             filename = glob.glob(os.path.join(folder, "*"))
-            if len(filename) != 75:
+            if len(filename) != self._seq_len:
                 continue
             filename.sort()
             label = os.path.split(folder)[-1]
@@ -68,7 +69,8 @@ class LipsDataset(dataset.Dataset):
             img.append(tmp_img)
         img = nd.stack(*img)
         img = nd.transpose(img, (1, 0, 2, 3))
-        label = self.align_generation(self.items[idx][1])
+        label = self.align_generation(self.items[idx][1], 
+                                      padding=self._seq_len)
         return img, label
 
     def __len__(self):

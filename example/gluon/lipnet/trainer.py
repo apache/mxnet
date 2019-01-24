@@ -74,6 +74,7 @@ class Train:
         self.num_gpus = config.num_gpus
         self.ctx = setting_ctx(self.num_gpus)
         self.num_workers = config.num_workers
+        self.seq_len = 75
         self.build_model()
 
     def build_model(self):
@@ -81,7 +82,8 @@ class Train:
         Description : build network
         """
         #set network
-        self.net = LipNet(self.dr_rate)
+        self.net = LipNet(self.dr_rate, self.batch_size, self.seq_len)
+        self.net.hybridize()
         self.net.initialize(ctx=self.ctx)
         #set optimizer
         self.loss_fn = gluon.loss.CTCLoss()
@@ -103,7 +105,11 @@ class Train:
         input_transform = transforms.Compose([transforms.ToTensor(), \
                                              transforms.Normalize((0.7136, 0.4906, 0.3283), \
                                                                   (0.1138, 0.1078, 0.0917))])
-        training_dataset = LipsDataset(self.image_path, self.align_path, transform=input_transform)
+        training_dataset = LipsDataset(self.image_path,
+                                       self.align_path,
+                                       transform=input_transform,
+                                       seq_len=self.seq_len)
+
         train_dataloader = mx.gluon.data.DataLoader(training_dataset,
                                                     batch_size=self.batch_size,
                                                     shuffle=True,
