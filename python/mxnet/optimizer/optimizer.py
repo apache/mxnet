@@ -70,12 +70,11 @@ class Optimizer(object):
         The initial number of updates.
 
     multi_precision : bool, optional, default False
-       Flag to control the internal precision of the optimizer.::
-
-           False: results in using the same precision as the weights (default),
-           True: makes internal 32-bit copy of the weights and applies gradients
-           in 32-bit precision even if actual weights used in the model have lower precision.
-           Turning this on can improve convergence and accuracy when training with float16.
+       Flag to control the internal precision of the optimizer.
+       False: results in using the same precision as the weights (default),
+       True: makes internal 32-bit copy of the weights and applies gradients
+       in 32-bit precision even if actual weights used in the model have lower precision.
+       Turning this on can improve convergence and accuracy when training with float16.
 
     param_dict : dict of int -> gluon.Parameter, default None
         Dictionary of parameter index to gluon.Parameter, used to lookup parameter attributes
@@ -491,7 +490,7 @@ class SGD(Optimizer):
         Default is True. If True, lazy updates are applied \
         if the storage types of weight and grad are both ``row_sparse``.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
+        Flag to control the internal precision of the optimizer.
         False: results in using the same precision as the weights (default),
         True: makes internal 32-bit copy of the weights and applies gradients
         in 32-bit precision even if actual weights used in the model have lower precision.
@@ -705,7 +704,7 @@ class LBSGD(Optimizer):
     momentum : float, optional
         The momentum value.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
+        Flag to control the internal precision of the optimizer.
         False: results in using the same precision as the weights (default),
         True: makes internal 32-bit copy of the weights and applies gradients
         in 32-bit precision even if actual weights used in the model have lower precision.
@@ -945,12 +944,11 @@ class NAG(Optimizer):
     momentum : float, optional
        The momentum value.
     multi_precision: bool, optional
-        Flag to control the internal precision of the optimizer.::
-
-            False: results in using the same precision as the weights (default),
-            True: makes internal 32-bit copy of the weights and applies gradients
-            in 32-bit precision even if actual weights used in the model have lower precision.
-            Turning this on can improve convergence and accuracy when training with float16.
+        Flag to control the internal precision of the optimizer.
+        False: results in using the same precision as the weights (default),
+        True: makes internal 32-bit copy of the weights and applies gradients
+        in 32-bit precision even if actual weights used in the model have lower precision.
+        Turning this on can improve convergence and accuracy when training with float16.
     """
     def __init__(self, momentum=0.0, **kwargs):
         super(NAG, self).__init__(**kwargs)
