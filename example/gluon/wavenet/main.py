@@ -31,6 +31,8 @@ def main():
     - dilation_depth : Define dilation depth (default=10)
     - use_gpu : whether or not to use the GPU (default=True)
     - generation : whether or not to generate a wave file for model (default=True)
+    - load_file : file name in loading wave file
+    - save_file : file name in saving result
     """
     parser = argparse.ArgumentParser(description='argument for wavenet hyperparameters')
     parser.add_argument('--batch_size', type=int, default=64, help="batch size")
@@ -43,6 +45,8 @@ def main():
     parser.add_argument('--seq_size', type=int, default=20000, help="number of sequence size")
     parser.add_argument('--use_gpu', type=str, default="True", help="use gpu")
     parser.add_argument('--generation', type=bool, default=True, help="generate a wave file")
+    parser.add_argument('--load_file', type=str, default='parametric-2.wav', help="file name in loading wave file")
+    parser.add_argument('--save_file', type=str, default='wav.npy', help="file name in saving result")
     config = parser.parse_args()
     print(config)
 
