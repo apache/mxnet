@@ -39,12 +39,12 @@ class Deformable_Convolution(HybridBlock):
         i.e. the number of output channels in the convolution.
     kernel_size : int or tuple/list of 2 ints, default (1,1)
         Specifies the dimensions of the convolution window.
-    strides: int or tuple/list of 2 ints, default (1,1)
+    strides : int or tuple/list of 2 ints, default (1,1)
         Specifies the strides of the convolution.
     padding : int or tuple/list of 2 ints, default (0,0)
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points
-    dilation: int or tuple/list of 2 ints, default (1,1)
+    dilation : int or tuple/list of 2 ints, default (1,1)
         Specifies the dilation rate to use for dilated convolution.
     groups : int, default 1
         Controls the connections between inputs and outputs.
@@ -59,7 +59,7 @@ class Deformable_Convolution(HybridBlock):
         'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
         batch, channel, height, width and depth dimensions respectively.
         Convolution is performed over 'D', 'H', and 'W' dimensions.
-    use_bias: bool (default True)
+    use_bias : bool (default True)
         Whether the layer for generating the output features uses a bias vector.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
@@ -72,22 +72,24 @@ class Deformable_Convolution(HybridBlock):
     weight_initializer : str or `Initializer` (default None)
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the output features
-    bias_initializer: str or `Initializer` (default Zero)
+    bias_initializer : str or `Initializer` (default Zero)
         Initializer for the bias vector for the convolution layer
         for generating the output features
     offset_weight_initializer : str or `Initializer` (default Zero, according to the paper[1])
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the offset
-    offset_bias_initializer: str or `Initializer` (default Zero)
+    offset_bias_initializer : str or `Initializer` (default Zero)
         Initializer for the bias vector for the convolution layer
         for generating the offset
     offset_use_bias: bool (default True)
         Whether the layer for generating the offset uses a bias vector.
 
+
     Inputs:
         - **data**: 4D input tensor with shape
           `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
           For other layouts shape is permuted accordingly.
+         
     Outputs:
         - **out**: 4D output tensor with shape
           `(batch_size, channels, out_height, out_width)` when `layout` is `NCHW`.
@@ -103,7 +105,7 @@ class Deformable_Convolution(HybridBlock):
                  num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
                  weight_initializer=None, bias_initializer='zeros',
                  offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
-                 op_name='DeformableConvolution', adj=None, prefix=None, params=None, **kwargs):
+                 op_name='DeformableConvolution', adj=None, prefix=None, params=None):
         super(Deformable_Convolution, self).__init__(prefix=prefix, params=params)
         with self.name_scope():
             self._channels = channels
@@ -178,7 +180,7 @@ class Deformable_Convolution(HybridBlock):
             else:
                 self.act = None
 
-    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias =None, deformable_conv_bias=None):
+    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
         if offset_bias is None:
             offset = F.Convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
         else:
