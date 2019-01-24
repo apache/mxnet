@@ -18,10 +18,11 @@
  */
 
 /*!
- * \file normalize_op.cu
- * \brief GPU Implementation of Normalize op
+ * \file image_random.cu
+ * \brief GPU Implementation of image transformation operators
  */
-#include "./normalize_op-inl.h"
+#include "./image_random-inl.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
