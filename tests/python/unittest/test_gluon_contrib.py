@@ -414,7 +414,13 @@ def test_deformable_convolution():
                                offset_use_bisa=False, use_bias=False)
     )
 
-    ctx = mx.gpu()
+    try:
+        ctx = mx.gpu()
+        _ = nd.array([0], ctx=ctx)
+    except mx.base.MXNetError:
+        print("deformable_convolution only supports GPU")
+        return
+    
     net.initialize(force_reinit=True, ctx=ctx)
     net.hybridize()
 
