@@ -125,9 +125,50 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
 
   test("test Visualize") {
     var nd = NDArray.ones(Shape(1, 2, 1000, 1))
-    require(nd.toString.split("\n").length == 33)
+    var data : String =
+      """
+        |[
+        | [
+        |  [
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |
+        |   ... with length 1000
+        |  ]
+        |  [
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |
+        |   ... with length 1000
+        |  ]
+        |  ]
+        |]
+        |<NDArray (1,2,1000,1) cpu(0) float32>""".stripMargin
+    require(nd.toString.split("\\s+").mkString == data.split("\\s+").mkString)
     nd = NDArray.ones(Shape(1, 4))
-    require(nd.toString.split("\n").length == 4)
+    data =
+      """
+        |[
+        | [1.0,1.0,1.0,1.0]
+        |]
+        |<NDArray (1,4) cpu(0) float32>""".stripMargin
+    require(nd.toString.split("\\s+").mkString == data.split("\\s+").mkString)
   }
 
   test("plus") {
