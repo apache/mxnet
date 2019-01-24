@@ -25,7 +25,6 @@ def main():
     Description : run code using argument info
     """
     parser = argparse.ArgumentParser()
-    parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--epoches', type=int, default=10)
     parser.add_argument('--mu', type=int, default=128)
