@@ -1,5 +1,5 @@
 """
-Description : Set DataSet module for Wavenet
+Description : Set Dataset module for Wavenet
 """
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -19,10 +19,10 @@ Description : Set DataSet module for Wavenet
 # under the License
 import os
 import numpy as np
-from scipy.io import wavfile
 from mxnet import nd
-from utils import encode_mu_law
+from scipy.io import wavfile
 # pylint: disable=invalid-name, too-many-arguments
+
 def load_wav(file_nm):
     """
     Description : load wav file
