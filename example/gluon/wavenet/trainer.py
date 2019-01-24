@@ -45,7 +45,7 @@ class Train():
     def __init__(self, config):
         ##setting hyper-parameters
         self.batch_size = config.batch_size
-        self.epoches = config.epoches
+        self.epochs = config.epochs
         self.mu = config.mu
         self.n_residue = config.n_residue
         self.n_skip = config.n_skip
@@ -74,7 +74,7 @@ class Train():
         Description : module for saving network
         """
         filename = 'models/best_perf_epoch_'+str(epoch)+"_loss_"+str(current_loss)
-        self.net.save_params(filename)
+        self.net.save_parameters(filename)
 
     def train(self):
         """
@@ -85,7 +85,7 @@ class Train():
 
         loss_save = []
         best_loss = sys.maxsize
-        for epoch in trange(self.epoches):
+        for epoch in trange(self.epochs):
             loss = 0.0
             for _ in range(self.batch_size):
                 batch = next(g)
