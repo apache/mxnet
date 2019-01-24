@@ -868,6 +868,14 @@ unittest_ubuntu_cpu_clojure() {
     ./contrib/clojure-package/ci-test.sh
 }
 
+unittest_ubuntu_cpu_clojure_integration() {
+    set -ex
+    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    ./contrib/clojure-package/integration-tests.sh
+}
+
+
 unittest_ubuntu_cpugpu_perl() {
     set -ex
     ./perl-package/test.sh
@@ -914,29 +922,21 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-
-    # install package
-    mkdir -p $DEVDIR
-    ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
-
-    # register MXNet.jl and dependencies
-    julia -e 'using Pkg; Pkg.develop("MXNet")'
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'using Pkg; Pkg.build("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
-    julia -e 'using Pkg; Pkg.test("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.test("MXNet")'
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
-    julia -e 'using MXNet; mx._sig_checker()'
+    julia --project=./julia -e 'using MXNet; mx._sig_checker()'
 }
 
 unittest_ubuntu_cpu_julia07() {
@@ -1272,10 +1272,8 @@ deploy_jl_docs() {
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
@@ -1294,6 +1292,14 @@ build_scala_static_mkl() {
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=mkl
     ./ci/publish/scala/build.sh
+    popd
+}
+
+build_static_python_mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
     popd
 }
 

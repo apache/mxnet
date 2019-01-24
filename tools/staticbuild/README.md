@@ -1,9 +1,9 @@
-# MXNet Static build
+# MXNet Static Build
 
-This folder contains the core script used to build the static library. This README would bring you the information and usages of the script in here. Please be aware, all of the scripts are designed to be run under the root folder.
+This folder contains the core script used to build the static library. This README provides information on how to use the scripts in this folder. Please be aware, all of the scripts are designed to be run under the root folder.
 
 ## `build.sh`
-This script is a wrapper around `build_lib.sh` aimed to simplify the usage of it. It would automatically identify the system version, number of cores and all environment variable settings. Here are the examples you can run this script:
+This script is a wrapper around `build_lib.sh. It simplifies the things by automatically identifing the system version, number of cores, and all environment variable settings. Here are examples you can run with this script:
 
 ```
 tools/staticbuild/build.sh cu92 maven
@@ -17,7 +17,7 @@ This would build the mxnet package based on MKLDNN and and pypi configuration se
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 
 ## `build_lib.sh`
-This script would clone the most up-to-date master and build the MXNet backend with static library. In order to run that, you should have prepare the the following environment variable:
+This script clones the most up-to-date master and builds the MXNet backend with a static library. In order to run the static library, you must set the the following environment variables:
 
 - `DEPS_PATH` Path to your static dependencies
 - `STATIC_BUILD_TARGET` Either `pip` or `maven` as your publish platform
@@ -29,4 +29,4 @@ It is not recommended to run this file alone since there are a bunch of variable
 After running this script, you would have everything you need ready in the `/lib` folder.
 
 ## `build_wheel.sh`
-This script is used to build the python package as well as running a sanity test
+This script builds the python package. It also runs a sanity test.

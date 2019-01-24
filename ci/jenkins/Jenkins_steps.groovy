@@ -534,6 +534,19 @@ def test_static_scala_cpu() {
   }]
 }
 
+def test_static_python_cpu() {
+  return ['Static build CPU 14.04 Python' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/ut-publish-python-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
 def test_unix_python2_cpu() {
     return ['Python2: CPU': {
       node(NODE_LINUX_CPU) {
@@ -887,6 +900,19 @@ def test_unix_clojure_cpu() {
     }]
 }
 
+def test_unix_clojure_integration_cpu() {
+    return ['Clojure: CPU Integration': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-clojure-integration-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure_integration', false)
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_r_cpu() {
     return ['R: CPU': {
       node(NODE_LINUX_CPU) {
@@ -1205,6 +1231,34 @@ def test_windows_python3_cpu() {
             } finally {
               utils.collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
             }
+          }
+        }
+      }
+    }]
+}
+
+def test_windows_julia07_cpu() {
+    return ['Julia 0.7: CPU Win': {
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/ut-julia07-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            unstash 'windows_package_cpu'
+            powershell 'ci/windows/test_jl07_cpu.ps1'
+          }
+        }
+      }
+    }]
+}
+
+def test_windows_julia10_cpu() {
+    return ['Julia 1.0: CPU Win': {
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/ut-julia10-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            unstash 'windows_package_cpu'
+            powershell 'ci/windows/test_jl10_cpu.ps1'
           }
         }
       }
