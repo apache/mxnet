@@ -1961,7 +1961,7 @@ def convert_broadcast_to(node, **kwargs):
     data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
     dims = np.shape(output_shape_np)
 
-    output_shape_name = "reps_attr_tensor" + str(kwargs["idx"])
+    output_shape_name = "expand_attr_tensor" + str(kwargs["idx"])
     tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
 
     initializer.append(
