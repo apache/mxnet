@@ -103,7 +103,7 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
         *out_min = param.min_calib_range.value();
         *out_max = param.max_calib_range.value();
         // TODO, requantize to int8 by default, fused relu will have uint8 output
-        param.requantize_scales[0] = kInt8 / MaxAbs(*out_min, *out_max) / data_scale / weight_scale;
+        param.requantize_scales[0] = kInt8Range / MaxAbs(*out_min, *out_max) / data_scale / weight_scale;
     } else {
       LOG(FATAL) << "min_calib_range and max_calib_range must be set for fusing requantize op.";
     }
