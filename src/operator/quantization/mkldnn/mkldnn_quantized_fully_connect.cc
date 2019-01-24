@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2018 by Contributors
- * \file quantized_fully_connected.cc
+ * \file mkldnn_quantized_fully_connected.cc
  * \brief
  */
 
@@ -34,29 +34,30 @@ namespace quantized_fully_connected_enum {
 enum QuantizedFullyConnectedOutputs { kOut, kMin, kMax };
 }
 
-static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
-                                                 const OpContext &ctx,
-                                                 const std::vector<NDArray> &in_data,
-                                                 const std::vector<OpReqType> &req,
-                                                 const std::vector<NDArray> &out_data) {
+void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
+                                          const OpContext &ctx,
+                                          const std::vector<NDArray> &in_data,
+                                          const std::vector<OpReqType> &req,
+                                          const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   FullyConnectedParam param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   const size_t num_inputs = param.no_bias ? 2 : 3;
 
   CHECK_EQ(in_data.size(), static_cast<size_t>(num_inputs * 3));
   CHECK_EQ(out_data.size(), param.fuse_dequantize ? 1U : 3U);
-  CHECK(param.flatten) << "QuantizedFullyConnected Op only supports flatten=true for now.";
 
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   const TShape &ishape = data.shape();
-  //TODO, MKLDNN only support uint8 currently, need fallback to
-  //CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
+
+  //(TODO) int8 input will be enabled when mkldnn supports this data type
   CHECK(data.dtype() == mshadow::kUint8)
     << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
     << mxnet::op::type_string(data.dtype());
 
   if (ishape.ndim() != 2) {
+    CHECK(param.flatten)
+      << "QuantizedFullyConnected Op only supports flatten=true when ishape.ndim()!=2 for now.";
     data = data.MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
   }
 
@@ -139,10 +140,6 @@ static void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   CommitOutput(out_data[fullc::kOut], out_mem);
   MKLDNNStream::Get()->Submit();
 }
-
-NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizedFullyConnectedForward)
-.set_attr<bool>("TIsMKLDNN", true);
 
 }  // namespace op
 }  // namespace mxnet
