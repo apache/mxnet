@@ -1,13 +1,13 @@
 # MXNet Java Sample Project
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
-You can use the `Makefile` to make the Java package. Simply do the following:
-```Bash
-make javademo
+User are required to use maven to build the package, by simply run
 ```
-This will load the default parameter for all the environment variable.
-If you want to run with GPU on Linux, just simply add `USE_CUDA=1` when you run the make file
- 
+mvn package
+```
+This command will pick the default values specified in the pom file.
+
+### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:
 User are required to use `mvn package` to build the package,
  which are shown below:
@@ -71,9 +71,15 @@ If you want to test run on GPU, you can set a environment variable as follows:
 export SCALA_TEST_ON_GPU=1
 ```
 ## Clean up
-Clean up for Maven package is simple, you can run the pre-configed `Makefile` as:
+Clean up for Maven package is simple:
 ```Bash
-make javaclean
+mvn clean
+```
+
+## Run in Eclipse
+You can convert the maven project to the eclipse one by simply do:
+```
+mvn eclipse:eclipse
 ```
 
 ## Q & A
@@ -87,4 +93,4 @@ sudo apt install libopencv-imgcodecs3.4
 Is there any other version available?
 
 You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0-SNAPSHOT~~).
-Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.
+Please keep the same version in the pom file or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.
