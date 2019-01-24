@@ -112,7 +112,6 @@ class Train:
         for epoch in trange(self.epochs):
             iter_no = 0
             for input_data, input_label in tqdm(train_dataloader):
-                input_data = nd.transpose(input_data, (0, 2, 1, 3, 4))
                 data = gluon.utils.split_and_load(input_data, self.ctx, even_split=False)
                 label = gluon.utils.split_and_load(input_label, self.ctx, even_split=False)
 
@@ -120,7 +119,7 @@ class Train:
                 sum_losses = 0
                 len_losses = 0
                 with autograd.record():
-                    losses = [self.loss_fn(self.net(X), Y) for X, Y in zip(data, label)]         
+                    losses = [self.loss_fn(self.net(X), Y) for X, Y in zip(data, label)]
                 for l in losses:
                     sum_losses += mx.nd.array(l).sum().asscalar()
                     len_losses += len(l)

@@ -67,7 +67,7 @@ class LipsDataset(dataset.Dataset):
                 tmp_img = self._transform(tmp_img)
             img.append(tmp_img)
         img = nd.stack(*img)
-        #print(self.items[idx][0][0])
+        img = nd.transpose(img, (1, 0, 2, 3))
         label = self.align_generation(self.items[idx][1])
         return img, label
 
