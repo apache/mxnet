@@ -18,20 +18,20 @@
 */
 
 /*!
-* \file image_random-inl.h
-* \brief
-* \author
+* \file resize-inl.h
+* \brief image resize operator using opencv and only support bilinear resize
+* \author Jake Lee
 */
 #ifndef MXNET_OPERATOR_IMAGE_RESIZE_INL_H_
 #define MXNET_OPERATOR_IMAGE_RESIZE_INL_H_
 
-
+#include <mxnet/base.h>
 #include <vector>
 
-#include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "image_utils.h"
+
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
 #endif  // MXNET_USE_OPENCV
@@ -39,6 +39,15 @@
 namespace mxnet {
 namespace op {
 namespace image {
+
+using namespace mshadow;
+
+#if MXNET_USE_CUDA
+template<typename DType, typename T, typename Acctype>
+void ResizeImplCUDA(Stream<gpu> *s,
+                      const T input,
+                      const T output);
+#endif  // MXNET_USE_CUDA
 
 struct ResizeParam : public dmlc::Parameter<ResizeParam> {
   nnvm::Tuple<int> size;
@@ -158,6 +167,7 @@ inline void ResizeImpl(const std::vector<TBlob> &inputs,
 #endif  // MXNET_USE_OPENCV
 }
 
+template <typename xpu>
 inline void Resize(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
@@ -166,7 +176,20 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   SizeParam size;
-  if (inputs[0].ndim() == 3) {
+  if (std::is_same<xpu, gpu>::value) {
+    mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      if (inputs[0].ndim() == 3) {
+        Tensor<gpu, 3, DType> input = inputs[0].get<gpu, 3, DType>(s);
+        Tensor<gpu, 3, DType> output = outputs[0].get<gpu, 3, DType>(s);
+        ResizeImplCUDA<DType, Tensor<gpu, 3, DType>, float>(s, input, output);
+      } else {
+        Tensor<gpu, 4, DType> input = inputs[0].get<gpu, 4, DType>(s);
+        Tensor<gpu, 4, DType> output = outputs[0].get<gpu, 4, DType>(s);
+        ResizeImplCUDA<DType, Tensor<gpu, 4, DType>, float>(s, input, output);
+      }
+    });
+  } else if (inputs[0].ndim() == 3) {
     size = GetHeightAndWidth(inputs[0].shape_[H], inputs[0].shape_[W], param);
     ResizeImpl(inputs, outputs, size.height, size.width, param.interp);
   } else {

@@ -126,7 +126,6 @@ inline void CenterCropImpl(const std::vector<TBlob> &inputs,
                             const std::vector<TBlob> &outputs,
                             const SizeParam &size,
                             int interp) {
-  auto need_resize = false;
   int h, w;
   if (inputs[0].ndim() == 3) {
     h = inputs[0].shape_[0];
