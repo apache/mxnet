@@ -54,6 +54,8 @@ class Train():
         self.seq_size = config.seq_size
         self.use_gpu = config.use_gpu
         self.ctx = setting_ctx(self.use_gpu)
+        self.load_file = config.load_file
+        self.save_file = conflg.save_file
         self.build_model()
 
     def build_model(self):
@@ -80,7 +82,7 @@ class Train():
         """
         Description : module for running train
         """
-        fs, data = load_wav('parametric-2.wav')
+        fs, data = load_wav(self.load_file)
         g = data_generation(data, fs, mu=self.mu, seq_size=self.seq_size, ctx=self.ctx)
 
         loss_save = []
@@ -121,10 +123,10 @@ class Train():
         """
         Description : module for generation
         """
-        fs, data = load_wav('parametric-2.wav')
+        fs, data = load_wav(self.load_file)
         initial_data = data_generation_sample(data, fs, mu=self.mu, seq_size=3000, ctx=self.ctx)
         gen_rst = self.generate_slow(initial_data[0:3000], self.net, dilation_depth=10,\
          n_repeat=2, n=2000, ctx=self.ctx)
         gen_wav = np.array(gen_rst)
         gen_wav = decode_mu_law(gen_wav, 128)
-        np.save("wav.npy", gen_wav)
+        np.save(self.self_file, gen_wav)
