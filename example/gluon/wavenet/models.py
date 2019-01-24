@@ -17,12 +17,12 @@
 # under the License.
 
 """
-Module: WaveNet network modulep
+Module: WaveNet network block
 """
 from mxnet import nd
 from mxnet.gluon import nn
-import mxnet.ndarray as F
 # pylint: disable=invalid-name, too-many-arguments, arguments-differ, attribute-defined-outside-init, too-many-instance-attributes, invalid-sequence-index, no-self-use
+
 class One_Hot(nn.Block):
     """
     Description : generate one hot result
@@ -45,7 +45,8 @@ class WaveNet(nn.Block):
     mu: audio quantization size
     n_residue: residue channels
     n_skip: skip channels
-    dilation_depth & n_repeat: dilation layer setup
+    dilation_depth : set the dilation depth for dilation layer
+    n_repeat: set number of repeat for dilation layer
     """
     def __init__(self, mu=256, n_residue=32, n_skip=512, dilation_depth=10, n_repeat=5):
         super(WaveNet, self).__init__()
@@ -88,7 +89,7 @@ class WaveNet(nn.Block):
         """
         Description : module for preprocess
         """
-        output = F.transpose(self.one_hot(x).expand_dims(0), axes=(0, 2, 1))
+        output = nd.transpose(self.one_hot(x).expand_dims(0), axes=(0, 2, 1))
         output = self.from_input(output)
         return output
 
