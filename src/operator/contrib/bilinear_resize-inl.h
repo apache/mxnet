@@ -136,13 +136,13 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
   TShape dshape(in_shape->at(0));
   if (dshape.ndim() == 0) return false;
   if (param.scale_height.has_value()) {
-    dshape[2] = int(param.scale_height.value() * in_shape->at(0)[2]);
+    dshape[2] = static_cast<int>(param.scale_height.value() * in_shape->at(0)[2]);
   } else {
     dshape[2] = param.height;
   }
 
   if (param.scale_height.has_value()) {
-    dshape[3] = int(param.scale_width.value() * in_shape->at(0)[3]);
+    dshape[3] = static_cast<int>(param.scale_width.value() * in_shape->at(0)[3]);
   } else {
     dshape[3] = param.width;
   }
