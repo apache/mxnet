@@ -21,45 +21,45 @@
             [org.apache.clojure-mxnet.resource-scope :as resource-scope]
             [clojure.test :refer :all]))
 
+
 (deftest test-resource-scope-with-ndarray
-  (let [x (ndarray/ones [2 2])
+  (let [native-resources (atom {})
+        x (ndarray/ones [2 2])
         return-val (resource-scope/using
-                    (def temp-x (ndarray/ones [3 1]))
-                    (def temp-y (ndarray/ones [3 1]))
-                    (let [z {:just-a-test (def temp-z (ndarray/ones [3 3]))}
-                          y (ndarray/+ temp-x 1)]
-                      y))]
-    (is (true? (.isDisposed temp-x)))
-    (is (true? (.isDisposed temp-y)))
-    (is (true? (.isDisposed temp-z)))
+                    (let [temp-x (ndarray/ones [3 1])
+                          temp-y (ndarray/ones [3 1])]
+                      (swap! native-resources assoc :temp-x temp-x)
+                      (swap! native-resources assoc :temp-y temp-y)
+                      (ndarray/+ temp-x 1)))]
+    (is (true? (.isDisposed (:temp-x @native-resources))))
+    (is (true? (.isDisposed (:temp-y @native-resources))))
     (is (false? (.isDisposed return-val)))
     (is (false? (.isDisposed x)))
     (is (= [2.0 2.0 2.0] (ndarray/->vec return-val)))))
 
 (deftest test-nested-resource-scope-with-ndarray
-  (let [x (ndarray/ones [2 2])
+  (let [native-resources (atom {})
+        x (ndarray/ones [2 2])
         return-val (resource-scope/using
-                    (def temp-x (ndarray/ones [3 1]))
-                    (resource-scope/using
-                     (def temp-y (ndarray/ones [3 1]))
-                     (is (false? (.isDisposed temp-y)))
-                     (is (false? (.isDisposed temp-x))))
-                    (is (true? (.isDisposed temp-y)))
-                    (is (false? (.isDisposed temp-x))))]
-    (is (true? (.isDisposed temp-y)))
-    (is (true? (.isDisposed temp-x)))
+                    (let [temp-x (ndarray/ones [3 1])]
+                      (swap! native-resources assoc :temp-x temp-x)
+                     (resource-scope/using
+                      (let [temp-y (ndarray/ones [3 1])]
+                        (swap! native-resources assoc :temp-y temp-y)))))]
+    (is (true? (.isDisposed (:temp-y @native-resources))))
+    (is (true? (.isDisposed (:temp-x @native-resources))))
     (is (false? (.isDisposed x)))))
 
 (deftest test-resource-scope-with-sym
-  (let [x (sym/ones [2 2])
+  (let [native-resources (atom {})
+        x (sym/ones [2 2])
         return-val (resource-scope/using
-                    (def temp-x (sym/ones [3 1]))
-                    (def temp-y (sym/ones [3 1]))
-                    (let [z {:just-a-test (def temp-z (sym/ones [3 3]))}
-                          y (sym/+ temp-x 1)]
-                      y))]
-    (is (true? (.isDisposed temp-x)))
-    (is (true? (.isDisposed temp-y)))
-    (is (true? (.isDisposed temp-z)))
+                    (let [temp-x (sym/ones [3 1])
+                          temp-y (sym/ones [3 1])]
+                      (swap! native-resources assoc :temp-x temp-x)
+                      (swap! native-resources assoc :temp-y temp-y)
+                      (sym/+ temp-x 1)))]
+    (is (true? (.isDisposed (:temp-x @native-resources))))
+    (is (true? (.isDisposed (:temp-y @native-resources))))
     (is (false? (.isDisposed return-val)))
     (is (false? (.isDisposed x)))))
