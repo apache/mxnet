@@ -1909,7 +1909,7 @@ def convert_roipooling(node, **kwargs):
     return [node]
 
 
-@mx_op.register("Tile")
+@mx_op.register("tile")
 def convert_tile(node, **kwargs):
     """Map MXNet's Tile operator attributes to onnx's Tile
     operator and return the created node.
