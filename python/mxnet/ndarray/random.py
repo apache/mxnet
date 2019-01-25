@@ -320,6 +320,12 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` is, e.g., `(m, n)` and `alpha` and `beta` are scalars, output 
+    shape will be `(m, n)`. If `alpha` and `beta` are NDArrays with shape, e.g., 
+    `(x, y)`, then output will have shape `(x, y, m, n)`, where `m*n` samples are 
+    drawn for each `[alpha, beta)` pair.
 
     Examples
     --------
