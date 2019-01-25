@@ -211,7 +211,7 @@ MXNET_DLL const char *MXGetLastError();
 
 /*!
  * \brief Check if a feature is enabled in the runtime
- * \param feature to check mxruntime.h
+ * \param feature to check (see libinfo.h)
  * \param out set to true if the feature is enabled, false otherwise
  * \return 0 when success, -1 when failure happens.
  */

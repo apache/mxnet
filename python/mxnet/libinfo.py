@@ -125,7 +125,7 @@ def _feature_names_available():
     """
     feature_list = ctypes.POINTER(ctypes.c_char_p)()
     feature_list_sz = ctypes.c_size_t()
-    check_call(_LIB.MXRuntimeFeatureList(ctypes.byref(feature_list_sz), ctypes.byref(feature_list)))
+    check_call(_LIB.MXLibFeatureList(ctypes.byref(feature_list_sz), ctypes.byref(feature_list)))
     feature_names = []
     for i in range(feature_list_sz.value):
         feature_names.append(py_str(feature_list[i]))
@@ -160,7 +160,7 @@ def has_feature_index(feature):
         True if the feature is enabled, false otherwise
     """
     res = ctypes.c_bool()
-    check_call(_LIB.MXRuntimeHasFeature(mx_uint(feature), ctypes.byref(res)))
+    check_call(_LIB.MXLibHasFeature(mx_uint(feature), ctypes.byref(res)))
     return res.value
 
 

@@ -127,7 +127,7 @@ namespace features {
 // Check compile flags such as CMakeLists.txt
 
 /// Compile time features
-// ATTENTION: When changing this enum, match the strings in mxruntime.cc!!!
+// ATTENTION: When changing this enum, match the strings in the implementation file!
 enum : uint32_t {
   // NVIDIA, CUDA
   CUDA = 0,
