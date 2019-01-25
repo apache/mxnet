@@ -178,6 +178,12 @@ def randn(*shape, **kwargs):
     out : NDArray
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` is, e.g., `(m, n)` and `loc` and `scale` are scalars, output 
+    shape will be `(m, n)`. If `loc` and `scale` are NDArrays with shape, e.g., `(x, y)`, 
+    then output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for 
+    each `[loc, scale)` pair.
 
     Examples
     --------
