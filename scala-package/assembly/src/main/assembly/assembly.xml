@@ -33,7 +33,7 @@
         <exclude>org.slf4j:slf4j-api</exclude>
         <exclude>args4j:args4j</exclude>
       </excludes>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>.</outputDirectory>
       <useProjectArtifact>true</useProjectArtifact>
       <unpack>true</unpack>
       <scope>runtime</scope>
@@ -71,7 +71,7 @@
         <include>cub/LICENSE.TXT</include>
         <include>mkldnn/external/mklml_mac_2019.0.1.20180928/license.txt</include>
       </includes>
-      <outputDirectory>/</outputDirectory>
+      <outputDirectory>.</outputDirectory>
     </fileSet>
   </fileSets>
 </assembly>
