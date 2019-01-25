@@ -1,7 +1,7 @@
 # MXNet Scala Sample Project
 This is an project created to use Maven-published Scala package with two Scala examples.
 ## Setup
-User are required to use maven to build the package, by simply running
+You are required to use maven to build the package, by running the following:
 ```
 mvn package
 ```
@@ -55,7 +55,7 @@ If you want to test run on GPU, you can set a environment variable as follows:
 export SCALA_TEST_ON_GPU=1
 ```
 ## Clean up
-Clean up for Maven package is simple, you can just run
+To clean up a Maven package, run the following:
 ```Bash
 mvn clean
 ```

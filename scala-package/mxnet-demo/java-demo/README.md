@@ -1,18 +1,18 @@
 # MXNet Java Sample Project
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
-User are required to use maven to build the package, by simply running
+You are required to use Maven to build the package with the following commands:
 ```
 mvn package
 ```
-This command will pick the default values specified in the pom file.
+This command will pick the default values specified in the [pom](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/pom.xml) file.
 
 Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
 
 ### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:
-User are required to use `mvn package` to build the package,
- which are shown below:
+You may use `mvn package` to build the package,
+using the following commands:
 ```Bash
 export SCALA_VERSION_PROFILE=2.11
 export SCALA_PKG_PROFILE=
@@ -78,8 +78,8 @@ Clean up for Maven package is simple:
 mvn clean
 ```
 
-## Run in Eclipse
-You can convert the maven project to the eclipse one by running
+## Convert to Eclipse project (Optional)
+You can convert the maven project to the eclipse one by running the following command:
 ```
 mvn eclipse:eclipse
 ```
@@ -95,4 +95,4 @@ sudo apt install libopencv-imgcodecs3.4
 Is there any other version available?
 
 You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0-SNAPSHOT~~).
-Please keep the same version in the pom file or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.
+Please keep the same version in the pom file or [other versions in here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.

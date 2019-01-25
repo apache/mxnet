@@ -90,6 +90,7 @@ You can convert your existing Maven project to a project that can run in Eclipse
 ```
 mvn eclipse:eclipse
 ```
+This can be done once you have your maven project properly configured.
 
 ## Source
 
@@ -105,7 +106,7 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 
 #### Build Java from an Existing MXNet Installation
-If you have already built MXNet **from source** and are looking to setup Java from that point, you may simply run the following from the MXNet `scala-package`:
+If you have already built MXNet **from source** and are looking to setup Java from that point, you may simply run the following from the MXNet `scala-package` folder:
 
 ```
 mvn package
