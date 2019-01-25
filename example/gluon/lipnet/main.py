@@ -41,7 +41,7 @@ def main():
     trainer.build_model(dr_rate=config.dr_rate, path=config.model_path)
     trainer.load_dataloader()
     trainer.run(epochs=config.epochs)
-    
+
 if __name__ == "__main__":
     main()
     

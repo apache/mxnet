@@ -44,9 +44,9 @@ def main():
         data_loader = trainer.train_dataloader
     elif config.data_type == 'valid':
         data_loader = trainer.valid_dataloader
-                
+
     trainer.infer_batch(data_loader)
-    
+
 if __name__ == "__main__":
     main()
     

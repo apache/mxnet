@@ -82,10 +82,10 @@ class Train:
         self.net = LipNet(dr_rate)
         self.net.hybridize()
         self.net.initialize(ctx=self.ctx)
-        
+
         if path is not None:
             self.load_model(path)
-        
+
         #set optimizer
         self.loss_fn = gluon.loss.CTCLoss()
         self.trainer = gluon.Trainer(self.net.collect_params(), \
@@ -107,12 +107,12 @@ class Train:
         Description : load parameter of network weight
         """
         self.net.load_parameters(path)
-        
+
     def load_dataloader(self):
         """
         Description : Setup the dataloader
         """
-        
+
         input_transform = transforms.Compose([transforms.ToTensor(), \
                                              transforms.Normalize((0.7136, 0.4906, 0.3283), \
                                                                   (0.1138, 0.1078, 0.0917))])
@@ -126,14 +126,14 @@ class Train:
                                                          batch_size=self.batch_size,
                                                          shuffle=True,
                                                          num_workers=self.num_workers)
-        
+
         valid_dataset = LipsDataset(self.image_path,
                                     self.align_path,
                                     mode='valid',
                                     transform=input_transform,
                                     seq_len=self.seq_len)
-        
-        self.valid_dataloader = mx.gluon.data.DataLoader(training_dataset,
+
+        self.valid_dataloader = mx.gluon.data.DataLoader(valid_dataset,
                                                          batch_size=self.batch_size,
                                                          shuffle=True,
                                                          num_workers=self.num_workers)
@@ -147,13 +147,13 @@ class Train:
         len_losses = 0
         with autograd.record():
             losses = [self.loss_fn(self.net(X), Y) for X, Y in zip(data, label)]
-        for l in losses:
-            sum_losses += mx.nd.array(l).sum().asscalar()
-            len_losses += len(l)
-            l.backward()
+        for loss in losses:
+            sum_losses += mx.nd.array(loss).sum().asscalar()
+            len_losses += len(loss)
+            loss.backward()
         self.trainer.step(batch_size)
         return sum_losses, len_losses
-            
+
     def infer(self, input_data, input_label):
         """
         Description : Print sentence for prediction result
@@ -169,7 +169,7 @@ class Train:
             for target, pred in zip(label_convert, pred_convert):
                 print("target:{t}  pred:{p}".format(t=target, p=pred))
         return sum_losses, len_losses
-        
+
     def train_batch(self, dataloader):
         """
         Description : training for LipNet
@@ -185,7 +185,7 @@ class Train:
             len_losses += len_losses
 
         return sum_losses, len_losses
-        
+
     def infer_batch(self, dataloader):
         """
         Description : inference for LipNet
@@ -200,7 +200,7 @@ class Train:
             len_losses += len_losses
 
         return sum_losses, len_losses
-            
+
     def run(self, epochs):
         """
         Description : Run training for LipNet
@@ -217,7 +217,7 @@ class Train:
                 print("[Train] epoch:{e} iter:{i} loss:{l:.4f}".format(e=epoch,
                                                                        i=iter_no,
                                                                        l=current_loss))
-                
+
             ## validating
             sum_val_losses, len_val_losses = self.infer_batch(self.valid_dataloader)
 

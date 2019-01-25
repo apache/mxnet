@@ -25,14 +25,14 @@ import mxnet.gluon.data.dataset as dataset
 from mxnet.gluon.data.vision.datasets import image
 from utils.align import Align
 
+# pylint: disable=too-many-instance-attributes, too-many-arguments
 class LipsDataset(dataset.Dataset):
     """
     Description : DataSet class for lip images
     """
-    def __init__(self, root, align_root, flag=1, 
+    def __init__(self, root, align_root, flag=1,
                  mode='train', transform=None, seq_len=75):
-
-        assert mode in ['train','valid']
+        assert mode in ['train', 'valid']
         self._root = os.path.expanduser(root)
         self._align_root = align_root
         self._flag = flag
@@ -52,7 +52,7 @@ class LipsDataset(dataset.Dataset):
         valid_unseen_sub_idx = [1, 2, 20, 22]
         skip_sub_idx = [21]
 
-        if self._mode == 'train':            
+        if self._mode == 'train':
             sub_idx = ['s' + str(i) for i in range(1, 35) \
                              if i not in valid_unseen_sub_idx + skip_sub_idx]
         elif self._mode == 'valid':
@@ -61,7 +61,7 @@ class LipsDataset(dataset.Dataset):
         folder_path = []
         for i in sub_idx:
             folder_path.extend(glob.glob(os.path.join(root, i, "*")))
-            
+
         for folder in folder_path:
             filename = glob.glob(os.path.join(folder, "*"))
             if len(filename) != self._seq_len:
@@ -86,7 +86,7 @@ class LipsDataset(dataset.Dataset):
             img.append(tmp_img)
         img = nd.stack(*img)
         img = nd.transpose(img, (1, 0, 2, 3))
-        label = self.align_generation(self.items[idx][1], 
+        label = self.align_generation(self.items[idx][1],
                                       padding=self._seq_len)
         return img, label
 
