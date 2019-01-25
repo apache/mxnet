@@ -29,18 +29,23 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--image_path', type=str, default='./data/datasets/')
     parser.add_argument('--align_path', type=str, default='./data/align/')
-    parser.add_argument('--dr_rate', type=float, default=0.5)
     parser.add_argument('--num_gpus', type=int, default=1)
     parser.add_argument('--num_workers', type=int, default=0)
+    parser.add_argument('--data_type', type=str, default='valid')
     parser.add_argument('--model_path', type=str, default=None)
     config = parser.parse_args()
     trainer = Train(config)
-    trainer.build_model(dr_rate=config.dr_rate, path=config.model_path)
+    trainer.build_model(path=config.model_path)
     trainer.load_dataloader()
-    trainer.run(epochs=config.epochs)
+
+    if config.data_type == 'train':
+        data_loader = trainer.train_dataloader
+    elif config.data_type == 'valid':
+        data_loader = trainer.valid_dataloader
+                
+    trainer.infer_batch(data_loader)
     
 if __name__ == "__main__":
     main()

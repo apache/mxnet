@@ -14,10 +14,7 @@ Gluon implementation of [LipNet: End-to-End Sentence-level Lipreading](https://a
 pip install -r requirements.txt
 ```
 
-## Test Environment
-- 4 CPU cores
-- 1 GPU (Tesla K80 12GB)
-
+---
 
 ## The Data
 - The GRID audiovisual sentence corpus (http://spandh.dcs.shef.ac.uk/gridcorpus/)
@@ -26,9 +23,11 @@ pip install -r requirements.txt
   - Each movie has one sentence consist of 6 words.
 - Align: word alignments(190 K each) 
   - One align has 6 words. Each word has start time and end time. But this tutorial needs just sentence because of using ctc-loss.
-  
+ 
+---
+
 ## Prepare the Data
-### Download the data
+### (1) Download the data
 - Outputs
   - The Total Moives(mp4): 16GB
   - The Total Aligns(text): 134MB
@@ -38,28 +37,58 @@ pip install -r requirements.txt
   - n_process : num of process (default=1)
 
 ```
-cd ./utils && python download_data.py --n_process $(nproc)
+cd ./utils && python download_data.py --n_process=$(nproc)
 ```
 
-### Preprocess the Data: Extracting the mouth images from a video and save it.
+### (2) Preprocess the Data: Extracting the mouth images from a video and save it.
+
+* Using Face Landmark Detection(http://dlib.net/)
+
+#### Preprocess (preprocess_data.py)
+*  If there is no landmark, it download automatically.  
+*  Using Face Landmark Detection, It extract the mouth from a video.  
+
+ - 1 Video to 75 Frames
+   - example: 
+     - video: ./data/mp4s/s2/bbbf7p.mpg
+     - align(target): ./data/align/s2/bbbf7p.align  
+         : 'sil bin blue by f seven please sil'
+
+Frame 0            |  Frame 1 | ... | Frame 74 |
+:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
+![](asset/s2_bbbf7p_000.png)  |  ![](asset/s2_bbbf7p_001.png) |  ...  |  ![](asset/s2_bbbf7p_074.png)
+
+  - Extract the mouth
+
+Frame 0            |  Frame 1 | ... | Frame 74 |
+:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
+![](asset/mouth_000.png)  |  ![](asset/mouth_001.png) |  ...  |  ![](asset/mouth_074.png)
+
+* Save the result images into tgt_path.  
+
+----
+
+### How to run
+
+- Arguments
+  - src_path : Path for videos (default='./data/mp4s/')
+  - tgt_path : Path for preprocessed images (default='./data/datasets/')
+  - n_process : num of process (default=1)
+
 - Outputs
   - The Total Images(png): 19GB
 - Elapsed time
   - About 54 Hours using 1 process
   - If you use the multi-processes, you can finish the number of processes faster.
     - e.g) 9 hours using 6 processes
-- Arguments
-  - src_path : Path for videos (default='./data/mp4s/')
-  - tgt_path : Path for preprocessed images (default='./data/datasets/')
-  - n_process : num of process (default=1)
 
 You can run the preprocessing with just one processor, but this will take a long time (>48 hours). To use all of the available processors, use the following command: 
 
 ```
-cd ./utils && python preprocess_data.py --n_process $(nproc)
+cd ./utils && python preprocess_data.py --n_process=$(nproc)
 ```
 
-## Data Structure
+## Output: Data Structure
 
 ```
 The training data folder should look like : 
@@ -83,6 +112,7 @@ The training data folder should look like :
 
 ```
 
+---
 
 ## Training
 
@@ -94,12 +124,38 @@ The training data folder should look like :
   - dr_rate : Dropout rate(default=0.5)
   - num_gpus : Num of gpus (if num_gpus is 0, then use cpu) (default=1)
   - num_workers : Num of workers when generating data (default=0)
+  - model_path : Path of pretrained model (defalut=None)
   
 ```
 python main.py
 ```
 
-## Results
+---
+
+## Test Environment
+- 72 CPU cores
+- 1 GPU (NVIDIA Tesla V100 SXM2 32 GB)
+- 128 Batch Size
+
+  -  It takes over 24 hours (60 epochs) to get some good results.
+
+---
+
+## Inference
+
+- arguments
+  - batch_size : Define batch size (default=64)
+  - image_path : Path for lip image files (default='./data/datasets/')
+  - align_path : Path for align files (default='./data/align/')
+  - num_gpus : Num of gpus (if num_gpus is 0, then use cpu) (default=1)
+  - num_workers : Num of workers when generating data (default=0)
+  - model_path : Path of pretrained model (defalut=None)
+    
+```
+python infer.py --model_path=$(model_path)
+```
+
+
 ```
 [Target]
 ['lay green with a zero again',

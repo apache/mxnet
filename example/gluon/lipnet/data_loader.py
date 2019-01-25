@@ -29,13 +29,17 @@ class LipsDataset(dataset.Dataset):
     """
     Description : DataSet class for lip images
     """
-    def __init__(self, root, align_root, flag=1, transform=None, seq_len=75):
+    def __init__(self, root, align_root, flag=1, 
+                 mode='train', transform=None, seq_len=75):
+
+        assert mode in ['train','valid']
         self._root = os.path.expanduser(root)
         self._align_root = align_root
         self._flag = flag
         self._transform = transform
         self._exts = ['.jpg', '.jpeg', '.png']
         self._seq_len = seq_len
+        self._mode = mode
         self._list_images(self._root)
 
     def _list_images(self, root):
@@ -44,7 +48,20 @@ class LipsDataset(dataset.Dataset):
         """
         self.labels = []
         self.items = []
-        folder_path = glob.glob(os.path.join(root, "*", "*"))
+
+        valid_unseen_sub_idx = [1, 2, 20, 22]
+        skip_sub_idx = [21]
+
+        if self._mode == 'train':            
+            sub_idx = ['s' + str(i) for i in range(1, 35) \
+                             if i not in valid_unseen_sub_idx + skip_sub_idx]
+        elif self._mode == 'valid':
+            sub_idx = ['s' + str(i) for i in valid_unseen_sub_idx]
+
+        folder_path = []
+        for i in sub_idx:
+            folder_path.extend(glob.glob(os.path.join(root, i, "*")))
+            
         for folder in folder_path:
             filename = glob.glob(os.path.join(folder, "*"))
             if len(filename) != self._seq_len:
