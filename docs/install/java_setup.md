@@ -86,7 +86,7 @@ The official Java Packages will be released with the release of MXNet 1.4 and wi
 <hr>
 
 ### Eclipse IDE Support
-You can easily convert you existing maven project to a project that can run in Eclipse by:
+You can convert your existing Maven project to a project that can run in Eclipse by:
 ```
 mvn eclipse:eclipse
 ```
