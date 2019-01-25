@@ -23,8 +23,8 @@
  * \brief
  * \author
 */
-#ifndef MXNET_OPERATOR_MKL_FUNCTIONS_H_
-#define MXNET_OPERATOR_MKL_FUNCTIONS_H_
+#ifndef MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
+#define MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
 
 #if MSHADOW_USE_MKL == 1
 #include "mkl.h"
@@ -54,7 +54,6 @@ static bool check_type(const int t) {
       vd##func(static_cast<MKL_INT>(n), src, dst);                                     \
     }                                                                                  \
   }
- 
 
 #define MXNET_MKL_BINARY_MATH_FUNC(name, func)                                         \
   struct name : public mxnet_op::tunable {                                             \
@@ -74,7 +73,7 @@ static bool check_type(const int t) {
                                     double *c) {                                       \
       vd##func(static_cast<MKL_INT>(n), a, b, c);                                      \
     }                                                                                  \
-  } 
+  }
 
 MXNET_MKL_UNARY_MATH_FUNC(erf, Erf);
 MXNET_MKL_UNARY_MATH_FUNC(exp, Exp);
@@ -123,4 +122,4 @@ MXNET_MKL_BINARY_MATH_FUNC(hypot, Hypot);
 }  // namespace op
 }  // namespace mxnet
 #endif  // MSHADOW_USE_MKL == 1
-#endif // MXNET_OPERATOR_MKL_FUNCTIONS_H_
+#endif  // MXNET_OPERATOR_MKL_FUNCTIONS_INL_H_
