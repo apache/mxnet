@@ -274,6 +274,11 @@ def exponential(scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` is, e.g., `(m, n)` and `scale` is a scalar, output shape will 
+    be `(m, n)`. If `scale` is an NDArray with shape, e.g., `(x, y)`, then `output` 
+    will have shape `(x, y, m, n)`, where `m*n` samples are drawn for each entry in scale.
 
     Examples
     --------
