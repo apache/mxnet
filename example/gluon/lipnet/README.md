@@ -48,17 +48,19 @@ cd ./utils && python download_data.py --n_process=$(nproc)
 *  If there is no landmark, it download automatically.  
 *  Using Face Landmark Detection, It extract the mouth from a video.  
 
- - 1 Video to 75 Frames
-   - example: 
-     - video: ./data/mp4s/s2/bbbf7p.mpg
-     - align(target): ./data/align/s2/bbbf7p.align  
-         : 'sil bin blue by f seven please sil'
+- example: 
+ - video: ./data/mp4s/s2/bbbf7p.mpg
+ - align(target): ./data/align/s2/bbbf7p.align  
+     : 'sil bin blue by f seven please sil'
+
+
+- Video to the images (75 Frames)
 
 Frame 0            |  Frame 1 | ... | Frame 74 |
 :-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
 ![](asset/s2_bbbf7p_000.png)  |  ![](asset/s2_bbbf7p_001.png) |  ...  |  ![](asset/s2_bbbf7p_074.png)
 
-  - Extract the mouth
+  - Extract the mouth from images
 
 Frame 0            |  Frame 1 | ... | Frame 74 |
 :-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
