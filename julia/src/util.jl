@@ -35,12 +35,12 @@ function get_mnist_ubyte()
   filenames = Dict((x[1] => joinpath(mnist_dir, x[2]) for x ∈ pairs(filenames)))
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
-      mnist_dir = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
+      data = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
         try
-          run(`unzip -u $mnist_dir`)
+          run(`unzip -u $data`)
         catch
           try
-            run(pipe(`7z x $mnist_dir`,stdout = devnull))
+            run(pipeline(`7z x $data`,stdout = devnull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end

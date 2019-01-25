@@ -48,7 +48,7 @@ from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
-           "histogram"]
+           "histogram", "split_v2"]
 
 
 class Symbol(SymbolBase):
@@ -1855,6 +1855,14 @@ class Symbol(SymbolBase):
         """
         return op.split(self, *args, **kwargs)
 
+    def split_v2(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split_v2`.
+
+        The arguments are the same as for :py:func:`split_v2`, with
+        this array as data.
+        """
+        return split_v2(self, *args, **kwargs)
+
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
 
@@ -2958,6 +2966,11 @@ def histogram(a, bins=10, range=None, **kwargs):
         Values outside the range are ignored. The first element of the range must be less than or
         equal to the second. range affects the automatic bin computation as well, the range will
         be equally divided by the number of bins.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
     """
     if isinstance(bins, Symbol):
         return _internal._histogram(data=a, bins=bins, **kwargs)
@@ -2966,5 +2979,45 @@ def histogram(a, bins=10, range=None, **kwargs):
             raise ValueError("null range is not supported in symbol mode")
         return _internal._histogram(data=a, bin_cnt=bins, range=range, **kwargs)
     raise ValueError("bins argument should be either an integer or an NDArray")
+
+def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
+    """Split an array into multiple sub-arrays.
+
+    Parameters
+    ----------
+    ary : NDArray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or tuple of ints
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+        - ary[:2]
+        - ary[2:3]
+        - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    squeeze_axis: boolean, optional
+        Whether to squeeze the axis of sub-arrays or not, only useful when size
+        of the sub-arrays are 1 on the `axis`. Default is False.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    return _internal._split_v2(ary, indices, axis, squeeze_axis, sections)
 
 _set_symbol_class(Symbol)

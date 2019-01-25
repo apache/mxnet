@@ -44,8 +44,8 @@ import scala.language.implicitConversions
   */
 class ObjectDetector private[mxnet] (val objDetector: org.apache.mxnet.infer.ObjectDetector){
 
-  def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc], contexts:
-  java.util.List[Context], epoch: Int)
+  def this(modelPathPrefix: String, inputDescriptors: java.lang.Iterable[DataDesc], contexts:
+  java.lang.Iterable[Context], epoch: Int)
   = this {
     val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator)
       .asScala.toIndexedSeq map {a => a: org.apache.mxnet.DataDesc}
@@ -79,7 +79,7 @@ class ObjectDetector private[mxnet] (val objDetector: org.apache.mxnet.infer.Obj
     * @return                 List of list of tuples of
     *                         (class, [probability, xmin, ymin, xmax, ymax])
     */
-  def objectDetectWithNDArray(input: java.util.List[NDArray], topK: Int):
+  def objectDetectWithNDArray(input: java.lang.Iterable[NDArray], topK: Int):
   java.util.List[java.util.List[ObjectDetectorOutput]] = {
     val ret = objDetector.objectDetectWithNDArray(convert(input.asScala.toIndexedSeq), Some(topK))
     (ret map {a => (a map {e => new ObjectDetectorOutput(e._1, e._2)}).asJava}).asJava
@@ -92,7 +92,7 @@ class ObjectDetector private[mxnet] (val objDetector: org.apache.mxnet.infer.Obj
     * @param topK             Number of result elements to return, sorted by probability
     * @return                 List of list of tuples of (class, probability)
     */
-  def imageBatchObjectDetect(inputBatch: java.util.List[BufferedImage], topK: Int):
+  def imageBatchObjectDetect(inputBatch: java.lang.Iterable[BufferedImage], topK: Int):
       java.util.List[java.util.List[ObjectDetectorOutput]] = {
     val ret = objDetector.imageBatchObjectDetect(inputBatch.asScala, Some(topK))
     (ret map {a => (a map {e => new ObjectDetectorOutput(e._1, e._2)}).asJava}).asJava
@@ -122,7 +122,7 @@ object ObjectDetector {
     org.apache.mxnet.infer.ImageClassifier.bufferedImageToPixels(resizedImage, inputImageShape)
   }
 
-  def loadInputBatch(inputImagePaths: java.util.List[String]): java.util.List[BufferedImage] = {
+  def loadInputBatch(inputImagePaths: java.lang.Iterable[String]): java.util.List[BufferedImage] = {
     org.apache.mxnet.infer.ImageClassifier
       .loadInputBatch(inputImagePaths.asScala.toList).toList.asJava
   }
