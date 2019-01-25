@@ -425,6 +425,12 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` is, e.g., `(m, n)` and `mu` and `alpha` are scalars, output 
+    shape will be `(m, n)`. If `mu` and `alpha` are NDArrays with shape, e.g., `(x, y)`, 
+    then output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for 
+    each `[mu, alpha)` pair.
 
     Examples
     --------
