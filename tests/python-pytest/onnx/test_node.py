@@ -286,6 +286,7 @@ import_test_cases = [
     ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1})
 ]
 
+# test_case = ("test_case_name", "ONNX_op_name", mxnet_op, attribute map)
 export_test_cases = [
     ("test_expand", "Expand", mx.sym.broadcast_to, {'shape': (2,1,3,1)}),
     ("test_tile", "Tile", mx.sym.tile, {'reps': (2,3)})
