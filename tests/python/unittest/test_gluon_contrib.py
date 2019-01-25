@@ -416,7 +416,7 @@ def test_deformable_convolution():
 
     try:
         ctx = mx.gpu()
-        _ = nd.array([0], ctx=ctx)
+        _ = mx.nd.array([0], ctx=ctx)
     except mx.base.MXNetError:
         print("deformable_convolution only supports GPU")
         return
