@@ -899,8 +899,19 @@ The storage type of ``cbrt`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
                                                   unary_bwd<mshadow_op::cube_root_grad>);
-
 // erf
+#if MSHADOW_USE_MKL == 1
+MXNET_MKL_OPERATOR_REGISTER_UNARY(erf)
+.describe(R"code(Returns element-wise gauss error function of the input.
+
+Example::
+
+   erf([0, -1., 10.]) = [0., -0.8427, 1.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::MKL_Compute<mshadow_op::erf, mkl_func::erf>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erf"});
+#else
 MXNET_OPERATOR_REGISTER_UNARY(erf)
 .describe(R"code(Returns element-wise gauss error function of the input.
 
@@ -911,6 +922,7 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erf>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erf"});
+#endif    // MSHADOW_USE_MKL == 1
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
 .set_attr<FCompute>("FCompute<cpu>",
@@ -970,6 +982,18 @@ The storage type of ``exp`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
 // log
+#if MSHADOW_USE_MKL == 1
+MXNET_MKL_OPERATOR_REGISTER_UNARY(log)
+.describe(R"code(Returns element-wise Natural logarithmic value of the input.
+
+The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
+
+The storage type of ``log`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::MKL_Compute<mshadow_op::log, mkl_func::log>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+#else
 MXNET_OPERATOR_REGISTER_UNARY(log)
 MXNET_ADD_SPARSE_OP_ALIAS(log)
 .describe(R"code(Returns element-wise Natural logarithmic value of the input.
@@ -979,8 +1003,10 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 The storage type of ``log`` output is always dense
 
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::LogCompute<cpu, mshadow_op::log>)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::log>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
+#endif    // MSHADOW_USE_MKL == 1
+
 
 // log10
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(log10, cpu, mshadow_op::log10)

@@ -35,9 +35,10 @@
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
 #include "../../ndarray/ndarray_function.h"
+
 #if MSHADOW_USE_MKL == 1
-#include "mkl.h"
-#endif
+#include "../mkl_functions-inl.h"
+#endif  // MSHADOW_USE_MKL == 1
 
 namespace mxnet {
 namespace op {
@@ -354,42 +355,27 @@ class UnaryOp : public OpBase {
   }
 
 #if MSHADOW_USE_MKL == 1
-  static inline void MKLLog(MKL_INT size, const float* pIn, float* pOut) {
-    vsLn(size, pIn, pOut);
+template<typename OP, typename MKL_OP>
+static void MKL_Compute(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs){
+  if (req[0] == kNullOp)  return;
+  auto type_flag = inputs[0].type_flag_;
+  size_t input_size = inputs[0].Size();
+  if (req[0] == kWriteTo &&
+      mkl_func::check_size(input_size) &&
+      mkl_func::check_type(type_flag)){
+    // set DType as float or double according to type_flag
+    MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+      MKL_OP::Map(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+    });
+  } else {
+    Compute<cpu, OP>(attrs, ctx, inputs, req, outputs);
   }
-
-  static inline void MKLLog(MKL_INT size, const double* pIn, double* pOut) {
-    vdLn(size, pIn, pOut);
-  }
-#endif
-
-  template<typename xpu, typename OP>
-  static void LogCompute(const nnvm::NodeAttrs& attrs,
-                         const OpContext& ctx,
-                         const std::vector<TBlob>& inputs,
-                         const std::vector<OpReqType>& req,
-                         const std::vector<TBlob>& outputs) {
-    if (req[0] == kNullOp) return;
-    // if defined MSHADOW_USE_MKL then call mkl log when req is KWriteTo, type_flag
-    // is mshadow::kFloat32 or mshadow::kFloat64 and data size less than or equal MKL_INT_MAX
-#if MSHADOW_USE_MKL == 1
-    auto type_flag = inputs[0].type_flag_;
-    const size_t MKL_INT_MAX = (sizeof(MKL_INT) == sizeof(int)) ? INT_MAX : LLONG_MAX;
-    size_t input_size = inputs[0].Size();
-    if (req[0] == kWriteTo &&
-        input_size <= MKL_INT_MAX &&
-        (type_flag == mshadow::kFloat32 || type_flag == mshadow::kFloat64)) {
-      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
-        MKLLog(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
-      });
-    } else {
-      Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-    }
-#else
-    Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-#endif
-  }
-};
+ }
+#endif  // MSHADOW_USE_MKL == 1
 
 /*! \brief Map legacy unary_bwd to backward_grad */
 template<typename GRAD_OP>
@@ -555,6 +541,22 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
   .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
+    [](const NodeAttrs& attrs){                                     \
+      return std::vector<std::pair<int, int> >{{0, 0}};             \
+    })                                                              \
+  .add_argument("data", "NDArray-or-Symbol", "The input array.")
+
+/*! \bried MKL Unary compute. 
+ *  With this macro means mxnet compile with MKL to accelerate math function with mkl. 
+ *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function. 
+ */
+#define MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                  \
+  NNVM_REGISTER_OP(__name$)                                         \
+  .set_num_inputs(1)                                                \
+  .set_num_outputs(1)                                               \
+  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
