@@ -355,27 +355,28 @@ class UnaryOp : public OpBase {
   }
 
 #if MSHADOW_USE_MKL == 1
-template<typename OP, typename MKL_OP>
-static void MKL_Compute(const nnvm::NodeAttrs& attrs,
-                        const OpContext& ctx,
-                        const std::vector<TBlob>& inputs,
-                        const std::vector<OpReqType>& req,
-                        const std::vector<TBlob>& outputs){
-  if (req[0] == kNullOp)  return;
-  auto type_flag = inputs[0].type_flag_;
-  size_t input_size = inputs[0].Size();
-  if (req[0] == kWriteTo &&
-      mkl_func::check_size(input_size) &&
-      mkl_func::check_type(type_flag)){
-    // set DType as float or double according to type_flag
-    MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
-      MKL_OP::Map(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
-    });
-  } else {
-    Compute<cpu, OP>(attrs, ctx, inputs, req, outputs);
+  template<typename OP, typename MKL_OP>
+  static void MKL_Compute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+    if (req[0] == kNullOp)  return;
+    auto type_flag = inputs[0].type_flag_;
+    size_t input_size = inputs[0].Size();
+    if (req[0] == kWriteTo &&
+        mkl_func::check_size(input_size) &&
+        mkl_func::check_type(type_flag)) {
+      // set DType as float or double according to type_flag
+      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+        MKL_OP::Map(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    } else {
+      Compute<cpu, OP>(attrs, ctx, inputs, req, outputs);
+    }
   }
- }
 #endif  // MSHADOW_USE_MKL == 1
+};
 
 /*! \brief Map legacy unary_bwd to backward_grad */
 template<typename GRAD_OP>
@@ -586,7 +587,6 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
-
 }  // namespace op
 }  // namespace mxnet
 
