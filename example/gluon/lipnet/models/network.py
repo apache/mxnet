@@ -26,10 +26,8 @@ class LipNet(nn.HybridBlock):
     Description : LipNet network using gluon
     dr_rate : Dropout rate
     """
-    def __init__(self, dr_rate, batch_size, seq_len, **kwargs):
+    def __init__(self, dr_rate, **kwargs):
         super(LipNet, self).__init__(**kwargs)
-        self.batch_size = batch_size
-        self.seq_len = seq_len
         with self.name_scope():
             self.conv1 = nn.Conv3D(32, kernel_size=(3, 5, 5), strides=(1, 2, 2), padding=(1, 2, 2))
             self.bn1 = nn.InstanceNorm(in_channels=32)
@@ -66,7 +64,7 @@ class LipNet(nn.HybridBlock):
         out = self.pool3(out)
         out = F.transpose(out, (2, 0, 1, 3, 4))
         # pylint: disable=no-member
-        out = out.reshape((self.seq_len, self.batch_size, -1))
+        out = out.reshape((0, 0, -1))
         out = self.gru1(out)
         out = self.gru2(out)
         out = self.dense(out)

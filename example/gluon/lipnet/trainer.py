@@ -82,7 +82,7 @@ class Train:
         Description : build network
         """
         #set network
-        self.net = LipNet(self.dr_rate, self.batch_size, self.seq_len)
+        self.net = LipNet(self.dr_rate)
         self.net.hybridize()
         self.net.initialize(ctx=self.ctx)
         #set optimizer
