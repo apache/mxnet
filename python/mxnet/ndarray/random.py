@@ -498,7 +498,7 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
 
 
 def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kwargs):
-        """Concurrent sampling from multiple multinomial distributions.
+    """Concurrent sampling from multiple multinomial distributions.
 
     .. note:: The input distribution must be normalized, i.e. `data` must sum to
               1 along its last dimension.
