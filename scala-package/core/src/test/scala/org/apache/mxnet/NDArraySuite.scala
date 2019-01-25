@@ -91,23 +91,19 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
 
   test("create NDArray based on Java Matrix") {
     def arrayGen(num : Any) : Array[Any] = {
-      val arrayBuf = num match {
+      val array = num match {
         case f: Float =>
-          val arr = ArrayBuffer[Array[Float]]()
-          for (_ <- 0 until 100) arr += Array(1.0f, 1.0f, 1.0f, 1.0f)
-          arr
+          (for (_ <- 0 until 100) yield Array(1.0f, 1.0f, 1.0f, 1.0f)).toArray
         case d: Double =>
-          val arr = ArrayBuffer[Array[Double]]()
-          for (_ <- 0 until 100) arr += Array(1.0d, 1.0d, 1.0d, 1.0d)
-          arr
+          (for (_ <- 0 until 100) yield Array(1.0d, 1.0d, 1.0d, 1.0d)).toArray
         case _ => throw new IllegalArgumentException(s"Unsupported Type ${num.getClass}")
       }
       Array(
         Array(
-          arrayBuf.toArray
+          array
         ),
         Array(
-          arrayBuf.toArray
+          array
         )
       )
     }

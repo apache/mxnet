@@ -518,8 +518,7 @@ object NDArray extends NDArrayBase {
     * @throws IllegalArgumentException if the data type is not valid
     */
   def toNDArray(sourceArr: Array[_], ctx : Context = null) : NDArray = {
-    val shape = ArrayBuffer[Int]()
-    shapeGetter(sourceArr, shape, 0)
+    val shape = shapeGetter(sourceArr)
     val container = new Array[Any](shape.product)
     flattenArray(sourceArr, container, 0, container.length - 1)
     val finalArr = container(0) match {
@@ -531,24 +530,21 @@ object NDArray extends NDArrayBase {
     finalArr
   }
 
-  private def shapeGetter(sourceArr : Any,
-                          shape : ArrayBuffer[Int], shapeIdx : Int) : Unit = {
+  private def shapeGetter(sourceArr : Any) : ArrayBuffer[Int] = {
     sourceArr match {
+        // e.g : Array[Double] the inner layer
       case arr: Array[_] if MX_PRIMITIVES.isValidMxPrimitiveType(arr(0)) => {
-        val arrLength = arr.length
-        if (shape.length == shapeIdx) {
-          shape += arrLength
-        }
-        require(shape(shapeIdx) == arrLength, "Each Array should have equal length")
+        ArrayBuffer[Int](arr.length)
       }
+        // e.g : Array[Array...[]]
       case arr: Array[_] => {
-        val arrLength = arr.length
-        if (shape.length == shapeIdx) {
-          shape += arrLength
+        var arrBuffer = new ArrayBuffer[Int]()
+        if (!arr.isEmpty) arrBuffer = shapeGetter(arr(0))
+        for (idx <- arr.indices) {
+          require(arrBuffer == shapeGetter(arr(idx)))
         }
-        require(shape(shapeIdx) == arrLength,
-          s"Each Array should have equal length, expected ${shape(shapeIdx)}, get $arrLength")
-        arr.foreach(ele => shapeGetter(ele, shape, shapeIdx + 1))
+        arrBuffer.insert(0, arr.length)
+        arrBuffer
       }
       case _ => throw new IllegalArgumentException(s"Wrong type passed: ${sourceArr.getClass}")
     }
