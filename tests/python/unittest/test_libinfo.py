@@ -16,15 +16,37 @@
 # under the License.
 
 import os
+import sys
 import mxnet as mx
-from mxnet import libinfo
+from mxnet.libinfo import *
+from mxnet.base import MXNetError
+from nose.tools import *
+
 
 def test_include_path():
-    incl_path = libinfo.find_include_path()
+    incl_path = find_include_path()
     assert os.path.exists(incl_path)
     assert os.path.isdir(incl_path)
+
+
+def test_runtime_features():
+    for f in Feature:
+        res = has_feature_index(f.value)
+        ok_(type(res) is bool)
+    for f in features_enabled():
+        ok_(type(f) is Feature)
+    ok_(type(features_available()) is list)
+    ok_(len(features_available()) > 0)
+    ok_(len(Feature) > 0)
+    print("Features available: {}".format(features_available()))
+
+
+@raises(MXNetError)
+def test_has_feature_2large():
+    has_feature_index(sys.maxsize)
 
 
 if __name__ == '__main__':
     import nose
     nose.runmodule()
+

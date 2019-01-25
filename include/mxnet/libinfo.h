@@ -18,9 +18,10 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
- * \file mxruntime.h
- * \brief check MXNet features including compile time support
+ * Copyright (c) 2018 by Contributors
+ * \file libinfo.h
+ * \author larroy
+ * \brief get features of the MXNet library at runtime
  */
 
 #pragma once

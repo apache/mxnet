@@ -19,11 +19,12 @@
 
 /*!
  *  Copyright (c) 2018 by Contributors
- * \file mxruntime.cc
+ * \file libinfo.cc
+ * \author larroy
  * \brief check MXNet features including compile time support
  */
 
-#include "mxnet/mxruntime.h"
+#include "mxnet/libinfo.h"
 #include <bitset>
 
 namespace mxnet {

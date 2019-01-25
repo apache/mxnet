@@ -43,7 +43,7 @@
 #include "mxnet/kvstore.h"
 #include "mxnet/rtc.h"
 #include "mxnet/storage.h"
-#include "mxnet/mxruntime.h"
+#include "mxnet/libinfo.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
@@ -87,13 +87,13 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
-int MXRuntimeHasFeature(const mx_uint feature, bool *out) {
+int MXLibHasFeature(const mx_uint feature, bool *out) {
   API_BEGIN();
   *out = features::is_enabled(feature);
   API_END();
 }
 
-int MXRuntimeFeatureList(size_t *size, const char ***names) {
+int MXLibFeatureList(size_t *size, const char ***names) {
   API_BEGIN();
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   ret->ret_vec_str.resize(0);

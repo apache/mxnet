@@ -18,7 +18,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <mxnet/mxruntime.h>
+#include <mxnet/libinfo.h>
 
 using namespace mxnet;
 using namespace std;

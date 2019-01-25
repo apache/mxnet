@@ -215,7 +215,7 @@ MXNET_DLL const char *MXGetLastError();
  * \param out set to true if the feature is enabled, false otherwise
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXRuntimeHasFeature(const mx_uint feature, bool *out);
+MXNET_DLL int MXLibHasFeature(const mx_uint feature, bool *out);
 
 /*!
  * \brief Return a list of supported runtime features not enabled inclusive.
@@ -223,7 +223,7 @@ MXNET_DLL int MXRuntimeHasFeature(const mx_uint feature, bool *out);
  * \param names ptr to array of strings containing feature names
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXRuntimeFeatureList(size_t *size, const char ***names);
+MXNET_DLL int MXLibFeatureList(size_t *size, const char ***names);
 
 /*!
  * \brief Seed all global random number generators in mxnet.
