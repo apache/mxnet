@@ -78,6 +78,12 @@ def uniform(low=0, high=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` has shape, e.g., `(m, n)` and `low` and
+    `high` are scalars, output shape will be `(m, n)`. If `low` and `high`
+    are NDArrays with shape, e.g., `(x, y)`, then output will have shape
+    `(x, y, m, n)`, where `m*n` samples are drawn for each `[low, high)` pair.
 
     Examples
     --------
@@ -128,6 +134,12 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` has shape, e.g., `(m, n)` and `loc` and
+    `scale` are scalars, output shape will be `(m, n)`. If `loc` and `scale`
+    are NDArrays with shape, e.g., `(x, y)`, then output will have shape
+    `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
 
     Examples
     --------
@@ -180,7 +192,7 @@ def randn(*shape, **kwargs):
 
     Returns
     -------
-    If input `shape` is, e.g., `(m, n)` and `loc` and `scale` are scalars, output 
+    If input `shape` has shape, e.g., `(m, n)` and `loc` and `scale` are scalars, output 
     shape will be `(m, n)`. If `loc` and `scale` are NDArrays with shape, e.g., `(x, y)`, 
     then output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for 
     each `[loc, scale)` pair.
@@ -233,6 +245,12 @@ def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` has shape, e.g., `(m, n)` and `lam` is
+    a scalar, output shape will be `(m, n)`. If `lam`
+    is an NDArray with shape, e.g., `(x, y)`, then output will have shape
+    `(x, y, m, n)`, where `m*n` samples are drawn for each entry in `lam`.
 
     Examples
     --------
@@ -282,7 +300,7 @@ def exponential(scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
 
     Returns
     -------
-    If input `shape` is, e.g., `(m, n)` and `scale` is a scalar, output shape will 
+    If input `shape` has shape, e.g., `(m, n)` and `scale` is a scalar, output shape will 
     be `(m, n)`. If `scale` is an NDArray with shape, e.g., `(x, y)`, then `output` 
     will have shape `(x, y, m, n)`, where `m*n` samples are drawn for each entry in scale.
 
@@ -333,7 +351,7 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
 
     Returns
     -------
-    If input `shape` is, e.g., `(m, n)` and `alpha` and `beta` are scalars, output 
+    If input `shape` has shape, e.g., `(m, n)` and `alpha` and `beta` are scalars, output 
     shape will be `(m, n)`. If `alpha` and `beta` are NDArrays with shape, e.g., 
     `(x, y)`, then output will have shape `(x, y, m, n)`, where `m*n` samples are 
     drawn for each `[alpha, beta)` pair.
@@ -388,7 +406,7 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, ctx=None,
 
     Returns
     -------
-    If input `shape` is, e.g., `(m, n)` and `k` and `p` are scalars, output shape
+    If input `shape` has shape, e.g., `(m, n)` and `k` and `p` are scalars, output shape
     will be `(m, n)`. If `k` and `p` are NDArrays with shape, e.g., `(x, y)`, then 
     output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for each `[k, p)` pair.
 
@@ -444,7 +462,7 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
 
     Returns
     -------
-    If input `shape` is, e.g., `(m, n)` and `mu` and `alpha` are scalars, output 
+    If input `shape` has shape, e.g., `(m, n)` and `mu` and `alpha` are scalars, output 
     shape will be `(m, n)`. If `mu` and `alpha` are NDArrays with shape, e.g., `(x, y)`, 
     then output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for 
     each `[mu, alpha)` pair.
@@ -548,6 +566,12 @@ def shuffle(data, **kwargs):
         Input data array.
     out : NDArray, optional
         Array to store the result.
+
+    Returns
+    -------
+    A new NDArray with the same shape and type as input `data`, but
+    with items in the first axis of the returned NDArray shuffled randomly.
+    The original input `data` is not modified.
 
     Examples
     --------
