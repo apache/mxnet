@@ -615,6 +615,11 @@ def randint(low, high, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    Returns an NDArray of type `dtype`. If input `shape` has shape, e.g., 
+    `(m, n)`, the returned NDArray will shape will be `(m, n)`. Contents
+    of the returned NDArray will be samples from the interval `[low, high)`.
 
     Examples
     --------
