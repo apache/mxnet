@@ -505,7 +505,6 @@ def test_normal_generator():
     num_buckets = 5
     for dtype in ['float16', 'float32', 'float64']:
         for mu, sigma in [(0.0, 1.0), (1.0, 5.0)]:
-            print("ctx=%s, dtype=%s, Mu=%g, Sigma=%g:" % (ctx, dtype, mu, sigma))
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, mu, sigma), num_buckets)
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
             buckets = np.array(buckets, dtype=dtype).tolist()
@@ -526,7 +525,6 @@ def test_uniform_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for low, high in [(-1.0, 1.0), (1.0, 3.0)]:
-            print("ctx=%s, dtype=%s, Low=%g, High=%g:" % (ctx, dtype, low, high))
             scale = high - low
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
             # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
@@ -546,7 +544,6 @@ def test_gamma_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for kappa, theta in [(0.5, 1.0), (1.0, 5.0)]:
-            print("ctx=%s, dtype=%s, Shape=%g, Scale=%g:" % (ctx, dtype, kappa, theta))
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.gamma.ppf(x, a=kappa, loc=0, scale=theta), 5)
             generator_mx = lambda x: mx.nd.random.gamma(kappa, theta, shape=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs, success_rate=success_rate)
@@ -561,7 +558,6 @@ def test_exponential_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for scale in [0.1, 1.0]:
-            print("ctx=%s, dtype=%s, Scale=%g:" % (ctx, dtype, scale))
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.expon.ppf(x, loc=0, scale=scale), 5)
             generator_mx = lambda x: mx.nd.random.exponential(scale, shape=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
@@ -576,7 +572,6 @@ def test_poisson_generator():
     ctx = mx.context.current_context()
     for dtype in ['float16', 'float32', 'float64']:
         for lam in [1, 10]:
-            print("ctx=%s, dtype=%s, Lambda=%d:" % (ctx, dtype, lam))
             buckets = [(-1.0, lam - 0.5), (lam - 0.5, 2 * lam + 0.5), (2 * lam + 0.5, np.inf)]
             probs = [ss.poisson.cdf(bucket[1], lam) - ss.poisson.cdf(bucket[0], lam) for bucket in buckets]
             generator_mx = lambda x: mx.nd.random.poisson(lam, shape=x, ctx=ctx, dtype=dtype).asnumpy()
@@ -593,7 +588,6 @@ def test_negative_binomial_generator():
     for dtype in ['float16', 'float32', 'float64']:
         success_num = 2
         success_prob = 0.2
-        print("ctx=%s, dtype=%s, Success Num=%d:, Success Prob=%g" % (ctx, dtype, success_num, success_prob))
         buckets = [(-1.0, 2.5), (2.5, 5.5), (5.5, 8.5), (8.5, np.inf)]
         probs = [ss.nbinom.cdf(bucket[1], success_num, success_prob) -
                  ss.nbinom.cdf(bucket[0], success_num, success_prob) for bucket in buckets]
@@ -606,7 +600,6 @@ def test_negative_binomial_generator():
                  for _ in range(10)])
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
         # Also test the Gamm-Poisson Mixture
-        print('Gamm-Poisson Mixture Test:')
         alpha = 1.0 / success_num
         mu = (1.0 - success_prob) / success_prob / alpha
         generator_mx = lambda x: mx.nd.random.generalized_negative_binomial(mu, alpha,
@@ -643,7 +636,6 @@ def test_multinomial_generator():
     trials = 5
     buckets = list(range(6))
     for dtype in ['float16', 'float32', 'float64']:
-        print("ctx=%s, dtype=%s" %(ctx, dtype))
         quantized_probs = quantize_probs(probs, dtype)
         generator_mx = lambda x: mx.nd.random.multinomial(data=mx.nd.array(quantized_probs, ctx=ctx, dtype=dtype),
                                                           shape=x).asnumpy()
@@ -843,6 +835,54 @@ def test_shuffle():
     # Test larger arrays
     testLarge(mx.nd.arange(0, 100000).reshape((10, 10000)), 10)
     testLarge(mx.nd.arange(0, 100000).reshape((10000, 10)), 10)
+
+@with_seed()
+def test_randint():
+    dtypes = ['int32', 'int64']
+    for dtype in dtypes:
+        params = {
+            'low': -1,
+            'high': 3,
+            'shape' : (500, 500),
+            'dtype' : dtype,
+            'ctx' : mx.context.current_context()
+            }
+        mx.random.seed(128)
+        ret1 = mx.nd.random.randint(**params).asnumpy()
+        mx.random.seed(128)
+        ret2 = mx.nd.random.randint(**params).asnumpy()
+        assert same(ret1, ret2), \
+                "ndarray test: `%s` should give the same result with the same seed"
+
+@with_seed()
+def test_randint_extremes():
+    a = mx.nd.random.randint(dtype='int64', low=50000000, high=50000010, ctx=mx.context.current_context())
+    assert a>=50000000 and a<=50000010
+
+@with_seed()
+def test_randint_generator():
+    ctx = mx.context.current_context()
+    for dtype in ['int32', 'int64']:
+        for low, high in [(50000000, 50001000),(-50000100,-50000000),(-500,199)]:
+            scale = high - low
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), 5)
+            # Quantize bucket boundaries to reflect the actual dtype and adjust probs accordingly
+            buckets = np.array(buckets, dtype=dtype).tolist()
+            probs = [(buckets[i][1] - buckets[i][0]) / float(scale) for i in range(5)]
+            generator_mx = lambda x: mx.nd.random.randint(low, high, shape=x, ctx=ctx, dtype=dtype).asnumpy()
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, nrepeat=100)
+            # Scipy uses alpha = 0.01 for testing discrete distribution generator but we are using default alpha=0.05 (higher threshold ensures robustness)
+            # Refer - https://github.com/scipy/scipy/blob/9f12af697763fb5f9767d5cb1280ce62456a3974/scipy/stats/tests/test_discrete_basic.py#L45
+            generator_mx_same_seed = \
+                lambda x: np.concatenate(
+                    [mx.nd.random.randint(low, high, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
+                        for _ in range(10)])
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
+
+@with_seed()
+def test_randint_without_dtype():
+    a = mx.nd.random.randint(low=50000000, high=50000010, ctx=mx.context.current_context())
+    assert a.dtype == np.int32
 
 if __name__ == '__main__':
     import nose

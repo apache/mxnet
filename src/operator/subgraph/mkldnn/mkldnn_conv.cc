@@ -109,7 +109,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       DType weight_range = MaxAbs(weight_c_min[c], weight_c_max[c]);
-      weight_scales->at(c) = int8_range / weight_range;
+      weight_scales->at(c) = kInt8Range / weight_range;
       const DType *fp_ptr = weight_ptr + c * offset;
       int8_t *quan_ptr = quan_weight_ptr + c * offset;
       for (size_t k = 0; k < offset; ++k) {
@@ -125,7 +125,7 @@ static void QuantizeConvWeightBias(NDArray *weight, NDArray *bias,
     }
     weight_scales->resize(1);
     DType weight_range = MaxAbs(total_min, total_max);
-    weight_scales->at(0) = int8_range / weight_range;
+    weight_scales->at(0) = kInt8Range / weight_range;
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       const DType *fp_ptr = weight_ptr + c * offset;
@@ -327,7 +327,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     // Quantize weight and bias.
     if (mkldnn_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
-      auto data_range = (data.dtype() == mshadow::kInt8) ? int8_range : uint8_range;
+      auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
       float data_scale = data_range / MaxAbs(cached_data_min_, cached_data_max_);
       MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
         QuantizeConvWeightBias<DType>(&cached_weight_, &cached_bias_,
@@ -346,12 +346,12 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         LOG(FATAL) << "Can't handle negetive value for QuantizeData";
       }
       if (mkldnn_param.with_sum) {
-        auto quantized_sum_range = cached_sum_min_ < 0 ? int8_range : uint8_range;
+        auto quantized_sum_range = cached_sum_min_ < 0 ? kInt8Range : kUint8Range;
         sum_in_scale = quantized_sum_range / MaxAbs(cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize) {
         quantized_out_range =
-            IsOutputUInt8(mkldnn_param) ? uint8_range : int8_range;
+            IsOutputUInt8(mkldnn_param) ? kUint8Range : kInt8Range;
         out_range = MaxAbs(*out_min_ptr, *out_max_ptr);
         output_scale = quantized_out_range / out_range;
         full_conv_param.requantize_scales.resize(channel);
@@ -626,8 +626,12 @@ std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
 }
 
 nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
+  auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   nnvm::NodePtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
+  CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
+      << "Quantized Convolution of MKL-DNN only supports 2D kernel currently."
+      <<  "Please exclude this layer from the quantized model.";
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
   node->attrs.dict["quantized"] = "true";

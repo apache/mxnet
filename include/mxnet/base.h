@@ -25,47 +25,18 @@
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
 
-#include <dmlc/base.h>
-#include <dmlc/io.h>
-#include <dmlc/type_traits.h>
-#include <dmlc/parameter.h>
-#include <mshadow/tensor.h>
-// nnvm headers for symbolic construction.
-#include <nnvm/op.h>
-#include <nnvm/tuple.h>
-#include <nnvm/symbolic.h>
+#include "dmlc/base.h"
 #include <string>
+#include "dmlc/io.h"
+#include "dmlc/type_traits.h"
+#include "dmlc/parameter.h"
+#include "mshadow/tensor.h"
+// nnvm headers for symbolic construction.
+#include "nnvm/op.h"
+#include "nnvm/tuple.h"
+#include "nnvm/symbolic.h"
+#include "mxfeatures.h"
 
-/*!
- *\brief whether to use opencv support
- */
-#ifndef MXNET_USE_OPENCV
-#define MXNET_USE_OPENCV 1
-#endif
-
-/*!
- *\brief whether to use cuda support
- */
-#ifndef MXNET_USE_CUDA
-#define MXNET_USE_CUDA MSHADOW_USE_CUDA
-#endif
-
-/*!
- *\brief whether to use cudnn library for convolution
- */
-#ifndef MXNET_USE_CUDNN
-#define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
-#endif
-
-/*!
- *\brief whether to use cusolver library
- */
-#ifndef MXNET_USE_CUSOLVER
-#define MXNET_USE_CUSOLVER MSHADOW_USE_CUSOLVER
-#endif
-
-/*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
-#define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
 
 /*!
  * \brief define compatible keywords in g++
@@ -102,9 +73,9 @@
 /*! \brief major version */
 #define MXNET_MAJOR 1
 /*! \brief minor version */
-#define MXNET_MINOR 3
+#define MXNET_MINOR 5
 /*! \brief patch version */
-#define MXNET_PATCH 1
+#define MXNET_PATCH 0
 /*! \brief mxnet version */
 #define MXNET_VERSION (MXNET_MAJOR*10000 + MXNET_MINOR*100 + MXNET_PATCH)
 /*! \brief helper for making version number */
@@ -411,6 +382,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
 #define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
+
 
 #if MXNET_USE_MKLDNN == 1
 constexpr size_t kMKLDNNAlign = 64;

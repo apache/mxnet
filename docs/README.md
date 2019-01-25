@@ -17,8 +17,12 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet/docs/build_version_doc
 ./setup_docs_ubuntu.sh
 cd ../../
-make docs USE_OPENMP=1
+make docs USE_OPENMP=1 SPHINXOPTS=-W
 ```
+
+OpenMP speeds things up and will work on Ubuntu if you used the `setup_docs_ubuntu.sh` script.
+The `-W` Sphinx option enforces "warnings as errors". This will help you debug your builds and get them through CI.
+**CI will not let a PR through if it breaks the website.** Refer to the [MXNet Developer wiki's documentation guide](https://cwiki.apache.org/confluence/display/MXNET/Documentation+Guide) for troubleshooting tips.
 
 For more information on each API's documentation dependencies, how to serve the docs, or how to build the full website with each legacy MXNet version, refer to the following links:
 

@@ -29,37 +29,29 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <mxnet/c_api.h>
+#include <mxnet/c_api_error.h>
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <vector>
 #include <string>
 
-/*! \brief  macro to guard beginning and end section of all functions */
-#define API_BEGIN() try { on_enter_api(__FUNCTION__);
-/*! \brief every function starts with API_BEGIN();
-     and finishes with API_END() or API_END_HANDLE_ERROR */
-#define API_END() } catch(dmlc::Error &_except_) { on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0;  // NOLINT(*)
 /*!
- * \brief every function starts with API_BEGIN();
- *   and finishes with API_END() or API_END_HANDLE_ERROR
- *   The finally clause contains procedure to cleanup states when an error happens.
+ * \brief Macros to guard beginning and end section of all functions
+ * every function starts with API_BEGIN()
+ * and finishes with API_END() or API_END_HANDLE_ERROR()
+ * The finally clause contains procedure to cleanup states when an error happens.
  */
-#define API_END_HANDLE_ERROR(Finalize) } catch(dmlc::Error &_except_) { Finalize; on_exit_api(); return MXAPIHandleException(_except_); } on_exit_api(); return 0; // NOLINT(*)
+#ifndef API_BEGIN
+#define API_BEGIN MX_API_BEGIN
+#endif
 
-/*!
- * \brief Set the last error message needed by C API
- * \param msg The error message to set.
- */
-void MXAPISetLastError(const char* msg);
-/*!
- * \brief handle exception throwed out
- * \param e the exception
- * \return the return value of API after exception is handled
- */
-inline int MXAPIHandleException(const dmlc::Error &e) {
-  MXAPISetLastError(e.what());
-  return -1;
-}
+#ifndef API_END
+#define API_END MX_API_END
+#endif
+
+#ifndef API_END_HANDLE_ERROR
+#define API_END_HANDLE_ERROR MX_API_END_HANDLE_ERROR
+#endif
 
 using namespace mxnet;
 
@@ -137,10 +129,6 @@ inline void CopyAttr(const nnvm::IndexedGraph& idx,
 
 // stores keys that will be converted to __key__
 extern const std::vector<std::string> kHiddenKeys;
-
-extern void on_enter_api(const char *function);
-extern void on_exit_api();
-
 }  // namespace mxnet
 
 #endif  // MXNET_C_API_C_API_COMMON_H_

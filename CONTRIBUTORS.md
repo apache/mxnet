@@ -192,6 +192,8 @@ List of Contributors
 * [Rahul Padmanabhan](https://github.com/rahul3)
 * [Yuxi Hu](https://github.com/yuxihu)
 * [Harsh Patel](https://github.com/harshp8l)
+* [Xiao Wang](https://github.com/BeyonderXX)
+* [Piyush Ghai](https://github.com/piyushghai)
 
 Label Bot
 ---------

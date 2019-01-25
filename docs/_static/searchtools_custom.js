@@ -457,7 +457,7 @@ var Search = {
                 highlightstring + item[2]).html(item[1]));
             } else {
                 // normal html builders
-                var baseURL = 'https://' + window.location.hostname + '/';
+                var baseURL = window.location.protocol + '//' + window.location.hostname + '/';
                 var urlHref = window.location.href;
                 let urlSplits = urlHref.split("/");
                 let versionString = '';
@@ -570,7 +570,7 @@ var Search = {
         }
         Search.title.text(_('Search Results'));
         if (!resultCount)
-          Search.status.text(_('Your search did not match any documents. Please make sure that all words are spelled correctly and that you\'ve selected enough categories.'));
+          Search.status.text(_('Your search did not match any documents in this version of the documentation. You can use the dropdown selector in the navigation bar to try another version. Please make sure that all words are spelled correctly and that you\'ve selected enough categories.'));
         else
             Search.status.text(_('Search finished, found %s page(s) matching the search query.').replace('%s', resultCount));
         Search.status.fadeIn(500);

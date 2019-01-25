@@ -5,106 +5,109 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-parent_2.11</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-full-parent_2.11</artifactId>
-  <name>MXNet Scala Package - Full Parent</name>
+  <artifactId>mxnet-full_2.11</artifactId>
+  <name>Assembly Scala Package</name>
   <packaging>pom</packaging>
+
+  <properties>
+    <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>mxnet-core</artifactId>
+      <version>INTERNAL</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>libmxnet-scala</artifactId>
+      <version>INTERNAL</version>
+      <type>${libtype}</type>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>mxnet-infer</artifactId>
+      <version>INTERNAL</version>
+    </dependency>
+  </dependencies>
 
   <profiles>
     <profile>
-      <id>osx-x86_64-cpu</id>
-      <modules>
-        <module>osx-x86_64-cpu</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>linux-x86_64-cpu</id>
-      <modules>
-        <module>linux-x86_64-cpu</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>linux-x86_64-gpu</id>
-      <modules>
-        <module>linux-x86_64-gpu</module>
-      </modules>
-    </profile>
-    <profile>
-      <id>release</id>
+      <id>staging</id>
       <build>
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <configuration>
-              <skip>true</skip>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>jar-no-fork</goal>
-                </goals>
-                <configuration>
-                  <includePom>true</includePom>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <executions>
-              <execution>
-                <phase>package</phase>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-                <configuration>
-                  <includeDependencySources>true</includeDependencySources>
-                  <dependencySourceExcludes>
-                    <dependencySourceExclude>commons-codec:*</dependencySourceExclude>
-                    <dependencySourceExclude>org.scala-lang:*</dependencySourceExclude>
-                    <dependencySourceExclude>log4j:*</dependencySourceExclude>
-                    <dependencySourceExclude>org.slf4j:*</dependencySourceExclude>
-                  </dependencySourceExcludes>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
+            <version>1.6</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
-                <phase>verify</phase>
+                <phase>deploy</phase>
                 <goals>
                   <goal>sign</goal>
                 </goals>
               </execution>
             </executions>
           </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <extensions>true</extensions>
-            <configuration>
-              <serverId>ossrh</serverId>
-              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-              <autoReleaseAfterClose>true</autoReleaseAfterClose>
-            </configuration>
-          </plugin>
         </plugins>
       </build>
     </profile>
   </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>binary-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>false</appendAssemblyId>
+              <descriptors>
+                <descriptor>src/main/assembly/assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+          <execution>
+            <id>sources-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>true</appendAssemblyId>
+              <descriptors>
+                <descriptor>src/main/assembly/source.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+          <execution>
+            <id>javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <appendAssemblyId>true</appendAssemblyId>
+              <descriptors>
+                <descriptor>src/main/assembly/javadoc.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

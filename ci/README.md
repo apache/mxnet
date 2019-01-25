@@ -88,9 +88,9 @@ source 3rdparty folder of the parent mxnet sources concurrent builds of
 different platforms is NOT SUPPORTED.
 
 ## ccache
-For all builds a directory from the host system is mapped where ccache will store cached 
-compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds 
-significantly. You can set this directory explicitly by setting CCACHE_DIR environment 
+For all builds a directory from the host system is mapped where ccache will store cached
+compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds
+significantly. You can set this directory explicitly by setting CCACHE_DIR environment
 variable. All ccache instances are currently set to be 10 Gigabytes max in size.
 
 
@@ -117,4 +117,67 @@ ssh -o StrictHostKeyChecking=no -p 2222 qemu@localhost
 There are two pre-configured users: `root` and `qemu` both without passwords.
 
 
+### Example of reproducing a test result with QEMU on ARM
 
+
+You might want to enable a debug build first:
+
+```
+$ git diff
+diff --git a/ci/docker/runtime_functions.sh b/ci/docker/runtime_functions.sh
+index 39631f9..666ceea 100755
+--- a/ci/docker/runtime_functions.sh
++++ b/ci/docker/runtime_functions.sh
+@@ -172,6 +172,7 @@ build_armv7() {
+         -DUSE_LAPACK=OFF \
+         -DBUILD_CPP_EXAMPLES=OFF \
+         -Dmxnet_LINKER_LIBS=-lgfortran \
++        -DCMAKE_BUILD_TYPE=Debug \
+         -G Ninja /work/mxnet
+
+     ninja -v
+
+```
+
+Then we build the project for armv7, the test container and start QEMU inside docker:
+
+```
+ci/build.py -p armv7
+ci/build.py -p test.arm_qemu -b && docker run -p2222:2222 -ti mxnetci/build.test.arm_qemu
+```
+
+
+
+At this point we copy artifacts and sources to the VM, in another terminal (host) do the following:
+
+```
+# Copy mxnet sources to the VM
+rsync --delete -e 'ssh -p2222' --exclude='.git/' -zvaP ./ qemu@localhost:mxnet
+
+
+# Ssh into the vm
+ssh -p2222 qemu@localhost
+
+cd mxnet
+
+# Execute a single failing C++ test
+build/tests/mxnet_unit_tests --gtest_filter="ACTIVATION_PERF.ExecuteBidirectional"
+
+# To install MXNet:
+sudo pip3 install --upgrade --force-reinstall build/mxnet-1.3.1-py2.py3-none-any.whl
+
+# Execute a single python test:
+
+nosetests-3.4 -v -s tests/python/unittest/test_ndarray.py
+
+
+# Debug with cgdb
+sudo apt install -y libstdc++6-6-dbg
+cgdb build/tests/mxnet_unit_tests
+
+(gdb) !pwd
+/home/qemu/mxnet
+(gdb) set substitute-path /work /home/qemu
+(gdb) set substitute-path /build/gcc-6-6mK9AW/gcc-6-6.3.0/build/arm-linux-gnueabihf/libstdc++-v3/include/ /usr/include/c++/6/
+(gdb) r --gtest_filter="ACTIVATION_PERF.ExecuteBidirectional"
+```

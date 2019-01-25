@@ -18,8 +18,8 @@
 (defproject neural-style "0.1.0-SNAPSHOT"
   :description "Neural Style Transfer with MXNet"
   :plugins [[lein-cljfmt "0.5.7"]]
+  :repositories [["vendredi" {:url "https://repository.hellonico.info/repository/hellonico/"}]]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.3.1-SNAPSHOT"]
-                 [net.mikera/imagez "0.12.0"]
-                 [thinktopic/think.image "0.4.16"]]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+                 [origami "4.0.0-3"]]
   :main neural-style.core)

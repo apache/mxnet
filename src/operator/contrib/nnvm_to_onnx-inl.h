@@ -37,8 +37,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 
-#include <NvInfer.h>
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include <algorithm>
 #include <iostream>
@@ -49,13 +48,48 @@
 #include <utility>
 #include <string>
 
-#include "./tensorrt-inl.h"
 #include "../operator_common.h"
 #include "../../common/utils.h"
 #include "../../common/serialization.h"
 
 namespace mxnet {
 namespace op {
+
+namespace nnvm_to_onnx {
+    enum class TypeIO { Inputs = 0, Outputs = 1 };
+    using NameToIdx_t = std::map<std::string, int32_t>;
+    using InferenceTuple_t = std::tuple<uint32_t, TShape, int, int>;
+    using InferenceMap_t = std::map<std::string, InferenceTuple_t>;
+}  // namespace nnvm_to_onnx
+
+struct ONNXParam : public dmlc::Parameter<ONNXParam> {
+  std::string serialized_onnx_graph;
+  std::string serialized_input_map;
+  std::string serialized_output_map;
+  nnvm_to_onnx::NameToIdx_t input_map;
+  nnvm_to_onnx::InferenceMap_t output_map;
+  ::onnx::ModelProto onnx_pb_graph;
+
+  ONNXParam() {}
+
+  ONNXParam(const ::onnx::ModelProto& onnx_graph,
+           const nnvm_to_onnx::InferenceMap_t& input_map,
+           const nnvm_to_onnx::NameToIdx_t& output_map) {
+    common::Serialize(input_map, &serialized_input_map);
+    common::Serialize(output_map, &serialized_output_map);
+    onnx_graph.SerializeToString(&serialized_onnx_graph);
+  }
+
+DMLC_DECLARE_PARAMETER(ONNXParam) {
+    DMLC_DECLARE_FIELD(serialized_onnx_graph)
+    .describe("Serialized ONNX graph");
+    DMLC_DECLARE_FIELD(serialized_input_map)
+    .describe("Map from inputs to topological order as input.");
+    DMLC_DECLARE_FIELD(serialized_output_map)
+    .describe("Map from outputs to order in g.outputs.");
+  }
+};
+
 namespace nnvm_to_onnx {
 
 using namespace nnvm;
@@ -76,7 +110,7 @@ void ConvertConstant(GraphProto* const graph_proto,
   const std::string& node_name,
   std::unordered_map<std::string, NDArray>* const shared_buffer);
 
-void ConvertOutput(op::tensorrt::InferenceMap_t* const trt_output_map,
+void ConvertOutput(op::nnvm_to_onnx::InferenceMap_t* const trt_output_map,
                    GraphProto* const graph_proto,
                    const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
                    const std::string& node_name,
@@ -133,7 +167,7 @@ void ConvertElementwiseAdd(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-TRTParam ConvertNnvmGraphToOnnx(
+ONNXParam ConvertNnvmGraphToOnnx(
     const nnvm::Graph &g,
     std::unordered_map<std::string, NDArray> *const shared_buffer);
 

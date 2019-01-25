@@ -234,15 +234,6 @@ int main(int argc, char const *argv[]) {
      * initializer to call*/
     xavier(arg.first, &arg.second);
   }
-  /*print out to check the shape of the net*/
-  for (const auto &s : Net.ListArguments()) {
-    LG << s;
-    const auto &k = args_map[s].GetShape();
-    for (const auto &i : k) {
-      std::cout << i << " ";
-    }
-    std::cout << std::endl;
-  }
 
   /*these binary files should be generated using im2rc tools, which can be found
    * in mxnet/bin*/
@@ -253,12 +244,16 @@ int main(int argc, char const *argv[]) {
                               };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
-  Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10)
@@ -275,7 +270,6 @@ int main(int argc, char const *argv[]) {
     train_iter.Reset();
     while (train_iter.Next()) {
       auto batch = train_iter.GetDataBatch();
-      LG << train_iter.GetDataBatch().index.size();
       /*use copyto to feed new data and label to the executor*/
       batch.data.CopyTo(&args_map["data"]);
       batch.label.CopyTo(&args_map["label"]);

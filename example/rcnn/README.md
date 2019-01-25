@@ -9,7 +9,7 @@ For a gluon imperative version, checkout https://github.com/dmlc/gluon-cv.
 
 ### Out-of-box inference models
 Download any of the following models to the current directory and run `python3 demo.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --image $YOUR_IMAGE$` to get single image inference.
-For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU optionally.
+For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU, not set to use CPU. 
 Different network has different configuration. Different dataset has different object class names. You must pass them explicitly as command line arguments.
 
 | Network | Dataset | Imageset | Reference | Result | Link  |

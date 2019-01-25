@@ -145,7 +145,16 @@ function mx.update!(metric::NLL, labels::Vector{<:mx.NDArray}, preds::Vector{<:m
   nll = 0.0
   for (label, pred) in zip(labels, preds)
     @mx.nd_as_jl ro=(label, pred) begin
-      nll -= sum(log.(max.(broadcast_getindex(pred, round.(Int,label+1), 1:length(label)), 1e-20)))
+      nll -= sum(
+        log.(
+          max.(
+            getindex.(
+            (pred,),
+            round.(Int,label .+ 1),
+            1:length(label)),
+          1e-20)
+        )
+      )
     end
   end
 
