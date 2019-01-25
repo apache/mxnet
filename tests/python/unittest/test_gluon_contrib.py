@@ -411,7 +411,7 @@ def test_deformable_convolution():
     net.add(
         Deformable_Convolution(10, kernel_size=(3, 3), strides=1, padding=0),
         Deformable_Convolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
-                               offset_use_bisa=False, use_bias=False)
+                               offset_use_bias=False, use_bias=False)
     )
 
     try:
