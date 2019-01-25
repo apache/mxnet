@@ -369,6 +369,11 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, ctx=None,
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    If input `shape` is, e.g., `(m, n)` and `k` and `p` are scalars, output shape
+    will be `(m, n)`. If `k` and `p` are NDArrays with shape, e.g., `(x, y)`, then 
+    output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for each `[k, p)` pair.
 
     Examples
     --------
