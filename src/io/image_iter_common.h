@@ -127,7 +127,7 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   int num_parts;
   /*! \brief the index of the part will read */
   int part_index;
-  /*! \brief device id used to create CPUPinned context for internal NDArray */
+  /*! \brief device id used to create context for internal NDArray */
   int device_id;
   /*! \brief the size of a shuffle chunk */
   size_t shuffle_chunk_size;
@@ -166,7 +166,9 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
     DMLC_DECLARE_FIELD(part_index).set_default(0)
         .describe("The *i*-th virtual partition to be read.");
     DMLC_DECLARE_FIELD(device_id).set_default(0)
-        .describe("The device id used to create CPUPinned context for internal NDArray.");
+        .describe("The device id used to create context for internal NDArray. "\
+                  "-1 will create Context::CPU(0). Valid positive device "\
+                  "id will create Context::CPUPinned(device_id). Default is 0." );
     DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
         .describe("The data shuffle buffer size in MB. Only valid if shuffle is true.");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
