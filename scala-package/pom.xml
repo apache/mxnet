@@ -53,6 +53,7 @@
   </scm>
 
   <properties>
+    <scala.major.version>2.11</scala.major.version>
     <scala.version>2.11.8</scala.version>
     <build.platform/>
     <cxx>g++</cxx>
@@ -351,6 +352,10 @@
               <version>2.1.0</version>
             </compilerPlugin>
           </compilerPlugins>
+          <args>
+            <arg>-feature</arg>
+            <arg>-deprecation</arg>
+          </args>
         </configuration>
         <executions>
           <execution>
@@ -366,6 +371,10 @@
         <artifactId>scala-maven-plugin</artifactId>
         <version>3.3.2</version>
         <configuration>
+          <args>
+            <arg>-feature</arg>
+            <arg>-deprecation</arg>
+          </args>
         </configuration>
         <executions>
           <execution>

@@ -1189,7 +1189,7 @@ object Symbol extends SymbolBase {
 
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
-  @Deprecated
+  @deprecated("Use Checked version", "0.1.2")
   def createFromNamedSymbolsNoCheck(
       operator: String, name: String = null, attr: Map[String, String] = null)(
       kwargs: Map[String, Any]): Symbol = {
@@ -1208,7 +1208,7 @@ object Symbol extends SymbolBase {
 
   // a more friendly interface for creating symbols
   // all values except symbols in kwargs will be cast to String using its toString() method
-  @Deprecated
+  @deprecated("Use Checked version", "0.1.2")
   def createFromListedSymbolsNoCheck(
       operator: String, name: String = null, attr: Map[String, String] = null)(
       symbols: Array[Symbol], kwargs: Map[String, Any] = null): Symbol = {

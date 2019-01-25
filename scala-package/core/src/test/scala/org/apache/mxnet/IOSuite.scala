@@ -19,6 +19,7 @@ package org.apache.mxnet
 
 import org.apache.mxnet.io.{NDArrayIter, ResizeIter, PrefetchingIter}
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
+import scala.language.postfixOps
 import scala.sys.process._
 
 

@@ -25,6 +25,7 @@ import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 class CustomOpExampleSuite extends FunSuite with BeforeAndAfterAll {

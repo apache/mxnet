@@ -141,7 +141,7 @@ private[mxnet] abstract class GeneratorBase {
         throw new IllegalArgumentException(s"Invalid macro input: $ex")
     }
     // wrap the result up in an Expr, and return it
-    val result = c.Expr(Block(modDefs, Literal(Constant())))
+    val result = c.Expr(Block(modDefs, Literal(Constant(()))))
     result
   }
 
