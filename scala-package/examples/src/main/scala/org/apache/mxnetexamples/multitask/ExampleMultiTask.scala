@@ -31,6 +31,7 @@ import org.apache.mxnet.optimizer.RMSProp
 import org.apache.mxnetexamples.Util
 
 import scala.collection.immutable.ListMap
+import scala.language.postfixOps
 import scala.sys.process.Process
 
 /**
@@ -100,7 +101,7 @@ object ExampleMultiTask {
     override def getIndex(): IndexedSeq[Long] = this.dataIter.getIndex()
 
     // The name and shape of label provided by this iterator
-    @deprecated
+    @deprecated("Use provideLabelDesc instead", "1.3.0")
     override def provideLabel: ListMap[String, Shape] = {
       val provideLabel = this.dataIter.provideLabel.toArray
       // Different labels should be used here for actual application
@@ -126,7 +127,7 @@ object ExampleMultiTask {
     override def getPad(): Int = this.dataIter.getPad()
 
     // The name and shape of data provided by this iterator
-    @deprecated
+    @deprecated("Use provideDataDesc instead", "1.3.0")
     override def provideData: ListMap[String, Shape] = this.dataIter.provideData
 
     override def provideDataDesc: IndexedSeq[DataDesc] = this.dataIter.provideDataDesc
