@@ -533,10 +533,10 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
         returned NDArray consist of 0-indexed values sampled from each respective multinomial 
         distribution provided in the `k` dimension of `data`. 
 
-        For the case `n`=1, and `x`=1 (one shape dimension), returned NDArray has shape (`s1`,).
+        For the case `n`=1, and `x`=1 (one shape dimension), returned NDArray has shape `(s1,)`.
 
         If `get_prob` is set to True, this function returns a list of format: 
-        [ndarray_output, log_likelihood_output], where log_likelihood_output is an NDArray of the
+        `[ndarray_output, log_likelihood_output]`, where `log_likelihood_output` is an NDArray of the
         same shape as the sampled outputs. 
 
     Examples
