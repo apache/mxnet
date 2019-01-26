@@ -66,7 +66,7 @@ object ExampleMultiTask {
         new DataBatch(batch.data,
           IndexedSeq(label, label),
           batch.index,
-          batch.pad, null, null, null)
+          batch.pad)
       } else {
         throw new NoSuchElementException
       }
@@ -230,10 +230,10 @@ object ExampleMultiTask {
       val trainMultiIt = new MultiMnistIterator(trainIter)
       val valMultiIter = new MultiMnistIterator(valIter)
 
-      val datasAndLabels = trainMultiIt.provideData ++ trainMultiIt.provideLabel
+      val datasAndLabels = trainMultiIt.provideDataDesc ++ trainMultiIt.provideLabelDesc
 
       val (argShapes, outputShapes, auxShapes)
-      = network.inferShape(trainMultiIt.provideData("data"))
+      = network.inferShape(trainMultiIt.provideDataDesc.filter(_.name == "data"))
       val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
 
       val argNames = network.listArguments

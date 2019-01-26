@@ -75,7 +75,7 @@ object TrainCharRnn {
       // the network symbol
       val symbol = symGen(buckets(0))
 
-      val datasAndLabels = dataTrain.provideData ++ dataTrain.provideLabel
+      val datasAndLabels = dataTrain.provideDataDesc ++ dataTrain.provideLabelDesc
       val (argShapes, outputShapes, auxShapes) = symbol.inferShape(datasAndLabels)
 
       val initializer = new Xavier(factorType = "in", magnitude = 2.34f)
