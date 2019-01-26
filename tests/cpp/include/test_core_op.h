@@ -168,10 +168,22 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param op Pointer to nnvm Operator object
    */
   void AttachResources(OpContext *ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
+    std::vector<ResourceRequest> reqs;
+    std::vector<Resource>& requested = ctx->requested;
     static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
     if (fresource.count(op) != 0) {
-      std::vector<Resource>& requested = ctx->requested;
-      auto reqs = fresource[op](attrs);
+      reqs = fresource[op](attrs);
+    } else {
+      static auto& fresourceex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+      if (fresourceex.count(op) != 0) {
+        if (this->function_ || this->stateful_function_) {
+          reqs = fresourceex[op](attrs, ctx->run_ctx.ctx.dev_mask(), DispatchMode::kFCompute);
+        } else {
+          reqs = fresourceex[op](attrs, ctx->run_ctx.ctx.dev_mask(), DispatchMode::kFComputeEx);
+        }
+      }
+    }
+    if (!reqs.empty()) {
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
         if (req.type == ResourceRequest::kTempSpace) {

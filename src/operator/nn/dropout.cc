@@ -125,9 +125,23 @@ Example::
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kParallelRandom};
-})
+.set_attr<FResourceRequestEx>("FResourceRequestEx",
+  [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
+    std::vector<ResourceRequest> request;
+    if (dev_mask == kGPU) {
+#if MXNET_USE_CUDNN_DROPOUT
+      const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
+      // if cudnn is used, parallel random is not needed.
+      if (1.0f - param.p > 0
+          && !(param.cudnn_off && param.cudnn_off.value())
+          && param.axes.ndim() == 0) {
+        return request;
+      }
+#endif
+    }
+    request.emplace_back(ResourceRequest::kParallelRandom);
+    return request;
+  })
 .add_argument("data", "NDArray-or-Symbol", "Input array to which dropout will be applied.")
 .add_arguments(DropoutParam::__FIELDS__());
 
