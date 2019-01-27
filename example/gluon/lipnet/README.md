@@ -118,6 +118,14 @@ The training data folder should look like :
 
 ## Training
 
+- According to [LipNet: End-to-End Sentence-level Lipreading](https://arxiv.org/abs/1611.01599), four (S1, S2, S20, S22) of the 34 subjects are used for evaluation.
+ The other subjects are used for training.
+ 
+- To use the multi-gpu, it is recommended to make the batch size $(num_gpus) times larger.
+
+  - e.g) 1-gpu and 128 batch_size > 2-gpus 256 batch_size
+
+
 - arguments
   - batch_size : Define batch size (default=64)
   - epochs : Define total epochs (default=100)
@@ -151,6 +159,7 @@ python main.py
   - align_path : Path for align files (default='./data/align/')
   - num_gpus : Num of gpus (if num_gpus is 0, then use cpu) (default=1)
   - num_workers : Num of workers when generating data (default=0)
+  - data_type : 'train' or 'valid' (defalut='valid')
   - model_path : Path of pretrained model (defalut=None)
     
 ```
