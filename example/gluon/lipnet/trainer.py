@@ -91,15 +91,14 @@ class Train:
         self.trainer = gluon.Trainer(self.net.collect_params(), \
                                      optimizer='SGD')
 
-    def save_model(self, epoch, iter_no, loss):
+    def save_model(self, epoch, loss):
         """
         Description : save parameter of network weight
         """
         prefix = 'checkpoint/epoches'
-        file_name = "{prefix}_{epoch}_iter_{iter_no}_loss_{loss}".format(prefix=prefix,
-                                                                         epoch=str(epoch),
-                                                                         iter_no=str(iter_no),
-                                                                         loss=str(loss))
+        file_name = "{prefix}_{epoch}_loss_{l:.4f}".format(prefix=prefix,
+                                                           epoch=str(epoch),
+                                                           l=loss)
         self.net.save_parameters(file_name)
 
     def load_model(self, path=''):
@@ -227,7 +226,7 @@ class Train:
                                                                    l=current_val_loss))
 
             if best_loss > current_val_loss:
-                self.save_model(epoch, iter_no, current_val_loss)
+                self.save_model(epoch, current_val_loss)
                 best_loss = current_val_loss
 
             iter_no += 1

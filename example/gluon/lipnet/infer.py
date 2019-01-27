@@ -16,7 +16,7 @@
 # under the License.
 
 """
-Description : main module to run the lipnet training code
+Description : main module to run the lipnet inference code
 """
 
 
