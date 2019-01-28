@@ -88,10 +88,10 @@ def generate_doxygen(app):
 def build_mxnet(app):
     """Build mxnet .so lib"""
     if not os.path.exists(os.path.join(app.builder.srcdir, '..', 'config.mk')):
-        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1 USE_MKLDNN=0" %
+        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1 USE_MKLDNN=0 USE_CPP_PACKAGE=1" %
                 app.builder.srcdir)
     else:
-        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1 USE_MKLDNN=0" %
+        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1 USE_MKLDNN=0 USE_CPP_PACKAGE=1" %
                 app.builder.srcdir)
 
 def build_r_docs(app):
