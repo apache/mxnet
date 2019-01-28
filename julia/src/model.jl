@@ -122,7 +122,7 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
         delete!(self.arg_params, name)
       end
     end
-    arg_params[name] = empty(shape)
+    arg_params[name] = NDArray(undef, shape)
   end
 
   for (name, shape) in zip(aux_names, aux_shapes)
@@ -135,7 +135,7 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
         delete!(self.aux_params, name)
       end
     end
-    aux_params[name] = empty(shape)
+    aux_params[name] = NDArray(undef, shape)
   end
 
   for (k,v) in arg_params
@@ -463,8 +463,8 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   # set up output and labels in CPU for evaluation metric
   output_shapes = [tuple(size(x)[1:end-1]...,batch_size) for x in train_execs[1].outputs]
   cpu_dev = Context(CPU)
-  cpu_output_arrays = [empty(shape, cpu_dev) for shape in output_shapes]
-  cpu_label_arrays  = [empty(shape, cpu_dev) for (name,shape) in provide_label(data)]
+  cpu_output_arrays = [NDArray(undef, shape, ctx = cpu_dev) for shape in output_shapes]
+  cpu_label_arrays  = [NDArray(undef, shape, ctx = cpu_dev) for (name,shape) in provide_label(data)]
 
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)

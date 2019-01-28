@@ -65,9 +65,9 @@ struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
 
 template <int req>
 struct SequenceLastKernel {
-  template <typename DType>
+  template <typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
-                                  const DType *idx, int offset1, int offset2,
+                                  const IType *idx, int offset1, int offset2,
                                   mshadow::Shape<2> oshape) {
     const auto opos = mxnet_op::unravel(i, oshape);
     const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
@@ -77,9 +77,9 @@ struct SequenceLastKernel {
 };
 
 struct SequenceLastGradKernel {
-  template <typename DType>
+  template <typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i, DType *in_grad, const DType *out_grad,
-                                  const DType *idx, int offset1, int offset2,
+                                  const IType *idx, int offset1, int offset2,
                                   mshadow::Shape<2> oshape) {
     const auto opos = mxnet_op::unravel(i, oshape);
     const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
@@ -88,14 +88,14 @@ struct SequenceLastGradKernel {
   }
 };
 
-template <typename xpu, typename DType>
+template <typename xpu, typename DType, typename IType>
 class SequenceLastOp : public Operator {
  public:
   explicit SequenceLastOp(SequenceLastParam p) { this->param_ = p; }
 
   void sequence_last(const mshadow::Tensor<xpu, 3, DType> &data,
                      const mshadow::Tensor<xpu, 2, DType> &out,
-                     const mshadow::Tensor<xpu, 1, DType> &indices,
+                     const mshadow::Tensor<xpu, 1, IType> &indices,
                      const OpReqType req, mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -115,7 +115,7 @@ class SequenceLastOp : public Operator {
 
   void sequence_last_grad(const mshadow::Tensor<xpu, 3, DType> &in_grad,
                           const mshadow::Tensor<xpu, 2, DType> &out_grad,
-                          const mshadow::Tensor<xpu, 1, DType> &indices,
+                          const mshadow::Tensor<xpu, 1, IType> &indices,
                           mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -163,11 +163,11 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> out =
         out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(batch, rest_size), s);
-    Tensor<xpu, 1, DType> indices =
+    Tensor<xpu, 1, IType> indices =
         param_.use_sequence_length
-            ? in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s)
+            ? in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s)
             : ctx.requested[seq_last::kTempSpace]
-                  .get_space_typed<xpu, 1, DType>(Shape1(batch), s);
+                  .get_space_typed<xpu, 1, IType>(Shape1(batch), s);
     if (!param_.use_sequence_length) indices = max_seq_len;
 
     sequence_last(data, out, indices, req[seq_last::kOut], s);
@@ -206,11 +206,11 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> output_grad =
         out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(batch, rest_size), s);
-    Tensor<xpu, 1, DType> indices =
+    Tensor<xpu, 1, IType> indices =
         param_.use_sequence_length
-            ? in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s)
+            ? in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s)
             : ctx.requested[seq_last::kTempSpace]
-                  .get_space_typed<xpu, 1, DType>(Shape1(batch), s);
+                  .get_space_typed<xpu, 1, IType>(Shape1(batch), s);
 
     if (req[seq_last::kData] == kWriteTo) data_grad = 0.0f;
     sequence_last_grad(data_grad, output_grad, indices, s);
@@ -221,7 +221,7 @@ class SequenceLastOp : public Operator {
 };  // class SequenceLastOp
 
 template <typename xpu>
-Operator *CreateOp(SequenceLastParam param, int dtype);
+Operator *CreateOp(SequenceLastParam param, int dtype, int itype);
 
 #if DMLC_USE_CXX11
 class SequenceLastProp : public OperatorProperty {
@@ -281,8 +281,6 @@ class SequenceLastProp : public OperatorProperty {
     for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

@@ -22,12 +22,12 @@
  * \file c_api_symbolic.cc
  * \brief C API of mxnet
  */
-#include <mxnet/base.h>
-#include <mxnet/c_api.h>
-#include <nnvm/c_api.h>
-#include <nnvm/pass.h>
-#include <nnvm/pass_functions.h>
-#include <nnvm/symbolic.h>
+#include "mxnet/base.h"
+#include "mxnet/c_api.h"
+#include "nnvm/c_api.h"
+#include "nnvm/pass.h"
+#include "nnvm/pass_functions.h"
+#include "nnvm/symbolic.h"
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"

@@ -19,6 +19,7 @@
 
 # This script builds the static library of opencv that can be used as dependency of mxnet.
 # It expects openblas, libjpeg, libpng, libtiff, eigen, etc., to be in $DEPS_PATH.
+set -ex
 OPENCV_VERSION=3.4.2
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 if [[ $PLATFORM == 'linux' ]]; then
@@ -41,6 +42,7 @@ if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopenc
     curl -s -L https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip -o $DEPS_PATH/opencv.zip
     unzip -q $DEPS_PATH/opencv.zip -d $DEPS_PATH
     mkdir -p $DEPS_PATH/opencv-$OPENCV_VERSION/build
+    pushd .
     cd $DEPS_PATH/opencv-$OPENCV_VERSION/build
     cmake \
           -D OPENCV_ENABLE_NONFREE=OFF \
@@ -184,9 +186,9 @@ if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopenc
     if [[ $PLATFORM == 'linux' ]]; then
         cp $DIR/patch/opencv_lapack.h ./
     fi
-    make
-    make install
-    cd -
+    $MAKE
+    $MAKE install
+    popd
     # @szha: compatibility header
     cat $DEPS_PATH/include/opencv2/imgcodecs/imgcodecs_c.h >> $DEPS_PATH/include/opencv2/imgcodecs.hpp
 fi

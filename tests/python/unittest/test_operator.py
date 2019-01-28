@@ -3292,36 +3292,38 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
     L = mx.symbol.Variable('L') # lengths
     shapes = [(3, 4), (1, 1), (3, 4, 3, 1, 1)]
     for seqlenQ in [True, False]:
-        for s in shapes:
-            x = mx.random.uniform(-1, 1, s, ctx=mx.cpu()).copyto(xpu)
-            batch = s[1] if (axis == 0) else s[0]
-            seqlen = s[axis]
-            l_np = np.random.randint(1, seqlen + 1, batch)
-            l = mx.nd.array(l_np, ctx=mx.cpu()).copyto(xpu)
-            if not seqlenQ:
-                l_np = None
-            args = {'data':X, 'use_sequence_length':seqlenQ, "axis":axis}
-            if seqlenQ:
-                args['sequence_length'] = L
-            if ftype == "last":
-                Y = mx.symbol.SequenceLast(**args)
-                np_out = sequence_last_numpy(x.asnumpy(), l_np, axis)
-            elif ftype == "mask":
-                args['value'] = mask_value
-                Y = mx.symbol.SequenceMask(**args)
-                np_out = sequence_mask_numpy(x.asnumpy(), l_np, axis, mask_value)
-            elif ftype == "reverse":
-                Y = mx.symbol.SequenceReverse(**args)
-                np_out = sequence_reverse_numpy(x.asnumpy(), l_np, axis)
-            fargs = [x, l] if seqlenQ else [x]
-            gargs = [x.asnumpy(), l_np] if seqlenQ else [x.asnumpy()]
-            check_symbolic_forward(Y, fargs, [np_out])
-            check_numeric_gradient(Y, gargs, grad_nodes={'X':'write'},
-                numeric_eps=1e-2, rtol=1e-2)
-            check_numeric_gradient(Y, gargs, grad_nodes={'X':'add'},
-                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
-            check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
-                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+        for ary_dtype in [np.float32]:
+            for idx_dtype in [np.int32, np.float32]:
+                for s in shapes:
+                    x = mx.random.uniform(-1, 1, s, ctx=mx.cpu()).astype(ary_dtype).copyto(xpu)
+                    batch = s[1] if (axis == 0) else s[0]
+                    seqlen = s[axis]
+                    l_np = np.random.randint(1, seqlen + 1, batch)
+                    l = mx.nd.array(l_np, ctx=mx.cpu(), dtype=idx_dtype).copyto(xpu)
+                    if not seqlenQ:
+                        l_np = None
+                    args = {'data':X, 'use_sequence_length':seqlenQ, "axis":axis}
+                    if seqlenQ:
+                        args['sequence_length'] = L
+                    if ftype == "last":
+                        Y = mx.symbol.SequenceLast(**args)
+                        np_out = sequence_last_numpy(x.asnumpy(), l_np, axis)
+                    elif ftype == "mask":
+                        args['value'] = mask_value
+                        Y = mx.symbol.SequenceMask(**args)
+                        np_out = sequence_mask_numpy(x.asnumpy(), l_np, axis, mask_value)
+                    elif ftype == "reverse":
+                        Y = mx.symbol.SequenceReverse(**args)
+                        np_out = sequence_reverse_numpy(x.asnumpy(), l_np, axis)
+                    fargs = [x, l] if seqlenQ else [x]
+                    gargs = [x.asnumpy(), l_np] if seqlenQ else [x.asnumpy()]
+                    check_symbolic_forward(Y, fargs, [np_out], dtype="asnumpy")
+                    check_numeric_gradient(Y, gargs, grad_nodes={'X':'write'},
+                        numeric_eps=1e-2, rtol=1e-2)
+                    check_numeric_gradient(Y, gargs, grad_nodes={'X':'add'},
+                        numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+                    check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
+                        numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
 
 
 @with_seed()
@@ -3500,7 +3502,11 @@ def test_special_functions_using_scipy():
 
     # erf
     mathematical_core("erf", lambda x: mx.sym.erf(x), lambda x: scipy_special.erf(x),
-                     lambda x: 2.0 / math.sqrt(math.pi) * math.exp(-(x ** 2)), 0.5, 0.5)
+                     lambda x: 2.0 / math.sqrt(math.pi) * np.exp(-(x ** 2)), 0.5, 0.5)
+
+    # erfinv
+    mathematical_core("erfinv", lambda x: mx.sym.erfinv(x), lambda x: scipy_special.erfinv(x),
+                     lambda x: 0.5 * math.sqrt(math.pi) * np.exp(scipy_special.erfinv(x) ** 2), 0.5, 0.5)
 
 
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
@@ -6529,6 +6535,11 @@ def test_bilinear_resize_op():
         x = mx.nd.random.uniform(shape=shape)
         y = mx.nd.contrib.BilinearResize2D(x, height=height, width=width)
         assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+
+        x_scale = width / shape[-1]
+        y_scale = height / shape[-2]
+        y = mx.nd.contrib.BilinearResize2D(x, scale_height=y_scale, scale_width=x_scale)
+        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
     check_bilinear_resize_op(shape, 10, 10)
@@ -7287,6 +7298,25 @@ def test_softmax_cross_entropy():
     np_one_hot_label = np.zeros((batch_size, num_labels))
     np_one_hot_label[np.arange(batch_size), np_label] = 1.
     check_symbolic_forward(sym, {'data' : np_data, 'label' : np_label}, [np.array([f_sm_ce(np_sm, np_one_hot_label)])], rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+def test_split_v2():
+    dim = random.randint(2, 6)
+    shape = rand_shape_nd(dim)
+    axis = random.randint(-dim, dim-1)
+    axis_size = shape[axis]
+    samples = random.randint(0, axis_size - 1)
+    indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+    indices = tuple(indices)
+    mx_data = rand_ndarray(shape)
+    np_data = mx_data.asnumpy()
+    np_out = np.split(np_data, indices_or_sections=indices, axis=axis)
+    data = mx.sym.Variable("data")
+    sym = mx.sym.split_v2(data, indices_or_sections=indices, axis=axis)
+    check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
+    out_grad = [np.ones(arr.shape) for arr in np_out]
+    check_symbolic_backward(sym, {"data": mx_data}, out_grad, [np.concatenate(out_grad, axis=axis)])
 
 
 @with_seed()

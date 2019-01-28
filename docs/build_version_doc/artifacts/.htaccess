@@ -4,15 +4,11 @@ RewriteRule ^get_started/why_mxnet.html$ %{ENV:default_version}/faq/why_mxnet.ht
 RewriteRule ^get_started.*$ %{ENV:default_version}/install/ [R=301,L]
 RewriteRule ^how_to.*$ %{ENV:default_version}/faq/ [R=301,L]
 RewriteRule ^api/python/symbol.html$ %{ENV:default_version}/api/python/symbol/symbol.html [R=301,L]
-RewriteRule ^community/index.html$ %{ENV:default_version}/community/contribute.html [R=301,L]
+RewriteRule ^(?:versions\/[^\/]+\/)?community/index.html$ %{ENV:default_version}/community/contribute.html [R=301,L]
 
 # Navigation bar redirects to latest info
-RewriteRule ^versions\/[0-9.]+\/architecture/(.*)$ %{ENV:default_version}/architecture/$1 [R=301,L]
-RewriteRule ^versions\/[0-9.]+\/community/(.*)$ %{ENV:default_version}/community/$1 [R=301,L]
-RewriteRule ^versions\/[0-9.]+\/faq/(.*)$ %{ENV:default_version}/faq/$1 [R=301,L]
-RewriteRule ^versions\/[0-9.]+\/gluon/(.*)$ %{ENV:default_version}/gluon/$1 [R=301,L]
-RewriteRule ^versions\/[0-9.]+\/install/(.*)$ %{ENV:default_version}/install/$1 [R=301,L]
-RewriteRule ^versions\/[0-9.]+\/tutorials/(.*)$ %{ENV:default_version}/tutorials/$1 [R=301,L]
+RewriteCond %{ENV:default_version}#\/$1 !^([^#]+)#\1$
+RewriteRule ^(versions\/[^\/]+)?(?:\/)?(faq|community|install|gluon|tutorials|architecture)(.*)?$ %{ENV:default_version}/$2$3 [R=301,L]
 
 # Redirect navbar APIs that did not exist
 RewriteRule ^versions/0.11.0/api/python/contrib/onnx.html %{ENV:default_version}/error/api.html [R=301,L]

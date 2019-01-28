@@ -35,12 +35,12 @@ function get_mnist_ubyte()
   filenames = Dict((x[1] => joinpath(mnist_dir, x[2]) for x ∈ pairs(filenames)))
   if !all(isfile, values(filenames))
     cd(mnist_dir) do
-      mnist_dir = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
+      data = download("http://data.mxnet.io/mxnet/data/mnist.zip", "mnist.zip")
         try
-          run(`unzip -u $mnist_dir`)
+          run(`unzip -u $data`)
         catch
           try
-            run(pipe(`7z x $mnist_dir`,stdout = devnull))
+            run(pipeline(`7z x $data`,stdout = devnull))
           catch
             error("Extraction Failed:No extraction program found in path")
           end
@@ -183,15 +183,14 @@ end
 Extract the line of `Defined in ...`
 
 julia> mx._getdocdefine("sgd_update")
-"Defined in src/operator/optimizer_op.cc:L53"
-```
+"Defined in `src/operator/optimizer_op.cc:L53`"
 """
 function _getdocdefine(name::String)
   op = _get_libmx_op_handle(name)
   str = _get_libmx_op_description(name, op)[1]
   lines = split(str, '\n')
-  for m ∈ match.(Ref(r"^Defined in .*$"), lines)
-    m != nothing && return m.match
+  for m ∈ match.(Ref(r"^Defined in ([\S]+)$"), lines)
+    m != nothing && return "Defined in `$(m.captures[1])`"
   end
   ""
 end

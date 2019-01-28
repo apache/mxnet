@@ -168,18 +168,6 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_MKLDNN == 1
 
-NDArray::NDArray(const mkldnn::memory *mkldnn_mem, bool static_data)
-    : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
-  auto mem_pd = mkldnn_mem->get_primitive_desc();
-  auto mem_desc = mem_pd.desc();
-  shape_ = TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
-  dtype_ = get_mxnet_type(mem_desc.data.data_type);
-  auto data = TBlob(mkldnn_mem->get_data_handle(), shape_, cpu::kDevMask, dtype_);
-  ptr_ = std::make_shared<Chunk>(data, 0);
-  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mem_pd, ptr_->shandle.dptr);
-  ptr_->static_data = static_data;
-}
-
 NDArray::NDArray(mkldnn::memory::primitive_desc mem_pd)
     : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
   auto mem_desc = mem_pd.desc();

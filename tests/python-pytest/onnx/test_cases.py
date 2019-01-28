@@ -113,7 +113,8 @@ BASIC_MODEL_TESTS = {
              'test_Softmax',
              'test_softmax_functional',
              'test_softmax_lastdim',
-             ]
+             ],
+    'export': ['test_ConvTranspose2d']
 }
 
 STANDARD_MODEL = {

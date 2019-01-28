@@ -212,6 +212,16 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+ifeq ($(use_blas), open)
+	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
+else ifeq ($(use_blas), atlas)
+	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
+else ifeq ($(use_blas), mkl)
+	CFLAGS += -DMXNET_USE_BLAS_MKL=1
+else ifeq ($(use_blas), apple)
+	CFLAGS += -DMXNET_USE_BLAS_APPLE=1
+endif
+
 # whether to use F16C instruction set extension for fast fp16 compute on CPU
 # if cross compiling you may want to explicitly turn it off if target system does not support it
 ifndef USE_F16C
@@ -596,7 +606,7 @@ rpkg:
 	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
 	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
-	Rscript -e "if(!require(devtools)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
+	Rscript -e "if(!require(roxygen2)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
 	echo "import(Rcpp)" >> R-package/NAMESPACE

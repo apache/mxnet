@@ -65,14 +65,14 @@ struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
 };
 
 struct ReverseKernel {
-  template <typename DType>
+  template <typename DType, typename IType>
   MSHADOW_XINLINE static void Map(const int i, DType *const out_data,
                                   const DType *const in_data,
                                   const OpReqType req,
                                   const index_t max_seq_len,
                                   const index_t batch_size,
                                   const index_t other_dim, const index_t numel,
-                                  const DType *const indices) {
+                                  const IType *const indices) {
     for (index_t batch = 0; batch < batch_size; ++batch) {
       const index_t num_seq =
           indices ? static_cast<index_t>(indices[batch]) : max_seq_len;
@@ -102,13 +102,13 @@ struct ReverseKernel {
   }
 };
 
-template <typename xpu, typename DType>
+template <typename xpu, typename DType, typename IType>
 class SequenceReverseOp : public Operator {
  public:
   explicit SequenceReverseOp(SequenceReverseParam p) { this->param_ = p; }
   void sequence_reverse(const mshadow::Tensor<xpu, 3, DType> &data,
                         const mshadow::Tensor<xpu, 3, DType> &out,
-                        const OpReqType req, const DType *const indices,
+                        const OpReqType req, const IType *const indices,
                         mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -145,9 +145,9 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 3, DType> out =
         out_data[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
 
-    const DType *const indices =
+    const IType *const indices =
         param_.use_sequence_length
-            ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
+            ? in_data[seq_reverse::kSequenceLength].dptr<IType>()
             : nullptr;
 
     sequence_reverse(data, out, req[seq_reverse::kOut], indices, s);
@@ -179,9 +179,9 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 3, DType> output_grad =
         out_grad[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
 
-    const DType *const indices =
+    const IType *const indices =
         param_.use_sequence_length
-            ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
+            ? in_data[seq_reverse::kSequenceLength].dptr<IType>()
             : nullptr;
 
     sequence_reverse(output_grad, data_grad, req[seq_reverse::kData], indices,
@@ -193,7 +193,7 @@ class SequenceReverseOp : public Operator {
 };  // class SequenceReverseOp
 
 template <typename xpu>
-Operator *CreateOp(SequenceReverseParam param, int dtype);
+Operator *CreateOp(SequenceReverseParam param, int dtype, int itype);
 
 #if DMLC_USE_CXX11
 class SequenceReverseProp : public OperatorProperty {
@@ -249,8 +249,6 @@ class SequenceReverseProp : public OperatorProperty {
     for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

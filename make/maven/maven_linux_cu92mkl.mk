@@ -37,10 +37,10 @@ DEBUG = 0
 USE_PROFILER = 1
 
 # whether to turn on signal handler (e.g. segfault logger)
-USE_SIGNAL_HANDLER = 0
+USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -lz -framework CoreFoundation -framework Security  -Wl,-exported_symbols_list,$(CURDIR)/make/config/libmxnet.sym,-rpath,'$${ORIGIN}',-dead_strip
+ADD_LDFLAGS += -L$(DEPS_PATH)/lib $(DEPS_PATH)/lib/libculibos.a -lpng -ltiff -ljpeg -lz -ldl -lgfortran -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
 
 # the additional compile flags you want to add
 ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
@@ -52,7 +52,7 @@ ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
-USE_BLAS=apple
+USE_BLAS=openblas
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -60,34 +60,37 @@ USE_BLAS=apple
 USE_OPENCV = 1
 
 # whether use CUDA during compile
-USE_CUDA = 0
+USE_CUDA = 1
 
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = NONE
+USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-9.2
 
-# whether use CuDNN R3 library
-USE_CUDNN = 0
+# whether to use CuDNN library
+USE_CUDNN = 1
+
+# whether to use NCCL library
+USE_NCCL = 1
 
 # CUDA architecture setting: going with all of them.
 # For CUDA < 6.0, comment the *_50 lines for compatibility.
 # CUDA_ARCH :=
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVRTC = 0
+USE_NVRTC = 1
 
 # use openmp for parallelization
-USE_OPENMP = 0
+USE_OPENMP = 1
 USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
+
+# whether use MKL-DNN library
+USE_MKLDNN = 1
 
 
 # MKL ML Library for Intel CPU/Xeon Phi
 # Please refer to MKL_README.md for details
-
-# whether use MKL-DNN library
-USE_MKLDNN = 0
 
 # MKL ML Library folder, need to be root for /usr/local
 # Change to User Home directory for standard user

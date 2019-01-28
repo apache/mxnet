@@ -34,7 +34,7 @@ mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/li
 mx_cmake_lib_debug = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests'
 mx_cmake_mkldnn_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so, build/3rdparty/mkldnn/src/libmkldnn.so.0'
 mx_mkldnn_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libiomp5.so, lib/libmkldnn.so.0, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_tensorrt_lib = 'lib/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
+mx_tensorrt_lib = 'build/libmxnet.so, lib/libnvonnxparser_runtime.so.0, lib/libnvonnxparser.so.0, lib/libonnx_proto.so, lib/libonnx.so'
 mx_lib_cpp_examples = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/*'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/cpp-package/example/*'
 
@@ -521,6 +521,32 @@ def compile_windows_gpu_mkldnn() {
     }]
 }
 
+def test_static_scala_cpu() {
+  return ['Static build CPU 14.04 Scala' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/ut-publish-scala-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_scala_static_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
+def test_static_python_cpu() {
+  return ['Static build CPU 14.04 Python' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/ut-publish-python-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python_mkl', false)
+          }
+        }
+    }
+  }]
+}
+
 def test_unix_python2_cpu() {
     return ['Python2: CPU': {
       node(NODE_LINUX_CPU) {
@@ -874,7 +900,34 @@ def test_unix_clojure_cpu() {
     }]
 }
 
+def test_unix_clojure_integration_cpu() {
+    return ['Clojure: CPU Integration': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-clojure-integration-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure_integration', false)
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_r_cpu() {
+    return ['R: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-r-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('cpu', mx_lib, true)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_perl_cpu() {
     return ['Perl: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-perl-cpu') {
@@ -930,13 +983,27 @@ def test_unix_cpp_cpu() {
     }]
 }
 
-def test_unix_r_gpu() {
+def test_unix_perl_gpu() {
     return ['Perl: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib, true)
             utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_cpugpu_perl', true)
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_r_gpu() {
+    return ['R: GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/ut-r-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('gpu', mx_lib, true)
+            utils.docker_run('ubuntu_gpu', 'unittest_ubuntu_gpu_R', true)
             utils.publish_test_coverage()
           }
         }
@@ -1150,6 +1217,34 @@ def test_windows_python3_cpu() {
             } finally {
               utils.collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
             }
+          }
+        }
+      }
+    }]
+}
+
+def test_windows_julia07_cpu() {
+    return ['Julia 0.7: CPU Win': {
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/ut-julia07-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            unstash 'windows_package_cpu'
+            powershell 'ci/windows/test_jl07_cpu.ps1'
+          }
+        }
+      }
+    }]
+}
+
+def test_windows_julia10_cpu() {
+    return ['Julia 1.0: CPU Win': {
+      node(NODE_WINDOWS_CPU) {
+        ws('workspace/ut-julia10-cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git_win()
+            unstash 'windows_package_cpu'
+            powershell 'ci/windows/test_jl10_cpu.ps1'
           }
         }
       }
