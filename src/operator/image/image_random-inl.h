@@ -31,7 +31,6 @@
 #include <vector>
 #include <cmath>
 #include <limits>
-#include <algorithm>
 #include <utility>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -339,7 +338,7 @@ void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   }
 }
 
-void FlipLeftRight(const nnvm::NodeAttrs &attrs,
+inline void FlipLeftRight(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -351,7 +350,7 @@ void FlipLeftRight(const nnvm::NodeAttrs &attrs,
   });
 }
 
-void FlipTopBottom(const nnvm::NodeAttrs &attrs,
+inline void FlipTopBottom(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -363,7 +362,7 @@ void FlipTopBottom(const nnvm::NodeAttrs &attrs,
   });
 }
 
-void RandomFlipLeftRight(
+inline void RandomFlipLeftRight(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -384,7 +383,7 @@ void RandomFlipLeftRight(
   });
 }
 
-void RandomFlipTopBottom(
+inline void RandomFlipTopBottom(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -436,7 +435,7 @@ inline void AdjustBrightnessImpl(const float& alpha_b,
   });
 }
 
-void RandomBrightness(const nnvm::NodeAttrs &attrs,
+inline void RandomBrightness(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
@@ -592,7 +591,7 @@ inline void RGB2HLSConvert(const float& src_r,
   *dst_s = s;
 }
 
-void HLS2RGBConvert(const float& src_h,
+inline void HLS2RGBConvert(const float& src_h,
                     const float& src_l,
                     const float& src_s,
                     float *dst_r,
@@ -643,7 +642,7 @@ void HLS2RGBConvert(const float& src_h,
   *dst_r = r * 255.f;
 }
 
-void AdjustHueImpl(float alpha,
+inline void AdjustHueImpl(float alpha,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -670,7 +669,7 @@ void AdjustHueImpl(float alpha,
   });
 }
 
-void RandomHue(const nnvm::NodeAttrs &attrs,
+inline void RandomHue(const nnvm::NodeAttrs &attrs,
                const OpContext &ctx,
                const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req,
@@ -703,7 +702,7 @@ struct RandomColorJitterParam : public dmlc::Parameter<RandomColorJitterParam> {
   }
 };
 
-void RandomColorJitter(const nnvm::NodeAttrs &attrs,
+inline void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
@@ -772,7 +771,7 @@ struct RandomLightingParam : public dmlc::Parameter<RandomLightingParam> {
   }
 };
 
-void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
+inline void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
                         const OpContext &ctx,
                         const std::vector<TBlob> &inputs,
                         const std::vector<OpReqType> &req,
@@ -807,7 +806,7 @@ void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
   });
 }
 
-void AdjustLighting(const nnvm::NodeAttrs &attrs,
+inline void AdjustLighting(const nnvm::NodeAttrs &attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
                     const std::vector<OpReqType> &req,
@@ -817,7 +816,7 @@ void AdjustLighting(const nnvm::NodeAttrs &attrs,
   AdjustLightingImpl(param.alpha, ctx, inputs, req, outputs);
 }
 
-void RandomLighting(const nnvm::NodeAttrs &attrs,
+inline void RandomLighting(const nnvm::NodeAttrs &attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
                     const std::vector<OpReqType> &req,
