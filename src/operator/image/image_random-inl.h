@@ -554,7 +554,7 @@ inline void RandomSaturation(const nnvm::NodeAttrs &attrs,
   AdjustSaturationImpl(alpha_s, ctx, inputs, req, outputs);
 }
 
-void RGB2HLSConvert(const float& src_r,
+inline void RGB2HLSConvert(const float& src_r,
                     const float& src_g,
                     const float& src_b,
                     float *dst_h,
