@@ -206,6 +206,7 @@ class DropoutOp {
     this->pkeep_ = 1.0f - param.p;
     this->mode_ = static_cast<dropout::DropoutOpMode>(param.mode);
     this->axes_ = param.axes;
+    this->dropout_passthrough_ = true;
 #if MXNET_USE_CUDNN_DROPOUT
     this->cudnn_off_ = param.cudnn_off && param.cudnn_off.value();
     this->ctx_ = ctx;
@@ -339,6 +340,7 @@ class DropoutOp {
                const std::vector<TBlob> &in_data,
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &out_data) {
+    this->dropout_passthrough_ = true;
     if (req[dropout::kOut] != kNullOp) {
       CHECK_EQ(in_data.size(), 1U);
       if (ctx.is_train) {
@@ -349,6 +351,7 @@ class DropoutOp {
       const TBlob &out = out_data[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
       if (ctx.is_train || this->mode_ == dropout::kAlways) {
+        this->dropout_passthrough_ = false;
         if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT
           if (MKLAvailable()) {
@@ -420,7 +423,8 @@ class DropoutOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    if (ctx.is_train || mode_ == dropout::kAlways) {
+    if (!this->dropout_passthrough_) {
+      this->dropout_passthrough_ = true;
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
@@ -483,6 +487,7 @@ class DropoutOp {
   /*! \brief Dropout mode */
   dropout::DropoutOpMode mode_;
   TShape axes_;
+  bool dropout_passthrough_;
 #if MXNET_USE_CUDNN_DROPOUT
   bool cudnn_off_;
   Context ctx_;
