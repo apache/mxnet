@@ -23,8 +23,8 @@
 # choice of compiler
 #--------------------
 
-export CC = gcc
-export CXX = g++
+export CC = $(brew --prefix llvm)/bin/clang
+export CXX = $(brew --prefix llvm)/bin/clang++
 export NVCC = nvcc
 
 # whether compile with options for MXNet developer
@@ -78,7 +78,7 @@ USE_CUDNN = 0
 USE_NVRTC = 0
 
 # use openmp for parallelization
-USE_OPENMP = 0
+USE_OPENMP = 1
 USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
 
