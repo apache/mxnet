@@ -16,6 +16,7 @@
 # under the License.
 
 """A sphnix-doc plugin to build mxnet docs"""
+from __future__ import print_function
 import subprocess
 import re
 import os
@@ -434,6 +435,22 @@ def add_buttons(app, docname, source):
 
         # source[i] = '\n'.join(lines)
 
+
+def copy_artifacts(app):
+    """Copies artifacts needed for website presentation"""
+    print("Copying artifacts...")
+    dest_path = app.builder.outdir + '/error'
+    _run_cmd('cd ' + app.builder.srcdir)
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    _run_cmd('cp build_version_doc/artifacts/404.html ' + dest_path)
+    _run_cmd('cp build_version_doc/artifacts/api.html ' + dest_path)
+    dest_path = app.builder.outdir + '/_static'
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    _run_cmd('cp _static/mxnet.css ' + dest_path)
+
+
 def setup(app):
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
@@ -458,6 +475,7 @@ def setup(app):
     if _R_DOCS:
         print("Building R Docs!")
         app.connect("builder-inited", build_r_docs)
+    app.connect("builder-inited", copy_artifacts)
     app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)
     app.add_config_value('recommonmark_config', {
