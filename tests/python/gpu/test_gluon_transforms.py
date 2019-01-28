@@ -58,7 +58,7 @@ def test_normalize():
     # Default normalize values i.e., mean=0, std=1
     data_in_3d_def = nd.random.uniform(0, 1, (3, 300, 300))
     out_nd_3d_def = transforms.Normalize()(data_in_3d_def)
-    data_expected_3d_def = data_in_3d.asnumpy()
+    data_expected_3d_def = data_in_3d_def.asnumpy()
     assert_almost_equal(data_expected_3d_def, out_nd_3d_def.asnumpy())
 
     # Invalid Input - Neither 3D or 4D input
