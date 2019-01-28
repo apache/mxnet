@@ -97,12 +97,12 @@ class WaveNet(nn.Block):
         """
         Description : module for postprocess
         """
-        output = F.relu(x)
+        output = nd.relu(x)
         output = self.conv_post_1(output)
-        output = F.relu(output)
+        output = nd.relu(output)
         output = self.conv_post_2(output)
         output = nd.reshape(output, (output.shape[1], output.shape[2]))
-        output = F.transpose(output, axes=(1, 0))
+        output = nd.transpose(output, axes=(1, 0))
         return output
 
     def residue_forward(self, x, conv_sigmoid, conv_tanh, skip_scale, residue_scale):
@@ -111,7 +111,7 @@ class WaveNet(nn.Block):
         """
         output = x
         output_sigmoid, output_tanh = conv_sigmoid(output), conv_tanh(output)
-        output = F.sigmoid(output_sigmoid) * F.tanh(output_tanh)
+        output = nd.sigmoid(output_sigmoid) * nd.tanh(output_tanh)
         skip = skip_scale(output)
         output = residue_scale(output)
         output = output + x[:, :, -output.shape[2]:]

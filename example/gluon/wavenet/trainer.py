@@ -55,7 +55,7 @@ class Train():
         self.use_gpu = config.use_gpu
         self.ctx = setting_ctx(self.use_gpu)
         self.load_file = config.load_file
-        self.save_file = conflg.save_file
+        self.save_file = config.save_file
         self.build_model()
 
     def build_model(self):
@@ -66,6 +66,7 @@ class Train():
          dilation_depth=self.dilation_depth, n_repeat=self.n_repeat)
         #parameter initialization
         self.net.collect_params().initialize(ctx=self.ctx)
+        self.net.hybridize()
         #set optimizer
         self.trainer = gluon.Trainer(self.net.collect_params(), optimizer='adam',\
         optimizer_params={'learning_rate':0.01})

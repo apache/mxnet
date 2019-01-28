@@ -21,6 +21,7 @@ import os
 import numpy as np
 from mxnet import nd
 from scipy.io import wavfile
+from utils import encode_mu_law
 # pylint: disable=invalid-name, too-many-arguments
 
 def load_wav(file_nm):
