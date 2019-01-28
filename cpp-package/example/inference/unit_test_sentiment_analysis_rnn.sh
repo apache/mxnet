@@ -19,14 +19,14 @@
 set -e # exit on the first error
 export EXE_NAME=sentiment_analysis_rnn
 
-# Running the example with dog image.
+# Running the example with a movie review.
 if [ "$(uname)" == "Darwin" ]; then
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./${EXE_NAME} --input "This movie has the great story and best acting" 2&> ${EXE_NAME}.log
+    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./${EXE_NAME}  --input "This movie is the best." 2&> ${EXE_NAME}.log
 else
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./${EXE_NAME} --input "This movie has the great story and best acting" 2&> ${EXE_NAME}.log
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./${EXE_NAME}  --input "This movie is the best." 2&> ${EXE_NAME}.log
 fi
-result=`grep "The sentiment score between 0 and 1.*\=" sentiment_analysis_rnn.log | cut -d '=' -f2`
-if [ $result ==  "0.910454" ];
+result=`grep "The sentiment score between 0 and 1.*\=" ${EXE_NAME}.log | cut -d '=' -f2`
+if [ $result ==  "0.964498" ];
 then
     echo "PASS: ${EXE_NAME} correctly predicted the sentiment with score = $result"
     exit 0

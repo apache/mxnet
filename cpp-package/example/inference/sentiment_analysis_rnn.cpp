@@ -22,8 +22,10 @@
  * The example performs following tasks.
  * 1. Load the pre-trained RNN model,
  * 2. Load the dictionary file that contains word to index mapping.
- * 3. Convert the input string to vector of indices and padded to match the input data length.
- * 4. Run the forward pass and predict the output string.
+ * 3. Create executors for pre-determined input lengths.
+ * 4. Convert each line in the input to the vector of indices.
+ * 5. Predictor finds the right executor for each line.
+ * 4. Run the forward pass for each line and predicts the sentiment scores.
  * The example uses a pre-trained RNN model that is trained with the IMDB dataset.
  */
 
@@ -39,7 +41,7 @@
 
 using namespace mxnet::cpp;
 
-static const int DEFAULT_NUM_WORDS = 10;
+static const int DEFAULT_BUCKET_KEYS[] = {5, 10, 15, 20, 25, 30};
 static const char DEFAULT_S3_URL[] = "https://s3.amazonaws.com/mxnet-cpp/RNN_model/";
 
 /*
@@ -54,9 +56,9 @@ class Predictor {
     Predictor(const std::string& model_json,
               const std::string& model_params,
               const std::string& input_dictionary,
-              bool use_gpu = false,
-              int num_words = DEFAULT_NUM_WORDS);
-    float PredictSentiment(const std::string &input_sequence);
+              const std::vector<int>& bucket_keys,
+              bool use_gpu = false);
+    float PredictSentiment(const std::string &input_review);
     ~Predictor();
 
  private:
@@ -67,17 +69,18 @@ class Predictor {
         struct stat buffer;
         return (stat(name.c_str(), &buffer) == 0);
     }
-    int ConverToIndexVector(const std::string& input,
+    float PredictSentimentForOneLine(const std::string &input_line);
+    int ConvertToIndexVector(const std::string& input,
                       std::vector<float> *input_vector);
     int GetIndexForOutputSymbolName(const std::string& output_symbol_name);
     float GetIndexForWord(const std::string& word);
+    int GetClosestBucketKey(int num_words);
     std::map<std::string, NDArray> args_map;
     std::map<std::string, NDArray> aux_map;
     std::map<std::string, int>  wordToIndex;
     Symbol net;
-    Executor *executor;
+    std::map<int, Executor*> executor_buckets;
     Context global_ctx = Context::cpu();
-    int num_words;
 };
 
 
@@ -91,15 +94,17 @@ class Predictor {
  * The constructor:
  *  1. Loads the model and parameter files.
  *  2. Loads the dictionary file to create index to word and word to index maps.
- *  3. Invokes the SimpleBind to bind the input argument to the model and create an executor.
- *
- *  The SimpleBind is expected to be invoked only once.
+ *  3. For each bucket key in the input vector of bucket keys, it invokes the SimpleBind to
+ *     create the executor. The bucket key determines the length of input data required
+ *     for that executor.
+ *  4. Creates a map of bucket key to corresponding executor.
+ *  5. The model is loaded only once. The executors share the memory for the parameters.
  */
 Predictor::Predictor(const std::string& model_json,
                      const std::string& model_params,
                      const std::string& input_dictionary,
-                     bool use_gpu,
-                     int num_words):num_words(num_words) {
+                     const std::vector<int>& bucket_keys,
+                     bool use_gpu) {
   if (use_gpu) {
     global_ctx = Context::gpu();
   }
@@ -117,11 +122,14 @@ Predictor::Predictor(const std::string& model_json,
   // Load the model parameters.
   LoadParameters(model_params);
 
-  args_map["data0"] = NDArray(Shape(num_words, 1), global_ctx, false);
-  args_map["data1"] = NDArray(Shape(1), global_ctx, false);
-
-  executor = net.SimpleBind(global_ctx, args_map, std::map<std::string, NDArray>(),
-                              std::map<std::string, OpReqType>(), aux_map);
+  // Create the executors for each bucket key. The bucket key represents the shape of input data.
+  for (int bucket : bucket_keys) {
+    args_map["data0"] = NDArray(Shape(bucket, 1), global_ctx, false);
+    args_map["data1"] = NDArray(Shape(1), global_ctx, false);
+    Executor* executor = net.SimpleBind(global_ctx, args_map, std::map<std::string, NDArray>(),
+                                std::map<std::string, OpReqType>(), aux_map);
+    executor_buckets[bucket] = executor;
+  }
 }
 
 
@@ -212,8 +220,9 @@ float Predictor::GetIndexForWord(const std::string& word) {
 /*
  * The function populates the input vector with indices from the dictionary that
  * correspond to the words in the input string.
+ * The function returns the number of words in the input line.
  */
-int Predictor::ConverToIndexVector(const std::string& input, std::vector<float> *input_vector) {
+int Predictor::ConvertToIndexVector(const std::string& input, std::vector<float> *input_vector) {
   std::istringstream input_string(input);
   input_vector->clear();
   const char delimiter = ' ';
@@ -245,18 +254,52 @@ int Predictor::GetIndexForOutputSymbolName(const std::string& output_symbol_name
 
 
 /*
- * The following function runs the forward pass on the model.
- * The executor is created in the constructor.
+ * The function finds the closest bucket for the given num_words in the input line.
+ * If the exact bucket key exists, function returns that bucket key.
+ * If the matching bucket key does not exist, function looks for the next bucket key
+ * that is greater than given num_words.
+ * If the next larger bucket does not exist, function looks for the previous bucket key
+ * that is lesser than given num_words.
  */
-float Predictor::PredictSentiment(const std::string& input_text) {
+int Predictor::GetClosestBucketKey(int num_words) {
+  int closest_bucket_key = -1;
+
+  // If exact bucket is found return that.
+  if (executor_buckets.find(num_words) != executor_buckets.end()) {
+    closest_bucket_key = num_words;
+  } else if (executor_buckets.upper_bound(num_words) != executor_buckets.end()) {
+    // Check for nearest larger bucket.
+    closest_bucket_key = executor_buckets.upper_bound(num_words)->first;
+  } else if (executor_buckets.lower_bound(num_words) != executor_buckets.end()) {
+    // Check of nearest lower bucket. The input line would
+    closest_bucket_key = executor_buckets.lower_bound(num_words)->first;
+  }
+  return closest_bucket_key;
+}
+
+
+/*
+ * The following function runs the forward pass on the model for the given line.
+ *
+ */
+float Predictor::PredictSentimentForOneLine(const std::string& input_line) {
   /*
    * Initialize a vector of length equal to 'num_words' with index corresponding to <eos>.
    * Convert the input string to a vector of indices that represent
    * the words in the input string.
    */
-  std::vector<float> index_vector(num_words, GetIndexForWord("<eos>"));
-  int num_words = ConverToIndexVector(input_text, &index_vector);
+  std::vector<float> index_vector(GetIndexForWord("<eos>"));
+  int num_words = ConvertToIndexVector(input_line, &index_vector);
+  int bucket_key = GetClosestBucketKey(num_words);
 
+  /*
+   * The index_vector has size equal to num_words. The vector needs to be padded if
+   * the bucket_key is greater than num_words. The vector needs to be trimmed if
+   * the bucket_key is smaller than num_words.
+   */
+  index_vector.resize(bucket_key, GetIndexForWord("<eos>"));
+
+  Executor* executor = executor_buckets[bucket_key];
   executor->arg_dict()["data0"].SyncCopyFromCPU(index_vector.data(), index_vector.size());
   executor->arg_dict()["data1"] = num_words;
 
@@ -285,10 +328,38 @@ float Predictor::PredictSentiment(const std::string& input_text) {
 
 
 /*
+ * The function predicts the sentiment score for the input review.
+ * The function splits the input review in lines (separated by '.').
+ * It finds sentiment score for each line and computes the average.
+ */
+float Predictor::PredictSentiment(const std::string& input_review) {
+  std::istringstream input_string(input_review);
+  int num_lines = 0;
+  float sentiment_score = 0.0f;
+
+  // Split the iput review in separate lines separated by '.'
+  const char delimiter = '.';
+  std::string line;
+  while (std::getline(input_string, line, delimiter)) {
+    // Predict the sentiment score for each line.
+    float score = PredictSentimentForOneLine(line);
+    LG << "Input Line : [" << line << "] Score : " << score;
+    sentiment_score += score;
+    num_lines++;
+  }
+
+  // Find the average sentiment score.
+  sentiment_score = sentiment_score / num_lines;
+  return sentiment_score;
+}
+
+
+/*
  * The destructor frees the executor and notifies MXNetEngine to shutdown.
  */
 Predictor::~Predictor() {
-  if (executor) {
+  for (auto bucket : this->executor_buckets) {
+    Executor* executor = bucket.second;
     delete executor;
   }
   MXNotifyShutdown();
@@ -301,13 +372,13 @@ Predictor::~Predictor() {
 void printUsage() {
     std::cout << "Usage:" << std::endl;
     std::cout << "sentiment_analysis_rnn " << std::endl
-              << "--input Input movie review line."
-              << "e.g. \"This movie is the best.\" "
-              << "The input is trimmed or padded with 0s to match the max_num_words."  << std::endl
-              << "[--max_num_words]  "
-              << "The number of words in the sentence to be considered for sentiment analysis. "
-              << "Default is " << DEFAULT_NUM_WORDS << std::endl
+              << "--input Input movie review. The review can be single line or multiline."
+              << "e.g. \"This movie is the best.\" OR  "
+              << "\"This movie is the best. The direction is awesome.\" " << std::endl
               << "[--gpu]  Specify this option if workflow needs to be run in gpu context "
+              << std::endl
+              << "If the review is multiline, the example predicts sentiment score for each line "
+              << "and the final score is the average of scores obtained for each line."
               << std::endl;
 }
 
@@ -333,8 +404,6 @@ int main(int argc, char** argv) {
   std::string model_file_params ="./sentiment_analysis-0010.params";
   std::string input_dictionary = "./sentiment_token_to_idx.txt";
   std::string input_review = "This movie is the best";
-
-  int num_words = DEFAULT_NUM_WORDS;
   bool use_gpu = false;
 
   int index = 1;
@@ -342,11 +411,6 @@ int main(int argc, char** argv) {
     if (strcmp("--input", argv[index]) == 0) {
       index++;
       input_review = (index < argc ? argv[index]:input_review);
-    } else if (strcmp("--max_num_words", argv[index]) == 0) {
-      index++;
-      if (index < argc) {
-        std::istringstream(std::string(argv[index])) >> num_words;
-      }
     } else if (strcmp("--gpu", argv[index]) == 0) {
       use_gpu = true;
     } else if (strcmp("--help", argv[index]) == 0) {
@@ -373,12 +437,14 @@ int main(int argc, char** argv) {
 
   Download_files(files);
 
+  std::vector<int> buckets(DEFAULT_BUCKET_KEYS,
+                           DEFAULT_BUCKET_KEYS + sizeof(DEFAULT_BUCKET_KEYS) / sizeof(int));
+
   try {
     // Initialize the predictor object
-    Predictor predict(model_file_json, model_file_params, input_dictionary, use_gpu,
-                      num_words);
+    Predictor predict(model_file_json, model_file_params, input_dictionary, buckets, use_gpu);
 
-    // Run the forward pass to predict the sentiment score.
+    // Run the forward pass to predict the sentiment score for the given review.
     float sentiment_score = predict.PredictSentiment(input_review);
     LG << "The sentiment score between 0 and 1, (1 being positive)=" << sentiment_score;
   } catch (std::runtime_error &error) {

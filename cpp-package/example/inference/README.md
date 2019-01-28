@@ -41,11 +41,17 @@ Alternatively, The script [unit_test_inception_inference.sh](<https://github.com
 ```
 
 ### [sentiment_analysis_rnn.cpp](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/sentiment_analysis_rnn.cpp>)
-This example demonstrates how you can load a pre-trained RNN model and use it to predict the sentiment expressed in the given line of the movie review with the MXNet C++ API. The example performs the following tasks
+This example demonstrates how you can load a pre-trained RNN model and use it to predict the sentiment expressed in the given movie review with the MXNet C++ API. The example is capable of processing variable legnth inputs. It performs the following tasks
 - Loads the pre-trained RNN model.
 - Loads the dictionary file containing the word to index mapping.
-- Converts the input string to vector of indices that's truncated or padded to match the input data length.
-- Runs the forward pass and predicts the sentiment score between 0 to 1 where 1 represents positive sentiment.
+- Splits the review in multiple lines separated by "."
+- The example predicts the sentiment score for individual lines and outputs the average score.
+
+The example is capable of processing variable length input by implementing following technique:
+- The example creates executors for pre-determined input lenghts such as 5, 10, 15, 20, 25, etc called **buckets**.
+- Each bucket is identified by **bucket-key** representing the length on input required by corresponding executor.
+- For each line in the review, the example finds the number of words in the line and tries to find a closest bucket or executor.
+- If the bucket key does not match the number of words in the line, the example pads or trims the input line to match the required length.
 
 The example uses a pre-trained RNN model trained with a IMDB dataset. The RNN model was built by exercising the [GluonNLP Sentiment Analysis Tutorial](<http://gluon-nlp.mxnet.io/examples/sentiment_analysis/sentiment_analysis.html#>). The tutorial uses 'standard_lstm_lm_200' available in Gluon Model Zoo and fine tunes it for the IMDB dataset
 The model consists of :
@@ -68,43 +74,34 @@ The example's command line parameters are as shown below:
 ./sentiment_analysis_rnn --help
 Usage:
 sentiment_analysis_rnn
---input Input movie review line.e.g. "This movie is the best." The input is trimmed or padded with 0s to match the max_num_words.
-[--max_num_words]  The number of words in the sentence to be considered for sentiment analysis. Default is 10
+--input Input movie review. The review can be single line or multiline.e.g. "This movie is the best." OR  "This movie is the best. The direction is awesome."
 [--gpu]  Specify this option if workflow needs to be run in gpu context
+If the review is multiline, the example predicts sentiment score for each line and the final score is the average of scores obtained for each line.
 
 ```
 
-The following command line shows running the example with input line containing less number of words than max_num_words.
-The input will be padded to match the max_num_words.
+The following command line shows running the example with the movie review containing only one line.
 
 ```
-./sentiment_analysis_rnn --input "This movie has the great story and best acting"
+./sentiment_analysis_rnn --input "This movie has the great story"
 ```
 
 The above command will output the sentiment score as follows:
 ```
-The sentiment score between 0 and 1, (1 being positive)=0.910454
+sentiment_analysis_rnn.cpp:346: Input Line : [This movie has the great story] Score : 0.999898
+sentiment_analysis_rnn.cpp:449: The sentiment score between 0 and 1, (1 being positive)=0.999898
 ```
 
-The following command line shows invoking the example with input having negative sentiment.
+The following command line shows invoking the example with the multi-line review.
 
 ```
-./sentiment_analysis_rnn --input "The movie is worst" --max_num_words 4
+./sentiment_analysis_rnn --input "This movie is the best. The direction is awesome."
 ```
-The above command will output the sentiment score as follows:
+The above command will output the sentiment score for each line in the review and average score as follows:
 ```
-The sentiment score between 0 and 1, (1 being positive)=0.0315846
-```
-
-The following command line shows running the example with input line containing more number of words than max_num_words.
-The input will be trimmed to match the max_num_words.
-
-```
-./sentiment_analysis_rnn --input "The best movie ever made in the history of cinema" --max_num_words 5
-```
-The above command will output the sentiment score as follows:
-```
-The sentiment score between 0 and 1, (1 being positive)=0.716847
+Input Line : [This movie is the best] Score : 0.964498
+Input Line : [ The direction is awesome] Score : 0.968855
+The sentiment score between 0 and 1, (1 being positive)=0.966677
 ```
 
 Alternatively, you can run the [unit_test_sentiment_analysis_rnn.sh](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/unit_test_sentiment_analysis_rnn.sh>) script.
