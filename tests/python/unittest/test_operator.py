@@ -4013,9 +4013,12 @@ def test_cast_float32_to_float16():
                         small_delta = y / 2**FP32_FRACTION_BITS
                         val = (-1.0)**sign_bit * 2.0**exponent * (1.0 + fraction + small_delta)
                         yield val
+        # Add np.nan as a final data value to process
+        yield np.nan
 
     input_np = np.array(list(get_data())).astype(np.float32)
-    # temp cast to np.float64 gets around numpy bug: see https://github.com/numpy/numpy/issues/12721
+    # The intermediate cast to np.float64 below gets around a numpy rounding bug that is fixed
+    # as of numpy 1.17 by PR https://github.com/numpy/numpy/pull/12722
     expected_output = input_np.astype(np.float64).astype(np.float16)
 
     x = mx.sym.Variable('x', dtype=np.float32)
@@ -4027,7 +4030,8 @@ def test_cast_float32_to_float16():
     exe.forward(is_train=False)
     sym_output = exe.outputs[0].asnumpy()
     for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
-        assert model_fp16_val == np_fp16_val, \
+        assert (model_fp16_val == np_fp16_val) or \
+               (np.isnan(model_fp16_val) and np.isnan(np_fp16_val)), \
             'fp32->fp16 cast mismatch: with fp32 value {}, model_fp16 = {}, numpy_fp16 = {}'.format(
                 fp32_val, model_fp16_val, np_fp16_val)
 
