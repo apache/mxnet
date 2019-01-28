@@ -870,8 +870,9 @@ unittest_ubuntu_cpu_clojure() {
 
 unittest_ubuntu_cpu_clojure_integration() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
-    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    cd scala-package
+    mvn install
+    cd ..
     ./contrib/clojure-package/integration-tests.sh
 }
 
