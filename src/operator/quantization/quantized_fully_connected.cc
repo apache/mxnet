@@ -204,8 +204,8 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
   if (!param.no_bias) {
     Tensor<cpu, 1, int8_t> bias = in_data[fullc::kBias].get_with_shape<cpu, 1, int8_t>(
       Shape1(wshape[0]), s);
-    Tensor<cpu, 1, float> bias_min = in_data[num_inputs + 7].get<cpu, 1, float>(s);
-    Tensor<cpu, 1, float> bias_max = in_data[num_inputs + 8].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> bias_min = in_data[num_inputs + 4].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> bias_max = in_data[num_inputs + 5].get<cpu, 1, float>(s);
 
     Kernel<QuantizedSumInitKernelWithBias, cpu>::Launch(s, n, out.dptr_,
         bias.dptr_, out_min.dptr_, out_max.dptr_, bias_min.dptr_, bias_max.dptr_);
