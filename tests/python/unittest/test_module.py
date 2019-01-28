@@ -174,8 +174,6 @@ def test_module_layout():
 
 @with_seed()
 def test_save_load():
-    previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
-    os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
     def dict_equ(a, b):
         assert set(a) == set(b)
         for k in a:
@@ -213,7 +211,6 @@ def test_save_load():
     assert mod._symbol.tojson() == mod2._symbol.tojson()
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
-    os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
 
 @with_seed()

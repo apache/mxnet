@@ -97,8 +97,7 @@ class Arg:
         'double':'double',\
         'double or None':'dmlc::optional<double>',\
         'Shape or None':'dmlc::optional<Shape>',\
-        'string':'const std::string&',\
-        'tuple of <float>':'nnvm::Tuple<mx_float>'}
+        'string':'const std::string&'}
     name = ''
     type = ''
     description = ''
@@ -408,7 +407,6 @@ if __name__ == "__main__":
                       "#include \"mxnet-cpp/op_util.h\"\n"
                       "#include \"mxnet-cpp/operator.h\"\n"
                       "#include \"dmlc/optional.h\"\n"
-                      "#include \"nnvm/tuple.h\"\n"
                       "\n"
                       "namespace mxnet {\n"
                       "namespace cpp {\n"
