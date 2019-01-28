@@ -262,7 +262,7 @@ class Dropout(HybridBlock):
         self._axes = axes
 
     def hybrid_forward(self, F, x):
-        return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd')
+        return F.Dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
 
     def __repr__(self):
         s = '{name}(p = {_rate}, axes={_axes})'
