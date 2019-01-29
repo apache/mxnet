@@ -116,7 +116,7 @@ private[mxnet] abstract class GeneratorBase {
     */
   protected def structGeneration(c: blackbox.Context)
                                 (funcDef: List[c.universe.DefDef], annottees: c.Expr[Any]*)
-  : c.Expr[Any] = {
+  : c.Expr[Nothing] = {
     import c.universe._
     val inputs = annottees.map(_.tree).toList
     // pattern match on the inputs
