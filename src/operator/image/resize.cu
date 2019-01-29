@@ -17,10 +17,10 @@
  * under the License.
  */
 /*!
- * Copyright (c) 2018 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file bilinear_resize.cu
  * \brief bilinear resize operator
- * \author Hang Zhang
+ * \author Hang Zhang, Jake Lee
 */
 #include <algorithm>
 #include "./resize-inl.h"

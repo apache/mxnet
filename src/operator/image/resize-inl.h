@@ -16,7 +16,6 @@
 * specific language governing permissions and limitations
 * under the License.
 */
-
 /*!
 * \file resize-inl.h
 * \brief image resize operator using opencv and only support bilinear resize
@@ -177,6 +176,7 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   SizeParam size;
+#if MXNET_USE_CUDA 
   if (std::is_same<xpu, gpu>::value) {
     CHECK(param.interp == 1) << "GPU version only support bilinear interpolation";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -191,7 +191,10 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
         ResizeImplCUDA<DType, Tensor<gpu, 4, DType>, float>(s, input, output);
       }
     });
-  } else if (inputs[0].ndim() == 3) {
+    return ;
+  }
+#endif  // MXNET_USE_CUDA
+  if (inputs[0].ndim() == 3) {
     size = GetHeightAndWidth(inputs[0].shape_[H], inputs[0].shape_[W], param);
     ResizeImpl(inputs, outputs, size.height, size.width, param.interp);
   } else {

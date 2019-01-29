@@ -20,7 +20,7 @@
  * Copyright (c) 2019 by Contributors
  * \file bilinear_resize-inl.cuh
  * \brief bilinear resize operator cuda implementation
- * \author Hang Zhang
+ * \author Hang Zhang, Jake Lee
 */
 
 #ifndef MXNET_OPERATOR_CONTRIB_BILINEAR_RESIZE_CUH_
