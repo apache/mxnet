@@ -285,12 +285,20 @@ bool CachedOp::SetForwardGraph(
   }
 
   bool match = true;
-  match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
+  bool contain_dynamic_shape = false;
+  match &= CheckAndInferShape(&g, std::move(shape_inputs), true,
+                              {0, 0}, {0, 0}, &contain_dynamic_shape);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
   exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
+  // When dynmaic shape exists, it is not feasible to plan memory ahead of time
+  if (contain_dynamic_shape) {
+    g.attrs.erase("forward_mem_plan");
+    g.attrs.erase("full_mem_plan");
+    return false;
+  }
   if (!match) {
     g.attrs.erase("forward_mem_plan");
     g.attrs.erase("full_mem_plan");

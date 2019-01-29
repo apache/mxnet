@@ -161,7 +161,8 @@ class LoopState {
     // only static_alloc supports nested call of CachedOp.
     std::vector<std::pair<std::string, std::string> > kwargs = {
       {"inline_limit", "0"},
-      {"static_alloc", "1"}
+      {"static_alloc", "1"},
+      {"is_dynamic", "1"}
     };
     return std::make_shared<CachedOp>(sym, kwargs);
   }
