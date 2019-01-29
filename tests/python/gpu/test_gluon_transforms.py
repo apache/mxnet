@@ -15,24 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 from __future__ import print_function
+import os
+import sys
 import mxnet as mx
 import mxnet.ndarray as nd
 import numpy as np
 from mxnet import gluon
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, set_default_context
 from mxnet.test_utils import almost_equal
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import assertRaises, setup_module, with_seed, teardown
 
 
-@with_seed()
-def test_to_tensor():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(out_nd.asnumpy(), np.transpose(
-        data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
-
+set_default_context(mx.gpu(0))
 
 @with_seed()
 def test_normalize():
@@ -57,6 +55,12 @@ def test_normalize():
     data_expected_4d[1][:][:][2] = data_expected_4d[1][:][:][2] - 2.0
     assert_almost_equal(data_expected_4d, out_nd_4d.asnumpy())
 
+    # Default normalize values i.e., mean=0, std=1
+    data_in_3d_def = nd.random.uniform(0, 1, (3, 300, 300))
+    out_nd_3d_def = transforms.Normalize()(data_in_3d_def)
+    data_expected_3d_def = data_in_3d_def.asnumpy()
+    assert_almost_equal(data_expected_3d_def, out_nd_3d_def.asnumpy())
+
     # Invalid Input - Neither 3D or 4D input
     invalid_data_in = nd.random.uniform(0, 1, (5, 5, 3, 300, 300))
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
@@ -66,47 +70,3 @@ def test_normalize():
     invalid_data_in = nd.random.uniform(0, 1, (5, 4, 300, 300))
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
-
-
-@with_seed()
-def test_flip_left_right():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    flip_in = data_in[:, ::-1, :]
-    data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(flip_in, data_trans.asnumpy())
-
-
-@with_seed()
-def test_flip_top_bottom():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    flip_in = data_in[::-1, :, :]
-    data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(flip_in, data_trans.asnumpy())
-
-
-@with_seed()
-def test_transformer():
-    from mxnet.gluon.data.vision import transforms
-
-    transform = transforms.Compose([
-        transforms.Resize(300),
-        transforms.Resize(300, keep_ratio=True),
-        transforms.CenterCrop(256),
-        transforms.RandomResizedCrop(224),
-        transforms.RandomFlipLeftRight(),
-        transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
-        transforms.RandomBrightness(0.1),
-        transforms.RandomContrast(0.1),
-        transforms.RandomSaturation(0.1),
-        transforms.RandomHue(0.1),
-        transforms.RandomLighting(0.1),
-        transforms.ToTensor(),
-        transforms.Normalize([0, 0, 0], [1, 1, 1])])
-
-    transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
-
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
