@@ -158,21 +158,20 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
     const Acctype w1lambda = w1r - w1;
     const Acctype w0lambda = Acctype(1) - w1lambda;
 
-      for (auto n = 0; n < batch_size; ++n) {
-        for (int c = 0; c < channels; ++c) {
-          if (layout == NHWC) {
-            const Acctype val = h0lambda * (w0lambda * data1[n][h1][w1][c]
+    for (auto n = 0; n < batch_size; ++n) {
+      for (int c = 0; c < channels; ++c) {
+        if (layout == NHWC) {
+          const Acctype val = h0lambda * (w0lambda * data1[n][h1][w1][c]
                             + w1lambda * data1[n][h1][w1+w1p][c])
                             + h1lambda * (w0lambda * data1[n][h1+h1p][w1][c]
                             + w1lambda * data1[n][h1+h1p][w1+w1p][c]);
-            data2[n][h2][w2][c] = ScalarConvert<Acctype, Dtype>::to(val);
-          } else {
-            const Acctype val = h0lambda * (w0lambda * data1[n][c][h1][w1]
+          data2[n][h2][w2][c] = ScalarConvert<Acctype, Dtype>::to(val);
+        } else {
+          const Acctype val = h0lambda * (w0lambda * data1[n][c][h1][w1]
                             + w1lambda * data1[n][c][h1][w1+w1p])
                             + h1lambda * (w0lambda * data1[n][c][h1+h1p][w1]
                             + w1lambda * data1[n][c][h1+h1p][w1+w1p]);
-            data2[n][c][h2][w2] = ScalarConvert<Acctype, Dtype>::to(val);
-          }
+          data2[n][c][h2][w2] = ScalarConvert<Acctype, Dtype>::to(val);
         }
       }
     }
