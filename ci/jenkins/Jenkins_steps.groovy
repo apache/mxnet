@@ -933,7 +933,7 @@ def test_unix_r_mkldnn_cpu() {
         ws('workspace/ut-r-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
+            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_minimal_R', false)
             utils.publish_test_coverage()
           }
         }

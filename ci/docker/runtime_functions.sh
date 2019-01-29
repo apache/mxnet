@@ -902,6 +902,22 @@ unittest_ubuntu_cpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
 
+unittest_ubuntu_minimal_R() {
+    set -ex
+    mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    build_ccache_wrappers
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
+    # make -j not supported
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
+    R CMD INSTALL --library=/tmp/r-site-library R-package
+    R_LIBS=/tmp/r-site-library Rscript -e "library(mxnet); as.array(mx.nd.ones(c(2,3)))"
+}
+
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
