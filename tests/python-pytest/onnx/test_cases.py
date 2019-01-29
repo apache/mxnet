@@ -78,7 +78,8 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_max_',
              'test_softplus',
              'test_reduce_',
-             'test_split_equal'
+             'test_split_equal',
+             'test_upsample_n'
              ],
     'import': ['test_gather',
                'test_softsign',

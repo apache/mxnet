@@ -148,5 +148,5 @@ _convert_map = {
     'SpaceToDepth'      : spacetodepth,
     'Hardmax'           : hardmax,
     'LpNormalization'   : lpnormalization,
-    'UpSampling'        : upsampling
+    'Upsample'          : upsampling
 }
