@@ -84,6 +84,6 @@ def test_resize():
     # Test with normal case 4D input float type
     data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3))
     out_nd_4d = transforms.Resize((100, 100))(data_in_3d)
-    data_in_4d_nchw = nd.moveaxis(data_in_3d, 3, 1)
+    data_in_4d_nchw = nd.moveaxis(data_in_4d, 3, 1)
     data_expected_4d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3))
     assert_almost_equal(out_nd_4d.asnumpy(), data_expected_4d.asnumpy())
