@@ -67,6 +67,7 @@ def test_normalize():
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
+
 @with_seed()
 def test_resize():
     def _test_resize_with_diff_type(dtype):
