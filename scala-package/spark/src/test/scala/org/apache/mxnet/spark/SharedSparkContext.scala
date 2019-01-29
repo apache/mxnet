@@ -81,17 +81,15 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
   }
 
   private def getJarFilePath(root: String): String = {
-    for (platform <- List("linux-x86_64-cpu", "linux-x86_64-gpu", "osx-x86_64-cpu")) {
-      val jarFiles = new File(s"$root/$platform/target/").listFiles(new FileFilter {
-        override def accept(pathname: File) = {
-          pathname.getAbsolutePath.endsWith(".jar") &&
-            !pathname.getAbsolutePath.contains("javadoc") &&
-            !pathname.getAbsolutePath.contains("sources")
-        }
-      })
-      if (jarFiles != null && jarFiles.nonEmpty) {
-        return jarFiles.head.getAbsolutePath
+    val jarFiles = new File(s"$root/target/").listFiles(new FileFilter {
+      override def accept(pathname: File) = {
+        pathname.getAbsolutePath.endsWith(".jar") &&
+          !pathname.getAbsolutePath.contains("bundle") &&
+          !pathname.getAbsolutePath.contains("src")
       }
+    })
+    if (jarFiles != null && jarFiles.nonEmpty) {
+      return jarFiles.head.getAbsolutePath
     }
     null
   }
@@ -110,6 +108,8 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
       null
     }
   }
+
+  private def getNativeJars(root:String): String = new File(root).listFiles().map(_.toPath).mkString(",")
 
   protected def buildLeNet(): MXNet = {
     val workingDir = composeWorkingDirPath
@@ -130,6 +130,8 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
   protected def buildMlp(): MXNet = {
     val workingDir = composeWorkingDirPath
     val assemblyRoot = s"$workingDir/../assembly"
+    val nativeRoot =s"$workingDir/../native/target/lib"
+
     new MXNet()
       .setBatchSize(128)
       .setLabelName("softmax_label")
@@ -139,7 +141,7 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
       .setNumEpoch(10)
       .setNumServer(1)
       .setNumWorker(numWorkers)
-      .setExecutorJars(s"${getJarFilePath(assemblyRoot)},$getSparkJar")
+      .setExecutorJars(s"${getJarFilePath(assemblyRoot)},$getSparkJar,${getNativeJars(nativeRoot)}")
       .setJava("java")
       .setTimeout(0)
   }
