@@ -18,9 +18,10 @@
 */
 
 /*!
- *  Copyright (c) 2018 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file image_utils.h
  * \brief the image operator utility function implementation
+ * \author Jake Lee
  */
 
 #ifndef MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
