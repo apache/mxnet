@@ -89,10 +89,9 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 
 #### Build Scala from an Existing MXNet Installation
-If you have already built MXNet **from source** and are looking to setup Scala from that point, you may simply run the following from the MXNet source root:
+If you have already built MXNet **from source** and are looking to setup Scala from that point, you may simply run the following from the MXNet `scala-package` folder:
 
 ```
-cd scala-package
 mvn install
 ```
 
