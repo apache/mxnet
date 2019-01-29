@@ -279,7 +279,7 @@ class Resize(HybridBlock):
 
 
     Inputs:
-        - **data**: input tensor with (Hi x Wi x C) or (N x H x W x C) shape.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape.
 
     Outputs:
         - **out**: output tensor with (H x W x C) or (N x H x W x C) shape.

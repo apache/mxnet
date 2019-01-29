@@ -178,7 +178,7 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   SizeParam size;
 #if MXNET_USE_CUDA
   if (std::is_same<xpu, gpu>::value) {
-    CHECK(param.interp == 1) << "GPU version only support bilinear interpolation";
+    CHECK(param.interp == 1) << "interp should be 1 for using Resize on GPU.";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       if (inputs[0].ndim() == 3) {
