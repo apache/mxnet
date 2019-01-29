@@ -23,8 +23,8 @@
 # choice of compiler
 #--------------------
 
-export CC = $(brew --prefix llvm)/bin/clang
-export CXX = $(brew --prefix llvm)/bin/clang++
+export CC = gcc
+export CXX = g++
 export NVCC = nvcc
 
 # whether compile with options for MXNet developer

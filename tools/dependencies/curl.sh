@@ -38,6 +38,7 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
                 --without-zsh-functions-dir \
                 --without-librtmp \
                 --without-libssh2 \
+                --without-libidn2 \
                 --disable-debug \
                 --disable-curldebug \
                 --enable-symbol-hiding=yes \
