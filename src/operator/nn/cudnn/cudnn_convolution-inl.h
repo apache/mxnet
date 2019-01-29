@@ -1038,7 +1038,8 @@ class CuDNNConvolutionOp {
   // Always allocates at least one word.
   mshadow::Tensor<gpu, 1, DType> AllocateTempWorkspace(const OpContext &ctx, size_t size_bytes) {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-    size_t size_words = std::max<size_t>(1, RoundToMultiple(size_bytes, sizeof(DType)) / sizeof(DType));
+    size_t size_words =
+      std::max<size_t>(1, RoundToMultiple(size_bytes, sizeof(DType)) / sizeof(DType));
     return ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
         mshadow::Shape1(size_words), s);
   }
