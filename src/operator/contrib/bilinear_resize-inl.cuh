@@ -117,28 +117,12 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
     Tensor<xpu, 4, Dtype> data2,
     ImageLayout layout) {
   int index = threadIdx.x + blockIdx.x * blockDim.x;
-  int batch_size;
-  int channels;
-  int height1;
-  int width1;
-  int height2;
-  int width2;
-
-  if (layout == NHWC) {
-    batch_size = data1.size(0);
-    channels = data1.size(3);
-    height1 = data1.size(1);
-    width1 = data1.size(2);
-    height2 = data2.size(1);
-    width2 = data2.size(2);
-  } else {
-    batch_size = data1.size(0);
-    channels = data1.size(1);
-    height1 = data1.size(2);
-    width1 = data1.size(3);
-    height2 = data2.size(2);
-    width2 = data2.size(3);
-  }
+  int batch_size = (layout == NHWC) ? data1.size(0) : data1.size(0);
+  int channels = (layout == NHWC) ? data1.size(3) : data1.size(1);
+  int height1 = (layout == NHWC) ? data1.size(1) : data1.size(2);
+  int width1 = (layout == NHWC) ? data1.size(2) : data1.size(3);
+  int height2 = (layout == NHWC) ? data2.size(1) : data2.size(2);
+  int width2 = (layout == NHWC) ? data2.size(2): data2.size(3);
 
   if (index < n) {
     const int w2 = index % width2;  // 0:width2-1
@@ -148,16 +132,12 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
       const int h1 = h2;
       const int w1 = w2;
 
-      if (layout == NHWC) {
-        for (int n = 0; n < batch_size; ++n) {
-          for (int c = 0; c < channels; ++c) {
+      for (int n = 0; n < batch_size; ++n) {
+        for (int c = 0; c < channels; ++c) {
+          if (layout == NHWC) {
             const Dtype val = data1[n][h1][w1][c];
             data2[n][h2][w2][c] = val;
-          }
-        }
-      } else {
-        for (int n = 0; n < batch_size; ++n) {
-          for (int c = 0; c < channels; ++c) {
+          } else {
             const Dtype val = data1[n][c][h1][w1];
             data2[n][c][h2][w2] = val;
           }
@@ -178,24 +158,21 @@ __global__ void caffe_gpu_interp2_kernel(const int n,
     const Acctype w1lambda = w1r - w1;
     const Acctype w0lambda = Acctype(1) - w1lambda;
 
-    if (layout == NHWC) {
       for (auto n = 0; n < batch_size; ++n) {
         for (int c = 0; c < channels; ++c) {
-          const Acctype val = h0lambda * (w0lambda * data1[n][h1][w1][c]
+          if (layout == NHWC) {
+            const Acctype val = h0lambda * (w0lambda * data1[n][h1][w1][c]
                             + w1lambda * data1[n][h1][w1+w1p][c])
                             + h1lambda * (w0lambda * data1[n][h1+h1p][w1][c]
                             + w1lambda * data1[n][h1+h1p][w1+w1p][c]);
-          data2[n][h2][w2][c] = ScalarConvert<Acctype, Dtype>::to(val);
-        }
-      }
-    } else {
-      for (auto n = 0; n < batch_size; ++n) {
-        for (int c = 0; c < channels; ++c) {
-          const Acctype val = h0lambda * (w0lambda * data1[n][c][h1][w1]
+            data2[n][h2][w2][c] = ScalarConvert<Acctype, Dtype>::to(val);
+          } else {
+            const Acctype val = h0lambda * (w0lambda * data1[n][c][h1][w1]
                             + w1lambda * data1[n][c][h1][w1+w1p])
                             + h1lambda * (w0lambda * data1[n][c][h1+h1p][w1]
                             + w1lambda * data1[n][c][h1+h1p][w1+w1p]);
-          data2[n][c][h2][w2] = ScalarConvert<Acctype, Dtype>::to(val);
+            data2[n][c][h2][w2] = ScalarConvert<Acctype, Dtype>::to(val);
+          }
         }
       }
     }
