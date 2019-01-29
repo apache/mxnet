@@ -74,9 +74,16 @@ def test_normalize():
 
 @with_seed()
 def test_resize():
-    # Test with normal case 3D input
-    data_in_3d = nd.random.uniform(0, 255, (300, 300, 3)).astype('uint8')
+    # Test with normal case 3D input float type
+    data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
     out_nd_3d = transforms.Resize((100, 100))(data_in_3d)
     data_in_4d_nchw = nd.moveaxis(nd.expand_dims(data_in_3d, axis=0), 3, 1)
     data_expected_3d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3))[0]
     assert_almost_equal(out_nd_3d.asnumpy(), data_expected_3d.asnumpy())
+
+    # Test with normal case 4D input float type
+    data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3))
+    out_nd_4d = transforms.Resize((100, 100))(data_in_3d)
+    data_in_4d_nchw = nd.moveaxis(data_in_3d, 3, 1)
+    data_expected_4d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3))
+    assert_almost_equal(out_nd_4d.asnumpy(), data_expected_4d.asnumpy())
