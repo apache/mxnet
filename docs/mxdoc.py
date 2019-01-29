@@ -105,7 +105,7 @@ def build_r_docs(app):
 
 def build_scala(app):
     """build scala for scala docs, java docs, and clojure docs to use"""
-    _run_cmd("cd %s/../scala-package && mvn install -DskipTests" % app.builder.srcdir)
+    _run_cmd("cd %s/../scala-package && mvn -B install -DskipTests" % app.builder.srcdir)
 
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
