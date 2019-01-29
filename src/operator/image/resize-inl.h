@@ -68,10 +68,11 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
         "INTER_LINEAR - a bilinear interpolation"
         "INTER_AREA - resampling using pixel area relation"
         "INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood"
-        "INTER_LANCZOS4 - a Lanczos interpolation over 8x8 pixel neighborhood");
+        "INTER_LANCZOS4 - a Lanczos interpolation over 8x8 pixel neighborhood"
+        "Note that the GPU version only support bilinear interpolation");
   }
 };
-
+// handle the keep ratio param
 inline SizeParam GetHeightAndWidth(int data_h,
                                     int data_w,
                                     const ResizeParam& param) {
@@ -177,6 +178,7 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   SizeParam size;
   if (std::is_same<xpu, gpu>::value) {
+    CHECK(param.interp == 1) << "GPU version only support bilinear interpolation";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       if (inputs[0].ndim() == 3) {

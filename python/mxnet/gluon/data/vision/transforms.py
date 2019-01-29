@@ -291,6 +291,7 @@ class Resize(HybridBlock):
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
     >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
     <NDArray 3x500x1000x3 @cpu(0)>
     """
     def __init__(self, size, keep_ratio=False, interpolation=1):
