@@ -3292,36 +3292,38 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
     L = mx.symbol.Variable('L') # lengths
     shapes = [(3, 4), (1, 1), (3, 4, 3, 1, 1)]
     for seqlenQ in [True, False]:
-        for s in shapes:
-            x = mx.random.uniform(-1, 1, s, ctx=mx.cpu()).copyto(xpu)
-            batch = s[1] if (axis == 0) else s[0]
-            seqlen = s[axis]
-            l_np = np.random.randint(1, seqlen + 1, batch)
-            l = mx.nd.array(l_np, ctx=mx.cpu()).copyto(xpu)
-            if not seqlenQ:
-                l_np = None
-            args = {'data':X, 'use_sequence_length':seqlenQ, "axis":axis}
-            if seqlenQ:
-                args['sequence_length'] = L
-            if ftype == "last":
-                Y = mx.symbol.SequenceLast(**args)
-                np_out = sequence_last_numpy(x.asnumpy(), l_np, axis)
-            elif ftype == "mask":
-                args['value'] = mask_value
-                Y = mx.symbol.SequenceMask(**args)
-                np_out = sequence_mask_numpy(x.asnumpy(), l_np, axis, mask_value)
-            elif ftype == "reverse":
-                Y = mx.symbol.SequenceReverse(**args)
-                np_out = sequence_reverse_numpy(x.asnumpy(), l_np, axis)
-            fargs = [x, l] if seqlenQ else [x]
-            gargs = [x.asnumpy(), l_np] if seqlenQ else [x.asnumpy()]
-            check_symbolic_forward(Y, fargs, [np_out])
-            check_numeric_gradient(Y, gargs, grad_nodes={'X':'write'},
-                numeric_eps=1e-2, rtol=1e-2)
-            check_numeric_gradient(Y, gargs, grad_nodes={'X':'add'},
-                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
-            check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
-                numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+        for ary_dtype in [np.float32]:
+            for idx_dtype in [np.int32, np.float32]:
+                for s in shapes:
+                    x = mx.random.uniform(-1, 1, s, ctx=mx.cpu()).astype(ary_dtype).copyto(xpu)
+                    batch = s[1] if (axis == 0) else s[0]
+                    seqlen = s[axis]
+                    l_np = np.random.randint(1, seqlen + 1, batch)
+                    l = mx.nd.array(l_np, ctx=mx.cpu(), dtype=idx_dtype).copyto(xpu)
+                    if not seqlenQ:
+                        l_np = None
+                    args = {'data':X, 'use_sequence_length':seqlenQ, "axis":axis}
+                    if seqlenQ:
+                        args['sequence_length'] = L
+                    if ftype == "last":
+                        Y = mx.symbol.SequenceLast(**args)
+                        np_out = sequence_last_numpy(x.asnumpy(), l_np, axis)
+                    elif ftype == "mask":
+                        args['value'] = mask_value
+                        Y = mx.symbol.SequenceMask(**args)
+                        np_out = sequence_mask_numpy(x.asnumpy(), l_np, axis, mask_value)
+                    elif ftype == "reverse":
+                        Y = mx.symbol.SequenceReverse(**args)
+                        np_out = sequence_reverse_numpy(x.asnumpy(), l_np, axis)
+                    fargs = [x, l] if seqlenQ else [x]
+                    gargs = [x.asnumpy(), l_np] if seqlenQ else [x.asnumpy()]
+                    check_symbolic_forward(Y, fargs, [np_out], dtype="asnumpy")
+                    check_numeric_gradient(Y, gargs, grad_nodes={'X':'write'},
+                        numeric_eps=1e-2, rtol=1e-2)
+                    check_numeric_gradient(Y, gargs, grad_nodes={'X':'add'},
+                        numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
+                    check_numeric_gradient(Y, gargs, grad_nodes={'X':'null'},
+                        numeric_eps=1e-3, rtol=1e-2, atol=1E-4)
 
 
 @with_seed()
@@ -3500,7 +3502,11 @@ def test_special_functions_using_scipy():
 
     # erf
     mathematical_core("erf", lambda x: mx.sym.erf(x), lambda x: scipy_special.erf(x),
-                     lambda x: 2.0 / math.sqrt(math.pi) * math.exp(-(x ** 2)), 0.5, 0.5)
+                     lambda x: 2.0 / math.sqrt(math.pi) * np.exp(-(x ** 2)), 0.5, 0.5)
+
+    # erfinv
+    mathematical_core("erfinv", lambda x: mx.sym.erfinv(x), lambda x: scipy_special.erfinv(x),
+                     lambda x: 0.5 * math.sqrt(math.pi) * np.exp(scipy_special.erfinv(x) ** 2), 0.5, 0.5)
 
 
 def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_init=2.):
@@ -4391,6 +4397,7 @@ def test_where():
     test_1d_cond()
 
 
+@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/13600")
 @with_seed()
 def test_softmin():
     for ndim in range(1, 5):
@@ -6528,6 +6535,11 @@ def test_bilinear_resize_op():
         x = mx.nd.random.uniform(shape=shape)
         y = mx.nd.contrib.BilinearResize2D(x, height=height, width=width)
         assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+
+        x_scale = width / shape[-1]
+        y_scale = height / shape[-2]
+        y = mx.nd.contrib.BilinearResize2D(x, scale_height=y_scale, scale_width=x_scale)
+        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
     check_bilinear_resize_op(shape, 10, 10)
@@ -7244,6 +7256,25 @@ def test_softmax_cross_entropy():
 
 
 @with_seed()
+def test_split_v2():
+    dim = random.randint(2, 6)
+    shape = rand_shape_nd(dim)
+    axis = random.randint(-dim, dim-1)
+    axis_size = shape[axis]
+    samples = random.randint(0, axis_size - 1)
+    indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+    indices = tuple(indices)
+    mx_data = rand_ndarray(shape)
+    np_data = mx_data.asnumpy()
+    np_out = np.split(np_data, indices_or_sections=indices, axis=axis)
+    data = mx.sym.Variable("data")
+    sym = mx.sym.split_v2(data, indices_or_sections=indices, axis=axis)
+    check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
+    out_grad = [np.ones(arr.shape) for arr in np_out]
+    check_symbolic_backward(sym, {"data": mx_data}, out_grad, [np.concatenate(out_grad, axis=axis)])
+
+
+@with_seed()
 def test_invalid_kernel_size():
     invalid_kernel_size = 28
     assert_exception(
@@ -7294,6 +7325,73 @@ def test_invalid_max_pooling_pad_type_same():
         pool_type='max',
         name='pooling',
         pooling_convention="same")
+
+
+@with_seed()
+def test_image_normalize():
+    # Part 1 - Test 3D Input
+    shape_3d = (3, 28, 28)
+    mean = (0, 1, 2)
+    std = (3, 2, 1)
+
+    data_in_3d = mx.nd.random.uniform(0, 1, shape_3d)
+    data_expected_3d = data_in_3d.asnumpy()
+    data_expected_3d[:][:][0] = data_expected_3d[:][:][0] / 3.0
+    data_expected_3d[:][:][1] = (data_expected_3d[:][:][1] - 1.0) / 2.0
+    data_expected_3d[:][:][2] = data_expected_3d[:][:][2] - 2.0
+
+    data = mx.symbol.Variable('data')
+    img_norm_sym = mx.sym.image.normalize(data=data, mean=mean, std=std)
+
+    # check forward
+    check_symbolic_forward(img_norm_sym, [data_in_3d], [data_expected_3d],
+                           rtol=1e-5, atol=1e-5)
+
+    # Gradient is 1/std_dev
+    grad_expected_3d = np.ones(shape_3d)
+    grad_expected_3d[:][:][0] = 1 / 3.0
+    grad_expected_3d[:][:][1] = 1 / 2.0
+    grad_expected_3d[:][:][2] = 1 / 1.0
+
+    # check backward
+    check_symbolic_backward(img_norm_sym, location=[data_in_3d], out_grads=[mx.nd.ones(shape_3d)],
+                            expected=[grad_expected_3d], rtol=1e-5, atol=1e-5)
+
+    # check backward using finite difference
+    check_numeric_gradient(img_norm_sym, [data_in_3d], atol=0.001)
+
+    # Part 2 - Test 4D Input
+    shape_4d = (2, 3, 28, 28)
+
+    data_in_4d = mx.nd.random.uniform(0, 1, shape_4d)
+    data_expected_4d = data_in_4d.asnumpy()
+    data_expected_4d[0][:][:][0] = data_expected_4d[0][:][:][0] / 3.0
+    data_expected_4d[0][:][:][1] = (data_expected_4d[0][:][:][1] - 1.0) / 2.0
+    data_expected_4d[0][:][:][2] = data_expected_4d[0][:][:][2] - 2.0
+    data_expected_4d[1][:][:][0] = data_expected_4d[1][:][:][0] / 3.0
+    data_expected_4d[1][:][:][1] = (data_expected_4d[1][:][:][1] - 1.0) / 2.0
+    data_expected_4d[1][:][:][2] = data_expected_4d[1][:][:][2] - 2.0
+
+    # check forward
+    check_symbolic_forward(img_norm_sym, [data_in_4d], [data_expected_4d],
+                           rtol=1e-5, atol=1e-5)
+
+    # Gradient is 1/std_dev
+    grad_expected_4d = np.ones(shape_4d)
+    grad_expected_4d[0][:][:][0] = 1 / 3.0
+    grad_expected_4d[0][:][:][1] = 1 / 2.0
+    grad_expected_4d[0][:][:][2] = 1 / 1.0
+    grad_expected_4d[1][:][:][0] = 1 / 3.0
+    grad_expected_4d[1][:][:][1] = 1 / 2.0
+    grad_expected_4d[1][:][:][2] = 1 / 1.0
+
+    # check backward
+    check_symbolic_backward(img_norm_sym, location=[data_in_4d], out_grads=[mx.nd.ones(shape_4d)],
+                            expected=[grad_expected_4d], rtol=1e-5, atol=1e-5)
+
+    # check backward using finite difference
+    check_numeric_gradient(img_norm_sym, [data_in_4d], atol=0.001)
+
 
 if __name__ == '__main__':
     import nose

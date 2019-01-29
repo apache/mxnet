@@ -1,16 +1,20 @@
-# Example of Autencoder
+# Example of a Convolutional Autoencoder
 
-Autoencoder architecture is often used for unsupervised feature learning. This [link](http://ufldl.stanford.edu/tutorial/unsupervised/Autoencoders/) contains an introduction tutorial to autoencoders. This example illustrates a simple autoencoder using stack of fully-connected layers for both encoder and decoder. The number of hidden layers and size of each hidden layer can be customized using command line arguments.
+Autoencoder architectures are often used for unsupervised feature learning. This [link](http://ufldl.stanford.edu/tutorial/unsupervised/Autoencoders/) contains an introduction tutorial to autoencoders. This example illustrates a simple autoencoder using a stack of convolutional layers for both the encoder and the decoder. 
 
-## Training Stages
-This example uses a two-stage training. In the first stage, each layer of encoder and its corresponding decoder are trained separately in a layer-wise training loop. In the second stage the entire autoencoder network is fine-tuned end to end.
+
+![](https://cdn-images-1.medium.com/max/800/1*LSYNW5m3TN7xRX61BZhoZA.png)
+
+([Diagram source](https://towardsdatascience.com/autoencoders-introduction-and-implementation-3f40483b0a85))
+
+
+The idea of an autoencoder is to learn to use bottleneck architecture to encode the input and then try to decode it to reproduce the original. By doing so, the network learns to effectively compress the information of the input, the resulting embedding representation can then be used in several domains. For example as featurized representation for visual search, or in anomaly detection.
 
 ## Dataset
-The dataset used in this example is [MNIST](http://yann.lecun.com/exdb/mnist/) dataset. This example uses scikit-learn module to download this dataset.
 
-## Simple autoencoder example
-mnist_sae.py: this example uses a simple auto-encoder architecture to encode and decode MNIST images with size of 28x28 pixels. It contains several command line arguments. Pass -h (or --help) to view all available options. To start the training on CPU (use --gpu option for training on GPU) using default options:
+The dataset used in this example is [FashionMNIST](https://github.com/zalandoresearch/fashion-mnist) dataset. 
 
-```
-python mnist_sae.py
-```
+## Variational Autoencoder
+
+You can check an example of variational autoencoder [here](https://gluon.mxnet.io/chapter13_unsupervised-learning/vae-gluon.html)
+

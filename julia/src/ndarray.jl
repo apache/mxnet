@@ -61,22 +61,22 @@ function fromTypeFlag(T::TypeFlag)
 end
 
 # create a NDArray handle of specific shape
-function _ndarray_alloc(shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool) where N
+function _ndarray_alloc(shape::NTuple{N,Int}, ctx::Context, delay_alloc::Bool) where N
   h_ref  = Ref{MX_handle}(0)
-  shape  = flipdim(MX_uint[shape...],1)
+  shape  = collect(reverse(MX_uint.(shape)))
   @mxcall(:MXNDArrayCreate, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Ref{MX_handle}),
-      shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, h_ref)
+      shape, N, ctx.device_type, ctx.device_id, delay_alloc, h_ref)
   handle = MX_NDArrayHandle(h_ref[])
   return handle
 end
 
 # create a NDArray handle of specific shape type
-function _ndarray_alloc(:: Type{T}, shape :: NTuple{N, Int}, ctx :: Context, delay_alloc :: Bool) where {T <: DType,N}
+function _ndarray_alloc(::Type{T}, shape::NTuple{N,Int}, ctx::Context, delay_alloc::Bool) where {T<:DType,N}
   h_ref  = Ref{MX_handle}(0)
-  shape  = flipdim(MX_uint[shape...],1)
+  shape  = collect(reverse(MX_uint.(shape)))
   dtype  = toTypeFlag(T)
   @mxcall(:MXNDArrayCreateEx, (Ptr{MX_uint}, MX_uint, Cint, Cint, Cint, Cint, Ref{MX_handle}),
-      shape, length(shape), ctx.device_type, ctx.device_id, delay_alloc, dtype, h_ref)
+      shape, N, ctx.device_type, ctx.device_id, delay_alloc, dtype, h_ref)
   handle = MX_NDArrayHandle(h_ref[])
   return handle
 end
@@ -110,85 +110,87 @@ mutable struct NDArray{T,N}
   handle   :: MX_NDArrayHandle
   writable :: Bool
 
-  NDArray{T,N}(handle, writable = true) where {T,N} = new(handle, writable)
+  NDArray{T,N}(handle::MX_NDArrayHandle, writable::Bool = true) where {T,N} =
+    new(handle, writable)
 end
 
-NDArray(x::AbstractArray{T}) where {T<:DType} = copy(collect(x), cpu())
-NDArray(x::Array{T}) where {T<:DType} = copy(x, cpu())
+# UndefInitializer constructors
+NDArray{T,N}(::UndefInitializer, dims::NTuple{N,Integer};
+             writable = true, ctx::Context = cpu()) where {T,N} =
+  NDArray{T,N}(_ndarray_alloc(T, dims, ctx, false), writable)
+NDArray{T,N}(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {T,N} =
+  NDArray{T,N}(undef, dims; kw...)
+
+NDArray{T}(::UndefInitializer, dims::NTuple{N,Integer}; kw...) where {T,N} =
+  NDArray{T,N}(undef, dims; kw...)
+NDArray{T}(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {T,N} =
+  NDArray{T,N}(undef, dims; kw...)
+
+NDArray(::UndefInitializer, dims::NTuple{N,Integer}; kw...) where {N} =
+  NDArray{DEFAULT_DTYPE,N}(undef, dims; kw...)
+NDArray(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {N} =
+  NDArray{DEFAULT_DTYPE,N}(undef, dims; kw...)
+
+NDArray(x::AbstractArray{<:DType}) = copy(collect(x), cpu())
+NDArray(x::Array{<:DType})         = copy(x, cpu())
+
 NDArray(::Type{T}, x::AbstractArray) where {T<:DType} =
   copy(convert(AbstractArray{T}, x), cpu())
+
 NDArray(handle, writable = true) =
   NDArray{eltype(handle), ndims(handle)}(handle, writable)
 
 # type aliases
-const NDArrayOrReal = Union{NDArray, Real}
+const NDArrayOrReal = Union{NDArray,Real}
 const VecOfNDArray = AbstractVector{<:NDArray}
 
-@unfuse NDArray
+Base.unsafe_convert(::Type{MX_handle}, x::NDArray) =
+  Base.unsafe_convert(MX_handle, x.handle)
+Base.convert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
+Base.cconvert(T::Type{MX_handle}, x::NDArray) = Base.unsafe_convert(T, x)
+
+MX_handle(x::NDArray) = Base.convert(MX_handle, x)
 
 function Base.show(io::IO, x::NDArray)
-  print(io, "NDArray ")
-  Base.showarray(io, try_get_shared(x, sync = :read), header = false)
+  print(io, "NDArray(")
+  Base.show(io, try_get_shared(x, sync = :read))
+  print(io, ")")
 end
 
 # for REPL
-function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T, N}) where {T, N}
+function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T,N}) where {T,N}
   type_ = split(string(typeof(x)), '.', limit=2)[end]
-  size_ = N == 1 ? "$(length(x))-element" : join(size(x), "×")
-  println(io, "$size_ $type_ @ $(context(x)):")
-  Base.showarray(io, try_get_shared(x, sync = :read), false, header = false)
+  n = length(x)
+  size_ = N == 1 ? "$n-element" : join(size(x), "×")
+  print(io, "$size_ $type_ @ $(context(x))", (n == 0) ? "" : ":\n")
+  Base.print_array(io, try_get_shared(x, sync = :read))
 end
-
-Base.unsafe_convert(::Type{MX_handle}, obj::NDArray) =
-  Base.unsafe_convert(MX_handle, obj.handle)
-Base.convert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
-Base.cconvert(T::Type{MX_handle}, obj::NDArray) = Base.unsafe_convert(T, obj)
 
 ################################################################################
 # NDArray functions exported to the users
 ################################################################################
 """
-    context(arr::NDArray)
+    context(x::NDArray)
 
 Get the context that this `NDArray` lives on.
 """
-function context(arr::NDArray)
+function context(x::NDArray)
   ref_typeid = Ref{Cint}(0)
   ref_devid  = Ref{Cint}(0)
   @mxcall(:MXNDArrayGetContext, (MX_handle, Ref{Cint}, Ref{Cint}),
-          arr, ref_typeid, ref_devid)
-  return Context(ref_typeid[], ref_devid[])
+          x, ref_typeid, ref_devid)
+  Context(ref_typeid[], ref_devid[])
 end
 
 """
-    empty(DType, dims[, ctx::Context = cpu()])
-    empty(DType, dims)
-    empty(DType, dim1, dim2, ...)
-
-Allocate memory for an uninitialized `NDArray` with a specified type.
-"""
-empty(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType} =
-  NDArray{T, N}(_ndarray_alloc(T, dims, ctx, false))
-empty(::Type{T}, dims::Int...) where {T<:DType} = empty(T, dims)
-
-"""
-    empty(dims::Tuple[, ctx::Context = cpu()])
-    empty(dim1, dim2, ...)
-
-Allocate memory for an uninitialized `NDArray` with specific shape of type Float32.
-"""
-empty(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
-  NDArray(_ndarray_alloc(dims, ctx, false))
-empty(dims::Int...) = empty(dims)
-
-"""
-    similar(x::NDArray)
+    similar(x::NDArray; writable, ctx)
 
 Create an `NDArray` with similar shape, data type,
 and context with the given one.
 Note that the returned `NDArray` is uninitialized.
 """
-Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
+Base.similar(x::NDArray{T,N}; writable = x.writable, ctx = context(x)) where {T,N} =
+  NDArray{T,N}(undef, size(x)...; writable = writable, ctx = ctx)
 
 """
     zeros([DType], dims, [ctx::Context = cpu()])
@@ -198,9 +200,9 @@ Base.similar(x::NDArray{T}) where {T} = empty(T, size(x), context(x))
 Create zero-ed `NDArray` with specific shape and type.
 """
 function zeros(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
-  arr = empty(T, dims, ctx)
-  arr[:] = zero(T)
-  arr
+  x = NDArray{T}(undef, dims..., ctx = ctx)
+  x[:] = zero(T)
+  x
 end
 
 zeros(::Type{T}, dims::Int...) where {T<:DType} = zeros(T, dims)
@@ -220,7 +222,7 @@ Base.zeros(x::NDArray)::typeof(x) = zeros_like(x)
 Create an `NDArray` with specific shape & type, and initialize with 1.
 """
 function ones(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
-  arr = empty(T, dims, ctx)
+  arr = NDArray{T}(undef, dims..., ctx = ctx)
   arr[:] = one(T)
   arr
 end
@@ -234,32 +236,24 @@ ones(dims::Int...) = ones(dims)
 ones(x::NDArray)::typeof(x)      = ones_like(x)
 Base.ones(x::NDArray)::typeof(x) = ones_like(x)
 
-import Base: size, length, ndims, eltype
+import Base: length, ndims
 
 """
     size(x::NDArray)
-    size(x::NDArray, dims...)
+    size(x::NDArray, dims)
 
 Get the shape of an `NDArray`. The shape is in Julia's column-major convention.
 See also the notes on NDArray shapes [`NDArray`](@ref).
 """
-function size(x::NDArray)
+function Base.size(x::NDArray)
   ref_ndim  = Ref{MX_uint}(0)
   ref_shape = Ref{Ptr{MX_uint}}(0)
   @mxcall(:MXNDArrayGetShape, (MX_handle, Ref{MX_uint}, Ref{Ptr{MX_uint}}),
           x, ref_ndim, ref_shape)
-  tuple(map(Int, flipdim(unsafe_wrap(Array, ref_shape[], ref_ndim[]),1))...)
+  tuple(map(Int, reverse(unsafe_wrap(Array, ref_shape[], ref_ndim[])))...)
 end
 
-function size(x::NDArray{T,N}, dim::Int) where {T,N}
-  if dim > N
-    1
-  else
-    size(x)[dim]
-  end
-end
-
-size(x::NDArray, dims::Int...) = map(d -> size(x, d), dims)
+Base.size(x::NDArray{T,N}, dims::Integer) where {T,N} = (dims > N) ? 1 : size(x)[dims]
 
 """
     length(x::NDArray)
@@ -289,25 +283,23 @@ end
 
 Get the element type of an `NDArray`.
 """
-function eltype(x::Union{NDArray, MX_NDArrayHandle})
+function Base.eltype(x::Union{NDArray,MX_NDArrayHandle})
   dtype_ref = Ref{Cint}(0)
   @mxcall(:MXNDArrayGetDType, (MX_handle, Ptr{Cint}), x, dtype_ref)
 
   if dtype_ref[] == -1 # x->is_none()
-    warn("Eltype of $x is not defined")
-    Base.show_backtrace(STDOUT, backtrace())
-    println()
-    Float32
-  else
-    fromTypeFlag(TypeFlag(dtype_ref[]))
+    # TODO: unit test for this branch
+    throw(MXError("Eltype of $x is not defined"))
   end
+
+  fromTypeFlag(TypeFlag(dtype_ref[]))
 end
 
 @inline _first(x::NDArray) = try_get_shared(x, sync = :read) |> first
 
 Base.first(x::NDArray) = _first(x)
 
-Base.endof(x::NDArray) = length(x)
+Base.lastindex(x::NDArray) = length(x)
 
 """
     slice(arr :: NDArray, start:stop)
@@ -456,7 +448,7 @@ Copy contents of `src` into `dst`.
 function copy!(dst::NDArray, src::NDArray)
   @assert(dst.writable)
   if dst.handle == src.handle
-    warn("Copying an NDArray to itself")
+    @warn("Copying an NDArray to itself")
     return
   end
 
@@ -466,7 +458,7 @@ end
 
 function copy!(dst::Array{T}, src::NDArray{T}) where T<:DType
   @assert size(dst) == size(src)
-  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{Void}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyToCPU, (MX_handle, Ptr{Cvoid}, Csize_t),
           src, pointer(dst), length(dst))
   dst
 end
@@ -478,7 +470,7 @@ function copy!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable
   @assert size(dst) == size(src)
   src = convert(Array{T}, src) # this might involve copying
-  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Cvoid}, Csize_t),
           dst.handle, pointer(src), length(src))
   dst
 end
@@ -487,7 +479,7 @@ function copy_ignore_shape!(dst::NDArray{T}, src::Array{<:Real}) where {T}
   @assert dst.writable
   @assert length(dst) == length(src)
   src = convert(Array{T}, src) # this might involve copying
-  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Void}, Csize_t),
+  @mxcall(:MXNDArraySyncCopyFromCPU, (MX_handle, Ptr{Cvoid}, Csize_t),
           dst.handle, pointer(src), length(src))
   dst
 end
@@ -501,8 +493,10 @@ end
 Create a copy of an array. When no `Context` is given, create a Julia `Array`.
 Otherwise, create an `NDArray` on the specified context.
 """
+copy
+
 # Create copy: NDArray -> Julia Array
-copy(x::NDArray{T,D}) where{T,D} = copy!(Array{T,D}(size(x)), x)
+copy(x::NDArray{T,D}) where{T,D} = copy!(Array{T,D}(undef, size(x)), x)
 
 # Create copy: NDArray -> NDArray in a given context
 copy(x::NDArray{T,D}, ctx::Context) where {T,D} =
@@ -510,10 +504,10 @@ copy(x::NDArray{T,D}, ctx::Context) where {T,D} =
 
 # Create copy: Julia Array -> NDArray in a given context
 copy(x::Array{T}, ctx::Context) where {T<:DType} =
-  copy!(empty(T, size(x), ctx), x)
+  copy!(NDArray{T}(undef, size(x); ctx = ctx), x)
 
 copy(x::AbstractArray, ctx::Context) =
-  copy!(empty(eltype(x), size(x), ctx), collect(x))
+  copy!(NDArray{eltype(x)}(undef, size(x); ctx = ctx), collect(x))
 
 """
     convert(::Type{Array{<:Real}}, x::NDArray)
@@ -538,27 +532,27 @@ end
 """
     hcat(x::NDArray...)
 """
-Base.hcat(xs::NDArray{T}...) where T = cat(2, xs...)
+Base.hcat(xs::NDArray{T}...) where T = cat(xs..., dims = 2)
 
 """
     vcat(x::NDArray...)
 """
-Base.vcat(xs::NDArray{T}...) where T = cat(1, xs...)
+Base.vcat(xs::NDArray{T}...) where T = cat(xs..., dims = 1)
 
 """
-    cat(dim, xs::NDArray...)
+    cat(xs::NDArray...; dims)
 
-Concate the `NDArray`s which have the same element type along the `dim`.
+Concate the `NDArray`s which have the same element type along the `dims`.
 Building a diagonal matrix is not supported yet.
 """
-function Base.cat(dim::Int, xs::NDArray{T}...) where T
+function Base.cat(xs::NDArray{T}...; dims) where T
   ns = ndims.(xs)
-  d = Base.max(dim, maximum(ns))
+  d = Base.max(dims, maximum(ns))
   xs′ = map(zip(ns, xs)) do i
     n, x = i
     (d > n) ? reshape(x, -2, Base.ones(Int, d - n)...) : x
   end
-  concat(xs′..., dim = d - dim)
+  concat(xs′..., dim = d - dims)
 end
 
 """
@@ -633,11 +627,7 @@ added together. Note at least the first or second argument needs to be an
 +(x::NDArray, y::Real)    = _plus_scalar(x, scalar = y)
 +(y::Real,    x::NDArray) = _plus_scalar(x, scalar = y)
 
-broadcast_(::typeof(+), x::NDArray, y::Real) = x + y
-broadcast_(::typeof(+), x::Real, y::NDArray) = x + y
-
-broadcast_(::typeof(+), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N}   = x + y
-broadcast_(::typeof(+), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(+), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_add(x, y)
 
 """
@@ -665,16 +655,12 @@ import Base: -
 Subtraction `x - y`, of scalar types or `NDArray`.
 Or create the negative of `x`.
 """
--(x::NDArray) = _mul_scalar(x, scalar = -one(eltype(x)))
+-(x::NDArray)             = _mul_scalar(x, scalar = -one(eltype(x)))
 -(x::NDArray, y::NDArray) = _minus(x, y)
 -(x::NDArray, y::Real)    = _minus_scalar(x, scalar = y)
 -(y::Real, x::NDArray)    = _rminus_scalar(x, scalar = y)
 
-broadcast_(::typeof(-), x::NDArray, y::Real) = x - y
-broadcast_(::typeof(-), x::Real, y::NDArray) = x - y
-
-broadcast_(::typeof(-), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N}   = x - y
-broadcast_(::typeof(-), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(-), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_minus(x, y)
 
 """
@@ -703,12 +689,9 @@ Elementwise multiplication for `NDArray`.
 *(x::NDArray, y::Real)  = _mul_scalar(x, scalar = y)
 *(y::Real, x::NDArray)  = _mul_scalar(x, scalar = y)
 
-broadcast_(::typeof(*), x::NDArray, y::Real) = x * y
-broadcast_(::typeof(*), y::Real, x::NDArray) = x * y
-
-broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(*), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _mul(x, y)
-broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(*), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_mul(x, y)
 
 """
@@ -717,6 +700,9 @@ broadcast_(::typeof(*), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
 Matrix/tensor multiplication.
 """
 *(x::NDArray{T}, y::NDArray{T}) where T = x ⋅ y
+
+LinearAlgebra.adjoint(x::NDArray{T,1}) where T = transpose(x)
+LinearAlgebra.adjoint(x::NDArray{T,2}) where T = transpose(x)
 
 """
     div_from!(dst::NDArray, arg::NDArrayOrReal)
@@ -767,15 +753,13 @@ of the same shape.
 """
 /(x::NDArray, y::Real) = _div_scalar(x, scalar = y)
 
-broadcast_(::typeof(/), x::NDArray, y::Real)    = _div_scalar(x, scalar = y)
-broadcast_(::typeof(/), y::Real, x::NDArray)    = _rdiv_scalar(x, scalar = y)
-
-broadcast_(::typeof(/), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(/), y::Real, x::NDArray) = _rdiv_scalar(x, scalar = y)
+broadcasted(::typeof(/), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _div(x, y)
-broadcast_(::typeof(/), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(/), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_div(x, y)
 
-function broadcast_(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
+function broadcasted(::typeof(/), x::NDArray{T}, y::Real) where {T<:Integer}
   @assert(round(T, y) != zero(T), "Integer divided by zero")
   _div_scalar(x, scalar = y)
 end
@@ -807,52 +791,50 @@ import Base: %
 
 Elementwise modulo for `NDArray`.
 """
-%(x::NDArray, y::Real) = _mod_scalar(x, scalar = y)
+%(x::NDArray, y::Real) = _mod_scalar(x, y)
 
-broadcast_(::typeof(%), x::NDArray, y::Real)    = _mod_scalar(x, y)
-broadcast_(::typeof(%), y::Real, x::NDArray)    = _rmod_scalar(x, y)
-
-broadcast_(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(%), y::Real, x::NDArray) = _rmod_scalar(x, y)
+broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _mod(x, y)
-broadcast_(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(%), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_mod(x, y)
-
-import Base: ^
 
 # document of `.^` is merged into SymbolicNode's
 
-broadcast_(::typeof(^), x::NDArray, s::Real)    = _power_scalar(x, scalar = s)
-broadcast_(::typeof(^), s::Real, x::NDArray)    = _rpower_scalar(x, scalar = s)
+broadcasted(::typeof(Base.literal_pow), ::typeof(^), x::NDArray, ::Val{s}) where {s} =
+  _power_scalar(x, scalar = s)
+broadcasted(::typeof(^), x::NDArray, s::Real) = _power_scalar(x,  scalar = s)
+broadcasted(::typeof(^), s::Real, x::NDArray) = _rpower_scalar(x, scalar = s)
 
-broadcast_(::typeof(^), ::Irrational{:e}, x::NDArray) = exp(x)
-broadcast_(::typeof(^), x::NDArray, s::Irrational)    = _power_scalar(x, scalar = s)
-broadcast_(::typeof(^), s::Irrational, x::NDArray)    = _rpower_scalar(x, scalar = s)
+broadcasted(::typeof(^), ::Irrational{:ℯ}, x::NDArray) = exp(x)
+broadcasted(::typeof(^), x::NDArray, s::Irrational)    = _power_scalar(x, scalar = s)
+broadcasted(::typeof(^), s::Irrational, x::NDArray)    = _rpower_scalar(x, scalar = s)
 
-broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
+broadcasted(::typeof(^), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
   _power(x, y)
-broadcast_(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
+broadcasted(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_power(x, y)
 
 ###############################################################################
 # comparison
 ###############################################################################
 
-broadcast_(::typeof(==), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(==), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_equal(x, y)
 
-broadcast_(::typeof(!=), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(!=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_not_equal(x, y)
 
-broadcast_(::typeof(>), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(>), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_greater(x, y)
 
-broadcast_(::typeof(>=), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(>=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_greater_equal(x, y)
 
-broadcast_(::typeof(<), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(<), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_lesser(x, y)
 
-broadcast_(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_lesser_equal(x, y)
 
 
@@ -862,10 +844,10 @@ broadcast_(::typeof(<=), x::NDArray{T}, y::NDArray{T}) where {T} =
 
 import Base: min, max
 
-broadcast_(::typeof(max), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(max), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_maximum(x, y)
 
-broadcast_(::typeof(min), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(min), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_minimum(x, y)
 
 """
@@ -884,8 +866,8 @@ end
 
 Create an `NDArray` filled with the value `x`, like `Base.fill`.
 """
-function fill(x, dims::NTuple{N,Integer}, ctx::Context=cpu()) where N
-  arr = empty(typeof(x), dims, ctx)
+function fill(x::T, dims::NTuple{N,Integer}, ctx::Context = cpu()) where {T,N}
+  arr = NDArray{T}(undef, dims, ctx = ctx)
   arr[:] = x
   arr
 end
@@ -894,7 +876,7 @@ fill(x, dims::Integer...) = fill(x, dims)
 
 import Base: hypot
 
-broadcast_(::typeof(hypot), x::NDArray{T}, y::NDArray{T}) where {T} =
+broadcasted(::typeof(hypot), x::NDArray{T}, y::NDArray{T}) where {T} =
   _broadcast_hypot(x, y)
 
 """
@@ -985,7 +967,7 @@ macro nd_as_jl(m_args...)
   wait_statements  = Expr(:block, [:(_wait_to_read($v)) for v in nd_ro]...,
                                   [:(_wait_to_write($v)) for v in nd_rw]...)
   clear_statements = Expr(:block, [:($v_orig = nothing) for v_orig in rw_origs]...)
-  let_assignments  = [:($v = try_get_shared($v)) for v in nd_all]
+  let_assignments  = Expr(:block, [:($v = try_get_shared($v)) for v in nd_all]...)
   sync_statements  = map(rw_origs, nd_rw) do v_orig, v
     quote
       if !is_shared($v, $v_orig)
@@ -996,10 +978,10 @@ macro nd_as_jl(m_args...)
   end
   sync_statements  = Expr(:block, sync_statements...)
 
-  let_statement = Expr(:let, quote
+  let_statement = Expr(:let, let_assignments, quote
     $stmts
     $sync_statements
-  end, let_assignments...)
+  end)
   m_body = quote
     $wait_statements
     $save_statements
@@ -1015,8 +997,8 @@ end
 # pointers from CPU) leads to undefined behavior.
 import Base.pointer
 function pointer(arr :: NDArray)
-  pdata = Ref{Ptr{Void}}(0)
-  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{Void}}), arr, pdata)
+  pdata = Ref{Ptr{Cvoid}}(0)
+  @mxcall(:MXNDArrayGetData, (MX_handle, Ref{Ptr{Cvoid}}), arr, pdata)
   return convert(Ptr{eltype(arr)}, pdata[])
 end
 
@@ -1146,18 +1128,6 @@ end
 const _ndsig = Dict{Symbol,Expr}()
 const _nddoc = Dict{Symbol,Any}()
 
-function _autoimport(name::Symbol, sig::Expr)
-  if name == :broadcast_
-    name = _broadcast_target(sig)
-  end
-
-  if isdefined(Base, name)
-    :(import Base: $name)
-  else
-    :()
-  end
-end
-
 _isinplace(name::Symbol) = endswith(string(name), "!")
 
 _writable(name::Symbol, x) =
@@ -1178,7 +1148,7 @@ _broadcast_target(sig::Expr) = sig.args[2].args[].args[end]
 Generate docstring from function signature
 """
 function _docsig(fname::Symbol, sig::Expr, opname::String)
-  if fname !== :broadcast_
+  if fname !== :broadcasted
     get(_nddoc, fname, "    $sig") * "\n" * _getdocdefine(opname)
   else
     name = _broadcast_target(sig)
@@ -1205,11 +1175,12 @@ function _docsig(fname::Symbol, sig::Expr, opname::String)
   end
 end
 
-macro _remap(sig::Expr, imp::Expr)
-  fname = (sig.head == :call) ? sig.args[1] : sig.args[1].args[1]  # case of `where`
-  opname = string(imp.args[1])
 
-  import_expr = _autoimport(fname, sig)
+macro _remap(sig::Expr, imp::Expr)
+  d = splitdef(:($sig = $imp))
+  @capture d[:name] (M_.fname_|fname_)
+
+  opname = string(imp.args[1])
 
   if isa(imp.args[2], Expr) && imp.args[2].head == :parameters
     ndin = imp.args[3:end]
@@ -1257,8 +1228,7 @@ macro _remap(sig::Expr, imp::Expr)
   func_def = Expr(:function, sig, func_body)
 
   esc(quote
-    $import_expr
-    @doc $docstr ->
+    @doc $docstr
     $func_def
   end)
 end
@@ -1271,32 +1241,98 @@ macro _remap(sig::Expr, imp::Symbol)
   end)
 end
 
-_ndsig[:reshape] = :(reshape(arr; shape = dim, reverse = !reverse))
-@_remap reshape(arr::NDArray, dim...; reverse = false) reshape
-@_remap reshape(arr::NDArray, dim; reverse = false)    reshape
+_ndsig[:reshape] = :(reshape(x; shape = dim, reverse = !reverse))
+@_remap Base.reshape(x::NDArray, dim...; reverse = false) reshape
+@_remap Base.reshape(x::NDArray, dim   ; reverse = false) reshape
 
-@_remap mean(arr::NDArray)         mean(arr)
-@_remap mean(arr::NDArray, region) mean(arr; axis = 0 .- region, keepdims = true)
+Statistics.mean(x::NDArray; dims = :) = _mean(x, dims)
+@_remap _mean(x::NDArray, ::Colon) mean(x)
+@_remap _mean(x::NDArray, dims)    mean(x; axis = 0 .- dims, keepdims = true)
 
-@_remap sum(arr::NDArray)       sum(arr)
-@_remap sum(arr::NDArray, dims) sum(arr; axis = 0 .- dims, keepdims = true)
+Base.sum(x::NDArray; dims = :) = _sum(x, dims)
+@_remap _sum(x::NDArray, ::Colon) sum(x)
+@_remap _sum(x::NDArray, dims)    sum(x; axis = 0 .- dims, keepdims = true)
 
-@_remap maximum(arr::NDArray)       max(arr)
-@_remap maximum(arr::NDArray, dims) max(arr; axis = 0 .- dims, keepdims = true)
+Base.maximum(x::NDArray; dims = :) = _nd_maximum(x, dims)
+@_remap _nd_maximum(x::NDArray, ::Colon) max(x)
+@_remap _nd_maximum(x::NDArray, dims)    max(x; axis = 0 .- dims, keepdims = true)
 
-@_remap minimum(arr::NDArray)       min(arr)
-@_remap minimum(arr::NDArray, dims) min(arr; axis = 0 .- dims, keepdims = true)
+Base.minimum(x::NDArray; dims = :) = _nd_minimum(x, dims)
+@_remap _nd_minimum(x::NDArray, ::Colon) min(x)
+@_remap _nd_minimum(x::NDArray, dims)    min(x; axis = 0 .- dims, keepdims = true)
 
 # See https://github.com/dmlc/MXNet.jl/issues/55
-@_remap dot(x::NDArray, y::NDArray) dot(y, x)
+@_remap LinearAlgebra.dot(x::NDArray, y::NDArray) dot(y, x)
 
 # See https://github.com/dmlc/MXNet.jl/pull/123
-@_remap transpose(arr::NDArray{T,1}) where T reshape(arr; shape = (1, length(arr)), reverse = true)
-@_remap transpose(arr::NDArray{T,2}) where T transpose(arr)
-@_remap permutedims(arr::NDArray, axes) transpose(arr; axes = length(axes) .- tuple(axes...))
+@_remap Base.transpose(x::NDArray{T,1}) where T reshape(x; shape = (1, length(x)), reverse = true)
+@_remap Base.transpose(x::NDArray{T,2}) where T transpose(x)
+@_remap Base.permutedims(x::NDArray, axes) transpose(x; axes = length(axes) .- tuple(axes...))
 
-@_remap prod(arr::NDArray)       prod(arr)
-@_remap prod(arr::NDArray, dims) prod(arr; axis = 0 .- dims, keepdims = true)
+Base.prod(x::NDArray; dims = :) = _prod(x, dims)
+@_remap _prod(x::NDArray, ::Colon) prod(x)
+@_remap _prod(x::NDArray, dims)    prod(x; axis = 0 .- dims, keepdims = true)
+
+# TODO: support CartesianIndex ?
+"""
+    argmax(x::NDArray; dims) -> indices
+
+Note that `NaN` is skipped during comparison.
+This is different from Julia `Base.argmax`.
+
+## Examples
+
+```julia-repl
+julia> x = NDArray([0. 1 2; 3 4 5])
+2×3 NDArray{Float64,2} @ CPU0:
+ 0.0  1.0  2.0
+ 3.0  4.0  5.0
+
+julia> argmax(x, dims = 1)
+1×3 NDArray{Float64,2} @ CPU0:
+ 2.0  2.0  2.0
+
+julia> argmax(x, dims = 2)
+2×1 NDArray{Float64,2} @ CPU0:
+ 3.0
+ 3.0
+```
+
+See also [`argmin`](@ref mx.argmin).
+"""
+Base.argmax(x::NDArray; dims = :) = _argmax(x, dims) .+ 1
+@_remap _argmax(x::NDArray, ::Colon) argmax(x)
+@_remap _argmax(x::NDArray, dims)    argmax(x; axis = 0 .- dims, keepdims = true)
+
+"""
+    argmin(x::NDArray; dims) -> indices
+
+Note that `NaN` is skipped during comparison.
+This is different from Julia `Base.argmin`.
+
+## Examples
+
+```julia-repl
+julia> x = NDArray([0. 1 2; 3 4 5])
+2×3 NDArray{Float64,2} @ CPU0:
+ 0.0  1.0  2.0
+ 3.0  4.0  5.0
+
+julia> argmax(x, dims = 1)
+1×3 NDArray{Float64,2} @ CPU0:
+ 2.0  2.0  2.0
+
+julia> argmax(x, dims = 2)
+2×1 NDArray{Float64,2} @ CPU0:
+ 3.0
+ 3.0
+```
+
+See also [`argmax`](@ref mx.argmax).
+"""
+Base.argmin(x::NDArray; dims = :) = _argmin(x, dims) .+ 1
+@_remap _argmin(x::NDArray, ::Colon) argmin(x)
+@_remap _argmin(x::NDArray, dims)    argmin(x; axis = 0 .- dims, keepdims = true)
 
 _nddoc[:clip] = _nddoc[:clip!] =
 """
@@ -1362,23 +1398,23 @@ julia> mx.expand_dims(x, 2)
 @_remap expand_dims(x::NDArray, dim) expand_dims(x; axis = -dim)
 
 # trigonometric functions, remap to keep consistent with Base
-@_remap broadcast_(::typeof(sin),  x::NDArray) sin(x)
-@_remap broadcast_(::typeof(cos),  x::NDArray) cos(x)
-@_remap broadcast_(::typeof(tan),  x::NDArray) tan(x)
-@_remap broadcast_(::typeof(asin), x::NDArray) arcsin(x)
-@_remap broadcast_(::typeof(acos), x::NDArray) arccos(x)
-@_remap broadcast_(::typeof(atan), x::NDArray) arctan(x)
+@_remap broadcasted(::typeof(sin),  x::NDArray) sin(x)
+@_remap broadcasted(::typeof(cos),  x::NDArray) cos(x)
+@_remap broadcasted(::typeof(tan),  x::NDArray) tan(x)
+@_remap broadcasted(::typeof(asin), x::NDArray) arcsin(x)
+@_remap broadcasted(::typeof(acos), x::NDArray) arccos(x)
+@_remap broadcasted(::typeof(atan), x::NDArray) arctan(x)
 
 # hyperbolic funcs, remap to keep consistent with Base
-@_remap broadcast_(::typeof(sinh),  x::NDArray) sinh(x)
-@_remap broadcast_(::typeof(cosh),  x::NDArray) cosh(x)
-@_remap broadcast_(::typeof(tanh),  x::NDArray) tanh(x)
-@_remap broadcast_(::typeof(asinh), x::NDArray) arcsinh(x)
-@_remap broadcast_(::typeof(acosh), x::NDArray) arccosh(x)
-@_remap broadcast_(::typeof(atanh), x::NDArray) arctanh(x)
+@_remap broadcasted(::typeof(sinh),  x::NDArray) sinh(x)
+@_remap broadcasted(::typeof(cosh),  x::NDArray) cosh(x)
+@_remap broadcasted(::typeof(tanh),  x::NDArray) tanh(x)
+@_remap broadcasted(::typeof(asinh), x::NDArray) arcsinh(x)
+@_remap broadcasted(::typeof(acosh), x::NDArray) arccosh(x)
+@_remap broadcasted(::typeof(atanh), x::NDArray) arctanh(x)
 
 # activation functions
-_nddoc[:σ] = _nddoc[:sigmoid] = doc"""
+@doc doc"""
     σ.(x::NDArray)
     sigmoid.(x::NDArray)
 
@@ -1390,10 +1426,12 @@ Computes sigmoid of x element-wise.
 
 The storage type of `sigmoid` output is always dense.
 """
-@_remap broadcast_(::typeof(σ), x::NDArray)       sigmoid(x)
-@_remap broadcast_(::typeof(sigmoid), x::NDArray) sigmoid(x)
+function σ end
+const sigmoid = σ
+_nddoc[:σ] = false
+@_remap broadcasted(::typeof(σ), x::NDArray) sigmoid(x)
 
-_nddoc[:relu] = doc"""
+@doc doc"""
     relu.(x::NDArray)
 
 Computes rectified linear.
@@ -1402,9 +1440,11 @@ Computes rectified linear.
 \max(x, 0)
 ```
 """
-@_remap broadcast_(::typeof(relu), x::NDArray) relu(x)
+function relu end
+_nddoc[:relu] = false
+@_remap broadcasted(::typeof(relu), x::NDArray) relu(x)
 
-_nddoc[:softmax] = doc"""
+@doc doc"""
     softmax.(x::NDArray, [dim = ndims(x)])
 
 Applies the softmax function.
@@ -1416,10 +1456,12 @@ and the elements along the given axis sum up to 1.
 softmax(\mathbf{z})_j = \frac{e^{z_j}}{\sum_{k=1}^K e^{z_k}}
 ```
 """
-@_remap broadcast_(::typeof(softmax), x::NDArray) softmax(x; axis = -ndims(x))
-@_remap broadcast_(::typeof(softmax), x::NDArray, dim::Int) softmax(x; axis = -dim)
+function softmax end
+_nddoc[:softmax] = false
+@_remap broadcasted(::typeof(softmax), x::NDArray)           softmax(x; axis = -ndims(x))
+@_remap broadcasted(::typeof(softmax), x::NDArray, dim::Int) softmax(x; axis = -dim)
 
-_nddoc[:log_softmax] = """
+"""
     log_softmax.(x::NDArray, [dim = ndims(x)])
 
 Computes the log softmax of the input.
@@ -1435,8 +1477,10 @@ julia> mx.log_softmax.(x)
  -1.41703  -0.41703  -2.31703
  -2.31703  -0.41703  -1.41703
 """
-@_remap broadcast_(::typeof(log_softmax), x::NDArray) log_softmax(x; axis = -ndims(x))
-@_remap broadcast_(::typeof(log_softmax), x::NDArray, dim::Int) log_softmax(x; axis = -dim)
+function log_softmax end
+_nddoc[:log_softmax] = false
+@_remap broadcasted(::typeof(log_softmax), x::NDArray)           log_softmax(x; axis = -ndims(x))
+@_remap broadcasted(::typeof(log_softmax), x::NDArray, dim::Int) log_softmax(x; axis = -dim)
 
 ################################################################################
 # remapping to solving type unstablility
@@ -1570,7 +1614,7 @@ julia> mx.broadcast_axis(x, 3, 2)
 """
 @_remap(broadcast_axis(x::NDArray, dim, size),
         broadcast_axis(x; axis = ndims(x) .- dim, size = size))
-@_remap(broadcast_axes(x::NDArray, dim, size),
+@_remap(Base.broadcast_axes(x::NDArray, dim, size),
         broadcast_axes(x; axis = ndims(x) .- dim, size = size))
 
 ################################################################################
@@ -1619,7 +1663,7 @@ Upon calling, the output arguments will be automatically initialized with empty 
 Those functions always return the output arguments. If there is only one output (the typical situation), that
 object (`NDArray`) is returned. Otherwise, a tuple containing all the outputs will be returned.
 """
-function _get_ndarray_function_def(name :: String)
+function _get_ndarray_function_def(name::String)
   func_name = Symbol(name)
 
   func_def = quote
@@ -1751,6 +1795,10 @@ const _op_import_bl = [  # import black list; do not import these funcs
     "broadcast_axis",
     "broadcast_axes",
     "broadcast_hypot",
+
+    # reduction
+    "argmax",
+    "argmin",
 ]
 
 macro _import_ndarray_functions()
@@ -1763,11 +1811,13 @@ macro _import_ndarray_functions()
     func_def, func_def2 = _get_ndarray_function_def(name)
 
     func_name = Symbol(name)
-    expr = quote
-      # TODO the explicit exclusion of take will no longer be necessary when it is removed from Base
-      $((isdefined(Base, func_name) && func_name ≠ :take) ? :(import Base.$func_name) : :())
+
+    import_expr = _import_expr(func_name)
+
+    quote
+      $import_expr
       $func_def
-      @doc $desc ->
+      @doc $desc
       $func_def2
     end
   end
@@ -1777,4 +1827,4 @@ macro _import_ndarray_functions()
   end)
 end
 
-@_import_ndarray_functions()
+@_import_ndarray_functions

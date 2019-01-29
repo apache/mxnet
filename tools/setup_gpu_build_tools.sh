@@ -246,6 +246,8 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
         rm package.deb
     done
 
+    mkdir -p ${prefix}/include
+    mkdir -p ${prefix}/lib
     cp ${prefix}/usr/include/x86_64-linux-gnu/cudnn_v${LIBCUDNN_MAJOR}.h ${prefix}/include/cudnn.h
     ln -s libcudnn_static_v${LIBCUDNN_MAJOR}.a ${prefix}/usr/lib/x86_64-linux-gnu/libcudnn.a
     cp ${prefix}/usr/local/cuda-${CUDA_MAJOR_VERSION}/lib64/*.a ${prefix}/lib/

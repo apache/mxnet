@@ -19,7 +19,7 @@
 
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
 # more details please refer to
 # https://github.com/Ldpe2G/mxnet/blob/develop/example/neural-style/end_to_end/README.md

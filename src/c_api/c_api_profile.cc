@@ -215,25 +215,26 @@ struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   int profile_process;
   DMLC_DECLARE_PARAMETER(ProfileConfigParam) {
     DMLC_DECLARE_FIELD(profile_all).set_default(false)
-      .describe("Profile all.");
+      .describe("Profile all. Default is False.");
     DMLC_DECLARE_FIELD(profile_symbolic).set_default(true)
-      .describe("Profile symbolic operators.");
+      .describe("Profile symbolic operators.  Default is True.");
     DMLC_DECLARE_FIELD(profile_imperative).set_default(true)
-      .describe("Profile imperative operators.");
+      .describe("Profile imperative operators.  Default is True.");
     DMLC_DECLARE_FIELD(profile_memory).set_default(true)
-      .describe("Profile memory.");
+      .describe("Profile memory.  Default is True.");
     DMLC_DECLARE_FIELD(profile_api).set_default(true)
-      .describe("Profile C API.");
+      .describe("Profile C API.  Default is True.");
     DMLC_DECLARE_FIELD(filename).set_default("profile.json")
       .describe("File name to write profiling info.");
     DMLC_DECLARE_FIELD(continuous_dump).set_default(true)
-      .describe("Periodically dump (and append) priofling data to file while running.");
+      .describe("Periodically dump (and append) profiling data to file while running. "
+                "Default is True.");
     DMLC_DECLARE_FIELD(dump_period).set_default(1.0f)
       .describe("When continuous dump is enabled, the period between subsequent "
                   "profile info dumping.");
     DMLC_DECLARE_FIELD(aggregate_stats).set_default(false)
       .describe("Maintain aggregate stats, required for MXDumpAggregateStats.  Note that "
-      "this can have anegative performance impact.");
+      "this can have a negative performance impact. Default is False.");
     DMLC_DECLARE_FIELD(profile_process)
       .add_enum("worker", static_cast<int>(ProfileProcess::kWorker))
       .add_enum("server", static_cast<int>(ProfileProcess::kServer))

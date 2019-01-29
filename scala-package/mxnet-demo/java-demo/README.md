@@ -1,24 +1,25 @@
 # MXNet Java Sample Project
 This is an project created to use Maven-published Scala/Java package with two Java examples.
 ## Setup
-You can use the `Makefile` to make the Java package. Simply do the following:
-```Bash
-make javademo
+You are required to use Maven to build the package with the following commands:
 ```
-This will load the default parameter for all the environment variable.
-If you want to run with GPU on Linux, just simply add `USE_CUDA=1` when you run the make file
- 
+mvn package
+```
+This command will pick the default values specified in the [pom](https://github.com/apache/incubator-mxnet/blob/master/scala-package/mxnet-demo/java-demo/pom.xml) file.
+
+Note: If you are planning to use GPU, please add `-Dmxnet.profile=linux-x86_64-gpu`
+
+### Use customized version set
 You can use the following instruction as an alternative to achieve the same result:
-User are required to use `mvn package` to build the package,
- which are shown below:
+You may use `mvn package` to build the package,
+using the following commands:
 ```Bash
-export SCALA_VERSION_PROFILE=2.11 MXNET_VERSION=1.5.0-SNAPSHOT
+export SCALA_VERSION_PROFILE=2.11
 export SCALA_PKG_PROFILE=
 mvn package -Dmxnet.profile=$SCALA_PKG_PROFILE \
-		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE \
-		-Dmxnet.version=$MXNET_VERSION
+		-Dmxnet.scalaprofile=$SCALA_VERSION_PROFILE
 ```
-These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`, `MXNET_VERSION`)
+These environment variable (`SCALA_PKG_PROFILE`, `SCALA_VERSION_PROFILE`)
 should be set before executing the line above.
 The `SCALA_PKG_PROFILE` should be chosen from `osx-x86_64-cpu`, `linux-x86_64-cpu` or `linux-x86_64-gpu`.
 
@@ -72,9 +73,15 @@ If you want to test run on GPU, you can set a environment variable as follows:
 export SCALA_TEST_ON_GPU=1
 ```
 ## Clean up
-Clean up for Maven package is simple, you can run the pre-configed `Makefile` as:
+Clean up for Maven package is simple:
 ```Bash
-make javaclean
+mvn clean
+```
+
+## Convert to Eclipse project (Optional)
+You can convert the maven project to the eclipse one by running the following command:
+```
+mvn eclipse:eclipse
 ```
 
 ## Q & A
@@ -88,4 +95,4 @@ sudo apt install libopencv-imgcodecs3.4
 Is there any other version available?
 
 You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0-SNAPSHOT~~).
-Please keep the same version in the Makefile or [above version](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.
+Please keep the same version in the pom file or [other versions in here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.

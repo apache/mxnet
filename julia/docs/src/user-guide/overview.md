@@ -73,9 +73,13 @@ operators in Julia directly.
 
 The followings are common ways to create `NDArray` objects:
 
-- `mx.empty(shape[, context])`: create on uninitialized array of a
-  given shape on a specific device. For example,
-  `mx.empty(2, 3)`, `mx.((2, 3), mx.gpu(2))`.
+- `NDArray(undef, shape...; ctx = context, writable = true)`:
+  create an uninitialized array of a given shape on a specific device.
+  For example,
+  `NDArray(undef, 2, 3)`, `NDArray(undef, 2, 3, ctx = mx.gpu(2))`.
+- `NDArray(undef, shape; ctx = context, writable = true)`
+- `NDArray{T}(undef, shape...; ctx = context, writable = true)`:
+  create an uninitialized with the given type `T`.
 - `mx.zeros(shape[, context])` and `mx.ones(shape[, context])`:
   similar to the Julia's built-in `zeros` and `ones`.
 - `mx.copy(jl_arr, context)`: copy the contents of a Julia `Array` to
@@ -101,11 +105,11 @@ shows a way to set the contents of an `NDArray`.
 ```@repl
 using MXNet
 mx.srand(42)
-a = mx.empty(2, 3)
+a = NDArray(undef, 2, 3)
 a[:] = 0.5              # set all elements to a scalar
 a[:] = rand(size(a))    # set contents with a Julia Array
 copy!(a, rand(size(a))) # set value by copying a Julia Array
-b = mx.empty(size(a))
+b = NDArray(undef, size(a))
 b[:] = a                # copying and assignment between NDArrays
 ```
 
@@ -175,7 +179,7 @@ function inplace_op()
   grad   = mx.ones(SHAPE, CTX)
 
   # pre-allocate temp objects
-  grad_lr = mx.empty(SHAPE, CTX)
+  grad_lr = NDArray(undef, SHAPE, ctx = CTX)
 
   for i = 1:N_REP
     copy!(grad_lr, grad)
@@ -234,7 +238,7 @@ shape = (2, 3)
 key   = 3
 
 mx.init!(kv, key, mx.ones(shape) * 2)
-a = mx.empty(shape)
+a = NDArray(undef, shape)
 mx.pull!(kv, key, a) # pull value into a
 a
 ```

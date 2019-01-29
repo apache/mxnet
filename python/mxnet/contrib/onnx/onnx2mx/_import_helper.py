@@ -18,7 +18,7 @@
 # coding: utf-8_
 # pylint: disable=invalid-name
 """Operator attributes conversion"""
-from ._op_translations import identity, random_uniform, random_normal
+from ._op_translations import identity, random_uniform, random_normal, sample_multinomial
 from ._op_translations import add, subtract, multiply, divide, absolute, negative, add_n
 from ._op_translations import tanh, arccos, arcsin, arctan, _cos, _sin, _tan
 from ._op_translations import softplus, shape, gather, lp_pooling, size
@@ -37,7 +37,7 @@ from ._op_translations import clip, reduce_log_sum, reduce_log_sum_exp
 from ._op_translations import reduce_sum_square, reduce_l1, reduce_l2, max_roi_pooling
 from ._op_translations import log_softmax, softsign, lesser, greater, equal
 from ._op_translations import logical_and, logical_or, logical_xor, logical_not
-from ._op_translations import mean, depthtospace, spacetodepth
+from ._op_translations import mean, depthtospace, spacetodepth, lpnormalization
 
 # convert_map defines maps of ONNX operator names to converter functor(callable)
 # defined in the op_translations module.
@@ -48,6 +48,7 @@ _convert_map = {
     'RandomNormal'      : random_normal,
     'RandomUniformLike' : random_uniform,
     'RandomNormalLike'  : random_normal,
+    'Multinomial'       : sample_multinomial,
     # Arithmetic Operators
     'Add'               : add,
     'Sub'               : subtract,
@@ -145,5 +146,6 @@ _convert_map = {
     'LpPool'            : lp_pooling,
     'DepthToSpace'      : depthtospace,
     'SpaceToDepth'      : spacetodepth,
-    'Hardmax'           : hardmax
+    'Hardmax'           : hardmax,
+    'LpNormalization'   : lpnormalization
 }

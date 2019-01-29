@@ -49,20 +49,91 @@ NNVM_REGISTER_OP(_image_to_tensor)
 .add_argument("data", "NDArray-or-Symbol", "The input.");
 
 NNVM_REGISTER_OP(_image_normalize)
-.describe(R"code()code" ADD_FILELINE)
+.describe(R"code(Normalize an tensor of shape (C x H x W) or (N x C x H x W) with mean and
+    standard deviation.
+
+    Given mean `(m1, ..., mn)` and std `(s\ :sub:`1`\ , ..., s\ :sub:`n`)` for `n` channels,
+    this transform normalizes each channel of the input tensor with:
+
+.. math::
+
+        output[i] = (input[i] - m\ :sub:`i`\ ) / s\ :sub:`i`
+
+    If mean or std is scalar, the same value will be applied to all channels.
+
+    Default value for mean is 0.0 and stand deviation is 1.0.
+
+Example:
+
+    .. code-block:: python
+        image = mx.nd.random.uniform(0, 1, (3, 4, 2))
+        normalize(image, mean=(0, 1, 2), std=(3, 2, 1))
+            [[[ 0.18293785  0.19761486]
+              [ 0.23839645  0.28142193]
+              [ 0.20092112  0.28598186]
+              [ 0.18162774  0.28241724]]
+             [[-0.2881726  -0.18821815]
+              [-0.17705294 -0.30780914]
+              [-0.2812064  -0.3512327 ]
+              [-0.05411351 -0.4716435 ]]
+             [[-1.0363373  -1.7273437 ]
+              [-1.6165586  -1.5223348 ]
+              [-1.208275   -1.1878313 ]
+              [-1.4711051  -1.5200229 ]]]
+            <NDArray 3x4x2 @cpu(0)>
+
+        image = mx.nd.random.uniform(0, 1, (2, 3, 4, 2))
+        normalize(image, mean=(0, 1, 2), std=(3, 2, 1))
+            [[[[ 0.18934818  0.13092826]
+               [ 0.3085322   0.27869293]
+               [ 0.02367868  0.11246539]
+               [ 0.0290431   0.2160573 ]]
+              [[-0.4898908  -0.31587923]
+               [-0.08369008 -0.02142242]
+               [-0.11092162 -0.42982462]
+               [-0.06499392 -0.06495637]]
+              [[-1.0213816  -1.526392  ]
+               [-1.2008414  -1.1990893 ]
+               [-1.5385206  -1.4795225 ]
+               [-1.2194707  -1.3211205 ]]]
+             [[[ 0.03942481  0.24021089]
+               [ 0.21330701  0.1940066 ]
+               [ 0.04778443  0.17912441]
+               [ 0.31488964  0.25287187]]
+              [[-0.23907584 -0.4470462 ]
+               [-0.29266903 -0.2631998 ]
+               [-0.3677222  -0.40683383]
+               [-0.11288315 -0.13154092]]
+              [[-1.5438497  -1.7834496 ]
+               [-1.431566   -1.8647819 ]
+               [-1.9812102  -1.675859  ]
+               [-1.3823645  -1.8503251 ]]]]
+            <NDArray 2x3x4x2 @cpu(0)>
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<NormalizeParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser(ParamParser<NormalizeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", NormalizeShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", NormalizeOpShape)
+.set_attr<nnvm::FInferType>("FInferType", NormalizeOpType)
+.set_attr<FCompute>("FCompute<cpu>", NormalizeOpForward<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
+  [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", Normalize)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
-.add_argument("data", "NDArray-or-Symbol", "The input.")
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_image_normalize"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NormalizeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_image_normalize)
+.set_attr_parser(ParamParser<NormalizeParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NormalizeOpBackward<cpu>);
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_left_right)
 .describe(R"code()code" ADD_FILELINE)

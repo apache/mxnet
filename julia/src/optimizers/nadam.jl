@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-doc"""
+@doc doc"""
     Nadam(; kwargs...)
 
 Nesterov Adam optimizer: Adam RMSprop with Nesterov momentum,
