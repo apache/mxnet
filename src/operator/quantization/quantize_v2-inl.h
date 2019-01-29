@@ -47,7 +47,7 @@ struct QuantizeV2Param : public dmlc::Parameter<QuantizeV2Param> {
       .add_enum("auto", kAuto)
       .add_enum("int8", kInt8)
       .add_enum("uint8", kUint8)
-      .set_default(kAuto)
+      .set_default(kInt8)
       .describe("Output data type. `auto` can be specified to automatically determine output type "
                 "according to min_calib_range.");
     DMLC_DECLARE_FIELD(min_calib_range)
@@ -76,7 +76,7 @@ static mshadow::TypeFlag GetOutputType(const QuantizeV2Param &param) {
   } else if (param.out_type == QuantizeV2Param::OutType::kUint8) {
     out_type = mshadow::kUint8;
   } else {
-    LOG(FATAL) << "Unsupported quantize output type.";
+    LOG(FATAL) << "Unsupported out_type in params: " <<param.out_type;
   }
   return out_type;
 }
@@ -208,7 +208,7 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs &attrs, std::vector<int>
   } else if (out_type == mshadow::kInt8) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
   } else {
-    LOG(FATAL) << "Unsupported out_type.";
+    LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
   }
   TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kFloat32);

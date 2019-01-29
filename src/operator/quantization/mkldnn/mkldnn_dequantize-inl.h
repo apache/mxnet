@@ -75,6 +75,7 @@ static void MKLDNNDequantizeComputeKer(const std::vector<NDArray> &inputs,
   }
   mkldnn::memory::format i_fmt = static_cast<mkldnn::memory::format>(i_desc.data.format);
   if (i_fmt == mkldnn::memory::format::nhwc) {
+    // For 4d tensor, nchw is the default format
     i_fmt = mkldnn::memory::format::nchw;
   }
   auto o_desc = mkldnn::memory::desc(i_dims,

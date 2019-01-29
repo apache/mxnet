@@ -32,11 +32,9 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(QuantizeV2Param);
 
-static bool QuantizeV2StorageType(const nnvm::NodeAttrs& attrs,
-                         const int dev_mask,
-                         DispatchMode* dispatch_mode,
-                         std::vector<int> *in_attrs,
-                         std::vector<int> *out_attrs) {
+static bool QuantizeV2StorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                  DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                  std::vector<int>* out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
@@ -79,10 +77,9 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr_parser(ParamParser<QuantizeV2Param>)
 .set_num_inputs(1)
 .set_num_outputs(3)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
-  })
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data"};
+})
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizeV2Shape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizeV2Type)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeV2StorageType)
@@ -92,13 +89,13 @@ If min_calib_range isn't presented, the output type will be int8.
 #endif
 .set_attr<FCompute>("FCompute<cpu>", QuantizeV2Compute<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
-    const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
-    if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-      return std::vector<ResourceRequest>();
-    } else {
-      return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
-    }
-  })
+  const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
+  if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+    return std::vector<ResourceRequest>();
+  } else {
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
+  }
+})
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
 .add_arguments(QuantizeV2Param::__FIELDS__());
 

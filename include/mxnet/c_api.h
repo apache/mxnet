@@ -1566,7 +1566,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data.
- * \param calib_quantize **Deperated**. quantize op will always be calibrated if could.
+ * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could.
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
