@@ -176,8 +176,8 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   SizeParam size;
-#if MXNET_USE_CUDA
   if (std::is_same<xpu, gpu>::value) {
+#if MXNET_USE_CUDA
     CHECK(param.interp == 1) << "interp should be 1 for using Resize on GPU.";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
@@ -191,10 +191,8 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
         ResizeImplCUDA<DType, Tensor<gpu, 4, DType>, float>(s, input, output);
       }
     });
-    return;
-  }
 #endif  // MXNET_USE_CUDA
-  if (inputs[0].ndim() == 3) {
+  } else if (inputs[0].ndim() == 3) {
     size = GetHeightAndWidth(inputs[0].shape_[H], inputs[0].shape_[W], param);
     ResizeImpl(inputs, outputs, size.height, size.width, param.interp);
   } else {
