@@ -18,26 +18,24 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
- * \file sequence_mask.cu
+ * Copyright (c) 2018 by Contributors
+ * \file gradient_multiplier_op.cu
  * \brief
- * \author Sebastian Bodenstein
+ * \author Istvan Fehervari
 */
-
-#include "./sequence_mask-inl.h"
+#include "../tensor/elemwise_unary_op.h"
+#include "../tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 namespace op {
 
-template <> Operator *CreateOp<gpu>(SequenceMaskParam param, int dtype, int itype) {
-  Operator *op = NULL;
-  MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceMaskOp<gpu, DType, IType>(param);
-        });
-    });
-  return op;
-}
+NNVM_REGISTER_OP(_contrib_gradientmultiplier)
+.set_attr<FComputeEx>("FComputeEx<gpu>", UnaryOp::IdentityComputeEx<gpu>)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
+NNVM_REGISTER_OP(_contrib_backward_gradientmultiplier)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>)
+.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, op::mshadow_op::mul>);
 
 }  // namespace op
 }  // namespace mxnet

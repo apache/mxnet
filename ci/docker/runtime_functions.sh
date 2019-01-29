@@ -1257,7 +1257,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    make java_ci_demo
+    mvn -Pci-nightly install
     bash bin/java_sample.sh
     bash bin/run_od.sh
 }
@@ -1265,7 +1265,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    make scala_ci_demo
+    mvn -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
 }

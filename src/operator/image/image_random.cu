@@ -18,26 +18,23 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
- * \file sequence_mask.cu
- * \brief
- * \author Sebastian Bodenstein
-*/
-
-#include "./sequence_mask-inl.h"
+ * \file image_random.cu
+ * \brief GPU Implementation of image transformation operators
+ */
+#include "./image_random-inl.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
+namespace image {
 
-template <> Operator *CreateOp<gpu>(SequenceMaskParam param, int dtype, int itype) {
-  Operator *op = NULL;
-  MSHADOW_TYPE_SWITCH(dtype, DType, {
-      MSHADOW_TYPE_SWITCH(itype, IType, {
-          op = new SequenceMaskOp<gpu, DType, IType>(param);
-        });
-    });
-  return op;
-}
+NNVM_REGISTER_OP(_image_normalize)
+.set_attr<FCompute>("FCompute<gpu>", NormalizeOpForward<gpu>);
 
+NNVM_REGISTER_OP(_backward_image_normalize)
+.set_attr<FCompute>("FCompute<gpu>", NormalizeOpBackward<gpu>);
+
+
+}  // namespace image
 }  // namespace op
 }  // namespace mxnet
