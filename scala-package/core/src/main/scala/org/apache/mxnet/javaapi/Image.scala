@@ -35,13 +35,24 @@ object Image {
     org.apache.mxnet.Image.imDecode(buf, flag, toRGB, None)
   }
 
+  def imDecode(buf: Array[Byte]): NDArray = {
+    imDecode(buf, 1, true)
+  }
+
   /**
     * Same imageDecode with InputStream
+    *
     * @param inputStream the inputStream of the image
+    * @param flag   Convert decoded image to grayscale (0) or color (1).
+    * @param toRGB Whether to convert decoded image
     * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
-  def imDecode(inputStream: InputStream, flag: Int = 1, toRGB: Boolean = true): NDArray = {
+  def imDecode(inputStream: InputStream, flag: Int, toRGB: Boolean): NDArray = {
     org.apache.mxnet.Image.imDecode(inputStream, flag, toRGB, None)
+  }
+
+  def imDecode(inputStream: InputStream): NDArray = {
+    imDecode(inputStream, 1, true)
   }
 
   /**
@@ -53,8 +64,12 @@ object Image {
     *                 (instead of opencv's default BGR).
     * @return org.apache.mxnet.NDArray in HWC format with DType [[DType.UInt8]]
     */
-  def imRead(filename: String, flag: Int, toRGB: Boolean = true): NDArray = {
+  def imRead(filename: String, flag: Int, toRGB: Boolean): NDArray = {
     org.apache.mxnet.Image.imRead(filename, Some(flag), Some(toRGB), None)
+  }
+
+  def imRead(filename: String): NDArray = {
+    imRead(filename, 1, true)
   }
 
   /**
@@ -68,6 +83,10 @@ object Image {
   def imResize(src: NDArray, w: Int, h: Int, interp: Integer): NDArray = {
     val interpVal = if (interp == null) None else Some(interp.intValue())
     org.apache.mxnet.Image.imResize(src, w, h, interpVal, None)
+  }
+
+  def imResize(src: NDArray, w: Int, h: Int): NDArray = {
+    imResize(src, w, h, null)
   }
 
   /**
