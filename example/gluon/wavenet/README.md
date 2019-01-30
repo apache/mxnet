@@ -54,7 +54,7 @@ python main.py --batch_size=32 --epochs=100 ...
 
 ## Samples
 - ground truth [link](https://soundcloud.com/seung-hwan-jung-375239472/us-english-ground-truth)
-- official result from for deepmind [link](https://soundcloud.com/seung-hwan-jung-375239472/official-result-from-deepmind)
+- official result from deepmind [link](https://soundcloud.com/seung-hwan-jung-375239472/official-result-from-deepmind)
 - result using this code [link](https://soundcloud.com/seung-hwan-jung-375239472/wavenet-gen-rst)
 
 ## References
