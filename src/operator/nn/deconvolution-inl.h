@@ -227,6 +227,10 @@ class DeconvolutionOp {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+#if defined(__CUDACC__)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+        << "Must init CuBLAS handle in stream";
+#endif
     auto in_data_shape = in_data[deconv::kData].shape_;
     Tensor<xpu, 4, DType> data = TBlobTo4DTensor(in_data[deconv::kData], s);
     Tensor<xpu, 4, DType> out = TBlobTo4DTensor(out_data[deconv::kOut], s);
@@ -253,55 +257,37 @@ class DeconvolutionOp {
                param_.num_filter / param_.num_group * kernel_size);
     Tensor<xpu, 3, DType> wmat =
         in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
-#if defined(__CUDACC__)
-    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
-        << "Must init CuBLAS handle in stream";
-#endif
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1, DType> workspace =
         ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
             Shape1(this->InitTemp(out.shape_, data.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
+      // temp_col: (N*kernel_size, OW * OH)
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
                                             workspace.dptr_,
                                             Shape2(shape_colunit_[0],
                                             shape_colunit_[1] * step), s);
+      // temp_dst: (N, N/n_grup, OW * OH)
       Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
                                            workspace.dptr_ + temp_col.shape_.Size(),
                                            Shape3(shape_dstunit_[0],
                                            shape_dstunit_[1],
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
-      if (o_pad[0] == 0 && o_pad[1] == 0) {
-        // temp_col = unpack_patch2col(out.Slice(i, i + step),
-        //                             kernel[0],
-        //                             kernel[1],
-        //                             stride[0],
-        //                             stride[1],
-        //                             dilate[0],
-        //                             dilate[1]);
-        im2col(
-          s,
-          (out.Slice(i, i+step)).dptr_,
-          out.shape_,
-          temp_col.shape_,
-          kernel,
-          padding,
-          stride,
-          dilate,
-          temp_col.dptr_
-        );
-      } else {
-        temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
-                                        o_pad[0], o_pad[1]),
-                                    kernel[0],
-                                    kernel[1],
-                                    stride[0],
-                                    stride[1],
-                                    dilate[0],
-                                    dilate[1]);
-      }
+
+      im2col(
+        s,
+        (out.Slice(i, i+step)).dptr_,
+        out.shape_,
+        temp_col.shape_,
+        kernel,
+        padding,
+        stride,
+        dilate,
+        temp_col.dptr_
+      );
+
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
@@ -310,42 +296,21 @@ class DeconvolutionOp {
         //   tmpc = dot(wmat[gid].T(), temp_dst[gid]);
         linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
-      if (o_pad[0] == 0 && o_pad[1] == 0) {
-        // out.Slice(i, i + step) = pack_col2patch(temp_col,
-        //                            out.Slice(i, i + step).shape_,
-        //                            kernel[0],
-        //                            kernel[1],
-        //                            stride[0],
-        //                            stride[1],
-        //                            dilate[0],
-        //                            dilate[1]);
-        col2im(
-          s,
-          temp_col.dptr_,
-          out.Slice(i, i + step).shape_,
-          temp_col.shape_,
-          kernel,
-          padding,
-          stride,
-          dilate,
-          out.Slice(i, i+step).dptr_,
-          req[deconv::kOut]
-        );
-      } else {
-        Shape<4> pshape = out.Slice(i, i + step).shape_;
-        pshape[2] += 2 * o_pad[0];
-        pshape[3] += 2 * o_pad[1];
-        out.Slice(i, i + step) = crop(pack_col2patch(temp_col,
-                                        pshape,
-                                        kernel[0],
-                                        kernel[1],
-                                        stride[0],
-                                        stride[1],
-                                        dilate[0],
-                                        dilate[1]),
-                                        out[i][0].shape_);
-      }
+
+      col2im(
+        s,
+        temp_col.dptr_,
+        out.Slice(i, i + step).shape_,
+        temp_col.shape_,
+        kernel,
+        padding,
+        stride,
+        dilate,
+        out.Slice(i, i+step).dptr_,
+        req[deconv::kOut]
+      );
     }
+
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
       Tensor<xpu, 1, DType> bias = in_data[deconv::kBias].get<xpu, 1, DType>(s);
