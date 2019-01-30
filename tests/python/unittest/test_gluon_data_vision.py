@@ -25,6 +25,7 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
 from common import assertRaises, setup_module, with_seed, teardown
 
+import numpy as np
 
 @with_seed()
 def test_to_tensor():
