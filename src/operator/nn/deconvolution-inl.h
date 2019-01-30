@@ -263,7 +263,7 @@ class DeconvolutionOp {
             Shape1(this->InitTemp(out.shape_, data.shape_)), s);
     for (index_t i = 0; i < nbatch; i += nstep_) {
       const index_t step = std::min(nstep_, nbatch - i);
-      // temp_col: (N*kernel_size, OW * OH)
+      // temp_col: (N * kernel_size, OW * OH)
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
                                             workspace.dptr_,
                                             Shape2(shape_colunit_[0],
@@ -293,7 +293,7 @@ class DeconvolutionOp {
         mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
                                               gstride * (gid + 1));
         // Legacy approach shown here for comparison:
-        //   tmpc = dot(wmat[gid].T(), temp_dst[gid]);
+        // tmpc = dot(wmat[gid].T(), temp_dst[gid]);
         linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
 
@@ -334,6 +334,10 @@ class DeconvolutionOp {
     CHECK_EQ(in_data[deconv::kWeight].CheckContiguous(), true);
     // get data
     Stream<xpu> *s = ctx.get_stream<xpu>();
+#if defined(__CUDACC__)
+    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
+        << "Must init CuBLAS handle in stream";
+#endif
     auto in_data_shape = in_data[deconv::kData].shape_;
     Tensor<xpu, 4, DType> data = TBlobTo4DTensor(in_data[deconv::kData], s);
     Tensor<xpu, 4, DType> grad = TBlobTo4DTensor(out_grad[deconv::kOut], s);
@@ -352,6 +356,7 @@ class DeconvolutionOp {
     }
     auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
     auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
+    auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[1]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
@@ -363,10 +368,6 @@ class DeconvolutionOp {
         in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     Tensor<xpu, 3, DType> gwmat =
         in_grad[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
-#if defined(__CUDACC__)
-    CHECK_EQ(s->blas_handle_ownership_, Stream<xpu>::OwnHandle)
-        << "Must init CuBLAS handle in stream";
-#endif
 
     const index_t nbatch = data.size(0);
     Tensor<xpu, 1, DType> workspace =
@@ -384,23 +385,19 @@ class DeconvolutionOp {
                                            shape_dstunit_[1],
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
-      if (o_pad[0] == 0 && o_pad[1] == 0) {
-        temp_col = unpack_patch2col(grad.Slice(i, i + step),
-                                     kernel[0],
-                                     kernel[1],
-                                     stride[0],
-                                     stride[1],
-                                     dilate[0],
-                                     dilate[1]);
-      } else {
-        temp_col = unpack_patch2col(pad(grad.Slice(i, i + step), o_pad[0], o_pad[1]),
-                                     kernel[0],
-                                     kernel[1],
-                                     stride[0],
-                                     stride[1],
-                                     dilate[0],
-                                     dilate[1]);
-      }
+
+      im2col(
+        s,
+        (grad.Slice(i, i + step)).dptr_,
+        grad.shape_,
+        temp_col.shape_,
+        kernel,
+        padding,
+        stride,
+        dilate,
+        temp_col.dptr_
+      );
+
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
         Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
@@ -421,7 +418,7 @@ class DeconvolutionOp {
         for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
           Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
           // Legacy approach shown here for comparison:
-          //   temp_dst[gid] = dot(wmat[gid], tmpc);
+          // temp_dst[gid] = dot(wmat[gid], tmpc);
           linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
         }
         Assign(gdata.Slice(i, i + step),
