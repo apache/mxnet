@@ -29,6 +29,7 @@
 #include <ngraph_imperative.h>
 #include <ngraph_nnvm_ops.h>
 #include <ngraph_sgcompiler_utils.h>
+#include <ngraph_utils.h>
 
 #include "../subgraph/common.h"
 #include "../subgraph/subgraph_property.h"
@@ -165,6 +166,12 @@ bool NgraphSubgraphInferShape(const nnvm::NodeAttrs &attrs,
   auto compiler =
       nnvm::get<std::shared_ptr<ngraph_bridge::Compiler>>(attrs.parsed);
   auto graph = get_ngraph(attrs);
+
+  ngraph_check(in_attrs != nullptr);
+  ngraph_check(out_attrs != nullptr);
+  ngraph_check(in_attrs->size() == graph->inputs_.size());
+  ngraph_check(out_attrs->size() == graph->get_results().size());
+
   if ((graph->inputs_.size() > 0) &&
       (*in_attrs)[0] != graph->inputs_[0]->shape_) {
     compiler->ReshapeGraph(*in_attrs);
@@ -184,6 +191,12 @@ bool NgraphSubgraphInferShape(const nnvm::NodeAttrs &attrs,
 bool NgraphSubgraphInferType(const nnvm::NodeAttrs &attrs,
                              std::vector<int> *iattr, std::vector<int> *oattr) {
   auto graph = get_ngraph(attrs);
+
+  ngraph_check(iattr != nullptr);
+  ngraph_check(oattr != nullptr);
+  ngraph_check(iattr->size() == graph->inputs_.size());
+  ngraph_check(oattr->size() == graph->get_results().size());
+
   for (size_t i = 0; i < graph->inputs_.size(); ++i) {
     (*iattr)[i] = graph->inputs_[i]->dtype_;
   }
@@ -202,11 +215,15 @@ bool NgraphSubgraphInferStorageType(const nnvm::NodeAttrs &attrs,
                                     mxnet::DispatchMode *dispatch_mode,
                                     std::vector<int> *in_attrs,
                                     std::vector<int> *out_attrs) {
+  ngraph_check(dispatch_mode != nullptr);
+  ngraph_check(in_attrs != nullptr);
+  ngraph_check(out_attrs != nullptr);
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-  if (in_attrs->size() > 0)
+  if (in_attrs->size() > 0) {
     mxnet::op::storage_type_assign(in_attrs, mxnet::kDefaultStorage,
                                    dispatch_mode,
                                    mxnet::DispatchMode::kFComputeEx);
+  }
   return mxnet::op::storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                         dispatch_mode,
                                         mxnet::DispatchMode::kFComputeEx);
@@ -216,6 +233,9 @@ bool NgraphSubgraphBackwardInferStorageType(const nnvm::NodeAttrs &attrs,
                                             mxnet::DispatchMode *dispatch_mode,
                                             std::vector<int> *in_attrs,
                                             std::vector<int> *out_attrs) {
+  ngraph_check(dispatch_mode != nullptr);
+  ngraph_check(in_attrs != nullptr);
+  ngraph_check(out_attrs != nullptr);
   DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   mxnet::op::storage_type_assign(in_attrs, mxnet::kDefaultStorage,
                                  dispatch_mode,
@@ -261,6 +281,8 @@ NNVM_REGISTER_OP(_ngraph_subgraph_op)
                                  NgraphSubgraphInferStorageType)
     .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
                                   NgraphSubgraphOpForward)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
+                                  NgraphSubgraphOpForward)
     .set_attr<nnvm::FGradient>("FGradient", NgraphSubgraphGradient)
     .set_attr<nnvm::FMutateInputs>("FMutateInputs", NGraphSubgraphMutateInputs)
     .set_attr<std::string>("key_var_num_args", "num_args")
@@ -280,6 +302,8 @@ NNVM_REGISTER_OP(_backward_ngraph_subgraph_op)
     .set_attr<bool>("TIsBackward", true)
     .set_attr<bool>("TIsLayerOpBackward", true)
     .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
+                                  NgraphSubgraphOpBackward)
+    .set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
                                   NgraphSubgraphOpBackward)
     .set_attr<FInferStorageType>("FInferStorageType",
                                  NgraphSubgraphBackwardInferStorageType);

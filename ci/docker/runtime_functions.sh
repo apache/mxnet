@@ -842,7 +842,7 @@ unittest_ubuntu_cpu_ngraph() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest -e "test_subgraph_exe" -e "test_make_subgraph" -e "test_monitor" -e "test_op_output_names_monitor" -e "test_zero_prop"
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest -e "test_monitor" -e "test_op_output_names_monitor" -e "test_zero_prop"
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS --with-xunit --xunit-file nosetests_ngraph.xml --verbose tests/python/ngraph
 }
 

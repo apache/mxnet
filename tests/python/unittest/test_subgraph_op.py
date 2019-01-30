@@ -51,8 +51,7 @@ def test_subgraph_exe():
         partitioned_exe.forward()
         assert len(exe.outputs) == len(partitioned_exe.outputs)
         for i in range(len(exe.outputs)):
-            assert_almost_equal((exe.outputs[i] - partitioned_exe.outputs[i]).abs().sum().asnumpy(),
-                                np.zeros(shape=(1,)))
+            assert_almost_equal(exe.outputs[i].asnumpy(), partitioned_exe.outputs[i].asnumpy())
 
     def _check_subgraph_exe2(sym, op_names):
         """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in simple_bind
@@ -84,7 +83,7 @@ def test_subgraph_exe():
         outputs2 = partitioned_exec.outputs
         assert len(outputs1) == len(outputs2)
         for i in range(len(outputs1)):
-            assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+            assert_almost_equal(outputs1[i].asnumpy(), outputs2[i].asnumpy())
 
     def _check_subgraph_exe3(sym, op_names):
         """Use the partitioned sym to bind an executor and compare the outputs
