@@ -11,9 +11,9 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 
 ## Requirements
 - Python 3.6.1
-- Mxnet 1.2
-- tqdm
-- scipy.io
+- Mxnet 1.3.1
+- tqdm 4.29.0
+- scipy 1.2.0
 
 
 ## Usage
