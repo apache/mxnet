@@ -540,23 +540,26 @@ def _test_in_separate_process(func, *args):
 def _conv_with_num_streams(seed, num_streams):
     os.environ['MXNET_GPU_WORKER_NSTREAMS'] = str(num_streams)
     with random_seed(seed):
-        num_trials = 10
+        # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
+        num_trials = 20
         for _ in range(num_trials):
-            size = np.random.randint(32, 512)
-            print('size = {}'.format(size))
+            size = np.random.randint(32, 128)
             # The cudnn conv operator runs dgrad and wgrad in separate streams if enabled, with possible
             # kernel overlap.  The non-cudnn conv op doesn't do this so is used as the 'golden copy'.
-            ctx = {'ctx': mx.gpu(0), 'conv_data': (2, 2, size, size),
-                   'type_dict': {'conv_data': np.float32}}
             ctx = {'ctx': mx.gpu(0), 'conv_data': (2, 2, size, size),
                    'type_dict': {'conv_data': np.float32}}
             # Adding 'flip' here isolates the model from the input node (which can't use inplace store)
             flipped = mx.sym.flip(axis=0, name='conv')
             sym = mx.sym.Convolution(data=flipped, num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
             flipped_no_cudnn = mx.sym.flip(axis=0, name='conv')
-            sym_no_cudnn = mx.sym.Convolution(data = flipped_no_cudnn, num_filter=3, kernel=(3,3), pad=(1,1),
+            sym_no_cudnn = mx.sym.Convolution(data=flipped_no_cudnn, num_filter=3, kernel=(3,3), pad=(1,1),
                                               cudnn_off=True, name='conv')
-            check_consistency([sym, sym_no_cudnn], [ctx, ctx])
+            try:
+                # tol can be pretty high- we're looking for a large diff due to garbaged workspace
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=1e-2)
+            except:
+                print('Failing conv size = {}'.format(size))
+                raise
 
 @with_seed()
 def test_convolution_multiple_streams():
