@@ -48,7 +48,7 @@ enum UpSamplingMultiInputMode {kConcat, kSum};
 }  // namespace up_enum
 
 struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
-  int scale;
+  TShape scale;
   int num_filter;
   int sample_type;
   int num_args;
@@ -56,8 +56,10 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   uint64_t workspace;
   DMLC_DECLARE_PARAMETER(UpSamplingParam) {
     DMLC_DECLARE_FIELD(scale)
-    .set_range(1, 1000)
-    .describe("Up sampling scale");
+    .set_default(TShape())
+    .describe("Up sampling scale. Integer or tuple of integers. "
+              "Different scale per dimension is allowed only for "
+              "nearest neighbor upsampling.");
     DMLC_DECLARE_FIELD(num_filter)
     .describe("Input filter. Only used by bilinear sample_type.")
     .set_default(0);
@@ -65,6 +67,11 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .add_enum("nearest", up_enum::kNearest)
     .add_enum("bilinear", up_enum::kBilinear)
     .describe("upsampling method");
+    DMLC_DECLARE_FIELD(num_args).set_default(1)
+    .describe("Number of inputs to be upsampled. For nearest neighbor "
+    "upsampling, this can be 1-N; the size of output will be"
+    "(scale*h_0,scale*w_0) and all other inputs will be upsampled to the"
+    "same size. For bilinear upsampling this must be 2; 1 input and 1 weight.");
     DMLC_DECLARE_FIELD(multi_input_mode)
     .add_enum("concat", up_enum::kConcat)
     .add_enum("sum", up_enum::kSum)
@@ -72,11 +79,6 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .describe("How to handle multiple input. concat means concatenate upsampled "
     "images along the channel dimension. sum means add all images together, "
     "only available for nearest neighbor upsampling.");
-    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
-    .describe("Number of inputs to be upsampled. For nearest neighbor "
-    "upsampling, this can be 1-N; the size of output will be"
-    "(scale*h_0,scale*w_0) and all other inputs will be upsampled to the"
-    "same size. For bilinear upsampling this must be 2; 1 input and 1 weight.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
     .describe("Tmp workspace for deconvolution (MB)");
   }
@@ -102,7 +104,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
       int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
-      if (param.multi_input_mode == up_enum::kSum) {
+      /*if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
           Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale));
         } else {
@@ -110,12 +112,12 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
         }
       } else {
         Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale));
-      }
+      }*/
       begin = end;
     }
   } else {
-    Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
-    Assign(out, req[up_enum::kOut], upsampling_nearest(data, param.scale));
+    /*Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
+    Assign(out, req[up_enum::kOut], upsampling_nearest(data, param.scale));*/
   }
 }
 
@@ -154,7 +156,7 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
       }
       begin = end;
     }
-  } else {
+  } /*else {
     Tensor<xpu, 4, DType> input_grad = in_grad[up_enum::kData].get<xpu, 4, DType>(s);
     mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
     Assign(input_grad, req[up_enum::kData],
@@ -164,14 +166,28 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
                                    param.scale,
                                    param.scale,
                                    param.scale));
-  }
+  }*/
 }
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
   DeconvolutionParam p = DeconvolutionParam();
-  int kernel = 2 * param.scale - param.scale % 2;
-  int stride = param.scale;
-  int pad = static_cast<int>(ceil((param.scale - 1) / 2.));
+  int scale_h = 1;
+  int scale_w = 1;
+  if (param.scale.ndim() == 1) {
+    scale_h = param.scale[0];
+    scale_w = param.scale[0];
+  } else if (param.scale.ndim() == 2) {
+    scale_h = param.scale[0];
+    scale_w = param.scale[1];
+  } else if (param.scale.ndim() == 4) {
+    scale_h = param.scale[2];
+    scale_w = param.scale[3];
+  }
+  CHECK_EQ(scale_h, scale_w) <<
+  "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
+  int kernel = 2 * scale_h - scale_h % 2;
+  int stride = scale_h;
+  int pad = static_cast<int>(ceil((scale_h - 1) / 2.));
   p.workspace = param.workspace;
   p.num_group = param.num_filter;
   p.num_filter = param.num_filter;
