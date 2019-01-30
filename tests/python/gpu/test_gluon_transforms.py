@@ -91,7 +91,7 @@ def test_resize():
     # Invalid Param interp is set to 2
     data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
     invalid_transformer = transforms.Resize((100, 100), interpolation=2)
-    assertRaises(MXNetError, invalid_transformer, data_in_3d)
+    assertRaises(MXNetError, invalid_transformer(data_in_3d))
 
     # Credited to Hang Zhang
     def py_bilinear_resize_nhwc(x, outputHeight, outputWidth):
