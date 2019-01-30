@@ -50,8 +50,6 @@ export SymbolicNode,
 
 # ndarray.jl
 export NDArray,
-       clip,
-       clip!,
        context,
        expand_dims,
        @inplace,

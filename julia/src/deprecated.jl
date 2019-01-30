@@ -72,8 +72,6 @@ end
 @deprecate softmax(x::NDArray; axis = ndims(x))     softmax.(x, axis)
 @deprecate log_softmax(x::NDArray; axis = ndims(x)) log_softmax.(x, axis)
 
-@deprecate clip(x; a_min = 0, a_max = 0) clip(x, a_min, a_max)
-
 function broadcast_plus(x::NDArray, y::NDArray)
   @warn("broadcast_plus(x, y) is deprecated, use x .+ y instead.")
   x .+ y
@@ -194,3 +192,9 @@ function empty(dims::Int...)
         "use `NDArray(undef, dims...)` instead.")
   NDArray(undef, dims...)
 end
+
+# replaced by Base.clamp
+@deprecate clip(x::NDArray, lo::Real, hi::Real)  clamp(x, lo, hi)
+@deprecate clip!(x::NDArray, lo::Real, hi::Real) clamp!(x, lo, hi)
+@deprecate clip(x; a_min = 0, a_max = 0) clamp(x, a_min, a_max)
+

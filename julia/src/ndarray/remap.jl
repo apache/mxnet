@@ -67,6 +67,18 @@ function _docsig(fname::Symbol, sig::Expr, opname::String)
   end
 end
 
+"""
+    @_remap(sig::Expr, imp::Expr)
+
+Creating a function in signature `sig` with the function implementation `imp`.
+
+## Arguments
+- `sig` is the function signature.
+  If the function name ends with `!`, it will invoke the corresponding inplace
+  call.
+- `imp` is the underlying libmxnet API call
+
+"""
 macro _remap(sig::Expr, imp::Expr)
   d = splitdef(:($sig = $imp))
   @capture d[:name] (M_.fname_|fname_)

@@ -291,7 +291,7 @@ function normgrad!(opt::AbstractOptimizer, W::NDArray, ∇::NDArray)
   !iszero(s) && @inplace ∇ .*= s
   # gradient clipping
   c = opt.clip
-  c > 0 && clip!(∇, -c, c)
+  c > 0 && clamp!(∇, -c, c)
   # weight decay
   λ = opt.λ
   λ > 0 && @inplace ∇ += λ .* W

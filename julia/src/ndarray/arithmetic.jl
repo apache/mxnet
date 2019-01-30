@@ -218,40 +218,52 @@ broadcasted(::typeof(^), x::NDArray{T,N}, y::NDArray{T,N}) where {T,N} =
 broadcasted(::typeof(^), x::NDArray{T,N}, y::NDArray{T,M}) where {T,N,M} =
   _broadcast_power(x, y)
 
-_nddoc[:clip] = _nddoc[:clip!] =
 """
-    clip(x::NDArray, min, max)
-    clip!(x::NDArray, min, max)
+    clamp(x::NDArray, lo, hi)
 
-Clips (limits) the values in `NDArray`.
+Clamps (limits) the values in `NDArray`.
 Given an interval, values outside the interval are clipped to the interval edges.
-Clipping `x` between `min` and `x` would be:
+Clamping `x` between low `lo` and high `hi` would be:
 
 ```julia
-clip(x, min_, max_) = max(min(x, max_), min_))
+clamp(x, lo, hi) = max(min(x, lo), hi))
 ```
+
+The storage type of clip output depends on storage types of inputs and the
+`lo`, `hi` parameter values:
+
+- clamp(default) -> default
+- clamp(row_sparse, lo <= 0, hi >= 0) -> row_sparse
+- clamp(csr, lo <= 0, hi >= 0) -> csr
+- clamp(row_sparse, lo < 0, hi < 0) -> default
+- clamp(row_sparse, lo > 0, hi > 0) -> default
+- clamp(csr, lo < 0, hi < 0) -> csr
+- clamp(csr, lo > 0, hi > 0) -> csr
+
+## Examples
 
 ```jldoctest
 julia> x = NDArray(1:9);
 
-julia> mx.clip(x, 2, 8)'
+julia> clamp(x, 2, 8)'
 1×9 mx.NDArray{Int64,2} @ CPU0:
  2  2  3  4  5  6  7  8  8
-```
 
-The storage type of clip output depends on storage types of inputs and the
-`min`, `max` parameter values:
-
-- clip(default) = default
-- clip(row_sparse, min <= 0, max >= 0) = row_sparse
-- clip(csr, min <= 0, max >= 0) = csr
-- clip(row_sparse, min < 0, max < 0) = default
-- clip(row_sparse, min > 0, max > 0) = default
-- clip(csr, min < 0, max < 0) = csr
-- clip(csr, min > 0, max > 0) = csr
+julia> clamp(x, 8, 2)'
+1×9 NDArray{Int64,2} @ CPU0:
+ 8  8  2  2  2  2  2  2  2
+ ```
 """
-@_remap clip(x::NDArray, min::Real, max::Real) clip(x; a_min = min, a_max = max)
-@_remap clip!(x::NDArray, min::Real, max::Real) clip(x; a_min = min, a_max = max)
+Base.clamp(x::NDArray, lo::Real, hi::Real) = _clamp(x, lo, hi)
+@_remap _clamp(x::NDArray, lo::Real, hi::Real) clip(x; a_min = lo, a_max = hi)
+
+"""
+    clamp!(x::NDArray, lo, hi)
+
+See also [`clamp`](@ref).
+"""
+Base.clamp!(x::NDArray, lo::Real, hi::Real) = _clamp!(x, lo, hi)
+@_remap _clamp!(x::NDArray, lo::Real, hi::Real) clip(x; a_min = lo, a_max = hi)
 
 ################################################################################
 # remapping to solving type unstablility
