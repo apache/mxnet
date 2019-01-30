@@ -6,7 +6,7 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 ![net_structure2](assets/net_struc2.png)
 
 ## Dataset
-- Deepmind WaveNet blog
+- Deepmind WaveNet blog [link](https://deepmind.com/blog/wavenet-generative-model-raw-audio/)
    - use US English data [audio link](https://storage.googleapis.com/deepmind-media/pixie/us-english/parametric-2.wav)
 
 ## Requirements
