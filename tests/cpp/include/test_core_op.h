@@ -186,20 +186,32 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     if (!reqs.empty()) {
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
-        if (req.type == ResourceRequest::kTempSpace) {
-          Resource r = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
-          requested.emplace_back(r);
-        } else if (req.type == ResourceRequest::kRandom) {
-          requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
-        } else if (req.type == ResourceRequest::kParallelRandom) {
-          Resource rm = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
-          if (ctx->run_ctx.ctx.dev_mask() == Context::kCPU) {
-            common::random::RandGenerator<cpu, DType>::AllocState(
-                rm.get_parallel_random<cpu, DType>());
+        switch (req.type) {
+          case ResourceRequest::kTempSpace: {
+            requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+            break;
           }
-          requested.emplace_back(rm);
-        } else {
-          LOG(FATAL) << "resource type not yet supported";
+          case ResourceRequest::kRandom: {
+            requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+            break;
+          }
+          case ResourceRequest::kParallelRandom: {
+            Resource rm = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
+            if (ctx->run_ctx.ctx.dev_mask() == Context::kCPU) {
+              common::random::RandGenerator<cpu, DType>::AllocState(
+                  rm.get_parallel_random<cpu, DType>());
+            }
+            requested.emplace_back(rm);
+            break;
+          }
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+          case ResourceRequest::kCuDNNDropoutDesc: {
+            requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+            break;
+          }
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+          default:
+            LOG(FATAL) << "resource type " << req.type << " is not yet supported";
         }
       }
     }

@@ -135,6 +135,7 @@ Example::
       if (1.0f - param.p > 0
           && !(param.cudnn_off && param.cudnn_off.value())
           && param.axes.ndim() == 0) {
+        request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
         return request;
       }
 #endif

@@ -78,7 +78,8 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     DMLC_DECLARE_FIELD(axes).set_default(TShape())
     .describe("Axes for variational dropout kernel.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(true))
-    .describe("Whether to turn off cudnn in dropout operator.");
+    .describe("Whether to turn off cudnn in dropout operator. "
+              "This option is ignored if axes is specified.");
   }
 };  // struct DropoutParam
 
@@ -211,7 +212,6 @@ class DropoutOp {
     this->cudnn_off_ = param.cudnn_off && param.cudnn_off.value();
     this->ctx_ = ctx;
     if (ctx.dev_type == kGPU && this->pkeep_ > 0 && !this->cudnn_off_) {
-      init_cudnn_ = false;
       dtype_ = mshadow::DataType<DType>::kCudnnFlag;
       CUDNN_CALL(cudnnCreateTensorDescriptor(&x_desc_));
       CUDNN_CALL(cudnnCreateTensorDescriptor(&y_desc_));
@@ -230,9 +230,6 @@ class DropoutOp {
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_));
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_));
       CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
-      if (init_cudnn_) {
-        Storage::Get()->Free(dropout_states_);
-      }
     }
 #endif  // MXNET_USE_CUDNN_DROPOUT
   }
@@ -249,16 +246,7 @@ class DropoutOp {
       Stream<xpu> *s = ctx.get_stream<xpu>();
 
       // set dropout state.
-      // TODO(szha): expensive call, should be cached and reused across operators.
-      if (!init_cudnn_) {
-        CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_, &dropout_state_byte_));
-        dropout_states_ = Storage::Get()->Alloc(dropout_state_byte_, Context::GPU(s->dev_id));
-        CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
-                                             1.0f - this->pkeep_,
-                                             dropout_states_.dptr, dropout_state_byte_,
-                                             seed_));
-        init_cudnn_ = true;
-      }
+      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_, seed_);
 
       // describe input/output tensor
       int dim[4], stride[4];
@@ -493,10 +481,8 @@ class DropoutOp {
   Context ctx_;
   cudnnDataType_t dtype_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  bool init_cudnn_;
   uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
-  size_t dropout_state_byte_, dropout_reserve_byte_;
-  Storage::Handle dropout_states_;
+  size_t dropout_reserve_byte_;
   cudnnTensorDescriptor_t x_desc_, y_desc_, dx_desc_, dy_desc_;
 #endif  // MXNET_USE_CUDNN_DROPOUT
 };  // class DropoutOp
