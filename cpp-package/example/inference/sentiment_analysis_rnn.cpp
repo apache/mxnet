@@ -44,6 +44,7 @@ using namespace mxnet::cpp;
 static const int DEFAULT_BUCKET_KEYS[] = {5, 10, 15, 20, 25, 30};
 static const char DEFAULT_S3_URL[] = "https://s3.amazonaws.com/mxnet-cpp/RNN_model/";
 
+
 /*
  * class Predictor
  *
@@ -75,6 +76,7 @@ class Predictor {
     int GetIndexForOutputSymbolName(const std::string& output_symbol_name);
     float GetIndexForWord(const std::string& word);
     int GetClosestBucketKey(int num_words);
+
     std::map<std::string, NDArray> args_map;
     std::map<std::string, NDArray> aux_map;
     std::map<std::string, int>  wordToIndex;
@@ -89,14 +91,14 @@ class Predictor {
  * 1. model_json:  The RNN model in json formatted file.
  * 2. model_params: File containing model parameters
  * 3. input_dictionary: File containing the word and associated index.
- * 4. num_words: Number of words which will be used to predict the sentiment.
+ * 4. bucket_keys: A vector of bucket keys for creating executors.
  *
  * The constructor:
  *  1. Loads the model and parameter files.
  *  2. Loads the dictionary file to create index to word and word to index maps.
- *  3. For each bucket key in the input vector of bucket keys, it invokes the SimpleBind to
- *     create the executor. The bucket key determines the length of input data required
- *     for that executor.
+ *  3. For each bucket key in the input vector of bucket keys, it creates an executor.
+ *     The executors share the memory. The bucket key determines the length of input data
+ *     required for that executor.
  *  4. Creates a map of bucket key to corresponding executor.
  *  5. The model is loaded only once. The executors share the memory for the parameters.
  */
@@ -122,13 +124,38 @@ Predictor::Predictor(const std::string& model_json,
   // Load the model parameters.
   LoadParameters(model_params);
 
-  // Create the executors for each bucket key. The bucket key represents the shape of input data.
+  /*
+   * Create the executors for each bucket key. The bucket key represents the shape of input data.
+   * The executors will share the memory by using following technique:
+   * 1. Infer the executor arrays and bind the first executor with the first bucket key.
+   * 2. Then for creating the next bucket key, adjust the shape of input argument to match that key.
+   * 3. Create the executor for the next bucket key by passing the inferred executor arrays and
+   *    pointer to the executor created for the first key.
+   */
+
+  Executor *master_executor = nullptr;
+  std::vector<NDArray> arg_arrays;
+  std::vector<NDArray> grad_arrays;
+  std::vector<OpReqType> grad_reqs;
+  std::vector<NDArray> aux_arrays;
+
   for (int bucket : bucket_keys) {
     args_map["data0"] = NDArray(Shape(bucket, 1), global_ctx, false);
     args_map["data1"] = NDArray(Shape(1), global_ctx, false);
-    Executor* executor = net.SimpleBind(global_ctx, args_map, std::map<std::string, NDArray>(),
-                                std::map<std::string, OpReqType>(), aux_map);
-    executor_buckets[bucket] = executor;
+
+    if (master_executor == nullptr) {
+      net.InferExecutorArrays(global_ctx, &arg_arrays, &grad_arrays, &grad_reqs,
+                              &aux_arrays, args_map, std::map<std::string, NDArray>(),
+                              std::map<std::string, OpReqType>(), aux_map);
+      master_executor = net.Bind(global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+                                 std::map<std::string, Context>(), nullptr);
+      executor_buckets[bucket] = master_executor;
+    } else {
+      arg_arrays[0]  = NDArray(Shape(bucket, 1), global_ctx, false);
+      Executor *executor = net.Bind(global_ctx, arg_arrays, grad_arrays, grad_reqs, aux_arrays,
+                                    std::map<std::string, Context>(), master_executor);
+      executor_buckets[bucket] = executor;
+    }
   }
 }
 
