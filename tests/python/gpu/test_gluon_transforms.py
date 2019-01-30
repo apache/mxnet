@@ -92,6 +92,7 @@ def test_resize():
     data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
     invalid_transformer = transforms.Resize((100, 100), interpolation=2)
     assertRaises(MXNetError, invalid_transformer, data_in_3d)
+
     # Credited to Hang Zhang
     def py_bilinear_resize_nhwc(x, outputHeight, outputWidth):
         batch, inputHeight, inputWidth, channel = x.shape
@@ -117,8 +118,14 @@ def test_resize():
                             h1lambda*((1-w1lambda)*x[b][h1+h1p][w1][c] + \
                             w1lambda*x[b][h1+h1p][w1+w1p][c])
         return y
+
+    # Test with normal case 3D input int8 type
+    data_in_4d = nd.random.uniform(0, 255, (1, 300, 300, 3)).astype('uint8')
+    out_nd_3d = transforms.Resize((100, 100))(data_in_4d[0])
+    assert_almost_equal(out_nd_3d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100)[0], atol=1.0)
+
     # Test with normal case 4D input int8 type
     data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3)).astype('uint8')
     out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
-    assert_almost_equal(out_nd_4d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100))
+    assert_almost_equal(out_nd_4d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100), atol=1.0)
 
