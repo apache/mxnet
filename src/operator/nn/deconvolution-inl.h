@@ -36,6 +36,7 @@
 #include <utility>
 #include "../operator_common.h"
 #include "../linalg.h"
+#include "./im2col.h"
 
 
 namespace mxnet {
@@ -242,6 +243,7 @@ class DeconvolutionOp {
     }
     auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
     auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
+    auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[1]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
@@ -272,13 +274,24 @@ class DeconvolutionOp {
                                            shape_dstunit_[2] * step), s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
       if (o_pad[0] == 0 && o_pad[1] == 0) {
-        temp_col = unpack_patch2col(out.Slice(i, i + step),
-                                    kernel[0],
-                                    kernel[1],
-                                    stride[0],
-                                    stride[1],
-                                    dilate[0],
-                                    dilate[1]);
+        // temp_col = unpack_patch2col(out.Slice(i, i + step),
+        //                             kernel[0],
+        //                             kernel[1],
+        //                             stride[0],
+        //                             stride[1],
+        //                             dilate[0],
+        //                             dilate[1]);
+        im2col(
+          s,
+          (out.Slice(i, i+step)).dptr_,
+          out.shape_,
+          temp_col.shape_,
+          kernel,
+          padding,
+          stride,
+          dilate,
+          temp_col.dptr_
+        );
       } else {
         temp_col = unpack_patch2col(pad(out.Slice(i, i + step),
                                         o_pad[0], o_pad[1]),
@@ -298,14 +311,26 @@ class DeconvolutionOp {
         linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
       }
       if (o_pad[0] == 0 && o_pad[1] == 0) {
-        out.Slice(i, i + step) = pack_col2patch(temp_col,
-                                   out.Slice(i, i + step).shape_,
-                                   kernel[0],
-                                   kernel[1],
-                                   stride[0],
-                                   stride[1],
-                                   dilate[0],
-                                   dilate[1]);
+        // out.Slice(i, i + step) = pack_col2patch(temp_col,
+        //                            out.Slice(i, i + step).shape_,
+        //                            kernel[0],
+        //                            kernel[1],
+        //                            stride[0],
+        //                            stride[1],
+        //                            dilate[0],
+        //                            dilate[1]);
+        col2im(
+          s,
+          temp_col.dptr_,
+          out.Slice(i, i + step).shape_,
+          temp_col.shape_,
+          kernel,
+          padding,
+          stride,
+          dilate,
+          out.Slice(i, i+step).dptr_,
+          req[deconv::kOut]
+        );
       } else {
         Shape<4> pshape = out.Slice(i, i + step).shape_;
         pshape[2] += 2 * o_pad[0];
