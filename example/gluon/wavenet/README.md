@@ -52,6 +52,8 @@ python main.py --batch_size=32 --epochs=100 ...
 ![perf_loss](assets/loss.png)
 
 
+## Samples
+- ground truth [link](https://soundcloud.com/seung-hwan-jung-375239472/us-english-ground-truth)
 
 
 ## References
