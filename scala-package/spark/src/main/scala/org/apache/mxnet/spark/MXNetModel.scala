@@ -23,7 +23,7 @@ import org.apache.spark.SparkContext
 import org.apache.spark.mllib.linalg.Vector
 
 /**
- * Wrapper for <pre>[[org.apache.mxnet.Model]]</pre> which used in Spark application
+ * Wrapper for ``org.apache.mxnet.Model`` which used in Spark application
  * @author Yizhi Liu
  */
 class MXNetModel private[mxnet](

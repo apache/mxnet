@@ -34,7 +34,7 @@
         <exclude>args4j:args4j</exclude>
       </excludes>
       <outputDirectory>.</outputDirectory>
-      <useProjectArtifact>true</useProjectArtifact>
+      <useProjectArtifact>false</useProjectArtifact>
       <unpack>true</unpack>
       <scope>runtime</scope>
     </dependencySet>
