@@ -5,6 +5,10 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 ![net_structure1](assets/net_struc1.png)
 ![net_structure2](assets/net_struc2.png)
 
+## Dataset
+- Deepmind WaveNet blog
+   - use US English data [audio link](https://storage.googleapis.com/deepmind-media/pixie/us-english/parametric-2.wav)
+
 ## Requirements
 - Python 3.6.1
 - Mxnet 1.2
@@ -46,6 +50,9 @@ python main.py --batch_size=32 --epochs=100 ...
 
 ## Results
 ![perf_loss](assets/loss.png)
+
+
+
 
 ## References
 - WaveNet: A Generative Model for Raw Audio | Deepmind [blog](https://deepmind.com/blog/wavenet-generative-model-raw-audio/)
