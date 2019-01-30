@@ -29,7 +29,7 @@ def main():
     - n_residue : Define number of residue (default=24)
     - n_skip : Define number of skip (default=128)
     - dilation_depth : Define dilation depth (default=10)
-    - use_gpu : whether or not to use the GPU (default=True)
+    - use_gpu : use gpu for trainin (default=True)
     - generation : whether or not to generate a wave file for model (default=True)
     - load_file : file name in loading wave file
     - save_file : file name in saving result
@@ -43,7 +43,7 @@ def main():
     parser.add_argument('--dilation_depth', type=int, default=10, help="number of dilation depth")
     parser.add_argument('--n_repeat', type=int, default=2, help="number of repeat")
     parser.add_argument('--seq_size', type=int, default=20000, help="number of sequence size")
-    parser.add_argument('--use_gpu', type=str, default="True", help="use gpu")
+    parser.add_argument('--use_gpu', action='store_true', help='use gpu for training.')
     parser.add_argument('--generation', type=bool, default=True, help="generate a wave file")
     parser.add_argument('--load_file', type=str, default='parametric-2.wav', help="file name in loading wave file")
     parser.add_argument('--save_file', type=str, default='wav.npy', help="file name in saving result")

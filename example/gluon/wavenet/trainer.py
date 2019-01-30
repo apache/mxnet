@@ -27,16 +27,6 @@ from models import WaveNet
 from utils import decode_mu_law
 from data_loader import load_wav, data_generation, data_generation_sample
 # pylint: disable=invalid-name, too-many-arguments, too-many-instance-attributes, no-member, no-self-use
-# set gpu count
-def setting_ctx(use_gpu):
-    """
-    Description : setting cpu/gpu
-    """
-    if eval(use_gpu):
-        ctx = mx.gpu()
-    else:
-        ctx = mx.cpu()
-    return ctx
 
 class Train():
     """
@@ -52,8 +42,7 @@ class Train():
         self.dilation_depth = config.dilation_depth
         self.n_repeat = config.n_repeat
         self.seq_size = config.seq_size
-        self.use_gpu = config.use_gpu
-        self.ctx = setting_ctx(self.use_gpu)
+        self.ctx = mx.gpu() if config.use_gpu else mx.cpu()
         self.load_file = config.load_file
         self.save_file = config.save_file
         self.build_model()
@@ -66,7 +55,6 @@ class Train():
          dilation_depth=self.dilation_depth, n_repeat=self.n_repeat)
         #parameter initialization
         self.net.collect_params().initialize(ctx=self.ctx)
-        self.net.hybridize()
         #set optimizer
         self.trainer = gluon.Trainer(self.net.collect_params(), optimizer='adam',\
         optimizer_params={'learning_rate':0.01})
