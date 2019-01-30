@@ -83,7 +83,42 @@ def test_resize():
 
     # Test with normal case 4D input float type
     data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3))
-    out_nd_4d = transforms.Resize((100, 100))(data_in_3d)
+    out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
     data_in_4d_nchw = nd.moveaxis(data_in_4d, 3, 1)
-    data_expected_4d = (nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3))
+    data_expected_4d = nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3)
     assert_almost_equal(out_nd_4d.asnumpy(), data_expected_4d.asnumpy())
+
+    # Invalid Param interp is set to 2
+    data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
+    invalid_transformer = transforms.Resize((100, 100), interpolation=2)
+    assertRaises(MXNetError, invalid_transformer, data_in_3d)
+    # Credited to Hang Zhang
+    def py_bilinear_resize_nhwc(x, outputHeight, outputWidth):
+        batch, channel, inputHeight, inputWidth = x.shape
+        if outputHeight == inputHeight and outputWidth == inputWidth:
+            return x
+        y = np.empty([batch, outputHeight, outputWidth, channel])
+        rheight = 1.0 * (inputHeight - 1) / (outputHeight - 1) if outputHeight > 1 else 0.0
+        rwidth = 1.0 * (inputWidth - 1) / (outputWidth - 1) if outputWidth > 1 else 0.0
+        for h2 in range(outputHeight):
+            h1r = 1.0 * h2 * rheight
+            h1 = int(np.floor(h1r))
+            h1lambda = h1r - h1
+            h1p = 1 if h1 < (inputHeight - 1) else 0
+            for w2 in range(outputWidth):
+                w1r = 1.0 * w2 * rwidth
+                w1 = int(np.floor(w1r))
+                w1lambda = w1r - w1
+                w1p = 1 if w1 < (inputHeight - 1) else 0
+                for b in range(batch):
+                    for c in range(channel):
+                        y[b][h2][w2][c] = (1-h1lambda)*((1-w1lambda)*x[b][h1][w1][c] + \
+                            w1lambda*x[b][h1][w1+w1p][c]) + \
+                            h1lambda*((1-w1lambda)*x[b][h1+h1p][w1][c] + \
+                            w1lambda*x[b][h1+h1p][w1+w1p][c])
+        return y
+        # Test with normal case 4D input int8 type
+        data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3)).astype('uint8')
+        out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
+        assert_almost_equal(out_nd_4d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100))
+
