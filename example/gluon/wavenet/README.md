@@ -29,13 +29,13 @@ Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxi
 
 ###### default setting
 ```
-python main.py
+python main.py --use_gpu
 ``` 
 or
 
 ###### manual setting
 ```
-python main.py --batch_size=32 --epochs=100 ...
+python main.py --use_gpu --batch_size=32 --epochs=100 ...
 ```
 ## Train progress
 ###### 0 epoch
