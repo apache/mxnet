@@ -88,6 +88,11 @@ def test_resize():
     data_expected_4d = nd.moveaxis(nd.contrib.BilinearResize2D(data_in_4d_nchw, 100, 100), 1, 3)
     assert_almost_equal(out_nd_4d.asnumpy(), data_expected_4d.asnumpy())
 
+    # Test invalid interp
+    data_in_3d = nd.random.uniform(0, 255, (300, 300, 3))
+    invalid_transform = transforms.Resize(-150, keep_ratio=False, interpolation=2)
+    assertRaises(MXNetError, invalid_transform, data_in_3d)
+
     # Credited to Hang Zhang
     def py_bilinear_resize_nhwc(x, outputHeight, outputWidth):
         batch, inputHeight, inputWidth, channel = x.shape

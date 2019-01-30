@@ -95,12 +95,12 @@ def test_resize():
         out_nd = transforms.Resize(150, keep_ratio=True)(data_in)
         data_expected = mx.image.imresize(data_in, 150, 225, 1)
         assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-        def _test_size_below_zero_Exception():
-            transforms.Resize(-150, keep_ratio=True)(data_in)
-        assertRaises(MXNetError, _test_size_below_zero_Exception)
-        def _test_size_more_than_2_Exception():
-            transforms.Resize((100, 100, 100), keep_ratio=True)(data_in)
-        assertRaises(MXNetError, _test_size_more_than_2_Exception)
+        # test size below zero
+        invalid_transform = transforms.Resize(-150, keep_ratio=True)
+        assertRaises(MXNetError, invalid_transform, data_in)
+        # test size more than 2:
+        invalid_transform = transforms.Resize((100, 100, 100), keep_ratio=True)
+        assertRaises(MXNetError, invalid_transform, data_in)
 
     for dtype in ['uint8', 'float32', 'float64']:
         _test_resize_with_diff_type(dtype)    
