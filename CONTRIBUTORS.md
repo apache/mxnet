@@ -194,6 +194,7 @@ List of Contributors
 * [Harsh Patel](https://github.com/harshp8l)
 * [Xiao Wang](https://github.com/BeyonderXX)
 * [Piyush Ghai](https://github.com/piyushghai)
+* [Zach Boldyga](https://github.com/zboldyga)
 
 Label Bot
 ---------
