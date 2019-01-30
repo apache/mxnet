@@ -156,6 +156,10 @@ mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML "Use MKLML subset of MKL instead of full MKL, will be downloaded" ON IF
              ${USE_MKL_IF_AVAILABLE} AND (NOT APPLE))
 
+if(DEFINED USE_MKLML_MKL)
+  message(WARNING "The option USE_MKLML_MKL is deprecated and will not be considered, use USE_MKLML instead")
+endif()
+
 # If either MKL of MKLML is present MKLDNN can be utilised from the 3rdparty/mkldnn subrepo.
 # See more information here: https://github.com/intel/mkl-dnn
 # Note: The same limitation on hardware as for MKL and MKLDNN applies for MKLDNN as well.
