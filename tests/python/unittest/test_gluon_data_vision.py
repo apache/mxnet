@@ -102,7 +102,7 @@ def test_resize():
             transforms.Resize((100, 100, 100), keep_ratio=True)(data_in)
         assertRaises(MXNetError, _test_size_more_than_2_Exception)
 
-    for dtype in ['uint8', 'int8', 'float32', 'float64']:
+    for dtype in ['uint8', 'float32', 'float64']:
         _test_resize_with_diff_type(dtype)    
 
 
