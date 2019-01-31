@@ -128,9 +128,10 @@ Example::
 .set_attr<FResourceRequestEx>("FResourceRequestEx",
   [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
     std::vector<ResourceRequest> request;
+    const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
+    if (param.p == 0) return request;
     if (dev_mask == kGPU) {
 #if MXNET_USE_CUDNN_DROPOUT
-      const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
       // if cudnn is used, parallel random is not needed.
       if (1.0f - param.p > 0
           && !(param.cudnn_off && param.cudnn_off.value())

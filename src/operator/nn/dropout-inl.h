@@ -338,7 +338,7 @@ class DropoutOp {
       const TBlob &in = in_data[dropout::kData];
       const TBlob &out = out_data[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
-      if (ctx.is_train || this->mode_ == dropout::kAlways) {
+      if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
         if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT
