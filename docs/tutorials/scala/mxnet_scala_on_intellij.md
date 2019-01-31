@@ -325,7 +325,7 @@ log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] 
 
 **Step 6.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
-* Note that if you run into ```bad option: '-make:transitive'```, please follow the [how to solve scalac-error-bad-option-maketransitive](https://stackoverflow.com/questions/35016945/scalac-error-bad-option-maketransitive-on-mvn-package-via-command-line)
+* Note that if you run into ```bad option: '-make:transitive'```, please remove the 
 
 **Step 7.** Run the Hello World App:
 
