@@ -135,7 +135,7 @@ mxnet
 ```
 **ArtifactId**
 ```
-ArtifactId: scalaMXNet
+scalaMXNet
 ```
 **Version**
 ```
@@ -211,6 +211,7 @@ The project's `pom.xml` will be open for editing.
     <dependency>
       <groupId>org.apache.mxnet</groupId>
       <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
+      <version>[1.3.1,)</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -324,7 +325,7 @@ log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] 
 
 **Step 6.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
-
+* Note that if you run into ```bad option: '-make:transitive'```, please follow the [how to solve scalac-error-bad-option-maketransitive](https://stackoverflow.com/questions/35016945/scalac-error-bad-option-maketransitive-on-mvn-package-via-command-line)
 
 **Step 7.** Run the Hello World App:
 
