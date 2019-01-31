@@ -1492,34 +1492,9 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
 
 
 def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
-    def py_bilinear_resize(x, outputHeight, outputWidth):
-        batch, channel, inputHeight, inputWidth = x.shape
-        if outputHeight == inputHeight and outputWidth == inputWidth:
-            return x
-        y = np.empty([batch, channel, outputHeight, outputWidth])
-        rheight = 1.0 * (inputHeight - 1) / (outputHeight - 1) if outputHeight > 1 else 0.0
-        rwidth = 1.0 * (inputWidth - 1) / (outputWidth - 1) if outputWidth > 1 else 0.0
-        for h2 in range(outputHeight):
-            h1r = 1.0 * h2 * rheight
-            h1 = int(np.floor(h1r))
-            h1lambda = h1r - h1
-            h1p = 1 if h1 < (inputHeight - 1) else 0
-            for w2 in range(outputWidth):
-                w1r = 1.0 * w2 * rwidth
-                w1 = int(np.floor(w1r))
-                w1lambda = w1r - w1
-                w1p = 1 if w1 < (inputHeight - 1) else 0
-                for b in range(batch):
-                    for c in range(channel):
-                        y[b][c][h2][w2] = (1-h1lambda)*((1-w1lambda)*x[b][c][h1][w1] + \
-                            w1lambda*x[b][c][h1][w1+w1p]) + \
-                            h1lambda*((1-w1lambda)*x[b][c][h1+h1p][w1] + \
-                            w1lambda*x[b][c][h1+h1p][w1+w1p])
-        return y
-    def _init_bilinear(arr):
+    def _init_bilinear(arr, f):
         weight = np.zeros(np.prod(arr.shape), dtype='float32')
         shape = arr.shape
-        f = np.ceil(shape[3] / 2.)
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
@@ -1527,8 +1502,9 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
         return arr
+
     arr = {'data': mx.random.uniform(-10.0, 10.0, data_shape, ctx=mx.cpu()).copyto(default_context()),
-        'weight':  mx.nd.array(_init_bilinear(mx.ndarray.empty(weight_shape).asnumpy()))}
+        'weight':  mx.nd.array(_init_bilinear(mx.ndarray.empty(weight_shape).asnumpy(), root_scale))}
 
     up = mx.sym.UpSampling(mx.sym.Variable('data'),
         mx.sym.Variable('weight'), sample_type='bilinear', scale=root_scale,
@@ -1539,7 +1515,6 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
     exe.forward(is_train=True)
     out = exe.outputs[0].asnumpy()
     exe.backward(exe.outputs)
-    assert_allclose(out, py_bilinear_resize(arr['data'].asnumpy(), data_shape[2]*root_scale, data_shape[3]*root_scale), rtol=1e-4)
 
 
 @with_seed()
