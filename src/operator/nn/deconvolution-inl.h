@@ -119,7 +119,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   }
 
   template<size_t ndim>
-  void InferPad(TShape input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim] ) const {
+  void InferPad(const TShape &input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim]) const {
     // Modified by Li.bs
     // Use tag to control the calculation of pad
     bool bCal = false;
@@ -238,16 +238,13 @@ class DeconvolutionOp {
     if (param_.kernel.ndim() == 2) {
       param_.InferPad(TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
     } else {
-      index_t o_pad_1D[1], o_adj_1D[1];
-      param_.InferPad({in_data_shape[2]}, o_pad_1D, o_adj_1D);
-      o_pad[0] = 0;
-      o_pad[1] = o_pad_1D[0];
-      o_adj[0] = 0;
-      o_adj[1] = o_adj_1D[0];
+      param_.InferPad({in_data_shape[2]}, o_pad, o_adj);
     }
+
     auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
     auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
-    auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[1]});
+    auto padding = param_.kernel.ndim() == 2 ?
+      TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
@@ -290,8 +287,7 @@ class DeconvolutionOp {
 
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
-        mshadow::Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid,
-                                              gstride * (gid + 1));
+        Tensor<xpu, 2, DType> tmpc = temp_col.Slice(gstride * gid, gstride * (gid + 1));
         // Legacy approach shown here for comparison:
         // tmpc = dot(wmat[gid].T(), temp_dst[gid]);
         linalg_gemm(wmat[gid], temp_dst[gid], tmpc, true, false, s);
@@ -314,7 +310,7 @@ class DeconvolutionOp {
     if (!param_.no_bias) {
       // add bias, broadcast bias to dim 1: channel
       Tensor<xpu, 1, DType> bias = in_data[deconv::kBias].get<xpu, 1, DType>(s);
-      out += mshadow::expr::broadcast<1>(bias, out.shape_);
+      out += broadcast<1>(bias, out.shape_);
     }
   }
 
@@ -342,21 +338,16 @@ class DeconvolutionOp {
     Tensor<xpu, 4, DType> data = TBlobTo4DTensor(in_data[deconv::kData], s);
     Tensor<xpu, 4, DType> grad = TBlobTo4DTensor(out_grad[deconv::kOut], s);
     Tensor<xpu, 4, DType> gdata = TBlobTo4DTensor(in_grad[deconv::kData], s);
-
     index_t o_pad[2], o_adj[2];
     if (param_.kernel.ndim() == 2) {
       param_.InferPad(TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
     } else {
-      index_t o_pad_1D[1], o_adj_1D[1];
-      param_.InferPad({in_data_shape[2]}, o_pad_1D, o_adj_1D);
-      o_pad[0] = 0;
-      o_pad[1] = o_pad_1D[0];
-      o_adj[0] = 0;
-      o_adj[1] = o_adj_1D[0];
+      param_.InferPad({in_data_shape[2]}, o_pad, o_adj);
     }
     auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
     auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
-    auto padding = param_.kernel.ndim() == 2 ? TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[1]});
+    auto padding = param_.kernel.ndim() == 2 ?
+      TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
@@ -404,11 +395,11 @@ class DeconvolutionOp {
         if (i == 0) {
           Tensor<xpu, 2, DType> tmp_gwmat = gwmat[gid];
           // Legacy approach shown here for comparison:
-          //   Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
+          // Assign(tmp_gwmat, req[deconv::kWeight], dot(temp_dst[gid], tmpc.T()));
           linalg_gemm(temp_dst[gid], tmpc, tmp_gwmat, false, true, s, req[deconv::kWeight]);
         } else {
           // Legacy approach shown here for comparison:
-          //   gwmat[gid] += dot(temp_dst[gid], tmpc.T());
+          // gwmat[gid] += dot(temp_dst[gid], tmpc.T());
           linalg_gemm(temp_dst[gid], tmpc, gwmat[gid], false, true, s, kAddTo);
         }
       }
@@ -424,10 +415,10 @@ class DeconvolutionOp {
         Assign(gdata.Slice(i, i + step),
                req[deconv::kData],
                (swapaxis<1, 0>(reshape(temp_dst,
-                                      mshadow::Shape4(gdata.shape_[1],
-                                                      step,
-                                                      gdata.size(2),
-                                                      gdata.size(3))))));
+                                       Shape4(gdata.shape_[1],
+                                              step,
+                                              gdata.size(2),
+                                              gdata.size(3))))));
       }
     }
     if (!param_.no_bias) {
