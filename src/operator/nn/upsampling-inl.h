@@ -120,7 +120,6 @@ void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
   int iout[4];  // Output indices
   int iin[4];  // Input indices
 
-  channels = nbatch * channels;
   for (i0 = 0; i0 < osz0; i0++) {
     iout[0] = i0;
     iin[0] = i0;
@@ -138,8 +137,8 @@ void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
           iin[xDim] = iout[xDim] / dW;
           iin[yDim] = iout[yDim] / dH;
 
-          idst = /*i0*otensor.stride_ + i1*otensor.stride_ +*/ i2;//*otensor.stride_;
-          isrc = /*iin[0]*itensor.stride_ + iin[1]*itensor.stride_ +*/ iin[2];//*itensor.stride_;
+          idst = i0*(channels*outputHeight*outputWidth) + i1*(outputHeight*outputWidth) + i2;//*otensor.stride_;
+          isrc = iin[0]*(channels*inputHeight*inputWidth) + iin[1]*(inputHeight*inputWidth) + iin[2];//*itensor.stride_;
           if (idim > 3) {
             idst += i3*otensor.stride_;
             isrc += iin[3]*itensor.stride_;
