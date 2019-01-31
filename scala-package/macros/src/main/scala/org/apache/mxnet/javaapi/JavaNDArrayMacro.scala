@@ -96,9 +96,9 @@ private[mxnet] object JavaNDArrayMacro extends GeneratorBase {
       // add default out parameter
       argDef += s"out: org.apache.mxnet.javaapi.NDArray"
       if (useParamObject) {
-        impl += "if (po.getOut() != null) map(\"out\") = po.getOut()"
+        impl += "if (po.getOut() != null) map(\"out\") = po.getOut().nd"
       } else {
-        impl += "if (out != null) map(\"out\") = out"
+        impl += "if (out != null) map(\"out\") = out.nd"
       }
       val returnType = "Array[org.apache.mxnet.javaapi.NDArray]"
       // scalastyle:off
