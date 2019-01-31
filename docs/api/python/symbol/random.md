@@ -31,12 +31,13 @@ In the rest of this document, we list routines provided by the `symbol.random` p
     exponential
     gamma
     generalized_negative_binomial
+    multinomial
     negative_binomial
     normal
     poisson
-    uniform
-    multinomial
+    randint
     shuffle
+    uniform
     mxnet.random.seed
 ```
 
@@ -48,6 +49,7 @@ In the rest of this document, we list routines provided by the `symbol.random` p
 
 .. automodule:: mxnet.symbol.random
     :members:
+    :noindex:
 
 .. automodule:: mxnet.random
     :members:

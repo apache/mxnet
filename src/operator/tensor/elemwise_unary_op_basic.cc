@@ -71,7 +71,7 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
 
 // relu
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(relu, cpu, mshadow_op::relu)
-.describe(R"code(Computes rectified linear.
+.describe(R"code(Computes rectified linear activation.
 
 .. math::
    max(features, 0)
@@ -235,6 +235,20 @@ NNVM_REGISTER_OP(_backward_copy)
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   });
+
+NNVM_REGISTER_OP(_backward_reshape)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+                                [](const NodeAttrs& attrs){
+                                  return std::vector<std::pair<int, int> >{{0, 0}};
+                                })
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity",
+                                  [](const NodeAttrs& attrs){
+                                    return std::vector<bool>{true};
+                                  });
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 MXNET_ADD_SPARSE_OP_ALIAS(stop_gradient)
@@ -492,7 +506,8 @@ void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
-  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * sizeof(int64_t));
+  size_t type_size = mshadow::mshadow_sizeof(out_data.type_flag_);
+  memcpy(out_data.dptr_, in_data.shape_.data(), in_data.ndim() * type_size);
 }
 
 NNVM_REGISTER_OP(shape_array)
@@ -542,8 +557,9 @@ void SizeComputeCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
+  size_t type_size = mshadow::mshadow_sizeof(out_data.type_flag_);
   const index_t size_var = in_data.Size();
-  memcpy(out_data.dptr_, &size_var, 1U * sizeof(int64_t));
+  memcpy(out_data.dptr_, &size_var, type_size);
 }
 
 NNVM_REGISTER_OP(size_array)
@@ -884,6 +900,38 @@ The storage type of ``cbrt`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
                                                   unary_bwd<mshadow_op::cube_root_grad>);
 
+// erf
+MXNET_OPERATOR_REGISTER_UNARY(erf)
+.describe(R"code(Returns element-wise gauss error function of the input.
+
+Example::
+
+   erf([0, -1., 10.]) = [0., -0.8427, 1.]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erf>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erf"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::erf_grad>>);
+
+// erfinv
+MXNET_OPERATOR_REGISTER_UNARY(erfinv)
+.describe(R"code(Returns element-wise inverse gauss error function of the input.
+
+Example::
+
+   erfinv([0, 0.5., -1.]) = [0., 0.4769, -inf]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erfinv>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erfinv"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_erfinv)
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::erfinv_grad>>);
+
 // rcbrt
 MXNET_OPERATOR_REGISTER_UNARY(rcbrt)
 .describe(R"code(Returns element-wise inverse cube-root value of the input.
@@ -922,7 +970,7 @@ The storage type of ``exp`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
 
 // log
-MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(log, cpu, mshadow_op::log)
+MXNET_OPERATOR_REGISTER_UNARY(log)
 MXNET_ADD_SPARSE_OP_ALIAS(log)
 .describe(R"code(Returns element-wise Natural logarithmic value of the input.
 
@@ -931,6 +979,7 @@ The natural logarithm is logarithm in base *e*, so that ``log(exp(x)) = x``
 The storage type of ``log`` output is always dense
 
 )code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::LogCompute<cpu, mshadow_op::log>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_log"});
 
 // log10

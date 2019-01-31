@@ -22,20 +22,6 @@
  * \file c_api.cc
  * \brief C API of mxnet
  */
-#include <dmlc/base.h>
-#include <dmlc/logging.h>
-#include <dmlc/io.h>
-#include <dmlc/memory_io.h>
-#include <dmlc/recordio.h>
-#include <dmlc/omp.h>
-#include <mxnet/base.h>
-#include <mxnet/ndarray.h>
-#include <mxnet/operator.h>
-#include <mxnet/io.h>
-#include <mxnet/c_api.h>
-#include <mxnet/kvstore.h>
-#include <mxnet/rtc.h>
-#include <mxnet/storage.h>
 #include <vector>
 #include <sstream>
 #include <string>
@@ -43,6 +29,21 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include "dmlc/base.h"
+#include "dmlc/logging.h"
+#include "dmlc/io.h"
+#include "dmlc/memory_io.h"
+#include "dmlc/recordio.h"
+#include "dmlc/omp.h"
+#include "mxnet/base.h"
+#include "mxnet/ndarray.h"
+#include "mxnet/operator.h"
+#include "mxnet/io.h"
+#include "mxnet/c_api.h"
+#include "mxnet/kvstore.h"
+#include "mxnet/rtc.h"
+#include "mxnet/storage.h"
+#include "mxnet/mxfeatures.h"
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/tensor/matrix_op-inl.h"
@@ -85,6 +86,13 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 }
 
 // NOTE: return value is added in API_END
+
+int MXHasFeature(const mx_uint feature, bool* out) {
+  API_BEGIN();
+  *out = features::is_enabled(feature);
+  API_END();
+}
+
 int MXRandomSeed(int seed) {
   API_BEGIN();
   mxnet::RandomSeed(seed);

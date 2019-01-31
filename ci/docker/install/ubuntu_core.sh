@@ -21,12 +21,15 @@
 # the whole docker cache for the image
 
 set -ex
-apt-get update
+apt-get update || true
+
+# Avoid interactive package installers such as tzdata.
+export DEBIAN_FRONTEND=noninteractive
+
 apt-get install -y \
     apt-transport-https \
     build-essential \
     ca-certificates \
-    cmake \
     curl \
     git \
     libatlas-base-dev \
@@ -41,3 +44,12 @@ apt-get install -y \
     sudo \
     unzip \
     wget
+
+# Note: we specify an exact cmake version to work around a cmake 3.10 CUDA 10 issue.
+# Reference: https://github.com/clab/dynet/issues/1457
+mkdir /opt/cmake && cd /opt/cmake
+wget -nv https://cmake.org/files/v3.12/cmake-3.12.4-Linux-x86_64.sh
+sh cmake-3.12.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
+ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+rm cmake-3.12.4-Linux-x86_64.sh
+cmake --version

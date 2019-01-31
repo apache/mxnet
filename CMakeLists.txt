@@ -1,6 +1,16 @@
 cmake_minimum_required(VERSION 3.0.2)
 
+# workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
+if(CMAKE_CROSSCOMPILING)
+  set(__CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING})
+  set(__CMAKE_CROSSCOMPILING_OVERRIDE ON)
+endif()
+
 project(mxnet C CXX)
+
+if(__CMAKE_CROSSCOMPILING_OVERRIDE)
+  set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
+endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
   include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
@@ -20,7 +30,7 @@ mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) 
 mxnet_option(USE_LAPACK           "Build with lapack support" ON)
 mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 mxnet_option(USE_MKLML_MKL        "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
-mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE))
+mxnet_option(USE_MKLDNN           "Use MKLDNN variant of MKL (if MKL found)" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
 mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
 mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support (if found)" ON)
 mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
@@ -40,6 +50,10 @@ mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." OFF)
 mxnet_option(USE_TENSORRT         "Enable infeference optimization with TensorRT." OFF)
 mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
 mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
+
+message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
+message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 if(USE_CUDA AND NOT USE_OLDCMAKECUDA)
@@ -112,26 +126,16 @@ else(MSVC)
   endif()
   # For cross complication, turn off flag if target device does not support it
   if(USE_F16C)
-    check_cxx_compiler_flag("-mf16c"     COMPILER_SUPPORT_MF16C)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-      execute_process(COMMAND cat /proc/cpuinfo
-              COMMAND grep flags
-              COMMAND grep f16c
-              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-      execute_process(COMMAND sysctl -a
-              COMMAND grep machdep.cpu.features
-              COMMAND grep F16C
-              OUTPUT_VARIABLE CPU_SUPPORT_F16C)
-    endif()
-    if(NOT CPU_SUPPORT_F16C)
-      message("CPU does not support F16C instructions")
-    endif()
-    if(CPU_SUPPORT_F16C AND COMPILER_SUPPORT_MF16C)
-      set(SUPPORT_F16C TRUE)
-    endif()
+    # Determine if hardware supports F16C instruction set
+    message(STATUS "Determining F16C support")
+    include(cmake/AutoDetectF16C.cmake)
   else()
     set(SUPPORT_F16C FALSE)
+  endif()
+  if(SUPPORT_F16C)
+    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -mf16c")
+  else()
+    add_definitions(-DMSHADOW_USE_F16C=0)
   endif()
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   set(CMAKE_C_FLAGS "-Wall -Wno-unknown-pragmas -Wno-sign-compare")
@@ -197,6 +201,7 @@ if(USE_TENSORRT)
   include_directories(${ONNX_PATH})
   include_directories(3rdparty/onnx-tensorrt/)
   include_directories(3rdparty/)
+  include_directories(3rdparty/onnx-tensorrt/third_party/onnx/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
 
@@ -225,7 +230,7 @@ if(ENABLE_TESTCOVERAGE)
   if(NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Aborting...")
   endif() # NOT GCOV_PATH
-  
+
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
@@ -234,13 +239,19 @@ if(ENABLE_TESTCOVERAGE)
 endif()
 
 if(USE_MKLDNN)
-  include(cmake/MklDnn.cmake)
+  include(cmake/DownloadMKLML.cmake)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(NOT MSVC)
     set(ARCH_OPT_FLAGS "-mtune=generic")
+  else()
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
   endif()
-  set(WITH_TEST OFF)
-  set(WITH_EXAMPLE OFF)
+
+  set(WITH_TEST OFF CACHE INTERNAL "" FORCE)
+  set(WITH_EXAMPLE OFF CACHE INTERNAL "" FORCE)
+  set(ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
@@ -261,7 +272,6 @@ if(USE_CUDA)
     if(NOT CUDA_TOOLSET)
       set(CUDA_TOOLSET "${CUDA_VERSION_STRING}")
     endif()
-    set(CMAKE_GENERATOR_TOOLSET "cuda=${CUDA_TOOLSET},host=x64")
   else()
     set(FIRST_CUDA FALSE)
   endif()
@@ -413,12 +423,14 @@ if(USE_OPENMP)
     endif()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    add_definitions(-DMXNET_USE_OPENMP=1)
   else()
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
       set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
       set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      add_definitions(-DMXNET_USE_OPENMP=1)
     endif()
   endif()
 elseif(UNIX AND NOT ANDROID)
@@ -737,7 +749,12 @@ install(TARGETS ${MXNET_INSTALL_TARGETS}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+# NOTE: Public headers will be installed into ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}, see
+#       https://cmake.org/cmake/help/v3.0/variable/CMAKE_INSTALL_PREFIX.html
+#       https://cmake.org/cmake/help/v3.0/module/GNUInstallDirs.html
+
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY 3rdparty/tvm/nnvm/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if (INSTALL_EXAMPLES)
   install(DIRECTORY example  DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME})
 endif()

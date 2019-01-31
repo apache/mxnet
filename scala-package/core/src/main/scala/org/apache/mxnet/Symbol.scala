@@ -22,6 +22,7 @@ import org.apache.mxnet.DType.DType
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.language.implicitConversions
 
 /**
  * Symbolic configuration API of mxnet. <br />
@@ -841,6 +842,7 @@ object Symbol extends SymbolBase {
   private val bindReqMap = Map("null" -> 0, "write" -> 1, "add" -> 3)
 
   val api = SymbolAPI
+  val random = SymbolRandomAPI
 
   def pow(sym1: Symbol, sym2: Symbol): Symbol = {
     Symbol.createFromListedSymbols("_Power")(Array(sym1, sym2))

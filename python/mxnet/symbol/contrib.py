@@ -73,17 +73,14 @@ def rand_zipfian(true_classes, num_sampled, range_max):
 
     Examples
     --------
-    >>> true_cls = mx.nd.array([3])
-    >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.rand_zipfian(true_cls, 4, 5)
-    >>> samples
-    [1 3 3 3]
-    <NDArray 4 @cpu(0)>
-    >>> exp_count_true
-    [ 0.12453879]
-    <NDArray 1 @cpu(0)>
-    >>> exp_count_sample
-    [ 0.22629439  0.12453879  0.12453879  0.12453879]
-    <NDArray 4 @cpu(0)>
+    >>> true_cls = mx.sym.Variable('true_cls')
+    >>> samples, exp_count_true, exp_count_sample = mx.sym.contrib.rand_zipfian(true_cls, 4, 5)
+    >>> samples.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
+    array([1, 3, 3, 3])
+    >>> exp_count_true.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
+    array([0.12453879])
+    >>> exp_count_sample.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
+    array([0.22629439, 0.12453879, 0.12453879, 0.12453879])
     """
     assert(isinstance(true_classes, Symbol)), "unexpected type %s" % type(true_classes)
     log_range = math.log(range_max + 1)
@@ -236,15 +233,15 @@ def foreach(body, data, init_states, name="foreach"):
     output data, the body function can return (out, []).
 
     The computation done by this operator is equivalent to the pseudo code below
-    when the input data is NDArray:
+    when the input data is NDArray::
 
-    states = init_states
-    outs = []
-    for i in data.shape[0]:
-        s = data[i]
-        out, states = body(s, states)
-        outs.append(out)
-    outs = stack(*outs)
+        states = init_states
+        outs = []
+        for i in data.shape[0]:
+            s = data[i]
+            out, states = body(s, states)
+            outs.append(out)
+        outs = stack(*outs)
 
 
     Parameters

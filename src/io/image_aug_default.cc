@@ -97,8 +97,6 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   int pad;
   /*! \brief shape of the image data*/
   TShape data_shape;
-  /*! \brief random seed for augmentations */
-  dmlc::optional<int> seed_aug;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
@@ -188,8 +186,6 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(pad).set_default(0)
         .describe("Change size from ``[width, height]`` into "
                   "``[pad + width + pad, pad + height + pad]`` by padding pixes");
-    DMLC_DECLARE_FIELD(seed_aug).set_default(dmlc::optional<int>())
-        .describe("Random seed for augmentations.");
   }
 };
 
@@ -208,16 +204,13 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams() {
 class DefaultImageAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageAugmenter() {
-    rotateM_ = cv::Mat(2, 3, CV_32F);
-    seed_init_state = false;
-  }
+  DefaultImageAugmenter() {}
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);
-    for (size_t i = 0; i < kwargs_left.size(); i++) {
-        if (!strcmp(kwargs_left[i].first.c_str(), "rotate_list")) {
-          const char* val = kwargs_left[i].second.c_str();
+    for (auto& kwarg : kwargs_left) {
+        if (!strcmp(kwarg.first.c_str(), "rotate_list")) {
+          const char* val = kwarg.second.c_str();
           const char *end = val + strlen(val);
           char buf[128];
           while (val < end) {
@@ -251,10 +244,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
   }
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
-    if (!seed_init_state && param_.seed_aug.has_value()) {
-      prnd->seed(param_.seed_aug.value());
-      seed_init_state = true;
-    }
     using mshadow::index_t;
     bool is_cropped = false;
 
@@ -473,18 +462,18 @@ class DefaultImageAugmenter : public ImageAugmenter {
                                                                   param_.saturation)(*prnd);
       int rand_order[3] = {0, 1, 2};
       std::random_shuffle(std::begin(rand_order), std::end(rand_order));
-      for (int i = 0; i < 3; ++i) {
-        if (rand_order[i] == 0) {
+      for (int i : rand_order) {
+        if (i == 0) {
           // brightness
           res.convertTo(res, -1, alpha_b, 0);
         }
-        if (rand_order[i] == 1) {
+        if (i == 1) {
           // contrast
           cvtColor(res, temp_, CV_RGB2GRAY);
           float gray_mean = cv::mean(temp_)[0];
           res.convertTo(res, -1, alpha_c, (1 - alpha_c) * gray_mean);
         }
-        if (rand_order[i] == 2) {
+        if (i == 2) {
           // saturation
           cvtColor(res, temp_, CV_RGB2GRAY);
           cvtColor(temp_, temp_, CV_GRAY2BGR);
@@ -550,8 +539,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
  private:
   // temporal space
   cv::Mat temp_;
-  // rotation param
-  cv::Mat rotateM_;
   // eigval and eigvec for adding pca noise
   // store eigval * eigvec as eigvec
   float eigvec[3][3] = { { 55.46f * -0.5675f, 4.794f * 0.7192f,  1.148f * 0.4009f },
@@ -561,7 +548,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
   DefaultImageAugmentParam param_;
   /*! \brief list of possible rotate angle */
   std::vector<int> rotate_list_;
-  bool seed_init_state;
 };
 
 ImageAugmenter* ImageAugmenter::Create(const std::string& name) {

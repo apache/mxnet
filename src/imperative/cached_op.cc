@@ -278,10 +278,10 @@ bool CachedOp::SetForwardGraph(
   shape_inputs.reserve(inputs.size());
   dtype_inputs.reserve(inputs.size());
   storage_type_inputs.reserve(inputs.size());
-  for (uint32_t i = 0; i < inputs.size(); ++i) {
-    shape_inputs.emplace_back(inputs[i]->shape());
-    dtype_inputs.emplace_back(inputs[i]->dtype());
-    storage_type_inputs.emplace_back(inputs[i]->storage_type());
+  for (auto input : inputs) {
+    shape_inputs.emplace_back(input->shape());
+    dtype_inputs.emplace_back(input->dtype());
+    storage_type_inputs.emplace_back(input->storage_type());
   }
 
   bool match = true;
@@ -583,14 +583,11 @@ void CachedOp::StaticInitExec(
     }
 
     size_t bulk_size = idx.num_nodes();
-    std::unordered_set<uint32_t> excludes;
     if (recording || keep_fwd) {
       bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
-      for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
-      for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
     }
 
-    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
+    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size,
                       state.execs, skip_plus_node, &state.opr_segs);
   }
 
@@ -658,9 +655,9 @@ void CachedOp::StaticRunOps(
         arg_dtypes.clear();
         arg_shapes.reserve(ndinputs.size());
         arg_dtypes.reserve(ndinputs.size());
-        for (size_t i = 0; i < ndinputs.size(); ++i) {
-          arg_shapes.emplace_back(ndinputs[i]->shape());
-          arg_dtypes.emplace_back(ndinputs[i]->dtype());
+        for (auto& ndinput : ndinputs) {
+          arg_shapes.emplace_back(ndinput->shape());
+          arg_dtypes.emplace_back(ndinput->dtype());
         }
         state.op_states[i] = createop[node.source->op()](
             node.source->attrs, default_ctx, arg_shapes, arg_dtypes);
@@ -784,7 +781,9 @@ OpStatePtr CachedOp::DynamicForward(
   states.reserve(idx.num_nodes());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (size_t i = 0; i < buff.size(); ++i) arrays.push_back(&buff[i]);
+  for (auto& buffered_array : buff) {
+    arrays.push_back(&buffered_array);
+  }
   for (size_t i = 0; i < num_inputs; ++i) {
     arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
   }
@@ -855,10 +854,15 @@ OpStatePtr CachedOp::Forward(
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
 
   OpStatePtr op_state;
-  if (config_.static_alloc) {
-    op_state = StaticForward(default_ctx, inputs, outputs);
-  } else {
-    op_state = DynamicForward(default_ctx, inputs, outputs);
+  try {
+    if (config_.static_alloc) {
+      op_state = StaticForward(default_ctx, inputs, outputs);
+    } else {
+      op_state = DynamicForward(default_ctx, inputs, outputs);
+    }
+  } catch (const dmlc::Error& e) {
+    Engine::Get()->set_bulk_size(prev_bulk_size);
+    throw e;
   }
 
   Engine::Get()->set_bulk_size(prev_bulk_size);
@@ -907,7 +911,9 @@ void CachedOp::DynamicBackward(
   buff.resize(idx.num_node_entries());
   std::vector<NDArray*> arrays;
   arrays.reserve(buff.size());
-  for (size_t i = 0; i < buff.size(); ++i) arrays.push_back(&buff[i]);
+  for (auto& buffered_array : buff) {
+    arrays.push_back(&buffered_array);
+  }
   for (size_t i = 0; i < inputs.size(); ++i) {
     if (runtime.info.bwd_input_eid[i] == kEidNotExist) {
       continue;
@@ -1058,10 +1064,15 @@ void CachedOp::Backward(
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.backward_bulk_size);
 
-  if (config_.static_alloc) {
-    StaticBackward(retain_graph, state, inputs, reqs, outputs);
-  } else {
-    DynamicBackward(retain_graph, state, inputs, reqs, outputs);
+  try {
+    if (config_.static_alloc) {
+      StaticBackward(retain_graph, state, inputs, reqs, outputs);
+    } else {
+      DynamicBackward(retain_graph, state, inputs, reqs, outputs);
+    }
+  } catch (const dmlc::Error& e) {
+    Engine::Get()->set_bulk_size(prev_bulk_size);
+    throw e;
   }
 
   Engine::Get()->set_bulk_size(prev_bulk_size);
@@ -1177,8 +1188,9 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
       in_ptrs.push_back(&(*it));
   }
   CHECK_EQ(in_ptrs.size(), s.op->num_backward_inputs());
-  for (size_t i = 0; i < out_bufs.size(); i++)
-    out_ptrs.push_back(&out_bufs[i]);
+  for (auto& out_buf : out_bufs) {
+    out_ptrs.push_back(&out_buf);
+  }
   CHECK_EQ(out_ptrs.size(), s.op->num_backward_outputs());
   // Set is_training correct for the imperative executor.
   bool orig_is_train;
@@ -1283,8 +1295,8 @@ void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
     nnvm::Symbol sym;
     sym.outputs = g.outputs;
     std::vector<std::pair<std::string, std::string> > flags;
-    for (auto it = attrs->dict.begin(); it != attrs->dict.end(); it++)
-      flags.emplace_back(it->first, it->second);
+    for (const auto& attr : attrs->dict)
+      flags.emplace_back(attr.first, attr.second);
     attrs->parsed = CachedOpPtr(new CachedOp(sym, flags));
   }
 }

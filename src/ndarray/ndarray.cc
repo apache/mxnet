@@ -122,8 +122,8 @@ NDArray::Chunk::~Chunk() {
       }
 #endif
       if (mem.h.size > 0) Storage::Get()->Free(mem.h);
-      for (size_t i = 0; i < mem.aux_h.size(); i++) {
-        if (mem.aux_h[i].size > 0) Storage::Get()->Free(mem.aux_h[i]);
+      for (const auto& aux : mem.aux_h) {
+        if (aux.size > 0) Storage::Get()->Free(aux);
       }
     }
   }, shandle.ctx, var);
@@ -168,16 +168,28 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
 
 #if MXNET_USE_MKLDNN == 1
 
-NDArray::NDArray(const mkldnn::memory *mkldnn_mem, bool static_data)
+NDArray::NDArray(mkldnn::memory::primitive_desc mem_pd)
+    : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
+  auto mem_desc = mem_pd.desc();
+  shape_ = TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
+  dtype_ = get_mxnet_type(mem_desc.data.data_type);
+  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+  ptr_->CheckAndAlloc(mem_pd.get_size());
+  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mem_pd, ptr_->shandle.dptr);
+}
+
+NDArray::NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem)
     : storage_type_(kDefaultStorage), entry_({nullptr, 0, 0}) {
   auto mem_pd = mkldnn_mem->get_primitive_desc();
   auto mem_desc = mem_pd.desc();
   shape_ = TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_ = get_mxnet_type(mem_desc.data.data_type);
-  auto data = TBlob(mkldnn_mem->get_data_handle(), shape_, cpu::kDevMask, dtype_);
-  ptr_ = std::make_shared<Chunk>(data, 0);
-  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mem_pd, ptr_->shandle.dptr);
-  ptr_->static_data = static_data;
+  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+  ptr_->shandle.dptr = mkldnn_mem->get_data_handle();
+  ptr_->shandle.size = mem_pd.get_size();
+  ptr_->delay_alloc = false;
+  ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(mkldnn_mem);
+  ptr_->static_data = true;
 }
 
 NDArray NDArray::MKLDNNDataReshape(const TShape &shape) const {
@@ -330,11 +342,10 @@ struct NDArrayDLManager {
 };
 
 DLManagedTensor* NDArray::ToDLPack() const {
+  CHECK(!is_none()) << "NDArray is not initialized";
   NDArrayDLManager* dlmanager(new NDArrayDLManager);
   dlmanager->handle = *this;
-  if (!is_none()) {
-    dlmanager->tensor.dl_tensor = data().dltensor();
-  }
+  dlmanager->tensor.dl_tensor = dlmanager->handle.data().dltensor();
   dlmanager->tensor.manager_ctx = dlmanager;
   dlmanager->tensor.deleter = [](DLManagedTensor* dlmanager){
     delete static_cast<NDArrayDLManager*>(dlmanager->manager_ctx);
@@ -454,17 +465,10 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
 
   mkldnn::memory::dims dims;
   // These are shapes supprted by MKLDNN.
-  if (shape.ndim() == 1 || shape.ndim() == 2 || shape.ndim() == 4
-      || shape.ndim() == 5) {
+  if (shape.ndim() >= 1 && shape.ndim() <= 5) {
     dims.resize(shape.ndim());
     for (size_t i = 0; i < dims.size(); i++)
       dims[i] = shape[i];
-  } else if (shape.ndim() == 3) {
-    // If there are 3 dimensions, we'll force it to 4 dimensions.
-    dims.resize(shape.ndim() + 1);
-    dims[0] = 1;
-    for (size_t i = 0; i < shape.ndim(); i++)
-      dims[i + 1] = shape[i];
   } else {
     LOG(FATAL) << "MKLDNN doesn't support " << shape.ndim() << " dimensions";
   }
@@ -472,6 +476,7 @@ void NDArray::Chunk::SetMKLMem(const TShape &shape, int dtype) {
   switch (dims.size()) {
     case 1: layout = mkldnn::memory::format::x; break;
     case 2: layout = mkldnn::memory::format::nc; break;
+    case 3: layout = mkldnn::memory::format::ncw; break;
     case 4: layout = mkldnn::memory::format::nchw; break;
     // This isn't the right layout when the data has 5 dimensions in MXNet.
     // MXNet interprets 5 dimensions as ncdhw, but MKLDNN doesn't have
@@ -717,19 +722,16 @@ mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::primitive_desc &
   return ptr_->mkl_mem_->GetRaw();
 }
 
-void NDArray::UpdateMKLDNNMemDesc() {
+void NDArray::UpdateMKLDNNMemDesc(mkldnn::memory::format format) {
   const mkldnn::memory *mem = GetMKLDNNData();
   auto mem_desc = mem->get_primitive_desc().desc();
   auto this_dtype = get_mkldnn_type(dtype());
-  if (this_dtype != mem_desc.data.data_type) {
-    mkldnn::memory::desc data_md(
-        mkldnn::memory::dims(mem_desc.data.dims,
-                             mem_desc.data.dims + mem_desc.data.ndims),
-        this_dtype, static_cast<mkldnn::memory::format>(mem_desc.data.format));
-    mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
-    ptr_->mkl_mem_.reset(new MKLDNNMemory(pd, ptr_->shandle.dptr));
-    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
-  }
+  mkldnn::memory::desc data_md(
+      mkldnn::memory::dims(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims),
+      this_dtype, format);
+  mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
+  ptr_->mkl_mem_.reset(new MKLDNNMemory(pd, ptr_->shandle.dptr));
+  MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
 }
 #endif
 
@@ -1280,17 +1282,17 @@ void CopyFromTo(const NDArray& from, const NDArray *to, int priority) {
 void ElementwiseSum(const std::vector<NDArray> &source, NDArray *out, int priority) {
   std::vector<Engine::VarHandle> const_vars;
   const_vars.reserve(source.size());
-  for (size_t i = 0; i < source.size(); ++i) {
-    if (source[i].var() != out->var()) {
-      const_vars.push_back(source[i].var());
+  for (const auto& source_array : source) {
+    if (source_array.var() != out->var()) {
+      const_vars.push_back(source_array.var());
     }
-    CHECK_EQ(source[i].shape() , out->shape())
+    CHECK_EQ(source_array.shape() , out->shape())
         << "operands shape mismatch";
     if (out->ctx().dev_mask() == Context::kCPU) {
-      CHECK_EQ(source[i].ctx().dev_mask(), Context::kCPU)
+      CHECK_EQ(source_array.ctx().dev_mask(), Context::kCPU)
           << "operands context mismatch";
     } else {
-      CHECK_EQ(source[i].ctx(), out->ctx())
+      CHECK_EQ(source_array.ctx(), out->ctx())
           << "operands context mismatch";
     }
   }

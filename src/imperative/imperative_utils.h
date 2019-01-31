@@ -117,11 +117,13 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_shapes.push_back(i->shape());
   }
-  CHECK(infershape.count(attrs.op))
-    << "Operator " << attrs.op->name << " is missing FInferShape attribute";
-  CHECK(infershape[attrs.op](attrs, &in_shapes, &out_shapes));
-  CHECK_EQ(out_shapes.size(), outputs.size());
-
+  bool is_dynamic_shape_existing = false;
+  if (!infershape.count(attrs.op)) {
+    is_dynamic_shape_existing = true;
+  } else {
+    CHECK(infershape[attrs.op](attrs, &in_shapes, &out_shapes));
+    CHECK_EQ(out_shapes.size(), outputs.size());
+  }
   // infer type
   std::vector<int>& in_types = ret->arg_types;
   in_types.clear();
@@ -178,7 +180,10 @@ inline void SetShapeType(const Context& ctx,
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
     if (outputs[i]->is_none()) {
-      if (storage_type == kDefaultStorage) {
+      if (is_dynamic_shape_existing) {
+        // once there is dynamic shape somewhere, we could not pre-determine the shape.
+        *outputs[i] = NDArray(ctx, out_types[i]);
+      } else if (storage_type == kDefaultStorage) {
         *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
       } else {
         *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
@@ -401,7 +406,7 @@ inline void PushFCompute(const FCompute& fn,
       fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
       // post-fcompute fallback, cast to original storage type
       CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-      if (is_gpu) {
+      if (is_gpu && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -923,7 +928,6 @@ inline void CreateEngineOpSeg(
     const size_t start_nid,
     const size_t end_nid,
     const size_t bulk_size,
-    const std::unordered_set<uint32_t>& excludes,
     const std::vector<std::shared_ptr<exec::OpExecutor> >& execs,
     const std::vector<int> skip_plus_node,
     std::vector<EngineOprSeg> *opr_segs) {
@@ -939,13 +943,6 @@ inline void CreateEngineOpSeg(
 
     // Stop at async nodes and invalid node (due to input/output is not allocated)
     bool stop = is_async || !valid || seg_execs.size() >= bulk_size;
-    for (size_t i = 0; i < node.inputs.size() && !stop; ++i) {
-      if (excludes.count(idx.entry_id(node.inputs[i]))) stop = true;
-    }
-    auto num_outputs = node.source->num_outputs();
-    for (size_t i = 0; i < num_outputs && !stop; ++i) {
-      if (excludes.count(idx.entry_id(nid, i))) stop = true;
-    }
 
     // Create opr segment for previous nodes.
     if (stop && nid > seg_start) {

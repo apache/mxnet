@@ -225,11 +225,7 @@ if __name__ == '__main__':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
         calib_layer = lambda name: name.endswith('_output')
-        excluded_sym_names += ['squeezenet0_flatten0_flatten0',
-                               'squeezenet0_pool0_fwd',
-                               'squeezenet0_pool1_fwd',
-                               'squeezenet0_pool2_fwd',
-                               'squeezenet0_pool3_fwd']
+        excluded_sym_names += ['squeezenet0_flatten0_flatten0']
         if exclude_first_conv:
             excluded_sym_names += ['squeezenet0_conv0_fwd']
     elif args.model == 'mobilenet1.0':
@@ -277,7 +273,9 @@ if __name__ == '__main__':
     logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
     std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}    
-
+    combine_mean_std = {}
+    combine_mean_std.update(mean_args)
+    combine_mean_std.update(std_args)
     if calib_mode == 'none':
         logger.info('Quantizing FP32 model %s' % args.model)
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
@@ -298,8 +296,7 @@ if __name__ == '__main__':
                                      shuffle=args.shuffle_dataset,
                                      shuffle_chunk_seed=args.shuffle_chunk_seed,
                                      seed=args.shuffle_seed,
-                                     **mean_args,
-                                     **std_args)
+                                     **combine_mean_std)
 
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                         ctx=ctx, excluded_sym_names=excluded_sym_names,

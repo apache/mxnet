@@ -29,14 +29,39 @@ def identity(attrs, inputs, proto_obj):
 
 def random_uniform(attrs, inputs, proto_obj):
     """Draw random samples from a uniform distribtuion."""
-    new_attr = translation_utils._remove_attributes(attrs, ['seed'])
-    return 'random_uniform', new_attr, inputs
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
+    new_attrs = translation_utils._remove_attributes(attrs, ['seed'])
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attrs.get('dtype', 1))]
+    return 'random_uniform', new_attrs, inputs
 
 def random_normal(attrs, inputs, proto_obj):
     """Draw random samples from a Gaussian distribution."""
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
     new_attr = translation_utils._remove_attributes(attrs, ['seed'])
-    new_attr = translation_utils._fix_attribute_names(new_attr, {'mean' : 'loc'})
-    return 'random_uniform', new_attr, inputs
+    new_attr = translation_utils._fix_attribute_names(new_attr, {'mean': 'loc'})
+    new_attr['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(new_attr.get('dtype', 1))]
+    return 'random_normal', new_attr, inputs
+
+def sample_multinomial(attrs, inputs, proto_obj):
+    """Draw random samples from a multinomial distribution."""
+    try:
+        from onnx.mapping import TENSOR_TYPE_TO_NP_TYPE
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          + "Instructions to install - https://github.com/onnx/onnx")
+    new_attrs = translation_utils._remove_attributes(attrs, ['seed'])
+    new_attrs = translation_utils._fix_attribute_names(new_attrs, {'sample_size': 'shape'})
+    new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
+    return 'sample_multinomial', new_attrs, inputs
+
 
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
@@ -382,6 +407,7 @@ def global_lppooling(attrs, inputs, proto_obj):
                                                                 'kernel': (1, 1),
                                                                 'pool_type': 'lp',
                                                                 'p_value': p_value})
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
     return 'Pooling', new_attrs, inputs
 
 def linalg_gemm(attrs, inputs, proto_obj):
@@ -642,6 +668,10 @@ def shape(attrs, inputs, proto_obj):
     """Returns shape of input array."""
     return 'shape_array', attrs, inputs
 
+def size(attrs, inputs, proto_obj):
+    """Returns array containing size of data."""
+    return "size_array", attrs, inputs
+
 def reduce_l2(attrs, inputs, proto_obj):
     """Reduce input tensor by l2 normalization."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'axes':'axis'})
@@ -667,11 +697,12 @@ def lp_pooling(attrs, inputs, proto_obj):
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'kernel_shape': 'kernel',
                                                         'strides': 'stride',
-                                                        'pads': 'pad',
-                                                        'p_value': p_value
+                                                        'pads': 'pad'
                                                        })
+    new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pooling_convention': 'valid'
+                                                        {'pooling_convention': 'valid',
+                                                         'p_value': p_value
                                                         })
     new_op = translation_utils._fix_pooling('lp', inputs, new_attrs)
     return new_op, new_attrs, inputs
@@ -710,3 +741,37 @@ def spacetodepth(attrs, inputs, proto_obj):
     new_attrs = translation_utils._fix_attribute_names(attrs, {'blocksize':'block_size'})
 
     return "space_to_depth", new_attrs, inputs
+
+def hardmax(attrs, inputs, proto_obj):
+    """Returns batched one-hot vectors."""
+    input_tensor_data = proto_obj.model_metadata.get('input_tensor_data')[0]
+    input_shape = input_tensor_data[1]
+
+    axis = int(attrs.get('axis', 1))
+    axis = axis if axis >= 0 else len(input_shape) + axis
+
+    if axis == len(input_shape) - 1:
+        amax = symbol.argmax(inputs[0], axis=-1)
+        one_hot = symbol.one_hot(amax, depth=input_shape[-1])
+        return one_hot, attrs, inputs
+
+    # since reshape doesn't take a tensor for shape,
+    # computing with np.prod. This needs to be changed to
+    # to use mx.sym.prod() when mx.sym.reshape() is fixed.
+    # (https://github.com/apache/incubator-mxnet/issues/10789)
+    new_shape = (int(np.prod(input_shape[:axis])),
+                 int(np.prod(input_shape[axis:])))
+    reshape_op = symbol.reshape(inputs[0], new_shape)
+    amax = symbol.argmax(reshape_op, axis=-1)
+    one_hot = symbol.one_hot(amax, depth=new_shape[-1])
+    hardmax_op = symbol.reshape(one_hot, input_shape)
+    return hardmax_op, attrs, inputs
+
+def lpnormalization(attrs, inputs, proto_obj):
+    """ONNX does not have eps attribute, so cannot map it to L2normalization in MXNet
+     without that, it works as norm operator discussion in PR:
+     https://github.com/onnx/onnx/pull/1330"""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'p': 'ord'})
+    axis = int(attrs.get("axis", -1))
+    new_attrs.update(axis=axis)
+    return 'norm', new_attrs, inputs

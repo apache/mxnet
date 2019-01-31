@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for ARM64/ARMv8
 
-FROM mxnetci/dockcross-linux-arm64:08212018
+FROM mxnetcipinned/dockcross-linux-arm64:11262018
 
 ENV ARCH aarch64
 ENV HOSTCC gcc
@@ -27,8 +27,8 @@ ENV TARGET ARMV8
 WORKDIR /work/deps
 
 # gh issue #11567 https://github.com/apache/incubator-mxnet/issues/11567
-RUN sed -i '\#deb http://cdn-fastly.deb.debian.org/debian-security jessie/updates main#d' /etc/apt/sources.list
-RUN sed -i 's/cdn-fastly.//' /etc/apt/sources.list
+#RUN sed -i '\#deb http://cdn-fastly.deb.debian.org/debian-security jessie/updates main#d' /etc/apt/sources.list
+#RUN sed -i 's/cdn-fastly.//' /etc/apt/sources.list
 
 COPY install/ubuntu_arm.sh /work/
 RUN /work/ubuntu_arm.sh
@@ -41,6 +41,11 @@ ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
 WORKDIR /work/build

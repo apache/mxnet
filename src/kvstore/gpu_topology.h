@@ -123,6 +123,9 @@ inline bool IsConnected(const std::vector<T>& matrix, int num_gpus) {
 /**
  * \brief Generate adjacency matrix with row/col numbering from 0, 1, ..., n_gpu
  * \param devs is a vector of GPU contexts
+ * \param p2p_matrix is adjacency matrix of P2P connections where
+ *          0: no P2P connection
+ *          1: P2P connection
  * \param matrix is adjacency matrix of link topology graph
  *        where edge weight represents relative performance of NVIDIA GPUs
  *          0: Self-connection
@@ -131,7 +134,9 @@ inline bool IsConnected(const std::vector<T>& matrix, int num_gpus) {
  *          3: 2 NVLink connections
  */
 template <typename T>
-inline void GetP2PWeight(const std::vector<Context>& devs, std::vector<T>* matrix) {
+inline void GetP2PWeight(const std::vector<Context>& devs,
+                         const std::vector<int>& p2p_matrix,
+                         std::vector<T>* matrix) {
   int num_gpus = devs.size();
   int count    = 0;
   std::vector<int> zero_dev_id(num_gpus, -1);
@@ -161,11 +166,61 @@ inline void GetP2PWeight(const std::vector<Context>& devs, std::vector<T>* matri
     }
   }
 
-  // Check that all GPUs have at least 1 NVLink connection
-  int max_value = 0;
-  for (unsigned int i = 0; i < max.size(); ++i) {
-    if (max[i] > max_value)
-      max_value = max[i];
+  // Check that all P2P connections are detected by GetP2PAttribute
+  // If yes, then continue as before
+  // If not, then treat fallback to using p2p_matrix (from EnableP2P)
+  //
+  // We have observed that with CUDA 9.0 p3.16xlarge:
+  //
+  //   0 2 2 3 3 1 1 1    . v v v v . . .
+  //   2 0 3 2 1 3 1 1    v . v v . v . .
+  //   2 3 0 3 1 1 2 1    v v . v . . v .
+  //   3 2 3 0 1 1 1 2    v v v . . . . v
+  //   3 1 1 1 0 2 2 3    v . . . . v v v
+  //   1 3 1 1 2 0 3 2    . v . . v . v v
+  //   1 1 2 1 2 3 0 3    . . v . v v . v
+  //   1 1 1 2 3 2 3 0    . . . v v v v .
+  //
+  //        matrix           p2p_matrix
+  //
+  // Here, they are correctly detected, because the 2s and 3s correspond to
+  // links that have P2P connections between them. However for CUDA 9.2 p3.16xlarge:
+  //
+  //   0 2 2 1 1 1 1 1    . v v v v . . .
+  //   2 0 1 2 1 1 1 1    v . v v . v . .
+  //   2 1 0 1 1 1 2 1    v v . v . . v .
+  //   1 2 1 0 1 1 1 2    v v v . . . . v
+  //   1 1 1 1 0 2 2 1    v . . . . v v v
+  //   1 1 1 1 2 0 1 2    . v . . v . v v
+  //   1 1 2 1 2 1 0 1    . . v . v v . v
+  //   1 1 1 2 1 2 1 0    . . . v v v v .
+  //
+  //        matrix          p2p_matrix
+  //
+  // The fastest connections (3 - double NVLink) are not recognized as being any
+  if (kLogTree) {
+    PrintMatrix("matrix", *matrix, num_gpus, num_gpus);
+    PrintMatrix("p2p_matrix", p2p_matrix, num_gpus, num_gpus);
+  }
+
+  // different from (1 - non-P2P PCI-E). This is why we fallback to p2p_matrix.
+  bool matrix_correct = true;
+  for (unsigned i = 0; i < p2p_matrix.size(); ++i) {
+    if (p2p_matrix[i] > 0 && (*matrix)[i] == 1) {
+      matrix_correct = false;
+      break;
+    }
+  }
+
+  if (!matrix_correct) {
+    LOG(WARNING) << "cudaDeviceGetP2PAttribute incorrect. "
+                 << "Falling back to cudaDeviceEnablePeerAccess for topology detection";
+    for (unsigned i = 0; i < p2p_matrix.size(); ++i) {
+      if (p2p_matrix[i] > 0)
+        (*matrix)[i] = 2;
+      else
+        (*matrix)[i] = 1;
+    }
   }
 
   // If all GPUs are connected by NVLink, then we can use NVLink only
@@ -188,6 +243,8 @@ inline void GetP2PWeight(const std::vector<Context>& devs, std::vector<T>* matri
       matrix_value = (matrix_value == 1) ? 1./num_gpus : matrix_value;
     }
   }
+  if (kLogTree)
+    PrintMatrix("Weight", *matrix, num_gpus, num_gpus);
 
 #else
   LOG(WARNING) << "GPU required for link topology";
@@ -278,8 +335,8 @@ inline bool KernighanLin(const std::vector<T>& W, std::vector<int>* P,
 
   // 0) For every partition, determine if it can be partitioned further.
   //    To do this, we must do a histogram of each partition:
-  for (unsigned i=0; i < P->size(); ++i) {
-    histogram[(*P)[i]]++;
+  for (int partition : *P) {
+    histogram[partition]++;
   }
 
   bool stop = true;
@@ -315,13 +372,13 @@ inline bool KernighanLin(const std::vector<T>& W, std::vector<int>* P,
 
       // 1b) Shuffle using random generator
       std::shuffle(cluster_list.begin(), cluster_list.end(), *gen);
-      for (unsigned i = 0; i < cluster_list.size(); ++i) {
+      for (int cluster : cluster_list) {
         if (first_partition < target_partition) {
-          int dest = cluster_list[i];
+          int dest = cluster;
           P_temp[dest] = 1;
           first_partition++;
         } else {
-          int dest = cluster_list[i];
+          int dest = cluster;
           P_temp[dest] = -1;
         }
       }
@@ -758,8 +815,8 @@ inline bool FormTopology(const std::vector<int>& result,
                          std::vector<size_t>* topo_row,
                          std::vector<size_t>* scan_row,
                          int depth) {
-  for (unsigned i = 0; i < result.size(); ++i)
-    if (result[i] == -1)
+  for (int result_value : result)
+    if (result_value == -1)
       return false;
 
   scan_row->push_back(topo_row->size());
@@ -1027,7 +1084,7 @@ inline void ComputeTreesFromRoot(std::vector<T>* W,
 
   bool success = true;
   if (reset == 1) {
-    // LOG(INFO) << "No valid binary tree found from root " << root << ", try backtracking";
+    LOG(INFO) << "No valid binary tree found from root " << root << ", try backtracking";
     success = BacktrackGenerateBinaryTree(W, num_elements, root, topo, scan);
   } else {
     *topo = topo_temp;
@@ -1078,8 +1135,8 @@ inline void ComputeTrees(const std::vector<T>& W,
       int from = std::min((*topo)[row][col], (*topo)[row][col+1]);
       int dest = std::max((*topo)[row][col], (*topo)[row][col+1]);
       if (from != dest) {
-        adj[from*num_elements+dest] += 1;
-        adj[dest*num_elements+from] += 1;
+        adj.at(from*num_elements+dest) += 1;
+        adj.at(dest*num_elements+from) += 1;
       }
     }
   }

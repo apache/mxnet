@@ -47,7 +47,7 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
            "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
-           "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
+           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -157,6 +157,13 @@ def waitall():
     """Wait for all async operations to finish in MXNet.
 
     This function is used for benchmarking only.
+
+    .. warning::
+
+       If your code has exceptions, `waitall` can cause silent failures.
+       For this reason you should avoid `waitall` in your code.
+       Use it only if you are confident that your code is error free.
+       Then make sure you call `wait_to_read` on all outputs after `waitall`.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -399,7 +406,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
+        key : int, mxnet.ndarray.slice, list, np.ndarray, NDArray, or tuple of all previous types
             The indexing key.
         value : scalar or array-like object that can be broadcast to the shape of self[key]
             The value to set.
@@ -467,7 +474,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
+        key : int, mxnet.ndarray.slice, list, np.ndarray, NDArray, or tuple of all previous types
             Indexing key.
 
         Examples
@@ -998,7 +1005,7 @@ fixed-size items.
 
               Example::
 
-              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be \
                 (40,5).
               - with reverse=1, output shape will be (50,4).
 
@@ -1125,6 +1132,14 @@ fixed-size items.
         this array as data.
         """
         return op.split(self, *args, **kwargs)
+
+    def split_v2(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split_v2`.
+
+        The arguments are the same as for :py:func:`split_v2`, with
+        this array as data.
+        """
+        return split_v2(self, *args, **kwargs)
 
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
@@ -2642,9 +2657,9 @@ def add(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be added.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be added.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2704,9 +2719,9 @@ def subtract(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be subtracted.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be subtracted.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2765,9 +2780,9 @@ def multiply(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be multiplied.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be multiplied.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2826,9 +2841,9 @@ def divide(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array in division.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array in division.
         The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2883,9 +2898,9 @@ def modulo(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array in modulo.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array in modulo.
         The arrays to be taken modulo. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -3002,9 +3017,9 @@ def maximum(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3059,9 +3074,9 @@ def minimum(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3120,9 +3135,9 @@ def equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3184,9 +3199,9 @@ def not_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3251,9 +3266,9 @@ def greater(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3315,9 +3330,9 @@ def greater_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3379,9 +3394,9 @@ def lesser(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3443,9 +3458,9 @@ def lesser_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3506,9 +3521,9 @@ def logical_and(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3566,9 +3581,9 @@ def logical_or(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3626,9 +3641,9 @@ def logical_xor(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3894,6 +3909,12 @@ def histogram(a, bins=10, range=None):
         Values outside the range are ignored. The first element of the range must be less than or
         equal to the second. range affects the automatic bin computation as well, the range will
         be equally divided by the number of bins.
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
     """
 
     # pylint: disable= no-member, protected-access
@@ -3908,6 +3929,51 @@ def histogram(a, bins=10, range=None):
         return _internal._histogram(data=a, bin_cnt=bins, range=range)
     raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
+
+def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
+    """Split an array into multiple sub-arrays.
+
+    Parameters
+    ----------
+    ary : NDArray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or tuple of ints
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+        - ary[:2]
+        - ary[2:3]
+        - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    squeeze_axis: boolean, optional
+        Whether to squeeze the axis of sub-arrays or not, only useful when size
+        of the sub-arrays are 1 on the `axis`. Default is False.
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
+    """
+    indices = []
+    axis_size = ary.shape[axis]
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+        if axis_size % sections:
+            raise ValueError('array split does not result in an equal division')
+        section_size = int(axis_size / sections)
+        indices = [i * section_size for i in range(sections)]
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    return _internal._split_v2(ary, indices, axis, squeeze_axis)
 
 PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
 _c_str_dltensor = c_str('dltensor')

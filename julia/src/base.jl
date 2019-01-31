@@ -27,7 +27,7 @@ Base.show(io::IO, e::MXError) = print(io, e.msg)
 ################################################################################
 const MX_uint = Cuint
 const MX_float = Cfloat
-const MX_handle = Ptr{Void}
+const MX_handle = Ptr{Cvoid}
 
 const char_p = Ptr{UInt8}
 const char_pp = Ptr{char_p}
@@ -50,7 +50,10 @@ const grad_req_map = Dict{Symbol,GRAD_REQ}(
 const MXNET_LIB = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],  # see build.jl
                                      [joinpath(get(ENV, "MXNET_HOME", ""), "lib"),
                                       get(ENV, "MXNET_HOME", ""),
-                                      Pkg.dir("MXNet", "deps", "usr", "lib")])
+                                      joinpath(@__DIR__, "..",
+                                               "deps", "usr", "lib")])
+const LIB_VERSION = Ref{Cint}(0)
+
 if isempty(MXNET_LIB)
   # touch this file, so that after the user properly build libmxnet, the precompiled
   # MXNet.ji will be re-compiled to get MXNET_LIB properly.
@@ -65,8 +68,7 @@ function __init__()
   # TODO: bug in nnvm, if do not call this, call get handle "_copyto" will fail
   _get_libmx_op_names()
   _populate_iter_creator_cache!()
-
-  global const LIB_VERSION = _get_lib_version()
+  _get_lib_version!()
 
   atexit() do
     # notify libmxnet we are shutting down
@@ -87,8 +89,8 @@ macro mxcall(fv, argtypes, args...)
   f = eval(fv)
   args = map(esc, args)
   quote
-    _mxret = ccall( ($(Meta.quot(f)), $MXNET_LIB),
-                    Cint, $argtypes, $(args...) )
+    _mxret = ccall(($(QuoteNode(f)), $MXNET_LIB),
+                   Cint, $argtypes, $(args...))
     if _mxret != 0
       err_msg = mx_get_last_error()
       throw(MXError(err_msg))
@@ -98,38 +100,38 @@ end
 
 """
 Get libmxnet version
+
+This function will changes the global variable `LIB_VERSION`.
 """
-function _get_lib_version()
-  ver = Ref{Cint}(0)
-  @mxcall :MXGetVersion (Ref{Cint},) ver
-  ver[]
+function _get_lib_version!()
+  @mxcall :MXGetVersion (Ref{Cint},) LIB_VERSION
+  LIB_VERSION[]
 end
 
 ################################################################################
 # Handle types
 ################################################################################
-macro mx_define_handle_t(name, destructor)
-  name = esc(name)
-  quote
+function mx_define_handle_t(name, destructor)
+  @eval begin
     mutable struct $name
-      value :: MX_handle
+      value::MX_handle
 
       function $name(value = C_NULL)
         hdr = new(value)
 
-        $(if destructor != :nop
-          :(finalizer(hdr, delete!))
+        $(if destructor != nothing
+          :(finalizer(delete!, hdr))
         end)
 
         return hdr
       end
     end
 
-    $(if finalizer != :nop
+    $(if finalizer != nothing
       quote
         function delete!(h :: $name)
           if h.value != C_NULL
-            @mxcall($(Meta.quot(destructor)), (MX_handle,), h.value)
+            @mxcall($(QuoteNode(destructor)), (MX_handle,), h.value)
             h.value = C_NULL
           end
         end
@@ -142,16 +144,16 @@ macro mx_define_handle_t(name, destructor)
     Base.convert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
     Base.cconvert(t::Type{MX_handle}, obj::$name) = Base.unsafe_convert(t, obj)
 
-    function Base.isnull(obj::$name) obj.value == C_NULL end
+    MX_handle(x::$name) = Base.convert(MX_handle, x)
   end
 end
 
-@mx_define_handle_t(MX_NDArrayHandle, MXNDArrayFree)
-@mx_define_handle_t(MX_OpHandle, nop)
-@mx_define_handle_t(MX_SymbolHandle, MXSymbolFree)
-@mx_define_handle_t(MX_ExecutorHandle, MXExecutorFree)
-@mx_define_handle_t(MX_DataIterHandle, MXDataIterFree)
-@mx_define_handle_t(MX_KVStoreHandle, MXKVStoreFree)
+mx_define_handle_t(:MX_NDArrayHandle,  :MXNDArrayFree)
+mx_define_handle_t(:MX_OpHandle,       nothing)
+mx_define_handle_t(:MX_SymbolHandle,   :MXSymbolFree)
+mx_define_handle_t(:MX_ExecutorHandle, :MXExecutorFree)
+mx_define_handle_t(:MX_DataIterHandle, :MXDataIterFree)
+mx_define_handle_t(:MX_KVStoreHandle,  :MXKVStoreFree)
 
 ################################################################################
 # MXNet Params
@@ -183,8 +185,8 @@ dump_mx_param(val::Float64)    = @sprintf("%.16e", val)
 dump_mx_param(val::Float32)    = @sprintf("%.8e", val)
 dump_mx_param(val::Float16)    = @sprintf("%.4e", val)
 dump_mx_param(val::Irrational) = @sprintf("%.16e", val)
-dump_mx_param(shape::NTuple{N, <:Integer}) where N =
-  string(tuple(flipdim([shape...], 1)...))
+dump_mx_param(shape::NTuple{N,<:Integer}) where N =
+  string(reverse(shape))
 
 
 """
@@ -248,11 +250,11 @@ function _defstruct_impl(is_immutable, name, fields)
     name       = esc(name.args[1])
   end
 
-  field_defs     = Vector{Expr}(length(fields))        # :(field2 :: Int)
-  field_names    = Vector{Expr}(length(fields))        # :field2
-  field_defaults = Vector{Expr}(length(fields))        # :(field2 = 0)
-  field_types    = Vector{Expr}(length(fields))        # Int
-  field_asserts  = Vector{Expr}(length(fields))        # :(field2 >= 0)
+  field_defs     = Vector{Expr}(undef, length(fields))  # :(field2 :: Int)
+  field_names    = Vector{Expr}(undef, length(fields))  # :field2
+  field_defaults = Vector{Expr}(undef, length(fields))  # :(field2 = 0)
+  field_types    = Vector{Expr}(undef, length(fields))  # Int
+  field_asserts  = Vector{Expr}(undef, length(fields))  # :(field2 >= 0)
   required_field = Symbol[]
 
   for i = 1:length(fields)

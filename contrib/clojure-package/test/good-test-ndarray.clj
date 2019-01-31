@@ -1,6 +1,7 @@
 (ns org.apache.clojure-mxnet.ndarray
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
-                            min repeat reverse set sort take to-array empty shuffle])
+                            min repeat reverse set sort take to-array empty shuffle
+                            ref])
   (:import (org.apache.mxnet NDArray Shape)))
 
 ;; Do not edit - this is auto-generated
@@ -26,11 +27,12 @@
 
 (defn
  div
- ([ndarray num-or-ndarray]
+ ([ndarray ndarray-or-double-or-float]
   (util/coerce-return
    (.$div
     ndarray
     (util/coerce-param
-     num-or-ndarray
-     #{"float" "org.apache.mxnet.NDArray"})))))
+     ndarray-or-double-or-float
+     #{"org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE"
+       "org.apache.mxnet.NDArray"})))))
 

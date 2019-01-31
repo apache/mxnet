@@ -43,7 +43,7 @@ The community is also working on parallel effort to create a foundational resour
 
 Use plug-and-play neural network building blocks, including predefined layers, optimizers, and initializers:
 
-```python
+```
 net = gluon.nn.Sequential()
 # When instantiated, Sequential stores a chain of neural network layers.
 # Once presented with data, Sequential executes each layer in turn, using
@@ -59,7 +59,7 @@ with net.name_scope():
 
 Prototype, build, and train neural networks in fully imperative manner using the MXNet autograd package and the Gluon trainer method:
 
-```python
+```
 epochs = 10
 
 for e in range(epochs):
@@ -76,20 +76,19 @@ for e in range(epochs):
 
 Build neural networks on the fly for use cases where neural networks must change in size and shape during model training:
 
-```python
+```
 def forward(self, F, inputs, tree):
     children_outputs = [self.forward(F, inputs, child)
                         for child in tree.children]
     #Recursively builds the neural network based on each input sentence’s
     #syntactic structure during the model definition and training process
-    …
 ```
 <br/>
 **__High Performance__**
 
 Easily cache the neural network to achieve high performance by defining your neural network with ``HybridSequential`` and calling the ``hybridize`` method:
 
-```python
+```
 net = nn.HybridSequential()
 with net.name_scope():
     net.add(nn.Dense(256, activation="relu"))
@@ -97,7 +96,7 @@ with net.name_scope():
     net.add(nn.Dense(2))
 ```
 
-```python
+```
 net.hybridize()
 ```
 

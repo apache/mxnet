@@ -9,7 +9,7 @@ For a gluon imperative version, checkout https://github.com/dmlc/gluon-cv.
 
 ### Out-of-box inference models
 Download any of the following models to the current directory and run `python3 demo.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --image $YOUR_IMAGE$` to get single image inference.
-For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU optionally.
+For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU, not set to use CPU. 
 Different network has different configuration. Different dataset has different object class names. You must pass them explicitly as command line arguments.
 
 | Network | Dataset | Imageset | Reference | Result | Link  |
@@ -32,6 +32,7 @@ Make a directory `data` and follow `py-faster-rcnn` for data preparation instruc
 ### Training and evaluation
 Use `python3 train.py --dataset $Dataset$ --network $Network$ --pretrained $IMAGENET_MODEL_FILE$ --gpus $GPUS$` to train,
 for example, `python3 train.py --dataset voc --network vgg16 --pretrained model/vgg16-0000.params --gpus 0,1`.
+use `python3 train.py --dataset voc --imageset 2007_trainval+2012_trainval --network vgg16 --pretrained model/vgg16-0000.params --gpus 0,1` to train on both of voc2007 and voc2012.
 Use `python3 test.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --gpu $GPU$` to evaluate,
 for example, `python3 test.py --dataset voc --network vgg16 --params model/vgg16-0010.params --gpu 0`.
 

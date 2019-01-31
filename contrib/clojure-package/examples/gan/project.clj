@@ -15,10 +15,12 @@
 ;; limitations under the License.
 ;;
 
-(defproject gan "0.1.0-SNAPSHOT"
+(defproject gan-origami "0.1.0-SNAPSHOT"
   :description "GAN MNIST with MXNet"
   :plugins [[lein-cljfmt "0.5.7"]]
+  :repositories [["vendredi" {:url "https://repository.hellonico.info/repository/hellonico/"}]]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.3.1-SNAPSHOT"]
-                 [nu.pattern/opencv "2.4.9-7"]]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]
+                 [origami "4.0.0-3"]
+                 ]
   :main gan.gan-mnist)

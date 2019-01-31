@@ -22,12 +22,12 @@
  * \file c_api_symbolic.cc
  * \brief C API of mxnet
  */
-#include <mxnet/base.h>
-#include <mxnet/c_api.h>
-#include <nnvm/c_api.h>
-#include <nnvm/pass.h>
-#include <nnvm/pass_functions.h>
-#include <nnvm/symbolic.h>
+#include "mxnet/base.h"
+#include "mxnet/c_api.h"
+#include "nnvm/c_api.h"
+#include "nnvm/pass.h"
+#include "nnvm/pass_functions.h"
+#include "nnvm/symbolic.h"
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
@@ -269,8 +269,8 @@ int MXSymbolListAttr(SymbolHandle symbol,
   }
   *out_size = attr_list.size()/2;
   ret->ret_vec_charp.clear();
-  for (size_t i = 0; i < attr_list.size(); ++i) {
-    ret->ret_vec_charp.push_back(attr_list[i].c_str());
+  for (const auto& attr : attr_list) {
+    ret->ret_vec_charp.push_back(attr.c_str());
   }
   *out = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();
@@ -298,8 +298,8 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
   }
   *out_size = attr_list.size()/2;
   ret->ret_vec_charp.clear();
-  for (size_t i = 0; i < attr_list.size(); ++i) {
-    ret->ret_vec_charp.push_back(attr_list[i].c_str());
+  for (auto &attr : attr_list) {
+    ret->ret_vec_charp.push_back(attr.c_str());
   }
   *out = dmlc::BeginPtr(ret->ret_vec_charp);
   API_END();

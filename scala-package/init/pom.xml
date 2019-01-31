@@ -5,65 +5,69 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-parent_2.11</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
-<!--  <relativePath>../pom.xml</relativePath>-->
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
+    <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>mxnet-init_2.11</artifactId>
+  <artifactId>mxnet-scala-init</artifactId>
   <name>MXNet Scala Package - Initializer</name>
 
-  <profiles>
-    <profile>
-      <id>osx-x86_64-cpu</id>
-      <properties>
-        <platform>osx-x86_64-cpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-cpu</id>
-      <properties>
-        <platform>linux-x86_64-cpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64-gpu</id>
-      <properties>
-        <platform>linux-x86_64-gpu</platform>
-      </properties>
-    </profile>
-    <profile>
-      <id>apache-release</id>
-   <!--Running the compile-backend inside a different profile did not work when used with apache-release profile for release-perform-->
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>1.6.0</version>
-            <executions>
-              <execution>
-                <id>compile-mxnet-backend</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>exec</goal>
-                </goals>
-                <configuration>
-                  <executable>bash</executable>
-                  <commandlineArgs>${project.parent.basedir}/dev/compile-mxnet-backend.sh ${build.platform} ${project.parent.basedir}/../</commandlineArgs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <executions>
+          <execution>
+            <id>javah</id>
+            <phase>verify</phase>
             <configuration>
-              <skip>true</skip>
+              <javahProvider>default</javahProvider>
+              <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
+              <workingDirectory>${basedir}</workingDirectory>
+              <javahOutputFileName>org_apache_mxnet_init_native_c_api.h</javahOutputFileName>
+              <javahClassNames>
+                <javahClassName>org.apache.mxnet.init.LibInfo</javahClassName>
+              </javahClassNames>
             </configuration>
-          </plugin>
-        </plugins>
-      </build>
-      </profile>
-  </profiles>
+            <goals>
+              <goal>javah</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>verify-javah</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>diff</executable>
+              <commandlineArgs>
+                ${project.build.directory}/custom-javah/org_apache_mxnet_init_native_c_api.h
+                ${project.parent.basedir}/init-native/src/main/native/org_apache_mxnet_init_native_c_api.h
+              </commandlineArgs>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <configuration>
+          <skip>true</skip>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>

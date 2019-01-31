@@ -3,12 +3,13 @@
 ```eval_rst
 .. toctree::
    :hidden:
-   
+
    basic/index.md
    c++/index.md
    control_flow/index.md
    embedded/index.md
    gluon/index.md
+   java/index.md
    nlp/index.md
    onnx/index.md
    python/index.md
@@ -58,6 +59,7 @@ Select API:&nbsp;
     * [Logistic Regression](/tutorials/gluon/logistic_regression_explained.html)
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+   * [Image similiarity search with InfoGAN](/tutorials/gluon/info_gan.html)
 * Practitioner Guides
     * [Gotchas using NumPy](/tutorials/gluon/gotchas_numpy_in_mxnet.html)
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
@@ -76,6 +78,7 @@ Select API:&nbsp;
         * NDArray
             * [NDArray API](/tutorials/gluon/ndarray.html) ([Alternative](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
+            * [Difference between reshape and transpose](/tutorials/basic/reshape_transpose.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
@@ -153,6 +156,13 @@ Select API:&nbsp;
     * [MNIST Handwritten Digit Recognition with Fully Connected Network](/tutorials/scala/mnist.html)
     * [Barack Obama speech generation with Character-level LSTM](/tutorials/scala/char_lstm.html)
 * [MXNet-Scala  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples)
+<hr>
+
+## Java Tutorials
+* Getting Started
+    * [Developer Environment Setup on IntelliJ IDE](/tutorials/java/mxnet_java_on_intellij.html)
+* [Multi Object Detection using pre-trained Single Shot Detector (SSD) Model](/tutorials/java/ssd_inference.html)
+* [MXNet-Java  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 <hr>
 
 ## C++ Tutorials

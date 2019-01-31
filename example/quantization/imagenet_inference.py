@@ -93,6 +93,7 @@ def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples,
     if logger is not None:
         logger.info('Finished inference with %d images' % num)
         logger.info('Finished with %f images per second', speed)
+        logger.warn('Note: GPU performance is expected to be slower than CPU. Please refer quantization/README.md for details')
         for m in metrics:
             logger.info(m.get())
 
@@ -180,6 +181,9 @@ if __name__ == '__main__':
     logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
     std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
+    combine_mean_std = {}
+    combine_mean_std.update(mean_args)
+    combine_mean_std.update(std_args)
 
     label_name = args.label_name
     logger.info('label_name = %s' % label_name)
@@ -205,8 +209,7 @@ if __name__ == '__main__':
                                     shuffle=True,
                                     shuffle_chunk_seed=3982304,
                                     seed=48564309,
-                                    **mean_args,
-                                    **std_args)
+                                    **combine_mean_std)
 
         # loading model
         sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)
