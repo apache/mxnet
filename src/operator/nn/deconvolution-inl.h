@@ -258,24 +258,24 @@ class DeconvolutionOp {
     Tensor<xpu, 1, DType> workspace =
         ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
             Shape1(this->InitTemp(out.shape_, data.shape_)), s);
-    for (index_t i = 0; i < nbatch; i += nstep_) {
-      const index_t step = std::min(nstep_, nbatch - i);
+    for (index_t i = 0; i < nbatch; ++i) {
       // temp_col: (N * kernel_size, OW * OH)
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
                                             workspace.dptr_,
-                                            Shape2(shape_colunit_[0],
-                                            shape_colunit_[1] * step), s);
+                                            Shape2(shape_colunit_[0], shape_colunit_[1]),
+                                            s);
       // temp_dst: (N, N/n_grup, OW * OH)
       Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
                                            workspace.dptr_ + temp_col.shape_.Size(),
                                            Shape3(shape_dstunit_[0],
-                                           shape_dstunit_[1],
-                                           shape_dstunit_[2] * step), s);
-      temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
+                                                  shape_dstunit_[1],
+                                                  shape_dstunit_[2]),
+                                           s);
+      temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), temp_dst.shape_);
 
       im2col(
         s,
-        (out.Slice(i, i+step)).dptr_,
+        (out.Slice(i, i + 1)).dptr_,
         out.shape_,
         temp_col.shape_,
         kernel,
@@ -295,13 +295,13 @@ class DeconvolutionOp {
       col2im(
         s,
         temp_col.dptr_,
-        out.Slice(i, i + step).shape_,
+        out.Slice(i, i + 1).shape_,
         temp_col.shape_,
         kernel,
         padding,
         stride,
         dilate,
-        out.Slice(i, i+step).dptr_,
+        out.Slice(i, i + 1).dptr_,
         req[deconv::kOut]);
     }
 
@@ -362,22 +362,22 @@ class DeconvolutionOp {
     Tensor<xpu, 1, DType> workspace =
         ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
             Shape1(this->InitTemp(grad.shape_, data.shape_)), s);
-    for (index_t i = 0; i < nbatch; i += nstep_) {
-      const index_t step = std::min(nstep_, nbatch - i);
+    for (index_t i = 0; i < nbatch; ++i) {
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
                                            workspace.dptr_,
-                                           Shape2(shape_colunit_[0],
-                                           shape_colunit_[1] * step), s);
+                                           Shape2(shape_colunit_[0], shape_colunit_[1]),
+                                           s);
       Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
                                            workspace.dptr_ + temp_col.shape_.Size(),
                                            Shape3(shape_dstunit_[0],
-                                           shape_dstunit_[1],
-                                           shape_dstunit_[2] * step), s);
-      temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + step)), temp_dst.shape_);
+                                                  shape_dstunit_[1],
+                                                  shape_dstunit_[2]),
+                                           s);
+      temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), temp_dst.shape_);
 
       im2col(
         s,
-        (grad.Slice(i, i + step)).dptr_,
+        (grad.Slice(i, i + 1)).dptr_,
         grad.shape_,
         temp_col.shape_,
         kernel,
@@ -409,11 +409,11 @@ class DeconvolutionOp {
           // temp_dst[gid] = dot(wmat[gid], tmpc);
           linalg_gemm(wmat[gid], tmpc, temp_dst[gid], false, false, s);
         }
-        Assign(gdata.Slice(i, i + step),
+        Assign(gdata.Slice(i, i + 1),
                req[deconv::kData],
                (swapaxis<1, 0>(reshape(temp_dst,
                                        Shape4(gdata.shape_[1],
-                                              step,
+                                              1,
                                               gdata.size(2),
                                               gdata.size(3))))));
       }
@@ -433,17 +433,12 @@ class DeconvolutionOp {
     shape_dstunit_ = mshadow::Shape3(param_.num_group,
                                      oshape[1] / param_.num_group,
                                      oshape[2] * oshape[3]);
-    // See convolution for workspace calculations. nstep_ will be the effective batch size
-    nstep_ = std::max<index_t>(
-        std::min(static_cast<index_t>(param_.workspace) /
-          (shape_colunit_.Size() + shape_dstunit_.Size()), ishape[0]),
-      1);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
-                                             shape_colunit_[1] * nstep_);
+                                             shape_colunit_[1]);
     mshadow::Shape<3> sdst = mshadow::Shape3(shape_dstunit_[0],
                                              shape_dstunit_[1],
-                                             shape_dstunit_[2] * nstep_);
+                                             shape_dstunit_[2]);
     index_t required_size = scol.Size() + sdst.Size();
     return required_size;
   }
@@ -460,7 +455,6 @@ class DeconvolutionOp {
   DeconvolutionParam param_;
   mshadow::Shape<2> shape_colunit_;
   mshadow::Shape<3> shape_dstunit_;
-  index_t nstep_;
 };  // class DeconvolutionOp
 
 template<typename xpu>
