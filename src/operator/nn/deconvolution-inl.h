@@ -282,8 +282,7 @@ class DeconvolutionOp {
         padding,
         stride,
         dilate,
-        temp_col.dptr_
-      );
+        temp_col.dptr_);
 
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
@@ -303,8 +302,7 @@ class DeconvolutionOp {
         stride,
         dilate,
         out.Slice(i, i+step).dptr_,
-        req[deconv::kOut]
-      );
+        req[deconv::kOut]);
     }
 
     if (!param_.no_bias) {
@@ -386,8 +384,7 @@ class DeconvolutionOp {
         padding,
         stride,
         dilate,
-        temp_col.dptr_
-      );
+        temp_col.dptr_);
 
       const index_t gstride = temp_col.size(0) / param_.num_group;
       for (uint32_t gid = 0; gid < param_.num_group; ++gid) {
