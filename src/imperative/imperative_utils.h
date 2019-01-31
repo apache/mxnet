@@ -406,7 +406,7 @@ inline void PushFCompute(const FCompute& fn,
       fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
       // post-fcompute fallback, cast to original storage type
       CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-      if (is_gpu) {
+      if (is_gpu && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -928,7 +928,6 @@ inline void CreateEngineOpSeg(
     const size_t start_nid,
     const size_t end_nid,
     const size_t bulk_size,
-    const std::unordered_set<uint32_t>& excludes,
     const std::vector<std::shared_ptr<exec::OpExecutor> >& execs,
     const std::vector<int> skip_plus_node,
     std::vector<EngineOprSeg> *opr_segs) {
@@ -944,13 +943,6 @@ inline void CreateEngineOpSeg(
 
     // Stop at async nodes and invalid node (due to input/output is not allocated)
     bool stop = is_async || !valid || seg_execs.size() >= bulk_size;
-    for (size_t i = 0; i < node.inputs.size() && !stop; ++i) {
-      if (excludes.count(idx.entry_id(node.inputs[i]))) stop = true;
-    }
-    auto num_outputs = node.source->num_outputs();
-    for (size_t i = 0; i < num_outputs && !stop; ++i) {
-      if (excludes.count(idx.entry_id(nid, i))) stop = true;
-    }
 
     // Create opr segment for previous nodes.
     if (stop && nid > seg_start) {
