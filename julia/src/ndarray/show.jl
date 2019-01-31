@@ -15,17 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-include("ndarray/type.jl")  # type def and constructors
-include("ndarray/context.jl")
-include("ndarray/show.jl")
-include("ndarray/remap.jl")  # provide @_remap util
-include("ndarray/array.jl")
-include("ndarray/arithmetic.jl")
-include("ndarray/comparison.jl")
-include("ndarray/io.jl")  # save/load and synchronization utils
-include("ndarray/reduction.jl")
-include("ndarray/statistic.jl")
-include("ndarray/linalg.jl")
-include("ndarray/trig.jl")
-include("ndarray/activation.jl")
-include("ndarray/autoimport.jl")  # auto import operators from libmxnet
+function Base.show(io::IO, x::NDArray)
+  print(io, "NDArray(")
+  Base.show(io, try_get_shared(x, sync = :read))
+  print(io, ")")
+end
+
+# for REPL
+function Base.show(io::IO, ::MIME{Symbol("text/plain")}, x::NDArray{T,N}) where {T,N}
+  type_ = split(string(typeof(x)), '.', limit=2)[end]
+  n = length(x)
+  size_ = N == 1 ? "$n-element" : join(size(x), "×")
+  print(io, "$size_ $type_ @ $(context(x))", (n == 0) ? "" : ":\n")
+  Base.print_array(io, try_get_shared(x, sync = :read))
+end

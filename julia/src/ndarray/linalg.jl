@@ -15,17 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-include("ndarray/type.jl")  # type def and constructors
-include("ndarray/context.jl")
-include("ndarray/show.jl")
-include("ndarray/remap.jl")  # provide @_remap util
-include("ndarray/array.jl")
-include("ndarray/arithmetic.jl")
-include("ndarray/comparison.jl")
-include("ndarray/io.jl")  # save/load and synchronization utils
-include("ndarray/reduction.jl")
-include("ndarray/statistic.jl")
-include("ndarray/linalg.jl")
-include("ndarray/trig.jl")
-include("ndarray/activation.jl")
-include("ndarray/autoimport.jl")  # auto import operators from libmxnet
+# See https://github.com/dmlc/MXNet.jl/issues/55
+@_remap LinearAlgebra.dot(x::NDArray, y::NDArray) dot(y, x)
+
+# See https://github.com/dmlc/MXNet.jl/pull/123
+@_remap LinearAlgebra.transpose(x::NDArray{T,1}) where T reshape(x; shape = (1, length(x)), reverse = true)
+@_remap LinearAlgebra.transpose(x::NDArray{T,2}) where T transpose(x)
