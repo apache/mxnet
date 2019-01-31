@@ -69,7 +69,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
   RunContext ret;
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
-      ret = RunContext{ctx, nullptr};
+      ret = RunContext{ctx, nullptr, nullptr, false};
       break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
@@ -91,8 +91,10 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         use_counter = counter;
         counter = (counter + 1) % kStreams;
       }
-      ret = RunContext{ctx, gpu_streams_.at(ctx.dev_id).at(use_counter),
-                            gpu_aux_streams_.at(ctx.dev_id).at(use_counter)};
+      ret = RunContext{ctx,
+                       gpu_streams_.at(ctx.dev_id).at(use_counter),
+                       gpu_aux_streams_.at(ctx.dev_id).at(use_counter),
+                       false};
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
@@ -110,7 +112,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
   RunContext ret;
   switch (ctx.dev_mask()) {
     case cpu::kDevMask:
-      ret = RunContext{ctx, nullptr};
+      ret = RunContext{ctx, nullptr, nullptr, false};
       break;
     case gpu::kDevMask: {
 #if MXNET_USE_CUDA
@@ -121,7 +123,7 @@ RunContext StreamManager<kNumGpus, kStreams>::GetIORunContext(
           gpu_io_streams_.at(ctx.dev_id) = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
         }
       }
-      ret = RunContext{ctx, gpu_io_streams_.at(ctx.dev_id)};
+      ret = RunContext{ctx, gpu_io_streams_.at(ctx.dev_id), nullptr, false};
       break;
 #else
       LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;

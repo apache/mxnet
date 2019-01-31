@@ -242,6 +242,8 @@ using FResourceRequest = std::function<
 /*!
  * \brief The resource request from the operator.
  *        An operator could register ResourceRequestEx, or ResourceRequest, or neither.
+ *        If an operator registers both ResourceRequestEx and ResourceRequest,
+ *        ResourceRequest is ignored.
  *
  * \note Register under "FResourceRequestEx"
  */

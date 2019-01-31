@@ -902,6 +902,36 @@ unittest_ubuntu_cpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
 
+unittest_ubuntu_minimal_R() {
+    set -ex
+    mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    build_ccache_wrappers
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
+    # make -j not supported
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
+    R CMD INSTALL --library=/tmp/r-site-library R-package
+    # pick mlp as minimal R test
+    R_LIBS=/tmp/r-site-library \
+        Rscript -e "library(mxnet); require(mlbench); \
+                    data(Sonar, package=\"mlbench\"); \
+                    Sonar[,61] = as.numeric(Sonar[,61])-1; \
+                    train.ind = c(1:50, 100:150); \
+                    train.x = data.matrix(Sonar[train.ind, 1:60]); \
+                    train.y = Sonar[train.ind, 61]; \
+                    test.x = data.matrix(Sonar[-train.ind, 1:60]); \
+                    test.y = Sonar[-train.ind, 61]; \
+                    model = mx.mlp(train.x, train.y, hidden_node = 10, \
+                                   out_node = 2, out_activation = \"softmax\", \
+                                   learning.rate = 0.1, \
+                                   array.layout = \"rowmajor\"); \
+                    preds = predict(model, test.x, array.layout = \"rowmajor\")"
+}
+
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
@@ -1241,7 +1271,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    make java_ci_demo
+    mvn -Pci-nightly install
     bash bin/java_sample.sh
     bash bin/run_od.sh
 }
@@ -1249,7 +1279,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    make scala_ci_demo
+    mvn -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
 }

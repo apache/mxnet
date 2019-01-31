@@ -4,7 +4,6 @@ RewriteRule ^get_started/why_mxnet.html$ %{ENV:default_version}/faq/why_mxnet.ht
 RewriteRule ^get_started.*$ %{ENV:default_version}/install/ [R=301,L]
 RewriteRule ^how_to.*$ %{ENV:default_version}/faq/ [R=301,L]
 RewriteRule ^api/python/symbol.html$ %{ENV:default_version}/api/python/symbol/symbol.html [R=301,L]
-RewriteRule ^(?:versions\/[^\/]+\/)?community/index.html$ %{ENV:default_version}/community/contribute.html [R=301,L]
 
 # Navigation bar redirects to latest info
 RewriteCond %{ENV:default_version}#\/$1 !^([^#]+)#\1$
@@ -22,4 +21,4 @@ RewriteRule ^versions/1.0.0/api/clojure/.*$ %{ENV:default_version}/error/api.htm
 RewriteRule ^versions/1.1.0/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
 RewriteRule ^versions/1.2.1/api/clojure/.*$ %{ENV:default_version}/error/api.html [R=301,L]
 
-ErrorDocument 404 https://mxnet.incubator.apache.org/error/404.html
+ErrorDocument 404 /error/404.html

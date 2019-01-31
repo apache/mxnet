@@ -99,7 +99,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(ctx.dev_id));
         #endif
       }
-      this->ExecuteOprBlock(RunContext{ctx, nullptr}, opr_block);
+      this->ExecuteOprBlock(RunContext{ctx, nullptr, nullptr, false}, opr_block);
     } else {
       if (ctx.dev_mask() == Context::kCPU) {
         // CPU execution.
@@ -261,7 +261,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     } while (false);
     // execute task
     OprBlock* opr_block;
-    RunContext run_ctx{ctx, stream, aux_stream};
+    RunContext run_ctx{ctx, stream, aux_stream, false};
     auto* task_queue = &(block->task_queue);
 
     // Don't eat up omp threads for GPU jobs.  They're probably best used elsewhere,
@@ -287,7 +287,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
                         const std::shared_ptr<dmlc::ManualEvent>& ready_event) {
     this->is_worker_ = true;
     auto* task_queue = &(block->task_queue);
-    RunContext run_ctx{ctx, nullptr};
+    RunContext run_ctx{ctx, nullptr, nullptr, false};
 
     // execute task
     OprBlock* opr_block;

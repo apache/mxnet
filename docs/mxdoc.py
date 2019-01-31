@@ -16,6 +16,7 @@
 # under the License.
 
 """A sphnix-doc plugin to build mxnet docs"""
+from __future__ import print_function
 import subprocess
 import re
 import os
@@ -49,6 +50,7 @@ _JAVA_DOCS = parser.getboolean(_DOC_SET, 'java_docs')
 _CLOJURE_DOCS = parser.getboolean(_DOC_SET, 'clojure_docs')
 _DOXYGEN_DOCS = parser.getboolean(_DOC_SET,  'doxygen_docs')
 _R_DOCS = parser.getboolean(_DOC_SET, 'r_docs')
+_ARTIFACTS = parser.getboolean(_DOC_SET, 'artifacts')
 
 # white list to evaluate the code block output, such as ['tutorials/gluon']
 _EVAL_WHILTELIST = []
@@ -87,10 +89,10 @@ def generate_doxygen(app):
 def build_mxnet(app):
     """Build mxnet .so lib"""
     if not os.path.exists(os.path.join(app.builder.srcdir, '..', 'config.mk')):
-        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) DEBUG=1 USE_MKLDNN=0" %
+        _run_cmd("cd %s/.. && cp make/config.mk config.mk && make -j$(nproc) USE_MKLDNN=0 USE_CPP_PACKAGE=1 " %
                 app.builder.srcdir)
     else:
-        _run_cmd("cd %s/.. && make -j$(nproc) DEBUG=1 USE_MKLDNN=0" %
+        _run_cmd("cd %s/.. && make -j$(nproc) USE_MKLDNN=0 USE_CPP_PACKAGE=1 " %
                 app.builder.srcdir)
 
 def build_r_docs(app):
@@ -434,6 +436,22 @@ def add_buttons(app, docname, source):
 
         # source[i] = '\n'.join(lines)
 
+
+def copy_artifacts(app):
+    """Copies artifacts needed for website presentation"""
+    dest_path = app.builder.outdir + '/error'
+    source_path = app.builder.srcdir + '/build_version_doc/artifacts'
+    _run_cmd('cd ' + app.builder.srcdir)
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    _run_cmd('cp ' + source_path + '/404.html ' + dest_path)
+    _run_cmd('cp ' + source_path + '/api.html ' + dest_path)
+    dest_path = app.builder.outdir + '/_static'
+    _run_cmd('rm -rf ' + dest_path)
+    _run_cmd('mkdir -p ' + dest_path)
+    _run_cmd('cp ' + app.builder.srcdir + '/_static/mxnet.css ' + dest_path)
+
+
 def setup(app):
     # If MXNET_DOCS_BUILD_MXNET is set something different than 1
     # Skip the build step
@@ -458,6 +476,9 @@ def setup(app):
     if _R_DOCS:
         print("Building R Docs!")
         app.connect("builder-inited", build_r_docs)
+    if _ARTIFACTS:
+        print("Copying Artifacts!")
+        app.connect("builder-inited", copy_artifacts)
     app.connect('source-read', convert_table)
     app.connect('source-read', add_buttons)
     app.add_config_value('recommonmark_config', {
