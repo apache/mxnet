@@ -237,7 +237,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
     val shape0 = Shape(Array(1000, 2, 2))
     val data = IndexedSeq(NDArray.ones(shape0), NDArray.zeros(shape0))
     val shape1 = Shape(Array(1000, 1))
-    val label = IndexedSeq(NDArray.ones(shape1))
+    val label = IndexedSeq(NDArray.ones(shape1, dtype = DType.Int32))
     val batchData0 = NDArray.ones(Shape(Array(128, 2, 2)))
     val batchData1 = NDArray.zeros(Shape(Array(128, 2, 2)))
     val batchLabel = NDArray.ones(Shape(Array(128, 1)))
@@ -254,6 +254,7 @@ class IOSuite extends FunSuite with BeforeAndAfterAll {
       assert(tBatch.data(0).toArray === batchData0.toArray)
       assert(tBatch.data(1).toArray === batchData1.toArray)
       assert(tBatch.label(0).toArray === batchLabel.toArray)
+      assert(tBatch.label(0).dtype == DType.Int32)
     }
 
     assert(batchCount === nBatch0)
