@@ -84,6 +84,74 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   }
 };  // struct UpSamplingParam
 
+template<typename xpu, typename DTyp, typename AccReal>
+void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
+                                           const std::vector<TBlob> &in_data,
+                                           std::vector<TBlob> &out_data) {
+  Tensor<xpu, 4, DTyp> itensor = in_data[0].get<xpu, 4, DTyp>(s);
+  Tensor<xpu, 4, DTyp> otensor = out_data[0].get<xpu, 4, DTyp>(s);
+  int nbatch = otensor.size(0);
+  int channels = otensor.size(1);
+  int outputHeight = otensor.size(2);
+  int outputWidth = otensor.size(3);
+  int inputHeight = itensor.size(2);
+  int inputWidth = itensor.size(3);
+
+  int dW = outputWidth / inputWidth;
+  int dH = outputHeight / inputHeight;
+  int idim = itensor.shape_.kDimension;
+  int xDim = idim-2;
+  int yDim = idim-1;
+
+  DTyp *pin = itensor.dptr_;
+  DTyp *pout = otensor.dptr_;
+
+  // dims
+  int osz0 = otensor.size(0);
+  int osz1 = otensor.size(1);
+  int osz2 = otensor.size(2);
+  int osz3 = 1;
+  if (idim > 3) {
+    osz3 = otensor.size(3);
+  }
+
+  // perform the upsampling
+  int i0, i1, i2, i3, isrc, idst;
+  int iout[4];  // Output indices
+  int iin[4];  // Input indices
+
+  channels = nbatch * channels;
+  for (i0 = 0; i0 < osz0; i0++) {
+    iout[0] = i0;
+    iin[0] = i0;
+    for (i1 = 0; i1 < osz1; i1++) {
+      iout[1] = i1;
+      iin[1] = i1;
+      for (i2 = 0; i2 < osz2; i2++) {
+        iout[2] = i2;
+        iin[2] = i2;
+        for (i3 = 0; i3 < osz3; i3++) {
+          iout[3] = i3;
+          iin[3] = i3;
+
+          // set the indices for the upsampled dimensions
+          iin[xDim] = iout[xDim] / dW;
+          iin[yDim] = iout[yDim] / dH;
+
+          idst = /*i0*otensor.stride_ + i1*otensor.stride_ +*/ i2;//*otensor.stride_;
+          isrc = /*iin[0]*itensor.stride_ + iin[1]*itensor.stride_ +*/ iin[2];//*itensor.stride_;
+          if (idim > 3) {
+            idst += i3*otensor.stride_;
+            isrc += iin[3]*itensor.stride_;
+          }
+
+          pout[idst] = pin[isrc];
+        }
+      }
+    }
+  }
+}
+
 template<typename xpu, typename DType>
 void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
                        const std::vector<TBlob> &in_data,
@@ -104,20 +172,36 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
       int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
-      /*if (param.multi_input_mode == up_enum::kSum) {
+      if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
-          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale));
+          std::vector<TBlob> outdata = out_data;
+          MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
+            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+            out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
+          });
         } else {
-          out += upsampling_nearest(data, scale);
+          std::vector<TBlob> outdata = out_data;
+          MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
+            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+            out += out_data[up_enum::kOut].get<xpu, 4, DType>(s);
+          });
         }
       } else {
-        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale));
-      }*/
+        std::vector<TBlob> outdata = out_data;
+          MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
+            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+            slice<1>(out, begin, end) = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
+          });
+      }
       begin = end;
     }
   } else {
-    /*Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
-    Assign(out, req[up_enum::kOut], upsampling_nearest(data, param.scale));*/
+    Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
+    std::vector<TBlob> outdata = out_data;
+    MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
+      SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+      out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
+    });
   }
 }
 
@@ -136,37 +220,50 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> input_grad = in_grad[i].get<xpu, 4, DType>(s);
       mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
       int end = begin + input_grad.size(1);
-      int scale = grad.size(2)/in_shape[0];
+      int scale_h = grad.size(2)/in_shape[0];
+      int scale_w = grad.size(3)/in_shape[1];
       if (param.multi_input_mode == up_enum::kSum) {
         Assign(input_grad, req[i],
                pool<mshadow::red::sum>(grad,
                                        in_shape,
-                                       scale,
-                                       scale,
-                                       scale,
-                                       scale));
+                                       scale_h,
+                                       scale_w,
+                                       scale_h,
+                                       scale_w));
       } else {
         Assign(input_grad, req[i],
                pool<mshadow::red::sum>(slice<1>(grad, begin, end),
                                        in_shape,
-                                       scale,
-                                       scale,
-                                       scale,
-                                       scale));
+                                       scale_h,
+                                       scale_w,
+                                       scale_h,
+                                       scale_w));
       }
       begin = end;
     }
-  } /*else {
+  } else {
     Tensor<xpu, 4, DType> input_grad = in_grad[up_enum::kData].get<xpu, 4, DType>(s);
     mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
+    int scale_h = 1;
+    int scale_w = 1;
+    if (param.scale.ndim() == 1) {
+      scale_h = param.scale[0];
+      scale_w = param.scale[0];
+    } else if (param.scale.ndim() == 2) {
+      scale_h = param.scale[0];
+      scale_w = param.scale[1];
+    } else if (param.scale.ndim() == 4) {
+      scale_h = param.scale[2];
+      scale_w = param.scale[3];
+    }
     Assign(input_grad, req[up_enum::kData],
            pool<mshadow::red::sum>(grad,
                                    in_shape,
-                                   param.scale,
-                                   param.scale,
-                                   param.scale,
-                                   param.scale));
-  }*/
+                                   scale_h,
+                                   scale_w,
+                                   scale_h,
+                                   scale_w));
+  }
 }
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
@@ -185,7 +282,7 @@ static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& pa
   }
   CHECK_EQ(scale_h, scale_w) <<
   "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
-  int kernel = 2 * scale_h - scale_h % 2;
+  int kernel = static_cast<int>(2.0 * scale_h - ::fmod(scale_h, 2));
   int stride = scale_h;
   int pad = static_cast<int>(ceil((scale_h - 1) / 2.));
   p.workspace = param.workspace;

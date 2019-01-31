@@ -56,10 +56,10 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(shape.ndim(), 4U) << \
         "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
       int oh = dshape[2]*scale_h, ow = dshape[3]*scale_w;
-      CHECK_EQ(oh%shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2] << \
-        "does not divide output height of " << oh;
-      CHECK_EQ(ow%shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3] << \
-        "does not divide output width of " << ow;
+      // CHECK_EQ(oh%shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2] << \
+      //   "does not divide output height of " << oh;
+      // CHECK_EQ(ow%shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3] << \
+      //   "does not divide output width of " << ow;
       if (param_.multi_input_mode == up_enum::kSum) {
         CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
                          "Number of channels must be the same when multi_input_mode==sum";
@@ -75,14 +75,14 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(dshape.ndim(), 4U) << \
       "UpSamplingBilinear: Input data should be 4D in (batch, channel, y, x)";
     if (dshape.ndim() ==  0) return false;
-    int kernel = 2 * scale_h - scale_h % 2;
+    int kernel = static_cast<int>(2.0 * scale_h - ::fmod(scale_h, 2));
     SHAPE_ASSIGN_CHECK(*in_shape,
         up_enum::kWeight,
         mshadow::Shape4(dshape[1], 1, kernel, kernel));
     oshape = dshape;
   }
   oshape[2] = dshape[2] * scale_h;
-  oshape[3] = dshape[3] * scale_h;
+  oshape[3] = dshape[3] * scale_w;
   out_shape->clear();
   out_shape->push_back(oshape);
   return true;
