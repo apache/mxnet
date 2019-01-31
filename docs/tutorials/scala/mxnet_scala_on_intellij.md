@@ -325,7 +325,7 @@ log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} [%t] 
 
 **Step 6.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
-* Note that if you run into ```bad option: '-make:transitive'```, please remove the 
+* Note that if you run into ```bad option: '-make:transitive'```, please remove ```<arg>-make:transitive</arg>``` from `pom.xml` and `<parameter value="-make:transitive" />` from  `.idea/scala_compiler`.
 
 **Step 7.** Run the Hello World App:
 
