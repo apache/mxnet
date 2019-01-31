@@ -255,8 +255,14 @@ struct RunContext {
     return static_cast<mshadow::Stream<xpu>*>(stream);
   }
   /*!
-   * \brief get the auxiliary (i.e. 2nd) mshadow stream from Context
-   *  The user must sync work enqueued to this stream with the primary stream using events.
+   * \brief get the auxiliary (i.e. 2nd) mshadow stream from the Context
+   *  The user must sync work enqueued to the aux stream with the primary stream using events.
+   *  For example, gpu kernels that produce the inputs to the operation are likely to be
+   *  launched into the primary stream.  An event must be used to synchronize a kernel launched
+   *  into the auxilary stream on the availability of these inputs.  Also, a second event must be
+   *  used to synchronize auxiliary stream kernel outputs with the primary stream, so that a
+   *  subsequent operation's kernels launched into the primary stream read their inputs only when
+   *  they are ready.  See ./src/operator/nn/cudnn/cudnn_convolution-inl.h for an example.
    * \return the mshadow stream
    * \tparam xpu the device type of the stream
    */
