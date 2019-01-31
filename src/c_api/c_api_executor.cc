@@ -29,9 +29,6 @@
 #include "./c_api_common.h"
 #include "../executor/graph_executor.h"
 #include "../common/utils.h"
-#if MXNET_USE_TENSORRT
-#include "../executor/trt_graph_executor.h"
-#endif  // MXNET_USE_TENSORRT
 
 int MXExecutorPrint(ExecutorHandle handle, const char **out_str) {
   Executor *exec = static_cast<Executor*>(handle);
@@ -448,38 +445,12 @@ int MXExecutorSimpleBind(SymbolHandle symbol_handle,
   std::vector<NDArray> in_arg_vec;
   std::vector<NDArray> arg_grad_vec;
   std::vector<NDArray> aux_state_vec;
-#if MXNET_USE_TENSORRT
-  // If we've built with TensorRT support we by default return an TRTExecutor.
-  // Users can override this behaviour via env var, which is useful for example for A/B
-  // performance testing.
-  if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
-    *out = exec::TrtGraphExecutor::TensorRTBind(*sym, ctx, ctx_map, &in_arg_ctx_vec,
-                                                &arg_grad_ctx_vec, &aux_state_ctx_vec,
-                                                &arg_shape_map, &arg_dtype_map, &arg_stype_map,
-                                                &grad_req_type_vec, shared_arg_name_set,
-                                                &in_arg_vec, &arg_grad_vec, &aux_state_vec,
-                                                use_shared_buffer ? &shared_buffer_map : nullptr,
-                                                reinterpret_cast<Executor*>(shared_exec_handle));
-  } else {
-    // Checks to see if this env var has been set to true or false by the user.
-    // If the user is using a TensorRT build, but has not enabled TRT at inference time, warn
-    // them and describe further steps.
-    const int unset_indicator =  std::numeric_limits<int>::quiet_NaN();
-    if (dmlc::GetEnv("MXNET_USE_TENSORRT", unset_indicator) == unset_indicator) {
-      LOG(INFO) << "TensorRT not enabled by default.  Please set the MXNET_USE_TENSORRT "
-                   "environment variable to 1 or call mx.contrib.tensorrt.set_use_tensorrt(True) "
-                   "to enable.";
-    }
-#endif  // MXNET_USE_TENSORRT
-    *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
-                                aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
-                                grad_req_type_vec, shared_arg_name_set, &in_arg_vec,
-                                &arg_grad_vec, &aux_state_vec,
-                                use_shared_buffer ? &shared_buffer_map : nullptr,
-                                reinterpret_cast<Executor*>(shared_exec_handle));
-#if MXNET_USE_TENSORRT
-  }
-#endif  // MXNET_USE_TENSORRT
+  *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
+                              aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
+                              grad_req_type_vec, shared_arg_name_set, &in_arg_vec,
+                              &arg_grad_vec, &aux_state_vec,
+                              use_shared_buffer ? &shared_buffer_map : nullptr,
+                              reinterpret_cast<Executor*>(shared_exec_handle));
 
   // copy ndarray ptrs to ret->handles so that front end
   // can access them
@@ -808,38 +779,12 @@ int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
   std::vector<NDArray> in_arg_vec;
   std::vector<NDArray> arg_grad_vec;
   std::vector<NDArray> aux_state_vec;
-#if MXNET_USE_TENSORRT
-  // If we've built with TensorRT support we by default return an TRTExecutor.
-  // Users can override this behaviour via env var, which is useful for example for A/B
-  // performance testing.
-  if (dmlc::GetEnv("MXNET_USE_TENSORRT", false)) {
-    *out = exec::TrtGraphExecutor::TensorRTBind(*sym, ctx, ctx_map, &in_arg_ctx_vec,
-                                                &arg_grad_ctx_vec, &aux_state_ctx_vec,
-                                                &arg_shape_map, &arg_dtype_map, &arg_stype_map,
-                                                &grad_req_type_vec, shared_arg_name_set,
-                                                &in_arg_vec, &arg_grad_vec, &aux_state_vec,
-                                                use_shared_buffer ? &shared_buffer_map : nullptr,
-                                                reinterpret_cast<Executor*>(shared_exec_handle));
-  } else {
-    // Checks to see if this env var has been set to true or false by the user.
-    // If the user is using a TensorRT build, but has not enabled TRT at inference time, warn
-    // them and describe further steps.
-    const int unset_indicator =  std::numeric_limits<int>::quiet_NaN();
-    if (dmlc::GetEnv("MXNET_USE_TENSORRT", unset_indicator) == unset_indicator) {
-      LOG(INFO) << "TensorRT not enabled by default.  Please set the MXNET_USE_TENSORRT "
-                   "environment variable to 1 or call mx.contrib.tensorrt.set_use_tensorrt(True) "
-                   "to enable.";
-    }
-#endif  // MXNET_USE_TENSORRT
-    *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
-                                aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
-                                grad_req_type_vec, shared_arg_name_set, &in_arg_vec,
-                                &arg_grad_vec, &aux_state_vec,
-                                use_shared_buffer ? &shared_buffer_map : nullptr,
-                                reinterpret_cast<Executor*>(shared_exec_handle));
-#if MXNET_USE_TENSORRT
-  }
-#endif  // MXNET_USE_TENSORRT
+  *out = Executor::SimpleBind(*sym, ctx, ctx_map, in_arg_ctx_vec, arg_grad_ctx_vec,
+                              aux_state_ctx_vec, arg_shape_map, arg_dtype_map, arg_stype_map,
+                              grad_req_type_vec, shared_arg_name_set, &in_arg_vec,
+                              &arg_grad_vec, &aux_state_vec,
+                              use_shared_buffer ? &shared_buffer_map : nullptr,
+                              reinterpret_cast<Executor*>(shared_exec_handle));
 
   // copy ndarray ptrs to ret->handles so that front end
   // can access them
@@ -1091,14 +1036,9 @@ int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
   auto s = new nnvm::Symbol();
   API_BEGIN();
 
-#if MXNET_USE_TENSORRT
-  auto exec = static_cast<exec::TrtGraphExecutor*>(handle);
+  auto exec = static_cast<exec::GraphExecutor*>(handle);
   *s = exec->GetOptimizedSymbol();
   *out = s;
-#else
-  LOG(FATAL) << "GetOptimizedSymbol may only be used when MXNet is compiled with "
-                "MXNET_USE_TENSORRT enabled.  Please re-compile MXNet with TensorRT support.";
-#endif  // MXNET_USE_TENSORRT
 
   API_END_HANDLE_ERROR(delete s);
 }
