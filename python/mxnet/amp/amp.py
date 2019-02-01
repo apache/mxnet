@@ -20,7 +20,6 @@
 __all__ = ['init']
 
 import numpy as np
-import traceback
 
 from .. import symbol
 from ..symbol import Symbol
@@ -44,22 +43,20 @@ def _cast_symbol_NDArray(s, dtype):
         return s
 
 def _wrap_symbol_functions(module):
-    def symbol_wrapper(f, target_dtype):
+    def symbol_wrapper(f, target_dtype, cond_arg=None):
         def new_fun(*args, **kwargs):
             print("Wrapper of " + f.__name__ + " to " + str(target_dtype))
-            print(locals())
-            print("Called from:")
-            traceback.print_stack()
+            print("Cond_arg: " + str(cond_arg))
+            if cond_arg is not None:
+                if (cond_arg[0] not in kwargs or
+                    kwargs[cond_arg[0]] not in cond_arg[1]):
+                    print("No match for " + str(cond_arg))
+                    return f(*args, **kwargs)
             print("Casting *args")
-            print(args)
             new_args = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype), args))
-            print(new_args)
             args = tuple(new_args)
-            print(args)
             print("Casting **kwargs")
-            print(kwargs)
             kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
-            print(kwargs)
             return f(*args, **kwargs)
         return new_fun
 
@@ -77,6 +74,15 @@ def _wrap_symbol_functions(module):
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, symbol_wrapper(f_to_wrap, np.float32))
+        except AttributeError:
+            print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
+            pass
+
+    for fun_name, arg, arg_values in lists.symbol.CONDITIONAL_FP32_FUNCS:
+        print("Wrapping fp32 func " + fun_name + " in " + module.__name__)
+        try:
+            f_to_wrap = getattr(module, fun_name)
+            setattr(module, fun_name, symbol_wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
             print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass

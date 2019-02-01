@@ -42,11 +42,15 @@ FP32_FUNCS = [
 
         # Powers
         'broadcast_pow',
+        'broadcast_power',
         'square',
         'reciprocal',
         'rsqrt',
         'rcbrt',
         '__pow__',
+        'pow',
+        'linalg_sumlogdiag',
+        'hypot',
 
         # Reductions
         'sum',
@@ -55,10 +59,17 @@ FP32_FUNCS = [
         'nanprod',
         'mean',
         'norm',
+        'softmin',
 
         # Misc
         'gamma',
         'gammaln',
+        'linalg_syrk',
+        'linalg_potrf',
+        'linalg_gemm2',
+        'linalg_gelqf',
+        'linalg_trmm',
+        'linalg_trsm',
 
         # Neural network
         'SoftmaxOutput',
@@ -76,5 +87,12 @@ FP32_FUNCS = [
         'softmax_cross_entropy',
         'smooth_l1',
         'MakeLoss',
+        'make_loss',
         'Custom',
+        'CTCLoss',
+        'ctc_loss',
+        ]
+
+CONDITIONAL_FP32_FUNCS = [
+        ('Activation', 'act_type', ['softrelu']),
         ]
