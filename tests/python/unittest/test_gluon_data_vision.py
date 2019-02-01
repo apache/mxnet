@@ -17,7 +17,7 @@
 from __future__ import print_function
 import mxnet as mx
 import mxnet.ndarray as nd
-from mxnet.base import MXNetError
+import numpy as np
 from mxnet import gluon
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
@@ -25,7 +25,6 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import almost_equal
 from common import assertRaises, setup_module, with_seed, teardown
 
-import numpy as np
 
 @with_seed()
 def test_to_tensor():
@@ -67,43 +66,6 @@ def test_normalize():
     invalid_data_in = nd.random.uniform(0, 1, (5, 4, 300, 300))
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
-
-
-@with_seed()
-def test_resize():
-    def _test_resize_with_diff_type(dtype):
-        # test normal case
-        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
-        out_nd = transforms.Resize(200)(data_in)
-        data_expected = mx.image.imresize(data_in, 200, 200, 1)
-        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-        # test 4D input
-        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
-        out_batch_nd = transforms.Resize(200)(data_bath_in)
-        for i in range(len(out_batch_nd)):
-            assert_almost_equal(mx.image.imresize(data_bath_in[i], 200, 200, 1).asnumpy(),
-                out_batch_nd[i].asnumpy())
-        # test interp = 2
-        out_nd = transforms.Resize(200, interpolation=2)(data_in)
-        data_expected = mx.image.imresize(data_in, 200, 200, 2)
-        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-        # test height not equals to width
-        out_nd = transforms.Resize((200, 100))(data_in)
-        data_expected = mx.image.imresize(data_in, 200, 100, 1)
-        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-        # test keep_ratio
-        out_nd = transforms.Resize(150, keep_ratio=True)(data_in)
-        data_expected = mx.image.imresize(data_in, 150, 225, 1)
-        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
-        # test size below zero
-        invalid_transform = transforms.Resize(-150, keep_ratio=True)
-        assertRaises(MXNetError, invalid_transform, data_in)
-        # test size more than 2:
-        invalid_transform = transforms.Resize((100, 100, 100), keep_ratio=True)
-        assertRaises(MXNetError, invalid_transform, data_in)
-
-    for dtype in ['uint8', 'float32', 'float64']:
-        _test_resize_with_diff_type(dtype)    
 
 
 @with_seed()
