@@ -21,18 +21,33 @@
 
 (defmacro
   using
-  "Uses a Resource Scope for all forms. This is a way to manage all Native Resources like NDArray and Symbol - it will deallocate all Native Resources by calling close on them automatically. It will not call close on Native Resources returned from the form"
+  "Uses a Resource Scope for all forms. This is a way to manage all Native Resources like NDArray and Symbol - it will deallocate all Native Resources by calling close on them automatically. It will not call close on Native Resources returned from the form.
+  Example:
+  (resource-scope/using
+   (let [temp-x (ndarray/ones [3 1])
+        temp-y (ndarray/ones [3 1])]
+    (ndarray/+ temp-x temp-y))) "
   [& forms]
   `(ResourceScope/using (new ResourceScope) (util/forms->scala-fn ~@forms)))
 
+
 (defmacro
   with-do
-  "Alias for a do within a resource scope using"
+  "Alias for a do within a resource scope using.
+  Example:
+  (resource-scope/with-do
+    (ndarray/ones [3 1])
+    :all-cleaned-up)
+  "
   [& forms]
   `(using (do ~@forms)))
 
 (defmacro
   with-let
-  "Alias for a let within a resource scope using"
+  "Alias for a let within a resource scope using.
+  Example:
+  (resource-scope/with-let [temp-x (ndarray/ones [3 1])
+                            temp-y (ndarray/ones [3 1])]
+  (ndarray/+ temp-x temp-y))"
   [& forms]
   `(using (let ~@forms)))
