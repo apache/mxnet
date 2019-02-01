@@ -67,11 +67,6 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .add_enum("nearest", up_enum::kNearest)
     .add_enum("bilinear", up_enum::kBilinear)
     .describe("upsampling method");
-    DMLC_DECLARE_FIELD(num_args).set_default(1)
-    .describe("Number of inputs to be upsampled. For nearest neighbor "
-    "upsampling, this can be 1-N; the size of output will be"
-    "(scale*h_0,scale*w_0) and all other inputs will be upsampled to the"
-    "same size. For bilinear upsampling this must be 2; 1 input and 1 weight.");
     DMLC_DECLARE_FIELD(multi_input_mode)
     .add_enum("concat", up_enum::kConcat)
     .add_enum("sum", up_enum::kSum)
@@ -79,6 +74,11 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
     .describe("How to handle multiple input. concat means concatenate upsampled "
     "images along the channel dimension. sum means add all images together, "
     "only available for nearest neighbor upsampling.");
+    DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
+    .describe("Number of inputs to be upsampled. For nearest neighbor "
+    "upsampling, this can be 1-N; the size of output will be"
+    "(scale*h_0,scale*w_0) and all other inputs will be upsampled to the"
+    "same size. For bilinear upsampling this must be 2; 1 input and 1 weight.");
     DMLC_DECLARE_FIELD(workspace).set_default(512).set_range(0, 8192)
     .describe("Tmp workspace for deconvolution (MB)");
   }
