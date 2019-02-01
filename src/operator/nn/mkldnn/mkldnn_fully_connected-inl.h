@@ -34,19 +34,23 @@
 namespace mxnet{
 namespace op {
 
-/*
 struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
-  dmlc::optional<bool> fuse_dequantize;
+  bool fuse_requantize;
+  bool fuse_dequantize;
+  bool with_relu;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
     .describe("enable quantization");
-    DMLC_DECLARE_FIELD(fuse_dequantize)
-    .set_default(dmlc::optional<bool>())
+    DMLC_DECLARE_FIELD(fuse_requantize).set_default(false)
+    .describe("Whether to fuse requantize");
+    DMLC_DECLARE_FIELD(fuse_dequantize).set_default(false)
     .describe("Whether to fuse dequantize");
+    DMLC_DECLARE_FIELD(with_relu).set_default(false)
+    .describe("Add post relu");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -61,38 +65,37 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
 };
 
 struct MKLDNNFCFullParam {
-  FullyConnectedParam fc_param;
+  FullyConnectedParam default_param;
   MKLDNNFCParam mkldnn_param;
   std::vector<float> output_scales = {0.0};
   std::vector<float> requantize_scales = {0.0};
 };
-*/
 
-mkldnn::inner_product_forward::primitive_desc GetIPFwd(
-    const FullyConnectedParam &param, const bool is_train,
+mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
+    const MKLDNNFCFullParam &full_param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const mkldnn::memory::desc &out_md);
 
 class MKLDNNFullyConnectForward {
  public:
-  mkldnn::inner_product_forward::primitive_desc ipFwd_pd;
+  mkldnn::inner_product_forward::primitive_desc fwd_pd;
 
-  MKLDNNFullyConnectForward(const FullyConnectedParam &param, bool is_train,
+  MKLDNNFullyConnectForward(const MKLDNNFCFullParam &full_param, bool is_train,
                             const NDArray &data, const NDArray &weight,
                             const NDArray *bias,
                             const mkldnn::memory::desc &output)
-      : ipFwd_pd(GetIPFwd(param, is_train, data, weight, bias, output)) {}
+      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, output)) {}
 
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
                  const mkldnn::memory *bias, const mkldnn::memory &output);
 
-  const mkldnn::inner_product_forward &GetIpFwd() const {
-    return *ipFwd;
+  const mkldnn::inner_product_forward &GetFwd() const {
+    return *fwd;
   }
 
  private:
-  std::shared_ptr<mkldnn::inner_product_forward> ipFwd;
+  std::shared_ptr<mkldnn::inner_product_forward> fwd;
   std::shared_ptr<mkldnn::memory> data;
   std::shared_ptr<mkldnn::memory> weight;
   std::shared_ptr<mkldnn::memory> bias;
@@ -110,6 +113,13 @@ void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
+
+void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
+                                const OpContext &ctx,
+                                MKLDNNFCForward *fwd,
+                                const std::vector<NDArray> &in_data,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &out_data);
 
 }  // namespace op
 }  // namespace mxnet

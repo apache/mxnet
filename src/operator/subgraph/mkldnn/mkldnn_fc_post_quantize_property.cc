@@ -53,8 +53,7 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 
   bool Select(const nnvm::Node &n) override {
     if ((!disable_all) && n.op() == Op::Get(QUANTIZED_FC_NAME)) {
-      //auto const &param = nnvm::get<FullyConnectedParam>(n.attrs.parsed);
-      status = kStart;
+      status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
       return true;
@@ -72,11 +71,6 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
-    /*
-      while (matched_list.back() != &n) {
-        matched_list.pop_back();
-      }
-    */
       if (std::find(matched_list.begin(), matched_list.end(), &n) !=
         matched_list.end()) {
         while (matched_list.back() != &n) {
@@ -116,8 +110,6 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
     if (status != kSuccess) {
       return std::vector<nnvm::Node *>(0);
     } else {
-      //return candidates;
-
       std::vector<nnvm::Node *> ret;
       for (auto i : matched_list) {
         auto non_const_i = const_cast<nnvm::Node *>(i);

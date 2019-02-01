@@ -45,7 +45,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_shape->size(), num_inputs * 3);
-  CHECK_EQ(out_shape->size(), param.fuse_dequantize ? 1U : 3U);
+  CHECK_EQ(out_shape->size(), 3U);
 
   CHECK(!shape_is_none(in_shape->at(0)))
     << "QuantizedFullyConnectedOp input data shape must be given";
@@ -77,7 +77,7 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_type->size(), num_inputs * 3);
-  CHECK_EQ(out_type->size(), param.fuse_dequantize ? 1U : 3U);
+  CHECK_EQ(out_type->size(), 3U);
 
   //TODO(ciyong), intput data could be int8 or uint8
   //TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
@@ -88,13 +88,9 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kFloat32);
   }
 
-  if (param.fuse_dequantize) {
-    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kFloat32);
-  } else {
-    TYPE_ASSIGN_CHECK(*out_type, 0, param.fuse_requantize ? mshadow::kInt8 : mshadow::kInt32);
-    TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
-  }
+  TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt32);
+  TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
   return true;
 }
 
@@ -106,7 +102,7 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), num_inputs * 3);
-  CHECK_EQ(out_attrs->size(), param.fuse_dequantize ? 1U : 3U);
+  CHECK_EQ(out_attrs->size(), 3U);
 
   return MKLDNNStorageType(attrs, dev_mask, true,
                            dispatch_mode, in_attrs, out_attrs);
@@ -192,23 +188,23 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
     shiftdata.dptr_[i] = data_temp[i] + shift;
   }
 
-  Tensor<cpu, 1, float> out_min = out_data[1].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> out_max = out_data[2].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> data_min = in_data[num_inputs].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> data_max = in_data[num_inputs + 1].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> weight_min = in_data[num_inputs + 2].get<cpu, 1, float>(s);
-  Tensor<cpu, 1, float> weight_max = in_data[num_inputs + 3].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> min_output = out_data[1].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> max_output = out_data[2].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> min_data = in_data[num_inputs].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> max_data = in_data[num_inputs + 1].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> min_weight = in_data[num_inputs + 2].get<cpu, 1, float>(s);
+  Tensor<cpu, 1, float> max_weight = in_data[num_inputs + 3].get<cpu, 1, float>(s);
 
-  Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1, out_min.dptr_,
-      out_max.dptr_, data_min.dptr_, data_max.dptr_, weight_min.dptr_, weight_max.dptr_);
+  Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1, min_output.dptr_,
+      max_output.dptr_, min_data.dptr_, max_data.dptr_, min_weight.dptr_, max_weight.dptr_);
   if (!param.no_bias) {
     Tensor<cpu, 1, int8_t> bias = in_data[fullc::kBias].get_with_shape<cpu, 1, int8_t>(
       Shape1(wshape[0]), s);
-    Tensor<cpu, 1, float> bias_min = in_data[num_inputs + 4].get<cpu, 1, float>(s);
-    Tensor<cpu, 1, float> bias_max = in_data[num_inputs + 5].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> min_bias = in_data[num_inputs + 4].get<cpu, 1, float>(s);
+    Tensor<cpu, 1, float> max_bias = in_data[num_inputs + 5].get<cpu, 1, float>(s);
 
     Kernel<QuantizedSumInitKernelWithBias, cpu>::Launch(s, n, out.dptr_,
-        bias.dptr_, out_min.dptr_, out_max.dptr_, bias_min.dptr_, bias_max.dptr_);
+        bias.dptr_, min_output.dptr_, max_output.dptr_, min_bias.dptr_, max_bias.dptr_);
   } else {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < m * n; ++i) {
@@ -281,11 +277,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
     const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
     return param.no_bias? 6 : 9;
   })
-.set_num_outputs(
-  [](const NodeAttrs& attrs) {
-    const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-    return param.fuse_dequantize ? 1 : 3;
-  })
+.set_num_outputs(3)
 .set_attr_parser(ParamParser<FullyConnectedParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
@@ -300,10 +292,6 @@ and max thresholds representing the threholds for quantizing the float32 output 
   })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
   [](const NodeAttrs& attrs) {
-    const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-    if (param.fuse_dequantize) {
-      return std::vector<std::string>{"output"};
-    } else {
       return std::vector<std::string>{"output", "min_output", "max_output"};
     }
   })
