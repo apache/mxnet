@@ -2,7 +2,7 @@
 
 Gluon implementation of [WaveNet: A Generative Model for Raw Audio](https://arxiv.org/abs/1609.03499)
 
-![net_structure1](assets/net_struc1.png)
+![net_structure1](https://github.com/dmlc/web-data/blob/master/mxnet/example/gluon/wavenet/net_struc1.png)
 ![net_structure2](assets/net_struc2.png)
 
 ## Dataset
