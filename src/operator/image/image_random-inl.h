@@ -65,7 +65,7 @@ inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
-inline void ToTensor(const nnvm::NodeAttrs &attrs,
+void ToTensor(const nnvm::NodeAttrs &attrs,
                      const OpContext &ctx,
                      const std::vector<TBlob> &inputs,
                      const std::vector<OpReqType> &req,
@@ -88,53 +88,32 @@ inline void ToTensor(const nnvm::NodeAttrs &attrs,
   });
 }
 
-// Normalize Operator
-// Parameter registration for image Normalize operator
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   nnvm::Tuple<float> mean;
   nnvm::Tuple<float> std;
-
   DMLC_DECLARE_PARAMETER(NormalizeParam) {
     DMLC_DECLARE_FIELD(mean)
-    .set_default(nnvm::Tuple<float> {0.0f, 0.0f, 0.0f, 0.0f})
-    .describe("Sequence of means for each channel. "
-              "Default value is 0.");
+    .describe("Sequence of mean for each channel.");
     DMLC_DECLARE_FIELD(std)
-    .set_default(nnvm::Tuple<float> {1.0f, 1.0f, 1.0f, 1.0f})
-    .describe("Sequence of standard deviations for each channel. "
-              "Default value is 1.");
+    .describe("Sequence of standard deviations for each channel.");
   }
 };
 
-// Shape and Type inference for image Normalize operator
-
-// Shape inference
-inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
+inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-
   const auto& dshape = (*in_attrs)[0];
   if (!dshape.ndim()) return false;
 
-  CHECK((dshape.ndim() == 3) || (dshape.ndim() == 4))
-      << "Input tensor must have shape (channels, height, width), or "
-      << "(N, channels, height, width), but got " << dshape;
-
-  uint32_t nchannels;
-  if (dshape.ndim() == 3) {
-    nchannels = dshape[0];
-    CHECK(nchannels == 3 || nchannels == 1)
+  CHECK_EQ(dshape.ndim(), 3)
+      << "Input tensor must have shape (channels, height, width), but got "
+      << dshape;
+  auto nchannels = dshape[0];
+  CHECK(nchannels == 3 || nchannels == 1)
       << "The first dimension of input tensor must be the channel dimension with "
       << "either 1 or 3 elements, but got input with shape " << dshape;
-  } else if (dshape.ndim() == 4) {
-    nchannels = dshape[1];
-    CHECK(nchannels == 3 || nchannels == 1)
-      << "The second dimension of input tensor must be the channel dimension with "
-      << "either 1 or 3 elements, but got input with shape " << dshape;
-  }
-
-  CHECK((param.mean.ndim() == 1) || (param.mean.ndim() == nchannels))
+  CHECK(param.mean.ndim() == 1 || param.mean.ndim() == nchannels)
       << "Invalid mean for input with shape " << dshape
       << ". mean must have either 1 or " << nchannels
       << " elements, but got " << param.mean;
@@ -147,156 +126,28 @@ inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// Type Inference
-inline bool NormalizeOpType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int>* in_attrs,
-                          std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0) != -1;
-}
-
-template<int req>
-struct normalize_forward {
-    template<typename DType>
-    MSHADOW_XINLINE static void Map(int j, DType* out_data, const DType* in_data,
-                                    const int i, const int length, const int step,
-                                    const DType mean, const DType std_dev) {
-        KERNEL_ASSIGN(out_data[step + i*length + j], req,
-                      (in_data[step + i*length + j] - mean) / std_dev);
-    }
-};
-
-template<typename xpu>
-void NormalizeImpl(const OpContext &ctx,
-                          const std::vector<TBlob> &inputs,
-                          const std::vector<TBlob> &outputs,
-                          const std::vector<OpReqType> &req,
-                          const NormalizeParam &param,
-                          const int length,
-                          const uint32_t channel,
-                          const int step = 0) {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        DType* input = inputs[0].dptr<DType>();
-        DType* output = outputs[0].dptr<DType>();
-
-        for (uint32_t i = 0; i < channel; ++i) {
-            DType mean = param.mean[param.mean.ndim() > i ? i : 0];
-            DType std_dev = param.std[param.std.ndim() > i ? i : 0];
-            mxnet_op::Kernel<normalize_forward<req_type>, xpu>::Launch(
-                s, length, output, input,
-                i, length, step, mean, std_dev);
-        }
-      });
-    });
-}
-
-template<typename xpu>
-void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
+void Normalize(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
 
-  // 3D input (c, h, w)
-  if (inputs[0].ndim() == 3) {
-    const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
-    const uint32_t channel = inputs[0].shape_[0];
-    NormalizeImpl<xpu>(ctx, inputs, outputs, req, param, length, channel);
-  } else if (inputs[0].ndim() == 4) {
-    // 4D input (n, c, h, w)
-    const int batch_size = inputs[0].shape_[0];
-    const int length = inputs[0].shape_[2] * inputs[0].shape_[3];
-    const uint32_t channel = inputs[0].shape_[1];
-    const int step = channel * length;
+  int nchannels = inputs[0].shape_[0];
+  int length = inputs[0].shape_[1] * inputs[0].shape_[2];
 
-    #pragma omp parallel for
-    for (auto n = 0; n < batch_size; ++n) {
-      NormalizeImpl<xpu>(ctx, inputs, outputs, req, param, length, channel, n*step);
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    DType* input = inputs[0].dptr<DType>();
+    DType* output = outputs[0].dptr<DType>();
+
+    for (int i = 0; i < nchannels; ++i) {
+      DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
+      DType std = param.std[param.std.ndim() > 1 ? i : 0];
+      for (int j = 0; j < length; ++j) {
+        output[i*length + j] = (input[i*length + j] - mean) / std;
+      }
     }
-  }
-}
-
-// Backward function
-template<int req>
-struct normalize_backward {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int j, DType* in_grad, const DType* out_grad,
-                                  const int i, const int length,
-                                  const int step, const DType std_dev) {
-    // d/dx{(x - mean) / std_dev} => (1 / std_dev)
-    KERNEL_ASSIGN(in_grad[step + i*length + j], req,
-                  out_grad[step + i*length + j] * (1.0 / std_dev));
-  }
-};
-
-template<typename xpu>
-void NormalizeBackwardImpl(const OpContext &ctx,
-                           const std::vector<TBlob> &inputs,
-                           const std::vector<TBlob> &outputs,
-                           const std::vector<OpReqType> &req,
-                           const NormalizeParam &param,
-                           const int length,
-                           const uint32_t channel,
-                           const int step = 0) {
-    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TBlob& out_grad = inputs[0];
-    const TBlob& in_grad = outputs[0];
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        for (uint32_t i = 0; i < channel; ++i) {
-            DType std_dev = param.std[param.std.ndim() > i ? i : 0];
-            mxnet_op::Kernel<normalize_backward<req_type>, xpu>::Launch(
-                s, length, in_grad.dptr<DType>(), out_grad.dptr<DType>(),
-                i, length, step, std_dev);
-        }
-      });
-    });
-}
-
-template<typename xpu>
-void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
-                         const OpContext &ctx,
-                         const std::vector<TBlob> &inputs,
-                         const std::vector<OpReqType> &req,
-                         const std::vector<TBlob> &outputs) {
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-
-  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-
-  // Note: inputs[0] is out_grad
-  const TBlob& in_data = inputs[1];
-
-  // 3D input (c, h, w)
-  if (in_data.ndim() == 3) {
-    const int length = in_data.shape_[1] * in_data.shape_[2];
-    const uint32_t channel = in_data.shape_[0];
-    NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req, param, length, channel);
-  } else if (in_data.ndim() == 4) {
-    // 4D input (n, c, h, w)
-    const int batch_size = in_data.shape_[0];
-    const int length = in_data.shape_[2] * in_data.shape_[3];
-    const uint32_t channel = in_data.shape_[1];
-    const int step = channel * length;
-
-    #pragma omp parallel for
-    for (auto n = 0; n < batch_size; ++n) {
-      NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req, param, length, channel, n*step);
-    }
-  }
+  });
 }
 
 template<typename DType>
@@ -342,7 +193,7 @@ void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   }
 }
 
-inline void FlipLeftRight(const nnvm::NodeAttrs &attrs,
+void FlipLeftRight(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -354,7 +205,7 @@ inline void FlipLeftRight(const nnvm::NodeAttrs &attrs,
   });
 }
 
-inline void FlipTopBottom(const nnvm::NodeAttrs &attrs,
+void FlipTopBottom(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -366,7 +217,7 @@ inline void FlipTopBottom(const nnvm::NodeAttrs &attrs,
   });
 }
 
-inline void RandomFlipLeftRight(
+void RandomFlipLeftRight(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -387,7 +238,7 @@ inline void RandomFlipLeftRight(
   });
 }
 
-inline void RandomFlipTopBottom(
+void RandomFlipTopBottom(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -439,7 +290,7 @@ inline void AdjustBrightnessImpl(const float& alpha_b,
   });
 }
 
-inline void RandomBrightness(const nnvm::NodeAttrs &attrs,
+void RandomBrightness(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
@@ -557,7 +408,7 @@ inline void RandomSaturation(const nnvm::NodeAttrs &attrs,
   AdjustSaturationImpl(alpha_s, ctx, inputs, req, outputs);
 }
 
-inline void RGB2HLSConvert(const float& src_r,
+void RGB2HLSConvert(const float& src_r,
                     const float& src_g,
                     const float& src_b,
                     float *dst_h,
@@ -595,7 +446,7 @@ inline void RGB2HLSConvert(const float& src_r,
   *dst_s = s;
 }
 
-inline void HLS2RGBConvert(const float& src_h,
+void HLS2RGBConvert(const float& src_h,
                     const float& src_l,
                     const float& src_s,
                     float *dst_r,
@@ -646,7 +497,7 @@ inline void HLS2RGBConvert(const float& src_h,
   *dst_r = r * 255.f;
 }
 
-inline void AdjustHueImpl(float alpha,
+void AdjustHueImpl(float alpha,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -673,7 +524,7 @@ inline void AdjustHueImpl(float alpha,
   });
 }
 
-inline void RandomHue(const nnvm::NodeAttrs &attrs,
+void RandomHue(const nnvm::NodeAttrs &attrs,
                const OpContext &ctx,
                const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req,
@@ -706,7 +557,7 @@ struct RandomColorJitterParam : public dmlc::Parameter<RandomColorJitterParam> {
   }
 };
 
-inline void RandomColorJitter(const nnvm::NodeAttrs &attrs,
+void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
@@ -775,7 +626,7 @@ struct RandomLightingParam : public dmlc::Parameter<RandomLightingParam> {
   }
 };
 
-inline void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
+void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
                         const OpContext &ctx,
                         const std::vector<TBlob> &inputs,
                         const std::vector<OpReqType> &req,
@@ -810,7 +661,7 @@ inline void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
   });
 }
 
-inline void AdjustLighting(const nnvm::NodeAttrs &attrs,
+void AdjustLighting(const nnvm::NodeAttrs &attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
                     const std::vector<OpReqType> &req,
@@ -820,7 +671,7 @@ inline void AdjustLighting(const nnvm::NodeAttrs &attrs,
   AdjustLightingImpl(param.alpha, ctx, inputs, req, outputs);
 }
 
-inline void RandomLighting(const nnvm::NodeAttrs &attrs,
+void RandomLighting(const nnvm::NodeAttrs &attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
                     const std::vector<OpReqType> &req,
