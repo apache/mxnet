@@ -1152,7 +1152,7 @@ MXNet is available on several cloud providers with GPU support. You can also fin
 * **Oracle Cloud**
     - [NVIDIA VM](https://docs.cloud.oracle.com/iaas/Content/Compute/References/ngcimage.htm)
 
-All NVIDIA VMs use the [NVIDIA MXNet Docker container](https://ngc.nvidia.com/catalog/containers/nvidia%2Fmxnet).
+All NVIDIA VMs use the [NVIDIA MXNet Docker container](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet).
 Follow the [container usage instructions](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet) found in [NVIDIA's container repository](https://ngc.nvidia.com/).
 
 </div> <!-- END gpu -->
@@ -1399,6 +1399,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 <!-- Download -->
 <hr>
+
 
 # Source Download
 
