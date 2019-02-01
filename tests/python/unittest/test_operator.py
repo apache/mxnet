@@ -1522,7 +1522,7 @@ def check_bilinear_upsampling_with_shape(shapes, scale, root_scale):
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
         name = 'arg_%d'%k
-        # assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
+        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
 
 
 @with_seed()
