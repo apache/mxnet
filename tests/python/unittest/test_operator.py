@@ -1506,6 +1506,7 @@ def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
     up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
     exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
+    out = exe.outputs[0].asnumpy()
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
         name = 'arg_%d'%k
