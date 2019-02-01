@@ -90,8 +90,7 @@ void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
                                            std::vector<TBlob> &out_data) {
   Tensor<xpu, 4, DTyp> itensor = in_data[0].get<xpu, 4, DTyp>(s);
   Tensor<xpu, 4, DTyp> otensor = out_data[0].get<xpu, 4, DTyp>(s);
-  int nbatch = otensor.size(0);
-  int channels = otensor.size(1);
+
   int outputHeight = otensor.size(2);
   int outputWidth = otensor.size(3);
   int inputHeight = itensor.size(2);
@@ -100,11 +99,6 @@ void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
   int dW = outputWidth / inputWidth;
   int dH = outputHeight / inputHeight;
   int idim = itensor.shape_.kDimension;
-  int xDim = idim-2;
-  int yDim = idim-1;
-
-  DTyp *pin = itensor.dptr_;
-  DTyp *pout = otensor.dptr_;
 
   // dims
   int osz0 = otensor.size(0);
@@ -116,7 +110,7 @@ void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
   }
 
   // perform the upsampling
-  int i0, i1, i2, i3, isrc, idst;
+  int i0, i1, i2, i3;
   int iout[4];  // Output indices
   int iin[4];  // Input indices
 
@@ -129,22 +123,12 @@ void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
       for (i2 = 0; i2 < osz2; i2++) {
         iout[2] = i2;
         iin[2] = i2;
+        int in_y = i2 / dH;
         for (i3 = 0; i3 < osz3; i3++) {
           iout[3] = i3;
           iin[3] = i3;
-
-          // set the indices for the upsampled dimensions
-          iin[xDim] = iout[xDim] / dW;
-          iin[yDim] = iout[yDim] / dH;
-
-          idst = i0*(channels*outputHeight*outputWidth) + i1*(outputHeight*outputWidth) + i2;//*otensor.stride_;
-          isrc = iin[0]*(channels*inputHeight*inputWidth) + iin[1]*(inputHeight*inputWidth) + iin[2];//*itensor.stride_;
-          if (idim > 3) {
-            idst += i3*otensor.stride_;
-            isrc += iin[3]*itensor.stride_;
-          }
-
-          pout[idst] = pin[isrc];
+          int in_x = i3 / dW;
+          otensor[i0][i1][i2][i3] = itensor[i0][i1][in_y][in_x];
         }
       }
     }
@@ -170,7 +154,6 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     for (int i = 0; i < param.num_args; ++i) {
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
-      int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
           std::vector<TBlob> outdata = out_data;
@@ -195,7 +178,6 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       begin = end;
     }
   } else {
-    Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
     std::vector<TBlob> outdata = out_data;
     MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
       SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
