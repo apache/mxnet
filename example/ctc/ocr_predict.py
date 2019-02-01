@@ -26,9 +26,7 @@ import cv2
 
 
 class lstm_ocr_model(object):
-    """
-    LSTM network for predicting the Optical Character Recognition
-    """
+    """LSTM network for predicting the Optical Character Recognition"""
     # Keep Zero index for blank. (CTC request it)
     CONST_CHAR = '0123456789'
 
@@ -63,8 +61,7 @@ class lstm_ocr_model(object):
                                    all_shapes_dict)
 
     def forward_ocr(self, img_):
-        """
-        Forward the image through the LSTM network model
+        """Forward the image through the LSTM network model
 
         Parameters
         ----------

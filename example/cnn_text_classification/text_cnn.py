@@ -19,9 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
-"""
-Implementing CNN + Highway Network for Text Classification in MXNet
-"""
+"""Implementing CNN + Highway Network for Text Classification in MXNet"""
 
 import os
 import logging
@@ -59,8 +57,7 @@ parser.add_argument('--save-period', type=int, default=10,
 
 
 def save_model():
-    """
-    Save cnn model
+    """Save cnn model
 
     Returns
     ----------
@@ -72,8 +69,7 @@ def save_model():
 
 
 def data_iter(batch_size, num_embed, pre_trained_word2vec=False):
-    """
-    Construct data iter
+    """Construct data iter
 
     Parameters
     ----------
@@ -136,8 +132,7 @@ def data_iter(batch_size, num_embed, pre_trained_word2vec=False):
 def sym_gen(batch_size, sentences_size, num_embed, vocabulary_size,
             num_label=2, filter_list=None, num_filter=100,
             dropout=0.0, pre_trained_word2vec=False):
-    """
-    Generate network symbol
+    """Generate network symbol
 
     Parameters
     ----------
@@ -204,8 +199,7 @@ def sym_gen(batch_size, sentences_size, num_embed, vocabulary_size,
 
 
 def train(symbol_data, train_iterator, valid_iterator, data_column_names, target_names):
-    """
-    Train cnn model
+    """Train cnn model
 
     Parameters
     ----------

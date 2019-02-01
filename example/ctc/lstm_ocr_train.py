@@ -42,9 +42,7 @@ def get_fonts(path):
 
 
 def parse_args():
-    """
-    Parse command line arguments
-    """
+    """Parse command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument("font_path", help="Path to ttf font file or directory containing ttf files")
     parser.add_argument("--loss", help="'ctc' or 'warpctc' loss [Default 'ctc']", default='ctc')
@@ -58,9 +56,7 @@ def parse_args():
 
 
 def main():
-    """
-    Program entry point
-    """
+    """Program entry point"""
     args = parse_args()
     if not any(args.loss == s for s in ['ctc', 'warpctc']):
         raise ValueError("Invalid loss '{}' (must be 'ctc' or 'warpctc')".format(args.loss))

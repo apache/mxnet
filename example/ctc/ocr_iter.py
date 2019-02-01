@@ -23,8 +23,7 @@ import mxnet as mx
 
 
 class SimpleBatch(object):
-    """
-    Batch class for getting label data
+    """Batch class for getting label data
     Operation:
         - call get_label() to start label data generation
     """
@@ -72,12 +71,9 @@ def get_label(buf):
 
 
 class OCRIter(mx.io.DataIter):
-    """
-    Iterator class for generating captcha image data
-    """
+    """Iterator class for generating captcha image data"""
     def __init__(self, count, batch_size, lstm_init_states, captcha, name):
-        """
-        Parameters
+        """Parameters
         ----------
         count: int
             Number of batches to produce for one epoch

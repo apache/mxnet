@@ -30,7 +30,6 @@ from autoencoder import AutoEncoderModel
 from solver import Solver, Monitor
 
 
-
 def cluster_acc(Y_pred, Y):
     from sklearn.utils.linear_assignment_ import linear_assignment
     assert Y_pred.size == Y.size

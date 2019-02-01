@@ -22,8 +22,7 @@ import numpy as np
 
 
 class CtcMetrics(object):
-    """
-    Module for calculating the prediction accuracy during training. Two accuracy measures are implemented:
+    """Module for calculating the prediction accuracy during training. Two accuracy measures are implemented:
     A simple accuracy measure that calculates number of correct predictions divided by total number of predictions
     and a second accuracy measure based on sum of Longest Common Sequence(LCS) ratio of all predictions divided by total
     number of predictions
@@ -33,9 +32,7 @@ class CtcMetrics(object):
 
     @staticmethod
     def ctc_label(p):
-        """
-        Iterates through p, identifying non-zero and non-repeating values, and returns them in a list
-        Parameters
+        """Iterates through p, identifying non-zero and non-repeating values, and returns them in a list Parameters
         ----------
         p: list of int
 

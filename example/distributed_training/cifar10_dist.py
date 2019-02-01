@@ -161,8 +161,7 @@ def forward_backward(network, data, label):
 
 # Train a batch using multiple GPUs
 def train_batch(batch_list, context, network, gluon_trainer):
-    """ 
-    Training with multiple GPUs
+    """ Training with multiple GPUs
 
     Parameters
     ----------

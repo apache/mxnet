@@ -20,9 +20,7 @@ from __future__ import print_function
 
 
 class Hyperparams(object):
-    """
-    Hyperparameters for LSTM network
-    """
+    """Hyperparameters for LSTM network"""
     def __init__(self):
         # Training hyper parameters
         self._train_epoch_size = 30000

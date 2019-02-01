@@ -46,8 +46,7 @@ def lstm_init_states(batch_size):
 
 
 def load_module(prefix, epoch, data_names, data_shapes):
-    """
-    Loads the model from checkpoint specified by prefix and epoch, binds it
+    """Loads the model from checkpoint specified by prefix and epoch, binds it
     to an executor, and sets its parameters and returns a mx.mod.Module
     """
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
@@ -64,9 +63,7 @@ def load_module(prefix, epoch, data_names, data_shapes):
 
 
 def main():
-    """
-    Program entry point
-    """
+    """Program entry point"""
     parser = argparse.ArgumentParser()
     parser.add_argument("path", help="Path to the CAPTCHA image file")
     parser.add_argument("--prefix", help="Checkpoint prefix [Default 'ocr']", default='ocr')
