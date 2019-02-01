@@ -29,12 +29,15 @@
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(MKLDNNFCParam);
+
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const MKLDNNFCFullParam &full_param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const mkldnn::memory::desc &out_md) {
+    const NDArray &output) {
   auto data_md = GetMemDesc(data);
   auto weight_md = GetMemDesc(weight);
+  auto out_md = GetMemDesc(output);
   auto engine = CpuEngine::Get()->get_engine();
   auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
@@ -54,10 +57,10 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
         full_param.mkldnn_param.fuse_dequantize) {
       int mask = 0;
       std::vector<float> scales = {0.0};
-      if (full_param.mkldnn_param.requantize_scales.size()) {
-        scales[0] = full_param.mkldnn_param.requantize_scales[0];
-      } else if (full_param.mkldnn_param.output_scales.size()) {
-        scales[0] = full_param.mkldnn_param.output_scales[0];
+      if (full_param.requantize_scales.size()) {
+        scales[0] = full_param.requantize_scales[0];
+      } else if (full_param.output_scales.size()) {
+        scales[0] = full_param.output_scales[0];
       } else {
         LOG(FATAL) << "Must specified either output_scales or requantize_scales!";
       }
@@ -111,8 +114,10 @@ inline static mkldnn::inner_product_backward_weights::primitive_desc GetFCBwdWei
   }
 }
 
-void MKLDNNFullyConnectForward::SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
-                                          const mkldnn::memory *bias, const mkldnn::memory &output) {
+void MKLDNNFullyConnectedForward::SetNewMem(const mkldnn::memory &data,
+                                            const mkldnn::memory &weight,
+                                            const mkldnn::memory *bias,
+                                            const mkldnn::memory &output) {
   if (this->data == nullptr)
     this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
             fwd_pd.src_primitive_desc(), data.get_data_handle()));
@@ -151,16 +156,16 @@ void MKLDNNFullyConnectForward::SetNewMem(const mkldnn::memory &data, const mkld
   }
 }
 
-MKLDNNFullyConnectForward &GetFCFwd(
+MKLDNNFullyConnectedForward &GetFCFwd(
     const FullyConnectedParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight,
-    const NDArray *bias, const mkldnn::memory::desc &output) {
+    const NDArray *bias, const NDArray &output) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<MKLDNNFullyconSignature,
-              MKLDNNFullyConnectForward, OpHash> fcFwds;
+              MKLDNNFullyConnectedForward, OpHash> fcFwds;
 #else
   static MX_THREAD_LOCAL std::unordered_map<MKLDNNFullyconSignature,
-              MKLDNNFullyConnectForward, OpHash> fcFwds;
+              MKLDNNFullyConnectedForward, OpHash> fcFwds;
 #endif
   MKLDNNFullyconSignature key(param);
   key.AddSign(is_train);
@@ -174,15 +179,15 @@ MKLDNNFullyConnectForward &GetFCFwd(
     MKLDNNFCFullParam full_param;
     full_param.default_param = param;
     full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-    MKLDNNFullyConnectForward fcFwd(full_param, is_train, data, weight, bias, output);
+    MKLDNNFullyConnectedForward fcFwd(full_param, is_train, data, weight, bias, output);
     it = AddToCache(&fcFwds, key, fcFwd);
   }
   return it->second;
 }
 
-void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &param,
+void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
                                 const OpContext &ctx,
-                                MKLDNNFCForward *fwd,
+                                MKLDNNFullyConnectedForward *fwd,
                                 const std::vector<NDArray> &in_data,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &out_data) {
@@ -197,7 +202,7 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &param,
     data = data.Reorder2Default();
 
   auto out_md = GetMemDesc(out_data[fullc::kOut]);
-  if (data.shape().ndim() != 2 && !param.default_param.flatten) {
+  if (data.shape().ndim() != 2 && !full_param.default_param.flatten) {
     data = data.MKLDNNDataReshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),
                                      ishape[ishape.ndim()-1]));
     mkldnn::memory::dims out_dims{static_cast<int>(oshape.ProdShape(0, oshape.ndim()-1)),
@@ -218,19 +223,19 @@ void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &param,
     if (weight.IsMKLDNNData()) {
       weight.Reorder2DefaultAsync();
     }
-    weight_mem = GetWeights(weight, FCFwd.ipFwd_pd.weights_primitive_desc(), 1);
+    weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(), 1);
   } else {
     if (weight.IsDefaultData()) {
-      weight_mem = GetWeights(weight, FCFwd.ipFwd_pd.weights_primitive_desc(), 1);
-      weight.MKLDNNDataReorderAsync(FCFwd.ipFwd_pd.weights_primitive_desc());
+      weight_mem = GetWeights(weight, fwd->fwd_pd.weights_primitive_desc(), 1);
+      weight.MKLDNNDataReorderAsync(fwd->fwd_pd.weights_primitive_desc());
     } else {
       weight_mem = weight.GetMKLDNNData();
-      CHECK(weight_mem->get_primitive_desc() == FCFwd.ipFwd_pd.weights_primitive_desc());
+      CHECK(weight_mem->get_primitive_desc() == fwd->fwd_pd.weights_primitive_desc());
     }
   }
   auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut],
       fwd->fwd_pd.dst_primitive_desc(), req[fullc::kOut], &data);
-  if (!param.no_bias) {
+  if (!full_param.default_param.no_bias) {
     auto bias_mem = in_data[fullc::kBias].GetMKLDNNDataReorder(
         fwd->fwd_pd.bias_primitive_desc());
     fwd->SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
@@ -249,9 +254,10 @@ void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   MKLDNNFCFullParam full_param;
   full_param.default_param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   full_param.mkldnn_param.Init(std::unordered_map<std::string, std::string>());
-  auto out_md = GetMemDesc(out_data[fullc::kOut]);
-  auto &fwd = GetFCFwd(full_param.default_param, ctx.is_train, data, weight,
-               full_param.default_param.no_bias ? nullptr : &in_data[fullc::kBias], out_md);
+  auto &fwd = GetFCFwd(full_param.default_param, ctx.is_train, in_data[fullc::kData],
+                       in_data[fullc::kWeight],
+                       full_param.default_param.no_bias ? nullptr : &in_data[fullc::kBias],
+                       out_data[fullc::kOut]);
   MKLDNNFCForwardFullFeature(full_param, ctx, &fwd, in_data, req, out_data);
 }
 
@@ -286,7 +292,7 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
 
   mkldnn::inner_product_forward::primitive_desc fwd_pd = GetFCFwdImpl(full_param, ctx.is_train,
-      data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias], GetMemDesc(out_grad));
+      data, weight, param.no_bias ? nullptr : &in_grad[fullc::kBias], out_grad);
 
   CHECK_NE(req[fullc::kWeight], kWriteInplace) << "cannot write weight inplace";
   if (req[fullc::kData]) {

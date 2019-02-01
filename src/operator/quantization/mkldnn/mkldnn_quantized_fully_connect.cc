@@ -46,7 +46,7 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray weight = in_data[fullc::kWeight];
   const TShape &ishape = data.shape();
 
-  //(TODO) int8 input will be enabled when mkldnn supports this data type
+  // TODO(ciyong) int8 input will be enabled when mkldnn supports this data type
   CHECK(data.dtype() == mshadow::kUint8)
     << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
     << mxnet::op::type_string(data.dtype());
@@ -90,28 +90,29 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
     min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
 
-  auto out_md = GetMemDesc(out_data[fullc::kOut]);
   bool is_train = false;
   auto &fwd = GetFCFwd(param, is_train, data, weight,
-      param.no_bias ? nullptr : &quantized_bias, out_md);
+      param.no_bias ? nullptr : &quantized_bias, out_data[fullc::kOut]);
 
   auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
-    weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), 1); //(TODO)group=1
+    // TODO(ciyong): group=1
+    weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), 1);
     weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_primitive_desc());
   } else {
     weight_mem = weight.GetMKLDNNData();
     CHECK(weight_mem->get_primitive_desc() == fwd.fwd_pd.weights_primitive_desc());
   }
-  auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut], fwd.fwd_pd.dst_primitive_desc(), req[fullc::kOut]);
+  auto out_mem = CreateMKLDNNMem(out_data[fullc::kOut], fwd.fwd_pd.dst_primitive_desc(),
+                                 req[fullc::kOut]);
   const mkldnn::memory *bias_mem = nullptr;
   if (!param.no_bias)
     bias_mem = quantized_bias.GetMKLDNNDataReorder(fwd.fwd_pd.bias_primitive_desc());
 
   fwd.SetNewMem(*data_mem, *weight_mem, bias_mem, *out_mem.second);
-  MKLDNNStream::Get()->RegisterPrim(fwd.GetIpFwd());
+  MKLDNNStream::Get()->RegisterPrim(fwd.GetFwd());
 
   CommitOutput(out_data[fullc::kOut], out_mem);
   MKLDNNStream::Get()->Submit();

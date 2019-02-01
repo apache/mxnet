@@ -28,10 +28,12 @@
 
 #if MXNET_USE_MKLDNN == 1
 
+#include <vector>
+#include <string>
 #include "../fully_connected-inl.h"
 #include "./mkldnn_base-inl.h"
 
-namespace mxnet{
+namespace mxnet {
 namespace op {
 
 struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
@@ -74,16 +76,16 @@ struct MKLDNNFCFullParam {
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const MKLDNNFCFullParam &full_param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const mkldnn::memory::desc &out_md);
+    const NDArray &output);
 
-class MKLDNNFullyConnectForward {
+class MKLDNNFullyConnectedForward {
  public:
   mkldnn::inner_product_forward::primitive_desc fwd_pd;
 
-  MKLDNNFullyConnectForward(const MKLDNNFCFullParam &full_param, bool is_train,
-                            const NDArray &data, const NDArray &weight,
-                            const NDArray *bias,
-                            const mkldnn::memory::desc &output)
+  MKLDNNFullyConnectedForward(const MKLDNNFCFullParam &full_param, bool is_train,
+                              const NDArray &data, const NDArray &weight,
+                              const NDArray *bias,
+                              const NDArray &output)
       : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, output)) {}
 
 
@@ -104,19 +106,19 @@ class MKLDNNFullyConnectForward {
 
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
 
-MKLDNNFullyConnectForward &GetFCFwd(
+MKLDNNFullyConnectedForward &GetFCFwd(
     const FullyConnectedParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight,
-    const NDArray *bias, const mkldnn::memory::desc &output);
+    const NDArray *bias, const NDArray &output);
 
 void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
                      const std::vector<OpReqType> &req,
                      const std::vector<NDArray> &out_data);
 
-void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &full_param,
+void MKLDNNFCForwardFullFeature(const MKLDNNFCFullParam &param,
                                 const OpContext &ctx,
-                                MKLDNNFCForward *fwd,
+                                MKLDNNFullyConnectedForward *fwd,
                                 const std::vector<NDArray> &in_data,
                                 const std::vector<OpReqType> &req,
                                 const std::vector<NDArray> &out_data);

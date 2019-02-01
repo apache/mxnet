@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 
-#define QUANTIZED_FC_NAME "_contrib_quantized_fully_connected"
+#define QUANTIZED_FC_NAME "_sg_mkldnn_fully_connected"
 
 class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
  public:
@@ -82,7 +82,7 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
       return false;
     }
 
-    switch(status) {
+    switch (status) {
       case kStart:
         if (new_node.op() == Op::Get("_contrib_requantize")) {
           auto const &param = nnvm::get<RequantizeParam>(new_node.attrs.parsed);
@@ -168,7 +168,6 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
 
     // When only fused quantized_fullyconnected and requantize, set min/max_cablib_range,
     // When fused quantized_fullyconnected + requantize + dequantize, set dequantize flag to true.
-    fc_node->attrs.dict["quantized"] = "True";
     if (dequantize_node != nullptr) {
       fc_node->attrs.dict["fuse_dequantize"] = "True";
     } else {

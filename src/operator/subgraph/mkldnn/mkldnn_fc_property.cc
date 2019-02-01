@@ -25,7 +25,6 @@
 namespace mxnet {
 namespace op {
 
-#define FC_NAME "FullyConnected"
 class SgMKLDNNFCSelector : public SubgraphSelector {
  public:
   /*! \brief pattern match status */
@@ -42,12 +41,12 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   std::vector<const nnvm::Node *> matched_list;
 
  public:
-  SgMKLDNNFCSelector(int dis_all, int dis_fc_relu)
+  SgMKLDNNFCSelector(const bool dis_all, const bool dis_fc_relu)
       : disable_all(dis_all),
         disable_fc_relu(dis_fc_relu) {}
 
   bool Select(const nnvm::Node &n) override {
-    if (n.op() == Op::Get()) {
+    if (n.op() == Op::Get("FullyConnected")) {
       status = disable_all ? kSuccess : kStart;
       matched_list.clear();
       matched_list.push_back(&n);
@@ -63,6 +62,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     if (status == kFail || status == kSuccess || new_node.is_variable())
       return false;
+
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
@@ -71,6 +71,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
         while (matched_list.back() != &n) {
           matched_list.pop_back();
         }
+      }
 
       status = kSuccess;
       return false;
@@ -78,9 +79,9 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 
     switch (status) {
       case kStart:
-        if ((!disable_fc_relu) && 
-            new_node.op() == Op::Get("Activation" &&
-            new_node.op()->attrs.dict.at("act_type") == "relu") {
+        if ((!disable_fc_relu) &&
+            new_node.op() == Op::Get("Activation") &&
+            new_node.attrs.dict.at("act_type") == "relu") {
           matched_list.push_back(&new_node);
           status = kSuccess;
           return true;
@@ -112,9 +113,9 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 class SgMKLDNNFCProperty : public SubgraphProperty {
  public:
   SgMKLDNNFCProperty() {
-    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", 0);
-    disable_fc_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_RELU", 0);
-    
+    disable_all = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_OPT", false);
+    disable_fc_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_FC_RELU", false);
+
     disable_all = disable_all || disable_fc_relu;
     if (disable_all) {
       LOG(INFO) << "MKLDNN FullyConnected optimization pass (relu fusion) is disabled.";
@@ -122,9 +123,11 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       LOG(INFO) << "Start to execute MKLDNN FullyConnected optimization pass (relu fusion).";
     }
   }
+
   static SubgraphPropertyPtr Create() {
     return std::make_shared<SgMKLDNNFCProperty>();
   }
+
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
     nnvm::NodePtr n = nnvm::Node::Create();
@@ -139,16 +142,15 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       auto &sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
         node_name << "FullyConnected_";
-      } else if ((sub_name == "Activation") && 
-                 (node->op()->attrs.dict.at("act_type") == "relu") {
+      } else if ((sub_name == "Activation") &&
+                 (node->attrs.dict.at("act_type") == "relu")) {
           node_name << "relu_";
           n->attrs.dict["with_relu"] = "true";
-        }
       }
     });
     node_name << std::to_string(subgraph_id);
     n->attrs.name = node_name.str();
-    n->attrs.op = Op::Get("_sg_mkldnn_FullyConnected");
+    n->attrs.op = Op::Get("_sg_mkldnn_fully_connected");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
     n->op()->attr_parser(&(n->attrs));
@@ -166,14 +168,14 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       std::vector<nnvm::NodeEntry *> *output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      *output_entries->at(i) = nnvm::NodeEntry{n, 0, 0};
+      auto entry_ptr = output_entries->at(i);
+      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
     }
   }
 
-
  private:
-  int disable_all;
-  int disable_fc_relu;
+  bool disable_all;
+  bool disable_fc_relu;
 };
 
 MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_FC, SgMKLDNNFCProperty);
