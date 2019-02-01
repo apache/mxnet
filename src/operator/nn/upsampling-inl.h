@@ -87,9 +87,9 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
 template<typename xpu, typename DTyp, typename AccReal>
 void SpatialUpSamplingNearestUpdateOutput(mshadow::Stream<cpu> *s,
                                            const std::vector<TBlob> &in_data,
-                                           std::vector<TBlob> &out_data) {
+                                           std::vector<TBlob> *out_data) {
   Tensor<xpu, 4, DTyp> itensor = in_data[0].get<xpu, 4, DTyp>(s);
-  Tensor<xpu, 4, DTyp> otensor = out_data[0].get<xpu, 4, DTyp>(s);
+  Tensor<xpu, 4, DTyp> otensor = (*out_data)[0].get<xpu, 4, DTyp>(s);
 
   int outputHeight = otensor.size(2);
   int outputWidth = otensor.size(3);
@@ -149,6 +149,7 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
   }
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Tensor<xpu, 4, DType> out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
+  std::vector<TBlob> outdata = out_data;
   if (param.num_args > 1) {
     int begin = 0;
     for (int i = 0; i < param.num_args; ++i) {
@@ -156,31 +157,27 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
       int end = begin + data.size(1);
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
-          std::vector<TBlob> outdata = out_data;
           MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
-            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, &outdata);
             out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
           });
         } else {
-          std::vector<TBlob> outdata = out_data;
           MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
-            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, &outdata);
             out += out_data[up_enum::kOut].get<xpu, 4, DType>(s);
           });
         }
       } else {
-        std::vector<TBlob> outdata = out_data;
           MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
-            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+            SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, &outdata);
             slice<1>(out, begin, end) = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
           });
       }
       begin = end;
     }
   } else {
-    std::vector<TBlob> outdata = out_data;
     MSHADOW_REAL_TYPE_SWITCH_EX(in_data[0].type_flag_, DTyp, AccReal, {
-      SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, outdata);
+      SpatialUpSamplingNearestUpdateOutput<xpu, DTyp, AccReal>(s, in_data, &outdata);
       out = out_data[up_enum::kOut].get<xpu, 4, DType>(s);
     });
   }
