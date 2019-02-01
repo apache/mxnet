@@ -105,9 +105,21 @@
 (deftest test-list-creation-with-return-a-copy-of-first
   (let [native-resources (atom {})
         return-val (resource-scope/using
-                    (let [temp-ndarrays (mapv (constantly (ndarray/ones [3 1])) (range 5))
+                    (let [temp-ndarrays (repeatedly 3 #(ndarray/ones [3 1]))
                           _ (swap! native-resources assoc :temp-ndarrays temp-ndarrays)]
                       (ndarray/copy (first temp-ndarrays))))]
+    (is (false? (ndarray/is-disposed return-val)))
+    (is (every? true? (mapv ndarray/is-disposed (:temp-ndarrays @native-resources))))))
+
+;;; If you don't assign them all to a let vector binding and just return the first
+;; then they are disposed as usual
+(deftest test-list-creation-with-return-a-copy-of-first
+  (let [native-resources (atom [])
+        return-val (resource-scope/using
+                    (first (repeatedly 5 #(do
+                                            (let [x (ndarray/ones [3 1])]
+                                              (swap! native-resources conj x)
+                                              x)))))]
     (is (false? (ndarray/is-disposed return-val)))
     (is (every? true? (mapv ndarray/is-disposed (:temp-ndarrays @native-resources))))))
 
