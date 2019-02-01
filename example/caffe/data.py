@@ -14,17 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Create the helper functions to mnist dataset for Caffe operators in MXNet
-"""
+"""Create the helper functions to mnist dataset for Caffe operators in MXNet"""
 import mxnet as mx
 from mxnet.test_utils import get_mnist_ubyte
 
 
 def get_iterator(data_shape, use_caffe_data):
-    """
-    Generate the iterator of mnist dataset
-    """
+    """Generate the iterator of mnist dataset"""
     def get_iterator_impl_mnist(args, kv):
         """return train and val iterators for mnist"""
         # download data

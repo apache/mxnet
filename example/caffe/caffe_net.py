@@ -14,9 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Generate helper functions to load Caffe into MXNet
-"""
+"""Generate helper functions to load Caffe into MXNet"""
 import argparse
 import mxnet as mx
 from data import get_iterator
@@ -24,9 +22,7 @@ import train_model
 
 
 def get_mlp():
-    """
-    Get multi-layer perceptron
-    """
+    """Get multi-layer perceptron"""
     data = mx.symbol.Variable('data')
     fc1 = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1',
                             prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")
@@ -46,8 +42,7 @@ def get_mlp():
 
 
 def get_lenet():
-    """
-    LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
+    """LeCun, Yann, Leon Bottou, Yoshua Bengio, and Patrick
     Haffner. "Gradient-based learning applied to document recognition."
     Proceedings of the IEEE (1998)
     """
@@ -91,8 +86,7 @@ def get_network_from_json_file(file_name):
 
 
 def parse_args():
-    """
-    Parse the arguments
+    """Parse the arguments
     """
     parser = argparse.ArgumentParser(description='train an image classifier on mnist')
     parser.add_argument('--network', type=str, default='lenet',

@@ -14,9 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Generate helper functions to Stochastic Gradient Langevin Dynamics (SGLD) and Bayesian Dark Knowledge (BDK)
-"""
+"""Generate helper functions to Stochastic Gradient Langevin Dynamics (SGLD) and Bayesian Dark Knowledge (BDK)"""
 import numpy
 import mxnet as mx
 import mxnet.ndarray as nd
@@ -29,9 +27,7 @@ class BiasXavier(mx.initializer.Xavier):
 
 
 class SGLDScheduler(mx.lr_scheduler.LRScheduler):
-    """
-    Create SGLDScheduler class
-    """
+    """Create SGLDScheduler class"""
     def __init__(self, begin_rate, end_rate, total_iter_num, factor):
         super(SGLDScheduler, self).__init__()
         if factor >= 1.0:
@@ -51,9 +47,7 @@ class SGLDScheduler(mx.lr_scheduler.LRScheduler):
 
 
 def get_executor(sym, ctx, data_inputs, initializer=None):
-    """
-    Get executor to Stochastic Gradient Langevin Dynamics and/or Bayesian Dark Knowledge
-    """
+    """Get executor to Stochastic Gradient Langevin Dynamics and/or Bayesian Dark Knowledge"""
     data_shapes = {k: v.shape for k, v in data_inputs.items()}
     arg_names = sym.list_arguments()
     aux_names = sym.list_auxiliary_states()
@@ -73,9 +67,7 @@ def get_executor(sym, ctx, data_inputs, initializer=None):
 
 
 def copy_param(exe, new_param=None):
-    """
-    Create copy of parameters
-    """
+    """Create copy of parameters"""
     if new_param is None:
         new_param = {k: nd.empty(v.shape, ctx=mx.cpu()) for k, v in exe.arg_dict.items()}
     for k, v in new_param.items():
@@ -84,9 +76,7 @@ def copy_param(exe, new_param=None):
 
 
 def sample_test_acc(exe, X, Y, sample_pool=None, label_num=None, minibatch_size=100):
-    """
-    Generate sample test to evaluate accuracy
-    """
+    """Generate sample test to evaluate accuracy"""
     if label_num is None:
         pred = numpy.zeros((X.shape[0],)).astype('float32')
     else:
@@ -135,9 +125,7 @@ def sample_test_acc(exe, X, Y, sample_pool=None, label_num=None, minibatch_size=
 
 
 def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save_path="regression.txt"):
-    """
-    Generate a sample test regression
-    """
+    """Generate a sample test regression"""
     old_param = copy_param(exe)
     if sample_pool is not None:
         pred = numpy.zeros(Y.shape + (len(sample_pool),))
@@ -189,9 +177,7 @@ def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save
 
 
 def pred_test(testing_data, exe, param_list=None, save_path=""):
-    """
-    Generate prediction on testset
-    """
+    """Generate prediction on testset"""
     ret = numpy.zeros((testing_data.shape[0], 2))
     if param_list is None:
         for i in range(testing_data.shape[0]):

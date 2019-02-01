@@ -14,9 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Create layers of capsule net
-"""
+"""Create layers of capsule net"""
 import mxnet as mx
 
 
@@ -43,8 +41,7 @@ def primary_caps(data, dim_vector, n_channels, kernel, strides, name=''):
 
 
 class CapsuleLayer:
-    """
-    The capsule layer with dynamic routing.
+    """The capsule layer with dynamic routing.
     [batch_size, input_num_capsule, input_dim_vector] => [batch_size, num_capsule, dim_vector]
     """
 

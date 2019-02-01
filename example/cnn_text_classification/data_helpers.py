@@ -15,9 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""
-Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet
-"""
+"""Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet"""
 
 import itertools
 import os
@@ -31,8 +29,7 @@ import word2vec
 
 
 def clean_str(string):
-    """
-    Tokenization/string cleaning for all datasets except for SST.
+    """Tokenization/string cleaning for all datasets except for SST.
     Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data.py
     """
     string = re.sub(r"[^A-Za-z0-9(),!?\'\`]", " ", string)
@@ -52,8 +49,7 @@ def clean_str(string):
 
 
 def load_data_and_labels():
-    """
-    Loads MR polarity data from files, splits the data into words and generates labels.
+    """Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
     # Load data from files
@@ -79,8 +75,7 @@ def load_data_and_labels():
 
 
 def pad_sentences(sentences, padding_word="</s>"):
-    """
-    Pads all sentences to the same length. The length is defined by the longest sentence.
+    """Pads all sentences to the same length. The length is defined by the longest sentence.
     Returns padded sentences.
     """
     sequence_length = max(len(x) for x in sentences)
@@ -93,8 +88,7 @@ def pad_sentences(sentences, padding_word="</s>"):
 
 
 def build_vocab(sentences):
-    """
-    Builds a vocabulary mapping from word to index based on the sentences.
+    """Builds a vocabulary mapping from word to index based on the sentences.
     Returns vocabulary mapping and inverse vocabulary mapping.
     """
     # Build vocabulary
@@ -107,9 +101,7 @@ def build_vocab(sentences):
 
 
 def build_input_data(sentences, labels, vocabulary):
-    """
-    Maps sentencs and labels to vectors based on a vocabulary.
-    """
+    """Maps sentencs and labels to vectors based on a vocabulary."""
     x = np.array([[vocabulary[word] for word in sentence] for sentence in sentences])
     y = np.array(labels)
     return [x, y]
@@ -132,8 +124,7 @@ def build_input_data_with_word2vec(sentences, labels, word2vec_list):
 
 
 def load_data_with_word2vec(word2vec_list):
-    """
-    Loads and preprocessed data for the MR dataset.
+    """Loads and preprocessed data for the MR dataset.
     Returns input vectors, labels, vocabulary, and inverse vocabulary.
     """
     # Load and preprocess data
@@ -144,8 +135,7 @@ def load_data_with_word2vec(word2vec_list):
 
 
 def load_data():
-    """
-    Loads and preprocessed data for the MR dataset.
+    """Loads and preprocessed data for the MR dataset.
     Returns input vectors, labels, vocabulary, and inverse vocabulary.
     """
     # Load and preprocess data
@@ -157,9 +147,7 @@ def load_data():
 
 
 def batch_iter(data, batch_size, num_epochs):
-    """
-    Generates a batch iterator for a dataset.
-    """
+    """Generates a batch iterator for a dataset."""
     data = np.array(data)
     data_size = len(data)
     num_batches_per_epoch = int(len(data)/batch_size) + 1
@@ -174,9 +162,7 @@ def batch_iter(data, batch_size, num_epochs):
 
 
 def load_pretrained_word2vec(infile):
-    """
-    Load the pre-trained word2vec from file.
-    """
+    """Load the pre-trained word2vec from file."""
     if isinstance(infile, str):
         infile = open(infile)
 

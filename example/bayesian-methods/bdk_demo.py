@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 """Run Stochastic Gradient Langevin Dynamics (SGLD) and Bayesian Dark Knowledge (BDK)"""
-
 from __future__ import print_function
 import argparse
 import time
@@ -163,8 +162,9 @@ def dev(gpu_id=None):
     return mx.gpu(gpu_id) if gpu_id else mx.cpu()
 
 
-def run_mnist_SGD(training_num=50000, gpu_id=None):
-    X, Y, X_test, Y_test = load_mnist(training_num)
+
+def run_mnist_SGD(num_training=50000, gpu_id=None):
+    X, Y, X_test, Y_test = load_mnist(num_training)
     minibatch_size = 100
     net = get_mnist_sym()
     data_shape = (minibatch_size,) + X.shape[1::]
@@ -194,11 +194,11 @@ def run_mnist_SGLD(num_training=50000, gpu_id=None):
                             thin_interval=100, burn_in_iter_num=1000)
 
 
-def run_mnist_DistilledSGLD(training_num=50000, gpu_id=None):
+def run_mnist_DistilledSGLD(num_training=50000, gpu_id=None):
     """Run DistilledSGLD on mnist dataset"""
-    X, Y, X_test, Y_test = load_mnist(training_num)
+    X, Y, X_test, Y_test = load_mnist(num_training)
     minibatch_size = 100
-    if training_num >= 10000:
+    if num_training >= 10000:
         num_hidden = 800
         total_iter_num = 1000000
         teacher_learning_rate = 1E-6

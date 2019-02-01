@@ -14,9 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Generate MXNet implementation of CapsNet
-"""
+"""Generate MXNet implementation of CapsNet"""
 import os
 import re
 import gzip
@@ -36,9 +34,7 @@ def margin_loss(y_true, y_pred):
 
 
 def capsnet(batch_size, n_class, num_routing, recon_loss_weight):
-    """
-    Create CapsNet
-    """
+    """Create CapsNet"""
     # data.shape = [batch_size, 1, 28, 28]
     data = mx.sym.Variable('data')
 
@@ -124,9 +120,7 @@ def to4d(img):
 
 
 class LossMetric(mx.metric.EvalMetric):
-    """
-    Evaluate the loss function
-    """
+    """Evaluate the loss function"""
     def __init__(self, batch_size, num_gpus):
         super(LossMetric, self).__init__('LossMetric')
         self.batch_size = batch_size
@@ -141,9 +135,7 @@ class LossMetric(mx.metric.EvalMetric):
         self.n_batch = 0
 
     def update(self, labels, preds):
-        """
-        Update the hyper-parameters and loss of CapsNet
-        """
+        """Update the hyper-parameters and loss of CapsNet"""
         batch_sum_metric = 0
         batch_num_inst = 0
         for label, pred_outcaps in zip(labels[0], preds[0]):
@@ -198,9 +190,7 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 
 
 def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix, decay):
-    """
-    Run training to CapsNet
-    """
+    """Run training to CapsNet"""
     summary_writer = SummaryWriter(args.tblog_dir)
     lr_scheduler = SimpleLRScheduler(learning_rate)
     optimizer_params = {'lr_scheduler': lr_scheduler}
@@ -246,9 +236,7 @@ def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix, deca
 
 
 def apply_transform(x, transform_matrix, fill_mode='nearest', cval=0.):
-    """
-    Apply transform on nd.array
-    """
+    """Apply transform on nd.array"""
     x = np.rollaxis(x, 0, 0)
     final_affine_matrix = transform_matrix[:2, :2]
     final_offset = transform_matrix[:2, 2]
@@ -285,9 +273,7 @@ def _shuffle(data, idx):
 
 
 class MNISTCustomIter(mx.io.NDArrayIter):
-    """
-    Create custom iterator of mnist dataset
-    """
+    """Create custom iterator of mnist dataset"""
     def __init__(self, data, label, batch_size, shuffle):
         self.data = data
         self.label = label
@@ -296,9 +282,7 @@ class MNISTCustomIter(mx.io.NDArrayIter):
         self.cursor = None
 
     def reset(self):
-        """
-        Reset class MNISTCustomIter(mx.io.NDArrayIter):
-        """
+        """Reset class MNISTCustomIter(mx.io.NDArrayIter):"""
         # shuffle data
         if self.is_train:
             np.random.shuffle(self.idx)
@@ -311,15 +295,11 @@ class MNISTCustomIter(mx.io.NDArrayIter):
             self.cursor = -self.batch_size
 
     def set_is_train(self, is_train):
-        """
-        Set training flag
-        """
+        """Set training flag"""
         self.is_train = is_train
 
     def next(self):
-        """
-        Generate next of iterator
-        """
+        """Generate next of iterator"""
         if self.iter_next():
             if self.is_train:
                 data_raw_list = self.getdata()

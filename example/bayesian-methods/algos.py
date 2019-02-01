@@ -14,9 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Create implementation of algorithms of HMC, stepHMC, SGD, SGLD and DistilledSGLD
-"""
+"""Create implementation of algorithms of HMC, stepHMC, SGD, SGLD and DistilledSGLD"""
 from __future__ import print_function
 import time
 import numpy
@@ -37,9 +35,7 @@ def calc_potential(exe, params, label_name, noise_precision, prior_precision):
 
 
 def calc_grad(exe, exe_grads, params, X, Y, label_name=None, outgrad_f=None):
-    """
-    Calculate gradient
-    """
+    """Calculate gradient"""
     exe.copy_params_from(params)
     exe.arg_dict['data'][:] = X
     if outgrad_f is None:
@@ -54,9 +50,7 @@ def calc_grad(exe, exe_grads, params, X, Y, label_name=None, outgrad_f=None):
 
 
 def step_HMC(exe, exe_params, exe_grads, label_key, noise_precision, prior_precision, L=10, eps=1E-6):
-    """
-    Generate the implementation of step HMC
-    """
+    """Generate the implementation of step HMC"""
     init_params = {k: v.copyto(v.context) for k, v in exe_params.items()}
     end_params = {k: v.copyto(v.context) for k, v in exe_params.items()}
     init_momentums = {k: mx.random.normal(0, 1, v.shape) for k, v in init_params.items()}
@@ -109,9 +103,7 @@ def step_HMC(exe, exe_params, exe_grads, label_key, noise_precision, prior_preci
 def HMC(sym, data_inputs, X, Y, X_test, Y_test, sample_num,
         initializer=None, noise_precision=1 / 9.0, prior_precision=0.1,
         learning_rate=1E-6, L=10, dev=mx.gpu()):
-    """
-    Generate the implementation of HMC
-    """
+    """Generate the implementation of HMC"""
     label_key = list(set(data_inputs.keys()) - set(['data']))[0]
     exe, exe_params, exe_grads, _ = get_executor(sym, dev, data_inputs, initializer)
     exe.arg_dict['data'][:] = X
@@ -144,9 +136,7 @@ def SGD(sym, data_inputs, X, Y, X_test, Y_test, total_iter_num,
         out_grad_f=None,
         initializer=None,
         minibatch_size=100, dev=mx.gpu()):
-    """
-    Generate the implementation of SGD
-    """
+    """Generate the implementation of SGD"""
     if out_grad_f is None:
         label_key = list(set(data_inputs.keys()) - set(['data']))[0]
     exe, params, params_grad, _ = get_executor(sym, dev, data_inputs, initializer)
@@ -186,9 +176,7 @@ def SGLD(sym, X, Y, X_test, Y_test, total_iter_num,
          initializer=None,
          minibatch_size=100, thin_interval=100, burn_in_iter_num=1000, task='classification',
          dev=mx.gpu()):
-    """
-    Generate the implementation of SGLD
-    """
+    """Generate the implementation of SGLD"""
     if out_grad_f is None:
         label_key = list(set(data_inputs.keys()) - set(['data']))[0]
     exe, params, params_grad, _ = get_executor(sym, dev, data_inputs, initializer)
@@ -254,9 +242,7 @@ def DistilledSGLD(teacher_sym, student_sym,
                   minibatch_size=100,
                   task='classification',
                   dev=mx.gpu()):
-    """
-    Generate the implementation of DistilledSGLD
-    """
+    """Generate the implementation of DistilledSGLD"""
     teacher_exe, teacher_params, teacher_params_grad, _ = \
         get_executor(teacher_sym, dev, teacher_data_inputs, teacher_initializer)
     student_exe, student_params, student_params_grad, _ = \
