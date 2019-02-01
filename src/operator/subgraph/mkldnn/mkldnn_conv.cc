@@ -356,7 +356,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     initalized_ = true;
   }
 
-  if (!mkldnn_param.quantized) {
+  if (mkldnn_param.quantized) {
     auto data_mem = data.GetMKLDNNDataReorder(fwd_->fwd_pd.src_primitive_desc());
     mkldnn::memory *mem = output.CreateMKLDNNData(fwd_->fwd_pd.dst_primitive_desc());
     fwd_->SetNewMem(*data_mem, *mem);
