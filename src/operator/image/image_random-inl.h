@@ -287,12 +287,16 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
 template<int req>
 struct normalize_backward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int j, DType* in_grad, const DType* out_grad,
-                                  const int i, const int length,
-                                  const int step, const DType std_dev) {
+  MSHADOW_XINLINE static void Map(uint32_t c, DType* in_grad, const DType* out_grad,
+                                  const NormalizeParam &param, const int length,
+                                  const int step) {
     // d/dx{(x - mean) / std_dev} => (1 / std_dev)
-    KERNEL_ASSIGN(in_grad[step + i*length + j], req,
-                  out_grad[step + i*length + j] * (1.0 / std_dev));
+    DType std_dev = param.std[param.std.ndim() > c ? c : 0];
+    #pragma omp parallel for
+    for (int i = 0; i < length; ++i) {
+      KERNEL_ASSIGN(in_grad[step + c*length + i], req,
+                    out_grad[step + c*length + i] * (1.0 / std_dev));
+    }
   }
 };
 
@@ -306,16 +310,13 @@ void NormalizeBackwardImpl(const OpContext &ctx,
                            const uint32_t channel,
                            const int step = 0) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TBlob& out_grad = inputs[0];
-    const TBlob& in_grad = outputs[0];
+
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-        for (uint32_t i = 0; i < channel; ++i) {
-            DType std_dev = param.std[param.std.ndim() > i ? i : 0];
-            mxnet_op::Kernel<normalize_backward<req_type>, xpu>::Launch(
-                s, length, in_grad.dptr<DType>(), out_grad.dptr<DType>(),
-                i, length, step, std_dev);
-        }
+        DType* out_grad = inputs[0].dptr<DType>();
+        DType* in_grad = outputs[0].dptr<DType>();
+        mxnet_op::Kernel<normalize_backward<req_type>, xpu>::Launch(
+            s, channel, in_grad, out_grad, param, length, step);
       });
     });
 }
