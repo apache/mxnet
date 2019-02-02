@@ -90,8 +90,6 @@
     (is (true? (sym/is-disposed (:temp-x @native-resources))))
     (is (false? (sym/is-disposed x)))))
 
-;;; Note that if first is returned the rest of the collection ndarrays will
-;;; NOT be disposed
 (deftest test-list-creation-with-returning-first
   (let [native-resources (atom [])
         return-val (resource-scope/using
@@ -101,7 +99,6 @@
     (is (false? (ndarray/is-disposed return-val)))
     (is (= [false true true] (mapv ndarray/is-disposed @native-resources)))))
 
-;;; collections not referenced are disposed
 (deftest test-list-creation
   (let [native-resources (atom [])
         return-val (resource-scope/using
