@@ -218,11 +218,11 @@ template<int req>
 struct normalize_forward {
     template<typename DType>
     MSHADOW_XINLINE static void Map(uint32_t c, DType* out_data, const DType* in_data,
-                                    const NormalizeParam &param, const int length, 
+                                    const NormalizeParam &param, const int length,
                                     const int step) {
         DType mean = param.mean[param.mean.ndim() > c ? c : 0];
         DType std_dev = param.std[param.std.ndim() > c ? c : 0];
-        
+
         #pragma omp parallel for
         for (int i = 0; i < length; ++i) {
           KERNEL_ASSIGN(out_data[step + c*length + i], req,
