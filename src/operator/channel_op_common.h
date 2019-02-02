@@ -125,7 +125,7 @@ void Split_2D(const mshadow::Tensor<cpu, dim, DType> &input,
 #pragma omp parallel for
     for (int i = 0; i < input.shape_[0]; i++) {
       int iRow = i * input.shape_[1];
-      for (size_t j = 0; j < size; j++) {
+      for (int j = 0; j < size; j++) {
         int jRow = i * slice_len[j];
         int iPos = iRow + begin_pos[j];
         for (int k = 0; k < slice_len[j]; k++) {
