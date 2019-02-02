@@ -48,6 +48,7 @@ static void MKLDNNQuantizeComputeKer(const std::vector<NDArray>& inputs,
   NDArray in_buffer = inputs[0];
   SrcType data_min = red::limits::MaxValue<SrcType>();
   SrcType data_max = red::limits::MinValue<SrcType>();
+
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     data_min = param.min_calib_range.value();
     data_max = param.max_calib_range.value();
