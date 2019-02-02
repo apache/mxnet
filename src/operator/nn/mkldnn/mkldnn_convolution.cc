@@ -45,12 +45,21 @@ bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input) {
           (input.shape().ndim() == 4));
 }
 
-static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
-    const MKLDNNConvFullParam &param, const bool is_train, const mkldnn::memory::desc &data_md,
-    const mkldnn::memory::desc &weight_md, const mkldnn::memory::desc *bias_md,
-    const mkldnn::memory::desc &out_md) {
-  auto engine = CpuEngine::Get()->get_engine();
+mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullParam &param,
+                                                           const bool is_train, const NDArray &data,
+                                                           const NDArray &weights,
+                                                           const NDArray *bias,
+                                                           const NDArray &output) {
   auto prop = is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
+  auto data_md = GetMemDesc(data);
+  auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.mkldnn_param.quantized);
+  auto out_md = GetMemDesc(output);
+  auto bias_md =
+      bias ? (param.mkldnn_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias))
+           : mkldnn::memory::desc{
+             {}, mkldnn::memory::data_type::data_undef, mkldnn::memory::format::any};
+  auto bias_md_ptr = bias ? &bias_md : nullptr;
+
   mkldnn::memory::dims strides(param.conv_param.kernel.ndim());
   mkldnn::memory::dims padding(param.conv_param.kernel.ndim());
   if (param.conv_param.kernel.ndim() == 1) {
@@ -95,17 +104,39 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
     attr.set_output_scales(mask, param.requantize_scales);
     attr.set_int_output_round_mode(round_nearest);
   }
+  auto GetConvFwdPd = [&param, &data, &weights, &output,
+                       &attr](const mkldnn::convolution_forward::desc &desc) {
+    auto engine = CpuEngine::Get()->get_engine();
+    try {
+      auto conv_pd = mkldnn::convolution_forward::primitive_desc(desc, attr, engine);
+      while (conv_pd.dst_primitive_desc().get_size() != GetArraySize(output) ||
+             conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
+             (!param.mkldnn_param.quantized &&
+              conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights))) {
+        CHECK(conv_pd.next_impl()) << "No convolution implementation for this request.";
+      }
+      return conv_pd;
+    } catch (mkldnn::error &e) {
+      if (e.status == mkldnn_unimplemented && param.mkldnn_param.quantized) {
+        LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
+                      "required for int8 convolution";
+      } else {
+        LOG(ERROR) << e.message;
+      }
+      throw;
+    }
+  };
 
-  if (param.conv_param.dilate.ndim() == 0 && bias_md == nullptr) {
+  if (param.conv_param.dilate.ndim() == 0 && bias_md_ptr == nullptr) {
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
                                            weight_md, out_md, strides, padding, padding,
                                            mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, attr, engine);
+    return GetConvFwdPd(desc);
   } else if (param.conv_param.dilate.ndim() == 0) {
     mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
-                                           weight_md, *bias_md, out_md, strides, padding, padding,
-                                           mkldnn::padding_kind::zero);
-    return mkldnn::convolution_forward::primitive_desc(desc, attr, engine);
+                                           weight_md, *bias_md_ptr, out_md, strides, padding,
+                                           padding, mkldnn::padding_kind::zero);
+    return GetConvFwdPd(desc);
   } else {
     mkldnn::memory::dims dilates(param.conv_param.kernel.ndim());
     if (param.conv_param.dilate.ndim() == 1) {
@@ -117,50 +148,17 @@ static mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(
       LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size " << param.conv_param.dilate.ndim()
                  << ", supporting only 1 or 2.";
     }
-    if (bias_md == nullptr) {
+    if (bias_md_ptr == nullptr) {
       mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
                                              weight_md, out_md, strides, dilates, padding, padding,
                                              mkldnn::padding_kind::zero);
-      return mkldnn::convolution_forward::primitive_desc(desc, attr, engine);
+      return GetConvFwdPd(desc);
     } else {
       mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
-                                             weight_md, *bias_md, out_md, strides, dilates, padding,
-                                             padding, mkldnn::padding_kind::zero);
-      return mkldnn::convolution_forward::primitive_desc(desc, attr, engine);
+                                             weight_md, *bias_md_ptr, out_md, strides, dilates,
+                                             padding, padding, mkldnn::padding_kind::zero);
+      return GetConvFwdPd(desc);
     }
-  }
-}
-
-mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullParam &param,
-                                                           const bool is_train, const NDArray &data,
-                                                           const NDArray &weights,
-                                                           const NDArray *bias,
-                                                           const NDArray &output) {
-  auto data_md = GetMemDesc(data);
-  auto weight_md = GetWeightDesc(weights, param.conv_param.num_group, param.mkldnn_param.quantized);
-  auto out_md = GetMemDesc(output);
-  auto bias_md =
-      bias ? (param.mkldnn_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias))
-           : mkldnn::memory::desc{
-             {}, mkldnn::memory::data_type::data_undef, mkldnn::memory::format::any};
-  auto bias_md_ptr = bias ? &bias_md : nullptr;
-  try {
-    auto conv_pd = GetConvFwdImpl(param, is_train, data_md, weight_md, bias_md_ptr, out_md);
-    while (conv_pd.dst_primitive_desc().get_size() != GetArraySize(output) ||
-           conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
-           (!param.mkldnn_param.quantized &&
-            conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights))) {
-      CHECK(conv_pd.next_impl()) << "No convolution implementation for this request.";
-    }
-    return conv_pd;
-  } catch (mkldnn::error &e) {
-    if (e.status == mkldnn_unimplemented && param.mkldnn_param.quantized) {
-      LOG(ERROR) << "AVX512-BW support or Intel(R) MKL dependency is "
-                    "required for int8 convolution";
-    } else {
-      LOG(ERROR) << e.message;
-    }
-    throw;
   }
 }
 
