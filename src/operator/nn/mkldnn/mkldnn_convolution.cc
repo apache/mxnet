@@ -113,6 +113,7 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
              conv_pd.src_primitive_desc().get_size() != GetArraySize(data) ||
              (!param.mkldnn_param.quantized &&
               conv_pd.weights_primitive_desc().get_size() != GetArraySize(weights))) {
+        // next_impl() will visit desc and engine, please make sure they are still alive here.
         CHECK(conv_pd.next_impl()) << "No convolution implementation for this request.";
       }
       return conv_pd;
