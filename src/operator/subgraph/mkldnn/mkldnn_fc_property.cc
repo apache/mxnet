@@ -141,7 +141,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       if (node->is_variable()) return;
       auto &sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
-        node_name << "FullyConnected_";
+        node_name << "fully_connected_";
       } else if ((sub_name == "Activation") &&
                  (node->attrs.dict.at("act_type") == "relu")) {
           node_name << "relu_";

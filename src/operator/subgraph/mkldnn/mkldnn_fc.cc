@@ -113,8 +113,10 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   if (mkldnn_param.quantized && ishape.ndim() != 2) {
     CHECK(default_param.flatten)
       << "QuantizedFullyConnected only supports flatten=true when ishape.ndim() != 2 for now.";
-    data = data.MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
   }
+
+  mkldnn::memory::desc out_md = GetMemDesc(output);
+  MKLDNNFCFlattenData(default_param, out_data[fullc::kOut], &data, &out_md);
 
   if (initialized_ && mkldnn_param.quantized) {
     if (cached_min_data_ != min_data || cached_max_data_ != max_data ||
@@ -172,7 +174,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     }
 
     fwd_.reset(new MKLDNNFullyConnectedForward(full_param_, ctx.is_train, data, weight,
-      (has_bias ? &cached_bias_ : nullptr), output));
+      (has_bias ? &cached_bias_ : nullptr), out_md));
     initialized_ = true;
   }
   std::vector<NDArray> new_inputs;
@@ -243,6 +245,20 @@ static std::vector<std::string> SgMKLDNNFCListOutputNames(const NodeAttrs &attrs
   }
 }
 
+template <typename T>
+static inline void FillBaseInputOutputInfo(const FullyConnectedParam &param,
+                                           std::vector<T> *base_in_attrs,
+                                           std::vector<T> *base_out_attrs,
+                                           std::vector<T> *in_attrs,
+                                           std::vector<T> *out_attrs) {
+  auto base_num_inputs = param.no_bias ? 2 : 3;
+
+  base_out_attrs->push_back(out_attrs->at(0));
+  for (int i = 0; i < base_num_inputs; ++i) {
+    base_in_attrs->push_back(in_attrs->at(i));
+  }
+}
+
 static bool SgMKLDNNFCInferShape(const nnvm::NodeAttrs &attrs,
                                  std::vector<TShape> *in_shapes,
                                  std::vector<TShape> *out_shapes) {
@@ -250,12 +266,12 @@ static bool SgMKLDNNFCInferShape(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     std::vector<TShape> base_in_shapes;
     std::vector<TShape> base_out_shapes;
+    FillBaseInputOutputInfo(full_param.default_param, &base_in_shapes, &base_out_shapes,
+                            in_shapes, out_shapes);
     bool ret = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
 
-    auto base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
-    auto total_num_inputs = base_num_inputs * 3;
-    for (int i = 0; i < total_num_inputs; ++i) {
-      if (i < base_num_inputs)
+    for (size_t i = 0; i < in_shapes->size(); ++i) {
+      if (i < base_in_shapes.size())
         in_shapes->at(i) = base_in_shapes[i];
       else
         SHAPE_ASSIGN_CHECK(*in_shapes, i, Shape1(1));
@@ -277,32 +293,41 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
                                 std::vector<int> *out_types) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   if (full_param.mkldnn_param.quantized) {
+    /*
     std::vector<int> base_in_types;
     std::vector<int> base_out_types;
+    FillBaseInputOutputInfo(full_param.default_param, &base_in_types, &base_out_types,
+                            in_types, out_types);
     bool ret = DefaultSubgraphOpType(attrs, &base_in_types, &base_out_types);
+    */
 
-    auto base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
-    auto total_num_inputs = base_num_inputs * 3;
-    for (int i = 0; i < total_num_inputs; ++i) {
-      if (i < base_num_inputs)
-        in_types->at(i) = base_in_types[i];
-      else
+    size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
+
+    TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kUint8);
+    for (size_t i = 1; i < in_types->size(); ++i) {
+      if (i < base_num_inputs) {
+        TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kInt8);
+      } else {
         TYPE_ASSIGN_CHECK(*in_types, i, mshadow::kFloat32);
+      }
     }
 
     if (full_param.mkldnn_param.fuse_dequantize) {
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
     } else {
       if (full_param.mkldnn_param.fuse_requantize) {
-        // TODO(ciyong): with_relu=True, this should be Uint8.
-        TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
+        if (full_param.mkldnn_param.with_relu) {
+          TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
+        } else {
+          TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt8);
+        }
       } else {
         TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kInt32);
       }
       TYPE_ASSIGN_CHECK(*out_types, 1, mshadow::kFloat32);
       TYPE_ASSIGN_CHECK(*out_types, 2, mshadow::kFloat32);
     }
-    return ret;
+    return true;
   } else {
     return DefaultSubgraphOpType(attrs, in_types, out_types);
   }
@@ -317,13 +342,13 @@ static bool SgMKLDNNFCStorageType(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     std::vector<int> base_in_attrs;
     std::vector<int> base_out_attrs;
+    FillBaseInputOutputInfo(full_param.default_param, &base_in_attrs, &base_out_attrs,
+                            in_attrs, out_attrs);
     bool ret = DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
                                             &base_in_attrs, &base_out_attrs);
 
-    auto base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
-    auto total_num_inputs = base_num_inputs * 3;
-    for (int i = 0; i < total_num_inputs; ++i) {
-      if (i < base_num_inputs)
+    for (size_t i = 0; i < in_attrs->size(); ++i) {
+      if (i < base_in_attrs.size())
         in_attrs->at(i) = base_in_attrs[i];
       else
         type_assign(&in_attrs->at(i), mxnet::kDefaultStorage);
@@ -362,7 +387,7 @@ nnvm::NodePtr SgMKLDNNFCQuantizedOp(const NodeAttrs& attrs) {
   node->attrs.op = Op::Get("_sg_mkldnn_fully_connected");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
-  node->attrs.dict["quantized"] = "true";
+  node->attrs.dict["quantized"] = "True";
   node->attrs.subgraphs.reserve(attrs.subgraphs.size());
   for (auto sub : attrs.subgraphs) {
     node->attrs.subgraphs.push_back(sub);

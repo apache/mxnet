@@ -76,7 +76,7 @@ struct MKLDNNFCFullParam {
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const MKLDNNFCFullParam &full_param, const bool is_train,
     const NDArray &data, const NDArray &weight, const NDArray *bias,
-    const NDArray &output);
+    const mkldnn::memory::desc &out_md);
 
 class MKLDNNFullyConnectedForward {
  public:
@@ -85,8 +85,8 @@ class MKLDNNFullyConnectedForward {
   MKLDNNFullyConnectedForward(const MKLDNNFCFullParam &full_param, bool is_train,
                               const NDArray &data, const NDArray &weight,
                               const NDArray *bias,
-                              const NDArray &output)
-      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, output)) {}
+                              const mkldnn::memory::desc &out_md)
+      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {}
 
 
   void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
@@ -109,7 +109,12 @@ typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;
 MKLDNNFullyConnectedForward &GetFCFwd(
     const FullyConnectedParam &param, const bool is_train,
     const NDArray &data, const NDArray &weight,
-    const NDArray *bias, const NDArray &output);
+    const NDArray *bias, const mkldnn::memory::desc &out_md);
+
+void MKLDNNFCFlattenData(const FullyConnectedParam &param,
+                         const NDArray &out_data,
+                         NDArray *in_data,
+                         mkldnn::memory::desc *out_md);
 
 void MKLDNNFCForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                      const std::vector<NDArray> &in_data,
