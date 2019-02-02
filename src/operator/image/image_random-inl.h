@@ -217,37 +217,37 @@ inline bool NormalizeOpType(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct normalize_forward {
     template<typename DType>
-    MSHADOW_XINLINE static void Map(int j, DType* out_data, const DType* in_data,
-                                    const int i, const int length, const int step,
-                                    const DType mean, const DType std_dev) {
-        KERNEL_ASSIGN(out_data[step + i*length + j], req,
-                      (in_data[step + i*length + j] - mean) / std_dev);
+    MSHADOW_XINLINE static void Map(uint32_t c, DType* out_data, const DType* in_data,
+                                    const NormalizeParam &param, const int length, 
+                                    const int step) {
+        DType mean = param.mean[param.mean.ndim() > c ? c : 0];
+        DType std_dev = param.std[param.std.ndim() > c ? c : 0];
+        
+        #pragma omp parallel for
+        for (int i = 0; i < length; ++i) {
+          KERNEL_ASSIGN(out_data[step + c*length + i], req,
+                        (in_data[step + c*length + i] - mean) / std_dev);
+        }
     }
 };
 
 template<typename xpu>
 void NormalizeImpl(const OpContext &ctx,
-                          const std::vector<TBlob> &inputs,
-                          const std::vector<TBlob> &outputs,
-                          const std::vector<OpReqType> &req,
-                          const NormalizeParam &param,
-                          const int length,
-                          const uint32_t channel,
-                          const int step = 0) {
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<TBlob> &outputs,
+                   const std::vector<OpReqType> &req,
+                   const NormalizeParam &param,
+                   const int length,
+                   const uint32_t channel,
+                   const int step = 0) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         DType* input = inputs[0].dptr<DType>();
         DType* output = outputs[0].dptr<DType>();
-
-        for (uint32_t i = 0; i < channel; ++i) {
-            DType mean = param.mean[param.mean.ndim() > i ? i : 0];
-            DType std_dev = param.std[param.std.ndim() > i ? i : 0];
-            mxnet_op::Kernel<normalize_forward<req_type>, xpu>::Launch(
-                s, length, output, input,
-                i, length, step, mean, std_dev);
-        }
+        mxnet_op::Kernel<normalize_forward<req_type>, xpu>::Launch(
+            s, channel, output, input, param, length, step);
       });
     });
 }
