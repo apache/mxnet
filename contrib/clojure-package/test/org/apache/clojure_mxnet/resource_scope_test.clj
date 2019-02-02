@@ -93,35 +93,33 @@
 ;;; Note that if first is returned the rest of the collection ndarrays will
 ;;; NOT be disposed
 (deftest test-list-creation-with-returning-first
-  (let [native-resources (atom {})
-        return-val (resource-scope/using
-                    (let [temp-ndarrays (mapv (constantly (ndarray/ones [3 1])) (range 5))
-                          _ (swap! native-resources assoc :temp-ndarrays temp-ndarrays)]
-                      (first temp-ndarrays)))]
-    (is (false? (ndarray/is-disposed return-val)))
-    (is (every? false? (mapv ndarray/is-disposed (:temp-ndarrays @native-resources))))))
-
-;;; To have the rest of the collection disposed you need to call copy on the result
-(deftest test-list-creation-with-return-a-copy-of-first
-  (let [native-resources (atom {})
-        return-val (resource-scope/using
-                    (let [temp-ndarrays (repeatedly 3 #(ndarray/ones [3 1]))
-                          _ (swap! native-resources assoc :temp-ndarrays temp-ndarrays)]
-                      (ndarray/copy (first temp-ndarrays))))]
-    (is (false? (ndarray/is-disposed return-val)))
-    (is (every? true? (mapv ndarray/is-disposed (:temp-ndarrays @native-resources))))))
-
-;;; If you don't assign them all to a let vector binding and just return the first
-;; then they are disposed as usual
-(deftest test-list-creation-with-return-a-copy-of-first
   (let [native-resources (atom [])
         return-val (resource-scope/using
-                    (first (repeatedly 5 #(do
-                                            (let [x (ndarray/ones [3 1])]
-                                              (swap! native-resources conj x)
-                                              x)))))]
+                    (let [temp-ndarrays (doall (repeatedly 3 #(ndarray/ones [3 1])))
+                          _ (reset! native-resources temp-ndarrays)]
+                      (first temp-ndarrays)))]
     (is (false? (ndarray/is-disposed return-val)))
-    (is (every? true? (mapv ndarray/is-disposed (:temp-ndarrays @native-resources))))))
+    (is (= [false true true] (mapv ndarray/is-disposed @native-resources)))))
+
+;;; collections not referenced are disposed
+(deftest test-list-creation
+  (let [native-resources (atom [])
+        return-val (resource-scope/using
+                    (let [temp-ndarrays (doall (repeatedly 3 #(ndarray/ones [3 1])))
+                          _ (reset! native-resources temp-ndarrays)]
+                      (ndarray/ones [3 1])))]
+    (is (false? (ndarray/is-disposed return-val)))
+    (is (= [true true true] (mapv ndarray/is-disposed @native-resources)))))
+
+(deftest test-list-creation-without-let
+  (let [native-resources (atom [])
+        return-val (resource-scope/using
+                    (first (doall (repeatedly 3 #(do
+                                             (let [x (ndarray/ones [3 1])]
+                                               (swap! native-resources conj x)
+                                               x))))))]
+    (is (false? (ndarray/is-disposed return-val)))
+    (is (= [false true true] (mapv ndarray/is-disposed @native-resources)))))
 
 (deftest test-with-let
   (let [native-resources (atom {})
