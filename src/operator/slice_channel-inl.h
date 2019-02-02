@@ -99,7 +99,13 @@ class SliceChannelOp : public Operator {
     for (int i = 0; i < size_; ++i) {
       outputs[i] = out_data[i].get_with_shape<xpu, 3, DType>(slice_shape, s);
     }
-    Split(data, &outputs, 1, req);
+
+    // 3D dshape and trailing==1, split_2d can be used to speedup
+    if (trailing == 1 && std::is_same<xpu, cpu>::value) {
+      Split_2D(data, &outputs, 1, req);
+    } else {
+      Split(data, &outputs, 1, req);
+    }
   }
 
   virtual void Backward(const OpContext &ctx,

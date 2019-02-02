@@ -101,6 +101,42 @@ void Split(const mshadow::Tensor<xpu, dim, DType> &input,
     split_helper<xpu, dim, dim-1>(input, output, dimension, req);
   }
 }
+
+template<typename cpu, int dim, typename DType>
+void Split_2D(const mshadow::Tensor<cpu, dim, DType> &input,
+           std::vector<mshadow::Tensor<cpu, dim, DType> > *output,
+           const int dimension, const std::vector<OpReqType> &req) {
+  if (dimension != 1) {
+    LOG(FATAL) << "dimension (" << dimension << ") must == 1";
+  }
+  if (dim != 3) {
+    LOG(FATAL) << "dimension (" << dim << ") must == 3";
+  } else {
+    std::vector<mshadow::Tensor<cpu, dim, DType> > out = *output;
+    size_t size = out.size();
+    std::vector<int>slice_len;
+    std::vector<int>begin_pos;
+    begin_pos.push_back(0);
+
+    for (index_t i = 0; i < size; ++i) {
+      slice_len.push_back(out[i].size(dimension));
+      begin_pos.push_back(begin_pos[i] + out[i].size(dimension));
+    }
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (int i = 0; i < input.shape_[0]; i++) {
+      int iRow = i*input.shape_[1];
+      for (int j = 0; j < size; j++) {
+        int jRow = i*slice_len[j];
+        int iPos = iRow + begin_pos[j];
+        for (int k = 0; k < slice_len[j]; k++) {
+          out[j].dptr_[jRow + k] = input.dptr_[iPos + k];
+        }
+      }
+    }
+  }
+}
+
+
 }  // namespace op
 }  // namespace mxnet
 #endif  // MXNET_OPERATOR_CHANNEL_OP_COMMON_H_
