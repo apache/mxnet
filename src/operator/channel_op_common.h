@@ -113,22 +113,22 @@ void Split_2D(const mshadow::Tensor<cpu, dim, DType> &input,
     LOG(FATAL) << "dimension (" << dim << ") must == 3";
   } else {
     std::vector<mshadow::Tensor<cpu, dim, DType> > out = *output;
-    size_t size = out.size();
+    int size = out.size();
     std::vector<int> slice_len;
     std::vector<int> begin_pos;
     begin_pos.push_back(0);
 
-    for (size_t i = 0; i < size; ++i) {
+    for (int i = 0; i < size; ++i) {
       slice_len.push_back(out[i].size(dimension));
       begin_pos.push_back(begin_pos[i] + out[i].size(dimension));
     }
 #pragma omp parallel for
-    for (size_t i = 0; i < input.shape_[0]; i++) {
-      size_t iRow = i * input.shape_[1];
+    for (int i = 0; i < input.shape_[0]; i++) {
+      int iRow = i * input.shape_[1];
       for (size_t j = 0; j < size; j++) {
-        size_t jRow = i * slice_len[j];
-        size_t iPos = iRow + begin_pos[j];
-        for (size_t k = 0; k < slice_len[j]; k++) {
+        int jRow = i * slice_len[j];
+        int iPos = iRow + begin_pos[j];
+        for (int k = 0; k < slice_len[j]; k++) {
           out[j].dptr_[jRow + k] = input.dptr_[iPos + k];
         }
       }
