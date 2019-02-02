@@ -61,6 +61,30 @@
     (sym/fully-connected "fc3" {:data data :num-hidden 10})
     (sym/softmax-output "softmax" {:data data})))
 
+
+(defn train-data []
+  (mx-io/mnist-iter {:image (str data-dir "train-images-idx3-ubyte")
+                     :label (str data-dir "train-labels-idx1-ubyte")
+                     :label-name "softmax_label"
+                     :input-shape [784]
+                     :batch-size batch-size
+                     :shuffle true
+                     :flat true
+                     :silent false
+                     :seed 10
+                     :num-parts num-workers
+                     :part-index 0}))
+
+(defn eval-data []
+  (mx-io/mnist-iter {:image (str data-dir "t10k-images-idx3-ubyte")
+                     :label (str data-dir "t10k-labels-idx1-ubyte")
+                     :input-shape [784]
+                     :batch-size batch-size
+                     :flat true
+                     :silent false
+                     :num-parts num-workers
+                     :part-index 0}))
+
 (defn start
   ([devs] (start devs num-epoch))
   ([devs _num-epoch]
@@ -77,25 +101,8 @@
       (println "Running with context devices of" devs)
       (resource-scope/with-let [_mod (m/module (get-symbol) {:contexts devs})]
         (-> _mod
-            (m/fit {:train-data (mx-io/mnist-iter {:image (str data-dir "train-images-idx3-ubyte")
-                                                   :label (str data-dir "train-labels-idx1-ubyte")
-                                                   :label-name "softmax_label"
-                                                   :input-shape [784]
-                                                   :batch-size batch-size
-                                                   :shuffle true
-                                                   :flat true
-                                                   :silent false
-                                                   :seed 10
-                                                   :num-parts num-workers
-                                                   :part-index 0})
-                    :eval-data (mx-io/mnist-iter {:image (str data-dir "t10k-images-idx3-ubyte")
-                                                  :label (str data-dir "t10k-labels-idx1-ubyte")
-                                                  :input-shape [784]
-                                                  :batch-size batch-size
-                                                  :flat true
-                                                  :silent false
-                                                  :num-parts num-workers
-                                                  :part-index 0})
+            (m/fit {:train-data (train-data)
+                    :eval-data (eval-data)
                     :num-epoch _num-epoch
                     :fit-params (m/fit-params {:kvstore kvstore
                                                :optimizer optimizer
