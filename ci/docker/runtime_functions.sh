@@ -1025,6 +1025,8 @@ integrationtest_ubuntu_cpu_asan() {
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
     ./mlp_cpu
+    wget -q http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-0126.params
+    wget -q http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-symbol.json
     ./image-classification-predict
 }
 
