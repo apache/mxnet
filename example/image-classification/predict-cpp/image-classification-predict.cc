@@ -39,21 +39,7 @@
 #include <memory>
 #include <thread>
 #include <iomanip>
-#include <opencv2/opencv.hpp>
-// Path for c_predict_api
 #include <mxnet/c_predict_api.h>
-
-const mx_float DEFAULT_MEAN = 117.0;
-
-static std::string trim(const std::string& input) {
-  auto not_space = [](int ch) {
-    return !std::isspace(ch);
-  };
-  auto output = input;
-  output.erase(output.begin(), std::find_if(output.begin(), output.end(), not_space));
-  output.erase(std::find_if(output.rbegin(), output.rend(), not_space).base(), output.end());
-  return output;
-}
 
 // Read file to buffer
 class BufferFile {
@@ -90,96 +76,6 @@ class BufferFile {
   }
 };
 
-void GetImageFile(const std::string& image_file,
-                  mx_float* image_data, int channels,
-                  cv::Size resize_size, const mx_float* mean_data = nullptr) {
-  // Read all kinds of file into a BGR color 3 channels image
-  cv::Mat im_ori = cv::imread(image_file, cv::IMREAD_COLOR);
-
-  if (im_ori.empty()) {
-    std::cerr << "Can't open the image. Please check " << image_file << ". \n";
-    assert(false);
-  }
-
-  cv::Mat im;
-
-  resize(im_ori, im, resize_size);
-
-  int size = im.rows * im.cols * channels;
-
-  mx_float* ptr_image_r = image_data;
-  mx_float* ptr_image_g = image_data + size / 3;
-  mx_float* ptr_image_b = image_data + size / 3 * 2;
-
-  float mean_b, mean_g, mean_r;
-  mean_b = mean_g = mean_r = DEFAULT_MEAN;
-
-  for (int i = 0; i < im.rows; i++) {
-    auto data = im.ptr<uchar>(i);
-
-    for (int j = 0; j < im.cols; j++) {
-      if (mean_data) {
-        mean_r = *mean_data;
-        if (channels > 1) {
-          mean_g = *(mean_data + size / 3);
-          mean_b = *(mean_data + size / 3 * 2);
-        }
-        mean_data++;
-      }
-      if (channels > 1) {
-        *ptr_image_b++ = static_cast<mx_float>(*data++) - mean_b;
-        *ptr_image_g++ = static_cast<mx_float>(*data++) - mean_g;
-      }
-
-      *ptr_image_r++ = static_cast<mx_float>(*data++) - mean_r;;
-    }
-  }
-}
-
-// LoadSynsets
-// Code from : https://github.com/pertusa/mxnet_predict_cc/blob/master/mxnet_predict.cc
-std::vector<std::string> LoadSynset(const std::string& synset_file) {
-  std::ifstream fi(synset_file.c_str());
-
-  if (!fi.is_open()) {
-    std::cerr << "Error opening synset file " << synset_file << std::endl;
-    assert(false);
-  }
-
-  std::vector<std::string> output;
-
-  std::string synset, lemma;
-  while (fi >> synset) {
-    getline(fi, lemma);
-    output.push_back(lemma);
-  }
-
-  fi.close();
-
-  return output;
-}
-
-void PrintOutputResult(const std::vector<float>& data, const std::vector<std::string>& synset) {
-  if (data.size() != synset.size()) {
-    std::cerr << "Result data and synset size do not match!" << std::endl;
-  }
-
-  float best_accuracy = 0.0;
-  std::size_t best_idx = 0;
-
-  for (std::size_t i = 0; i < data.size(); ++i) {
-    std::cout << "Accuracy[" << i << "] = " << std::setprecision(8) << data[i] << std::endl;
-
-    if (data[i] > best_accuracy) {
-      best_accuracy = data[i];
-      best_idx = i;
-    }
-  }
-
-  std::cout << "Best Result: " << trim(synset[best_idx]) << " (id=" << best_idx << ", " <<
-            "accuracy=" << std::setprecision(8) << best_accuracy << ")" << std::endl;
-}
-
 void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
              NDListHandle nd_hnd, const std::string &synset_file, int i) {
   auto image_size = image_data.size();
@@ -212,11 +108,6 @@ void predict(PredictorHandle pred_hnd, const std::vector<mx_float> &image_data,
   // Release Predictor
   MXPredFree(pred_hnd);
 
-  // Synset path for your model, you have to modify it
-  auto synset = LoadSynset(synset_file);
-
-  // Print Output Data
-  PrintOutputResult(data, synset);
 }
 
 int main(int argc, char* argv[]) {
@@ -283,10 +174,13 @@ int main(int argc, char* argv[]) {
     MXNDListGet(nd_hnd, nd_index, &nd_key, &nd_data, &nd_shape, &nd_ndim);
   }
 
-  // Read Image Data
-  std::vector<mx_float> image_data(image_size);
 
-  GetImageFile(test_file, image_data.data(), channels, cv::Size(width, height), nd_data);
+  std::vector<mx_float> image_data(image_size);
+  for (int i = 0; i < image_size; i++) {
+    image_data[i] = 0;
+  }
+
+//  GetImageFile(test_file, image_data.data(), channels, cv::Size(width, height), nd_data);
 
   if (num_threads == 1) {
     // Create Predictor
@@ -301,7 +195,6 @@ int main(int argc, char* argv[]) {
                  input_shape_indptr,
                  input_shape_data,
                  &pred_hnd);
-    assert(pred_hnd);
 
     predict(pred_hnd, image_data, nd_hnd, synset_file, 0);
   } else {
@@ -318,8 +211,6 @@ int main(int argc, char* argv[]) {
                             input_shape_data,
                             pred_hnds.size(),
                             pred_hnds.data());
-    for (auto hnd : pred_hnds)
-      assert(hnd);
 
     std::vector<std::thread> threads;
     for (int i = 0; i < num_threads; i++)

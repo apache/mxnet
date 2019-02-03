@@ -433,6 +433,7 @@ build_ubuntu_cpu_cmake_asan() {
     ASAN_OPTIONS=detect_leaks=0 \
     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
     make -j $(nproc) mlp_cpu
+    make -j $(nproc) image-classification-predict
     popd
 }
 
@@ -1024,6 +1025,7 @@ integrationtest_ubuntu_cpu_asan() {
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
     ./mlp_cpu
+    ./image-classification-predict
 }
 
 integrationtest_ubuntu_gpu_cpp_package() {

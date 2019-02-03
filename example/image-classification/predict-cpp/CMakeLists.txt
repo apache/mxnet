@@ -1,9 +1,9 @@
 # Check OpenCV
-if(NOT USE_OPENCV OR NOT OpenCV_FOUND OR OpenCV_VERSION_MAJOR LESS 3)
-  message(WARNING "\
-OpenCV version >= 3 should be enabled and found to build image classification example, skipping...")
-  return()
-endif()
+#if(NOT USE_OPENCV OR NOT OpenCV_FOUND OR OpenCV_VERSION_MAJOR LESS 3)
+#  message(WARNING "\
+#OpenCV version >= 3 should be enabled and found to build image classification example, skipping...")
+#  return()
+#endif()
 
 if(NOT MSVC)
   set(IMG_CLASSIFICATION_EXAMPLE_STATIC_LINK ON CACHE BOOL "\
