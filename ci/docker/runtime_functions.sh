@@ -426,7 +426,6 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_JEMALLOC=OFF \
         -DUSE_ASAN=ON \
         -DUSE_CPP_PACKAGE=ON \
-        -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
     # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
@@ -1022,11 +1021,12 @@ integrationtest_ubuntu_cpu_asan() {
 
     # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
     export ASAN_OPTIONS=exitcode=0
-    cd /work/mxnet/build/cpp-package/example/
-    /work/mxnet/cpp-package/example/get_data.sh
-    ./mlp_cpu
-    wget -q http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-0126.params
-    wget -q http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-symbol.json
+    # cd /work/mxnet/build/cpp-package/example/
+    # /work/mxnet/cpp-package/example/get_data.sh
+    # ./mlp_cpu
+    cd /work/mxnet/build/example/image-classification/predict-cpp/
+    wget -nc -q http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-0126.params
+    wget -nc -q http://data.mxnet.io/mxnet/models/imagenet/inception-bn/Inception-BN-symbol.json
     ./image-classification-predict
 }
 

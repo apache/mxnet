@@ -48,7 +48,8 @@ class BufferFile {
     ifs.seekg(0, std::ios::beg);
     std::cout << file_path.c_str() << " ... " << length_ << " bytes\n";
 
-    buffer_.reset(new char[length_]);
+    buffer_.reset(new char[length_ + 1]);
+    buffer_[length_] = '\0';
     ifs.read(buffer_.get(), length_);
     ifs.close();
   }
@@ -101,42 +102,44 @@ int main(int argc, char* argv[]) {
     image_data[i] = 0;
   }
 
-  // Create Predictor
-  PredictorHandle pred_hnd;
-  MXPredCreate(static_cast<const char*>(json_data.GetBuffer()),
-               static_cast<const char*>(param_data.GetBuffer()),
-               static_cast<int>(param_data.GetLength()),
-               dev_type,
-               dev_id,
-               num_input_nodes,
-               input_keys,
-               input_shape_indptr,
-               input_shape_data,
-               &pred_hnd);
+  for (int i = 0; i < 1234; i++) {
+      // Create Predictor
+      PredictorHandle pred_hnd;
+      MXPredCreate(static_cast<const char*>(json_data.GetBuffer()),
+                   static_cast<const char*>(param_data.GetBuffer()),
+                   static_cast<int>(param_data.GetLength()),
+                   dev_type,
+                   dev_id,
+                   num_input_nodes,
+                   input_keys,
+                   input_shape_indptr,
+                   input_shape_data,
+                   &pred_hnd);
 
-  // Set Input Image
-  MXPredSetInput(pred_hnd, "data", image_data.data(), static_cast<mx_uint>(image_size));
+      // Set Input Image
+      MXPredSetInput(pred_hnd, "data", image_data.data(), static_cast<mx_uint>(image_size));
 
-  // Do Predict Forward
-  MXPredForward(pred_hnd);
+      // Do Predict Forward
+      MXPredForward(pred_hnd);
 
-  mx_uint output_index = 0;
+      mx_uint output_index = 0;
 
-  mx_uint* shape = nullptr;
-  mx_uint shape_len;
+      mx_uint* shape = nullptr;
+      mx_uint shape_len;
 
-  // Get Output Result
-  MXPredGetOutputShape(pred_hnd, output_index, &shape, &shape_len);
+      // Get Output Result
+      MXPredGetOutputShape(pred_hnd, output_index, &shape, &shape_len);
 
-  std::size_t size = 1;
-  for (mx_uint i = 0; i < shape_len; ++i) { size *= shape[i]; }
+      std::size_t size = 1;
+      for (mx_uint i = 0; i < shape_len; ++i) { size *= shape[i]; }
 
-  std::vector<float> data(size);
+      std::vector<float> data(size);
 
-  MXPredGetOutput(pred_hnd, output_index, &(data[0]), static_cast<mx_uint>(size));
+      MXPredGetOutput(pred_hnd, output_index, &(data[0]), static_cast<mx_uint>(size));
 
-  // Release Predictor
-  MXPredFree(pred_hnd);
+      // Release Predictor
+      MXPredFree(pred_hnd);
+  }
 
   printf("run successfully\n");
 
