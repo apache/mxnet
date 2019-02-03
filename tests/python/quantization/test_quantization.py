@@ -593,7 +593,8 @@ def test_quantize_model_with_forward():
             excluded_names = []
             if mx.current_context() == mx.cpu():
                excluded_names += ['fc']
-            excluded_names += ['concat']
+            else:
+               excluded_names += ['concat']
 
             optional_names = ['pool0']
             for skip_optional_names in [False, True]:
