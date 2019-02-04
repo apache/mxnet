@@ -68,7 +68,7 @@ class GraphExecutor : public Executor {
   const std::unordered_map<std::string, NDArray>& arg_grad_map() const override;
   const std::unordered_map<std::string, NDArray>& aux_state_map() const override;
   void Print(std::ostream &os) const override; // NOLINT(*)
-  void SetMonitorCallback(const MonitorCallback& callback, bool monitor_all) override;
+  void SetMonitorCallback(const MonitorCallback& callback, bool monitor_all = false) override;
   // Initialize the rest of attributes
   // after setting up arguments.
   void FinishInitGraph(nnvm::Symbol symbol, nnvm::Graph g,
