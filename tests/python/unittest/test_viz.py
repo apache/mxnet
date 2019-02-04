@@ -19,6 +19,7 @@ import unittest
 import warnings
 
 import mxnet as mx
+import numpy as np
 
 
 def test_print_summary():
@@ -55,6 +56,7 @@ def test_plot_network():
     net = mx.sym.SoftmaxOutput(data=net, name='out')
     with warnings.catch_warnings(record=True) as w:
         digraph = mx.viz.plot_network(net, shape={'data': (100, 200)},
+                                      dtype={'data': np.float32},
                                       node_attrs={"fixedsize": "false"})
     assert len(w) == 1
     assert "There are multiple variables with the same name in your graph" in str(w[-1].message)
