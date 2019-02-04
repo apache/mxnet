@@ -31,12 +31,12 @@ def _cast_symbol_NDArray(s, dtype):
     print("Trying to cast... " + str(type(s)))
     if isinstance(s, Symbol):
         print("Encountered symbol, casting to " + str(dtype))
-        return symbol.cast(s, dtype=dtype)
+        return symbol.amp_cast(s, dtype=dtype)
     elif isinstance(s, NDArray):
         print("Encountered NDArray, with dtype = " + str(s.dtype))
-        if s.dtype != dtype:
+        if s.dtype != dtype and (s.dtype == np.float16 or s.dtype == np.float32):
             print("Casting to " + str(dtype))
-            return ndarray.cast(s, dtype=dtype)
+            return ndarray.amp_cast(s, dtype=dtype)
         else:
             return s
     else:
@@ -57,6 +57,42 @@ def _wrap_symbol_functions(module):
             args = tuple(new_args)
             print("Casting **kwargs")
             kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
+            return f(*args, **kwargs)
+        return new_fun
+
+    def symbol_widest_wrapper(f):
+        def new_fun(*args, **kwargs):
+            print("Wrapper of " + f.__name__ + " to widest type")
+            symbols = []
+            is_symbol = False
+            args = list(args)
+            for i, arg in enumerate(args):
+                if isinstance(arg, (Symbol, NDArray)):
+                    symbols.append((args, i, arg))
+                    is_symbol = is_symbol or isinstance(arg, Symbol)
+            for k, arg in kwargs.items():
+                if isinstance(arg, (Symbol, NDArray)):
+                    symbols.append((kwargs, k, arg))
+                    is_symbol = is_symbol or isinstance(arg, Symbol)
+            if not is_symbol:
+                # NDArray case
+                widest_type = np.float16
+                for _, _, arg in symbols:
+                    if isinstance(arg, NDArray):
+                        if arg.dtype == np.float32:
+                            widest_type = np.float32
+                for arr, index, arg in symbols:
+                    if arg.dtype != widest_type and arg.dtype == np.float16:
+                        arr[index] = ndarray.amp_cast(arg, dtype=widest_type)
+            else:
+                # Symbol case
+                sym_to_check = list(map(lambda x: x[2], symbols))
+                casted_syms = symbol.amp_multicast(*sym_to_check, num_outputs=len(sym_to_check))
+                symbols = list(map(lambda x_y: (x_y[0][0], x_y[0][1], x_y[1]),
+                                   zip(symbols, casted_syms)))
+                for arr, index, arg in symbols:
+                    arr[index] = arg
+
             return f(*args, **kwargs)
         return new_fun
 
@@ -83,6 +119,15 @@ def _wrap_symbol_functions(module):
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, symbol_wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+        except AttributeError:
+            print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
+            pass
+
+    for fun_name in lists.symbol.WIDEST_TYPE_CASTS:
+        print("Wrapping widest cast func " + fun_name + " in " + module.__name__)
+        try:
+            f_to_wrap = getattr(module, fun_name)
+            setattr(module, fun_name, symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
             print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
