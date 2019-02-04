@@ -1843,12 +1843,18 @@ MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
 
 /*!
  * \brief set a call back to notify the completion of operation
- * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
  */
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
-                                           void* callback_handle,
-                                           bool monitor_all);
+                                           void* callback_handle);
+
+/*!
+ * \brief set a call back to notify the completion of operation
+ * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
+ */
+MXNET_DLL int MXExecutorSetMonitorCallbackEX(ExecutorHandle handle,
+                                             ExecutorMonitorCallback callback,
+                                             void *callback_handle, bool monitor_all);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

@@ -283,8 +283,6 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     min_val = np.min(arr)
     max_val = np.max(arr)
     th = max(abs(min_val), abs(max_val))
-    if min_val >= 0:
-        num_quantized_bins = (num_quantized_bins // 2) * 4 + 1
 
     hist, hist_edges = np.histogram(arr, bins=num_bins, range=(-th, th))
     zero_bin_idx = num_bins // 2

@@ -44,9 +44,9 @@ inline Monitor::Monitor(int interval, std::regex pattern, StatFunc stat_func)
 }
 
 inline void Monitor::install(Executor *exe, bool monitor_all) {
-  MXExecutorSetMonitorCallback(exe->handle_,
-                               static_cast<ExecutorMonitorCallback>(&Monitor::executor_callback),
-                               this, monitor_all);
+  MXExecutorSetMonitorCallbackEX(exe->handle_,
+                                 static_cast<ExecutorMonitorCallback>(&Monitor::executor_callback),
+                                 this, monitor_all);
   exes.push_back(exe);
 }
 

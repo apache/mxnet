@@ -1614,12 +1614,11 @@ int MXExecutorReshape(int partial_shaping,
 
 /*!
  * \brief set a call back to notify the completion of operation
- * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
  */
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
-                                           void* callback_handle,
-                                           bool monitor_all);
+                                           void* callback_handle);
+
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------
