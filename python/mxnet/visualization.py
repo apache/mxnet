@@ -224,6 +224,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
         Specifies the shape of the input tensors. If specified, the visualization will include
         the shape of the tensors between the nodes. `shape` is a dictionary mapping
         input symbol names (str) to the corresponding tensor shape (tuple).
+    dtype: dict, optional
+        Specifies the type of the input tensors. If specified, the visualization will include
+        the type of the tensors between the nodes. `dtype` is a dictionary mapping
+        input symbol names (str) to the corresponding tensor type (e.g. `numpy.float32`).
     node_attrs: dict, optional
         Specifies the attributes for nodes in the generated visualization. `node_attrs` is
         a dictionary of Graphviz attribute names and values. For example::
