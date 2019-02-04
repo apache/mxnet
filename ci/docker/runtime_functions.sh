@@ -870,8 +870,9 @@ unittest_ubuntu_cpu_clojure() {
 
 unittest_ubuntu_cpu_clojure_integration() {
     set -ex
-    make scalapkg USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
-    make scalainstall USE_OPENCV=1 USE_BLAS=openblas USE_DIST_KVSTORE=1 ENABLE_TESTCOVERAGE=1
+    cd scala-package
+    mvn -B install
+    cd ..
     ./contrib/clojure-package/integration-tests.sh
 }
 
@@ -1271,7 +1272,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    mvn -Pci-nightly install
+    mvn -B -Pci-nightly install
     bash bin/java_sample.sh
     bash bin/run_od.sh
 }
@@ -1279,7 +1280,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    mvn -Pci-nightly install
+    mvn -B -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
 }
