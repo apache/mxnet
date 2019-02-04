@@ -2529,7 +2529,8 @@ def test_flip():
 
 @with_seed()
 def test_stn():
-    np.set_printoptions(threshold=np.nan)
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
     num_filter = 2  # conv of loc net
     kernel = (3, 3)  # conv of loc net
     num_hidden = 6  # fc of loc net
