@@ -106,7 +106,11 @@ def build_r_docs(app):
 
 def build_scala(app):
     """build scala for scala docs, java docs, and clojure docs to use"""
-    _run_cmd("cd %s/../scala-package && mvn -B install -DskipTests" % app.builder.srcdir)
+    if any(v in _BUILD_VER for v in ['1.2.', '1.3.', '1.4.']):
+        _run_cmd("cd %s/.. && make scalapkg" % app.builder.srcdir)
+        _run_cmd("cd %s/.. && make scalainstall" % app.builder.srcdir)
+    else:
+        _run_cmd("cd %s/../scala-package && mvn -B install -DskipTests" % app.builder.srcdir)
 
 def build_scala_docs(app):
     """build scala doc and then move the outdir"""
@@ -119,7 +123,7 @@ def build_scala_docs(app):
         '`find infer -name "*.jar" | tr "\\n" ":" `'
     ])
     # There are unresolvable errors on mxnet 1.2.x. We are ignoring those errors while aborting the ci on newer versions
-    scala_ignore_errors = '; exit 0' if '1.2.' or '1.3.' in _BUILD_VER else ''
+    scala_ignore_errors = '; exit 0' if any(v in _BUILD_VER for v in ['1.2.', '1.3.']) else ''
     _run_cmd('cd {}; scaladoc `{}` -classpath {} -feature -deprecation {}'
              .format(scala_path, scala_doc_sources, scala_doc_classpath, scala_ignore_errors))
     dest_path = app.builder.outdir + '/api/scala/docs'
