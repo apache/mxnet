@@ -607,40 +607,7 @@ def test_convolution_versions():
     check_consistency(syms, ctx_list)
 
 
-@with_seed()
-def test_pooling_with_convention():
-    # transpose shape to bring feature dimension 'c' from 2nd position to last
-    def transpose(shape):
-        return (shape[0],) + shape[2:] + (shape[1],)
-    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
-    # We compare cpu and gpu results only within a given precision.
-    for layout in ['NCHW', 'NHWC']:
-        for data_type in [np.float64, np.float32, np.float16]:
-            logical_inshape = (2, 2, 10, 10)
-            inshape = logical_inshape if layout == 'NCHW' else transpose(logical_inshape)
-            gpu_ctx = {'ctx': mx.gpu(0), 'pool_data': inshape,
-                       'type_dict': {'pool_data': data_type}}
-            cpu_ctx = {'ctx': mx.cpu(0), 'pool_data': inshape,
-                       'type_dict': {'pool_data': data_type}}
-            sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid',
-                                 name='pool', layout = layout, cudnn_off = False)
-            sym_no_cudnn = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='valid',
-                                          name='pool', layout = layout, cudnn_off = True)
-            check_consistency([sym, sym_no_cudnn, sym], [gpu_ctx, gpu_ctx, cpu_ctx])
-
-            sym = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full',
-                                 name='pool', layout = layout, cudnn_off = False)
-            sym_no_cudnn = mx.sym.Pooling(kernel=(3,3), pool_type='max', pooling_convention='full',
-                                          name='pool', layout = layout, cudnn_off = True)
-            check_consistency([sym, sym_no_cudnn, sym], [gpu_ctx, gpu_ctx, cpu_ctx])
-
-            sym = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True,
-                                 name='pool', layout = layout, cudnn_off = False)
-            sym_no_cudnn = mx.sym.Pooling(kernel=(300,300), pool_type='max', global_pool=True,
-                                          name='pool', layout = layout, cudnn_off = True)
-            check_consistency([sym, sym_no_cudnn, sym], [gpu_ctx, gpu_ctx, cpu_ctx])
-
-
+# More max-pooling strides and pads to test cudnn pooling implementation code paths
 @with_seed()
 def test_pooling_nhwc_with_convention():
     def make_pooling_syms(**kwargs):
@@ -884,10 +851,23 @@ def test_pooling_nhwc_with_type():
 @with_seed()
 def test_pooling_versions():
 
+    # Produce the name of the 'transposed' layout, given the dimension
     def transposed_layout(ndim):
         if ndim < 3 or ndim > 5:
             raise RuntimeError("Invalid data dim, expecting 3, 4 or 5")
         return ('NWC', 'NHWC', 'NDHWC')[ndim-3]
+
+    # default padding is all zeros
+    def is_default_pad(pad):
+        return pad == (0,) * len(pad)
+
+    # default stride is all ones
+    def is_default_stride(stride):
+        return stride == (1,) * len(stride)
+
+    # returns True/False randomly with equal probability
+    def random_choice():
+        return np.random.random(1)[0] < 0.5
 
     def test_pooling_versions_helper(pool_op_list, data, kernel, pool_type, pad, stride,
                                      pooling_convention='valid', global_pool=False, p_value=2,
@@ -908,7 +888,12 @@ def test_pooling_versions():
             if global_pool:
                 pool_op_args['global_pool'] = True
             else:
-                pool_op_args.update({'pad' : pad, 'stride' : stride})
+                # Add pad and stride param if needed, plus randomly when it matches the default
+                if not is_default_pad(pad) or random_choice():
+                    pool_op_args.update({'pad' : pad})
+                if not is_default_stride(stride) or random_choice():
+                    pool_op_args.update({'stride' : stride})
+
             expected_pool_ops = ['pool', 'pool_transposed', 'pool_v1']
             if pool_op == 'pool_v1':
                 sym = mx.sym.Pooling_v1(**pool_op_args)
@@ -939,28 +924,28 @@ def test_pooling_versions():
                          tol=None):
         if dim == '1D':
             data = (3, 3, 10)
-            kernel = (4,)
+            kernels = [(4,), (4,)]
             pads = [(0,), (2,)]
             strides = [(1,), (2,)]
         elif dim == '2D_no_padding':
             data = (3, 2, 20, 20)
-            kernel = (4, 5)
+            kernels = [(3, 3), (4, 5)]
             pads = [(0, 0), (0, 0)]
             strides = [(1, 1), (2,1)]
         elif dim == '2D':
             data = (2, 2, 20, 20)
-            kernel = (4, 5)
+            kernels = [(3, 3), (4, 5), (4, 5)]
             pads = [(0, 0), (0, 0), (2, 3)]
             strides = [(1, 1), (2,1), (1, 1)]
         elif dim == '3D':
             data = (2, 3, 20, 20, 20)
-            kernel = (4, 5, 3)
+            kernels = [(4, 5, 3), (4, 5, 3)]
             pads = [(0, 0, 0), (2, 3, 2)]
             strides = [(1, 1, 1), (2, 3, 1)]
         else:
             raise RuntimeError('Unexpected pooling test class: {}.'.format(dim))
 
-        for pad, stride in zip(pads, strides):
+        for kernel, pad, stride in zip(kernels, pads, strides):
             for pooling_convention in ['valid', 'full']:
                 try:
                     test_pooling_versions_helper(pool_op_list=pool_op_list,
@@ -977,6 +962,11 @@ def test_pooling_versions():
                           count_include_pad, dtype))
                     print('environ = \n{}'.format(os.environ))
                     raise
+
+        # Make sure kernel is ignored during global_pool by sometimes setting it to a crazy value
+        kernel = kernels[0]
+        if random_choice():
+            kernel = (300,) * len(kernel)
 
         test_pooling_versions_helper(pool_op_list=pool_op_list,
                                      data=data, kernel=kernel, pad=None, stride=None,
