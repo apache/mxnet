@@ -218,27 +218,16 @@ template<int req>
 struct normalize_forward {
     template<typename DType>
     MSHADOW_XINLINE static void Map(uint32_t c, DType* out_data, const DType* in_data,
-                                    const NormalizeParam &param, const int length,
-                                    const int step) {
-        int mean_idx, std_idx;
-        if (param.mean.ndim() > c) {
-          mean_idx = c;
-        } else {
-          mean_idx = 0;
-        }
-
-        if (param.std.ndim() > c) {
-          std_idx = c;
-        } else {
-          std_idx = 0;
-        }
-        DType mean = param.mean[mean_idx];
-        DType std_dev = param.std[std_idx];
+                                    const float* mean, const uint32_t mean_ndim,
+                                    const float* std_dev, const uint32_t std_dev_ndim,
+                                    const int length, const int step) {
+        DType m = mean[mean_ndim > c ? c : 0];
+        DType s = std_dev[std_dev_ndim > c ? c : 0];
 
         #pragma omp parallel for
         for (int i = 0; i < length; ++i) {
           KERNEL_ASSIGN(out_data[step + c*length + i], req,
-                        (in_data[step + c*length + i] - mean) / std_dev);
+                        (in_data[step + c*length + i] - m) / s);
         }
     }
 };
@@ -259,7 +248,8 @@ void NormalizeImpl(const OpContext &ctx,
         DType* input = inputs[0].dptr<DType>();
         DType* output = outputs[0].dptr<DType>();
         mxnet_op::Kernel<normalize_forward<req_type>, xpu>::Launch(
-            s, channel, output, input, param, length, step);
+            s, channel, output, input, param.mean.begin(), param.mean.ndim(),
+            param.std.begin(), param.std.ndim(), length, step);
       });
     });
 }
@@ -300,14 +290,15 @@ template<int req>
 struct normalize_backward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(uint32_t c, DType* in_grad, const DType* out_grad,
-                                  const NormalizeParam &param, const int length,
-                                  const int step) {
+                                  const float* std_dev, const uint32_t std_dev_ndim,
+                                  const int length, const int step) {
     // d/dx{(x - mean) / std_dev} => (1 / std_dev)
-    DType std_dev = param.std[param.std.ndim() > c ? c : 0];
+    DType s = std_dev[std_dev_ndim > c ? c : 0];
+
     #pragma omp parallel for
     for (int i = 0; i < length; ++i) {
       KERNEL_ASSIGN(in_grad[step + c*length + i], req,
-                    out_grad[step + c*length + i] * (1.0 / std_dev));
+                    out_grad[step + c*length + i] * (1.0 / s));
     }
   }
 };
@@ -328,7 +319,8 @@ void NormalizeBackwardImpl(const OpContext &ctx,
         DType* out_grad = inputs[0].dptr<DType>();
         DType* in_grad = outputs[0].dptr<DType>();
         mxnet_op::Kernel<normalize_backward<req_type>, xpu>::Launch(
-            s, channel, in_grad, out_grad, param, length, step);
+            s, channel, in_grad, out_grad, param.std.begin(),
+            param.std.ndim(), length, step);
       });
     });
 }
