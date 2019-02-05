@@ -119,7 +119,8 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_
                                      c_str_array(excluded_symbols),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
-                                     c_str(quantized_dtype)))
+                                     c_str(quantized_dtype),
+                                     ctypes.c_bool(True)))
     return Symbol(out)
 
 
