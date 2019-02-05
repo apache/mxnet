@@ -220,8 +220,20 @@ struct normalize_forward {
     MSHADOW_XINLINE static void Map(uint32_t c, DType* out_data, const DType* in_data,
                                     const NormalizeParam &param, const int length,
                                     const int step) {
-        DType mean = param.mean[param.mean.ndim() > c ? c : 0];
-        DType std_dev = param.std[param.std.ndim() > c ? c : 0];
+        int mean_idx, std_idx;
+        if (param.mean.ndim() > c) {
+          mean_idx = c;
+        } else {
+          mean_idx = 0;
+        }
+
+        if (param.std.ndim() > c) {
+          std_idx = c;
+        } else {
+          std_idx = 0;
+        }
+        DType mean = param.mean[mean_idx];
+        DType std_dev = param.std[std_idx];
 
         #pragma omp parallel for
         for (int i = 0; i < length; ++i) {
