@@ -43,13 +43,13 @@ def _cast_symbol_NDArray(s, dtype):
         return s
 
 def _wrap_symbol_functions(module):
-    def symbol_wrapper(f, target_dtype, cond_arg=None):
-        def new_fun(*args, **kwargs):
+    def _symbol_wrapper(f, target_dtype, cond_arg=None):
+        def _new_fun(*args, **kwargs):
             print("Wrapper of " + f.__name__ + " to " + str(target_dtype))
             print("Cond_arg: " + str(cond_arg))
             if cond_arg is not None:
                 if (cond_arg[0] not in kwargs or
-                    kwargs[cond_arg[0]] not in cond_arg[1]):
+                        kwargs[cond_arg[0]] not in cond_arg[1]):
                     print("No match for " + str(cond_arg))
                     return f(*args, **kwargs)
             print("Casting *args")
@@ -58,10 +58,10 @@ def _wrap_symbol_functions(module):
             print("Casting **kwargs")
             kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
             return f(*args, **kwargs)
-        return new_fun
+        return _new_fun
 
-    def symbol_widest_wrapper(f):
-        def new_fun(*args, **kwargs):
+    def _symbol_widest_wrapper(f):
+        def _new_fun(*args, **kwargs):
             print("Wrapper of " + f.__name__ + " to widest type")
             symbols = []
             is_symbol = False
@@ -94,13 +94,13 @@ def _wrap_symbol_functions(module):
                     arr[index] = arg
 
             return f(*args, **kwargs)
-        return new_fun
+        return _new_fun
 
     for fun_name in lists.symbol.FP16_FUNCS:
         print("Wrapping fp16 func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, symbol_wrapper(f_to_wrap, np.float16))
+            setattr(module, fun_name, _symbol_wrapper(f_to_wrap, np.float16))
         except AttributeError:
             print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
@@ -109,7 +109,7 @@ def _wrap_symbol_functions(module):
         print("Wrapping fp32 func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, symbol_wrapper(f_to_wrap, np.float32))
+            setattr(module, fun_name, _symbol_wrapper(f_to_wrap, np.float32))
         except AttributeError:
             print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
@@ -118,7 +118,7 @@ def _wrap_symbol_functions(module):
         print("Wrapping fp32 func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, symbol_wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+            setattr(module, fun_name, _symbol_wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
             print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
@@ -127,7 +127,7 @@ def _wrap_symbol_functions(module):
         print("Wrapping widest cast func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, symbol_widest_wrapper(f_to_wrap))
+            setattr(module, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
             print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
