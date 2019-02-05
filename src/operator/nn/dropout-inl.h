@@ -474,7 +474,9 @@ class DropoutOp {
   real_t pkeep_;
   /*! \brief Dropout mode */
   dropout::DropoutOpMode mode_;
+  /*! \brief Axes on which dropout mask is shared in the form of broadcast multiply */
   TShape axes_;
+  /*! \brief Flag to record whether forward is executed in pass-through mode */
   bool dropout_passthrough_;
 #if MXNET_USE_CUDNN_DROPOUT
   bool cudnn_off_;
@@ -539,4 +541,6 @@ void DropoutGradCompute(const OpStatePtr& state,
 
 }  // namespace op
 }  // namespace mxnet
+
+#undef MXNET_USE_MKL_DROPOUT
 #endif  // MXNET_OPERATOR_NN_DROPOUT_INL_H_

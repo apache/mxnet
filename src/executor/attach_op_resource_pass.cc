@@ -66,6 +66,7 @@ void AttachOpResources(
       for (const ResourceRequest& req : reqs) {
         switch (req.type) {
           case ResourceRequest::kTempSpace: {
+            // the scope is needed when there's new declaration of variable.
             if (cached_temp.count(ctx) != 0) {
               requested.push_back(cached_temp.at(ctx));
             } else {
