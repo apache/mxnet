@@ -89,7 +89,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
-	NVCCFLAGS += -Werror cross-execution-space-call
+	NVCCFLAGS += -Werror cross-execution-space-call --expt-relaxed-constexpr
 endif
 
 # CFLAGS for debug
