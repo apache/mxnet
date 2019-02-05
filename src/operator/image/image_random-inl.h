@@ -218,15 +218,25 @@ template<int req>
 struct normalize_forward {
     template<typename DType>
     MSHADOW_XINLINE static void Map(uint32_t c, DType* out_data, const DType* in_data,
-                                    const std::vector<float> &mean, const std::vector<float> &std_dev,
+                                    const float mean_d0, const float mean_d1, const float mean_d2,
+                                    const float std_d0, const float std_d1, const float std_d2,
                                     const int length, const int step) {
-        DType m = mean[mean.size() > c ? c : 0];
-        DType s = std_dev[std_dev.size() > c ? c : 0];
-
+        float mean, std;
+        switch (c) {
+          case 0 : mean = mean_d0;
+                   std = std_d0;
+                   break;
+          case 1 : mean = mean_d1;
+                   std = std_d1;
+                   break;
+          case 2 : mean = mean_d2;
+                   std = std_d2;
+                   break;
+        }
         #pragma omp parallel for
         for (int i = 0; i < length; ++i) {
           KERNEL_ASSIGN(out_data[step + c*length + i], req,
-                        (in_data[step + c*length + i] - m) / s);
+                        (in_data[step + c*length + i] - mean) / std);
         }
     }
 };
@@ -236,8 +246,9 @@ void NormalizeImpl(const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<TBlob> &outputs,
                    const std::vector<OpReqType> &req,
-                   const std::vector<float> &mean,
-                   const std::vector<float> &std_dev,
+                   const float mean_d0, const float mean_d1,
+                   const float mean_d2, const float std_d0,
+                   const float std_d1, const float std_d2,
                    const int length,
                    const uint32_t channel,
                    const int step = 0) {
@@ -248,7 +259,8 @@ void NormalizeImpl(const OpContext &ctx,
         DType* input = inputs[0].dptr<DType>();
         DType* output = outputs[0].dptr<DType>();
         mxnet_op::Kernel<normalize_forward<req_type>, xpu>::Launch(
-            s, channel, output, input, mean, std_dev, length, step);
+            s, channel, output, input, mean_d0, mean_d1, mean_d2,
+            std_d0, std_d1, std_d2, length, step);
       });
     });
 }
@@ -265,23 +277,35 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
 
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
 
-  // Prepare mean and std_dev vector
-  std::vector<float> mean(param.mean.ndim());
-  std::vector<float> std_dev(param.std.ndim());
+  // Note: We need mean and std_dev in the kernel.
+  // It is costly (device copy) to pass it as vector, for gpu kernel.
+  // Hence, passing it as below for performance.
+  float mean_d0, mean_d1, mean_d2;
+  float std_d0, std_d1, std_d2;
 
-  for (uint32_t idx = 0; idx < param.mean.ndim(); ++idx) {
-    mean[idx] = param.mean[idx];
+  // Mean and Std can be 1 or 3 D only.
+  if (param.mean.ndim() == 1) {
+    mean_d0 = mean_d1 = mean_d2 = param.mean[0];
+  } else {
+    mean_d0 = param.mean[0];
+    mean_d1 = param.mean[1];
+    mean_d2 = param.mean[2];
   }
 
-  for (uint32_t idx = 0; idx < param.std.ndim(); ++idx) {
-    std_dev[idx] = param.std[idx];
+  if (param.std.ndim() == 1) {
+    std_d0 = std_d1 = std_d2 = param.std[0];
+  } else {
+    std_d0 = param.std[0];
+    std_d1 = param.std[1];
+    std_d2 = param.std[2];
   }
 
   // 3D input (c, h, w)
   if (inputs[0].ndim() == 3) {
     const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
     const uint32_t channel = inputs[0].shape_[0];
-    NormalizeImpl<xpu>(ctx, inputs, outputs, req, mean, std_dev, length, channel);
+    NormalizeImpl<xpu>(ctx, inputs, outputs, req, mean_d0, mean_d1, mean_d2,
+                       std_d0, std_d1, std_d2, length, channel);
   } else if (inputs[0].ndim() == 4) {
     // 4D input (n, c, h, w)
     const int batch_size = inputs[0].shape_[0];
@@ -291,7 +315,8 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
 
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {
-      NormalizeImpl<xpu>(ctx, inputs, outputs, req, mean, std_dev, length, channel, n*step);
+      NormalizeImpl<xpu>(ctx, inputs, outputs, req, mean_d0, mean_d1, mean_d2,
+                       std_d0, std_d1, std_d2, length, channel, n*step);
     }
   }
 }
@@ -301,15 +326,23 @@ template<int req>
 struct normalize_backward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(uint32_t c, DType* in_grad, const DType* out_grad,
-                                  const std::vector<float> &std_dev,
+                                  const float std_d0, const float std_d1, const float std_d2,
                                   const int length, const int step) {
     // d/dx{(x - mean) / std_dev} => (1 / std_dev)
-    DType s = std_dev[std_dev.size() > c ? c : 0];
+    float std_dev;
+    switch (c) {
+        case 0 : std_dev = std_d0;
+                 break;
+        case 1 : std_dev = std_d1;
+                 break;
+        case 2 : std_dev = std_d2;
+                 break;
+    }
 
     #pragma omp parallel for
     for (int i = 0; i < length; ++i) {
       KERNEL_ASSIGN(in_grad[step + c*length + i], req,
-                    out_grad[step + c*length + i] * (1.0 / s));
+                    out_grad[step + c*length + i] * (1.0 / std_dev));
     }
   }
 };
@@ -319,7 +352,7 @@ void NormalizeBackwardImpl(const OpContext &ctx,
                            const std::vector<TBlob> &inputs,
                            const std::vector<TBlob> &outputs,
                            const std::vector<OpReqType> &req,
-                           const std::vector<float> &std_dev,
+                           const float std_d0, const float std_d1, const float std_d2,
                            const int length,
                            const uint32_t channel,
                            const int step = 0) {
@@ -330,7 +363,7 @@ void NormalizeBackwardImpl(const OpContext &ctx,
         DType* out_grad = inputs[0].dptr<DType>();
         DType* in_grad = outputs[0].dptr<DType>();
         mxnet_op::Kernel<normalize_backward<req_type>, xpu>::Launch(
-            s, channel, in_grad, out_grad, std_dev, length, step);
+            s, channel, in_grad, out_grad, std_d0, std_d1, std_d2, length, step);
       });
     });
 }
@@ -345,12 +378,16 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
 
-  // Prepare std_dev vector
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-  std::vector<float> std_dev(param.std.ndim());
+  float std_d0, std_d1, std_d2;
 
-  for (uint32_t idx = 0; idx < param.std.ndim(); ++idx) {
-    std_dev[idx] = param.std[idx];
+  // Std can be 1 or 3 D only
+  if (param.std.ndim() == 1) {
+    std_d0 = std_d1 = std_d2 = param.std[0];
+  } else {
+    std_d0 = param.std[0];
+    std_d1 = param.std[1];
+    std_d2 = param.std[2];
   }
 
   // Note: inputs[0] is out_grad
@@ -360,7 +397,7 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
   if (in_data.ndim() == 3) {
     const int length = in_data.shape_[1] * in_data.shape_[2];
     const uint32_t channel = in_data.shape_[0];
-    NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req, std_dev, length, channel);
+    NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req, std_d0, std_d1, std_d2, length, channel);
   } else if (in_data.ndim() == 4) {
     // 4D input (n, c, h, w)
     const int batch_size = in_data.shape_[0];
@@ -370,7 +407,9 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
 
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {
-      NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req, std_dev, length, channel, n*step);
+      NormalizeBackwardImpl<xpu>(ctx, inputs, outputs, req,
+                                 std_d0, std_d1, std_d2, length,
+                                 channel, n*step);
     }
   }
 }
