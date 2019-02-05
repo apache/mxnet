@@ -501,7 +501,7 @@ class ThreadedEngine : public Engine {
     auto functions = bulk_status.functions;
     this->PushAsync([functions](RunContext ctx, CallbackOnComplete on_complete) {
         ctx.is_bulk = true;
-        for ( auto& fn : *functions) {
+        for (auto& fn : *functions) {
           fn(ctx);
         }
         ctx.is_bulk = false;
