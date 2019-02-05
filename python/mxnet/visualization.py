@@ -275,10 +275,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
         raise ImportError("Draw network requires graphviz library")
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be a Symbol")
+    internals = symbol.get_internals()
     draw_shape = False
     if shape is not None:
         draw_shape = True
-        internals = symbol.get_internals()
         _, out_shapes, _ = internals.infer_shape(**shape)
         if out_shapes is None:
             raise ValueError("Input shape is incomplete")
@@ -286,7 +286,6 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
     draw_type = False
     if dtype is not None:
         draw_type = True
-        internals = symbol.get_internals()
         _, out_types, _ = internals.infer_type(**dtype)
         if out_types is None:
             raise ValueError("Input type is incomplete")
