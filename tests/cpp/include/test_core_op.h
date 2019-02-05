@@ -168,26 +168,50 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param op Pointer to nnvm Operator object
    */
   void AttachResources(OpContext *ctx, const nnvm::NodeAttrs& attrs, const nnvm::Op *op) {
+    std::vector<ResourceRequest> reqs;
+    std::vector<Resource>& requested = ctx->requested;
     static auto& fresource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
     if (fresource.count(op) != 0) {
-      std::vector<Resource>& requested = ctx->requested;
-      auto reqs = fresource[op](attrs);
+      reqs = fresource[op](attrs);
+    } else {
+      static auto& fresourceex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+      if (fresourceex.count(op) != 0) {
+        if (this->function_ || this->stateful_function_) {
+          reqs = fresourceex[op](attrs, ctx->run_ctx.ctx.dev_mask(), DispatchMode::kFCompute);
+        } else {
+          reqs = fresourceex[op](attrs, ctx->run_ctx.ctx.dev_mask(), DispatchMode::kFComputeEx);
+        }
+      }
+    }
+    if (!reqs.empty()) {
       // Get the resource of temporal space.
       for (const ResourceRequest& req : reqs) {
-        if (req.type == ResourceRequest::kTempSpace) {
-          Resource r = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
-          requested.emplace_back(r);
-        } else if (req.type == ResourceRequest::kRandom) {
-          requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
-        } else if (req.type == ResourceRequest::kParallelRandom) {
-          Resource rm = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
-          if (ctx->run_ctx.ctx.dev_mask() == Context::kCPU) {
-            common::random::RandGenerator<cpu, DType>::AllocState(
-                rm.get_parallel_random<cpu, DType>());
+        switch (req.type) {
+          case ResourceRequest::kTempSpace: {
+            requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+            break;
           }
-          requested.emplace_back(rm);
-        } else {
-          LOG(FATAL) << "resource type not yet supported";
+          case ResourceRequest::kRandom: {
+            requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+            break;
+          }
+          case ResourceRequest::kParallelRandom: {
+            Resource rm = ResourceManager::Get()->Request(ctx->run_ctx.ctx, req);
+            if (ctx->run_ctx.ctx.dev_mask() == Context::kCPU) {
+              common::random::RandGenerator<cpu, DType>::AllocState(
+                  rm.get_parallel_random<cpu, DType>());
+            }
+            requested.emplace_back(rm);
+            break;
+          }
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+          case ResourceRequest::kCuDNNDropoutDesc: {
+            requested.emplace_back(ResourceManager::Get()->Request(ctx->run_ctx.ctx, req));
+            break;
+          }
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+          default:
+            LOG(FATAL) << "resource type " << req.type << " is not yet supported";
         }
       }
     }
@@ -511,8 +535,24 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       function_ = common::GetFCompute<FCompute>(op_, "FCompute", ctx_.run_ctx.ctx);
       functionex_ = common::GetFCompute<FComputeEx>(op_, "FComputeEx", ctx_.run_ctx.ctx);
+      stateful_function_ = common::GetFCompute<FStatefulCompute>(op_, "FStatefulCompute",
+                                                                 ctx_.run_ctx.ctx);
 
       AttachResources(&ctx_, attrs_, op_);
+
+      auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
+      auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
+      if (createop.count(op_) || is_layer_backward.get(op_, false)) {
+        if (backward_for_op) {
+          state_ = backward_for_op->state_;
+        }
+        if (!state_) {
+          if (!create_state_) {
+            create_state_ = createop[op_];
+          }
+          state_ = create_state_(attrs_, ctx_.run_ctx.ctx, input_shapes_, input_types);
+        }
+      }
 
       if (!backward_for_op) {
         bool no_backward = false;
@@ -561,8 +601,14 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   inline void forward(const size_t count) {
     perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), kForward, "Forward", count);
     mxnet::profiler::vtune::VTuneResume profile;
-    for (size_t i = 0; i < count; ++i) {
-      Execute();
+    if (stateful_function_) {
+      for (size_t i = 0; i < count; ++i) {
+        ExecuteStateful();
+      }
+    } else {
+      for (size_t i = 0; i < count; ++i) {
+        Execute();
+      }
     }
   }
 
@@ -570,8 +616,14 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     CHECK(HasBackward());
     perf::TimingItem timeF(&OperatorExecutorTiming::GetTiming(), kBackward, "Backward", count);
     mxnet::profiler::vtune::VTuneResume profile;
-    for (size_t i = 0; i < count; ++i) {
-      ExecuteBackward();
+    if (stateful_function_) {
+      for (size_t i = 0; i < count; ++i) {
+        ExecuteBackwardStateful();
+      }
+    } else {
+      for (size_t i = 0; i < count; ++i) {
+        ExecuteBackward();
+      }
     }
   }
 
@@ -593,6 +645,17 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     CHECK_EQ(initialized_, true);
     CHECK_NOTNULL(functionex_);
     functionex_(attrs_, ctx_, inputs_, req_, outputs_);
+  }
+
+  /*!
+   * \brief Execute the stateful operator
+   */
+  void ExecuteStateful() {
+    CHECK_EQ(initialized_, true);
+    CHECK(state_);
+    CollectBlobs(inputs_, &blob_inputs_);
+    CollectBlobs(outputs_, &blob_outputs_);
+    stateful_function_(state_, ctx_, blob_inputs_, req_, blob_outputs_);
   }
 
   bool HasBackward() const {
@@ -625,6 +688,22 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       // Avoid locked ref count here
       for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
         p->ExecuteEx();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /*!
+   * \brief Execute backward pass on stateful operator
+   */
+  bool ExecuteBackwardStateful() {
+    CHECK_EQ(initialized_, true);
+    CHECK(HasBackward());
+    if (!backward_.empty()) {
+      // Avoid locked ref count here
+      for (std::shared_ptr<CoreOpExecutor> &p : backward_) {
+        p->ExecuteStateful();
       }
       return true;
     }
@@ -738,6 +817,18 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \brief Operator's FCompute function (for sparse tensors)
    */
   FComputeEx functionex_;
+  /*!
+   * \brief Operator's FStatefulCompute function
+   */
+  FStatefulCompute stateful_function_;
+  /*!
+   * \brief Operator's FCreateOpState function
+   */
+  FCreateOpState create_state_;
+  /*!
+   * \brief Operator state
+   */
+  OpStatePtr state_;
 
   /*!
    * \brief Backward executors (if any)

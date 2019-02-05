@@ -36,6 +36,7 @@ DMLC_REGISTER_PARAMETER(SampleExponentialParam);
 DMLC_REGISTER_PARAMETER(SamplePoissonParam);
 DMLC_REGISTER_PARAMETER(SampleNegBinomialParam);
 DMLC_REGISTER_PARAMETER(SampleGenNegBinomialParam);
+DMLC_REGISTER_PARAMETER(SampleRandIntParam);
 
 DMLC_REGISTER_PARAMETER(SampleUniformLikeParam);
 DMLC_REGISTER_PARAMETER(SampleNormalLikeParam);
@@ -51,7 +52,7 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
   .set_num_outputs(1)                                                                        \
   .set_attr_parser(ParamParser<ParamType>)                                                   \
   .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)                          \
-  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)                         \
+  .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)                \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                            \
   .add_arguments(ParamType::__FIELDS__())                                                    \
   .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<ParamType, true, false>) \
@@ -177,6 +178,19 @@ Example::
                                                                     [ 6.,  4.]]
 )code" ADD_FILELINE);
 
+MXNET_OPERATOR_REGISTER_SAMPLE(_random_randint, SampleRandIntParam)
+.add_alias("random_randint")
+.describe(R"code(Draw random samples from a discrete uniform distribution.
+
+Samples are uniformly distributed over the half-open interval *[low, high)*
+(includes *low*, but excludes *high*).
+
+Example::
+
+   randint(low=0, high=5, shape=(2,2)) = [[ 0,  2],
+                                          [ 3,  1]]
+
+)code" ADD_FILELINE);
 
 // *_like operators
 

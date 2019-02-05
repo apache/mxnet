@@ -494,25 +494,38 @@ class LegacyOperatorExecutor : public OperatorDataInitializer<DType>
     ctx.dev_id = 0;
 
     for (const ResourceRequest& req : reqs) {
-      if (req.type == ResourceRequest::kTempSpace) {
-        if (cached_temp.count(ctx) != 0) {
-          opContext_.requested.emplace_back(cached_temp.at(ctx));
-        } else {
-          Resource r = ResourceManager::Get()->Request(ctx, req);
-          opContext_.requested.emplace_back(r);
-          cached_temp[ctx] = r;
+      switch (req.type) {
+        case ResourceRequest::kTempSpace: {
+          if (cached_temp.count(ctx) != 0) {
+            opContext_.requested.emplace_back(cached_temp.at(ctx));
+          } else {
+            Resource r = ResourceManager::Get()->Request(ctx, req);
+            opContext_.requested.emplace_back(r);
+            cached_temp[ctx] = r;
+          }
+          break;
         }
-      } else if (req.type == ResourceRequest::kRandom) {
-        opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
-      } else if (req.type == ResourceRequest::kParallelRandom) {
-        Resource rm = ResourceManager::Get()->Request(ctx, req);
-        if (ctx.dev_mask() == Context::kCPU) {
-          common::random::RandGenerator<cpu, DType>::AllocState(
-            rm.get_parallel_random<cpu, DType>());
+        case ResourceRequest::kRandom: {
+          opContext_.requested.emplace_back(ResourceManager::Get()->Request(ctx, req));
+          break;
         }
-        opContext_.requested.emplace_back(rm);
-      } else {
-        LOG(FATAL) << "resource type not yet supported";
+        case ResourceRequest::kParallelRandom: {
+          Resource rm = ResourceManager::Get()->Request(ctx, req);
+          if (ctx.dev_mask() == Context::kCPU) {
+            common::random::RandGenerator<cpu, DType>::AllocState(
+              rm.get_parallel_random<cpu, DType>());
+          }
+          opContext_.requested.emplace_back(rm);
+          break;
+        }
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+        case ResourceRequest::kCuDNNDropoutDesc: {
+          opContext_.requested.push_back(ResourceManager::Get()->Request(ctx, req));
+          break;
+        }
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+        default:
+          LOG(FATAL) << "resource type " << req.type << " is not yet supported";
       }
     }
   }

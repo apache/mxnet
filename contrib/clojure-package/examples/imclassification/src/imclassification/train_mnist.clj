@@ -25,14 +25,15 @@
             [org.apache.clojure-mxnet.kvstore :as kvstore]
             [org.apache.clojure-mxnet.kvstore-server :as kvstore-server]
             [org.apache.clojure-mxnet.optimizer :as optimizer]
-            [org.apache.clojure-mxnet.eval-metric :as eval-metric])
+            [org.apache.clojure-mxnet.eval-metric :as eval-metric]
+            [org.apache.clojure-mxnet.resource-scope :as resource-scope])
   (:gen-class))
 
 (def data-dir "data/") ;; the data directory to store the mnist data
 (def batch-size 10) ;; the batch size
 (def optimizer (optimizer/sgd {:learning-rate 0.01 :momentum 0.0}))
 (def eval-metric (eval-metric/accuracy))
-(def num-epoch 5) ;; the number of training epochs
+(def num-epoch 1) ;; the number of training epochs
 (def kvstore "local") ;; the kvstore type
 ;;; Note to run distributed you might need to complile the engine with an option set
 (def role "worker") ;; scheduler/server/worker
@@ -51,28 +52,6 @@
 (when-not (.exists (io/file (str data-dir "train-images-idx3-ubyte")))
   (sh "../../scripts/get_mnist_data.sh"))
 
-;;; Load the MNIST datasets
-(defonce train-data (mx-io/mnist-iter {:image (str data-dir "train-images-idx3-ubyte")
-                                       :label (str data-dir "train-labels-idx1-ubyte")
-                                       :label-name "softmax_label"
-                                       :input-shape [784]
-                                       :batch-size batch-size
-                                       :shuffle true
-                                       :flat true
-                                       :silent false
-                                       :seed 10
-                                       :num-parts num-workers
-                                       :part-index 0}))
-
-(defonce test-data (mx-io/mnist-iter {:image (str data-dir "t10k-images-idx3-ubyte")
-                                      :label (str data-dir "t10k-labels-idx1-ubyte")
-                                      :input-shape [784]
-                                      :batch-size batch-size
-                                      :flat true
-                                      :silent false
-                                      :num-parts num-workers
-                                      :part-index 0}))
-
 (defn get-symbol []
   (as-> (sym/variable "data") data
     (sym/fully-connected "fc1" {:data data :num-hidden 128})
@@ -82,7 +61,33 @@
     (sym/fully-connected "fc3" {:data data :num-hidden 10})
     (sym/softmax-output "softmax" {:data data})))
 
-(defn start [devs]
+
+(defn train-data []
+  (mx-io/mnist-iter {:image (str data-dir "train-images-idx3-ubyte")
+                     :label (str data-dir "train-labels-idx1-ubyte")
+                     :label-name "softmax_label"
+                     :input-shape [784]
+                     :batch-size batch-size
+                     :shuffle true
+                     :flat true
+                     :silent false
+                     :seed 10
+                     :num-parts num-workers
+                     :part-index 0}))
+
+(defn eval-data []
+  (mx-io/mnist-iter {:image (str data-dir "t10k-images-idx3-ubyte")
+                     :label (str data-dir "t10k-labels-idx1-ubyte")
+                     :input-shape [784]
+                     :batch-size batch-size
+                     :flat true
+                     :silent false
+                     :num-parts num-workers
+                     :part-index 0}))
+
+(defn start
+  ([devs] (start devs num-epoch))
+  ([devs _num-epoch]
   (when scheduler-host
     (println "Initing PS enviornments with " envs)
     (kvstore-server/init envs))
@@ -94,14 +99,16 @@
     (do
       (println "Starting Training of MNIST ....")
       (println "Running with context devices of" devs)
-      (let [mod (m/module (get-symbol) {:contexts devs})]
-        (m/fit mod {:train-data train-data
-                    :eval-data test-data
-                    :num-epoch num-epoch
+      (resource-scope/with-let [_mod (m/module (get-symbol) {:contexts devs})]
+        (-> _mod
+            (m/fit {:train-data (train-data)
+                    :eval-data (eval-data)
+                    :num-epoch _num-epoch
                     :fit-params (m/fit-params {:kvstore kvstore
                                                :optimizer optimizer
-                                               :eval-metric eval-metric})}))
-      (println "Finish fit"))))
+                                               :eval-metric eval-metric})})
+            (m/save-checkpoint {:prefix "target/test" :epoch _num-epoch}))
+        (println "Finish fit"))))))
 
 (defn -main [& args]
   (let [[dev dev-num] args

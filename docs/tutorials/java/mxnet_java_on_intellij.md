@@ -12,7 +12,7 @@ To use this tutorial you need the following pre-requisites:
 
 ### MacOS Prerequisites
 
-You can run the following commands to install the prerequisites.
+Run the following commands to install the prerequisites on MacOS.
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 brew update
@@ -22,10 +22,9 @@ brew install maven
 brew install opencv
 ```
 
-You can also run this tutorial on an Ubuntu machine after installing the following prerequisites.
 ### Ubuntu Prerequisites
 
-Run the following commands to install the prerequisites.
+Run the following commands to install the prerequisites on Ubuntu.
 
 ```bash
 wget https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/ubuntu_core.sh
@@ -66,7 +65,7 @@ mxnet
 ```
 **ArtifactId**
 ```
-ArtifactId: javaMXNet
+javaMXNet
 ```
 **Version**
 ```
@@ -86,17 +85,27 @@ Set the project's location. The rest of the settings can be left as their defaul
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-**Step 3.** Add the following Maven dependency to your `pom.xml` file under the `dependencies` tag: 
+**Step 3.** The Java packages are currently available as nightly builds on Maven. Add the following Maven repository to your `pom.xml` to fetch the Java packages :
  
+```html
+<repositories>
+    <repository>
+      <id>Apache Snapshot</id>
+      <url>https://repository.apache.org/content/groups/snapshots</url>
+    </repository>
+</repositories>
+```
+
+Also, add this under the `dependencies` tag :
+
 ```html
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.4.0</version>
+  <version>1.4.0-SNAPSHOT</version>
 </dependency>
 ```
-
-To view the latest MXNet Maven packages, you can check [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22)
+The official Java Packages will be released with the release of MXNet 1.4 and will be available on  [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 
 Note :
 - Change the osx-x86_64 to linux-x86_64 if your platform is linux.
@@ -114,8 +123,8 @@ Click "Import Changes" in this prompt.
 **Step 5.** Build the project:
 - To build the project, from the menu choose Build, and then choose Build Project.
 
-**Step 6.** Navigate to the App.java class in the project and paste the code from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/src/main/java/sample/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
-You can also grab the entire [Java Demo project](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/README.md)
+**Step 6.** Navigate to the App.java class in the project and paste the code in `main` method from HelloWorld.java from [Java Demo project](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/src/main/java/sample/HelloWorld.java) on MXNet repository, overwriting the original hello world code.
+You can also grab the entire [Java Demo project](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/mxnet-demo/java-demo) and run it by following the instructions on the [README](https://github.com/apache/incubator-mxnet/blob/java-api/scala-package/mxnet-demo/java-demo/README.md).
 
 **Step 7.** Now run the App.java. 
 
@@ -160,12 +169,12 @@ The build generates a new jar file in the `target` folder called `javaMXNet-1.0-
 
 To run the App.java use the following command from the project's root folder and you should see the same output as we got when the project was run from IntelliJ.
 ```bash
-java -cp target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/* mxnet.App
+java -cp "target/javaMXNet-1.0-SNAPSHOT.jar:target/dependency/*" mxnet.App
 ```
 
 ## Next Steps
 For more information about MXNet Java resources, see the following:
 
-* [Java Inference API](https://mxnet.incubator.apache.org/api/java/infer.html)
-* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/java-api/scala-package/examples/src/main/java/org/apache/mxnetexamples/infer/)
+* [Java Inference API](/api/java/index.html)
+* [Java Inference Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 * [MXNet Tutorials Index](http://mxnet.io/tutorials/index.html)

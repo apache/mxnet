@@ -465,7 +465,8 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
+                               const dmlc::Error* error);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
@@ -498,7 +499,13 @@ class ThreadedEngine : public Engine {
     DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
     SyncFn fn = std::move(bulk_status.fn);
     this->PushAsync([fn](RunContext ctx, CallbackOnComplete on_complete) {
+        ctx.is_bulk = true;
         fn(ctx);
+        ctx.is_bulk = false;
+        bool is_gpu = ctx.ctx.dev_mask() == gpu::kDevMask;
+        if (is_gpu) {
+          ctx.get_stream<gpu>()->Wait();
+        }
         on_complete();
       }, bulk_status.ctx, bulk_status.const_vars, bulk_status.mutable_vars,
       FnProperty::kNormal, 0, "ImperativeBulk");

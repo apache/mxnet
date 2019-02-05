@@ -217,7 +217,7 @@ class Initializer(object):
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
-            y = (i / shape[3]) % shape[2]
+            y = (i // shape[3]) % shape[2]
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
 
@@ -657,7 +657,7 @@ class Bilinear(Initializer):
         c = (2 * f - 1 - f % 2) / (2. * f)
         for i in range(np.prod(shape)):
             x = i % shape[3]
-            y = (i / shape[3]) % shape[2]
+            y = (i // shape[3]) % shape[2]
             weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
         arr[:] = weight.reshape(shape)
 

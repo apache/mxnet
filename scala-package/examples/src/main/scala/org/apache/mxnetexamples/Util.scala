@@ -24,9 +24,9 @@ import org.apache.commons.io.FileUtils
 
 object Util {
 
-  def downloadUrl(url: String, filePath: String, maxRetry: Option[Int] = None) : Unit = {
+  def downloadUrl(url: String, filePath: String, maxRetry: Int = 3) : Unit = {
     val tmpFile = new File(filePath)
-    var retry = maxRetry.getOrElse(3)
+    var retry = maxRetry
     var success = false
     if (!tmpFile.exists()) {
       while (retry > 0 && !success) {

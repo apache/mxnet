@@ -3,7 +3,7 @@
 [![MXNet](http://pkg.julialang.org/badges/MXNet_0.6.svg)](http://pkg.julialang.org/?pkg=MXNet)
 
 
-MXNet.jl is the [dmlc/mxnet](https://github.com/apache/incubator-mxnet) [Julia](http://julialang.org/) package. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of its features include:
+MXNet.jl is the [Apache MXNet](https://github.com/apache/incubator-mxnet) [Julia](http://julialang.org/) package. MXNet.jl brings flexible and efficient GPU computing and state-of-art deep learning to Julia. Some highlight of its features include:
 
 * Efficient tensor/matrix computation across multiple devices, including multiple CPUs, GPUs and distributed server nodes.
 * Flexible symbolic manipulation to composite and construction of state-of-the-art deep learning models.
@@ -50,7 +50,7 @@ labels = reduce(
 labels .= labels .+ 1
 
 # Now we use compute the accuracy
-pred = map(i -> indmax(probs[1:10, i]), 1:size(probs, 2))
+pred = map(i -> argmax(probs[1:10, i]), 1:size(probs, 2))
 correct = sum(pred .== labels)
 accuracy = 100correct/length(labels)
 @printf "Accuracy on eval set: %.2f%%\n" accuracy

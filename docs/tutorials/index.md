@@ -3,12 +3,13 @@
 ```eval_rst
 .. toctree::
    :hidden:
-   
+
    basic/index.md
    c++/index.md
    control_flow/index.md
    embedded/index.md
    gluon/index.md
+   java/index.md
    nlp/index.md
    onnx/index.md
    python/index.md
@@ -72,11 +73,13 @@ Select API:&nbsp;
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
+    * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
 * API Guides
     * Core APIs
         * NDArray
             * [NDArray API](/tutorials/gluon/ndarray.html) ([Alternative](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
+            * [Difference between reshape and transpose](/tutorials/basic/reshape_transpose.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
@@ -160,7 +163,7 @@ Select API:&nbsp;
 * Getting Started
     * [Developer Environment Setup on IntelliJ IDE](/tutorials/java/mxnet_java_on_intellij.html)
 * [Multi Object Detection using pre-trained Single Shot Detector (SSD) Model](/tutorials/java/ssd_inference.html)
-* [MXNet-Java  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples)
+* [MXNet-Java  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
 <hr>
 
 ## C++ Tutorials
@@ -170,6 +173,9 @@ Select API:&nbsp;
 
 * Backends
     * [Subgraph API](/tutorials/c%2B%2B/subgraphAPI.html)
+
+* Inference
+    * [C++ Inference](/tutorials/c%2B%2B/mxnet_cpp_inference_tutorial.html)
 
 <hr>
 

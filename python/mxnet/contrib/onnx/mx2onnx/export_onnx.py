@@ -53,12 +53,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 import logging
 import json
-import numpy as np
 
-from .... import context
 from .... import ndarray as nd
-from .... import io
-from .... import module as mod
 
 
 class MXNetGraph(object):
@@ -96,60 +92,6 @@ class MXNetGraph(object):
         return convert_func(node, **kwargs)
 
     @staticmethod
-    def forward_pass(inputs, sym, arg_params, aux_params, output_label):
-        """Do a forward pass based on the sym and params to get the shape
-        of the output using dummy data
-
-        Parameters
-        ----------
-        inputs   : json string
-
-        sym : :class:`~mxnet.symbol.Symbol`
-            MXNet symbol object
-        arg_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
-            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
-        aux_params : dict of ``str`` to :class:`~mxnet.ndarray.NDArray`
-            Dict of converted parameters stored in ``mxnet.ndarray.NDArray`` format
-
-        Returns
-        -------
-        shape : Shape
-            Output shape
-        """
-        # if label is not provided, MXNet adds label "softmax_label" by default
-        # while running load_checkpoint which is not actually a graph input. So ignoring it here
-        data_names = [graph_input for graph_input in sym.list_inputs()
-                      if graph_input not in arg_params and graph_input not in aux_params
-                      and graph_input != output_label]
-
-        data_shapes = []
-        # Adding extra dimension of batch_size 1 if the batch_size is different for multiple inputs.
-        for idx, input_name in enumerate(data_names):
-            data_shapes.append((input_name, inputs[idx].shape))
-
-        # create module, passing cpu context
-        ctx = context.cpu()
-        test_mod = mod.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
-        test_mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
-
-        # initializing parameters for calculating result of each individual node
-        if arg_params is None and aux_params is None:
-            test_mod.init_params()
-        else:
-            test_mod.set_params(arg_params=arg_params, aux_params=aux_params, allow_missing=True)
-
-        data_forward = []
-        for idx, input_name in enumerate(data_names):
-            val = inputs[idx]
-            data_forward.append(nd.array(val))
-
-        test_mod.forward(io.DataBatch(data_forward))
-        result = test_mod.get_outputs()[0].asnumpy()
-
-        return result.shape
-
-
-    @staticmethod
     def split_params(sym, params):
         """Helper function to split params dictionary into args and aux params
 
@@ -177,15 +119,41 @@ class MXNetGraph(object):
                 aux_params.update({aux: nd.array(params[aux])})
         return arg_params, aux_params
 
-
     @staticmethod
-    def infer_output_shape(sym, params, in_shape, output_label):
-        """Infer output shape by doing a forward pass using dummy inputs """
-        # create dummy input
-        inputs = [np.random.randn(*input_shape) for input_shape in in_shape]
-        arg, aux = MXNetGraph.split_params(sym, params)
-        return MXNetGraph.forward_pass(inputs, sym, arg, aux, output_label)
+    def get_outputs(sym, params, in_shape, in_label):
+        """ Infer output shapes and return dictionary of output name to shape
 
+        :param :class:`~mxnet.symbol.Symbol` sym: symbol to perform infer shape on
+        :param dic of (str, nd.NDArray) params:
+        :param list of tuple(int, ...) in_shape: list of all input shapes
+        :param  in_label: name of label typically used in loss that may be left in graph. This name is
+            removed from list of inputs required by symbol
+        :return: dictionary of output name to shape
+        :rtype: dict of (str, tuple(int, ...))
+        """
+        # remove any input listed in params from sym.list_inputs() and bind them to the input shapes provided
+        # by user. Also remove in_label, which is the name of the label symbol that may have been used
+        # as the label for loss during training.
+        inputs = {n: tuple(s) for n, s in zip([n for n in sym.list_inputs() if n not in params and n != in_label],
+                                              in_shape)}
+        # Add params and their shape to list of inputs
+        inputs.update({n: v.shape for n, v in params.items() if n in sym.list_inputs()})
+        # Provide input data as well as input params to infer_shape()
+        _, out_shapes, _ = sym.infer_shape(**inputs)
+
+        out_names = list()
+        for name in sym.list_outputs():
+            if name.endswith('_output'):
+                out_names.append(name[:-len('_output')])
+            else:
+                logging.info("output '%s' does not end with '_output'", name)
+                out_names.append(name)
+
+        assert len(out_shapes) == len(out_names)
+        # bind output shapes with output names
+        graph_outputs = {n: s for n, s in zip(out_names, out_shapes)}
+
+        return graph_outputs
 
     @staticmethod
     def convert_weights_to_numpy(weights_dict):
@@ -228,9 +196,6 @@ class MXNetGraph(object):
         # Deriving the output_label name.
         output_label = sym.get_internals()[len(sym.get_internals()) - 1].name + "_label"
 
-        # Determine output shape
-        output_shape = MXNetGraph.infer_output_shape(sym, params, in_shape, output_label)
-
         weights = MXNetGraph.convert_weights_to_numpy(params)
 
         mx_graph = json.loads(sym.tojson())["nodes"]
@@ -241,6 +206,9 @@ class MXNetGraph(object):
         onnx_processed_inputs = []
         onnx_processed_outputs = []
         index_lookup = []
+
+        # Determine output shape
+        graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label)
 
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
@@ -294,24 +262,15 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
-                        if idx == (len(mx_graph) - 1):
-                            # If converted node doesnt have name, use it from output field
-                            if not converted_node.name:
-                                onnx_processed_outputs.append(
-                                    make_tensor_value_info(
-                                        name=converted_node.output[0],
-                                        elem_type=in_type,
-                                        shape=output_shape
-                                    )
+                        node_name = converted_node.name if converted_node.name else converted_node.output[0]
+                        if node_name in graph_outputs:
+                            onnx_processed_outputs.append(
+                                make_tensor_value_info(
+                                    name=node_name,
+                                    elem_type=in_type,
+                                    shape=graph_outputs[node_name]
                                 )
-                            else:
-                                onnx_processed_outputs.append(
-                                    make_tensor_value_info(
-                                        name=converted_node.name,
-                                        elem_type=in_type,
-                                        shape=output_shape
-                                    )
-                                )
+                            )
                             if verbose:
                                 logging.info("Output node is: %s", converted_node.name)
                     elif isinstance(converted_node, TensorProto):

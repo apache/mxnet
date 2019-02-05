@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 120
+max_time = 180
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -51,6 +51,7 @@ core_logic: {
     custom_steps.test_unix_python3_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
     custom_steps.test_unix_python3_tensorrt_gpu(),
+    custom_steps.test_unix_perl_gpu(),
     custom_steps.test_unix_r_gpu(),
     custom_steps.test_unix_cpp_gpu(),
     custom_steps.test_unix_cpp_mkldnn_gpu(),

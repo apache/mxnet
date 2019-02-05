@@ -31,6 +31,7 @@
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
 #include "./operator_tune.h"
+#include "./contrib/erfinv-inl.h"
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
@@ -168,6 +169,8 @@ struct softrelu : public mxnet_op::tunable {
 };
 
 MXNET_UNARY_MATH_OP(softrelu_grad, -math::expm1(-a));
+
+MXNET_UNARY_MATH_OP(erfinv_grad, 0.5 * math::sqrt(PI) * math::exp(math::sqr(erfinv::Map(a))));
 
 MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
 
