@@ -28,7 +28,8 @@ import org.apache.mxnet.Context
 import scala.collection.mutable.ListBuffer
 
 /**
-  * A class for object detection tasks
+  * The ObjectDetector class helps to run ObjectDetection tasks where the goal
+  * is to find bounding boxes and corresponding labels for objects in a image.
   *
   * @param modelPathPrefix    Path prefix from where to load the model artifacts.
   *                           These include the symbol, parameters, and synset.txt.
