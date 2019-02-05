@@ -412,6 +412,12 @@
       <version>1.13.5</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- Following libraries are required by running javah, they should be excluded from .jar -->
     <dependency>
