@@ -935,7 +935,8 @@ def test_pooling_versions():
 
         check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), tol=tol)
 
-    def test_pooling_dim(dim, pool_type, dtype, pool_op_list, p_value=2, count_include_pad=True):
+    def test_pooling_dim(dim, pool_type, dtype, pool_op_list, p_value=2, count_include_pad=True,
+                         tol=None):
         if dim == '1D':
             data = (3, 3, 10)
             kernel = (4,)
@@ -966,7 +967,7 @@ def test_pooling_versions():
                                      data=data, kernel=kernel, pad=pad, stride=stride,
                                      pool_type=pool_type, pooling_convention=pooling_convention,
                                      global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad, dtype=dtype)
+                                     count_include_pad=count_include_pad, tol=tol, dtype=dtype)
                 except:
                     print('pool_op_list = {}'.format(pool_op_list))
                     print('kernel={}, pad={}, stride={}'.format(kernel, pad, stride))
@@ -980,7 +981,7 @@ def test_pooling_versions():
         test_pooling_versions_helper(pool_op_list=pool_op_list,
                                      data=data, kernel=kernel, pad=None, stride=None,
                                      pool_type=pool_type, global_pool=True, p_value=p_value,
-                                     count_include_pad=count_include_pad, dtype=dtype)
+                                     count_include_pad=count_include_pad, tol=tol, dtype=dtype)
 
     # The various implementations of the standard pooling operator
     std_pool_op_list = ['pool_cpu', 'pool_transposed_cpu',
@@ -1017,15 +1018,27 @@ def test_pooling_versions():
         #        only input values should appear in the output.
         #     3. In avg pooling, the 'v1' operator divides the sum by the same window size factor,
         #        even at the edges, and so does not support count_include_pad = False.
+        #     4. The float16 'v1' pooling operator performs forward sums and averages in
+        #        float16, whereas the std operators perform those calculations in float32, so
+        #        greater float16 tolerances are needed when comparing across implementations.
+
+        # Double the float16 tol when comparing v1 and non-v1 implemenations, per note 4 above.
+        relaxed_tol = {np.dtype(np.float16): 2e-1,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0,
+               np.dtype(np.int64): 0}
 
         # Exclude std implementations due to points 1 and 2 above.
         test_pooling_dim('2D', 'max', dtype, v1_pool_op_list)
         # The standard and 'v1' implementations match for this case.
-        test_pooling_dim('2D', 'avg', dtype, combo_pool_op_list, count_include_pad=True)
+        test_pooling_dim('2D', 'avg', dtype, combo_pool_op_list, count_include_pad=True,
+                         tol=relaxed_tol)
         # Exclude std implementations due to point 3 above.
         test_pooling_dim('2D', 'avg', dtype, v1_pool_op_list, count_include_pad=False)
         # The standard and 'v1' implementations match for this case.
-        test_pooling_dim('2D', 'sum', dtype, combo_pool_op_list)
+        test_pooling_dim('2D', 'sum', dtype, combo_pool_op_list, tol=relaxed_tol)
 
     # We can compare the standard and 'v1' max pooling implementations if we eliminate padding
     # (see point 2 above) and use np.float64 data so that no two random input window values are

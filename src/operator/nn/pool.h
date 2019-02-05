@@ -361,6 +361,7 @@ inline void pool_sum_1d_ncw_cpu(const DType *in_data, const TShape &ishape, cons
                                 const TShape &kernel, const TShape &pad, const TShape &stride,
                                 DType *out_data,
                                 const bool get_avg = false, const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   const int width = ishape[2];
   const int pooled_width = oshape[2];
   const int kernel_w = kernel[0];
@@ -379,11 +380,11 @@ inline void pool_sum_1d_ncw_cpu(const DType *in_data, const TShape &ishape, cons
         if (get_avg && !count_include_pad) {
           pool_size = (wend - wstart);
         }
-        DType sum = 0;
+        AccType sum = 0;
         for (int w = wstart; w < wend; ++w) {
-          sum += a_pow_p<DType, p>::Map(in_data[w]) / pool_size;
+          sum += a_pow_p<AccType, p>::Map(in_data[w]) / pool_size;
         }
-        out_data[pw] = a_root_p<DType, p>::Map(sum);
+        out_data[pw] = a_root_p<AccType, p>::Map(sum);
       }
       in_data += in_data_offset;
       out_data += out_data_offset;
@@ -400,6 +401,7 @@ inline void pool_sum_1d_nwc_cpu(const DType* in_data, const TShape& ishape, cons
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             DType* out_data,
                             const bool get_avg = false, const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   const int width = ishape[1];
   const int pooled_width = oshape[1];
   const int kernel_w = kernel[0];
@@ -408,7 +410,7 @@ inline void pool_sum_1d_nwc_cpu(const DType* in_data, const TShape& ishape, cons
   const int features = oshape[2];
   const index_t in_data_offset = ishape[1] * features;
   const index_t out_data_offset = oshape[1] * features;
-  std::vector<DType> sums(features);
+  std::vector<AccType> sums(features);
   for (index_t n = 0; n < oshape[0]; ++n) {
     for (int pw = 0; pw < pooled_width; ++pw) {
       int wstart = pw * stride_w - pad_w;
@@ -422,11 +424,11 @@ inline void pool_sum_1d_nwc_cpu(const DType* in_data, const TShape& ishape, cons
       std::fill(sums.begin(), sums.end(), 0);
       for (int w = wstart; w < wend; ++w) {
         for (index_t c = 0; c < features; ++c) {
-          sums[c] += a_pow_p<DType, p>::Map(in_data[w * features + c]) / pool_size;
+          sums[c] += a_pow_p<AccType, p>::Map(in_data[w * features + c]) / pool_size;
         }
       }
       for (index_t c = 0; c < features; ++c)
-        out_data[pw * features + c] = a_root_p<DType, p>::Map(sums[c]);
+        out_data[pw * features + c] = a_root_p<AccType, p>::Map(sums[c]);
     }
     in_data += in_data_offset;
     out_data += out_data_offset;
@@ -442,6 +444,7 @@ inline void pool_sum_2d_nchw_cpu(const DType *in_data, const TShape &ishape, con
                                  const TShape &kernel, const TShape &pad, const TShape &stride,
                                  DType *out_data,
                                  const bool get_avg = false, const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   const int height = ishape[2], width = ishape[3];
   const int pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -465,13 +468,13 @@ inline void pool_sum_2d_nchw_cpu(const DType *in_data, const TShape &ishape, con
           if (get_avg && !count_include_pad) {
             pool_size = (hend - hstart) * (wend - wstart);
           }
-          DType sum = 0;
+          AccType sum = 0;
           for (int h = hstart; h < hend; ++h) {
             for (int w = wstart; w < wend; ++w) {
-              sum += a_pow_p<DType, p>::Map(in_data[h*width+w]) / pool_size;
+              sum += a_pow_p<AccType, p>::Map(in_data[h*width+w]) / pool_size;
             }
           }
-          out_data[ph*pooled_width+pw] = a_root_p<DType, p>::Map(sum);
+          out_data[ph*pooled_width+pw] = a_root_p<AccType, p>::Map(sum);
         }
       }
       in_data += in_data_offset;
@@ -489,6 +492,7 @@ inline void pool_sum_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, con
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             DType* out_data,
                             const bool get_avg = false, const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   const int height = ishape[1], width = ishape[2];
   const int pooled_height = oshape[1], pooled_width = oshape[2];
   const int kernel_h = kernel[0], kernel_w = kernel[1];
@@ -497,7 +501,7 @@ inline void pool_sum_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, con
   const int features = oshape[3];
   const index_t in_data_offset = ishape[1] * ishape[2] * features;
   const index_t out_data_offset = oshape[1] * oshape[2] * features;
-  std::vector<DType> sums(features);
+  std::vector<AccType> sums(features);
   for (index_t n = 0; n < oshape[0]; ++n) {
     for (int ph = 0; ph < pooled_height; ++ph) {
       for (int pw = 0; pw < pooled_width; ++pw) {
@@ -519,12 +523,12 @@ inline void pool_sum_2d_nhwc_cpu(const DType* in_data, const TShape& ishape, con
           for (int w = wstart; w < wend; ++w) {
             const int in_index = h * width + w;
             for (index_t c = 0; c < features; ++c) {
-              sums[c] += a_pow_p<DType, p>::Map(in_data[in_index * features + c]) / pool_size;
+              sums[c] += a_pow_p<AccType, p>::Map(in_data[in_index * features + c]) / pool_size;
             }
           }
         }
         for (index_t c = 0; c < features; ++c)
-          out_data[pool_index * features + c] = a_root_p<DType, p>::Map(sums[c]);
+          out_data[pool_index * features + c] = a_root_p<AccType, p>::Map(sums[c]);
       }
     }
     in_data += in_data_offset;
@@ -541,6 +545,7 @@ inline void pool_sum_3d_ncdhw_cpu(const DType *in_data, const TShape &ishape, co
                                   const TShape &kernel, const TShape &pad, const TShape &stride,
                                   DType *out_data,
                                   const bool get_avg = false, const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   const int depth = ishape[2], height = ishape[3], width = ishape[4];
   const int pooled_depth = oshape[2], pooled_height = oshape[3], pooled_width = oshape[4];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -569,17 +574,17 @@ inline void pool_sum_3d_ncdhw_cpu(const DType *in_data, const TShape &ishape, co
             if (get_avg && !count_include_pad) {
               pool_size = (dend - dstart) * (hend - hstart) * (wend - wstart);
             }
-            DType sum = 0;
+            AccType sum = 0;
             for (int d = dstart; d < dend; ++d) {
               for (int h = hstart; h < hend; ++h) {
                 for (int w = wstart; w < wend; ++w) {
-                  sum += a_pow_p<DType, p>::Map(in_data[(d*height+h)*width+w]) / pool_size;
+                  sum += a_pow_p<AccType, p>::Map(in_data[(d*height+h)*width+w]) / pool_size;
                 }
               }
             }
             out_data[(pd*pooled_height+ph)*pooled_width+pw] = (pool_size == 0) ?
-                                                              DType(nanf("")) :
-                                                              a_root_p<DType, p>::Map(sum);
+                                                              AccType(nanf("")) :
+                                                              a_root_p<AccType, p>::Map(sum);
           }
         }
       }
@@ -598,6 +603,7 @@ inline void pool_sum_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, co
                             const TShape& kernel, const TShape& pad, const TShape& stride,
                             DType* out_data,
                             const bool get_avg = false, const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   const int depth = ishape[1], height = ishape[2], width = ishape[3];
   const int pooled_depth = oshape[1], pooled_height = oshape[2], pooled_width = oshape[3];
   const int kernel_d = kernel[0], kernel_h = kernel[1], kernel_w = kernel[2];
@@ -606,7 +612,7 @@ inline void pool_sum_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, co
   const int features = oshape[4];
   const index_t in_data_offset = ishape[1] * ishape[2] * ishape[3] * features;
   const index_t out_data_offset = oshape[1] * oshape[2] * oshape[3] * features;
-  std::vector<DType> sums(features);
+  std::vector<AccType> sums(features);
   for (index_t n = 0; n < oshape[0]; ++n) {
     for (int pd = 0; pd < pooled_depth; ++pd) {
       for (int ph = 0; ph < pooled_height; ++ph) {
@@ -634,15 +640,15 @@ inline void pool_sum_3d_ndhwc_cpu(const DType* in_data, const TShape& ishape, co
               for (int w = wstart; w < wend; ++w) {
                 const int in_index = (d * height + h) * width + w;
                 for (index_t c = 0; c < features; ++c) {
-                  sums[c] += a_pow_p<DType, p>::Map(in_data[in_index * features + c]) / pool_size;
+                  sums[c] += a_pow_p<AccType, p>::Map(in_data[in_index * features + c]) / pool_size;
                 }
               }
             }
           }
           for (index_t c = 0; c < features; ++c)
             out_data[pool_index * features + c] = (pool_size == 0) ?
-                                                            DType(nanf("")) :
-                                                            a_root_p<DType, p>::Map(sums[c]);
+                                                            AccType(nanf("")) :
+                                                            a_root_p<AccType, p>::Map(sums[c]);
         }
       }
     }

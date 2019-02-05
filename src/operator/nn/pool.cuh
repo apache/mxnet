@@ -227,6 +227,7 @@ __global__ void pool_sum_1d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int stride_w, const int pad_w, DType* out_data,
                                        const bool get_avg = false,
                                        const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   CUDA_KERNEL_LOOP(index, nthreads) {
     const bool nwc_layout = layout == mshadow::kNWC;
     const int idx = nwc_layout ? (index / channels) : index;
@@ -241,14 +242,14 @@ __global__ void pool_sum_1d_gpu_kernel(const int nthreads, const DType* in_data,
     if (get_avg && !count_include_pad) {
       pool_size = (wend - wstart);
     }
-    DType sum = 0;
+    AccType sum = 0;
     const DType* out_slice = nwc_layout ? in_data + n * channels * width + c
                                         : in_data + (n * channels + c) * width;
     const int multiplier = nwc_layout ? channels : 1;
     for (int w = wstart; w < wend; ++w) {
-      sum += a_pow_p<DType, p>::Map(out_slice[w * multiplier]) / pool_size;
+      sum += a_pow_p<AccType, p>::Map(out_slice[w * multiplier]) / pool_size;
     }
-    out_data[index] = a_root_p<DType, p>::Map(sum);
+    out_data[index] = a_root_p<AccType, p>::Map(sum);
   }
 }
 
@@ -265,6 +266,7 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int pad_h, const int pad_w, DType* out_data,
                                        const bool get_avg = false,
                                        const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   CUDA_KERNEL_LOOP(index, nthreads) {
     const bool nhwc_layout = layout == mshadow::kNHWC;
     const int idx = nhwc_layout ? (index / channels) : index;
@@ -285,16 +287,16 @@ __global__ void pool_sum_2d_gpu_kernel(const int nthreads, const DType* in_data,
     if (get_avg && !count_include_pad) {
       pool_size = (hend - hstart) * (wend - wstart);
     }
-    DType sum = 0;
+    AccType sum = 0;
     const DType* out_slice = nhwc_layout ? in_data + n * channels * height * width + c
                                          : in_data + (n * channels + c) * height * width;
     const int multiplier = nhwc_layout ? channels : 1;
     for (int h = hstart; h < hend; ++h) {
       for (int w = wstart; w < wend; ++w) {
-        sum += a_pow_p<DType, p>::Map(out_slice[(h * width + w) * multiplier]) / pool_size;
+        sum += a_pow_p<AccType, p>::Map(out_slice[(h * width + w) * multiplier]) / pool_size;
       }
     }
-    out_data[index] = a_root_p<DType, p>::Map(sum);
+    out_data[index] = a_root_p<AccType, p>::Map(sum);
   }
 }
 
@@ -312,6 +314,7 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
                                        const int pad_d, const int pad_h, const int pad_w,
                                        DType* out_data, const bool get_avg = false,
                                        const bool count_include_pad = true) {
+  using AccType = typename PoolingTypes<DType>::AccType;
   CUDA_KERNEL_LOOP(index, nthreads) {
     const bool ndhwc_layout = layout == mshadow::kNDHWC;
     const int idx = ndhwc_layout ? (index / channels) : index;
@@ -337,21 +340,21 @@ __global__ void pool_sum_3d_gpu_kernel(const int nthreads, const DType* in_data,
     if (get_avg && !count_include_pad) {
       pool_size = (dend - dstart) * (hend - hstart) * (wend - wstart);
     }
-    DType sum = 0;
+    AccType sum = 0;
     const DType* out_slice = ndhwc_layout ? in_data + n * channels * depth * height * width + c
                                           : in_data + (n * channels + c) * depth * height * width;
     const int multiplier = ndhwc_layout ? channels : 1;
     for (int d = dstart; d < dend; ++d) {
       for (int h = hstart; h < hend; ++h) {
         for (int w = wstart; w < wend; ++w) {
-          sum += a_pow_p<DType, p>::Map(out_slice[((d * height + h) * width + w) *
+          sum += a_pow_p<AccType, p>::Map(out_slice[((d * height + h) * width + w) *
                                                    multiplier]) / pool_size;
         }
       }
     }
     out_data[index] = (pool_size == 0) ?
-                      DType(nanf("")) :
-                      a_root_p<DType, p>::Map(sum);
+                      AccType(nanf("")) :
+                      a_root_p<AccType, p>::Map(sum);
   }
 }
 
