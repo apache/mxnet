@@ -89,9 +89,10 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
       }
     })
     if (jarFiles != null && jarFiles.nonEmpty) {
-      return jarFiles.head.getAbsolutePath
+      jarFiles.head.getAbsolutePath
+    } else {
+      null
     }
-    null
   }
 
   private def getSparkJar: String = {
@@ -109,7 +110,8 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
     }
   }
 
-  private def getNativeJars(root:String): String = new File(root).listFiles().map(_.toPath).mkString(",")
+  private def getNativeJars(root: String): String =
+    new File(root).listFiles().map(_.toPath).mkString(",")
 
   protected def buildLeNet(): MXNet = {
     val workingDir = composeWorkingDirPath
@@ -130,7 +132,7 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
   protected def buildMlp(): MXNet = {
     val workingDir = composeWorkingDirPath
     val assemblyRoot = s"$workingDir/../assembly"
-    val nativeRoot =s"$workingDir/../native/target/lib"
+    val nativeRoot = s"$workingDir/../native/target/lib"
 
     new MXNet()
       .setBatchSize(128)
