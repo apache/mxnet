@@ -227,6 +227,26 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Maximum value is 60.
   - This variable controls how many weights will be updated in a single call to optimizer (for optimizers that support aggregation, currently limited to SGD).
 
+* MXNET_CPU_TEMP_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many temporary memory resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_TEMP_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many temporary memory resources to create for each GPU context for use in operator.
+
+* MXNET_CPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many parallel random number generator resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many parallel random number generator resources to create for each GPU context for use in operator.
+
+* MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```

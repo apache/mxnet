@@ -5951,10 +5951,10 @@ def test_dropout():
         elif ratio == 0:
             assert output_zeroes == 0
 
-    def check_dropout_ratio(ratio, shape):
+    def check_dropout_ratio(ratio, shape, cudnn_off=True):
         # test dropout
         x = mx.sym.var('data')
-        y = mx.sym.Dropout(x, p=ratio)
+        y = mx.sym.Dropout(x, p=ratio, cudnn_off=cudnn_off)
         exe = y.simple_bind(ctx=default_context(), data=shape)
 
         if ratio == 1:
@@ -5992,7 +5992,7 @@ def test_dropout():
 
             # test permanent dropout
             x = mx.sym.var('data')
-            y = mx.sym.Dropout(x, p=ratio, mode='always')
+            y = mx.sym.Dropout(x, p=ratio, mode='always', cudnn_off=cudnn_off)
             exe = y.simple_bind(ctx=default_context(), data=shape)
 
             exe.arg_arrays[0][:] = 1
@@ -6017,17 +6017,26 @@ def test_dropout():
                 ix += (slice(None, None, None),)
         return x[ix]
 
-    def check_dropout_axes(ratio, shape, axes):
+    def check_dropout_axes(ratio, shape, axes, cudnn_off=True):
         compactshape = list(shape)
         for axis in axes:
             compactshape[axis] = 1
         compactx = mx.random.uniform(shape=tuple(compactshape))
         broadcastx = compactx.broadcast_to(shape)
-        dropouty = mx.nd.Dropout(broadcastx, p=ratio, axes=axes)
+        dropouty = mx.nd.Dropout(broadcastx, p=ratio, axes=axes, cudnn_off=cudnn_off)
         for axis in axes:
             target = get_slice(dropouty, axis, 0).asnumpy()
             for i in range(1, shape[axis]):
                 assert(get_slice(dropouty, axis, i).asnumpy() == target).all()
+
+    def check_passthrough(ratio, shape, cudnn_off=True):
+        # test inference_mode forward and then backward
+        a = mx.random.uniform(shape=shape)
+        a.attach_grad()
+        with mx.autograd.record(train_mode=False):
+            b = mx.nd.Dropout(a, ratio, cudnn_off=cudnn_off) # dropout acts as identity
+        b.backward()
+        assert_almost_equal(a.grad.asnumpy(), mx.nd.ones_like(b).asnumpy())
 
     shape = (100, 100)
     check_dropout_ratio(0.5, shape)
@@ -6035,6 +6044,18 @@ def test_dropout():
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
+    check_dropout_ratio(0.5, shape, cudnn_off=False)
+    check_dropout_ratio(0.0, shape, cudnn_off=False)
+    check_dropout_ratio(1.0, shape, cudnn_off=False)
+    check_dropout_ratio(0.75, shape, cudnn_off=False)
+    check_dropout_ratio(0.25, shape, cudnn_off=False)
+
+    check_passthrough(0.5, shape)
+    check_passthrough(0.0, shape)
+    check_passthrough(1.0, shape)
+    check_passthrough(0.5, shape, cudnn_off=False)
+    check_passthrough(0.0, shape, cudnn_off=False)
+    check_passthrough(1.0, shape, cudnn_off=False)
 
     nshape = (10, 10, 10, 10)
     with mx.autograd.train_mode():
@@ -6051,6 +6072,20 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
+        check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
+        check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
+
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
