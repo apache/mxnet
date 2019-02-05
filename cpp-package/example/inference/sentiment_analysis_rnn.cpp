@@ -41,7 +41,7 @@
 
 using namespace mxnet::cpp;
 
-static const int DEFAULT_BUCKET_KEYS[] = {5, 10, 15, 20, 25, 30};
+static const int DEFAULT_BUCKET_KEYS[] = {30, 25, 20, 15, 10, 5};
 static const char DEFAULT_S3_URL[] = "https://s3.amazonaws.com/mxnet-cpp/RNN_model/";
 
 
