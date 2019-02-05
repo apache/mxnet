@@ -18,25 +18,42 @@
 */
 
 /*!
-* \file image_random.cu
-* \brief GPU Implementation of image transformation operators
-*/
-#include "./image_random-inl.h"
-#include "../elemwise_op_common.h"
+ *  Copyright (c) 2019 by Contributors
+ * \file image_utils.h
+ * \brief the image operator utility function implementation
+ * \author Jake Lee
+ */
+
+#ifndef MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
+#define MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_
+
+#include <vector>
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace op {
 namespace image {
 
-NNVM_REGISTER_OP(_image_to_tensor)
-.set_attr<FCompute>("FCompute<gpu>", ToTensorOpForward<gpu>);
+enum ImageLayout {H, W, C};
+enum BatchImageLayout {N, kH, kW, kC};
 
-NNVM_REGISTER_OP(_image_normalize)
-.set_attr<FCompute>("FCompute<gpu>", NormalizeOpForward<gpu>);
-
-NNVM_REGISTER_OP(_backward_image_normalize)
-.set_attr<FCompute>("FCompute<gpu>", NormalizeOpBackward<gpu>);
+struct SizeParam {
+  int height;
+  int width;
+  SizeParam() {
+    height = 0;
+    width = 0;
+  }
+  SizeParam(int height_, int width_) {
+    height = height_;
+    width = width_;
+  }
+};  // struct SizeParam
 
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet
+
+#endif  // MXNET_OPERATOR_IMAGE_IMAGE_UTILS_H_

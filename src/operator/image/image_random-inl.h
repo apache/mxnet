@@ -26,29 +26,45 @@
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
 
-#include <mxnet/base.h>
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <limits>
+#include <tuple>
 #include <utility>
+#include <vector>
+#include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace op {
 namespace image {
 
+// There are no parameters for this operator.
+// Hence, no arameter registration.
+
+// Shape and Type inference for image to tensor operator
 inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
                           std::vector<TShape> *in_attrs,
                           std::vector<TShape> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
+
   TShape &shp = (*in_attrs)[0];
   if (!shp.ndim()) return false;
-  CHECK_EQ(shp.ndim(), 3)
-      << "Input image must have shape (height, width, channels), but got " << shp;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({shp[2], shp[0], shp[1]}));
+
+  CHECK((shp.ndim() == 3) || (shp.ndim() == 4))
+      << "Input image must have shape (height, width, channels), or "
+      << "(N, height, width, channels) but got " << shp;
+  if (shp.ndim() == 3) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({shp[2], shp[0], shp[1]}));
+  } else if (shp.ndim() == 4) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({shp[0], shp[3], shp[1], shp[2]}));
+  }
+
   return true;
 }
 
@@ -61,31 +77,74 @@ inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
-inline void ToTensor(const nnvm::NodeAttrs &attrs,
-                     const OpContext &ctx,
-                     const std::vector<TBlob> &inputs,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<TBlob> &outputs) {
-  CHECK_EQ(req[0], kWriteTo)
-    << "`to_tensor` does not support inplace";
+// Operator Implementation
 
-  int length = inputs[0].shape_[0] * inputs[0].shape_[1];
-  int channel = inputs[0].shape_[2];
+template<int req>
+struct totensor_forward {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(uint32_t c, float* out_data, const DType* in_data,
+                                  const int length, const int channel, const int step,
+                                  const float normalize_factor = 255.0f) {
+      #pragma omp parallel for
+      for (int i = 0; i < length; ++i) {
+        KERNEL_ASSIGN(out_data[step + c*length + i], req,
+                      (in_data[step + i*channel + c]) / normalize_factor);
+      }
+  }
+};
+
+template<typename xpu>
+void ToTensorImpl(const OpContext &ctx,
+                  const std::vector<TBlob> &inputs,
+                  const std::vector<TBlob> &outputs,
+                  const std::vector<OpReqType> &req,
+                  const int length,
+                  const uint32_t channel,
+                  const int step = 0) {
+  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    float* output = outputs[0].dptr<float>();
-    DType* input = inputs[0].dptr<DType>();
-
-    for (int l = 0; l < length; ++l) {
-      for (int c = 0; c < channel; ++c) {
-        output[c*length + l] = static_cast<float>(input[l*channel + c]) / 255.0f;
-      }
-    }
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      float* output = outputs[0].dptr<float>();
+      DType* input = inputs[0].dptr<DType>();
+      mxnet_op::Kernel<totensor_forward<req_type>, xpu>::Launch(
+          s, channel, output, input, length, channel, step);
+    });
   });
 }
 
-// Normalize Operator
-// Parameter registration for image Normalize operator
+template<typename xpu>
+void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  CHECK_EQ(req[0], kWriteTo)
+    << "`to_tensor` does not support inplace updates";
+
+  // 3D Input - (h, w, c)
+  if (inputs[0].ndim() == 3) {
+    const int length = inputs[0].shape_[0] * inputs[0].shape_[1];
+    const uint32_t channel = inputs[0].shape_[2];
+    ToTensorImpl<xpu>(ctx, inputs, outputs, req, length, channel);
+  } else if (inputs[0].ndim() == 4) {
+    // 4D input (n, h, w, c)
+    const int batch_size = inputs[0].shape_[0];
+    const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+    const uint32_t channel = inputs[0].shape_[3];
+    const int step = channel * length;
+
+    #pragma omp parallel for
+    for (auto n = 0; n < batch_size; ++n) {
+      ToTensorImpl<xpu>(ctx, inputs, outputs, req, length, channel, n*step);
+    }
+  }
+}
+
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   nnvm::Tuple<float> mean;
   nnvm::Tuple<float> std;

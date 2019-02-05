@@ -4,12 +4,12 @@
 MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily.
 Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python](https://mxnet.incubator.apache.org/api/python/module/module.html),    [Java](https://mxnet.incubator.apache.org/api/java/index.html), [Scala](https://mxnet.incubator.apache.org/api/scala/index.html), and [C++](https://mxnet.incubator.apache.org/api/c++/index.html) APIs.
 
-This tutorial is a continuation of the [Gluon end to end tutorial](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/gluon/gluon_from_experiment_to_deployment.md), we will focus on the MXNet C++ API. We have slightly modified the code in [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) for our use case.
+This tutorial is a continuation of the [Gluon end to end tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/gluon_from_experiment_to_deployment.html), we will focus on the MXNet C++ API. We have slightly modified the code in [C++ Inference Example](https://github.com/apache/incubator-mxnet/tree/master/cpp-package/example/inference) for our use case.
 
 ## Prerequisites
 
 To complete this tutorial, you need:
-- Complete the training part of [Gluon end to end tutorial](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/gluon/end_to_end_tutorial_training.md)
+- Complete the training part of [Gluon end to end tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/gluon_from_experiment_to_deployment.html)
 - Learn the basics about [MXNet C++ API](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
 
 
@@ -20,7 +20,7 @@ The summary of those two documents is that you need to build MXNet from source w
 
 ## Load the model and run inference
 
-After you complete [the previous tutorial](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/gluon/end_to_end_tutorial_training.md), you will get the following output files:
+After you complete [the previous tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/gluon_from_experiment_to_deployment.html), you will get the following output files:
 1. Model Architecture stored in `flower-recognition-symbol.json`
 2. Model parameter values stored in `flower-recognition-0040.params` (`0040` is for 40 epochs we ran)
 3. Label names stored in `synset.txt`
@@ -262,6 +262,6 @@ Now you can explore more ways to run inference and deploy your models:
 
 ## References
 
-1. [Gluon end to end tutorial](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/gluon/end_to_end_tutorial_training.md)
+1. [Gluon end to end tutorial](https://mxnet.apache.org/versions/master/tutorials/gluon/gluon_from_experiment_to_deployment.html)
 2. [Gluon C++ inference example](https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference/)
 3. [Gluon C++ package](https://github.com/apache/incubator-mxnet/tree/master/cpp-package)
