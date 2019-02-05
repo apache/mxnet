@@ -200,6 +200,9 @@ if __name__ == '__main__':
 
     calib_layer = lambda name: name.endswith('_output') or name == "data"
     exclude_first_conv = args.exclude_first_conv
+    if args.quantized_dtype == "uint8":
+        logger.info('quantized dtype is set to uint8, will exclude first conv.')
+        exclude_first_conv = True
     excluded_sym_names = []
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
