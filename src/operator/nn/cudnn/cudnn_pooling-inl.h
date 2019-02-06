@@ -82,7 +82,7 @@ class CuDNNPoolingOp {
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     if (!this->Init(s, in_data, out_data))
-      LOG(FATAL) << "CuDNN Pooling invoked with unsupported parameters.";
+      LOG(FATAL) << "cuDNN Pooling invoked with unsupported parameters.";
     if (param_.kernel.ndim() == 2) {
       // 2d pool
       Tensor<gpu, 4, DType> data = in_data.get<gpu, 4, DType>(s);
@@ -127,7 +127,7 @@ class CuDNNPoolingOp {
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     if (!this->Init(s, in_data, out_data))
-      LOG(FATAL) << "CuDNN Pooling invoked with unsupported parameters.";
+      LOG(FATAL) << "cuDNN Pooling invoked with unsupported parameters.";
     if (param_.kernel.ndim() == 2) {
       // 2d pool
       Tensor<gpu, 4, DType> m_out_grad = out_grad.get<gpu, 4, DType>(s);
@@ -172,7 +172,7 @@ class CuDNNPoolingOp {
 /*!
  * \brief Returns whether the cuDNN library version supports the pooling operation
  * described by `param`: cuDNN v5 and earlier does not support 3D pooling for example.
- * CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
+ * CuDNN v7.1.4 backprop kernel doesn't support kernel sizes 9 and above.
  */
   static bool Supports(const PoolingParam &param, const TBlob& input) {
     using namespace mshadow;
@@ -206,15 +206,15 @@ class CuDNNPoolingOp {
       if (!(layout == mshadow::kNCHW || layout == mshadow::kNHWC))
         return false;
 #if CUDNN_VERSION == 7104
-      // CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
+      // CuDNN v7.1.4 backprop kernel doesn't support kernel sizes 9 and above.
       // Perform shape calculations in a standard (NCHW) layout space
       mshadow::Shape<4> input_shape = input.shape_.get<4>();
       mshadow::Shape<4> dshape_nchw = (layout == mshadow::kNHWC) ?
                                       ConvertLayout(input_shape, mshadow::kNHWC, mshadow::kNCHW) :
                                       input_shape;
-      int window_height = param.global_pool ? dshape_nchw[2] : param.kernel[0];
-      int window_width = param.global_pool ? dshape_nchw[3] : param.kernel[1];
-      if (window_height > 8 || window_width > 8)
+      int kernel_height = param.global_pool ? dshape_nchw[2] : param.kernel[0];
+      int kernel_width = param.global_pool ? dshape_nchw[3] : param.kernel[1];
+      if (kernel_height > 8 || kernel_width > 8)
         return false;
 #endif
 #if CUDNN_VERSION >= 7105 && CUDNN_VERSION < 7500
@@ -284,20 +284,20 @@ class CuDNNPoolingOp {
                                             oshape_nchw[1],
                                             oshape_nchw[2],
                                             oshape_nchw[3]));
-      int window_height = param_.global_pool ? dshape_nchw[2] : param_.kernel[0];
-      int window_width = param_.global_pool ? dshape_nchw[3] : param_.kernel[1];
-      // CuDNN v7.1.4 backprop kernel doesn't support window sizes 9 and above.
+      int kernel_height = param_.global_pool ? dshape_nchw[2] : param_.kernel[0];
+      int kernel_width = param_.global_pool ? dshape_nchw[3] : param_.kernel[1];
+      // CuDNN v7.1.4 backprop kernel doesn't support kernel sizes 9 and above.
       // For reference see Fixed Issues section in
       // https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_721.html#rel_721
       #if CUDNN_VERSION == 7104
-      is_supported = window_height <= 8 && window_width <= 8;
+      is_supported = kernel_height <= 8 && kernel_width <= 8;
       #endif
       #if CUDNN_MAJOR >= 5
       CUDNN_CALL(cudnnSetPooling2dDescriptor(pooling_desc_,
                                              mode_,
                                              nan_prop_,
-                                             window_height,
-                                             window_width,
+                                             kernel_height,
+                                             kernel_width,
                                              param_.global_pool ? 0 : param_.pad[0],
                                              param_.global_pool ? 0 : param_.pad[1],
                                              param_.global_pool ? 1 : param_.stride[0],
@@ -305,8 +305,8 @@ class CuDNNPoolingOp {
       #else
       CUDNN_CALL(cudnnSetPooling2dDescriptor(pooling_desc_,
                                              mode_,
-                                             window_height,
-                                             window_width,
+                                             kernel_height,
+                                             kernel_width,
                                              param_.global_pool ? 0 : param_.pad[0],
                                              param_.global_pool ? 0 : param_.pad[1],
                                              param_.global_pool ? 1 : param_.stride[0],
