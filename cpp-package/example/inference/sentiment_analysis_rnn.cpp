@@ -84,6 +84,7 @@ class Predictor {
     Symbol net;
     std::map<int, Executor*> executor_buckets;
     Context global_ctx = Context::cpu();
+    int highest_bucket_key;
 };
 
 
@@ -142,7 +143,7 @@ Predictor::Predictor(const std::string& model_json,
    * Create master executor with highest bucket key for optimizing the shared memory between the
    * executors for the remaining bucket keys.
    */
-  int highest_bucket_key = *(std::max_element(bucket_keys.begin(), bucket_keys.end()));
+  highest_bucket_key = *(std::max_element(bucket_keys.begin(), bucket_keys.end()));
   args_map["data0"] = NDArray(Shape(highest_bucket_key, 1), global_ctx, false);
   args_map["data1"] = NDArray(Shape(1), global_ctx, false);
 
@@ -289,20 +290,12 @@ int Predictor::GetIndexForOutputSymbolName(const std::string& output_symbol_name
  * If the exact bucket key exists, function returns that bucket key.
  * If the matching bucket key does not exist, function looks for the next bucket key
  * that is greater than given num_words.
- * If the next larger bucket does not exist, function looks for the previous bucket key
- * that is lesser than given num_words.
+ * If the next larger bucket does not exist, function returns the largest bucket key.
  */
 int Predictor::GetClosestBucketKey(int num_words) {
-  int closest_bucket_key = -1;
+  int closest_bucket_key = highest_bucket_key;
 
-  // If exact bucket is found return that.
-  if (executor_buckets.find(num_words) != executor_buckets.end()) {
-    closest_bucket_key = num_words;
-  } else if (executor_buckets.upper_bound(num_words) != executor_buckets.end()) {
-    // Check for nearest larger bucket.
-    closest_bucket_key = executor_buckets.upper_bound(num_words)->first;
-  } else if (executor_buckets.lower_bound(num_words) != executor_buckets.end()) {
-    // Check of nearest lower bucket. The input line would
+  if (executor_buckets.lower_bound(num_words) != executor_buckets.end()) {
     closest_bucket_key = executor_buckets.lower_bound(num_words)->first;
   }
   return closest_bucket_key;
