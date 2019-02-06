@@ -606,6 +606,7 @@ rpkg:
 		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
 	fi
 
+	$(RM) -rf R-package/inst/include
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	rm R-package/inst/include/dmlc
@@ -619,8 +620,19 @@ rpkg:
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
-	rm R-package/NAMESPACE
+	$(RM) R-package/NAMESPACE
 	Rscript -e "devtools::document('R-package'); warnings()"
+	export R_TEXI2DVI=$${R_TEXI2DVI:-$${TEXI2DVI:-$$(Rscript -e 'Sys.getenv("R_TEXI2DVI")'|awk '{print $$2}'|grep -v '""')}}; \
+	    export R_TEXI2DVI=$${R_TEXI2DVI:-$$(ls /usr/bin/texi2dvi* | tail -1)}; \
+	    echo $$R_TEXI2DVI; \
+	    if [ -x "$${R_TEXI2DVI}" ]; then \
+		echo "resolved R texi2dvi: R_TEXI2DVI=$${R_TEXI2DVI}"; \
+		$(RM) -r .Rd2pdf*; \
+		mkdir -p R-package/inst/doc; \
+		R CMD Rd2pdf --title=mxnet --batch -no-preview --force --no-index --no-clean --internals R-package; \
+		if [ -f "$$(ls .Rd2pdf*/Rd2.pdf)" ]; then cp -f .Rd2pdf*/Rd2.pdf R-package/inst/doc/mxnet.pdf; else echo "No PDF found in: $$(ls -d .Rd2pdf*)"; fi; \
+	    else echo "Cannot resolve R texi2dvi or not executable: R_TEXI2DVI=$${R_TEXI2DVI}"; \
+	fi
 	R CMD INSTALL R-package
 
 rpkgtest:
@@ -647,7 +659,7 @@ jnilint:
 
 rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
+		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz .Rd2pdf*
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)

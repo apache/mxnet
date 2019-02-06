@@ -4,5 +4,6 @@ src/*.so$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 dummy.NAMESPACE
+.gitignore
 
 README.md

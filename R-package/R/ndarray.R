@@ -70,7 +70,7 @@ mx.nd.internal.empty <- function(shape, ctx=NULL) {
 #' as.array(mat)
 #' mat2 = mx.nd.zeros(c(5,5))
 #' as.array(mat)
-#' mat3 = mx.nd.zeroes(c(3,3,3))
+#' mat3 = mx.nd.zeros(c(3,3,3))
 #' as.array(mat3)
 #'
 #' @export
@@ -121,7 +121,7 @@ mx.nd.copyto <- function(src, ctx) {
 #' @return An Rcpp_MXNDArray object
 #' 
 #' @examples
-#' mat = mx.nd.array(x)
+#' mat = mx.nd.array(1:3)
 #' mat = 1 - mat + (2 * mat)/(mat + 0.5)
 #' as.array(mat)
 #'
