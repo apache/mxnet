@@ -1969,3 +1969,79 @@ def convert_roipooling(node, **kwargs):
         name=name
     )
     return [node]
+
+
+@mx_op.register("tile")
+def convert_tile(node, **kwargs):
+    """Map MXNet's Tile operator attributes to onnx's Tile
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    reps_list = convert_string_to_list(attrs["reps"])
+
+    initializer = kwargs["initializer"]
+    reps_shape_np = np.array(reps_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[reps_shape_np.dtype]
+    dims = np.shape(reps_shape_np)
+
+    output_shape_name = "reps_attr_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=reps_list,
+            raw=False,
+        )
+    )
+
+    input_nodes.append(output_shape_name)
+    tile_node = onnx.helper.make_node(
+        "Tile",
+        input_nodes,
+        [name],
+        name=name
+    )
+
+    return [tensor_node, tile_node]
+
+
+@mx_op.register("broadcast_to")
+def convert_broadcast_to(node, **kwargs):
+    """Map MXNet's broadcast_to operator attributes to onnx's Expand
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    shape_list = convert_string_to_list(attrs["shape"])
+
+    initializer = kwargs["initializer"]
+    output_shape_np = np.array(shape_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
+    dims = np.shape(output_shape_np)
+
+    output_shape_name = "expand_attr_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=shape_list,
+            raw=False,
+        )
+    )
+
+    input_nodes.append(output_shape_name)
+    expand_node = onnx.helper.make_node(
+        "Expand",
+        input_nodes,
+        [name],
+        name=name
+    )
+
+    return [tensor_node, expand_node]
