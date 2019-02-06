@@ -417,7 +417,7 @@ void printUsage() {
 /*
  * The function downloads the model files from s3 bucket.
  */
-void Download_files(const std::vector<std::string> model_files) {
+void DownloadFiles(const std::vector<std::string> model_files) {
   std::string wget_command("wget -nc ");
   std::string s3_url(DEFAULT_S3_URL);
   for (auto &file : model_files) {
@@ -466,7 +466,7 @@ int main(int argc, char** argv) {
   files.push_back(model_file_params);
   files.push_back(input_dictionary);
 
-  Download_files(files);
+  DownloadFiles(files);
 
   std::vector<int> buckets(DEFAULT_BUCKET_KEYS,
                            DEFAULT_BUCKET_KEYS + sizeof(DEFAULT_BUCKET_KEYS) / sizeof(int));

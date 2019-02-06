@@ -15,9 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
+function compare_range() {
+    perl -e "{if($1>$2 && $1<=$3){print 1} else {print 0}}"
+}
 
 set -e # exit on the first error
-export EXE_NAME=sentiment_analysis_rnn
+export EXE_NAME="sentiment_analysis_rnn"
 
 # Running the example with a movie review.
 if [ "$(uname)" == "Darwin" ]; then
@@ -26,7 +29,9 @@ else
     LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./${EXE_NAME}  --input "This movie is the best." 2&> ${EXE_NAME}.log
 fi
 result=`grep "The sentiment score between 0 and 1.*\=" ${EXE_NAME}.log | cut -d '=' -f2`
-if [ $result ==  "0.964498" ];
+lower_bound=0.8
+upper_bound=0.99
+if [ $(compare_range $result $lower_bound $upper_bound) == 1 ];
 then
     echo "PASS: ${EXE_NAME} correctly predicted the sentiment with score = $result"
     exit 0
