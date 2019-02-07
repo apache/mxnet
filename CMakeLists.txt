@@ -494,7 +494,7 @@ else()
 ENDIF(SSE4_2_FOUND)
 
 # set type of Binary_Word
-set(BINARY_WORD_TYPE "uint64" CACHE STRING "Selected BINARY_WORD_TYPE")
+set(BINARY_WORD_TYPE "uint32" CACHE STRING "Selected BINARY_WORD_TYPE")
 set_property(CACHE BINARY_WORD_TYPE PROPERTY STRINGS "uint32;uint64")
 if(BINARY_WORD_TYPE STREQUAL "uint32")
   message(STATUS "Using uint32_t as container for binarized values")
