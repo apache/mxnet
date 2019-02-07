@@ -58,6 +58,14 @@ parser.add_argument('--gctype', type=str, default='none',
                           takes `2bit` or `none` for now.')
 parser.add_argument('--gcthreshold', type=float, default=0.5,
                     help='threshold for 2bit gradient compression')
+parser.add_argument('--hybridize', action='store_true',
+                    help='whether to hybridize in mxnet>=1.3 (default=False)')
+parser.add_argument('--static-alloc', action='store_true',
+                    help='whether to use static-alloc hybridize in mxnet>=1.3 (default=False)')
+parser.add_argument('--static-shape', action='store_true',
+                    help='whether to use static-shape hybridize in mxnet>=1.3 (default=False)')
+parser.add_argument('--export-model', action='store_true',
+                    help='export a symbol graph and exit (default=False)')
 args = parser.parse_args()
 
 print(args)
@@ -71,6 +79,15 @@ if args.cuda:
     context = mx.gpu(0)
 else:
     context = mx.cpu(0)
+
+if args.export_model:
+    args.hybridize = True
+
+# optional parameters only for mxnet >= 1.3
+hybridize_optional = dict(filter(lambda kv:kv[1],
+    {'static_alloc':args.static_alloc, 'static_shape':args.static_shape}.items()))
+if args.hybridize:
+    print('hybridize_optional', hybridize_optional)
 
 dirname = './data'
 dirname = os.path.expanduser(dirname)
@@ -114,6 +131,8 @@ test_data = gluon.data.DataLoader(test_dataset,
 ntokens = len(vocab)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid,
                        args.nlayers, args.dropout, args.tied)
+if args.hybridize:
+    model.hybridize(**hybridize_optional)
 model.initialize(mx.init.Xavier(), ctx=context)
 
 compression_params = None if args.gctype == 'none' else {'type': args.gctype, 'threshold': args.gcthreshold}
@@ -123,6 +142,8 @@ trainer = gluon.Trainer(model.collect_params(), 'sgd',
                          'wd': 0},
                         compression_params=compression_params)
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
+if args.hybridize:
+    loss.hybridize(**hybridize_optional)
 
 ###############################################################################
 # Training code
@@ -177,6 +198,10 @@ def train():
                     epoch, i, cur_L, math.exp(cur_L)))
                 total_L = 0.0
 
+            if args.export_model:
+                model.export('model')
+                return
+
         val_L = eval(val_data)
 
         print('[Epoch %d] time cost %.2fs, valid loss %.2f, valid ppl %.2f'%(
@@ -193,6 +218,8 @@ def train():
 
 if __name__ == '__main__':
     train()
-    model.load_parameters(args.save, context)
-    test_L = eval(test_data)
-    print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
+    if not args.export_model:
+        model.load_parameters(args.save, context)
+        test_L = eval(test_data)
+        print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
+
