@@ -123,9 +123,6 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
 
-  CHECK_EQ(req[0], kWriteTo)
-    << "`to_tensor` does not support inplace updates";
-
   // 3D Input - (h, w, c)
   if (inputs[0].ndim() == 3) {
     const int length = inputs[0].shape_[0] * inputs[0].shape_[1];
