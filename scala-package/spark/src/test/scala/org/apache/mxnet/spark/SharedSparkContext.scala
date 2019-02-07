@@ -80,14 +80,18 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
     System.getProperty("user.dir")
   }
 
-  private def getJarFilePath(root: String): String = {
-    val jarFiles = new File(s"$root/target/").listFiles(new FileFilter {
+  private def findJars(root: String): Array[File] = {
+    val excludedSuffixes = List("bundle", "src", "javadoc", "sources")
+    new File(root).listFiles(new FileFilter {
       override def accept(pathname: File) = {
         pathname.getAbsolutePath.endsWith(".jar") &&
-          !pathname.getAbsolutePath.contains("bundle") &&
-          !pathname.getAbsolutePath.contains("src")
+          excludedSuffixes.map(!pathname.getAbsolutePath.contains(_)).forall(identity)
       }
     })
+  }
+
+  private def getJarFilePath(root: String): String = {
+    val jarFiles = findJars(s"$root/target/")
     if (jarFiles != null && jarFiles.nonEmpty) {
       jarFiles.head.getAbsolutePath
     } else {
@@ -96,13 +100,7 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
   }
 
   private def getSparkJar: String = {
-    val jarFiles = new File(s"$composeWorkingDirPath/target/").listFiles(new FileFilter {
-      override def accept(pathname: File) = {
-        pathname.getAbsolutePath.endsWith(".jar") &&
-          !pathname.getAbsolutePath.contains("javadoc") &&
-          !pathname.getAbsolutePath.contains("sources")
-      }
-    })
+    val jarFiles = findJars(s"$composeWorkingDirPath/target/")
     if (jarFiles != null && jarFiles.nonEmpty) {
       jarFiles.head.getAbsolutePath
     } else {
