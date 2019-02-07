@@ -64,7 +64,7 @@ parser.add_argument('--static-alloc', action='store_true',
                     help='whether to use static-alloc hybridize in mxnet>=1.3 (default=False)')
 parser.add_argument('--static-shape', action='store_true',
                     help='whether to use static-shape hybridize in mxnet>=1.3 (default=False)')
-parser.add_argument('--export-only', action='store_true',
+parser.add_argument('--export-model', action='store_true',
                     help='export a symbol graph and exit (default=False)')
 args = parser.parse_args()
 
@@ -80,7 +80,7 @@ if args.cuda:
 else:
     context = mx.cpu(0)
 
-if args.export_only:
+if args.export_model:
     args.hybridize = True
 
 # optional parameters only for mxnet >= 1.3
@@ -198,7 +198,7 @@ def train():
                     epoch, i, cur_L, math.exp(cur_L)))
                 total_L = 0.0
 
-            if args.export_only:
+            if args.export_model:
                 model.export('model')
                 return
 
@@ -218,7 +218,7 @@ def train():
 
 if __name__ == '__main__':
     train()
-    if not args.export_only:
+    if not args.export_model:
         model.load_parameters(args.save, context)
         test_L = eval(test_data)
         print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
