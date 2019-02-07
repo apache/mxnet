@@ -57,7 +57,6 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
 
   test("Test load image") {
     val nd = Image.imRead(imLocation)
-    logger.info(s"OpenCV load image with shape: ${nd.shape}")
     require(nd.shape == Shape(576, 1024, 3), "image shape not Match!")
   }
 
@@ -65,14 +64,12 @@ class ImageSuite extends FunSuite with BeforeAndAfterAll {
     val url = new URL("https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg")
     val inputStream = url.openStream
     val nd = Image.imDecode(inputStream)
-    logger.info(s"OpenCV load image with shape: ${nd.shape}")
     require(nd.shape == Shape(576, 1024, 3), "image shape not Match!")
   }
 
   test("Test resize image") {
     val nd = Image.imRead(imLocation)
     val resizeIm = Image.imResize(nd, 224, 224)
-    logger.info(s"OpenCV resize image with shape: ${resizeIm.shape}")
     require(resizeIm.shape == Shape(224, 224, 3), "image shape not Match!")
   }
 
