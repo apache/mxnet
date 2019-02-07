@@ -69,7 +69,6 @@ private[infer] class MXNetThreadPoolHandler(numThreads: Int = 1)
 
       val task = new Callable[T] {
         override def call(): T = {
-          logger.debug("threadId: %s".format(Thread.currentThread().getId()))
           f
         }
       }
