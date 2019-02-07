@@ -85,7 +85,7 @@ trait SharedSparkContext extends FunSuite with BeforeAndAfterEach with BeforeAnd
     new File(root).listFiles(new FileFilter {
       override def accept(pathname: File) = {
         pathname.getAbsolutePath.endsWith(".jar") &&
-          excludedSuffixes.map(!pathname.getAbsolutePath.contains(_)).forall(identity)
+          excludedSuffixes.forall(!pathname.getAbsolutePath.contains(_))
       }
     })
   }
