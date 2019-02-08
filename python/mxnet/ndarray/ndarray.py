@@ -768,8 +768,9 @@ fixed-size items.
                     'basic implementation, got object of type {}. '
                     'This is a bug, please report it!'
                     ''.format(type(idx)))
-        int_axes = [ax for ax in range(len(key))
-                    if isinstance(key[ax], integer_types)]
+        int_axes = [
+            ax for ax in range(len(key)) if isinstance(key[ax], integer_types)
+        ]
         begin, end, step = self._basic_indexing_key_to_begin_end_step(
             key, self.shape, keep_none=False
         )
@@ -962,7 +963,8 @@ fixed-size items.
         ndim_done = 0
         block_started = block_done = False
         for ax, idx in enumerate(arrays):
-            shp = (1,) * ndim_done + idx.shape + (1,) * (bcast_ndim - ndim_done - idx.ndim)
+            # TODO: finish
+            shp = (1,) * (ndim_done + block_ndim - idx.ndim) + idx.shape + (1,) * (bcast_ndim - ndim_done - idx.ndim)
             bcast_arrays.append(idx.reshape(shp).broadcast_to(bcast_shape))
 
             if ax in block_axes and not block_started:
@@ -1074,12 +1076,12 @@ fixed-size items.
 
     def _set_nd_advanced_indexing(self, key, value):
         """This function is called by __setitem__ when key is an advanced index."""
-        # FIXME: broken now, fix it!
         indices = self._get_index_nd(key)
         vshape = _get_oshape_of_gather_nd_op(self.shape, indices.shape)
-        value_nd = self._prepare_value_nd(value, vshape)
-        _internal._scatter_set_nd(lhs=self, rhs=value_nd, indices=indices,
-                                  shape=self.shape, out=self)
+        value_nd = self._prepare_value_nd(value, new_axes=[], bcast_shape=vshape)
+        _internal._scatter_set_nd(
+            lhs=self, rhs=value_nd, indices=indices, shape=self.shape, out=self
+        )
 
     def _get_nd_advanced_indexing(self, key):
         """Get item when key is a tuple of any objects of the following types:
