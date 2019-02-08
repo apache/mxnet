@@ -202,10 +202,10 @@ object BucketIo {
       labelBuf.set(labels.flatten)
 
       iBucket += 1
-      val batchProvideData = { val tmp = ListMap("data" -> dataBuf.shape)
-        tmp ++ initStates.map(x => x._1 -> Shape(x._2._1, x._2._2))
-      }
-      val batchProvideLabel = ListMap("softmax_label" -> labelBuf.shape)
+      val batchProvideData = IndexedSeq(DataDesc("data", dataBuf.shape, dataBuf.dtype)) ++
+        initStates.map {
+          case (name, shape) => DataDesc(name, Shape(shape._1, shape._2), DType.Float32)}
+      val batchProvideLabel = IndexedSeq(DataDesc("softmax_label", labelBuf.shape, labelBuf.dtype))
       val initStateArrays = initStates.map(x => NDArray.zeros(x._2._1, x._2._2))
       new DataBatch(IndexedSeq(dataBuf.copy()) ++ initStateArrays,
         IndexedSeq(labelBuf.copy()),
