@@ -157,7 +157,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
     ng->attrs.op = Op::Get("_zeros_without_dtype");
     ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
-    return nnvm::NodeEntry{ng, 0, 0};
+    return nnvm::NodeEntry(std::move(ng), 0, 0);
   }
 
   // remove zero in the sum. at least keep 1.
@@ -178,7 +178,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
       sum_node->attrs.dict["num_args"] = std::to_string(v.size());
       sum_node->attrs.op->attr_parser(&(sum_node->attrs));
       sum_node->inputs = std::move(v);
-      return nnvm::NodeEntry{sum_node, 0, 0};
+      return nnvm::NodeEntry(std::move(sum_node), 0, 0);
     } else {
       // use a stream line of plus instead
       nnvm::NodeEntry ret = v[0];
@@ -208,7 +208,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
         x->attrs.op = ewise_plus_op;
         x->attrs.name = os.str();
         x->inputs = {ret, v[i]};
-        ret = nnvm::NodeEntry{x, 0, 0};
+        ret = nnvm::NodeEntry(std::move(x), 0, 0);
       }
       // identity node is used to avoid exposure of dummy plus node
       // when its output get assigned to another space.
@@ -257,7 +257,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   }
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
-    NodeEntry ngrad{nnvm::Node::Create(), 0, 0};
+    NodeEntry ngrad;
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }

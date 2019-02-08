@@ -160,7 +160,7 @@ CachedOp::CachedOp(
   {
     ograd_entries_.reserve(fwd_graph_.outputs.size());
     for (size_t i = 0; i < fwd_graph_.outputs.size(); ++i) {
-      ograd_entries_.emplace_back(NodeEntry{Node::Create(), 0, 0});
+      ograd_entries_.emplace_back();
     }
 
     std::vector<NodeEntry> xs;
@@ -169,7 +169,7 @@ CachedOp::CachedOp(
       auto nid = idx.input_nodes()[i];
       if (idx.mutable_input_nodes().count(nid)) continue;
       fwd_input_to_grad_output_[i] = xs.size();
-      xs.emplace_back(NodeEntry{idx[nid].weak_ref.lock(), 0, 0});
+      xs.emplace_back(idx[nid].weak_ref.lock(), 0, 0);
     }
 
     CHECK_GT(xs.size(), 0)

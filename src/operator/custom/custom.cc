@@ -224,7 +224,7 @@ std::vector<nnvm::NodeEntry> Gradient(
     size_t i = static_cast<size_t>(t);
     if (i >= params.num_outs + params.num_args) {
       uint32_t idx = static_cast<uint32_t>(i-params.num_outs-params.num_args);
-      g->inputs.push_back(nnvm::NodeEntry{n, idx, 0});
+      g->inputs.push_back(n, idx, 0);
     } else if (i >= params.num_outs) {
       g->inputs.push_back(n->inputs[i-params.num_outs]);
     } else {
