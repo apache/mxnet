@@ -622,6 +622,13 @@ rpkg:
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
+
+	if [ -e "lib/libmkldnn.so.0" ]; then \
+		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
+		cp -rf lib/libiomp5.so R-package/inst/libs; \
+		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	fi
+
 	mkdir -p R-package/inst/include
 	cp -rf include/* R-package/inst/include
 	rm R-package/inst/include/dmlc

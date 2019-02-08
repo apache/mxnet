@@ -96,17 +96,20 @@ class Cast(HybridBlock):
 
 
 class ToTensor(HybridBlock):
-    """Converts an image NDArray to a tensor NDArray.
+    """Converts an image NDArray or batch of image NDArray to a tensor NDArray.
 
     Converts an image NDArray of shape (H x W x C) in the range
     [0, 255] to a float32 tensor NDArray of shape (C x H x W) in
     the range [0, 1).
 
+    If batch input, converts a batch image NDArray of shape (N x H x W x C) in the
+    range [0, 255] to a float32 tensor NDArray of shape (N x C x H x W).
+
     Inputs:
-        - **data**: input tensor with (H x W x C) shape and uint8 type.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
 
     Examples
     --------
@@ -262,8 +265,8 @@ class CenterCrop(Block):
         return image.center_crop(x, *self._args)[0]
 
 
-class Resize(Block):
-    """Resize an image to the given size.
+class Resize(HybridBlock):
+    """Resize an image or a batch of image NDArray to the given size.
     Should be applied before `mxnet.gluon.data.vision.transforms.ToTensor`.
 
     Parameters
@@ -276,13 +279,17 @@ class Resize(Block):
     interpolation : int
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
+        Note that the Resize on gpu use contrib.bilinearResize2D operator
+        which only support bilinear interpolation(1). The result would be slightly
+        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
+        use algorithm which aligns corner.
 
 
     Inputs:
-        - **data**: input tensor with (Hi x Wi x C) shape.
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape.
 
     Outputs:
-        - **out**: output tensor with (H x W x C) shape.
+        - **out**: output tensor with (H x W x C) or (N x H x W x C) shape.
 
     Examples
     --------
@@ -290,6 +297,9 @@ class Resize(Block):
     >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
     >>> transformer(image)
     <NDArray 500x1000x3 @cpu(0)>
+    >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 3x500x1000x3 @cpu(0)>
     """
     def __init__(self, size, keep_ratio=False, interpolation=1):
         super(Resize, self).__init__()
@@ -297,23 +307,8 @@ class Resize(Block):
         self._size = size
         self._interpolation = interpolation
 
-    def forward(self, x):
-        if isinstance(self._size, numeric_types):
-            if not self._keep:
-                wsize = self._size
-                hsize = self._size
-            else:
-                h, w, _ = x.shape
-                if h > w:
-                    wsize = self._size
-                    hsize = int(h * wsize / w)
-                else:
-                    hsize = self._size
-                    wsize = int(w * hsize / h)
-        else:
-            wsize, hsize = self._size
-        return image.imresize(x, wsize, hsize, self._interpolation)
-
+    def hybrid_forward(self, F, x):
+        return F.image.resize(x, self._size, self._keep, self._interpolation)
 
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
