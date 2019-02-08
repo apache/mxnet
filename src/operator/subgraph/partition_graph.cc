@@ -656,12 +656,14 @@ nnvm::Graph InferSubgraphAttrs(
     }
   });
 
+  // copy shapes/types from original graph if available
   const auto &input_nids = idx_g.input_nodes();
   for (size_t i = 0; i < input_nids.size(); i++) {
     auto nid = input_nids[i];
     auto eid = idx_g.entry_id(input_nids[i], 0);
     uint32_t onid = 0;
     uint32_t oeid = 0;
+    // get nodes ids from original graph, or previous subgraphs.
     if (idx_og.exist(orig_input_entries[i].node.get())) {
       onid = idx_og.node_id(orig_input_entries[i].node.get());
       oeid = idx_og.entry_id(orig_input_entries[i]);
@@ -671,9 +673,11 @@ nnvm::Graph InferSubgraphAttrs(
       oeid = idx_og.entry_id(previous.outputs[orig_input_entries[i].index]);
     }
 
+    // copy ctx/mask
     contexts[nid] = orig_ctx[onid];
     dev_masks[nid] = orig_dev_masks[onid];
 
+    // copy shapes/types
     shapes[eid] = oshapes[oeid];
     types[eid] = odtypes[oeid];
     stypes[eid] = ostypes[oeid];
