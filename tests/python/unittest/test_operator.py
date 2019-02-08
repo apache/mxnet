@@ -2526,7 +2526,7 @@ def test_slice_like_different_types():
 
     x = mx.nd.array(x)
     y = mx.nd.array(y).astype('int32')
-    z = mx.nd.slice_like(x, y).asnumpy()
+    z = mx.nd.slice_like(x, y)
     assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
 
 @with_seed()
