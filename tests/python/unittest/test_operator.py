@@ -4516,6 +4516,32 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+def test_softmax_fp16():
+    def check_fp16_fp32_almost_equal(input_data):
+        fp16_input = input_data.astype('float16')
+        fp32_input = input_data.astype('float32')
+        fp16_input.attach_grad()
+        fp32_input.attach_grad()
+        with mx.autograd.record():
+            fp16_softmax = fp16_input.softmax(axis=-1)
+            fp32_softmax = fp32_input.softmax(axis=-1)
+        fp16_softmax.backward()
+        fp32_softmax.backward()
+        assert_almost_equal(fp16_softmax.asnumpy(), fp32_softmax.asnumpy(), rtol=1e-5, atol=1e-5)
+        assert_almost_equal(fp16_input.grad.asnumpy(), fp32_input.grad.asnumpy(), rtol=1e-5, atol=1e-5)
+
+        with mx.autograd.record():
+            fp16_log_softmax = fp16_input.log_softmax(axis=-1)
+            fp32_log_softmax = fp32_input.log_softmax(axis=-1)
+        fp16_log_softmax.backward()
+        fp32_log_softmax.backward()
+        assert_almost_equal(fp16_log_softmax.asnumpy(), fp32_log_softmax.asnumpy(), rtol=1e-2, atol=1e-2)
+        assert_almost_equal(fp16_input.grad.asnumpy(), fp32_input.grad.asnumpy(), rtol=1e-2, atol=1e-2)
+
+    for _ in range(5):
+        check_fp16_fp32_almost_equal(mx.random.uniform(shape=(100, 500)))
+
+@with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
