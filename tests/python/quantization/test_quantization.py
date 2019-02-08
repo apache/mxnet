@@ -450,6 +450,16 @@ def get_fp32_sym_with_multiple_outputs(length=1):
 @with_seed()
 def test_quantize_model():
     def check_quantize_model(qdtype):
+        if is_test_for_native_cpu():
+            print('skipped testing quantize_model for native cpu since it is not supported yet')
+            return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing quantize_model for mkldnn cpu int8 since it is not supported yet')
+            return
+        elif qdtype == 'uint8' and is_test_for_gpu():
+            print('skipped testing quantize_model for gpu uint8 since it is not supported yet')
+            return
+
         def check_params(params, qparams, qsym=None):
             if qsym is None:
                 assert len(params) == len(qparams)
