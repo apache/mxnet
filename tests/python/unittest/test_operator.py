@@ -2516,6 +2516,20 @@ def test_slice_like():
             assert_allclose(xgrad1.asnumpy(), mx.nd.zeros_like(xgrad1).asnumpy())
 
 @with_seed()
+def test_slice_like_different_types():
+    x = [[  1.,   2.,   3.,   4.],
+         [  5.,   6.,   7.,   8.],
+         [  9.,  10.,  11.,  12.]]
+
+    y = [[  0.,   0.,   0.],
+         [  0.,   0.,   0.]]
+
+    x = mx.nd.array(x)
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.slice_like(x, y).asnumpy()
+    assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
+
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
