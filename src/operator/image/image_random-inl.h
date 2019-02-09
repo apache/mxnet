@@ -52,7 +52,8 @@ template<typename DType, typename T1, typename T2>
 void ToTensorImplCUDA(mshadow::Stream<gpu> *s,
                       const T1 input,
                       const T2 output,
-                      const int req);
+                      const int req,
+                      const float normalize_factor);
 #endif  // MXNET_USE_CUDA
 
 // Shape and Type inference for image to tensor operator
@@ -89,10 +90,10 @@ inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
 // Operator Implementation
 template<typename DType, int req>
 inline void ToTensor(float* out_data, const DType* in_data,
-                         const int length,
-                         const int channels,
-                         const int step = 0,
-                         const float normalize_factor = 255.0f) {
+                     const int length,
+                     const int channels,
+                     const float normalize_factor,
+                     const int step = 0) {
   #pragma omp parallel for collapse(2)
   for (int c = 0; c < channels; ++c) {
       for (int i = 0; i < length; ++i) {
@@ -107,6 +108,7 @@ inline void ToTensorImpl(const std::vector<TBlob> &inputs,
                          const std::vector<OpReqType> &req,
                          const int length,
                          const int channel,
+                         const float normalize_factor,
                          const int step = 0) {
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
@@ -132,6 +134,8 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(req[0], kWriteTo)
     << "`to_tensor` does not support inplace updates";
 
+  const float normalize_factor = 255.0f;
+
   if (std::is_same<xpu, gpu>::value) {
   #if MXNET_USE_CUDA
       mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -140,16 +144,23 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
           if (inputs[0].ndim() == 3) {
             Tensor<gpu, 3, DType> input = inputs[0].get<gpu, 3, DType>(s);
             Tensor<gpu, 3, float> output = outputs[0].get<gpu, 3, float>(s);
-            ToTensorImplCUDA<DType, Tensor<gpu, 3, DType>, Tensor<gpu, 3, float>>(s, input, output, req_type);
+            ToTensorImplCUDA<DType, Tensor<gpu, 3, DType>, Tensor<gpu, 3, float>>
+            (s, input, output, req_type, normalize_factor);
+          } else {
+            Tensor<gpu, 4, DType> input = inputs[0].get<gpu, 4, DType>(s);
+            Tensor<gpu, 4, float> output = outputs[0].get<gpu, 4, float>(s);
+            ToTensorImplCUDA<DType, Tensor<gpu, 4, DType>, Tensor<gpu, 4, float>>
+            (s, input, output, req_type, normalize_factor);
           }
         });
       });
-#endif  // MXNET_USE_CUDA
+  #endif  // MXNET_USE_CUDA
   } else if (inputs[0].ndim() == 3) {
     // 3D Input - (h, w, c)
     const int length = inputs[0].shape_[0] * inputs[0].shape_[1];
     const int channel = static_cast<int>(inputs[0].shape_[2]);
-    ToTensorImpl(inputs, outputs, req, length, channel);
+    ToTensorImpl(inputs, outputs, req, length,
+                 channel, normalize_factor);
   } else if (inputs[0].ndim() == 4) {
     // 4D input (n, h, w, c)
     const int batch_size = inputs[0].shape_[0];
@@ -159,7 +170,8 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
 
     #pragma omp parallel for
     for (auto n = 0; n < batch_size; ++n) {
-      ToTensorImpl(inputs, outputs, req, length, channel, n*step);
+      ToTensorImpl(inputs, outputs, req, length, channel,
+                   normalize_factor, n*step);
     }
   }
 }
