@@ -679,10 +679,18 @@ inline void GetIndexRange(const TShape& dshape,
 
       if (param_end[i].has_value()) {
         e = param_end[i].value();
-        if (e < 0) {
-          e += len;
-          CHECK_GE(e, 0) << "slicing with end[" << i << "]="
-                         << e - len << " exceeds limit of " << len;
+        if (s > 0) {
+          if (e < 0) {
+            e += len;
+            CHECK_GE(e, 0) << "slicing with end[" << i << "]="
+                           << e - len << " exceeds limit of " << len;
+          }
+        } else {
+          if (e < -1) {
+            e += len;
+            CHECK_GE(e, -1) << "slicing with end[" << i << "]="
+                           << e - len << " exceeds limit of " << len;
+          }
         }
       } else if (s < 0) {
         e = -1;
