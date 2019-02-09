@@ -254,7 +254,7 @@ inline int get_num_threads<cpu>(const int N) {
   case mshadow::kFloat32:                                  \
     {                                                      \
       typedef float DType;                                 \
-      typedef float AType;                                 \
+      typedef double AType;                                \
       {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
