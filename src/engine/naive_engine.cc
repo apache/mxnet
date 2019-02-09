@@ -74,6 +74,12 @@ class NaiveEngine final : public Engine {
         streams_[i] = nullptr;
       }
     }
+    for (size_t i = 0; i < aux_streams_.size(); ++i) {
+      if (aux_streams_[i] != nullptr) {
+        delete aux_streams_[i];
+        aux_streams_[i] = nullptr;
+      }
+    }
 #endif
   }
 
@@ -172,8 +178,9 @@ class NaiveEngine final : public Engine {
       }
       if (streams_[dev_id] == nullptr) {
         streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);
+        aux_streams_[dev_id] = new GPUAuxStream(streams_[dev_id]);
       }
-      exec_fun(RunContext{exec_ctx, streams_[dev_id], streams_[dev_id], false}, callback);
+      exec_fun(RunContext{exec_ctx, streams_[dev_id], aux_streams_[dev_id], false}, callback);
 #else
       LOG(FATAL) << "GPU is not enabled";
 #endif
@@ -220,6 +227,10 @@ class NaiveEngine final : public Engine {
   mshadow::Stream<cpu> cpu_stream_;
   // GPU streams
   std::vector<mshadow::Stream<gpu>*> streams_;
+#if MXNET_USE_CUDA
+  // GPU auxiliary streams
+  std::vector<GPUAuxStream*> aux_streams_;
+#endif
 };  // class NaiveEngine
 
 Engine *CreateNaiveEngine() {

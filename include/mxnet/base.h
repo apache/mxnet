@@ -226,6 +226,111 @@ struct Context {
   inline static Context FromString(const std::string& str);
 };
 
+#if MXNET_USE_CUDA
+/*! \brief Holds an auxiliary mshadow gpu stream that can be synced with a primary stream. */
+class GPUAuxStream {
+public:
+  /*!
+   * \brief constructor.
+   * \param primary_stream gpu stream that is synced with the created auxiliary stream.
+   */
+  explicit GPUAuxStream(mshadow::Stream<gpu> *primary_stream) :
+      primary_stream_(primary_stream),
+      aux_stream_(primary_stream),
+      gpu_stream_sync_event_(nullptr) {
+    if (Context::GetGPUStreamsPerWorker() >= 2) {
+      // Create auxiliary stream on the same device with the same properties as the primary stream
+      bool primary_has_blas_handle =
+          primary_stream->blas_handle_ownership_ == mshadow::Stream<gpu>::OwnHandle;
+      bool primary_has_dnn_handle =
+          primary_stream->dnn_handle_ownership_ == mshadow::Stream<gpu>::OwnHandle;
+      aux_stream_ = mshadow::NewStream<gpu>(primary_has_blas_handle,
+                                            primary_has_dnn_handle,
+                                            primary_stream->dev_id);
+      MSHADOW_CUDA_CALL(cudaEventCreateWithFlags(&gpu_stream_sync_event_, cudaEventDisableTiming));
+    }
+  }
+  /*! \brief destructor */
+  ~GPUAuxStream() {
+    // If the aux_stream_ == primary_stream_, then we created no new streams to destroy.
+    if (aux_stream_ != primary_stream_) {
+      MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(aux_stream_));
+      MSHADOW_CATCH_ERROR(cudaEventDestroy(gpu_stream_sync_event_));
+    }
+  }
+  /*!
+   * \brief Makes future aux stream work wait on the completion of existing primary stream work.
+   */
+  void PreAuxStreamUseSync() {
+    // If the aux_stream_ == primary_stream_, then no synchronization is necessary.
+    if (aux_stream_ != primary_stream_)
+      StreamSync(primary_stream_, aux_stream_, gpu_stream_sync_event_);
+  }
+  /*!
+   * \brief Makes future primary stream work wait on the completion of existing aux stream work.
+   */
+  void PostAuxStreamUseSync() {
+    // If the aux_stream_ == primary_stream_, then no synchronization is necessary.
+    if (aux_stream_ != primary_stream_)
+      StreamSync(aux_stream_, primary_stream_, gpu_stream_sync_event_);
+  }
+  /*! \brief Getter for created auxiliary stream. */
+  mshadow::Stream<gpu> *GetStream() { return aux_stream_; }
+  /*!
+   * \brief Make future work enqueued to `s2` wait on completion of current work enqueued to `s1`.
+   * \param s1 stream with work that must be completed before future s2 work can begin.
+   * \param s2 stream whose future work is made to wait on the completion of existing s1 work.
+   * \param event used to pass s1 state to s2.
+   */
+  static void StreamSync(mshadow::Stream<gpu> *s1, mshadow::Stream<gpu> *s2, cudaEvent_t event) {
+    MSHADOW_CUDA_CALL(cudaEventRecord(event, s1->stream_));
+    MSHADOW_CUDA_CALL(cudaStreamWaitEvent(s2->stream_, event, 0));
+  }
+
+private:
+  mshadow::Stream<gpu> *primary_stream_;
+  mshadow::Stream<gpu> *aux_stream_;
+  cudaEvent_t gpu_stream_sync_event_;
+};
+
+/*!
+ * \brief Provides automatic coordination of an auxilary stream with a primary one.
+ * This object, upon construction, prepares an aux stream for use by syncing it with enqueued
+ * primary-stream work.  Object destruction will sync again so future primary-stream work
+ * will wait on enqueued aux-stream work.  If MXNET_GPU_WORKER_NSTREAMS == 1, then this defaults
+ * simply: the primary stream will equal the aux stream and the syncs will be executed as nops.
+ * See ./src/operator/cudnn/cudnn_convolution-inl.h for a usage example.
+ */
+class SyncedGPUAuxStream {
+public:
+  /*!
+   * \brief constructor.
+   * \param gpu_aux_stream auxilary gpu stream that is managed by this RAII object.
+   */
+  SyncedGPUAuxStream(GPUAuxStream *gpu_aux_stream) : gpu_aux_stream_(gpu_aux_stream) {
+    gpu_aux_stream_->PreAuxStreamUseSync();
+  }
+  /*! \brief destructor */
+  ~SyncedGPUAuxStream() {
+    gpu_aux_stream_->PostAuxStreamUseSync();
+  }
+  /*! \brief copy constructor deleted to prevent unexpected synchronizations. */
+  SyncedGPUAuxStream(const SyncedGPUAuxStream&) = delete;
+  /*! \brief copy assignment operator deleted to prevent unexpected synchronizations. */
+  void operator=(const SyncedGPUAuxStream&) = delete;
+  /*! \brief move constructor permitted as alternative to copying. */
+  SyncedGPUAuxStream(SyncedGPUAuxStream&&) = default;
+  /*! \brief move assignment operator permitted as alternative to copy assignment. */
+  SyncedGPUAuxStream& operator=(SyncedGPUAuxStream&&) = default;
+  /*! \brief Getter for underlying mshadow::Stream<gpu>. */
+  inline mshadow::Stream<gpu>* GetStream() const {
+    return gpu_aux_stream_->GetStream();
+  }
+private:
+  GPUAuxStream *gpu_aux_stream_;
+};
+#endif  // MXNET_USE_CUDA
+
 /*!
  * \brief execution time context.
  *  The information needed in runtime for actual execution.
@@ -254,22 +359,15 @@ struct RunContext {
   inline mshadow::Stream<xpu>* get_stream() const {
     return static_cast<mshadow::Stream<xpu>*>(stream);
   }
+#if MXNET_USE_CUDA
   /*!
-   * \brief get the auxiliary (i.e. 2nd) mshadow stream from the Context
-   *  The user must sync work enqueued to the aux stream with the primary stream using events.
-   *  For example, gpu kernels that produce the inputs to the operation are likely to be
-   *  launched into the primary stream.  An event must be used to synchronize a kernel launched
-   *  into the auxilary stream on the availability of these inputs.  Also, a second event must be
-   *  used to synchronize auxiliary stream kernel outputs with the primary stream, so that a
-   *  subsequent operation's kernels launched into the primary stream read their inputs only when
-   *  they are ready.  See ./src/operator/nn/cudnn/cudnn_convolution-inl.h for an example.
-   * \return the mshadow stream
-   * \tparam xpu the device type of the stream
+   * \brief get an RAII object that transparently handles the syncing of the auxiliary stream.
+   * \return the aux stream auto-syncing object
    */
-  template<typename xpu>
-  inline mshadow::Stream<xpu>* get_aux_stream() const {
-    return static_cast<mshadow::Stream<xpu>*>(aux_stream);
+  inline SyncedGPUAuxStream get_gpu_aux_stream() const {
+    return SyncedGPUAuxStream(static_cast<GPUAuxStream*>(aux_stream));
   }
+#endif
   /*! \brief get the base Context from RunContext */
   inline const Context& get_ctx() const {
     return ctx;

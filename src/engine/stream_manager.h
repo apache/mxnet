@@ -55,7 +55,7 @@ class StreamManager {
 #if MXNET_USE_CUDA
   std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
       gpu_streams_;
-  std::array<std::array<mshadow::Stream<gpu>*, kStreams>, kNumGpus>
+  std::array<std::array<GPUAuxStream*, kStreams>, kNumGpus>
       gpu_aux_streams_;
   std::array<mshadow::Stream<gpu>*, kNumGpus> gpu_io_streams_;
   std::array<int, kNumGpus> gpu_cnt_;
@@ -79,12 +79,12 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           mxnet::common::cuda::DeviceStore device_store(ctx.dev_id);
-          for (auto&& i : gpu_streams_.at(ctx.dev_id)) {
-            i = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
-          }
-          for (auto&& i : gpu_aux_streams_.at(ctx.dev_id)) {
-            i = Context::GetGPUStreamsPerWorker() >= 2 ?
-                mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id) : nullptr;
+          auto dev_streams = gpu_streams_.at(ctx.dev_id);
+          auto dev_aux_streams = gpu_aux_streams_.at(ctx.dev_id);
+          for (int i = 0; i != dev_streams.size(); ++i) {
+            auto primary_stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
+            dev_streams.at(i) = primary_stream;
+            dev_aux_streams.at(i) = new GPUAuxStream(primary_stream);
           }
           counter = 0;
         }
@@ -152,9 +152,12 @@ void StreamManager<kNumGpus, kStreams>::Finalize() {
 #if MXNET_USE_CUDA
   for (std::size_t i = 0; i < kNumGpus; ++i) {
     if (gpu_cnt_.at(i) != -1) {
-      for (auto&& j : gpu_streams_.at(i)) {
+      for (auto&& primary_stream : gpu_streams_.at(i)) {
         // Catch exception for CUDA driver shutdown
-        MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(j));
+        MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(primary_stream));
+      }
+      for (auto&& aux_stream : gpu_aux_streams_.at(i)) {
+        delete aux_stream;
       }
       gpu_cnt_.at(i) = -1;
     }

@@ -245,7 +245,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
 #if MXNET_USE_CUDA
     CHECK(block != nullptr);
     mshadow::Stream<gpu> *stream = nullptr;
-    mshadow::Stream<gpu> *aux_stream = nullptr;
+    GPUAuxStream *aux_stream = nullptr;
     do {
       ThreadPool::SetReadyOnDestroy setReady(ready_event);
       // allocate stream
@@ -254,9 +254,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
         stream = mshadow::NewStream<gpu>(false, false, ctx.dev_id);
       } else {
         stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
-        if (Context::GetGPUStreamsPerWorker() >= 2) {
-          aux_stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
-        }
+        aux_stream = new GPUAuxStream(stream);
       }
     } while (false);
     // execute task
@@ -273,6 +271,8 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     }
     // Catch exception for CUDA driver shutdown
     MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(stream));
+    if (aux_stream != nullptr)
+      delete aux_stream;
 #else
     ready_event->signal();
 #endif

@@ -54,10 +54,6 @@ class CuDNNConvolutionOp {
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
     parallelize_backward_kernels_ = Context::GetGPUStreamsPerWorker() >= 2;
-    if (parallelize_backward_kernels_) {
-      CUDA_CALL(cudaEventCreateWithFlags(&dgrad_can_start_, cudaEventDisableTiming));
-      CUDA_CALL(cudaEventCreateWithFlags(&dgrad_completion_, cudaEventDisableTiming));
-    }
   }
 
   void Init(const ConvolutionParam& param,
@@ -126,10 +122,6 @@ class CuDNNConvolutionOp {
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(forward_conv_desc_));
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_));
     CUDNN_CALL(cudnnDestroyConvolutionDescriptor(back_conv_desc_w_));
-    if (parallelize_backward_kernels_) {
-      CUDA_CALL(cudaEventDestroy(dgrad_can_start_));
-      CUDA_CALL(cudaEventDestroy(dgrad_completion_));
-    }
   }
 
   void Forward(const OpContext &ctx,
@@ -233,14 +225,8 @@ class CuDNNConvolutionOp {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(in_grad.size(), expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    Stream<gpu> *s_dgrad = parallelize_backward_kernels_ ? ctx.get_aux_stream<gpu>() : s;
-
-    // Make sure the dgrad kernel in the aux stream doesn't start before it would have
-    // had it been launched into the operator's primary stream.
-    if (parallelize_backward_kernels_ && req[conv::kData] != kNullOp) {
-      CUDA_CALL(cudaEventRecord(dgrad_can_start_, s->stream_));
-      CUDA_CALL(cudaStreamWaitEvent(s_dgrad->stream_, dgrad_can_start_, 0));
-    }
+    // RAII object to handle syncing of the underlying auxiliary stream with the primary stream
+    SyncedGPUAuxStream s_dgrad = ctx.get_gpu_aux_stream();
 
     // I/O's should have 2 more dims than the kernel dim
     DType *grad_ptr = GetNdPtr(out_grad[conv::kOut], param_.kernel.ndim() + 2, s);
@@ -301,7 +287,7 @@ class CuDNNConvolutionOp {
             gwmat_ptr));
     }
     if (req[conv::kData] != kNullOp) {
-        CUDNN_CALL(cudnnConvolutionBackwardData(s_dgrad->dnn_handle_,
+        CUDNN_CALL(cudnnConvolutionBackwardData(s_dgrad.GetStream()->dnn_handle_,
             &alpha,
             filter_desc_,
             wmat_ptr,
@@ -314,10 +300,6 @@ class CuDNNConvolutionOp {
             req[conv::kData] == kAddTo? &beta_add : &beta,
             in_desc_,
             gdata_ptr));
-        if (parallelize_backward_kernels_) {
-          CUDA_CALL(cudaEventRecord(dgrad_completion_, s_dgrad->stream_));
-          CUDA_CALL(cudaStreamWaitEvent(s->stream_, dgrad_completion_, 0))
-        }
     }
     #else
     for (uint32_t g = 0; g < param_.num_group; ++g) {
@@ -1108,10 +1090,6 @@ class CuDNNConvolutionOp {
   cudnnConvolutionDescriptor_t back_conv_desc_w_;
   // Should dgrad and wgrad be launched into separate streams
   bool parallelize_backward_kernels_;
-  // Event to signal dgrad kernel aux stream completion back to the main stream of this operator.
-  cudaEvent_t dgrad_completion_;
-  // Event from the main stream of this operator that the dgrad kernel can begin in the aux stream.
-  cudaEvent_t dgrad_can_start_;
   // Algorithm for the forward inference operation
   CuDNNAlgo<cudnnConvolutionFwdAlgo_t> forward_algo_;
   // Algorithm for the back-prop operation to the data
