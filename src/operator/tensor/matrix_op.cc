@@ -667,7 +667,7 @@ Example::
     CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
     std::vector<int> checked_in_attrs = { (*in_attrs)[0] };
     bool ret = !type_is_none((*in_attrs)[1]) &&
-               ElemwiseType<1,1>(attrs, &checked_in_attrs, out_attrs);
+               ElemwiseType<1, 1>(attrs, &checked_in_attrs, out_attrs);
     (*in_attrs)[0] = checked_in_attrs[0];
     return ret;
   })
