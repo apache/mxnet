@@ -31,5 +31,8 @@ namespace op {
 NNVM_REGISTER_OP(_contrib_adamw_update)
 .set_attr<FCompute>("FCompute<gpu>", AdamWUpdate<gpu>);
 
+NNVM_REGISTER_OP(_contrib_mp_adamw_update)
+.set_attr<FCompute>("FCompute<gpu>", MPAdamWUpdate<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

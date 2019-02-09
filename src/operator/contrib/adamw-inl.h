@@ -80,6 +80,58 @@ struct AdamWParam : public dmlc::Parameter<AdamWParam> {
   }
 };
 
+struct MPAdamWKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data, float* mean_data,
+    float* var_data, const DType* weight_data, const DType* grad_data, float* weight32,
+    const float param_clip_gradient, const float param_beta1, const float param_beta2,
+    const float param_eta, const float param_lr, const float param_wd,
+    const float param_rescale_grad, const float param_epsilon, const OpReqType req) {
+    float w = weight32[i];
+    float mean = mean_data[i];
+    float var = var_data[i];
+    float scaled_grad = param_rescale_grad*static_cast<float>(grad_data[i]);
+    if (param_clip_gradient >= 0.0f) {
+      mean = param_beta1 * mean +
+             (1 - param_beta1) * mshadow_op::clip::Map(scaled_grad, param_clip_gradient);
+      var = param_beta2 * var + (1 - param_beta2) *
+            mshadow_op::square::Map(mshadow_op::clip::Map(scaled_grad, param_clip_gradient));
+    } else {
+      mean = param_beta1 * mean + (1 - param_beta1) * scaled_grad;
+      var = param_beta2 * var + (1 - param_beta2) * mshadow_op::square::Map(scaled_grad);
+    }
+    mean_data[i] = mean;
+    var_data[i] = var;
+    w = w - param_eta * (param_lr * mean / (mshadow_op::square_root::Map(var) + param_epsilon)
+                         + param_wd * w);
+    weight32[i] = w;
+    KERNEL_ASSIGN(out_data[i], req, w);
+  }
+};
+
+template<typename xpu>
+inline void MPAdamWUpdate(const nnvm::NodeAttrs& attrs,
+                          const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  AdamWParam param = nnvm::get<AdamWParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, float> mean = inputs[2].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> var = inputs[3].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> weight32 = inputs[4].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+      //MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+    Kernel<MPAdamWKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
+      var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient, param.beta1,
+      param.beta2, param.eta, param.lr, param.wd, param.rescale_grad, param.epsilon, req[0]);
+  });
+}
+
 /*
  * \brief adam_w update.
  */

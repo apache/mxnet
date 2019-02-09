@@ -24,11 +24,32 @@
  * \author Haibin Lin
  */
 #include "./adamw-inl.h"
+#include "../optimizer_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
 DMLC_REGISTER_PARAMETER(AdamWParam);
+
+NNVM_REGISTER_OP(_contrib_mp_adamw_update)
+.describe("Update function for multi-precision AdamW optimizer")
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<AdamWParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+// TODO rename: MP_SGD_InferType
+.set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 5>)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    return std::vector<uint32_t>{2, 3, 4};
+  })
+.set_attr<FCompute>("FCompute<cpu>", MPAdamWUpdate<cpu>)
+.add_argument("weight", "NDArray-or-Symbol", "Weight")
+.add_argument("grad", "NDArray-or-Symbol", "Gradient")
+.add_argument("mean", "NDArray-or-Symbol", "Moving mean")
+.add_argument("var", "NDArray-or-Symbol", "Moving variance")
+.add_argument("weight32", "NDArray-or-Symbol", "Weight32")
+.add_arguments(AdamWParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_adamw_update)
 .describe(R"code(Update function for AdamW optimizer. AdamW is seen as a modification of
