@@ -675,14 +675,22 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
         b = len - 1;
       }
       CHECK_LT(b, len) << "slicing with begin[" << i << "]="
-                       << b << " exceends limit of " << len;
+                       << b << " exceeds limit of " << len;
 
       if (param_end[i].has_value()) {
         e = param_end[i].value();
-        if (e < 0) {
-          e += len;
-          CHECK_GE(e, 0) << "slicing with end[" << i << "]="
-                         << e - len << " exceeds limit of " << len;
+        if (s > 0) {
+          if (e < 0) {
+            e += len;
+            CHECK_GE(e, 0) << "slicing with end[" << i << "]="
+                           << e - len << " exceeds limit of " << len;
+          }
+        } else {
+          if (e < -1) {
+            e += len;
+            CHECK_GE(e, -1) << "slicing with end[" << i << "]="
+                           << e - len << " exceeds limit of " << len;
+          }
         }
       } else if (s < 0) {
         e = -1;
