@@ -25,6 +25,9 @@
 #ifndef MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
+#ifdef _MSC_VER
+  #pragma warning(disable:4503)  // disable warning: decorated name length exceeded.
+#endif
 
 #include <algorithm>
 #include <cmath>
