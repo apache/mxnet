@@ -27,6 +27,7 @@
 #include <mxnet/base.h>
 #include <algorithm>
 #include "../mxnet_op.h"
+#include "../tensor/broadcast_reduce_op.h"
 
 namespace mxnet {
 namespace op {
@@ -170,6 +171,20 @@ struct QuantizationRangeForMultiplicationStruct {
     min_a[i], max_a[i], min_b[i], max_b[i], min_c, max_c);
   }
 };
+
+template<typename xpu, typename DType>
+inline size_t ConfigReduce(mshadow::Stream<xpu>* s,
+                           const TShape& data_shape,
+                           const TShape& out_shape,
+                           TShape* src_shape,
+                           TShape* dst_shape) {
+  BroadcastReduceShapeCompact(data_shape, out_shape, src_shape, dst_shape);
+  constexpr int NDim = 2;
+  CHECK_EQ(src_shape->ndim(), NDim);
+  CHECK_EQ(dst_shape->ndim(), NDim);
+
+  return broadcast::ReduceWorkspaceSize<NDim, DType>(s, *dst_shape, kWriteTo, *src_shape);
+}
 
 }  // namespace op
 }  // namespace mxnet

@@ -22,20 +22,19 @@
  * \file quantize.cc
  * \brief
  */
-#include "./quantize-inl.h"
+
+#include "./quantize_v2-inl.h"
 #if MXNET_USE_MKLDNN == 1
-#include "./mkldnn/mkldnn_quantize-inl.h"
+#include "./mkldnn/mkldnn_quantize_v2-inl.h"
 #endif
 
 namespace mxnet {
 namespace op {
-DMLC_REGISTER_PARAMETER(QuantizeParam);
+DMLC_REGISTER_PARAMETER(QuantizeV2Param);
 
-bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
-                         const int dev_mask,
-                         DispatchMode* dispatch_mode,
-                         std::vector<int> *in_attrs,
-                         std::vector<int> *out_attrs) {
+static bool QuantizeV2StorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                  DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                  std::vector<int>* out_attrs) {
   *dispatch_mode = DispatchMode::kFCompute;
 #if MXNET_USE_MKLDNN == 1
   if (dev_mask == mshadow::cpu::kDevMask) {
@@ -48,12 +47,11 @@ bool QuantizeStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(_contrib_quantize)
+NNVM_REGISTER_OP(_contrib_quantize_v2)
 .describe(R"code(Quantize a input tensor from float to `out_type`,
-with user-specified `min_range` and `max_range`.
+with user-specified `min_calib_range` and `max_calib_range` or the input range collected at runtime.
 
-min_range and max_range are scalar floats that specify the range for
-the input data.
+Output `min_range` and `max_range` are scalar floats that specify the range for the input data.
 
 When out_type is `uint8`, the output is calculated using the following equation:
 
@@ -70,29 +68,36 @@ where
 `quantized_range = MinAbs(max(int8), min(int8))` and
 `scale = quantized_range / MaxAbs(min_range, max_range).`
 
+When out_type is `auto`, the output type is automatically determined by min_calib_range if presented.
+If min_calib_range < 0.0f, the output type will be int8, otherwise will be uint8.
+If min_calib_range isn't presented, the output type will be int8.
+
 .. Note::
     This operator only supports forward propagation. DO NOT use it in training.)code" ADD_FILELINE)
-.set_attr_parser(ParamParser<QuantizeParam>)
-.set_num_inputs(3)
+.set_attr_parser(ParamParser<QuantizeV2Param>)
+.set_num_inputs(1)
 .set_num_outputs(3)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data", "min_range", "max_range"};
-  })
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizeShape)
-.set_attr<nnvm::FInferType>("FInferType", QuantizeType)
-.set_attr<FInferStorageType>("FInferStorageType", QuantizeStorageType)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data"};
+})
+.set_attr<nnvm::FInferShape>("FInferShape", QuantizeV2Shape)
+.set_attr<nnvm::FInferType>("FInferType", QuantizeV2Type)
+.set_attr<FInferStorageType>("FInferStorageType", QuantizeV2StorageType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
-.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeCompute)
+.set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeV2Compute)
 #endif
-.set_attr<FCompute>("FCompute<cpu>", QuantizeCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", QuantizeV2Compute<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
+  if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+    return std::vector<ResourceRequest>();
+  } else {
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
+  }
+})
 .add_argument("data", "NDArray-or-Symbol", "A ndarray/symbol of type `float32`")
-.add_argument("min_range", "NDArray-or-Symbol", "The minimum scalar value "
-  "possibly produced for the input")
-.add_argument("max_range", "NDArray-or-Symbol", "The maximum scalar value "
-  "possibly produced for the input")
-.add_arguments(QuantizeParam::__FIELDS__());
+.add_arguments(QuantizeV2Param::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet
