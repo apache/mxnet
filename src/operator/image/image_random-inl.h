@@ -94,12 +94,12 @@ inline void ToTensor(float* out_data, const DType* in_data,
                      const int channels,
                      const float normalize_factor,
                      const int step) {
-  // Visual C++ compiler does not support omp collapse
+  // Microsoft Visual C++ compiler does not support omp collapse
   #ifdef _MSC_VER
     #pragma omp parallel for
   #else
     #pragma omp parallel for collapse(2)
-  #endif
+  #endif // _MSC_VER
   for (int c = 0; c < channels; ++c) {
       for (int i = 0; i < length; ++i) {
         KERNEL_ASSIGN(out_data[step + c*length + i], req,

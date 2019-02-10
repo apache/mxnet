@@ -36,10 +36,6 @@
 #include "./operator_common.h"
 #include "./mshadow_op.h"
 
-#ifdef _MSC_VER
-  #pragma warning(disable:4503)  // disable warning: decorated name length exceeded.
-#endif
-
 namespace mxnet {
 namespace op {
 
