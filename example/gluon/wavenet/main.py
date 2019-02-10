@@ -31,8 +31,8 @@ def main():
     - dilation_depth : Define dilation depth (default=10)
     - use_gpu : use gpu for trainin (default=True)
     - generation : whether or not to generate a wave file for model (default=True)
-    - load_file : file name in loading wave file
-    - save_file : file name in saving result
+    - load_file : file name in loading wave file (default=parametric-2.wav)
+    - save_file : file name in saving result (default=wav.npy)
     """
     parser = argparse.ArgumentParser(description='argument for wavenet hyperparameters')
     parser.add_argument('--batch_size', type=int, default=64, help="batch size")
