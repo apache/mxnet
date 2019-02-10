@@ -93,7 +93,7 @@ inline void ToTensor(float* out_data, const DType* in_data,
                      const int length,
                      const int channels,
                      const float normalize_factor,
-                     const int step = 0) {
+                     const int step) {
   #pragma omp parallel for collapse(2)
   for (int c = 0; c < channels; ++c) {
       for (int i = 0; i < length; ++i) {
@@ -109,12 +109,13 @@ inline void ToTensorImpl(const std::vector<TBlob> &inputs,
                          const int length,
                          const int channel,
                          const float normalize_factor,
-                         const int step = 0) {
+                         const int step) {
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
       float* output = outputs[0].dptr<float>();
       DType* input = inputs[0].dptr<DType>();
-      ToTensor<DType, req_type>(output, input, length, channel, step);
+      ToTensor<DType, req_type>(output, input, length, channel,
+                                normalize_factor, step);
     });
   });
 }
@@ -159,8 +160,9 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
     // 3D Input - (h, w, c)
     const int length = inputs[0].shape_[0] * inputs[0].shape_[1];
     const int channel = static_cast<int>(inputs[0].shape_[2]);
+    const int step = 0;
     ToTensorImpl(inputs, outputs, req, length,
-                 channel, normalize_factor);
+                 channel, normalize_factor, step);
   } else if (inputs[0].ndim() == 4) {
     // 4D input (n, h, w, c)
     const int batch_size = inputs[0].shape_[0];
