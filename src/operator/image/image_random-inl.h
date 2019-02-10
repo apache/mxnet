@@ -99,7 +99,7 @@ inline void ToTensor(float* out_data, const DType* in_data,
     #pragma omp parallel for
   #else
     #pragma omp parallel for collapse(2)
-  #endif // _MSC_VER
+  #endif  // _MSC_VER
   for (int c = 0; c < channels; ++c) {
       for (int i = 0; i < length; ++i) {
         KERNEL_ASSIGN(out_data[step + c*length + i], req,
