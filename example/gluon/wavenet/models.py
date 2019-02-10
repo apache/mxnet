@@ -33,7 +33,6 @@ class One_Hot(nn.Block):
 
     def forward(self, X_in):
         with X_in.context:
-            X_in = X_in
             self.ones = nd.one_hot(nd.arange(self.depth), self.depth)
             return self.ones[X_in, :]
 
