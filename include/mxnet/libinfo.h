@@ -28,8 +28,10 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include "dmlc/base.h"
 #include "mshadow/base.h"
+#include "c_api.h"
 
 /*!
  *\brief whether to use opencv support
@@ -128,7 +130,7 @@ namespace features {
 
 /// Compile time features
 // ATTENTION: When changing this enum, match the strings in the implementation file!
-enum : uint32_t {
+enum : unsigned {
   // NVIDIA, CUDA
   CUDA = 0,
   CUDNN,
@@ -187,10 +189,21 @@ struct EnumNames {
   static const std::vector<std::string> names;
 };
 
+struct LibInfo {
+  LibInfo();
+  static LibInfo* getInstance();
+  const std::array<LibFeature, MAX_FEATURES>& getFeatures() {
+    return m_lib_features;
+  }
+ private:
+  std::array<LibFeature, MAX_FEATURES> m_lib_features;
+  static std::unique_ptr<LibInfo>  m_inst;
+};
+
 /*!
  * \return true if the given feature is supported
  */
-bool is_enabled(uint32_t feat);
+bool is_enabled(unsigned feat);
 
 }  // namespace features
 }  // namespace mxnet

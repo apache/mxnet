@@ -26,6 +26,7 @@
 
 #include "mxnet/libinfo.h"
 #include <bitset>
+#include "mxnet/base.h"
 
 namespace mxnet {
 namespace features {
@@ -108,6 +109,22 @@ static FeatureSet featureSet;
 bool is_enabled(const unsigned feat) {
   return featureSet.is_enabled(feat);
 }
+
+LibInfo::LibInfo() {
+    for (size_t i = 0; i < MAX_FEATURES; ++i) {
+        m_lib_features[i].name = EnumNames::names[i].c_str();
+        m_lib_features[i].enabled = is_enabled(i);
+        m_lib_features[i].index = i;
+    }
+}
+
+LibInfo *LibInfo::getInstance() {
+    if (!m_inst)
+        m_inst = std::make_unique<LibInfo>();
+    return m_inst.get();
+}
+
+std::unique_ptr<LibInfo> LibInfo::m_inst = nullptr;
 
 const std::vector<std::string> EnumNames::names = {
   "CUDA",

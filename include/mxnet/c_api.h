@@ -139,6 +139,12 @@ struct MXCallbackList {
   void **contexts;
 };
 
+struct LibFeature {
+  const char* name;
+  uint32_t index;
+  bool enabled;
+};
+
 enum CustomOpCallbacks {
   kCustomOpDelete,
   kCustomOpForward,
@@ -210,20 +216,12 @@ MXNET_DLL const char *MXGetLastError();
 //-------------------------------------
 
 /*!
- * \brief Check if a feature is enabled in the runtime
- * \param feature to check (see libinfo.h)
- * \param out set to true if the feature is enabled, false otherwise
+ * \brief Get list of features supported on the runtime
+ * \param libFeature pointer to array of LibFeature
+ * \param size of the array
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXLibHasFeature(const mx_uint feature, bool *out);
-
-/*!
- * \brief Return a list of supported runtime features not enabled inclusive.
- * \param size  size of the returned array
- * \param names ptr to array of strings containing feature names
- * \return 0 when success, -1 when failure happens.
- */
-MXNET_DLL int MXLibFeatureList(size_t *size, const char ***names);
+MXNET_DLL int MXLibInfoFeatures(const struct LibFeature **libFeature, size_t *size);
 
 /*!
  * \brief Seed all global random number generators in mxnet.

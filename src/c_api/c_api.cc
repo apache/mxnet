@@ -87,25 +87,12 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
-int MXLibHasFeature(const mx_uint feature, bool *out) {
+int MXLibInfoFeatures(const struct LibFeature **lib_features, size_t *size) {
+  using namespace features;
   API_BEGIN();
-  *out = features::is_enabled(feature);
-  API_END();
-}
-
-int MXLibFeatureList(size_t *size, const char ***names) {
-  API_BEGIN();
-  MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
-  ret->ret_vec_str.resize(0);
-  ret->ret_vec_charp.resize(0);
-  ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
-  std::copy(features::EnumNames::names.cbegin(), features::EnumNames::names.cend(),
-      std::back_inserter(ret->ret_vec_str));
-  for (size_t i = 0; i < ret->ret_vec_str.size(); ++i) {
-    ret->ret_vec_charp.push_back(ret->ret_vec_str[i].c_str());
-  }
-  *names = dmlc::BeginPtr(ret->ret_vec_charp);
-  *size = ret->ret_vec_str.size();
+  LibInfo* lib_info = LibInfo::getInstance();
+  *lib_features = lib_info->getFeatures().data();
+  *size = lib_info->getFeatures().size();
   API_END();
 }
 

@@ -15,38 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
-import sys
-import mxnet as mx
-from mxnet.libinfo import *
-from mxnet.base import MXNetError
-from nose.tools import *
+# coding: utf-8
+# pylint: disable=not-an-iterable
 
+"""runtime detection of compile time features in the native library"""
 
-def test_include_path():
-    incl_path = find_include_path()
-    assert os.path.exists(incl_path)
-    assert os.path.isdir(incl_path)
+import ctypes
+from .base import _LIB, check_call, mx_uint, py_str
 
+class LibFeature(ctypes.Structure):
+    _fields_ = [
+        ("name", ctypes.c_char_p),
+        ("index", ctypes.c_uint32),
+        ("enabled", ctypes.c_bool)
+    ]
 
-def test_runtime_features():
-    for f in Feature:
-        res = has_feature_index(f.value)
-        ok_(type(res) is bool)
-    for f in features_enabled():
-        ok_(type(f) is Feature)
-    ok_(type(features_available()) is list)
-    ok_(len(features_available()) > 0)
-    ok_(len(Feature) > 0)
-    print("Features available: {}".format(features_available()))
-
-
-@raises(MXNetError)
-def test_has_feature_2large():
-    has_feature_index(sys.maxsize)
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
-
+def libinfo_features():
+    lib_features = ctypes.POINTER(LibFeature)()
+    lib_features_size = ctypes.c_size_t()
+    check_call(_LIB.MXLibInfoFeatures(ctypes.byref(lib_features), ctypes.byref(lib_features_size)))
+    feature_list = [lib_features[i] for i in range(lib_features_size.value)]
+    return feature_list
