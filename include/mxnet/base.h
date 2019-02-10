@@ -229,7 +229,7 @@ struct Context {
 #if MXNET_USE_CUDA
 /*! \brief Holds an auxiliary mshadow gpu stream that can be synced with a primary stream. */
 class GPUAuxStream {
-public:
+ public:
   /*!
    * \brief constructor.
    * \param primary_stream gpu stream that is synced with the created auxiliary stream.
@@ -287,7 +287,7 @@ public:
     MSHADOW_CUDA_CALL(cudaStreamWaitEvent(s2->stream_, event, 0));
   }
 
-private:
+ private:
   mshadow::Stream<gpu> *primary_stream_;
   mshadow::Stream<gpu> *aux_stream_;
   cudaEvent_t gpu_stream_sync_event_;
@@ -302,12 +302,12 @@ private:
  * See ./src/operator/cudnn/cudnn_convolution-inl.h for a usage example.
  */
 class SyncedGPUAuxStream {
-public:
+ public:
   /*!
    * \brief constructor.
    * \param gpu_aux_stream auxilary gpu stream that is managed by this RAII object.
    */
-  SyncedGPUAuxStream(GPUAuxStream *gpu_aux_stream) : gpu_aux_stream_(gpu_aux_stream) {
+  explicit SyncedGPUAuxStream(GPUAuxStream *gpu_aux_stream) : gpu_aux_stream_(gpu_aux_stream) {
     gpu_aux_stream_->PreAuxStreamUseSync();
   }
   /*! \brief destructor */
@@ -326,7 +326,8 @@ public:
   inline mshadow::Stream<gpu>* GetStream() const {
     return gpu_aux_stream_->GetStream();
   }
-private:
+
+ private:
   GPUAuxStream *gpu_aux_stream_;
 };
 #endif  // MXNET_USE_CUDA
