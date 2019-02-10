@@ -95,6 +95,7 @@ class BucketingModule(BaseModule):
         self._curr_bucket_key = None
         self._params_dirty = False
         self._monitor = None
+        self._grad_req = None
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
@@ -331,6 +332,7 @@ class BucketingModule(BaseModule):
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
         self.binded = True
+        self._grad_req = grad_req
 
         symbol, data_names, label_names = self._call_sym_gen(self._default_bucket_key)
         module = Module(symbol, data_names, label_names, logger=self.logger,
@@ -340,7 +342,7 @@ class BucketingModule(BaseModule):
                         group2ctxs=self._group2ctxs,
                         compression_params=self._compression_params)
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
-                    force_rebind=False, shared_module=None, grad_req=grad_req)
+                    force_rebind=False, shared_module=None, grad_req=self._grad_req)
         self._curr_module = module
         self._curr_bucket_key = self._default_bucket_key
         self._buckets[self._default_bucket_key] = module
@@ -373,7 +375,8 @@ class BucketingModule(BaseModule):
                             compression_params=self._compression_params)
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
-                        force_rebind=False, shared_module=self._buckets[self._default_bucket_key])
+                        force_rebind=False, shared_module=self._buckets[self._default_bucket_key],
+                        grad_req=self._grad_req)
             if self._monitor is not None:
                 module.install_monitor(self._monitor)
             self._buckets[bucket_key] = module

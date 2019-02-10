@@ -139,10 +139,14 @@ int main(int argc, char const *argv[]) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
   Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("momentum", 0.9)

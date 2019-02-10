@@ -23,12 +23,12 @@ Samples are uniformly distributed over the half-open interval [low, high)
 (includes low, but excludes high).
 
 ```julia
-julia> mx.rand!(empty(2, 3))
+julia> mx.rand!(NDArray(undef, 2, 3))
 2×3 mx.NDArray{Float32,2} @ CPU0:
  0.385748   0.839275  0.444536
  0.0879585  0.215928  0.104636
 
-julia> mx.rand!(empty(2, 3), low = 1, high = 10)
+julia> mx.rand!(NDArray(undef, 2, 3), low = 1, high = 10)
 2×3 mx.NDArray{Float32,2} @ CPU0:
  6.6385   4.18888  2.07505
  8.97283  2.5636   1.95586
@@ -56,8 +56,8 @@ julia> mx.rand(2, 2; low = 1, high = 10)
  9.81258  3.58068
 ```
 """
-rand(dims::Int...; low = 0, high = 1, context = cpu()) =
-  rand!(empty(dims, context), low = low, high = high)
+rand(dims::Integer...; low = 0, high = 1, context = cpu()) =
+  rand!(NDArray(undef, dims, ctx = context), low = low, high = high)
 
 """
     randn!(x::NDArray; μ = 0, σ = 1)
@@ -73,7 +73,7 @@ randn!(x::NDArray; μ = 0, σ = 1) =
 Draw random samples from a normal (Gaussian) distribution.
 """
 randn(dims::Int...; μ = 0, σ = 1, context = cpu()) =
-  randn!(empty(dims, context), μ = μ, σ = σ)
+  randn!(NDArray(undef, dims, ctx = context), μ = μ, σ = σ)
 
 """
     seed!(seed::Int)

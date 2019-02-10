@@ -1,3 +1,4 @@
+target/
 .flattened-pom.xml
 core/src/main/scala/org/apache/mxnet/NDArrayAPIBase.scala
 core/src/main/scala/org/apache/mxnet/NDArrayBase.scala

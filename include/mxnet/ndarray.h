@@ -694,9 +694,13 @@ class NDArray {
   /*
    * Create NDArray from mkldnn memory.
    * mkldnn_mem The mkldnn memory to be managed.
-   * static_data If true, mkldnn memory won't be freed on destruction.
    */
-  explicit NDArray(const mkldnn::memory *mkldnn_mem, bool static_data = true);
+  explicit NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem);
+  /*
+   * Create NDArray from mkldnn memory descriptor.
+   * mem_pd The mkldnn memory descriptor to be created.
+   */
+  explicit NDArray(mkldnn::memory::primitive_desc mem_pd);
   /*
    * Test if the data is stored in one of special MKLDNN format.
    */
@@ -776,7 +780,7 @@ class NDArray {
    /*!
    * \ Fix mkldnn memory descriptor mismatch from NDArray.
    */
-  void UpdateMKLDNNMemDesc();
+  void UpdateMKLDNNMemDesc(mkldnn::memory::format format);
 #endif
 
   /*!

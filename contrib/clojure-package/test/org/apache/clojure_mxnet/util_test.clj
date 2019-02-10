@@ -226,3 +226,10 @@
   (let [nda (util/map->scala-tuple-seq {:a-b (ndarray/ones [1 2])})]
     (is (= "a_b" (._1 (.head nda))))
     (is (= [1.0 1.0] (ndarray/->vec (._2 (.head nda)))))))
+
+(deftest test-forms->scala-fn
+  (let [scala-fn (util/forms->scala-fn
+                  (def x 1)
+                  (def y 2)
+                  {:x x :y y})]
+    (is (= {:x 1 :y 2} (.apply scala-fn)))))

@@ -51,7 +51,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--num-calib-batches', type=int, default=5,
                         help='number of batches for calibration')
-    parser.add_argument('--exclude-first-conv', action='store_true', default=True,
+    parser.add_argument('--exclude-first-conv', action='store_true', default=False,
                         help='excluding quantizing the first conv layer since the'
                              ' number of channels is usually not a multiple of 4 in that layer'
                              ' which does not satisfy the requirement of cuDNN')
@@ -78,8 +78,8 @@ if __name__ == '__main__':
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
                              ' kinds of quantized models if the calibration dataset is representative enough of the'
                              ' inference dataset.')
-    parser.add_argument('--quantized-dtype', type=str, default='uint8',
-                        choices=['int8', 'uint8'],
+    parser.add_argument('--quantized-dtype', type=str, default='auto',
+                        choices=['auto', 'int8', 'uint8'],
                         help='quantization destination data type for input data')
 
     args = parser.parse_args()
@@ -115,16 +115,19 @@ if __name__ == '__main__':
     # get image shape
     image_shape = '3,300,300'
 
+    def calib_layer(name): return not (name.endswith('_data') or
+                                       name.endswith('_weight') or
+                                       name.endswith('_bias') or
+                                       name.endswith('_workspace'))
     # Quantization layer configs
     exclude_first_conv = args.exclude_first_conv
     excluded_sym_names = []
     rgb_mean = '123,117,104'
-    calib_layer = lambda name: name.endswith('_output')
     for i in range(1,19):
         excluded_sym_names += ['flatten'+str(i)]
-    excluded_sym_names += ['relu4_3_cls_pred_conv',
-                            'relu7_cls_pred_conv',
-                            'relu4_3_loc_pred_conv']
+    excluded_sym_names += ['multibox_loc_pred',
+                           'concat0',
+                           'concat1']
     if exclude_first_conv:
         excluded_sym_names += ['conv1_1']
 
@@ -157,9 +160,7 @@ if __name__ == '__main__':
                                                         calib_mode=calib_mode, calib_data=eval_iter,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        label_names=(label_name,),
-                                                        calib_quantize_op = True,
-                                                        logger=logger)
+                                                        label_names=(label_name,), logger=logger)
         sym_name = '%s-symbol.json' % ('./model/cqssd_vgg16_reduced_300')
         param_name = '%s-%04d.params' % ('./model/cqssd_vgg16_reduced_300', epoch)
     qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')

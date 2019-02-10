@@ -1618,6 +1618,7 @@ int MXExecutorReshape(int partial_shaping,
 int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
                                            void* callback_handle);
+
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------
@@ -2167,4 +2168,3 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** cuda_kernel_
                                   mx_uint grid_dim_z, mx_uint block_dim_x,
                                   mx_uint block_dim_y, mx_uint block_dim_z,
                                   mx_uint shared_mem);
-

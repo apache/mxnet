@@ -53,7 +53,6 @@ export NDArray,
        clip,
        clip!,
        context,
-       empty,
        expand_dims,
        @inplace,
        # activation funcs

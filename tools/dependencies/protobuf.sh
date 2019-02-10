@@ -18,6 +18,7 @@
 # under the License.
 
 # This script builds the static library of protobuf along with protoc, that can be used as dependency of mxnet.
+set -ex
 PROTOBUF_VERSION=3.5.1
 if [[ $PLATFORM == 'darwin' ]]; then
     DY_EXT="dylib"
@@ -32,12 +33,12 @@ if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     >&2 echo "Building protobuf..."
     curl -s -L https://github.com/google/protobuf/archive/v$PROTOBUF_VERSION.zip -o $DEPS_PATH/protobuf.zip
     unzip -q $DEPS_PATH/protobuf.zip -d $DEPS_PATH
+    pushd .
     cd $DEPS_PATH/protobuf-$PROTOBUF_VERSION
     ./autogen.sh
     ./configure -prefix=$DEPS_PATH
-    make
-    make install
-    cd -
+    $MAKE
+    $MAKE install
+    popd
 fi
 
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$(dirname $(find $DEPS_PATH -type f -name 'libprotoc*' | grep protobuf | head -n 1)):$DEPS_PATH/lib

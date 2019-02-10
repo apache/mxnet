@@ -43,6 +43,7 @@
     <dollar>$</dollar>
     <MXNET_DIR>${project.basedir}/..</MXNET_DIR>
     <skipJavaTests>true</skipJavaTests>
+    <repo_url>file://${project.build.directory}/repo</repo_url>
   </properties>
 
   <packaging>pom</packaging>
@@ -131,7 +132,7 @@
                 </goals>
                 <configuration>
                   <executable>bash</executable>
-                  <commandlineArgs>-c 'mkdir -p ${project.build.directory}; if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda.so | wc -l) == "0" ]]; then echo flavor=cpu &gt; ${project.build.directory}/flavor.properties; else echo flavor=gpu &gt; ${project.build.directory}/flavor.properties; fi'</commandlineArgs>
+                  <commandlineArgs>-c 'mkdir -p ${project.build.directory}; if [[ $(ldd ${MXNET_DIR}/lib/libmxnet.so | grep libcuda | wc -l) == "0" ]]; then echo flavor=cpu &gt; ${project.build.directory}/flavor.properties; else echo flavor=gpu &gt; ${project.build.directory}/flavor.properties; fi'</commandlineArgs>
                 </configuration>
               </execution>
             </executions>
@@ -154,6 +155,34 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>staging</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>nightly</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+              <skip>true</skip>
+            </configuration>
           </plugin>
         </plugins>
       </build>
@@ -337,7 +366,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-deploy-plugin</artifactId>
         <configuration>
-          <skip>true</skip>
+          <skip>false</skip>
+          <altDeploymentRepository>deployrepo::default::${repo_url}</altDeploymentRepository>
         </configuration>
       </plugin>
     </plugins>
@@ -380,6 +410,12 @@
       <groupId>org.scalacheck</groupId>
       <artifactId>scalacheck_2.11</artifactId>
       <version>1.13.5</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
       <scope>test</scope>
     </dependency>
 

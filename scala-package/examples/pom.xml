@@ -15,6 +15,7 @@
 
   <properties>
     <skipTests>true</skipTests>
+    <skipJavaTests>${skipTests}</skipJavaTests>
   </properties>
 
   <build>

@@ -20,7 +20,7 @@
 set -e
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
 java -Xmx8G -Dmxnet.traceLeakedObjects=true -cp $CLASS_PATH \
 	org.apache.mxnetexamples.javaapi.benchmark.JavaBenchmark $@
