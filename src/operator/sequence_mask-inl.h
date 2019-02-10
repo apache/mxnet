@@ -68,8 +68,8 @@ struct SequenceMaskParam : public dmlc::Parameter<SequenceMaskParam> {
 // (seqlen, batch, rest) case
 template <int req>
 struct SequenceMask0Kernel {
-  template <typename DType>
-  MSHADOW_XINLINE static void Map(int b, DType *in, const DType *idx,
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int b, DType *in, const IType *idx,
                                   index_t max_s_len, index_t batch_size,
                                   index_t restsize, DType value) {
     const index_t seqpos = static_cast<int>(idx[b]);
@@ -86,8 +86,8 @@ struct SequenceMask0Kernel {
 // (batch, seqlen, rest) case
 template <int req>
 struct SequenceMask1Kernel {
-  template <typename DType>
-  MSHADOW_XINLINE static void Map(int b, DType *in, const DType *idx,
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(int b, DType *in, const IType *idx,
                                   index_t max_s_len, index_t batch_size,
                                   index_t restsize, DType value) {
     const index_t seqpos = static_cast<int>(idx[b]);
@@ -101,13 +101,13 @@ struct SequenceMask1Kernel {
   }
 };
 
-template <typename xpu, typename DType>
+template <typename xpu, typename DType, typename IType>
 class SequenceMaskOp : public Operator {
  public:
   explicit SequenceMaskOp(SequenceMaskParam p) { this->param_ = p; }
 
   void sequence_mask(const mshadow::Tensor<xpu, 3, DType> &data,
-                     const mshadow::Tensor<xpu, 1, DType> &indices,
+                     const mshadow::Tensor<xpu, 1, IType> &indices,
                      const OpReqType req, mshadow::Stream<xpu> *const s,
                      DType val) {
     using namespace mshadow;
@@ -153,8 +153,8 @@ class SequenceMaskOp : public Operator {
     // Actual implementation of masking
     Assign(out, req[seq_mask::kOut], F<mshadow_op::identity>(data));
     if (param_.use_sequence_length) {
-      Tensor<xpu, 1, DType> indices =
-          in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
+      Tensor<xpu, 1, IType> indices =
+          in_data[seq_mask::kSequenceLength].get<xpu, 1, IType>(s);
       sequence_mask(out, indices, req[seq_mask::kOut], s,
                     static_cast<DType>(param_.value));
     }
@@ -190,8 +190,8 @@ class SequenceMaskOp : public Operator {
     if (!param_.use_sequence_length) {
       Assign(data_g, req[seq_mask::kData], F<mshadow_op::identity>(out_g));
     } else {
-      Tensor<xpu, 1, DType> indices =
-          in_data[seq_mask::kSequenceLength].get<xpu, 1, DType>(s);
+      Tensor<xpu, 1, IType> indices =
+          in_data[seq_mask::kSequenceLength].get<xpu, 1, IType>(s);
       if (req[seq_mask::kData] == kAddTo) {
         Tensor<xpu, 3, DType> out_g_temp =
             ctx.requested[seq_mask::kTempSpace].get_space_typed<xpu, 3, DType>(
@@ -212,7 +212,7 @@ class SequenceMaskOp : public Operator {
 };  // class SequenceMaskOp
 
 template <typename xpu>
-Operator *CreateOp(SequenceMaskParam param, int dtype);
+Operator *CreateOp(SequenceMaskParam param, int dtype, int itype);
 
 #if DMLC_USE_CXX11
 class SequenceMaskProp : public OperatorProperty {
@@ -270,8 +270,6 @@ class SequenceMaskProp : public OperatorProperty {
     for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();

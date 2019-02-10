@@ -16,7 +16,7 @@
 ;;
 
 (ns imclassification.train-mnist-test
-	(:require 
+	(:require
 		[clojure.test :refer :all]
 		[clojure.java.io :as io]
 		[clojure.string :as s]
@@ -26,14 +26,15 @@
 
 (defn- file-to-filtered-seq [file]
 	(->>
-		file 
+		file
 		(io/file)
 		(io/reader)
 		(line-seq)
 		(filter  #(not (s/includes? % "mxnet_version")))))
 
 (deftest mnist-two-epochs-test
-	(module/save-checkpoint (mnist/start [(context/cpu)] 2) {:prefix "target/test" :epoch 2})
-	(is (= 
-		(file-to-filtered-seq "test/test-symbol.json.ref") 
-		(file-to-filtered-seq "target/test-symbol.json"))))
+  (do
+    (mnist/start [(context/cpu)] 2)
+    (is (=
+         (file-to-filtered-seq "test/test-symbol.json.ref")
+         (file-to-filtered-seq "target/test-symbol.json")))))

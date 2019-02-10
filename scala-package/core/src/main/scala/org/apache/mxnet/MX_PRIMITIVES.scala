@@ -82,4 +82,10 @@ object MX_PRIMITIVES {
 
   implicit def MX_DoubleToDouble(d: MX_Double) : Double = d.data
 
+  def isValidMxPrimitiveType(num : Any) : Boolean = {
+    num match {
+      case valid @ (_: Float | _: Double) => true
+      case _ => false
+    }
+  }
 }
