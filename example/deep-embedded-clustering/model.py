@@ -18,8 +18,9 @@
 # pylint: disable=missing-docstring
 from __future__ import print_function
 
-import mxnet as mx
 import numpy as np
+import mxnet as mx
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -53,7 +54,7 @@ def extract_feature(sym, args, auxs, data_iter, N, xpu=mx.cpu()):
 
 
 class MXModel(object):
-    def __init__(self, xpu=mx.cpu(), *args, **kwargs):
+    def __init__(self, *args, xpu=mx.cpu(), **kwargs):
         self.xpu = xpu
         self.loss = None
         self.args = {}

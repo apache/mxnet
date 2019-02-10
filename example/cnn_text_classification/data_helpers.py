@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+"""Help functions to support for implementing CNN + Highway Network for Text Classification in MXNet"""
+
 import itertools
 import os
 import re
@@ -40,9 +42,9 @@ def clean_str(string):
     string = re.sub(r"\'ll", " \'ll", string)
     string = re.sub(r",", " , ", string)
     string = re.sub(r"!", " ! ", string)
-    string = re.sub(r"\(", " \( ", string)
-    string = re.sub(r"\)", " \) ", string)
-    string = re.sub(r"\?", " \? ", string)
+    string = re.sub(r"\(", r" \( ", string)
+    string = re.sub(r"\)", r" \) ", string)
+    string = re.sub(r"\?", r" \? ", string)
     string = re.sub(r"\s{2,}", " ", string)
     return string.strip().lower()
 
@@ -81,8 +83,8 @@ def pad_sentences(sentences, padding_word="</s>"):
     """
     sequence_length = max(len(x) for x in sentences)
     padded_sentences = []
-    for i in range(len(sentences)):
-        sentence = sentences[i]
+    for i, sentence in enumerate(sentences):
+        print(i, sentence)
         num_padding = sequence_length - len(sentence)
         new_sentence = sentence + [padding_word] * num_padding
         padded_sentences.append(new_sentence)
@@ -111,23 +113,24 @@ def build_input_data(sentences, labels, vocabulary):
     y = np.array(labels)
     return [x, y]
 
-def build_input_data_with_word2vec(sentences, labels, word2vec):
+
+def build_input_data_with_word2vec(sentences, labels, word2vec_list):
     """Map sentences and labels to vectors based on a pretrained word2vec"""
     x_vec = []
     for sent in sentences:
         vec = []
         for word in sent:
-            if word in word2vec:
-                vec.append(word2vec[word])
+            if word in word2vec_list:
+                vec.append(word2vec_list[word])
             else:
-                vec.append(word2vec['</s>'])
+                vec.append(word2vec_list['</s>'])
         x_vec.append(vec)
     x_vec = np.array(x_vec)
     y_vec = np.array(labels)
     return [x_vec, y_vec]
 
 
-def load_data_with_word2vec(word2vec):
+def load_data_with_word2vec(word2vec_list):
     """
     Loads and preprocessed data for the MR dataset.
     Returns input vectors, labels, vocabulary, and inverse vocabulary.
@@ -136,7 +139,7 @@ def load_data_with_word2vec(word2vec):
     sentences, labels = load_data_and_labels()
     sentences_padded = pad_sentences(sentences)
     # vocabulary, vocabulary_inv = build_vocab(sentences_padded)
-    return build_input_data_with_word2vec(sentences_padded, labels, word2vec)
+    return build_input_data_with_word2vec(sentences_padded, labels, word2vec_list)
 
 
 def load_data():
@@ -170,18 +173,21 @@ def batch_iter(data, batch_size, num_epochs):
 
 
 def load_pretrained_word2vec(infile):
+    """
+    Load the pre-trained word2vec from file.
+    """
     if isinstance(infile, str):
         infile = open(infile)
 
-    word2vec = {}
+    word2vec_list = {}
     for idx, line in enumerate(infile):
         if idx == 0:
             vocab_size, dim = line.strip().split()
         else:
             tks = line.strip().split()
-            word2vec[tks[0]] = map(float, tks[1:])
+            word2vec_list[tks[0]] = map(float, tks[1:])
 
-    return word2vec
+    return word2vec_list
 
 
 def load_google_word2vec(path):

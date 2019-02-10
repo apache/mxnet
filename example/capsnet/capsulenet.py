@@ -14,16 +14,20 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-import mxnet as mx
-import numpy as np
+"""
+Generate MXNet implementation of CapsNet
+"""
 import os
 import re
 import gzip
 import struct
+import numpy as np
 import scipy.ndimage as ndi
+import mxnet as mx
 from capsulelayers import primary_caps, CapsuleLayer
 
 from mxboard import SummaryWriter
+
 
 def margin_loss(y_true, y_pred):
     loss = y_true * mx.sym.square(mx.sym.maximum(0., 0.9 - y_pred)) +\
@@ -31,7 +35,10 @@ def margin_loss(y_true, y_pred):
     return mx.sym.mean(data=mx.sym.sum(loss, 1))
 
 
-def capsnet(batch_size, n_class, num_routing,recon_loss_weight):
+def capsnet(batch_size, n_class, num_routing, recon_loss_weight):
+    """
+    Create CapsNet
+    """
     # data.shape = [batch_size, 1, 28, 28]
     data = mx.sym.Variable('data')
 
@@ -107,7 +114,8 @@ def read_data(label_url, image_url):
         label = np.fromstring(flbl.read(), dtype=np.int8)
     with gzip.open(download_data(image_url), 'rb') as fimg:
         magic, num, rows, cols = struct.unpack(">IIII", fimg.read(16))
-        image = np.fromstring(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
+        image = np.fromstring(fimg.read(), dtype=np.uint8)
+        np.reshape(image, len(label), (rows, cols))
     return label, image
 
 
@@ -116,10 +124,13 @@ def to4d(img):
 
 
 class LossMetric(mx.metric.EvalMetric):
-    def __init__(self, batch_size, num_gpu):
+    """
+    Evaluate the loss function
+    """
+    def __init__(self, batch_size, num_gpus):
         super(LossMetric, self).__init__('LossMetric')
         self.batch_size = batch_size
-        self.num_gpu = num_gpu
+        self.num_gpu = num_gpus
         self.sum_metric = 0
         self.num_inst = 0
         self.loss = 0.0
@@ -130,6 +141,9 @@ class LossMetric(mx.metric.EvalMetric):
         self.n_batch = 0
 
     def update(self, labels, preds):
+        """
+        Update the hyper-parameters and loss of CapsNet
+        """
         batch_sum_metric = 0
         batch_num_inst = 0
         for label, pred_outcaps in zip(labels[0], preds[0]):
@@ -146,7 +160,7 @@ class LossMetric(mx.metric.EvalMetric):
         self.batch_sum_metric = batch_sum_metric
         self.batch_num_inst = batch_num_inst
         self.batch_loss = batch_loss
-        self.n_batch += 1 
+        self.n_batch += 1
 
     def get_name_value(self):
         acc = float(self.sum_metric)/float(self.num_inst)
@@ -184,6 +198,9 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 
 
 def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix, decay):
+    """
+    Run training to CapsNet
+    """
     summary_writer = SummaryWriter(args.tblog_dir)
     lr_scheduler = SimpleLRScheduler(learning_rate)
     optimizer_params = {'lr_scheduler': lr_scheduler}
@@ -218,7 +235,8 @@ def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix, deca
         summary_writer.add_scalar('val_loss', val_loss, n_epoch)
         summary_writer.add_scalar('val_recon_err', val_recon_err, n_epoch)
 
-        print('Epoch[%d] train acc: %.4f loss: %.6f recon_err: %.6f' % (n_epoch, train_acc, train_loss, train_recon_err))
+        print('Epoch[%d] train acc: %.4f loss: %.6f recon_err: %.6f' % (n_epoch, train_acc, train_loss,
+                                                                        train_recon_err))
         print('Epoch[%d] val acc: %.4f loss: %.6f recon_err: %.6f' % (n_epoch, val_acc, val_loss, val_recon_err))
         print('SAVE CHECKPOINT')
 
@@ -227,10 +245,10 @@ def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix, deca
         lr_scheduler.learning_rate = learning_rate * (decay ** n_epoch)
 
 
-def apply_transform(x,
-                    transform_matrix,
-                    fill_mode='nearest',
-                    cval=0.):
+def apply_transform(x, transform_matrix, fill_mode='nearest', cval=0.):
+    """
+    Apply transform on nd.array
+    """
     x = np.rollaxis(x, 0, 0)
     final_affine_matrix = transform_matrix[:2, :2]
     final_offset = transform_matrix[:2, 2]
@@ -255,30 +273,53 @@ def random_shift(x, width_shift_fraction, height_shift_fraction):
     x = apply_transform(x, shift_matrix, 'nearest')
     return x
 
+
 def _shuffle(data, idx):
     """Shuffle the data."""
     shuffle_data = []
 
-    for k, v in data:
-        shuffle_data.append((k, mx.ndarray.array(v.asnumpy()[idx], v.context)))
+    for idx_k, idx_v in data:
+        shuffle_data.append((idx_k, mx.ndarray.array(idx_v.asnumpy()[idx], idx_v.context)))
 
     return shuffle_data
 
+
 class MNISTCustomIter(mx.io.NDArrayIter):
-    
+    """
+    Create custom iterator of mnist dataset
+    """
+    def __init__(self, data, label, batch_size, shuffle):
+        self.data = data
+        self.label = label
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.cursor = None
+
     def reset(self):
+        """
+        Reset class MNISTCustomIter(mx.io.NDArrayIter):
+        """
         # shuffle data
         if self.is_train:
             np.random.shuffle(self.idx)
             self.data = _shuffle(self.data, self.idx)
             self.label = _shuffle(self.label, self.idx)
+
         if self.last_batch_handle == 'roll_over' and self.cursor > self.num_data:
-            self.cursor = -self.batch_size + (self.cursor%self.num_data)%self.batch_size
+            self.cursor = -self.batch_size + (self.cursor % self.num_data) % self.batch_size
         else:
             self.cursor = -self.batch_size
+
     def set_is_train(self, is_train):
+        """
+        Set training flag
+        """
         self.is_train = is_train
+
     def next(self):
+        """
+        Generate next of iterator
+        """
         if self.iter_next():
             if self.is_train:
                 data_raw_list = self.getdata()
@@ -288,8 +329,7 @@ class MNISTCustomIter(mx.io.NDArrayIter):
                 return mx.io.DataBatch(data=[mx.nd.array(data_shifted)], label=self.getlabel(),
                                        pad=self.getpad(), index=None)
             else:
-                 return mx.io.DataBatch(data=self.getdata(), label=self.getlabel(), \
-                                  pad=self.getpad(), index=None)
+                return mx.io.DataBatch(data=self.getdata(), label=self.getlabel(), pad=self.getpad(), index=None)
 
         else:
             raise StopIteration
@@ -298,10 +338,9 @@ class MNISTCustomIter(mx.io.NDArrayIter):
 if __name__ == "__main__":
     # Read mnist data set
     path = 'http://yann.lecun.com/exdb/mnist/'
-    (train_lbl, train_img) = read_data(
-        path + 'train-labels-idx1-ubyte.gz', path + 'train-images-idx3-ubyte.gz')
-    (val_lbl, val_img) = read_data(
-        path + 't10k-labels-idx1-ubyte.gz', path + 't10k-images-idx3-ubyte.gz')
+    (train_lbl, train_img) = read_data(path + 'train-labels-idx1-ubyte.gz', path + 'train-images-idx3-ubyte.gz')
+    (val_lbl, val_img) = read_data(path + 't10k-labels-idx1-ubyte.gz', path + 't10k-images-idx3-ubyte.gz')
+
     # set batch size
     import argparse
     parser = argparse.ArgumentParser()
@@ -331,10 +370,13 @@ if __name__ == "__main__":
     # generate train_iter, val_iter
     train_iter = MNISTCustomIter(data=to4d(train_img), label=train_lbl, batch_size=int(args.batch_size), shuffle=True)
     train_iter.set_is_train(True)
-    val_iter = MNISTCustomIter(data=to4d(val_img), label=val_lbl, batch_size=int(args.batch_size),)
+    val_iter = MNISTCustomIter(data=to4d(val_img), label=val_lbl, batch_size=int(args.batch_size), shuffle=True)
     val_iter.set_is_train(False)
     # define capsnet
-    final_net = capsnet(batch_size=int(args.batch_size/num_gpu), n_class=10, num_routing=args.num_routing, recon_loss_weight=args.recon_loss_weight)
+    final_net = capsnet(batch_size=int(args.batch_size/num_gpu),
+                        n_class=10,
+                        num_routing=args.num_routing,
+                        recon_loss_weight=args.recon_loss_weight)
     # set metric
     loss_metric = LossMetric(args.batch_size/num_gpu, 1)
 
@@ -343,5 +385,6 @@ if __name__ == "__main__":
     module.bind(data_shapes=train_iter.provide_data,
                 label_shapes=val_iter.provide_label,
                 for_training=True)
+
     do_training(num_epoch=args.num_epoch, optimizer='adam', kvstore='device', learning_rate=args.lr,
                 model_prefix=args.model_prefix, decay=args.decay)
