@@ -17,8 +17,11 @@
  * under the License.
  */
 
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <vector>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../nn/activation-inl.h"
@@ -149,9 +152,13 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     }
   }
   static SubgraphPropertyPtr Create() {
-    return std::make_shared<SgMKLDNNConvProperty>();
+    auto property = std::make_shared<SgMKLDNNConvProperty>();
+    property->SetAttr<std::string>("prop_name", "MKLDNN Convolution optimization pass");
+    property->SetAttr<bool>("inference_only", true);
+    return property;
   }
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+                                   const SubgraphSelectorPtr& subgraph_selector,
                                    const int subgraph_id = 0) const override {
     nnvm::NodePtr n = nnvm::Node::Create();
     // This op has single output, remove duplicated.
@@ -241,9 +248,8 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
   int disable_conv_sum;
 };
 
-MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN, SgMKLDNNConvProperty);
-
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_PROPERTY_H_

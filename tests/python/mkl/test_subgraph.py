@@ -44,6 +44,23 @@ def check_qsym_calibrated(qsym, out_type):
     if k.find('_quantize') != -1:
       assert v['out_type'] == out_type
 
+def check_qsym_scale_align(qsym):
+  assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_mkldnn_conv') != -1
+  init = False
+  for k, v in qsym.attr_dict().items():
+    if k.find('quantized_sg_mkldnn_conv') != -1:
+      assert 'min_calib_range' in v
+      assert 'max_calib_range' in v
+      if not init:
+        min_calib_range = v['min_calib_range']
+        max_calib_range = v['max_calib_range']
+        init = True
+      else:
+        assert min_calib_range == v['min_calib_range']
+        assert max_calib_range == v['max_calib_range']
+
+
+
 def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape):
   mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
   mod.bind(for_training=False,
@@ -66,7 +83,7 @@ def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
     output.wait_to_read()
   return mod.get_outputs()
 
-def check_quantize(sym, data_shape, out_type, check_conv=True):
+def check_quantize(sym, data_shape, out_type, check_conv=True, check_scale_align=False):
   fc = mx.sym.FullyConnected(data=sym, num_hidden=10, flatten=True, name='fc')
   sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
   sym_sg = sym.get_backend_symbol("MKLDNN")
@@ -107,6 +124,8 @@ def check_quantize(sym, data_shape, out_type, check_conv=True):
   qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
   if check_conv:
     check_qsym_calibrated(qsym, out_type)
+  if check_scale_align:
+    check_qsym_scale_align(qsym)
   quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
   for i in range(len(ref_out)):
     assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
@@ -237,6 +256,20 @@ def single_concat(data_shape, input_num, dim):
   for i in range(input_num):
     inputs.append(data)
   concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
+  return concat
+
+# concat scale alignment case
+def concat_scale_align(data_shape):
+  data, weight = head_symbol(data_shape)
+  conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
+                               kernel=(3, 3), stride=(1, 1), no_bias=True)
+  concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
   return concat
 
 def tail_neg_symbol(sym1, sym2):
@@ -482,6 +515,11 @@ def test_pos_single_concat():
       check_quantize(net, data_shape, out_type, False)
       net = single_concat(data_shape, 4, 3)
       check_quantize(net, data_shape, out_type, False)
+
+def test_pos_concat_scale_align():
+  for data_shape in DATA_SHAPE:
+    net = concat_scale_align(data_shape)
+    check_quantize(net, data_shape, check_conv=False, check_scale_align=True)
 
 @with_seed()
 def test_neg_conv_bn():
