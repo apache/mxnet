@@ -79,12 +79,13 @@ RunContext StreamManager<kNumGpus, kStreams>::GetRunContext(
         auto&& counter = gpu_cnt_.at(ctx.dev_id);
         if (counter == -1) {
           mxnet::common::cuda::DeviceStore device_store(ctx.dev_id);
-          auto dev_streams = gpu_streams_.at(ctx.dev_id);
-          auto dev_aux_streams = gpu_aux_streams_.at(ctx.dev_id);
-          for (int i = 0; i != dev_streams.size(); ++i) {
-            auto primary_stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
-            dev_streams.at(i) = primary_stream;
-            dev_aux_streams.at(i) = new GPUAuxStream(primary_stream);
+          for (auto&& primary_stream : gpu_streams_.at(ctx.dev_id)) {
+            primary_stream = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, ctx.dev_id);
+          }
+          int idx = 0;
+          for (auto&& aux_stream : gpu_aux_streams_.at(ctx.dev_id)) {
+            auto primary_stream = gpu_streams_.at(ctx.dev_id).at(idx++);
+            aux_stream = new GPUAuxStream(primary_stream);
           }
           counter = 0;
         }

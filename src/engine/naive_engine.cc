@@ -175,6 +175,7 @@ class NaiveEngine final : public Engine {
       MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);
+        aux_streams_.resize(dev_id + 1, nullptr);
       }
       if (streams_[dev_id] == nullptr) {
         streams_[dev_id] = mshadow::NewStream<gpu>(true, MXNET_USE_CUDNN != 0, dev_id);

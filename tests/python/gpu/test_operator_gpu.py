@@ -523,7 +523,7 @@ def test_convolution_options():
 
 # Helper function to run tests in a subprocess to avoid save/restore of os.environ.
 # Also avoids issues of cached environment variable lookups in the backend.
-def _test_in_separate_process(func, *args):
+def _test_in_separate_process(func, env, *args):
     try:
         mpctx = mp.get_context('spawn')
     except:
@@ -531,14 +531,15 @@ def _test_in_separate_process(func, *args):
               sys.version_info[0:2], file=sys.stderr, end='')
     else:
         seed = np.random.randint(0,1024*1024*1024)
+        for (key, value) in env.items():
+            os.environ[key] = str(value)
         # Prepend seed as first arg
         p = mpctx.Process(target=func, args=(seed,)+args)
         p.start()
         p.join()
         assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
 
-def _conv_with_num_streams(seed, num_streams):
-    os.environ['MXNET_GPU_WORKER_NSTREAMS'] = str(num_streams)
+def _conv_with_num_streams(seed):
     with random_seed(seed):
         # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
         num_trials = 20
@@ -563,8 +564,10 @@ def _conv_with_num_streams(seed, num_streams):
 
 @with_seed()
 def test_convolution_multiple_streams():
-    _test_in_separate_process(_conv_with_num_streams, 1)
-    _test_in_separate_process(_conv_with_num_streams, 2)
+    for num_streams in [1, 2]:
+        for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
+            _test_in_separate_process(_conv_with_num_streams,
+                {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
 
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
