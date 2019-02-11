@@ -37,17 +37,27 @@ namespace op {
 namespace mxnet_op {
 
 struct softmax_fwd {
-  template<typename DType, typename AType>
-  MSHADOW_XINLINE static AType Map(DType a, AType b) {
+  template<typename AType>
+  MSHADOW_XINLINE static AType Map(float a, AType b) {
     return AType(expf(a)/b);
+  }
+
+  template<typename AType>
+  MSHADOW_XINLINE static AType Map(double a, AType b) {
+    return AType(exp(a)/b);
   }
 };
 
 
 struct log_softmax_fwd {
-  template<typename DType, typename AType>
-  MSHADOW_XINLINE static AType Map(DType a, AType b) {
-    return AType(a - logf(b));
+  template<typename DType>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return a - logf(b);
+  }
+
+  template<typename DType>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return a - log(b);
   }
 };
 
@@ -111,9 +121,14 @@ struct softmax_bwd {
 
 
 struct log_softmax_bwd {
-  template<typename DType, typename AType>
-  MSHADOW_XINLINE static AType Map(DType ograd, DType out, AType sum) {
+  template<typename AType>
+  MSHADOW_XINLINE static AType Map(float ograd, float out, AType sum) {
     return AType(ograd - expf(out)*sum);
+  }
+
+  template<typename AType>
+  MSHADOW_XINLINE static AType Map(double ograd, double out, AType sum) {
+    return AType(ograd - exp(out)*sum);
   }
 };
 
