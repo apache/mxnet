@@ -151,8 +151,11 @@ def test_python_logistic_regression() :
 def test_python_numpy_gotchas() :
     assert _test_tutorial_nb('gluon/gotchas_numpy_in_mxnet')
 
-def test_gluon_end_to_end():
-    assert _test_tutorial_nb('gluon/gluon_from_experiment_to_deployment')
+# Temporary disable this test until fix can be properly tested
+# tracked in https://github.com/apache/incubator-mxnet/issues/14026#issuecomment-462428067
+# and https://github.com/apache/incubator-mxnet/pull/14119
+# def test_gluon_end_to_end():
+#    assert _test_tutorial_nb('gluon/gluon_from_experiment_to_deployment')
 
 def test_python_mnist():
     assert _test_tutorial_nb('python/mnist')
