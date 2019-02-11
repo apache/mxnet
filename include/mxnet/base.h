@@ -404,7 +404,7 @@ template<> struct hash<mxnet::Context> {
   }
 };
 
-#if __cplusplus < 201402L
+#if __cplusplus < 201402L && ! defined(_MSC_VER)
 template<typename T, typename... Args>
 inline std::unique_ptr<T> make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
