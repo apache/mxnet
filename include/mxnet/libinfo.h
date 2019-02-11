@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <memory>
 #include "dmlc/base.h"
 #include "mshadow/base.h"
 #include "c_api.h"
