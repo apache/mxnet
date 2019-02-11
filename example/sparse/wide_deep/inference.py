@@ -59,8 +59,7 @@ if __name__ == '__main__':
     model_prefix = args.model_prefix
     load_epoch = args.load_epoch
     ctx = mx.gpu(0) if args.gpu else mx.cpu()
-
-    # dataset    
+    # dataset
     data_dir = os.path.join(os.getcwd(), 'data')
     val_data = os.path.join(data_dir, ADULT['test'])
     val_csr, val_dns, val_label = get_uci_adult(data_dir, ADULT['test'], ADULT['url'])
@@ -70,18 +69,17 @@ if __name__ == '__main__':
     eval_data = mx.io.NDArrayIter({'csr_data': val_csr, 'dns_data': val_dns},
                                   {'softmax_label': val_label}, batch_size,
                                   shuffle=True, last_batch_handle='discard')
-    
     # module
-    mod = mx.mod.Module(symbol=sym, context=ctx ,data_names=['csr_data', 'dns_data'],
+    mod = mx.mod.Module(symbol=sym, context=ctx, data_names=['csr_data', 'dns_data'],
                         label_names=['softmax_label'])
     mod.bind(data_shapes=eval_data.provide_data, label_shapes=eval_data.provide_label)
     # get the sparse weight parameter
     mod.set_params(arg_params=arg_params, aux_params=aux_params)
 
     data_iter = iter(eval_data)
+    nbatch = 0
     if benchmark:
         logging.info('Inference benchmark started ...')
-        nbatch = 0
         tic = time.time()
         for i in range(num_iters):
             try:
@@ -92,7 +90,7 @@ if __name__ == '__main__':
                 mod.forward(batch, is_train=False)
                 for output in mod.get_outputs():
                     output.wait_to_read()
-                nbatch+=1
+                nbatch += 1
         score = (nbatch*batch_size)/(time.time() - tic)
         logging.info('batch size %d, process %s samples/s' % (batch_size, score))
     elif accuracy:
@@ -100,7 +98,6 @@ if __name__ == '__main__':
         # use accuracy as the metric
         metric = mx.metric.create(['acc'])
         accuracy_avg = 0.0
-        nbatch = 0
         for batch in data_iter:
             nbatch += 1
             metric.reset()
@@ -110,4 +107,3 @@ if __name__ == '__main__':
             if args.verbose:
                 logging.info('batch %d, accuracy = %s' % (nbatch, metric.get()))
         logging.info('averged accuracy on eval set is %.5f' % (accuracy_avg/nbatch))
-

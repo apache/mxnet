@@ -76,7 +76,7 @@ if __name__ == '__main__':
                                   shuffle=True, last_batch_handle='discard')
     
     # module
-    mod = mx.mod.Module(symbol=model, context=ctx ,data_names=['csr_data', 'dns_data'],
+    mod = mx.mod.Module(symbol=model, context=ctx, data_names=['csr_data', 'dns_data'],
                         label_names=['softmax_label'])
     mod.bind(data_shapes=train_data.provide_data, label_shapes=train_data.provide_label)
     mod.init_params()
