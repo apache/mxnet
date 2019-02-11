@@ -32,10 +32,8 @@ parser.add_argument('--load-epoch', type=int, default=0,
                     help='loading the params of the corresponding training epoch.')
 parser.add_argument('--batch-size', type=int, default=100,
                     help='number of examples per batch')
-parser.add_argument('--accuracy', action='store_true', default=True,
-                    help='run the script for inference accuracy, not set for benchmark.')
 parser.add_argument('--benchmark', action='store_true', default=False,
-                    help='run the script for benchmark mode.')
+                    help='run the script for benchmark mode, not set for accuracy test.')
 parser.add_argument('--verbose', action='store_true', default=False,
                     help='accurcy for each batch will be logged if set')
 parser.add_argument('--gpu', action='store_true', default=False,
@@ -53,7 +51,6 @@ if __name__ == '__main__':
     logging.info(args)
     num_iters = args.num_infer_batch
     batch_size = args.batch_size
-    accuracy = args.accuracy
     benchmark = args.benchmark
     verbose = args.verbose
     model_prefix = args.model_prefix
@@ -93,7 +90,7 @@ if __name__ == '__main__':
                 nbatch += 1
         score = (nbatch*batch_size)/(time.time() - tic)
         logging.info('batch size %d, process %s samples/s' % (batch_size, score))
-    elif accuracy:
+    else:
         logging.info('Inference started ...')
         # use accuracy as the metric
         metric = mx.metric.create(['acc'])
