@@ -160,6 +160,8 @@ void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
           }
         });
       });
+  #else
+    LOG(FATAL) << "Compile with USE_CUDA=1 to use ToTensor operator on GPU.";
   #endif  // MXNET_USE_CUDA
   } else if (inputs[0].ndim() == 3) {
     // 3D Input - (h, w, c)
