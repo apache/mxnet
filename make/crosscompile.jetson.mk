@@ -60,7 +60,7 @@ USE_SIGNAL_HANDLER = 1
 ADD_LDFLAGS = -L${CROSS_ROOT}/lib -L/usr/lib/aarch64-linux-gnu/
 
 # the additional compile flags you want to add
-ADD_CFLAGS = -I${CROSS_ROOT}/include
+ADD_CFLAGS = -I${CROSS_ROOT}/include -I/usr/include/aarch64-linux-gnu/
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
