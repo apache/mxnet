@@ -95,7 +95,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/tutorial-test-python2') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python2_gpu', true)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python2_gpu', true, '1500m')
         }
       }
     },
@@ -103,7 +103,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/tutorial-test-python3') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_tutorial_test_ubuntu_python3_gpu', true, '1500m')
         }
       }
     }
