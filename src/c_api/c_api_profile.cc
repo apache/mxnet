@@ -88,7 +88,8 @@ class ProfilingThreadData {
     // Per-thread so no lock necessary
     auto iter = events_.find(name);
     if (iter == events_.end()) {
-      iter = events_.emplace(std::make_pair(name, std::make_unique<profiler::ProfileEvent>(name))).first;
+      iter = events_.emplace(std::make_pair(name,
+        std::make_unique<profiler::ProfileEvent>(name))).first;
     }
     return iter->second.get();
   }
