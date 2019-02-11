@@ -147,6 +147,8 @@ if __name__ == '__main__':
                         help='If enabled, the quantize op will '
                              'be calibrated offline if calibration mode is '
                              'enabled')
+    parser.add_argument('--use-quantized-data-layer', type=bool, default=True,
+                        help='If enabled, data layer will be already quantized.')
     args = parser.parse_args()
     ctx = mx.cpu(0)
     logging.basicConfig()
@@ -273,6 +275,7 @@ if __name__ == '__main__':
         qsym, qarg_params, aux_params = quantize_model(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                        ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                        calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
+                                                       use_quantized_data_layer=args.use_quantized_data_layer,
                                                        logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
     else:
@@ -295,7 +298,10 @@ if __name__ == '__main__':
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        label_names=(label_name,), logger=logger)
+                                                        label_names=(label_name,),
+                                                        use_quantized_data_layer=args.use_quantized_data_layer,
+                                                        logger=logger)
+
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':
