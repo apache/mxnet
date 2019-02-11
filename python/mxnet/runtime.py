@@ -18,12 +18,15 @@
 # coding: utf-8
 # pylint: disable=not-an-iterable
 
-"""runtime detection of compile time features in the native library"""
+"""runtime querying of compile time features in the native library"""
 
 import ctypes
-from .base import _LIB, check_call, mx_uint, py_str
+from .base import _LIB, check_call
 
 class LibFeature(ctypes.Structure):
+    """
+    Compile time feature description
+    """
     _fields_ = [
         ("name", ctypes.c_char_p),
         ("index", ctypes.c_uint32),
@@ -31,6 +34,13 @@ class LibFeature(ctypes.Structure):
     ]
 
 def libinfo_features():
+    """
+    Check the library for compile-time features. The list of features are maintained in libinfo.h and libinfo.cc
+
+    Returns
+    -------
+    A list of class LibFeature indicating which features are available and enabled
+    """
     lib_features = ctypes.POINTER(LibFeature)()
     lib_features_size = ctypes.c_size_t()
     check_call(_LIB.MXLibInfoFeatures(ctypes.byref(lib_features), ctypes.byref(lib_features_size)))
