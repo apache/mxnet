@@ -107,7 +107,7 @@ class SgMKLDNNFCPostQuantizeSelector : public SubgraphSelector {
 
   std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
-    if (status != kSuccess) {
+    if ((status != kSuccess) || (matched_list.size() <= 1)) {
       return std::vector<nnvm::Node *>(0);
     } else {
       std::vector<nnvm::Node *> ret;
