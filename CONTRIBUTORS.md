@@ -213,8 +213,8 @@ List of Contributors
 * [Piyush Ghai](https://github.com/piyushghai)
 * [Zach Boldyga](https://github.com/zboldyga)
 * [Gordon Reid](https://github.com/gordon1992)
-
 * [Ming Yang](http://ufoym.com)
+* [Neo Chien](https://github.com/cchung100m)
 
 Label Bot
 ---------
