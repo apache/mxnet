@@ -484,13 +484,15 @@ def split(attrs, inputs, proto_obj):
     if not split_list:
         num_outputs = len(proto_obj.model_metadata.get('output_tensor_data'))
     else:
-        raise NotImplementedError("Operator {} in MXNet does not support variable splits."
+        if len(set(split_list)) == 1:
+            num_outputs = len(split_list)
+        else:
+            raise NotImplementedError("Operator {} in MXNet does not support variable splits."
                                   "Tracking the issue to support variable split here: "
                                   "https://github.com/apache/incubator-mxnet/issues/11594"
                                   .format('split'))
 
     new_attrs['num_outputs'] = num_outputs
-
     return 'split', new_attrs, inputs
 
 def _slice(attrs, inputs, proto_obj):
