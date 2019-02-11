@@ -171,7 +171,7 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
     return ret;
   }
 
-  const SubgraphSelectorPtr& GetV1ptr() const { return ss_ptr_; };
+  const SubgraphSelectorPtr& GetV1ptr() const { return ss_ptr_; }
 
  private:
   SubgraphSelectorPtr ss_ptr_;
