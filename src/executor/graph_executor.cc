@@ -247,7 +247,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   }
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
-    NodeEntry ngrad;
+    NodeEntry ngrad(nnvm::Node::Create(), 0, 0);
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
