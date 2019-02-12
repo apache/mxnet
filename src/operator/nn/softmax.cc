@@ -102,7 +102,7 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
 #endif
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_softmax"})
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmax"})
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -121,12 +121,9 @@ NNVM_REGISTER_OP(_backward_softmax)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"ograd", "data", "output"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}, {2, 0}};
-  })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("ograd", "NDArray-or-Symbol", "gradient of output")
 .add_argument("data", "NDArray-or-Symbol", "input")
 .add_argument("output", "NDArray-or-Symbol", "output")
@@ -165,7 +162,7 @@ Example::
     return std::vector<std::string>{"output"};
 })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd, true>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_softmin"})
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmin"})
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -184,12 +181,9 @@ NNVM_REGISTER_OP(_backward_softmin)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"ograd", "data", "output"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}, {2, 0}};
-  })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("ograd", "NDArray-or-Symbol", "gradient of output")
 .add_argument("data", "NDArray-or-Symbol", "input")
 .add_argument("output", "NDArray-or-Symbol", "output")
@@ -216,7 +210,7 @@ Examples::
 )code")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_log_softmax"})
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_log_softmax"})
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -235,12 +229,9 @@ NNVM_REGISTER_OP(_backward_log_softmax)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"ograd", "data", "output"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-  [](const NodeAttrs& attrs){
-    return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}, {2, 0}};
-  })
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("ograd", "NDArray-or-Symbol", "gradient of output")
 .add_argument("data", "NDArray-or-Symbol", "input")
 .add_argument("output", "NDArray-or-Symbol", "output")
