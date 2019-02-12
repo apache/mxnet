@@ -179,7 +179,9 @@ if __name__ == '__main__':
         prefix, epoch = download_model(model_name=args.model, logger=logger)
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
+    sym.save("model_pre_quantize.json")
     sym = sym.get_backend_symbol('MKLDNN')
+    sym.save("model_post_quantize.json")
 
     # get batch size
     batch_size = args.batch_size
@@ -314,6 +316,7 @@ if __name__ == '__main__':
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
     qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+    qsym.save("model_post_post_quantize.json")
     save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)
