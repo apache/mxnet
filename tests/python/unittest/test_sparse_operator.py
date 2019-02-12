@@ -155,6 +155,27 @@ def all_zero(var):
 
 @with_seed()
 def test_elemwise_binary_ops():
+    def initiate_nd(shape, stype, density, modifier_func,
+                    force_lr_overlap, shuffle_csr_indices, rand_array = True):
+        if stype == 'default':
+            if rand_array:
+                nd = rand_ndarray(shape, 'default')
+                func = all_zero if abs(density) < 1e-4 else modifier_func
+                nd = mx.nd.array(assign_each(nd.asnumpy(), func))
+            else:
+                nd = mx.nd.array(np.zeros(shape) if abs(density) < 1e-4 else np.ones(shape))
+        else:
+            nd = create_sparse_array_zd(
+                shape, stype, density=density,
+                modifier_func=modifier_func,
+                shuffle_csr_indices=shuffle_csr_indices,
+                rsp_indices=gen_rsp_random_indices(
+                    shape,
+                    density=density,
+                    force_indices=[(shape[0]/2)] if force_lr_overlap is True else None
+                ))
+        return nd
+
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
                                 lhs_grad_stype,
@@ -195,42 +216,10 @@ def test_elemwise_binary_ops():
         grad_stypes['lhs'] = lhs_grad_stype
         grad_stypes['rhs'] = rhs_grad_stype
 
-        if lhs_stype == 'default':
-            lhs_nd = rand_ndarray(shape, 'default')
-            if abs(lhs_density) < 1e-4:
-                func = all_zero
-            else:
-                func = modifier_func
-            lhs_nd = mx.nd.array(assign_each(lhs_nd.asnumpy(), func))
-        else:
-            lhs_nd = create_sparse_array_zd(
-                shape, lhs_stype, density=lhs_density,
-                modifier_func=modifier_func,
-                shuffle_csr_indices=shuffle_csr_indices,
-                rsp_indices=gen_rsp_random_indices(
-                    shape,
-                    density=lhs_density,
-                    force_indices=[(shape[0]/2)] if force_lr_overlap is True else None
-                ))
-
-        if rhs_stype == 'default':
-            rhs_nd = rand_ndarray(shape, 'default')
-            if abs(rhs_density) < 1e-4:
-                func = all_zero
-            else:
-                func = modifier_func
-            rhs_nd = mx.nd.array(assign_each(rhs_nd.asnumpy(), func))
-        else:
-            rhs_nd = create_sparse_array_zd(
-                shape, rhs_stype, density=rhs_density,
-                modifier_func=modifier_func,
-                shuffle_csr_indices=shuffle_csr_indices,
-                rsp_indices=gen_rsp_random_indices(
-                    shape,
-                    density=rhs_density,
-                    force_indices=[(shape[0]/2)] if force_lr_overlap is True else None
-                ))
-
+        lhs_nd = initiate_nd(shape, lhs_stype, lhs_density, modifier_func,
+                             force_lr_overlap, shuffle_csr_indices)
+        rhs_nd = initiate_nd(shape, rhs_stype, rhs_density, modifier_func,
+                             force_lr_overlap, shuffle_csr_indices)
         lhs_np = lhs_nd.asnumpy()
         rhs_np = rhs_nd.asnumpy()
 
@@ -257,24 +246,8 @@ def test_elemwise_binary_ops():
             print ("rhs_nd: ", rhs_nd.stype)
             print ("forward output: ", outputs[0].stype)
 
-        if outputs[0].stype != 'default':
-            out_grad = create_sparse_array_zd(
-                shape, outputs[0].stype, density=ograd_density,
-                data_init=1,
-                modifier_func=lambda x: 2,
-                shuffle_csr_indices=shuffle_csr_indices,
-                rsp_indices=gen_rsp_random_indices(
-                    shape,
-                    density=ograd_density,
-                    force_indices=[(shape[0]/2)] if force_grad_overlap is True else None
-                ))
-        else:
-            if abs(ograd_density) < 1e-4:
-                out_grad = mx.nd.array(np.zeros(shape))
-            else:
-                out_grad = mx.nd.array(np.ones(shape))
-
-
+        out_grad = initiate_nd(shape, outputs[0].stype, ograd_density, lambda x: 2,
+                               force_grad_overlap, shuffle_csr_indices, False)
         out_grad_np = out_grad.asnumpy()
 
         if verbose is True:
@@ -305,7 +278,7 @@ def test_elemwise_binary_ops():
 
         if skip_gradient_check is not True:
             check_numeric_gradient(test, location,
-                                   grad_stype_dict=grad_stypes)
+                                   grad_stype_dict=grad_stypes, use_batch=True)
 
     def check_all(l, r, check_function):
         assert l.shape == r.shape
