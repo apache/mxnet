@@ -71,7 +71,7 @@ static bool IdentityAttrLikeRhsStorageType(const nnvm::NodeAttrs& attrs,
 
 // relu
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(relu, cpu, mshadow_op::relu)
-.describe(R"code(Computes rectified linear.
+.describe(R"code(Computes rectified linear activation.
 
 .. math::
    max(features, 0)
@@ -915,6 +915,22 @@ Example::
 MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
 .set_attr<FCompute>("FCompute<cpu>",
                     ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::erf_grad>>);
+
+// erfinv
+MXNET_OPERATOR_REGISTER_UNARY(erfinv)
+.describe(R"code(Returns element-wise inverse gauss error function of the input.
+
+Example::
+
+   erfinv([0, 0.5., -1.]) = [0., 0.4769, -inf]
+
+)code" ADD_FILELINE)
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::erfinv>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_erfinv"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_erfinv)
+.set_attr<FCompute>("FCompute<cpu>",
+                    ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::erfinv_grad>>);
 
 // rcbrt
 MXNET_OPERATOR_REGISTER_UNARY(rcbrt)

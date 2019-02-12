@@ -22,7 +22,9 @@ set -ex
 # MAVEN_PUBLISH_OS_TYPE: linux-x86_64-cpu|linux-x86_64-gpu|osx-x86_64-cpu
 # export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
 
-bash scala-package/dev/compile-mxnet-backend.sh $MAVEN_PUBLISH_OS_TYPE ./
+source tools/staticbuild/build.sh $mxnet_variant maven
+
+set -ex
 
 # Compile tests for discovery later
 cd scala-package

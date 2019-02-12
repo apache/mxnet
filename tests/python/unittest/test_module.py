@@ -174,6 +174,8 @@ def test_module_layout():
 
 @with_seed()
 def test_save_load():
+    previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
+    os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
     def dict_equ(a, b):
         assert set(a) == set(b)
         for k in a:
@@ -211,6 +213,7 @@ def test_save_load():
     assert mod._symbol.tojson() == mod2._symbol.tojson()
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
     dict_equ(mod._kvstore._updater.states, mod2._updater.states)
+    os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
 
 @with_seed()
@@ -870,6 +873,48 @@ def test_reference_single_batch_during_fit():
 
     train_data = MockTrainData(batches=2)
     mod.fit(train_data, num_epoch=1)
+
+@with_seed()
+def test_bucket_module_grad_req():
+    batch_size = 2
+    def sym_gen(_):
+        data = mx.symbol.Variable('data')
+        weight = mx.symbol.Variable('a', shape=(1,), init=mx.init.One())
+        sym = mx.sym.make_loss(mx.sym.broadcast_mul(data, weight))
+        return sym, ('data',), None
+
+    mod = mx.mod.BucketingModule(sym_gen=sym_gen, default_bucket_key=10)
+    mod.bind(data_shapes=[['data', (batch_size, )]], for_training=True, grad_req='write')
+    mod.init_params()
+
+    mod.forward_backward(mx.io.DataBatch(data=[mx.nd.ones((batch_size,))],
+                                         label=None,
+                                         provide_data=[mx.io.DataDesc(name='data', shape=(batch_size, ), layout='N')],
+                                         bucket_key=10))
+    assert(mod._curr_module._exec_group.execs[0].grad_dict['a'].asscalar() == batch_size)
+
+    mod.forward_backward(mx.io.DataBatch(data=[mx.nd.ones((batch_size,))],
+                                         label=None,
+                                         provide_data=[mx.io.DataDesc(name='data', shape=(batch_size, ), layout='N')],
+                                         bucket_key=5))
+    assert(mod._curr_module._exec_group.execs[0].grad_dict['a'].asscalar() == batch_size)
+
+    mod = mx.mod.BucketingModule(sym_gen=sym_gen, default_bucket_key=10)
+    mod.bind(data_shapes=[['data', (batch_size, )]], for_training=True, grad_req='add')
+    mod.init_params()
+
+    mod.forward_backward(mx.io.DataBatch(data=[mx.nd.ones((batch_size,))],
+                                         label=None,
+                                         provide_data=[mx.io.DataDesc(name='data', shape=(batch_size,), layout='N')],
+                                         bucket_key=10))
+    assert(mod._curr_module._exec_group.execs[0].grad_dict['a'].asscalar() == batch_size)
+
+    mod.forward_backward(mx.io.DataBatch(data=[mx.nd.ones((batch_size,))],
+                                         label=None,
+                                         provide_data=[mx.io.DataDesc(name='data', shape=(batch_size,), layout='N')],
+                                         bucket_key=5))
+    assert mod._curr_module._grad_req == 'add'
+    assert(mod._curr_module._exec_group.execs[0].grad_dict['a'].asscalar() == 2 * batch_size)
 
 
 if __name__ == '__main__':

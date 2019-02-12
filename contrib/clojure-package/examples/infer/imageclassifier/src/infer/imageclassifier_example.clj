@@ -74,6 +74,8 @@
         image-file-batches (->> input-dir
                                 io/file
                                 file-seq
+                                sort
+                                reverse
                                 (filter #(.isFile %))
                                 (filter #(re-matches #".*\.jpg$" (.getPath %)))
                                 (mapv #(.getPath %))

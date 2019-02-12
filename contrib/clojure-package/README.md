@@ -142,21 +142,13 @@ With this option, you will install a Git revision of the Clojure package source 
 
 To run examples, you can now use `lein run` in any of the example directories, e.g., `examples/imclassification`. You can also specify the compute device, e.g., `lein run :cpu 2` (for 2 CPUs) or `lein run :gpu` (for 1 GPU).
 
-#### Experimental: Using Scala Snapshot Jars
-**Note:** Instead of a release tag, you can also use a development version of the Clojure package, e.g., Git `master`, together with the prebuilt Scala jar. There is a repo of nightly built snapshots of Scala jars. You can use them in your `project.clj` by adding a repository:
+#### Using Scala Nightly Snapshot Jars
+**Note:** Instead of a release tag, you can also use a development version of the Clojure package, e.g., Git `master`, together with the prebuilt Scala jar. There is a repo of nightly built snapshots of Scala jars. You can use them in your `project.clj` by adding them as a dependency:
 
-```
-["snapshots" {:url "https://repository.apache.org/content/repositories/snapshots"
-                              :snapshots true
-                              :sign-releases false
-                              :checksum :fail
-                              :update :always
-                              :releases {:checksum :fail :update :always}}]
-```
 
 Then you should be able to run with your dependency:
 
-    [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "latest-version-SNAPSHOT"]
+    [org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "<insert-version-SNAPSHOT>"]
 
 
 In that case, however, breakage can happen at any point, for instance when the Scala development version adds, changes or removes an interface and the Clojure development version moves along. If you really need the most recent version, you should consider [installation option 3](#option-3-everything-from-source).

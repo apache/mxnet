@@ -21,7 +21,7 @@
 #' @param learning.rate float, default=0.01
 #'      The initial learning rate.
 #' @param momentum float, default=0
-#'      The momentumvalue
+#'      The momentum value
 #' @param wd float, default=0.0
 #'      L2 regularization coefficient add to all the weights.
 #' @param rescale.grad float, default=1.0
@@ -453,6 +453,110 @@ mx.opt.adadelta <- function(rho = 0.90,
 }
 
 
+#' Create a Nesterov Accelerated SGD( NAG) optimizer.
+#'
+#' NAG optimizer is described in Aleksandar Botev. et al (2016).
+#' *NAG: A Nesterov accelerated SGD.*
+#' https://arxiv.org/pdf/1607.01981.pdf
+#'
+#' @param learning.rate float, default=0.01
+#'      The initial learning rate.
+#' @param momentum float, default=0
+#'      The momentum value
+#' @param wd float, default=0.0
+#'      L2 regularization coefficient added to all the weights.
+#' @param rescale.grad float, default=1.0
+#'      rescaling factor of gradient.
+#' @param clip_gradient float, optional, default=-1 (no clipping if < 0)
+#'      clip gradient in range [-clip_gradient, clip_gradient].
+#' @param lr_scheduler function, optional
+#'      The learning rate scheduler.
+#'
+mx.opt.nag <- function(learning.rate = 0.01,
+                       momentum = 0,
+                       wd = 0,
+                       rescale.grad = 1,
+                       clip_gradient = -1,
+                       lr_scheduler = NULL) {
+
+  lr <- learning.rate
+  count <- 0
+  num_update <- 0
+
+  nag <- new.env()
+  nag$lr <- learning.rate
+  nag$count <- 0
+  nag$num_update <- 0
+
+  create_exec <- function(index, weight_dim, ctx) {
+
+    weight <- mx.symbol.Variable("weight")
+    grad <- mx.symbol.Variable("grad")
+    mom <- mx.symbol.Variable("mom")
+    grad <- grad * rescale.grad
+
+    if (!is.null(clip_gradient)) {
+      if (clip_gradient >= 0) {
+        grad <- mx.symbol.clip(data = grad, a.min = -clip_gradient, a.max = clip_gradient)
+      }
+    }
+
+    if (momentum == 0) {
+
+      weight <- weight - lr * (grad + (wd * weight))
+      w <- mx.symbol.identity(weight, name = "w")
+      sym <- mx.symbol.Group(c(w))
+
+    } else {
+
+      mom <- momentum * mom + grad + wd * weight
+      grad <- momentum * mom + grad
+      weight <- weight - lr * grad
+
+      w <- mx.symbol.identity(weight, name = "w")
+      m <- mx.symbol.identity(mom, name = "m")
+      sym <- mx.symbol.Group(c(w, m))
+
+    }
+
+    exec <- mx.simple.bind(symbol = sym, weight = weight_dim, ctx = ctx, grad.req = "null")
+    return(exec)
+  }
+
+  update <- function(index, exec_w, weight, grad) {
+
+    if (!is.null(lr_scheduler)){
+      lr_scheduler(nag) ## changing lr
+      lr <- nag$lr
+      ## update count
+      indexKey <- paste0('ik', index)
+      if (!exists(envir = nag, x = indexKey, inherits = FALSE)){
+        nag[[indexKey]] <- 0
+      } else {
+        indexValue <- nag[[indexKey]]
+        nag[[indexKey]] <- indexValue + 1
+        nag$num_update <- max(nag$num_update, nag[[indexKey]])
+      }
+    }
+
+    mx.exec.update.arg.arrays(exec_w,
+                              arg.arrays = list(weight = weight,grad = grad),
+                              match.name = T)
+    mx.exec.forward(exec_w, is.train = F)
+
+    # update state
+    if (!is.null(exec_w$ref.outputs$m_output)){
+      mx.exec.update.arg.arrays(exec_w,
+                                arg.arrays = list(mom = exec_w$ref.outputs$m_output),
+                                match.name = T) 
+    }
+
+    return(exec_w$ref.outputs$w_output)
+  }
+  return(list(create_exec = create_exec, update = update))
+}
+
+
 #' Create an optimizer by name and parameters
 #'
 #' @param name The name of the optimizer
@@ -466,6 +570,7 @@ mx.opt.create <- function(name, ...) {
          "adam" = mx.opt.adam(...),
          "adagrad" = mx.opt.adagrad(...),
          "adadelta" = mx.opt.adadelta(...),
+         "nag" = mx.opt.nag(...),
          stop("Unknown optimizer ", name))
 }
 

@@ -3,7 +3,8 @@
 ## Building C++ examples
 
 The examples in this folder demonstrate the **training** workflow. The **inference workflow** related examples can be found in [inference](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference>) folder.
-The examples in this folder are built while building the MXNet library and cpp-package from source . However, they can be built manually as follows
+Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File before building these examples manually.
+The examples in this folder are built while building the MXNet library and cpp-package from source. However, they can be built manually as follows
 
 From cpp-package/examples directory
 

@@ -139,6 +139,12 @@ struct MXCallbackList {
   void **contexts;
 };
 
+struct LibFeature {
+  const char* name;
+  uint32_t index;
+  bool enabled;
+};
+
 enum CustomOpCallbacks {
   kCustomOpDelete,
   kCustomOpForward,
@@ -208,6 +214,15 @@ MXNET_DLL const char *MXGetLastError();
 //-------------------------------------
 // Part 0: Global State setups
 //-------------------------------------
+
+/*!
+ * \brief Get list of features supported on the runtime
+ * \param libFeature pointer to array of LibFeature
+ * \param size of the array
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXLibInfoFeatures(const struct LibFeature **libFeature, size_t *size);
+
 /*!
  * \brief Seed all global random number generators in mxnet.
  * \param seed the random number seed.
@@ -464,6 +479,7 @@ MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t 
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXGetVersion(int *out);
+
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
@@ -1556,7 +1572,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
  * \param quantized_dtype the quantized destination type for input data.
- * \param calib_quantize whether calibrate quantize op with offline calibration data.
+ * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could.
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
@@ -1837,6 +1853,14 @@ MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
                                            void* callback_handle);
+
+/*!
+ * \brief set a call back to notify the completion of operation
+ * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
+ */
+MXNET_DLL int MXExecutorSetMonitorCallbackEX(ExecutorHandle handle,
+                                             ExecutorMonitorCallback callback,
+                                             void *callback_handle, bool monitor_all);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

@@ -285,9 +285,14 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     shape_vec.push_back(param_.label_width);
     TShape label_shape(shape_vec.begin(), shape_vec.end());
 
-    out->data.at(0) = NDArray(data_shape, Context::CPU(0), false,
+    auto ctx = Context::CPU(0);
+    auto dev_id = param_.device_id;
+    if (dev_id != -1) {
+      ctx = Context::CPUPinned(dev_id);
+    }
+    out->data.at(0) = NDArray(data_shape, ctx, false,
       mshadow::DataType<DType>::kFlag);
-    out->data.at(1) = NDArray(label_shape, Context::CPU(0), false,
+    out->data.at(1) = NDArray(label_shape, ctx, false,
       mshadow::DataType<real_t>::kFlag);
     unit_size_[0] = param_.data_shape.Size();
     unit_size_[1] = param_.label_width;
@@ -519,6 +524,13 @@ inline size_t ImageRecordIOParser2<DType>::ParseChunk(DType* data_dptr, real_t* 
       cv::Mat res;
       rec.Load(blob.dptr, blob.size);
       cv::Mat buf(1, rec.content_size, CV_8U, rec.content);
+
+      // If augmentation seed is supplied
+      // Re-seed RNG to guarantee reproducible results
+      if (param_.seed_aug.has_value()) {
+        prnds_[tid]->seed(idx + param_.seed_aug.value() + kRandMagic);
+      }
+
       switch (param_.data_shape[0]) {
        case 1:
 #if MXNET_USE_LIBJPEG_TURBO

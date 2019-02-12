@@ -602,23 +602,23 @@ build_ubuntu_gpu_tensorrt() {
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
-    rm -rf build
-    make \
-        DEV=1                                                \
-        ENABLE_TESTCOVERAGE=1                                \
-        USE_BLAS=openblas                                    \
-        USE_CUDA=1                                           \
-        USE_CUDA_PATH=/usr/local/cuda                        \
-        USE_CUDNN=1                                          \
-        USE_OPENCV=0                                         \
-        USE_MKLDNN=0                                         \
-        USE_DIST_KVSTORE=0                                   \
-        USE_TENSORRT=1                                       \
-        USE_JEMALLOC=0                                       \
-        USE_GPERFTOOLS=0                                     \
-        ONNX_NAMESPACE=onnx                                  \
-        CUDA_ARCH="-gencode arch=compute_70,code=compute_70" \
-        -j$(nproc)
+    cd /work/build
+    cmake -DUSE_CUDA=1                            \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
+          -DUSE_CUDNN=1                           \
+          -DUSE_OPENCV=1                          \
+          -DUSE_TENSORRT=1                        \
+          -DUSE_OPENMP=0                          \
+          -DUSE_MKLDNN=0                          \
+          -DUSE_MKL_IF_AVAILABLE=OFF              \
+          -DENABLE_TESTCOVERAGE=ON                \
+          -DCUDA_ARCH_NAME=Manual                 \
+          -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+          -G Ninja                                \
+          /work/mxnet
+
+    ninja -v
 }
 
 build_ubuntu_gpu_mkldnn() {
@@ -868,6 +868,15 @@ unittest_ubuntu_cpu_clojure() {
     ./contrib/clojure-package/ci-test.sh
 }
 
+unittest_ubuntu_cpu_clojure_integration() {
+    set -ex
+    cd scala-package
+    mvn -B install
+    cd ..
+    ./contrib/clojure-package/integration-tests.sh
+}
+
+
 unittest_ubuntu_cpugpu_perl() {
     set -ex
     ./perl-package/test.sh
@@ -883,6 +892,7 @@ unittest_ubuntu_cpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg                           \
@@ -893,11 +903,42 @@ unittest_ubuntu_cpu_R() {
     make rpkgtest R_LIBS=/tmp/r-site-library
 }
 
+unittest_ubuntu_minimal_R() {
+    set -ex
+    mkdir -p /tmp/r-site-library
+    # build R packages in parallel
+    mkdir -p ~/.R/
+    build_ccache_wrappers
+    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
+    # make -j not supported
+    make rpkg                           \
+        USE_BLAS=openblas               \
+        R_LIBS=/tmp/r-site-library
+
+    R CMD INSTALL --library=/tmp/r-site-library R-package
+    # pick mlp as minimal R test
+    R_LIBS=/tmp/r-site-library \
+        Rscript -e "library(mxnet); require(mlbench); \
+                    data(Sonar, package=\"mlbench\"); \
+                    Sonar[,61] = as.numeric(Sonar[,61])-1; \
+                    train.ind = c(1:50, 100:150); \
+                    train.x = data.matrix(Sonar[train.ind, 1:60]); \
+                    train.y = Sonar[train.ind, 61]; \
+                    test.x = data.matrix(Sonar[-train.ind, 1:60]); \
+                    test.y = Sonar[-train.ind, 61]; \
+                    model = mx.mlp(train.x, train.y, hidden_node = 10, \
+                                   out_node = 2, out_activation = \"softmax\", \
+                                   learning.rate = 0.1, \
+                                   array.layout = \"rowmajor\"); \
+                    preds = predict(model, test.x, array.layout = \"rowmajor\")"
+}
+
 unittest_ubuntu_gpu_R() {
     set -ex
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make rpkg                           \
@@ -912,29 +953,21 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-
-    # install package
-    mkdir -p $DEVDIR
-    ln -sf ${MXNET_HOME}/julia ${DEVDIR}/MXNet
-
-    # register MXNet.jl and dependencies
-    julia -e 'using Pkg; Pkg.develop("MXNet")'
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
     # use the prebuilt binary from $MXNET_HOME/lib
-    julia -e 'using Pkg; Pkg.build("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
 
     # run the script `julia/test/runtests.jl`
-    julia -e 'using Pkg; Pkg.test("MXNet")'
+    julia --project=./julia -e 'using Pkg; Pkg.test("MXNet")'
 
     # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
-    julia -e 'using MXNet; mx._sig_checker()'
+    julia --project=./julia -e 'using MXNet; mx._sig_checker()'
 }
 
 unittest_ubuntu_cpu_julia07() {
@@ -1239,7 +1272,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    make java_ci_demo
+    mvn -B -Pci-nightly install
     bash bin/java_sample.sh
     bash bin/run_od.sh
 }
@@ -1247,7 +1280,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    make scala_ci_demo
+    mvn -B -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
 }
@@ -1258,7 +1291,9 @@ deploy_docs() {
     set -ex
     pushd .
 
-    make docs SPHINXOPTS=-W
+    export CC="ccache gcc"
+    export CXX="ccache g++"
+    make docs SPHINXOPTS=-W USE_MKLDNN=0
 
     popd
 }
@@ -1268,10 +1303,8 @@ deploy_jl_docs() {
     export PATH="/work/julia10/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
-    export DEVDIR="$JULIA_DEPOT_PATH/dev"
 
     julia -e 'using InteractiveUtils; versioninfo()'
-    mkdir -p $DEVDIR
 
     # FIXME
     export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
@@ -1281,6 +1314,24 @@ deploy_jl_docs() {
 
     # TODO: make Jenkins worker push to MXNet.jl ph-pages branch if master build
     # ...
+}
+
+build_scala_static_mkl() {
+    set -ex
+    pushd .
+    scala_prepare
+    export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
+    export mxnet_variant=mkl
+    ./ci/publish/scala/build.sh
+    popd
+}
+
+build_static_python_mkl() {
+    set -ex
+    pushd .
+    export mxnet_variant=mkl
+    ./ci/publish/python/build.sh
+    popd
 }
 
 publish_scala_build() {

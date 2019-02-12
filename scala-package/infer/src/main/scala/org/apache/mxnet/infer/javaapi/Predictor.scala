@@ -40,8 +40,8 @@ import scala.collection.JavaConverters._
 
 // JavaDoc description of class to be updated in https://issues.apache.org/jira/browse/MXNET-1178
 class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor){
-  def this(modelPathPrefix: String, inputDescriptors: java.util.List[DataDesc],
-           contexts: java.util.List[Context], epoch: Int)
+  def this(modelPathPrefix: String, inputDescriptors: java.lang.Iterable[DataDesc],
+           contexts: java.lang.Iterable[Context], epoch: Int)
   = this {
     val informationDesc = JavaConverters.asScalaIteratorConverter(inputDescriptors.iterator)
       .asScala.toIndexedSeq map {a => a: org.apache.mxnet.DataDesc}
@@ -97,10 +97,10 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
   }
 
   /**
-    * Takes input as List of one dimensional arrays and creates the NDArray needed for inference
+    * Takes input as List of one dimensional iterables and creates the NDArray needed for inference
     * The array will be reshaped based on the input descriptors.
     *
-    * @param input:            A List of a one-dimensional array.
+    * @param input:            A List of a one-dimensional iterables of DType Float.
                               An extra List is needed for when the model has more than one input.
     * @return                  Indexed sequence array of outputs
     */
@@ -118,10 +118,10 @@ class Predictor private[mxnet] (val predictor: org.apache.mxnet.infer.Predictor)
     * This method is useful when the input is a batch of data
     * Note: User is responsible for managing allocation/deallocation of input/output NDArrays.
     *
-    * @param input             List of NDArrays
+    * @param input             Iterable of NDArrays
     * @return                  Output of predictions as NDArrays
     */
-  def predictWithNDArray(input: java.util.List[NDArray]):
+  def predictWithNDArray(input: java.lang.Iterable[NDArray]):
   java.util.List[NDArray] = {
     val ret = predictor.predictWithNDArray(convert(JavaConverters
       .asScalaIteratorConverter(input.iterator).asScala.toIndexedSeq))

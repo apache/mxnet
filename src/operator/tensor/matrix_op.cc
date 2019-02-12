@@ -27,6 +27,7 @@
 #include "./elemwise_unary_op.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
 #include "../nn/mkldnn/mkldnn_base-inl.h"
+#include "../nn/mkldnn/mkldnn_slice-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -102,6 +103,7 @@ DMLC_REGISTER_PARAMETER(ReverseParam);
 DMLC_REGISTER_PARAMETER(StackParam);
 DMLC_REGISTER_PARAMETER(SqueezeParam);
 DMLC_REGISTER_PARAMETER(DepthToSpaceParam);
+DMLC_REGISTER_PARAMETER(SplitParam);
 
 #if MXNET_USE_MKLDNN == 1
 void MKLDNNReshape(const NDArray &in_data, const NDArray &out_data) {
@@ -420,6 +422,30 @@ will return a new array with shape ``(2,1,3,4)``.
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(ExpandDimParam::__FIELDS__());
 
+void SliceExCPU(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1);
+  CHECK_EQ(outputs.size(), 1);
+  const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
+  auto in_stype = inputs[0].storage_type();
+  if (in_stype == kCSRStorage) {
+    SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
+#if MXNET_USE_MKLDNN == 1
+  } else if (in_stype == kDefaultStorage) {
+    if (SupportMKLDNN(inputs[0])) {
+      MKLDNNSlice(param, ctx, inputs[0], req[0], outputs[0]);
+    } else {
+      FallBackCompute(SliceOpForward<cpu>, attrs, ctx, inputs, req, outputs);
+    }
+#endif
+  } else {
+    LOG(FATAL) << "Slice not implemented for storage type" << in_stype;
+  }
+}
+
 NNVM_REGISTER_OP(slice)
 MXNET_ADD_SPARSE_OP_ALIAS(slice)
 .add_alias("crop")
@@ -478,7 +504,10 @@ Example::
 .set_attr<FInferStorageType>("FInferStorageType", SliceForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice"})
 .set_attr<FCompute>("FCompute<cpu>", SliceOpForward<cpu>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", SliceEx<cpu>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SliceExCPU)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(SliceParam::__FIELDS__());
 
@@ -1043,8 +1072,8 @@ Example::
          [12, 18, 13, 19, 14, 20],
          [3, 9, 4, 10, 5, 11],
          [15, 21, 16, 22, 17, 23]]]]
-  
-  
+
+
   space_to_depth(x, 2) = [[[[0, 1, 2],
                             [3, 4, 5]],
                            [[6, 7, 8],
@@ -1071,6 +1100,104 @@ Example::
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"depth_to_space"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(DepthToSpaceParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_split_v2)
+.describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
+
+Example::
+
+   x  = [[[ 1.]
+          [ 2.]]
+         [[ 3.]
+          [ 4.]]
+         [[ 5.]
+          [ 6.]]]
+   x.shape = (3, 2, 1)
+
+   y = split_v2(x, axis=1, indices_or_sections=2) // a list of 2 arrays with shape (3, 1, 1)
+   y = [[[ 1.]]
+        [[ 3.]]
+        [[ 5.]]]
+
+       [[[ 2.]]
+        [[ 4.]]
+        [[ 6.]]]
+
+   y[0].shape = (3, 1, 1)
+
+   z = split_v2(x, axis=0, indices_or_sections=3) // a list of 3 arrays with shape (1, 2, 1)
+   z = [[[ 1.]
+         [ 2.]]]
+
+       [[[ 3.]
+         [ 4.]]]
+
+       [[[ 5.]
+         [ 6.]]]
+
+   z[0].shape = (1, 2, 1)
+
+   w = split_v2(x, axis=0, indices_or_sections=(1,)) // a list of 2 arrays with shape [(1, 2, 1), (2, 2, 1)]
+   w = [[[ 1.]
+         [ 2.]]]
+
+       [[[3.]
+         [4.]]
+
+        [[5.]
+         [6.]]]
+
+  w[0].shape = (1, 2, 1)
+  w[1].shape = (2, 2, 1)
+
+`squeeze_axis=True` removes the axis with length 1 from the shapes of the output arrays.
+**Note** that setting `squeeze_axis` to ``1`` removes axis with length 1 only
+along the `axis` which it is split.
+Also `squeeze_axis` can be set to true only if ``input.shape[axis] == indices_or_sections``.
+
+Example::
+
+   z = split_v2(x, axis=0, indices_or_sections=3, squeeze_axis=1) // a list of 3 arrays with shape (2, 1)
+   z = [[ 1.]
+        [ 2.]]
+
+       [[ 3.]
+        [ 4.]]
+
+       [[ 5.]
+        [ 6.]]
+   z[0].shape = (2, 1)
+
+)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(1)
+.set_num_outputs(SplitNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<nnvm::FInferShape>("FInferShape", SplitOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SplitOpType)
+.set_attr<FCompute>("FCompute<cpu>", SplitOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(SplitParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_split_v2_backward)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(SplitNumOutputs)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<FCompute>("FCompute<cpu>", SplitOpBackward<cpu>);
+
 
 }  // namespace op
 }  // namespace mxnet

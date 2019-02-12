@@ -620,8 +620,11 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         *In either case, value of all the arguments must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float16 or np.float32 or np.float64
-        Datatype for mx.nd.array.
+    dtype: "asnumpy" or np.float16 or np.float32 or np.float64
+        If dtype is "asnumpy" then the mx.nd.array created will have the same
+        type as th numpy array from which it is copied.
+        Otherwise, dtype is the explicit datatype for all mx.nd.array objects
+        created in this function.
 
     Returns
     -------
@@ -643,7 +646,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
     ValueError: Symbol arguments and keys of the given location do not match.
     """
     assert isinstance(location, (dict, list, tuple))
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if isinstance(location, dict):
         if set(location.keys()) != set(sym.list_arguments()):
             raise ValueError("Symbol arguments and keys of the given location do not match."
@@ -651,8 +654,8 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
                              % (str(set(sym.list_arguments())), str(set(location.keys()))))
     else:
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
-    location = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) if isinstance(v, np.ndarray) \
-               else v for k, v in location.items()}
+    location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+               if isinstance(v, np.ndarray) else v for k, v in location.items()}
     return location
 
 
@@ -677,8 +680,11 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         *In either case, all aux states of `sym` must be provided.*
     ctx : Context
         Device context.
-    dtype: np.float16 or np.float32 or np.float64
-        Datatype for mx.nd.array.
+    dtype: "asnumpy" or np.float16 or np.float32 or np.float64
+        If dtype is "asnumpy" then the mx.nd.array created will have the same
+        type as th numpy array from which it is copied.
+        Otherwise, dtype is the explicit datatype for all mx.nd.array objects
+        created in this function.
 
     Returns
     -------
@@ -702,7 +708,7 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     >>> _parse_aux_states(fc2, {'batchnorm0_moving_var': mean_states}, None)
     ValueError: Symbol aux_states names and given aux_states do not match.
     """
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if aux_states is not None:
         if isinstance(aux_states, dict):
             if set(aux_states.keys()) != set(sym.list_auxiliary_states()):
@@ -713,7 +719,8 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
         elif isinstance(aux_states, (list, tuple)):
             aux_names = sym.list_auxiliary_states()
             aux_states = {k:v for k, v in zip(aux_names, aux_states)}
-        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in aux_states.items()}
+        aux_states = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+                      for k, v in aux_states.items()}
     return aux_states
 
 
@@ -962,8 +969,11 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains the mapping between names of auxiliary states and their values.
     ctx : Context, optional
         running context
-    dtype: np.float16 or np.float32 or np.float64
-        Datatype for mx.nd.array.
+    dtype: "asnumpy" or np.float16 or np.float32 or np.float64
+        If dtype is "asnumpy" then the mx.nd.array created will have the same
+        type as th numpy array from which it is copied.
+        Otherwise, dtype is the explicit datatype for all mx.nd.array objects
+        created in this function.
 
     equal_nan: Boolean
         if True, `nan` is a valid value for checking equivalency (ie `nan` == `nan`)
@@ -979,7 +989,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     >>> ret_expected = np.array([[19, 22], [43, 50]])
     >>> check_symbolic_forward(sym_dot, [mat1, mat2], [ret_expected])
     """
-    assert dtype in (np.float16, np.float32, np.float64)
+    assert dtype == "asnumpy" or dtype in (np.float16, np.float32, np.float64)
     if ctx is None:
         ctx = default_context()
 
@@ -988,7 +998,8 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
                                    dtype=dtype)
     if isinstance(expected, dict):
         expected = [expected[k] for k in sym.list_outputs()]
-    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=dtype) for k, v in location.items()}
+    args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
+                      for k, v in location.items()}
 
     executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
