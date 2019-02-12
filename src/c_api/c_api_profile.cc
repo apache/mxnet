@@ -52,11 +52,6 @@ struct APICallTimingData {
 #endif  // PROFILE_API_INCLUDE_AS_EVENT
 };
 
-template<typename T, typename... Args>
-inline std::unique_ptr<T> make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 /*!
  * \brief Per-thread profiling data
  */
@@ -78,7 +73,7 @@ class ProfilingThreadData {
     auto iter = tasks_.find(name);
     if (iter == tasks_.end()) {
       iter = tasks_.emplace(std::make_pair(
-        name, make_unique<profiler::ProfileTask>(name, domain))).first;
+        name, std::make_unique<profiler::ProfileTask>(name, domain))).first;
     }
     return iter->second.get();
   }
@@ -93,7 +88,8 @@ class ProfilingThreadData {
     // Per-thread so no lock necessary
     auto iter = events_.find(name);
     if (iter == events_.end()) {
-      iter = events_.emplace(std::make_pair(name, make_unique<profiler::ProfileEvent>(name))).first;
+      iter = events_.emplace(std::make_pair(name,
+        std::make_unique<profiler::ProfileEvent>(name))).first;
     }
     return iter->second.get();
   }
