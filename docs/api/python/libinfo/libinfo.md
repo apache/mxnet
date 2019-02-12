@@ -15,8 +15,14 @@ In [1]: import mxnet as mx
 
 In [2]: import mxnet.runtime
 
-In [3]: mx.runtime.libinfo_features()
-Out[3]:
+In [3]: mxnet.runtime.is_enabled('DEBUG')
+Out[3]: True
+
+In [4]: mxnet.runtime.is_enabled('CUDA')
+Out[4]: False
+
+In [5]: mx.runtime.libinfo_features()
+Out[5]:
 [✔ CUDA,
  ✔ CUDNN,
  ✔ NCCL,
