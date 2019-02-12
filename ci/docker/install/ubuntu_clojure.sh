@@ -27,3 +27,4 @@ echo 'Installing Clojure...'
 wget https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
 chmod 775 lein
 sudo cp lein /usr/local/bin
+echo "Y" | sudo lein downgrade 2.8.3
