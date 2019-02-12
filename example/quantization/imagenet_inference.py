@@ -226,9 +226,9 @@ if __name__ == '__main__':
                                          label_name=label_name,
                                          rand_crop=False,
                                          rand_mirror=False,
-                                         shuffle=True,
-                                         shuffle_chunk_seed=3982304,
-                                         seed=48564309,
+                                         shuffle=args.shuffle_dataset,
+                                         shuffle_chunk_seed=args.shuffle_chunk_seed,
+                                         seed=args.shuffle_seed,
                                          **combine_mean_std)
         elif data_layer_type == 'uint8':
             data = mx.io.ImageRecordUInt8Iter(path_imgrec=dataset,
@@ -239,9 +239,9 @@ if __name__ == '__main__':
                                               label_name=label_name,
                                               rand_crop=False,
                                               rand_mirror=False,
-                                              shuffle=True,
-                                              shuffle_chunk_seed=3982304,
-                                              seed=48564309,
+                                              shuffle=args.shuffle_dataset,
+                                              shuffle_chunk_seed=args.shuffle_chunk_seed,
+                                              seed=args.shuffle_seed,
                                               **combine_mean_std)
         else:  #int8
             data = mx.io.ImageRecordInt8Iter(path_imgrec=dataset,
@@ -252,9 +252,9 @@ if __name__ == '__main__':
                                              label_name=label_name,
                                              rand_crop=False,
                                              rand_mirror=False,
-                                             shuffle=True,
-                                             shuffle_chunk_seed=3982304,
-                                             seed=48564309,
+                                             shuffle=args.shuffle_dataset,
+                                             shuffle_chunk_seed=args.shuffle_chunk_seed,
+                                             seed=args.shuffle_seed,
                                              **combine_mean_std)
 
         # loading model
