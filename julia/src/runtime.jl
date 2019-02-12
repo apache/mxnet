@@ -33,7 +33,7 @@ struct LibFeature
 end
 
 Base.show(io::IO, x::LibFeature) =
-  print(io, ifelse(x.enabled, "✔", "✖"), "\t", unsafe_string(x.name))
+  print(io, ifelse(x.enabled, "✔", "✖"), "  ", unsafe_string(x.name))
 
 """
     libinfo_features()
