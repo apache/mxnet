@@ -15,16 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
 import mxnet as mx
-from mxnet import libinfo
+import sys
+from mxnet.runtime import *
+from mxnet.base import MXNetError
+from nose.tools import *
 
-def test_include_path():
-    incl_path = libinfo.find_include_path()
-    assert os.path.exists(incl_path)
-    assert os.path.isdir(incl_path)
+def test_libinfo_features():
+    features = libinfo_features()
+    print("Lib features: ")
+    for f in features:
+        print(f.name, f.enabled, f.index)
+    ok_(type(features) is list)
+    ok_(len(features) > 0)
 
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import nose
     nose.runmodule()
