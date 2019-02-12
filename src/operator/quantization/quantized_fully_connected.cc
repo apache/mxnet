@@ -79,8 +79,6 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), num_inputs * 3);
   CHECK_EQ(out_type->size(), 3U);
 
-  // TODO(ciyong): intput data could be int8 or uint8
-  // TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
   for (size_t i = 1; i < num_inputs; ++i) {
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kInt8);
   }
@@ -292,7 +290,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
   })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
   [](const NodeAttrs& attrs) {
-      return std::vector<std::string>{"output", "min_output", "max_output"};
+    return std::vector<std::string>{"output", "min_output", "max_output"};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizedFullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedFullyConnectedType)

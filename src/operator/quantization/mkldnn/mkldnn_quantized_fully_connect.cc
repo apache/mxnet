@@ -98,7 +98,6 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   const mkldnn::memory *weight_mem = nullptr;
 
   if (weight.IsDefaultData()) {
-    // TODO(ciyong): group=1
     weight_mem = GetWeights(weight, fwd.fwd_pd.weights_primitive_desc(), 1);
     weight.MKLDNNDataReorderAsync(fwd.fwd_pd.weights_primitive_desc());
   } else {

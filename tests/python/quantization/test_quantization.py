@@ -370,8 +370,6 @@ def test_quantized_fc():
             assert cond == 0
 
     for qdtype in ['int8', 'uint8']:
-        #check_quantized_fc((2, 2), 2, False, qdtype)
-        #check_quantized_fc((2, 2), 2, True, qdtype)
         check_quantized_fc((32, 512, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 111, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 512, 2, 2), 100, False, qdtype)
