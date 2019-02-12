@@ -1173,17 +1173,17 @@ template<int ndim, bool clip = true>
 struct pick {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
-                                  const IType *idx, size_t M, int stride,
+                                  const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
-      else if (j >= static_cast<index_t>(M)) j = static_cast<index_t>(M) - 1;
+      else if (j >= M) j = M - 1;
     } else {
-      j = j % static_cast<index_t>(M);
-      j += (j < 0) ? static_cast<index_t>(M) : 0;
+      j = j % M;
+      j += (j < 0) ? M : 0;
     }
     j = ravel(unravel(i, sshape), bshape) + j*stride;
     out[i] = a[j];
@@ -1195,17 +1195,17 @@ template<int ndim, bool clip = true>
 struct pick_grad {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* igrad, const DType* ograd,
-                                  const IType *idx, size_t M, int stride,
+                                  const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
-      else if (j >= static_cast<index_t>(M)) j = static_cast<index_t>(M) - 1;
+      else if (j >= M) j = M - 1;
     } else {
-      j = j % static_cast<index_t>(M);
-      j += (j < 0) ? static_cast<index_t>(M) : 0;
+      j = j % M;
+      j += (j < 0) ? M : 0;
     }
     j = ravel(unravel(i, sshape), bshape) + j*stride;
     igrad[j] += ograd[i];
