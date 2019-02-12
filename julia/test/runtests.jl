@@ -39,7 +39,7 @@ include(joinpath(@__DIR__, "common.jl"))
   test_dir(joinpath(@__DIR__, "unittest"))
 
   # run the basic MNIST mlp example
-  if haskey(ENV, "CONTINUOUS_INTEGRATION")
+  if haskey(ENV, "INTEGRATION_TEST")
     @testset "MNIST Test" begin
       include(joinpath(BASEDIR, "examples", "mnist", "mlp-test.jl"))
     end

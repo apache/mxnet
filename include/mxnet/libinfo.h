@@ -18,21 +18,27 @@
  */
 
 /*!
- *  Copyright (c) 2018 by Contributors
- * \file mxfeatures.h
- * \brief check MXNet features including compile time support
+ * Copyright (c) 2018 by Contributors
+ * \file libinfo.h
+ * \author larroy
+ * \brief get features of the MXNet library at runtime
  */
 
 #pragma once
 
+#include <string>
+#include <vector>
+#include <array>
+#include <memory>
 #include "dmlc/base.h"
 #include "mshadow/base.h"
+#include "c_api.h"
 
 /*!
  *\brief whether to use opencv support
  */
 #ifndef MXNET_USE_OPENCV
-#define MXNET_USE_OPENCV 1
+#define MXNET_USE_OPENCV 0
 #endif
 
 /*!
@@ -124,7 +130,8 @@ namespace features {
 // Check compile flags such as CMakeLists.txt
 
 /// Compile time features
-enum : uint32_t {
+// ATTENTION: When changing this enum, match the strings in the implementation file!
+enum : unsigned {
   // NVIDIA, CUDA
   CUDA = 0,
   CUDNN,
@@ -179,10 +186,25 @@ enum : uint32_t {
 };
 
 
+struct EnumNames {
+  static const std::vector<std::string> names;
+};
+
+struct LibInfo {
+  LibInfo();
+  static LibInfo* getInstance();
+  const std::array<LibFeature, MAX_FEATURES>& getFeatures() {
+    return m_lib_features;
+  }
+ private:
+  std::array<LibFeature, MAX_FEATURES> m_lib_features;
+  static std::unique_ptr<LibInfo>  m_inst;
+};
+
 /*!
  * \return true if the given feature is supported
  */
-bool is_enabled(uint32_t feat);
+bool is_enabled(unsigned feat);
 
 }  // namespace features
 }  // namespace mxnet

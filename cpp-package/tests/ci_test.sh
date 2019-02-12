@@ -55,3 +55,11 @@ cp ../../build/cpp-package/example/test_score .
 ./test_score 0.93
 
 sh unittests/unit_test_mlp_csv.sh
+
+cd inference
+cp ../../../build/cpp-package/example/inception_inference .
+./unit_test_inception_inference.sh
+
+cp ../../../build/cpp-package/example/sentiment_analysis_rnn .
+./unit_test_sentiment_analysis_rnn.sh
+cd ..

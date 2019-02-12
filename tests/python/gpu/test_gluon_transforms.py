@@ -71,6 +71,24 @@ def test_normalize():
     normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
     assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
+@with_seed()
+def test_to_tensor():
+    # 3D Input
+    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(out_nd.asnumpy(), np.transpose(
+        data_in.astype(dtype=np.float32) / 255.0, (2, 0, 1)))
+
+    # 4D Input
+    data_in = np.random.uniform(0, 255, (5, 300, 300, 3)).astype(dtype=np.uint8)
+    out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
+    assert_almost_equal(out_nd.asnumpy(), np.transpose(
+                        data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
+
+    # Invalid Input
+    invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)
+    transformer = transforms.ToTensor()
+    assertRaises(MXNetError, transformer, invalid_data_in)
 
 @with_seed()
 def test_resize():
@@ -128,4 +146,3 @@ def test_resize():
     data_in_4d = nd.random.uniform(0, 255, (2, 300, 300, 3)).astype('uint8')
     out_nd_4d = transforms.Resize((100, 100))(data_in_4d)
     assert_almost_equal(out_nd_4d.asnumpy(), py_bilinear_resize_nhwc(data_in_4d.asnumpy(), 100, 100), atol=1.0)
-

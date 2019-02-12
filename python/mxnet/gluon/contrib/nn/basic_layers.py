@@ -165,7 +165,10 @@ class SyncBatchNorm(BatchNorm):
 
     Standard BN [1]_ implementation only normalize the data within each device.
     SyncBN normalizes the input within the whole mini-batch.
-    We follow the sync-onece implmentation described in the paper [2]_.
+    We follow the implementation described in the paper [2]_.
+
+    Note: Current implementation of SyncBN does not support FP16 training.
+    For FP16 inference, use standard nn.BatchNorm instead of SyncBN.
 
     Parameters
     ----------

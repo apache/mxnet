@@ -73,6 +73,7 @@ Select API:&nbsp;
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
+    * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
 * API Guides
     * Core APIs
         * NDArray
@@ -172,6 +173,9 @@ Select API:&nbsp;
 
 * Backends
     * [Subgraph API](/tutorials/c%2B%2B/subgraphAPI.html)
+
+* Inference
+    * [C++ Inference](/tutorials/c%2B%2B/mxnet_cpp_inference_tutorial.html)
 
 <hr>
 
