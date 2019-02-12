@@ -254,9 +254,9 @@ class Initializer(object):
         """Abstract method to Initialize weight."""
         raise NotImplementedError("Must override it")
 
-    def _init_quantized_weight(self, name, arr):
+    def _init_quantized_weight(self, _, arr):
         _arr = random.randint(-127, 127, dtype='int32').asnumpy()
-        arr = np.int8(_arr)
+        arr[:] = np.int8(_arr)
 
     def _init_default(self, name, _):
         raise ValueError(
