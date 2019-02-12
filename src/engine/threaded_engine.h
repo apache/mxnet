@@ -384,6 +384,10 @@ class ThreadedEngine : public Engine {
           threaded_opr->opr_exception =
               std::make_shared<std::exception_ptr>(std::current_exception());
           callback();
+        } catch (std::exception& e) {
+          threaded_opr->opr_exception =
+              std::make_shared<std::exception_ptr>(std::current_exception());
+          callback();
         }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";

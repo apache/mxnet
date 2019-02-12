@@ -24,6 +24,8 @@ from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context
 from nose.tools import assert_raises
 
+url = "https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/python/predict_image/cat.jpg?raw=true"
+
 @with_seed()
 def test_exc_imperative():
     def imperative(exec_numpy=True):
@@ -166,7 +168,6 @@ def test_multiple_waitalls():
     mx.nd.waitall()
 
 @with_seed()
-def test_exc_profiler():
     def run_training_iteration(data):
         output = net(data)
 
@@ -181,6 +182,15 @@ def test_exc_profiler():
     run_training_iteration(data)
     mx.nd.waitall()
     mx.profiler.set_state("stop")
+
+@with_seed()
+def test_opencv_exception():
+    def check_resize():
+        fname = mx.test_utils.download(url)
+        img = mx.image.imread(fname)
+        img = mx.image.imresize(img, 320, 320, interp=-1)
+        img.asnumpy()
+    assert_raises(MXNetError, check_resize)
 
 
 if __name__ == '__main__':

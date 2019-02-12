@@ -25,6 +25,7 @@
 #include <nnvm/c_api.h>
 #include "./c_api_common.h"
 
+
 const char *MXGetLastError() {
   return NNGetLastError();
 }
