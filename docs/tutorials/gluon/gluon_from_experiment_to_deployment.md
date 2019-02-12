@@ -3,7 +3,7 @@
 
 ## Overview
 MXNet Gluon API comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model. In this tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
-This tutorial covers training and inference in Python, please continue to [C++ inference part](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/c++/mxnet_cpp_inference_tutorial.md) after you finish.
+This tutorial covers training and inference in Python, please continue to [C++ inference part](https://mxnet.incubator.apache.org/versions/master/tutorials/c++/mxnet_cpp_inference_tutorial.html) after you finish.
 
 Let's say you need to build a service that provides flower species recognition. A common problem is that you don't have enough data to train a good model. In such cases, a technique called Transfer Learning can be used to make a more robust model.
 In Transfer Learning we make use of a pre-trained model that solves a related task, and was trained on a very large standard dataset, such as ImageNet. ImageNet is from a different domain, but we can utilize the knowledge in this pre-trained model to perform the new task at hand.
@@ -30,7 +30,7 @@ We have prepared a utility file to help you download and organize your data into
 ```python
 import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
-base_url = "https://raw.githubusercontent.com/roywei/incubator-mxnet/gluon_tutorial/docs/tutorial_utils/data/{}?raw=true"
+base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
 mx.test_utils.download(base_url.format(data_util_file), fname=data_util_file)
 import oxford_102_flower_dataset
 
@@ -39,28 +39,7 @@ path = './data'
 oxford_102_flower_dataset.get_data(path)
 ```
 
-Now your data will be organized into the following format, all the images belong to the same category will be put together in the following pattern:
-```bash
-data
-|--train
-|   |-- class0
-|   |   |-- image_06736.jpg
-|   |   |-- image_06741.jpg
-...
-|   |-- class1
-|   |   |-- image_06755.jpg
-|   |   |-- image_06899.jpg
-...
-|-- test
-|   |-- class0
-|   |   |-- image_00731.jpg
-|   |   |-- image_0002.jpg
-...
-|   |-- class1
-|   |   |-- image_00036.jpg
-|   |   |-- image_05011.jpg
-
-```
+Now your data will be organized into train, test, and validation sets, images belong to the same class are moved to the same folder.
 
 ## Training using Gluon
 
@@ -83,11 +62,11 @@ from mxnet.gluon.model_zoo.vision import resnet50_v2
 ```
 
 Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](https://mxnet.incubator.apache.org/tutorials/gluon/learning_rate_schedules.html) to adjust learning rates during training.
-
+Here we set the `epochs` to 1 for quick demonstration, please change to 40 for actual training.
 
 ```python
 classes = 102
-epochs = 40
+epochs = 1
 lr = 0.001
 per_device_batch_size = 32
 momentum = 0.9
@@ -110,7 +89,7 @@ Now we will apply data augmentations on training images. This makes minor altera
 4. Transpose the data from `[height, width, num_channels]` to `[num_channels, height, width]`, and map values from [0, 255] to [0, 1]
 5. Normalize with the mean and standard deviation from the ImageNet dataset.
 
-For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/c++/mxnet_cpp_inference_tutorial.md).
+For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](https://mxnet.incubator.apache.org/versions/master/tutorials/c++/mxnet_cpp_inference_tutorial.html).
 
 ```python
 jitter_param = 0.4
@@ -245,7 +224,7 @@ print('[Finished] Test-acc: %.3f' % (test_acc))
 ```
 
 Following is the training result:
-```bash
+```
 [Epoch 40] Train-acc: 0.945, loss: 0.354 | Val-acc: 0.955 | learning-rate: 4.219E-04 | time: 17.8
 [Finished] Test-acc: 0.952
 ```
@@ -309,13 +288,13 @@ print('probability=%f, class=%s' % (prob[idx], labels[idx]))
 ```
 
 Following is the output, you can see the image has been classified as lotus correctly.
-```bash
+```
 probability=9.798435, class=lotus
 ```
 
 ## What's next
 
-You can continue to the [next tutorial](https://github.com/apache/incubator-mxnet/tree/master/docs/tutorials/c++/mxnet_cpp_inference_tutorial.md) on how to load the model we just trained and run inference using MXNet C++ API.
+You can continue to the [next tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/c++/mxnet_cpp_inference_tutorial.html) on how to load the model we just trained and run inference using MXNet C++ API.
 
 You can also find more ways to run inference and deploy your models here:
 1. [Java Inference examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)

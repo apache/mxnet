@@ -109,7 +109,6 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 If you have already built MXNet **from source** and are looking to setup Java from that point, you may simply run the following from the MXNet `scala-package` folder:
 
 ```
-mvn package
 mvn install
 ```
 This will install both the Java Inference API and the required MXNet-Scala package. 

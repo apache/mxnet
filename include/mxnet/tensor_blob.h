@@ -287,7 +287,7 @@ class TBlob {
     CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
-    CHECK_EQ(this->shape_.Size(), shape.Size())
+    CHECK_EQ(this->shape_.Size(), static_cast<size_t>(shape.Size()))
       << "TBlob.get_with_shape: new and old shape do not match total elements";
     return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape,
                                                shape[dim - 1], stream);
