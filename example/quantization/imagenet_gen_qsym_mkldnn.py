@@ -55,24 +55,24 @@ def convert_from_gluon(model_name, image_shape, classes=1000, logger=None):
     symnet = mx.symbol.load_json(y.tojson())
     params = net.collect_params()
     args = {}
-    auxs = {}    
+    auxs = {}
     for param in params.values():
         v = param._reduce()
         k = param.name
         if 'running' in k:
             auxs[k] = v
         else:
-            args[k] = v            
+            args[k] = v
     mod = mx.mod.Module(symbol=symnet, context=mx.cpu(),
                         label_names = ['softmax_label'])
-    mod.bind(for_training=False, 
-             data_shapes=[('data', (1,) + 
+    mod.bind(for_training=False,
+             data_shapes=[('data', (1,) +
                           tuple([int(i) for i in image_shape.split(',')]))])
     mod.set_params(arg_params=args, aux_params=auxs)
     dst_dir = os.path.join(dir_path, 'model')
     prefix = os.path.join(dir_path, 'model', model_name)
     if not os.path.isdir(dst_dir):
-        os.mkdir(dst_dir)       
+        os.mkdir(dst_dir)
     mod.save_checkpoint(prefix, 0)
     return prefix
 
@@ -104,7 +104,7 @@ if __name__ == '__main__':
                              'you can set to custom to load your pre-trained model.')
     parser.add_argument('--use-gluon-model', type=bool, default=False,
                         help='If enabled, will download pretrained model from Gluon-CV '
-                             'and convert to symbolic model ')    
+                             'and convert to symbolic model ')
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--label-name', type=str, default='softmax_label')
     parser.add_argument('--calib-dataset', type=str, default='data/val_256_q90.rec',
@@ -114,7 +114,7 @@ if __name__ == '__main__':
                         help='number of threads for data decoding')
     parser.add_argument('--num-calib-batches', type=int, default=10,
                         help='number of batches for calibration')
-    parser.add_argument('--exclude-first-conv', action='store_true', default=True,
+    parser.add_argument('--exclude-first-conv', action='store_true', default=False,
                         help='excluding quantizing the first conv layer since the'
                              ' input data may have negative value which doesn\'t support at moment' )
     parser.add_argument('--shuffle-dataset', action='store_true', default=True,
@@ -140,8 +140,8 @@ if __name__ == '__main__':
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
                              ' kinds of quantized models if the calibration dataset is representative enough of the'
                              ' inference dataset.')
-    parser.add_argument('--quantized-dtype', type=str, default='uint8',
-                        choices=['int8', 'uint8'],
+    parser.add_argument('--quantized-dtype', type=str, default='auto',
+                        choices=['auto', 'int8', 'uint8'],
                         help='quantization destination data type for input data')
     parser.add_argument('--enable-calib-quantize', type=bool, default=True,
                         help='If enabled, the quantize op will '
@@ -198,40 +198,39 @@ if __name__ == '__main__':
     # get image shape
     image_shape = args.image_shape
 
+    calib_layer = lambda name: name.endswith('_output') or name == "data"
     exclude_first_conv = args.exclude_first_conv
+    if args.quantized_dtype == "uint8":
+        logger.info('quantized dtype is set to uint8, will exclude first conv.')
+        exclude_first_conv = True
     excluded_sym_names = []
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
         rgb_std = '1,1,1'
-        calib_layer = lambda name: name.endswith('_output')
-        excluded_sym_names += ['flatten0', 'fc1', 'pooling0']
+        excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '1,1,1'
-        calib_layer = lambda name: name.endswith('_output')
         excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
     elif args.model in ['resnet50_v1', 'resnet101_v1']:
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
-        calib_layer = lambda name: name.endswith('_output')
-        excluded_sym_names += ['resnetv10_dense0_fwd', 'resnetv10_pool0_fwd']
+        excluded_sym_names += ['resnetv10_dense0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['resnetv10_conv0_fwd']
     elif args.model == 'squeezenet1.0':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
-        calib_layer = lambda name: name.endswith('_output')
         excluded_sym_names += ['squeezenet0_flatten0_flatten0']
         if exclude_first_conv:
             excluded_sym_names += ['squeezenet0_conv0_fwd']
     elif args.model == 'mobilenet1.0':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
-        calib_layer = lambda name: name.endswith('_output')
         excluded_sym_names += ['mobilenet0_flatten0_flatten0',
                                'mobilenet0_dense0_fwd',
                                'mobilenet0_pool0_fwd']
@@ -240,22 +239,15 @@ if __name__ == '__main__':
     elif args.model == 'inceptionv3':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
-        calib_layer = lambda name: name.endswith('_output')
-        excluded_sym_names += ['inception30_dense0_fwd',
-                               'inception30_pool0_fwd']
+        excluded_sym_names += ['inception30_dense0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['inception30_conv0_fwd']
     elif args.model == 'custom':
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'
         rgb_std = '0,0,0'
-        calib_layer = lambda name: name.endswith('_output')
         # add layer names you donnot want to quantize.
-        # add conv/pool layer names that has negative inputs
-        # since Intel MKL-DNN only support uint8 quantization temporary.
-        # add all fc layer names since Intel MKL-DNN does not support temporary.
         excluded_sym_names += ['layers']
-        # add your first conv layer names since Intel MKL-DNN only support uint8 quantization temporary.
         if exclude_first_conv:
             excluded_sym_names += ['layers']
     else:
@@ -272,7 +264,7 @@ if __name__ == '__main__':
     mean_args = {'mean_r': rgb_mean[0], 'mean_g': rgb_mean[1], 'mean_b': rgb_mean[2]}
     logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
-    std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}    
+    std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
     combine_mean_std = {}
     combine_mean_std.update(mean_args)
     combine_mean_std.update(std_args)
@@ -303,8 +295,7 @@ if __name__ == '__main__':
                                                         calib_mode=calib_mode, calib_data=data,
                                                         num_calib_examples=num_calib_batches * batch_size,
                                                         calib_layer=calib_layer, quantized_dtype=args.quantized_dtype,
-                                                        label_names=(label_name,), calib_quantize_op = True,
-                                                        logger=logger)
+                                                        label_names=(label_name,), logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches
         elif calib_mode == 'naive':

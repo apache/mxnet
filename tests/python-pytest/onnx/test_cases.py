@@ -77,7 +77,8 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_elu',
              'test_max_',
              'test_softplus',
-             'test_reduce_'
+             'test_reduce_',
+             'test_split_equal'
              ],
     'import': ['test_gather',
                'test_softsign',
@@ -88,7 +89,6 @@ IMPLEMENTED_OPERATORS_TEST = {
                'test_averagepool_2d_precomputed_strides',
                'test_averagepool_2d_strides',
                'test_averagepool_3d',
-               'test_split_equal',
                'test_hardmax'
                ],
     'export': ['test_random_uniform',
