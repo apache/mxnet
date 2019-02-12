@@ -98,6 +98,8 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_
         avoided.
     quantized_dtype: str
         The quantized destination type for input data.
+    use_quantized_data_layer bool
+        If true, use quantized data layer.
     """
     num_excluded_symbols = 0
     if excluded_symbols is not None:
@@ -475,6 +477,8 @@ def quantize_model(sym, arg_params, aux_params,
         The quantized destination type for input data. Currently support 'int8'
         , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
         Default value is 'int8'.
+    use_quantized_data_layer bool
+        If true, use quantized data layer.
     logger : Object
         A logging object for printing information during the process of quantization.
 
