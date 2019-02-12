@@ -139,7 +139,7 @@ export to_graphviz
 
 include("base.jl")
 
-include("mxfeatures.jl")
+include("runtime.jl")
 include("context.jl")
 include("util.jl")
 
