@@ -30,7 +30,9 @@ import errno
 import logging
 import bz2
 import zipfile
+import copy
 from contextlib import contextmanager
+from collections import OrderedDict
 import numpy as np
 import numpy.testing as npt
 import numpy.random as rnd
@@ -97,6 +99,16 @@ def random_sample(population, k):
     population_copy = population[:]
     np.random.shuffle(population_copy)
     return population_copy[0:k]
+
+
+def _sorted_items(d):
+    """Return (key, value) pairs of dict 'd' in a deterministic order (sorted by key)."""
+    return sorted(d.items(), key=lambda t: t[0])
+
+
+def _sorted_dict(d):
+    """Return ordered dictionary containing items ordered by their keys."""
+    return OrderedDict(_sorted_items(d))
 
 
 def _validate_csr_generation_inputs(num_rows, num_cols, density,
@@ -476,15 +488,40 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
 
     Parameters
     ----------
-    a : np.ndarray
-    b : np.ndarray
-    threshold : None or float
-        The checking threshold. Default threshold will be used if set to ``None``.
+    a : np.ndarray or mx.nd.array
+    b : np.ndarray or mx.nd.array
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
+    names : tuple of names, optional
+        The names used in error message when an exception occurs
+    equal_nan : boolean, optional
+        The flag determining how to treat NAN values in comparison
     """
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
-    if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
-        return
+
+    use_np_allclose = isinstance(a, np.ndarray)
+    if not use_np_allclose:
+        if not hasattr(a, 'context') or not hasattr(b, 'context') or a.context != b.context:
+            use_np_allclose = True
+            if isinstance(a, mx.nd.NDArray):
+                a = a.asnumpy()
+            if isinstance(b, mx.nd.NDArray):
+                b = b.asnumpy()
+
+    if use_np_allclose:
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            return
+    else:
+        output = mx.nd.contrib.allclose(a, b, rtol, atol, equal_nan)
+        if output.asnumpy() == 1:
+            return
+
+        a = a.asnumpy()
+        b = b.asnumpy()
+
     index, rel = find_max_violation(a, b, rtol, atol)
     np.set_printoptions(threshold=4, suppress=True)
     msg = npt.build_err_msg([a, b],
@@ -492,6 +529,18 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
                                     " Location of maximum error:%s, a=%f, b=%f"
                             % (rel, rtol, atol, str(index), a[index], b[index]),
                             names=names)
+
+
+    print('*** Maximum errors for vector of sise {}:  rtol = {}, atol = {}\n'.format(a.size, rtol, atol))
+    i = 1
+    while i < 10:
+        print("%3d: Error %f  Location of error:%s, a=%f, b=%f\n" %(i, rel, str(index), a[index], b[index]))
+        a[index] = b[index]
+        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
+            break
+        i += 1
+        index, rel = find_max_violation(a, b, rtol, atol)
+
     raise AssertionError(msg)
 
 
@@ -600,7 +649,7 @@ def simple_forward(sym, ctx=None, is_train=False, **inputs):
 
 
 def _parse_location(sym, location, ctx, dtype=default_dtype()):
-    """Parses the given location to a dictionary.
+    """Parses the given location to a ordered dictionary.
 
     Arguments of the provided op `sym` are used as dictionary keys
     and elements of `location` are used as values.
@@ -656,7 +705,7 @@ def _parse_location(sym, location, ctx, dtype=default_dtype()):
         location = {k: v for k, v in zip(sym.list_arguments(), location)}
     location = {k: mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                if isinstance(v, np.ndarray) else v for k, v in location.items()}
-    return location
+    return _sorted_dict(location)
 
 
 def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
@@ -724,8 +773,9 @@ def _parse_aux_states(sym, aux_states, ctx, dtype=default_dtype()):
     return aux_states
 
 
-def numeric_grad(executor, location, aux_states=None, eps=1e-4,
-                 use_forward_train=True, dtype=default_dtype()):
+def numeric_grad(executor, location, grad_nodes, aux_states=None, eps=1e-4,
+                 use_forward_train=True, use_approx_grad=True,
+                 dtype=default_dtype(), loc_src=None):
     """Calculates a numeric gradient via finite difference method.
 
     Class based on Theano's `theano.gradient.numeric_grad` [1]
@@ -738,6 +788,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         Argument values used as location to compute gradient
         Maps the name of arguments to the corresponding numpy.ndarray.
         Value of all the arguments must be provided.
+    grad_nodes : List of nodes, where the gradient will be compared
     aux_states : None or list of numpy.ndarray or dict of str to numpy.ndarray, optional
         Auxiliary states values used as location to compute gradient
         Maps the name of aux_states to the corresponding numpy.ndarray.
@@ -746,6 +797,8 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         Epsilon for the finite-difference method.
     use_forward_train : bool, optional
         Whether to use `is_train=True` in testing.
+    use_approx_grad : bool, optional
+        Whether to use `mx.nd.contrib.approx_gradient` operator.
     dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
@@ -757,8 +810,19 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
         return mx.nd.cast_storage(mx.nd.array(var, dtype=dtype), stype=stype)
 
     assert dtype in (np.float16, np.float32, np.float64)
-    approx_grads = {k: np.zeros(v.shape, dtype=dtype)
-                    for k, v in location.items()}
+    # Allocate memory for gradient
+    if use_approx_grad:
+        if loc_src is None:
+            approx_grads = {k: mx.nd.array(v, dtype=dtype) if k in grad_nodes else None
+                            for k, v in location.items()}
+
+        else:
+            approx_grads = {k: mx.nd.array(v[0], dtype=dtype) if k in grad_nodes else None
+                            for k, v in location.items()}
+    else:
+        approx_grads = {k: np.zeros(v.shape, dtype=dtype) if k in grad_nodes else None
+                        for k, v in location.items()}
+
     for k, v in location.items():
         stype = executor.arg_dict[k].stype
         if stype == 'default':
@@ -766,41 +830,115 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
     for k in location:
         location[k] = np.asarray(location[k], order='C')
     for k, v in location.items():
+        # Dont need calculate gradient for nodes which will not be used in comparisons
+        if k not in grad_nodes:
+            continue
         if v.dtype.kind != 'f':
             continue
         stype = executor.arg_dict[k].stype
         old_value = v.copy()
-        for i in range(np.prod(v.shape)):
-            # inplace update
-            v.ravel()[i] += eps/2.0
+        if loc_src is not None:
+            len = np.prod(v.shape) // v.shape[0]
+            for i in range(len):
+                v.ravel()[i * (1 + len)] += eps/2.0
+
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
             if aux_states is not None:
                 for key, val in aux_states.items():
                     executor.aux_dict[key][:] = val
-            executor.forward(is_train=use_forward_train)
-            f_peps = executor.outputs[0].asnumpy()
 
-            v.ravel()[i] -= eps
+            executor.forward(is_train=use_forward_train)
+            if use_approx_grad:
+                f_peps = executor.outputs[0].copy()
+            else:
+                f_peps = executor.outputs[0].asnumpy()
+
+            for i in range(len):
+                v.ravel()[i * (1 + len)] -= eps
+
             executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
             if aux_states is not None:
                 for key, val in aux_states.items():
-                    adstype = executor.aux_dict[key].stype
-                    executor.aux_dict[key][:] = as_stype(val, adstype, dtype=dtype)
-            executor.forward(is_train=use_forward_train)
-            f_neps = executor.outputs[0].asnumpy()
+                    executor.aux_dict[key][:] = val
 
-            approx_grad = (f_peps - f_neps).sum() / eps
-            approx_grads[k].ravel()[i] = approx_grad
-            v.ravel()[i] = old_value.ravel()[i]
-        # copy back the original value
+            executor.forward(is_train=use_forward_train)
+            if use_approx_grad:
+                mx.nd.contrib.approx_gradient(f_peps, executor.outputs[0], approx_grads[k], len, eps, True)
+            else:
+                f_neps = executor.outputs[0].asnumpy()
+                approx_grads[k].ravel()[i] = (f_peps - f_neps).sum() / eps
+        else:
+            len = np.prod(v.shape)
+            for i in range(len):
+                # inplace update
+                v.ravel()[i] += eps/2.0
+                executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
+                if aux_states is not None:
+                    for key, val in aux_states.items():
+                        executor.aux_dict[key][:] = val
+                executor.forward(is_train=use_forward_train)
+                if use_approx_grad:
+                    f_peps = executor.outputs[0].copy()
+                else:
+                    f_peps = executor.outputs[0].asnumpy()
+
+                v.ravel()[i] -= eps
+                executor.arg_dict[k][:] = as_stype(v, stype, dtype=dtype)
+
+                if aux_states is not None:
+                    for key, val in aux_states.items():
+                        executor.aux_dict[key][:] = val
+                executor.forward(is_train=use_forward_train)
+                if use_approx_grad:
+                    mx.nd.contrib.approx_gradient(f_peps, executor.outputs[0], approx_grads[k], i, eps)
+                else:
+                    f_neps = executor.outputs[0].asnumpy()
+                    approx_grads[k].ravel()[i] = (f_peps - f_neps).sum() / eps
+
+                v.ravel()[i] = old_value.ravel()[i]
+
+        # copy back the original value (they are used in gradient calculation for different k)
         executor.arg_dict[k][:] = as_stype(old_value, stype, dtype=dtype)
 
     return approx_grads
 
 
+def check_gradient(grad_req, fd_grad, sym_grad, orig_grad, rtol, atol, name, names, equal_nan=False):
+    """Gradient check
+
+        Parameters
+    ----------
+    grad_req : string
+        Gradient requirement.
+
+    fd_grad : np.ndarray or mx.nd.array
+    sym_grad : np.ndarray or mx.nd.array
+    orig_grad : np.ndarray or mx.nd.array
+        fd_grad, sym_grad, orig_grad - different representations of (or corrections for) the gradient used in comparison
+    rtol : float
+        Relative tolerance used in gradient comparison
+    atol : float
+        Absolute tolerance used in gradient comparison
+    name: string
+        Name of the node where gradient is checked
+    names: Tuple of strings
+        The names describing the compared gradients
+    equal_nan : boolean, optional
+        The flag determining how to treat NAN values in gradient comparison
+    """
+    if grad_req == 'write':
+        assert_almost_equal(fd_grad, sym_grad, rtol, atol, names, equal_nan=equal_nan)
+    elif grad_req == 'add':
+        assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol, names, equal_nan=equal_nan)
+    elif grad_req == 'null':
+        assert_almost_equal(orig_grad, sym_grad, rtol, atol, names, equal_nan=equal_nan)
+    else:
+        raise ValueError("Invalid grad_req %s for argument %s"%(grad_req, name))
+
+
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
-                           grad_stype_dict=None, dtype=default_dtype()):
+                           grad_stype_dict=None, use_approx_grad=True, dtype=default_dtype(), use_batch=False):
     """Verify an operation by checking backward pass via finite difference method.
 
     Based on Theano's `theano.gradient.verify_grad` [1]
@@ -833,6 +971,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         Check the gradient computation on the specified device.
     grad_stype_dict : dict of str->str, optional
         Storage type dictionary for gradient ndarrays.
+    use_approx_grad : bool, optional
+        Whether to use `mx.nd.contrib.approx_gradient` operator.
     dtype: np.float16 or np.float32 or np.float64
         Datatype for mx.nd.array.
 
@@ -859,14 +999,17 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         plain = np.random.rand(*shape) + 0.1
         return plain
 
+    def tile_dict(dict, keep_stype=False):
+        for k, v in dict.items():
+            reps = tuple([np.prod(v.shape)] + len(v.shape) * [1])
+            if keep_stype:
+                dict[k] = mx.ndarray.tile(dict[k], reps).tostype(dict[k].stype)
+            else:
+                dict[k] = mx.ndarray.tile(dict[k], reps)
+
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
-    location_npy = {k:v.asnumpy() for k, v in location.items()}
     aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
                                    dtype=dtype)
-    if aux_states is not None:
-        aux_states_npy = {k: v.asnumpy() for k, v in aux_states.items()}
-    else:
-        aux_states_npy = None
     if grad_nodes is None:
         grad_nodes = sym.list_arguments()
         grad_req = {k: 'write' for k in grad_nodes}
@@ -885,14 +1028,47 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     out = sym * proj
     out = mx.sym.make_loss(out)
 
-    location = dict(list(location.items()) +
-                    [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
-                                                   ctx=ctx, dtype=dtype))])
-    args_grad_npy = dict([(k, np.random.normal(0, 0.01, size=location[k].shape))
-                          for k in grad_nodes]
-                         + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
+    location = OrderedDict(list(location.items()) +
+                           [("__random_proj", mx.nd.array(random_projection(out_shape[0]),
+                                                          ctx=ctx, dtype=dtype))])
+    if use_approx_grad:
+        args_grad_cmp = OrderedDict([(k, mx.nd.random.normal(0, 0.01, shape=location[k].shape, ctx=ctx))
+                                     for k in grad_nodes]
+                                    + [("__random_proj", mx.nd.random.normal(0, 0.01, shape=out_shape[0], ctx=ctx))])
+    else:
+        args_grad_cmp = OrderedDict([(k, np.random.normal(0, 0.01, size=location[k].shape))
+                                     for k in grad_nodes]
+                                    + [("__random_proj", np.random.normal(0, 0.01, size=out_shape[0]))])
 
-    args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_npy.items()}
+    # We can use use batched mode in numeric_grad only when:
+    if use_batch:
+        # ... all input shapes are equal to output shape
+        for k, v in location.items():
+            use_batch &= out_shape[0] == v.shape
+
+    if use_batch and aux_states is not None:
+        # ...  when none of the aux_states are stored as 'csr'
+        # because "CSR is only for 2-D shape"
+        for k, v in aux_states.items():
+            use_batch &= v.stype != 'csr'
+
+    location_src = copy.copy(location) if use_batch else None
+    flg = len(grad_req) == 1 and aux_states is not None
+    if location_src is not None:
+        # By multiplying locations/aux_states, we increase the batch size for MXNet call
+        tile_dict(location)
+
+        if flg:
+            args_grad = copy.copy(args_grad_cmp)
+            tile_dict(args_grad)
+        else:
+            args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_cmp.items()}
+
+        if aux_states is not None:
+            tile_dict(aux_states, keep_stype=True)
+    else:
+        args_grad = {k: mx.nd.array(v, ctx=ctx, dtype=dtype) for k, v in args_grad_cmp.items()}
+
     if grad_stype_dict is not None:
         assert isinstance(grad_stype_dict, dict), "grad_stype_dict must be a dict"
         for k, v in grad_stype_dict.items():
@@ -913,28 +1089,23 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     executor.forward(is_train=True)
     executor.backward()
-    symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
+
+    symbolic_grads = {k:executor.grad_dict[k] for k in grad_nodes}
+
+    if location_src is not None and flg:
+        symbolic_grads = {k:v.asnumpy()[0] if v.stype != 'csr' else v[0]
+                          for k, v in symbolic_grads.items()}
+
+    location = {k:v.asnumpy() for k, v in location.items()}
 
     numeric_gradients = numeric_grad(
-        executor, location_npy, aux_states_npy,
-        eps=numeric_eps, use_forward_train=use_forward_train, dtype=dtype)
+        executor, location, grad_nodes, aux_states, use_approx_grad=use_approx_grad,
+        eps=numeric_eps, use_forward_train=use_forward_train, dtype=dtype, loc_src=location_src)
 
     for name in grad_nodes:
-        fd_grad = numeric_gradients[name]
-        orig_grad = args_grad_npy[name]
-        sym_grad = symbolic_grads[name]
-        if grad_req[name] == 'write':
-            assert_almost_equal(fd_grad, sym_grad, rtol, atol,
-                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
-        elif grad_req[name] == 'add':
-            assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
-                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
-        elif grad_req[name] == 'null':
-            assert_almost_equal(orig_grad, sym_grad, rtol, atol,
-                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
-        else:
-            raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
-
+        names = ("NUMERICAL_%s"%name, "BACKWARD_%s"%name)
+        check_gradient(grad_req[name], numeric_gradients[name], symbolic_grads[name], args_grad_cmp[name],
+                       rtol, atol, name, names)
 
 def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
                            aux_states=None, ctx=None, equal_nan=False,
@@ -1085,7 +1256,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(expected, (list, tuple)):
         expected = {k:v for k, v in zip(sym.list_arguments(), expected)}
 
-    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in expected.items()}
+    # Dirty the output buffer deterministically, for reproducibility.
+    args_grad_npy = {k:np.random.normal(size=v.shape) for k, v in _sorted_items(expected)}
     args_grad_data = {}
     for k, v in args_grad_npy.items():
         nd = mx.nd.array(v, ctx=ctx, dtype=dtype)
@@ -1132,20 +1304,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
 
     for name in expected:
-        if grad_req[name] == 'write':
-            assert_almost_equal(expected[name], grads[name], rtol, atol,
-                                ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
-                                equal_nan=equal_nan)
-        elif grad_req[name] == 'add':
-            assert_almost_equal(expected[name], grads[name] - args_grad_npy[name],
-                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
-                                equal_nan=equal_nan)
-        elif grad_req[name] == 'null':
-            assert_almost_equal(args_grad_npy[name], grads[name],
-                                rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
-                                equal_nan=equal_nan)
-        else:
-            raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
+        names = ("EXPECTED_%s"%name, "BACKWARD_%s"%name)
+        check_gradient(grad_req[name], expected[name], grads[name], args_grad_npy[name],
+                       rtol, atol, name, names, equal_nan=equal_nan)
+
     return args_grad_data
 
 def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
@@ -1220,6 +1382,15 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         return forward_time
     else:
         raise ValueError('typ can only be "whole" or "forward".')
+
+
+def get_tolerance(rtol, ctx):
+    if 'atol' in ctx:
+        return ctx['atol']
+    if 'atol_mult' in ctx:
+        return ctx['atol_mult'] * rtol
+    return rtol
+
 
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
@@ -1339,12 +1510,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for i, exe in enumerate(exe_list):
         if i == max_idx:
             continue
+
+        rtol = tol[dtypes[i]]
+        atol = get_tolerance(rtol, ctx_list[i])
         for name, arr in zip(output_names, exe.outputs):
-            gtarr = gt[name].astype(dtypes[i]).asnumpy()
-            arr = arr.asnumpy()
+            # Previously, the cast was to dtypes[i], but symbol may be mixed-precision,
+            # so casting the ground truth to the actual output type seems more correct.
+            gtarr = gt[name].astype(arr.dtype)
             try:
-                assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
-                                    equal_nan=equal_nan)
+                assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
             except AssertionError as e:
                 print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                 traceback.print_exc()
@@ -1362,16 +1536,20 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         for i, exe in enumerate(exe_list):
             if i == max_idx:
                 continue
+
+            rtol = tol[dtypes[i]]
+            atol = get_tolerance(rtol, ctx_list[i])
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
                     assert arr is None
                     continue
-                gtarr = gt[name].astype(dtypes[i]).asnumpy()
-                arr = arr.asnumpy()
+
+                # Previous cast was to dtypes[i], but symbol may be mixed-precision,
+                # so casting the ground truth to the actual output type seems more correct.
+                gtarr = gt[name].astype(arr.dtype)
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=tol[dtypes[i]], atol=tol[dtypes[i]],
-                                        equal_nan=equal_nan)
+                    assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
                 except AssertionError as e:
                     print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
                     traceback.print_exc()
@@ -1543,7 +1721,7 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """
 
     get_mnist_ubyte()
-    flat = False if len(input_shape) == 3 else True
+    flat = len(input_shape) != 3
 
     train_dataiter = mx.io.MNISTIter(
         image="data/train-images-idx3-ubyte",
@@ -1983,12 +2161,14 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
 
 def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
     """Compare ndarray tuple."""
-    if t1 is not None and t2 is not None:
-        if isinstance(t1, tuple):
-            for s1, s2 in zip(t1, t2):
-                compare_ndarray_tuple(s1, s2, rtol, atol)
-        else:
-            assert_almost_equal(t1.asnumpy(), t2.asnumpy(), rtol=rtol, atol=atol)
+    if t1 is None or t2 is None:
+        return
+
+    if isinstance(t1, tuple):
+        for s1, s2 in zip(t1, t2):
+            compare_ndarray_tuple(s1, s2, rtol, atol)
+    else:
+        assert_almost_equal(t1, t2, rtol=rtol, atol=atol)
 
 
 def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
@@ -1997,7 +2177,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if w_stype == 'default':
         w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         w1 = w2.copyto(default_context())
-    elif w_stype == 'row_sparse' or w_stype == 'csr':
+    elif w_stype in ('row_sparse', 'csr'):
         w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
         w1 = w2.copyto(default_context()).tostype('default')
     else:
@@ -2005,7 +2185,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     if g_stype == 'default':
         g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
         g1 = g2.copyto(default_context())
-    elif g_stype == 'row_sparse' or g_stype == 'csr':
+    elif g_stype in ('row_sparse', 'csr'):
         g2 = rand_ndarray(shape, g_stype, dtype=dtype)
         g1 = g2.copyto(default_context()).tostype('default')
     else:
@@ -2020,7 +2200,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     opt2.update_multi_precision(0, w2, g2, state2)
     if compare_states:
         compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-    assert_almost_equal(w1.asnumpy(), w2.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
 
 class EnvManager(object):
     """Environment variable setter and unsetter via with idiom"""

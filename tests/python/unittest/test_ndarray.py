@@ -32,12 +32,17 @@ from mxnet.test_utils import random_sample, rand_shape_nd
 from numpy.testing import assert_allclose
 import mxnet.autograd
 
+
 def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=[np.float32]):
     """check function consistency with uniform random numbers"""
     if isinstance(arg_shapes, int):
         assert dim
         shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
         arg_shapes = [shape] * arg_shapes
+
+    if npuf is None:
+        npuf = uf
+
     for dtype in type_list:
         ndarray_arg = []
         numpy_arg = []
@@ -47,14 +52,9 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
             ndarray_arg.append(narr)
             numpy_arg.append(npy)
         out1 = uf(*ndarray_arg)
-        if npuf is None:
-            out2 = uf(*numpy_arg).astype(dtype)
-        else:
-            out2 = npuf(*numpy_arg).astype(dtype)
+        out2 = npuf(*numpy_arg).astype(dtype)
 
         assert out1.shape == out2.shape
-        if isinstance(out1, mx.nd.NDArray):
-            out1 = out1.asnumpy()
         if dtype == np.float16:
             assert_almost_equal(out1, out2, rtol=2e-3, atol=1e-5)
         else:
