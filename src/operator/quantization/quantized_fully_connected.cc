@@ -102,8 +102,27 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), num_inputs * 3);
   CHECK_EQ(out_attrs->size(), 3U);
 
+#if MXNET_USE_MKLDNN == 1
   return MKLDNNStorageType(attrs, dev_mask, true,
                            dispatch_mode, in_attrs, out_attrs);
+#else
+  *dispatch_mode = DispatchMode::kFCompute;
+
+  for (auto &v : *out_attrs) {
+    v = kDefaultStorage;
+    if (common::stype_string(v).compare("unknown") == 0) {
+      return false;
+    }
+  }
+
+  for (auto &v : *in_attrs) {
+    v = kDefaultStorage;
+    if (common::stype_string(v).compare("unknown") == 0) {
+      return false;
+    }
+  }
+  return true;
+#endif
 }
 
 struct QuantizedSumInitKernelWithBias {
