@@ -29,6 +29,17 @@ def test_libinfo_features():
     ok_(type(features) is list)
     ok_(len(features) > 0)
 
+def test_is_enabled():
+    features = libinfo_features()
+    for f in features:
+        if f.enabled:
+            ok_(is_enabled(f.name))
+        else:
+            ok_(not is_enabled(f.name))
+
+@raises(RuntimeError)
+def test_is_enabled_not_existing():
+    is_enabled('this girl is on fire')
 
 
 if __name__ == "__main__":
