@@ -60,7 +60,6 @@ static inline std::vector<std::string> ListArguments() {
   return {"data", "label"};
 }
 
-
 static bool SoftmaxOutputType(const nnvm::NodeAttrs& attrs,
                               std::vector<int> *in_type,
                               std::vector<int> *out_type) {
@@ -150,7 +149,6 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs &attrs,
   }
   FallBackCompute(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
-
 #endif
 
 NNVM_REGISTER_OP(SoftmaxOutput)

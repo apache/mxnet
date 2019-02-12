@@ -129,7 +129,7 @@ void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs,
 
   auto input_mem = idata.GetMKLDNNData();
   auto out_mem = CreateMKLDNNMem(out_data[softmaxout_enum::kOut],
-                            input_mem->get_primitive_desc(), req[softmaxout_enum::kOut]);
+                                 input_mem->get_primitive_desc(), req[softmaxout_enum::kOut]);
 
   MKLDNNSoftmaxOutputFwd &fwd = GetSoftmaxOutputForward(param, ctx, idata);
   fwd.SetNewMem(*input_mem, *out_mem.second);
