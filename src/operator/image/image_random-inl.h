@@ -66,6 +66,15 @@ void NormalizeImplCUDA(mshadow::Stream<gpu> *s,
                        const float std_d0,
                        const float std_d1,
                        const float std_d2);
+
+template<typename DType, typename T>
+void NormalizeBackwardImplCUDA(mshadow::Stream<gpu> *s,
+                               const T out_grad,
+                               const T in_grad,
+                               const int req,
+                               const float std_d0,
+                               const float std_d1,
+                               const float std_d2);
 #endif  // MXNET_USE_CUDA
 
 // Shape and Type inference for image to tensor operator
@@ -281,11 +290,9 @@ inline void Normalize(DType* out_data,
     #pragma omp parallel for collapse(2)
   #endif  // _MSC_VER
   for (uint32_t c = 0; c < channels; ++c) {
-    float mean_c = mean[mean.size() > c ? c : 0];
-    float std_c = std[std.size() > c ? c : 0];
     for (int i = 0; i < length; ++i) {
       KERNEL_ASSIGN(out_data[step + c*length + i], req,
-                    (in_data[step + c*length + i] - mean_c) / std_c);
+                    (in_data[step + c*length + i] - mean[c]) / std[c]);
     }
   }
 }
@@ -339,8 +346,31 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
     std[2] = param.std[2];
   }
 
-  // 3D input (c, h, w)
-  if (inputs[0].ndim() == 3) {
+  if (std::is_same<xpu, gpu>::value) {
+    #if MXNET_USE_CUDA
+      mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          if (inputs[0].ndim() == 3) {
+            Tensor<gpu, 3, DType> input = inputs[0].get<gpu, 3, DType>(s);
+            Tensor<gpu, 3, DType> output = outputs[0].get<gpu, 3, DType>(s);
+            NormalizeImplCUDA<DType, Tensor<gpu, 3, DType>>
+            (s, input, output, req_type, mean[0], mean[1], mean[2],
+             std[0], std[1], std[2]);
+          } else {
+            Tensor<gpu, 4, DType> input = inputs[0].get<gpu, 4, DType>(s);
+            Tensor<gpu, 4, DType> output = outputs[0].get<gpu, 4, DType>(s);
+            NormalizeImplCUDA<DType, Tensor<gpu, 4, DType>>
+            (s, input, output, req_type, mean[0], mean[1], mean[2],
+             std[0], std[1], std[2]);
+          }
+        });
+      });
+    #else
+      LOG(FATAL) << "Compile with USE_CUDA=1 to use Normalize operator on GPU.";
+    #endif  // MXNET_USE_CUDA
+  } else if (inputs[0].ndim() == 3) {
+    // 3D input (c, h, w)
     const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
     const uint32_t channel = inputs[0].shape_[0];
     const int step = 0;
@@ -374,10 +404,9 @@ inline void NormalizeBackward(const DType* out_grad,
     #pragma omp parallel for collapse(2)
   #endif  // _MSC_VER
   for (uint32_t c = 0; c < channels; ++c) {
-    float std_c = std[std.size() > c ? c : 0];
     for (int i = 0; i < length; ++i) {
       KERNEL_ASSIGN(in_grad[step + c*length + i], req,
-                    out_grad[step + c*length + i] * (1.0 / std_c));
+                    out_grad[step + c*length + i] * (1.0 / std[c]));
     }
   }
 }
@@ -424,8 +453,29 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
   // Note: inputs[0] is out_grad
   const TBlob& in_data = inputs[1];
 
-  // 3D input (c, h, w)
-  if (in_data.ndim() == 3) {
+  if (std::is_same<xpu, gpu>::value) {
+    #if MXNET_USE_CUDA
+      mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          if (in_data.ndim() == 3) {
+            Tensor<gpu, 3, DType> out_grad = inputs[0].get<gpu, 3, DType>(s);
+            Tensor<gpu, 3, DType> in_grad = outputs[0].get<gpu, 3, DType>(s);
+            NormalizeBackwardImplCUDA<DType, Tensor<gpu, 3, DType>>
+            (s, out_grad, in_grad, req_type, std[0], std[1], std[2]);
+          } else {
+            Tensor<gpu, 4, DType> out_grad = inputs[0].get<gpu, 4, DType>(s);
+            Tensor<gpu, 4, DType> in_grad = outputs[0].get<gpu, 4, DType>(s);
+            NormalizeBackwardImplCUDA<DType, Tensor<gpu, 4, DType>>
+            (s, out_grad, in_grad, req_type, std[0], std[1], std[2]);
+          }
+        });
+      });
+    #else
+      LOG(FATAL) << "Compile with USE_CUDA=1 to use Normalize backward operator on GPU.";
+    #endif  // MXNET_USE_CUDA
+  } else if (in_data.ndim() == 3) {
+    // 3D input (c, h, w)
     const int length = in_data.shape_[1] * in_data.shape_[2];
     const uint32_t channel = in_data.shape_[0];
     const int step = 0;
