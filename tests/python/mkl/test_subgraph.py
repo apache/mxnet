@@ -506,6 +506,7 @@ def test_pos_conv_bn_sum_relu():
     net, attrs = conv_bn_sum_relu(True, data_shape)
     check_fusion(net, data_shape, attrs)
 
+@with_seed()
 def test_pos_single_concat():
   for data_shape in DATA_SHAPE:
     for out_type in ('uint8', 'int8', 'auto'):
@@ -516,10 +517,12 @@ def test_pos_single_concat():
       net = single_concat(data_shape, 4, 3)
       check_quantize(net, data_shape, out_type, False)
 
+@with_seed()
 def test_pos_concat_scale_align():
   for data_shape in DATA_SHAPE:
-    net = concat_scale_align(data_shape)
-    check_quantize(net, data_shape, check_conv=False, check_scale_align=True)
+    for out_type in ('uint8', 'int8', 'auto'):
+      net = concat_scale_align(data_shape)
+      check_quantize(net, data_shape, out_type, check_conv=False, check_scale_align=True)
 
 @with_seed()
 def test_neg_conv_bn():
