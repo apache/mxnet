@@ -60,7 +60,7 @@ endif
 # use customized config file
 include $(config)
 
-ifndef $(USE_MKLDNN)
+ifndef USE_MKLDNN
 ifneq ($(UNAME_S), Darwin)
 ifneq ($(UNAME_S), Windows)
 ifeq ($(UNAME_P), x86_64)
@@ -104,13 +104,11 @@ else
 	CFLAGS += -O3 -DNDEBUG=1
 endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
-LDFLAGS =
+LDFLAGS = -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(USE_NGRAPH),1)
     CFLAGS += $(NGRAPH_CFLAGS)
 endif
-
-LDFLAGS += -pthread $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
@@ -585,10 +583,6 @@ cpplint:
 
 pylint:
 	pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
-
-python_clean:
-	$(RM) -r python/build
-	$(RM) -r python/dist
 
 doc: docs
 

@@ -231,7 +231,6 @@ if(ENABLE_TESTCOVERAGE)
   if(NOT GCOV_PATH)
     message(FATAL_ERROR "gcov not found! Aborting...")
   endif() # NOT GCOV_PATH
-  
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
   set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")

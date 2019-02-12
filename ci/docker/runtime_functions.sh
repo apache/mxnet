@@ -561,11 +561,8 @@ build_ubuntu_cpu_ngraph() {
     build_ccache_wrappers
 
     make  \
-        DEV=1                         \
         ENABLE_TESTCOVERAGE=1         \
-        USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
         USE_NGRAPH=1                  \
         -j$(nproc)
 }
@@ -839,6 +836,7 @@ unittest_ubuntu_tensorrt_gpu() {
 
 unittest_ubuntu_cpu_ngraph() {
     set -ex
+    export MXNET_SUBGRAPH_BACKEND="ngraph"
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
