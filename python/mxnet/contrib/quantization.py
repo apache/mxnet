@@ -498,7 +498,7 @@ def quantize_model(sym, arg_params, aux_params,
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype,
-                            use_quantized_data_layer = use_quantized_data_layer)
+                            use_quantized_data_layer=use_quantized_data_layer)
 
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
