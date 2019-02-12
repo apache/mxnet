@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-
 # runtime detection of compile time features in the native library
 
 module MXRuntime
@@ -23,7 +22,7 @@ module MXRuntime
 using ..mx
 
 export LibFeature
-export libinfo_features
+export libinfo_features, isenabled
 
 # defined in include/mxnet/c_api.h
 struct LibFeature
@@ -42,11 +41,31 @@ Check the library for compile-time features.
 The list of features are maintained in libinfo.h and libinfo.cc
 """
 function libinfo_features()
-  ref = Ref{Ptr{mx.MXRuntime.LibFeature}}(C_NULL)
+  ref = Ref{Ptr{LibFeature}}(C_NULL)
   s = Ref{Csize_t}(C_NULL)
-  mx.@mxcall(:MXLibInfoFeatures, (Ref{Ptr{mx.MXRuntime.LibFeature}}, Ref{Csize_t}), ref, s)
+  @mx.mxcall(:MXLibInfoFeatures, (Ref{Ptr{LibFeature}}, Ref{Csize_t}), ref, s)
   unsafe_wrap(Array, ref[], s[])
 end
+
+"""
+    isenabled(x::Symbol)::Bool
+
+Returns the given runtime feature is enabled or not.
+
+```julia-repl
+julia> mx.isenabled(:CUDA)
+false
+
+julia> mx.isenabled(:CPU_SSE)
+true
+```
+
+See also `mx.libinfo_features`.
+"""
+isenabled(x::Symbol) =
+  any(libinfo_features()) do i
+    Symbol(unsafe_string(i.name)) == x && i.enabled
+  end
 
 end  # module MXRuntime
 
