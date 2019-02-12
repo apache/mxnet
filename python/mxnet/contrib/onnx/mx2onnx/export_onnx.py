@@ -262,6 +262,8 @@ class MXNetGraph(object):
                     # If converted node is NodeProto, add it in processed nodes list
                     elif isinstance(converted_node, NodeProto):
                         onnx_processed_nodes.append(converted_node)
+                        # some operators have multiple outputs,
+                        # therefore, check all output node names
                         node_names = list(converted_node.output)
                         for nodename in node_names:
                             if nodename in graph_outputs:
