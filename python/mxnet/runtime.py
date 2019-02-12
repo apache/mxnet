@@ -28,10 +28,20 @@ class LibFeature(ctypes.Structure):
     Compile time feature description
     """
     _fields_ = [
-        ("name", ctypes.c_char_p),
+        ("_name", ctypes.c_char_p),
         ("index", ctypes.c_uint32),
         ("enabled", ctypes.c_bool)
     ]
+
+    @property
+    def name(self):
+        return self._name.decode()
+
+    def __repr__(self):
+        if self.enabled:
+            return "✔ {}".format(self.name)
+        else:
+            return "✖ {}".format(self.name)
 
 def libinfo_features():
     """
