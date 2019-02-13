@@ -553,6 +553,7 @@ def test_convolution_large_c():
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
 # Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
 @with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/10973")
 def test_deconvolution_large_c():
     problematic_c = 64 * 1024
     # The deconvolution accumulates many values, so set large tolerances.
