@@ -36,7 +36,7 @@
                  [org.apache.logging.log4j/log4j-api "2.8.1"]
                  [org.slf4j/slf4j-log4j12 "1.7.25" :exclusions [org.slf4j/slf4j-api]]]
   :pedantic? :skip
-  :plugins [[lein-codox "0.10.3" :exclusions [org.clojure/clojure]]
+  :plugins [[lein-codox "0.10.6" :exclusions [org.clojure/clojure]]
             [lein-cloverage "1.0.10" :exclusions [org.clojure/clojure]]
             [lein-cljfmt "0.5.7"]]
   :codox {:namespaces [#"^org\.apache\.clojure-mxnet\.(?!gen).*"]}
