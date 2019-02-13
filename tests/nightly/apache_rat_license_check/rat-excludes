@@ -5,7 +5,6 @@
 .*html
 .*json
 .*txt
-.*md
 3rdparty/*
 R-package/*
 trunk/*
