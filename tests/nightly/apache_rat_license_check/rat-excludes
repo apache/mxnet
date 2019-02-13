@@ -14,7 +14,6 @@ trunk/*
 .*svg
 .*cfg
 .*config
-docs/*
 __init__.py
 build/*
 .*\\.t
@@ -48,3 +47,5 @@ Project.toml
 include/*
 .*.iml
 .*.json.ref
+searchtools_custom.js
+theme.conf
