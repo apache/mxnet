@@ -10,7 +10,7 @@ The libinfo functionality allows to check for compile-time features supported by
 
 ### Example usage
 
-```python
+```
 In [1]: import mxnet as mx
 
 In [2]: import mxnet.runtime
