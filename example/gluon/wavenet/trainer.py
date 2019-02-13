@@ -71,8 +71,8 @@ class Train():
         """
         Description : module for running train
         """
-        fs, data = load_wav(self.load_file)
-        g = data_generation(data, fs, mu=self.mu, seq_size=self.seq_size, ctx=self.ctx)
+        _, data = load_wav(self.load_file)
+        g = data_generation(data, mu=self.mu, seq_size=self.seq_size, ctx=self.ctx)
 
         loss_save = []
         best_loss = sys.maxsize
@@ -112,8 +112,8 @@ class Train():
         """
         Description : module for generation
         """
-        fs, data = load_wav(self.load_file)
-        initial_data = data_generation_sample(data, fs, mu=self.mu, seq_size=3000, ctx=self.ctx)
+        _, data = load_wav(self.load_file)
+        initial_data = data_generation_sample(data, mu=self.mu, seq_size=3000, ctx=self.ctx)
         gen_rst = self.generate_slow(initial_data[0:3000], self.net, dilation_depth=10,\
          n_repeat=2, n=2000, ctx=self.ctx)
         gen_wav = np.array(gen_rst)

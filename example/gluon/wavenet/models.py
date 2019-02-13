@@ -115,4 +115,3 @@ class WaveNet(nn.Block):
         output = residue_scale(output)
         output = output + x[:, :, -output.shape[2]:]
         return output, skip
-

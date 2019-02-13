@@ -31,7 +31,7 @@ def load_wav(file_nm):
     fs, data = wavfile.read(os.getcwd()+'/dataset/'+file_nm)
     return  fs, data
 
-def data_generation(data, framerate, seq_size, mu, ctx, gen_mode=None):
+def data_generation(data, seq_size, mu, ctx):
     """
     Description : data generation to loading data
     """
@@ -43,13 +43,10 @@ def data_generation(data, framerate, seq_size, mu, ctx, gen_mode=None):
         ys = encode_mu_law(ys, mu)
         yield nd.array(ys[:seq_size], ctx=ctx)
 
-def data_generation_sample(data, framerate, seq_size, mu, ctx, gen_mode=None):
+def data_generation_sample(data, seq_size, mu, ctx):
     """
     Description : sample data generation to loading data
     """
-    if gen_mode == 'sin':
-        t = np.linspace(0, 5, framerate*5)
-        data = np.sin(2*np.pi*220*t) + np.sin(2*np.pi*224*t)
     div = max(data.max(), abs(data.min()))
     data = data/div
     start = 0
