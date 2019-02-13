@@ -223,6 +223,8 @@ void LoopState::Forward(int iter_no,
   // by CachedOp. We need to copy data to the real output.
   for (size_t i = 0; i < out_bufs.size(); i++)
     if (!out_bufs[i].IsSame(coutputs[i])) {
+      // The line below checks whether dynamic shape exists.
+      // If so, re-initialize the shape.
       if (coutputs[i].shape().ndim() == 0) {
         const_cast<NDArray &>(coutputs[i]).Init(out_bufs[i].shape());
       }
