@@ -35,9 +35,6 @@ def data_generation(data, framerate, seq_size, mu, ctx, gen_mode=None):
     """
     Description : data generation to loading data
     """
-    if gen_mode == 'sin':
-        t = np.linspace(0, 5, framerate*5)
-        data = np.sin(2*np.pi*220*t) + np.sin(2*np.pi*224*t)
     div = max(data.max(), abs(data.min()))
     data = data/div
     while True:
