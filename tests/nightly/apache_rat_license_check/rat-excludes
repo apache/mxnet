@@ -37,7 +37,6 @@ erfinv-inl.h
 im2col.cuh
 im2col.h
 pool.h
-README.rst
 dataset.cPickle
 image-classification/*
 rat-excludes
