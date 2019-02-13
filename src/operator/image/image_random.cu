@@ -119,61 +119,17 @@ void ToTensorImplCUDA(mshadow::Stream<gpu> *s,
         MSHADOW_CUDA_POST_KERNEL_CHECK(ToTensorCudaKernel);
 }
 
-// Normalize Kernel for 3D input
+// Normalize Forward CUDA Kernel
 template<typename xpu, typename DType>
 __global__ void
 __launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
-NormalizeCudaKernel(const Tensor<xpu, 3, DType> input,
-                    const Tensor<xpu, 3, DType> output,
+NormalizeCudaKernel(const DType* input,
+                    DType* output,
                     const int req,
                     const int N,
+                    const int C,
                     const int H,
                     const int W,
-                    const int C,
-                    const float mean_d0,
-                    const float mean_d1,
-                    const float mean_d2,
-                    const float std_d0,
-                    const float std_d1,
-                    const float std_d2) {
-    // We process one image per thread block.
-    // In 3D case, we have only 1 block i.e., blockIdx.x
-    // We do not use it.
-
-    float mean = mean_d0;
-    float std = std_d0;
-    for (int c = 0; c < C; ++c) {
-        switch (c) {
-            case 0 : mean = mean_d0;
-                     std = std_d0;
-                     break;
-            case 1 : mean = mean_d1;
-                     std = std_d1;
-                     break;
-            case 2 : mean = mean_d2;
-                     std = std_d2;
-                     break;
-        }
-        for (int h = threadIdx.y; h < H; h += blockDim.y) {
-            for (int w = threadIdx.x; w < W; w += blockDim.x) {
-                KERNEL_ASSIGN(output[c][h][w], req,
-                              (input[c][h][w] - mean) / std);
-            }
-        }
-    }
-}
-
-// Normalize Kernel for 4D input
-template<typename xpu, typename DType>
-__global__ void
-__launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
-NormalizeCudaKernel(const Tensor<xpu, 4, DType> input,
-                    const Tensor<xpu, 4, DType> output,
-                    const int req,
-                    const int N,
-                    const int H,
-                    const int W,
-                    const int C,
                     const float mean_d0,
                     const float mean_d1,
                     const float mean_d2,
@@ -182,14 +138,14 @@ NormalizeCudaKernel(const Tensor<xpu, 4, DType> input,
                     const float std_d2) {
     // We process one image per thread block.
     const int n = blockIdx.x;
+    const int length = H * W;
+    const int step = C * length * n;
 
     float mean = mean_d0;
     float std = std_d0;
     for (int c = 0; c < C; ++c) {
         switch (c) {
-            case 0 : mean = mean_d0;
-                     std = std_d0;
-                     break;
+            case 0 : break;
             case 1 : mean = mean_d1;
                      std = std_d1;
                      break;
@@ -197,153 +153,89 @@ NormalizeCudaKernel(const Tensor<xpu, 4, DType> input,
                      std = std_d2;
                      break;
         }
-        for (int h = threadIdx.y; h < H; h += blockDim.y) {
-            for (int w = threadIdx.x; w < W; w += blockDim.x) {
-                KERNEL_ASSIGN(output[n][c][h][w], req,
-                              (input[n][c][h][w] -  mean) / std);
-            }
+        for (int i = threadIdx.x; i < length; i += blockDim.x) {
+            KERNEL_ASSIGN(*(output + step + i + (c * length)), req,
+                      (*(input + step + i + (c * length)) - mean) / std);
         }
     }
 }
 
-template<typename DType, typename T>
+template<typename DType>
 void NormalizeImplCUDA(mshadow::Stream<gpu> *s,
-                       const T input,
-                       const T output,
+                       const DType* input,
+                       DType* output,
                        const int req,
+                       const int N,
+                       const int C,
+                       const int H,
+                       const int W,
                        const float mean_d0,
                        const float mean_d1,
                        const float mean_d2,
                        const float std_d0,
                        const float std_d1,
                        const float std_d2) {
-    int blocks, H, W, C, N;
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-    if (std::is_same<T, Tensor<gpu, 3, DType>>::value) {
-        // 3D Input - (C, H, W)
-        N = 0;
-        C = input.size(0);
-        H = input.size(1);
-        W = input.size(2);
-        blocks = 1;
-    } else {
-        // 4D Input - (N, C, H, W)
-        N = input.size(0);
-        C = input.size(1);
-        H = input.size(2);
-        W = input.size(3);
-        blocks = N > 0 ? N : 1;
-    }
-    // One block per image.
     NormalizeCudaKernel<gpu, DType>
-        <<<blocks, dim3(H, cuda::kMaxThreadsPerBlock / H), 0, stream>>>(input, output,
-            req, N, H, W, C, mean_d0, mean_d1, mean_d2,
-            std_d0, std_d1, std_d2);
+    // 1 image per block. N is batch size.
+    <<<N, dim3(cuda::kMaxThreadsPerBlock, 1), 0, stream>>>(input, output,
+        req, N, C, H, W, mean_d0, mean_d1, mean_d2,
+        std_d0, std_d1, std_d2);
     MSHADOW_CUDA_POST_KERNEL_CHECK(NormalizeCudaKernel);
 }
 
-// Normalize Backward Kernel for 3D input
+// Normalize Backward Kernel
 template<typename xpu, typename DType>
 __global__ void
 __launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
-NormalizeBackwardCudaKernel(const Tensor<xpu, 3, DType> out_grad,
-                            const Tensor<xpu, 3, DType> in_grad,
+NormalizeBackwardCudaKernel(const DType *out_grad,
+                            DType *in_grad,
                             const int req,
                             const int N,
+                            const int C,
                             const int H,
                             const int W,
-                            const int C,
-                            const float std_d0,
-                            const float std_d1,
-                            const float std_d2) {
-    // We process one image per thread block.
-    // In 3D case, we have only 1 block i.e., blockIdx.x
-    // We do not use it.
-
-    float std = std_d0;
-    for (int c = 0; c < C; ++c) {
-        switch (c) {
-            case 0 : std = std_d0;
-                     break;
-            case 1 : std = std_d1;
-                     break;
-            case 2 : std = std_d2;
-                     break;
-        }
-        for (int h = threadIdx.y; h < H; h += blockDim.y) {
-            for (int w = threadIdx.x; w < W; w += blockDim.x) {
-                KERNEL_ASSIGN(in_grad[c][h][w], req,
-                              out_grad[c][h][w] * (1 / std));
-            }
-        }
-    }
-}
-
-// Normalize Backward Kernel for 3D input
-template<typename xpu, typename DType>
-__global__ void
-__launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
-NormalizeBackwardCudaKernel(const Tensor<xpu, 4, DType> out_grad,
-                            const Tensor<xpu, 4, DType> in_grad,
-                            const int req,
-                            const int N,
-                            const int H,
-                            const int W,
-                            const int C,
                             const float std_d0,
                             const float std_d1,
                             const float std_d2) {
     // We process one image per thread block.
     const int n = blockIdx.x;
+    const int length = H * W;
+    const int step = C * length * n;
 
     float std = std_d0;
     for (int c = 0; c < C; ++c) {
         switch (c) {
-            case 0 : std = std_d0;
-                     break;
+            case 0 : break;
             case 1 : std = std_d1;
                      break;
             case 2 : std = std_d2;
                      break;
         }
-        for (int h = threadIdx.y; h < H; h += blockDim.y) {
-            for (int w = threadIdx.x; w < W; w += blockDim.x) {
-                KERNEL_ASSIGN(in_grad[n][c][h][w], req,
-                              out_grad[n][c][h][w] * (1 / std));
-            }
+        for (int i = threadIdx.x; i < length; i += blockDim.x) {
+            KERNEL_ASSIGN(*(in_grad + step + i + (c * length)), req,
+                          *(out_grad + step + i + (c * length)) * (1.0 / std));
         }
     }
 }
 
-template<typename DType, typename T>
+template<typename DType>
 void NormalizeBackwardImplCUDA(mshadow::Stream<gpu> *s,
-                               const T out_grad,
-                               const T in_grad,
+                               const DType *out_grad,
+                               DType *in_grad,
                                const int req,
+                               const int N,
+                               const int C,
+                               const int H,
+                               const int W,
                                const float std_d0,
                                const float std_d1,
                                const float std_d2) {
-    int blocks, H, W, C, N;
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-    if (std::is_same<T, Tensor<gpu, 3, DType>>::value) {
-        // 3D Input - (C, H, W)
-        N = 0;
-        C = out_grad.size(0);
-        H = out_grad.size(1);
-        W = out_grad.size(2);
-        blocks = 1;
-    } else {
-        // 4D Input - (N, C, H, W)
-        N = out_grad.size(0);
-        C = out_grad.size(1);
-        H = out_grad.size(2);
-        W = out_grad.size(3);
-        blocks = N > 0 ? N : 1;
-    }
-    // One block per image.
     NormalizeBackwardCudaKernel<gpu, DType>
-        <<<blocks, dim3(H, cuda::kMaxThreadsPerBlock / H), 0, stream>>>(out_grad, in_grad,
-            req, N, H, W, C, std_d0, std_d1, std_d2);
+    // 1 image per block. N is batch size.
+    <<<N, dim3(cuda::kMaxThreadsPerBlock, 1), 0, stream>>>(out_grad, in_grad,
+        req, N, C, H, W, std_d0, std_d1, std_d2);
     MSHADOW_CUDA_POST_KERNEL_CHECK(NormalizeBackwardCudaKernel);
 }
 

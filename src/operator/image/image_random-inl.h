@@ -55,11 +55,15 @@ void ToTensorImplCUDA(mshadow::Stream<gpu> *s,
                       const int req,
                       const float normalize_factor);
 
-template<typename DType, typename T>
+template<typename DType>
 void NormalizeImplCUDA(mshadow::Stream<gpu> *s,
-                       const T input,
-                       const T output,
+                       const DType *input,
+                       DType *output,
                        const int req,
+                       const int N,
+                       const int C,
+                       const int H,
+                       const int W,
                        const float mean_d0,
                        const float mean_d1,
                        const float mean_d2,
@@ -67,11 +71,15 @@ void NormalizeImplCUDA(mshadow::Stream<gpu> *s,
                        const float std_d1,
                        const float std_d2);
 
-template<typename DType, typename T>
+template<typename DType>
 void NormalizeBackwardImplCUDA(mshadow::Stream<gpu> *s,
-                               const T out_grad,
-                               const T in_grad,
+                               const DType *out_grad,
+                               DType *in_grad,
                                const int req,
+                               const int N,
+                               const int C,
+                               const int H,
+                               const int W,
                                const float std_d0,
                                const float std_d1,
                                const float std_d2);
@@ -326,6 +334,7 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(req.size(), 1U);
 
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  int N, C, H, W;
 
   // Mean and Std can be 1 or 3D only.
   std::vector<float> mean(3);
@@ -352,17 +361,25 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
       MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
           if (inputs[0].ndim() == 3) {
+            N = 1;
+            C = static_cast<int>(inputs[0].shape_[0]);
+            H = static_cast<int>(inputs[0].shape_[1]);
+            W = static_cast<int>(inputs[0].shape_[2]);
             Tensor<gpu, 3, DType> input = inputs[0].get<gpu, 3, DType>(s);
             Tensor<gpu, 3, DType> output = outputs[0].get<gpu, 3, DType>(s);
-            NormalizeImplCUDA<DType, Tensor<gpu, 3, DType>>
-            (s, input, output, req_type, mean[0], mean[1], mean[2],
-             std[0], std[1], std[2]);
+            NormalizeImplCUDA<DType>(s, input.dptr_, output.dptr_, req_type,
+                                     N, C, H, W, mean[0], mean[1], mean[2],
+                                     std[0], std[1], std[2]);
           } else {
+            N = static_cast<int>(inputs[0].shape_[0]);
+            C = static_cast<int>(inputs[0].shape_[1]);
+            H = static_cast<int>(inputs[0].shape_[2]);
+            W = static_cast<int>(inputs[0].shape_[3]);
             Tensor<gpu, 4, DType> input = inputs[0].get<gpu, 4, DType>(s);
             Tensor<gpu, 4, DType> output = outputs[0].get<gpu, 4, DType>(s);
-            NormalizeImplCUDA<DType, Tensor<gpu, 4, DType>>
-            (s, input, output, req_type, mean[0], mean[1], mean[2],
-             std[0], std[1], std[2]);
+            NormalizeImplCUDA<DType>(s, input.dptr_, output.dptr_, req_type,
+                                     N, C, H, W, mean[0], mean[1], mean[2],
+                                     std[0], std[1], std[2]);
           }
         });
       });
@@ -449,6 +466,7 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
     std[1] = param.std[1];
     std[2] = param.std[2];
   }
+  int N, C, H, W;
 
   // Note: inputs[0] is out_grad
   const TBlob& in_data = inputs[1];
@@ -459,15 +477,25 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
           if (in_data.ndim() == 3) {
+            N = 1;
+            C = static_cast<int>(in_data.shape_[0]);
+            H = static_cast<int>(in_data.shape_[1]);
+            W = static_cast<int>(in_data.shape_[2]);
             Tensor<gpu, 3, DType> out_grad = inputs[0].get<gpu, 3, DType>(s);
             Tensor<gpu, 3, DType> in_grad = outputs[0].get<gpu, 3, DType>(s);
-            NormalizeBackwardImplCUDA<DType, Tensor<gpu, 3, DType>>
-            (s, out_grad, in_grad, req_type, std[0], std[1], std[2]);
+            NormalizeBackwardImplCUDA<DType>(s, out_grad.dptr_, in_grad.dptr_,
+                                             req_type, N, C, H, W, std[0], std[1],
+                                             std[2]);
           } else {
+            N = static_cast<int>(in_data.shape_[0]);
+            C = static_cast<int>(in_data.shape_[1]);
+            H = static_cast<int>(in_data.shape_[2]);
+            W = static_cast<int>(in_data.shape_[3]);
             Tensor<gpu, 4, DType> out_grad = inputs[0].get<gpu, 4, DType>(s);
             Tensor<gpu, 4, DType> in_grad = outputs[0].get<gpu, 4, DType>(s);
-            NormalizeBackwardImplCUDA<DType, Tensor<gpu, 4, DType>>
-            (s, out_grad, in_grad, req_type, std[0], std[1], std[2]);
+            NormalizeBackwardImplCUDA<DType>(s, out_grad.dptr_, in_grad.dptr_,
+                                             req_type, N, C, H, W, std[0], std[1],
+                                             std[2]);
           }
         });
       });
