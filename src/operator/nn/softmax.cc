@@ -115,18 +115,13 @@ Example::
 .add_arguments(SoftmaxParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_softmax)
-.set_num_inputs(3)
+.set_num_inputs(SoftmaxGradOpNumInputs)
 .set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"ograd", "data", "output"};
-  })
+.set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
-.add_argument("ograd", "NDArray-or-Symbol", "gradient of output")
-.add_argument("data", "NDArray-or-Symbol", "input")
-.add_argument("output", "NDArray-or-Symbol", "output")
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
@@ -175,18 +170,13 @@ Example::
 .add_arguments(SoftmaxParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_softmin)
-.set_num_inputs(3)
+.set_num_inputs(SoftmaxGradOpNumInputs)
 .set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"ograd", "data", "output"};
-  })
+.set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
-.add_argument("ograd", "NDArray-or-Symbol", "gradient of output")
-.add_argument("data", "NDArray-or-Symbol", "input")
-.add_argument("output", "NDArray-or-Symbol", "output")
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd, true>);
@@ -223,18 +213,13 @@ Examples::
 .add_arguments(SoftmaxParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_log_softmax)
-.set_num_inputs(3)
+.set_num_inputs(SoftmaxGradOpNumInputs)
 .set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"ograd", "data", "output"};
-  })
+.set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
 .set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
-.add_argument("ograd", "NDArray-or-Symbol", "gradient of output")
-.add_argument("data", "NDArray-or-Symbol", "input")
-.add_argument("output", "NDArray-or-Symbol", "output")
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, mshadow_op::left,
                                                         mxnet_op::log_softmax_bwd>);

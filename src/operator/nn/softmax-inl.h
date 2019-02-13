@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NN_SOFTMAX_INL_H_
 
 #include <algorithm>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -343,7 +344,9 @@ static inline bool SoftmaxGradOpShape(const nnvm::NodeAttrs& attrs,
 static inline bool SoftmaxGradOpType(const nnvm::NodeAttrs& attrs,
                                      std::vector<int>* in_attrs,
                                      std::vector<int>* out_attrs) {
+  CHECK_EQ(out_attrs->size(), 1);
   if (softmax_has_dtype_override(attrs)) {
+    CHECK_EQ(in_attrs->size(), 3);
     int in_dtype = (*in_attrs)[1];
     int out_dtype = (*in_attrs)[2];
     TYPE_ASSIGN_CHECK(*in_attrs, 0, out_dtype);
@@ -351,6 +354,7 @@ static inline bool SoftmaxGradOpType(const nnvm::NodeAttrs& attrs,
 
     return (*out_attrs)[0] != -1 && (*in_attrs)[0] != -1;
   } else {
+    CHECK_EQ(in_attrs->size(), 2);
     int out_dtype = (*in_attrs)[1];
     TYPE_ASSIGN_CHECK(*out_attrs, 0, out_dtype);
     TYPE_ASSIGN_CHECK(*in_attrs, 0, out_dtype);
@@ -365,6 +369,18 @@ SoftmaxGradOpInplaceOption(const nnvm::NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}, {2, 0}};
   } else {
     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
+  }
+}
+
+static inline uint32_t SoftmaxGradOpNumInputs(const nnvm::NodeAttrs& attrs) {
+  return softmax_has_dtype_override(attrs) ? 3 : 2;
+}
+
+static inline std::vector<std::string> SoftmaxGradOpInputNames(const nnvm::NodeAttrs& attrs) {
+  if (softmax_has_dtype_override(attrs)) {
+    return std::vector<std::string>{"ograd", "data", "output"};
+  } else {
+    return std::vector<std::string>{"ograd", "output"};
   }
 }
 
