@@ -1537,12 +1537,14 @@ def convert_slice_channel(node, **kwargs):
         )
         return [node]
     elif squeeze_axis == 0 and num_outputs > 1:
+        in_shape = kwargs.get('in_shape')[0]
+        split = in_shape[axis] // num_outputs
         node = onnx.helper.make_node(
             "Split",
             input_nodes,
-            [name],
+            [name+'_output'+str(i) for i in range(num_outputs)],
             axis=axis,
-            split=[num_outputs],
+            split=[split for _ in range(num_outputs)],
             name=name,
         )
         return [node]
