@@ -274,9 +274,7 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs &attrs,
     return;
   }
 
-  MKLDNN_OPCHECK_INIT(false, 1, in_data, out_data);
   MKLDNNQuantizedFullyConnectedForward(attrs, ctx, in_data, req, out_data);
-  MKLDNN_OPCHECK_RUN(QuantizedFullyConnectedForwardCPU, attrs, ctx, in_data, req, out_data);
 }
 #endif
 
