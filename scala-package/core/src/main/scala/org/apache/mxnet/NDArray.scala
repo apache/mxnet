@@ -728,12 +728,15 @@ object NDArray extends NDArrayBase {
 }
 
 /**
- * NDArray object in mxnet.
- * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
- * <b>
- * WARNING: it is your responsibility to clear this object through dispose().
- * </b>
- */
+  * NDArray object in mxnet.
+  * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
+  * <b>
+  * NOTE: NDArray is stored in native memory. Use NDArray in a try-with-resources() construct
+  * or a [[org.apache.mxnet.ResourceScope]] in a try-with-resource to have them
+  * automatically disposed. You can explicitly control the lifetime of NDArray
+  * by calling dispose manually. Failure to do this will result in leaking native memory.
+  * </b>
+  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true,
                              addToCollector: Boolean = true) extends NativeResource {
@@ -775,21 +778,22 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   /**
-   * Dispose all NDArrays who help to construct this array. <br />
-   * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
-   * @return this array
-   */
+    * Dispose all NDArrays who help to construct this array. <br />
+    * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
+    * @return this NDArray
+    */
   def disposeDeps(): NDArray = {
     disposeDepsExcept()
   }
 
   /**
-   * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
-   * e.g. (a * b + c).disposeDepsExcept(a, b)
-   * will dispose c and a * b.
-   * Note that a, b's dependencies will not be disposed either.
-   * @return this array
-   */
+    * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
+    * e.g. (a * b + c).disposeDepsExcept(a, b)
+    * will dispose c and a * b.
+    * Note that a, b's dependencies will not be disposed either.
+    * @param arrs array of NDArrays
+    * @return this array
+    */
   def disposeDepsExcept(arrs: NDArray*): NDArray = {
     if (dependencies != null) {
       val excepts = mutable.HashSet.empty[Long]

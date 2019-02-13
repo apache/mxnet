@@ -31,7 +31,7 @@ import tarfile
 from collections import namedtuple
 import numpy as np
 import numpy.testing as npt
-from onnx import numpy_helper, helper, load_model
+from onnx import checker, numpy_helper, helper, load_model
 from onnx import TensorProto
 from mxnet.test_utils import download
 from mxnet.contrib import onnx as onnx_mxnet
@@ -206,6 +206,18 @@ class TestNode(unittest.TestCase):
                 mxnet_out = bkd_rep.run(inputs)
                 npt.assert_almost_equal(np_out, mxnet_out, decimal=4)
 
+    def test_exports(self):
+        input_shape = (2,1,3,1)
+        for test in export_test_cases:
+            test_name, onnx_name, mx_op, attrs = test
+            input_sym = mx.sym.var('data')
+            outsym = mx_op(input_sym, **attrs)
+            converted_model = onnx_mxnet.export_model(outsym, {}, [input_shape], np.float32,
+                                                      onnx_file_path=outsym.name + ".onnx")
+            model = load_model(converted_model)
+            checker.check_model(model)
+
+
 # test_case = ("test_case_name", mxnet op, "ONNX_op_name", [input_list], attribute map, MXNet_specific=True/False,
 # fix_attributes = {'modify': {mxnet_attr_name: onnx_attr_name},
 #                   'remove': [attr_name],
@@ -272,6 +284,12 @@ import_test_cases = [
     ("test_lpnormalization_default", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':-1}),
     ("test_lpnormalization_ord1", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':1, 'axis':-1}),
     ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1})
+]
+
+# test_case = ("test_case_name", "ONNX_op_name", mxnet_op, attribute map)
+export_test_cases = [
+    ("test_expand", "Expand", mx.sym.broadcast_to, {'shape': (2,1,3,1)}),
+    ("test_tile", "Tile", mx.sym.tile, {'reps': (2,3)})
 ]
 
 if __name__ == '__main__':

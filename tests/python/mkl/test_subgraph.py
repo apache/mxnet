@@ -35,14 +35,14 @@ from mxnet.test_utils import assert_almost_equal
 
 DATA_SHAPE=[(4, 4, 10, 10), (32, 3, 24, 24), (64, 8, 64, 64)]
 
-def check_qsym_calibrated(qsym):
+def check_qsym_calibrated(qsym, out_type):
   assert ''.join(qsym.attr_dict().keys()).find('quantized_sg_mkldnn_conv') != -1
   for k, v in qsym.attr_dict().items():
     if k.find('quantized_sg_mkldnn_conv') != -1:
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
     if k.find('_quantize') != -1:
-      assert v['out_type'] == 'uint8'
+      assert v['out_type'] == out_type
 
 def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape):
   mod = mx.mod.Module(symbol=qsym, context=mx.current_context())
@@ -66,7 +66,7 @@ def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
     output.wait_to_read()
   return mod.get_outputs()
 
-def check_quantize(sym, data_shape, check_conv=True):
+def check_quantize(sym, data_shape, out_type, check_conv=True):
   fc = mx.sym.FullyConnected(data=sym, num_hidden=10, flatten=True, name='fc')
   sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
   sym_sg = sym.get_backend_symbol("MKLDNN")
@@ -99,15 +99,14 @@ def check_quantize(sym, data_shape, check_conv=True):
                                                                    aux_params=aux_params,
                                                                    ctx=mx.current_context(),
                                                                    excluded_sym_names=excluded_sym_names,
-                                                                   quantized_dtype='uint8',
+                                                                   quantized_dtype=out_type,
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
                                                                    calib_layer=calib_layer,
-                                                                   calib_quantize_op=True,
                                                                    num_calib_examples=5)
   qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
   if check_conv:
-    check_qsym_calibrated(qsym)
+    check_qsym_calibrated(qsym, out_type)
   quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
   for i in range(len(ref_out)):
     assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
@@ -135,8 +134,9 @@ def check_fusion(sym, data_shape, attrs_op):
   for i in range(len(exe.outputs)):
     assert_almost_equal(exe.outputs[i].asnumpy(), exe_sg.outputs[i].asnumpy(), rtol=1e-3, atol=1e-3)
 
-  # fp32 to uint8
-  check_quantize(sym, data_shape)
+  # fp32 to int8
+  for out_type in ('uint8', 'int8', 'auto'):
+    check_quantize(sym, data_shape, out_type)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None, date_shape=(4,4,10,10)):
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
@@ -475,12 +475,13 @@ def test_pos_conv_bn_sum_relu():
 
 def test_pos_single_concat():
   for data_shape in DATA_SHAPE:
-    net = single_concat(data_shape, 2, 1)
-    check_quantize(net, data_shape, False)
-    net = single_concat(data_shape, 4, 2)
-    check_quantize(net, data_shape, False)
-    net = single_concat(data_shape, 4, 3)
-    check_quantize(net, data_shape, False)
+    for out_type in ('uint8', 'int8', 'auto'):
+      net = single_concat(data_shape, 2, 1)
+      check_quantize(net, data_shape, out_type, False)
+      net = single_concat(data_shape, 4, 2)
+      check_quantize(net, data_shape, out_type, False)
+      net = single_concat(data_shape, 4, 3)
+      check_quantize(net, data_shape, out_type, False)
 
 @with_seed()
 def test_neg_conv_bn():
