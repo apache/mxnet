@@ -279,7 +279,7 @@ template<typename DType, int req>
 inline void Normalize(DType* out_data,
                       const DType* in_data,
                       const int length,
-                      const uint32_t channels,
+                      const int channels,
                       const int step,
                       const std::vector<float> mean,
                       const std::vector<float> std) {
@@ -289,7 +289,7 @@ inline void Normalize(DType* out_data,
   #else
     #pragma omp parallel for collapse(2)
   #endif  // _MSC_VER
-  for (uint32_t c = 0; c < channels; ++c) {
+  for (int c = 0; c < channels; ++c) {
     for (int i = 0; i < length; ++i) {
       KERNEL_ASSIGN(out_data[step + c*length + i], req,
                     (in_data[step + c*length + i] - mean[c]) / std[c]);
@@ -301,7 +301,7 @@ inline void NormalizeImpl(const std::vector<TBlob> &inputs,
                           const std::vector<TBlob> &outputs,
                           const std::vector<OpReqType> &req,
                           const int length,
-                          const uint32_t channels,
+                          const int channels,
                           const int step,
                           const std::vector<float> mean,
                           const std::vector<float> std) {
@@ -372,14 +372,14 @@ void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
   } else if (inputs[0].ndim() == 3) {
     // 3D input (c, h, w)
     const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
-    const uint32_t channel = inputs[0].shape_[0];
+    const int channel = static_cast<int>(inputs[0].shape_[0]);
     const int step = 0;
     NormalizeImpl(inputs, outputs, req, length, channel, step, mean, std);
   } else if (inputs[0].ndim() == 4) {
     // 4D input (n, c, h, w)
     const int batch_size = inputs[0].shape_[0];
     const int length = inputs[0].shape_[2] * inputs[0].shape_[3];
-    const uint32_t channel = inputs[0].shape_[1];
+    const int channel = static_cast<int>(inputs[0].shape_[1]);
     const int step = channel * length;
 
     #pragma omp parallel for
@@ -394,7 +394,7 @@ template<typename DType, int req>
 inline void NormalizeBackward(const DType* out_grad,
                               DType* in_grad,
                               const int length,
-                              const uint32_t channels,
+                              const int channels,
                               const int step,
                               const std::vector<float> std) {
   // Microsoft Visual C++ compiler does not support omp collapse
@@ -403,7 +403,7 @@ inline void NormalizeBackward(const DType* out_grad,
   #else
     #pragma omp parallel for collapse(2)
   #endif  // _MSC_VER
-  for (uint32_t c = 0; c < channels; ++c) {
+  for (int c = 0; c < channels; ++c) {
     for (int i = 0; i < length; ++i) {
       KERNEL_ASSIGN(in_grad[step + c*length + i], req,
                     out_grad[step + c*length + i] * (1.0 / std[c]));
@@ -415,7 +415,7 @@ inline void NormalizeBackwardImpl(const std::vector<TBlob> &inputs,
                                   const std::vector<TBlob> &outputs,
                                   const std::vector<OpReqType> &req,
                                   const int length,
-                                  const uint32_t channels,
+                                  const int channels,
                                   const int step,
                                   const std::vector<float> std
                                   ) {
@@ -477,14 +477,14 @@ void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
   } else if (in_data.ndim() == 3) {
     // 3D input (c, h, w)
     const int length = in_data.shape_[1] * in_data.shape_[2];
-    const uint32_t channel = in_data.shape_[0];
+    const int channel = static_cast<int>(in_data.shape_[0]);
     const int step = 0;
     NormalizeBackwardImpl(inputs, outputs, req, length, channel, step, std);
   } else if (in_data.ndim() == 4) {
     // 4D input (n, c, h, w)
     const int batch_size = in_data.shape_[0];
     const int length = in_data.shape_[2] * in_data.shape_[3];
-    const uint32_t channel = in_data.shape_[1];
+    const int channel = static_cast<int>(in_data.shape_[1]);
     const int step = channel * length;
 
     #pragma omp parallel for
