@@ -52,7 +52,6 @@ Now let's first import necessary packages:
 import math
 import os
 import time
-from multiprocessing import cpu_count
 
 from mxnet import autograd
 from mxnet import gluon, init
@@ -77,7 +76,8 @@ lr_factor = 0.75
 lr_epochs = [10, 20, 30]
 
 num_gpus = mx.context.num_gpus()
-num_workers = cpu_count()
+# you can replace num_workers with the number of cores on you device
+num_workers = 8
 ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 batch_size = per_device_batch_size * max(num_gpus, 1)
 ```
