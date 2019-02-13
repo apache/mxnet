@@ -32,15 +32,25 @@ namespace image {
 using namespace mshadow;
 
 // ToTensor Kernel for 3D input
+/*
+ * In order to not generate the code that uses too many
+ * registers (resulting in too many resources requested
+ * error) we need to tell the compiler that we will be
+ * launching this kernel with cuda::kMaxThreadsPerBlock
+ * threads per block. Setting __launch_bounds__ ensures
+ * that such configuration can always be launched.
+ */
 template<typename xpu, typename Dtype>
-__global__ void ToTensorCudaKernel(const Tensor<xpu, 3, Dtype> input,
-                                   const Tensor<xpu, 3, float> output,
-                                   const int req,
-                                   const int N,
-                                   const int H,
-                                   const int W,
-                                   const int C,
-                                   const float normalize_factor) {
+__global__ void
+__launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
+ToTensorCudaKernel(const Tensor<xpu, 3, Dtype> input,
+                   const Tensor<xpu, 3, float> output,
+                   const int req,
+                   const int N,
+                   const int H,
+                   const int W,
+                   const int C,
+                   const float normalize_factor) {
     // We process one image per thread block.
     // In 3D case, we have only 1 block i.e., blockIdx.x
     // We do not use it.
@@ -56,14 +66,16 @@ __global__ void ToTensorCudaKernel(const Tensor<xpu, 3, Dtype> input,
 
 // ToTensor Kernel for 4D input
 template<typename xpu, typename Dtype>
-__global__ void ToTensorCudaKernel(const Tensor<xpu, 4, Dtype> input,
-                                   const Tensor<xpu, 4, float> output,
-                                   const int req,
-                                   const int N,
-                                   const int H,
-                                   const int W,
-                                   const int C,
-                                   const float normalize_factor) {
+__global__ void
+__launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
+ToTensorCudaKernel(const Tensor<xpu, 4, Dtype> input,
+                   const Tensor<xpu, 4, float> output,
+                   const int req,
+                   const int N,
+                   const int H,
+                   const int W,
+                   const int C,
+                   const float normalize_factor) {
     // We process one image per thread block.
     const int n = blockIdx.x;
 
@@ -100,25 +112,14 @@ void ToTensorImplCUDA(mshadow::Stream<gpu> *s,
         C = input.size(3);
         blocks = N > 0 ? N : 1;
     }
-    // One block per image.
-    // Number of threads = (32, 32) is optimal, because,
-    // computation is minimal and overhead of CUDA preparing
-    // all threads is minimal.
+
     ToTensorCudaKernel<gpu, DType>
-            <<<blocks, dim3(32, 32), 0, stream>>>(input, output,
+            <<<blocks, dim3(H, cuda::kMaxThreadsPerBlock / H), 0, stream>>>(input, output,
                 req, N, H, W, C, normalize_factor);
         MSHADOW_CUDA_POST_KERNEL_CHECK(ToTensorCudaKernel);
 }
 
 // Normalize Kernel for 3D input
-/*
- * In order to not generate the code that uses too many
- * registers (resulting in too many resources requested
- * error) we need to tell the compiler that we will be
- * launching this kernel with cuda::kMaxThreadsPerBlock
- * threads per block. Setting __launch_bounds__ ensures
- * that such configuration can always be launched.
- */
 template<typename xpu, typename DType>
 __global__ void
 __launch_bounds__(cuda::kMaxThreadsPerBlock, 1)
@@ -234,11 +235,8 @@ void NormalizeImplCUDA(mshadow::Stream<gpu> *s,
         blocks = N > 0 ? N : 1;
     }
     // One block per image.
-    // Number of threads = (32, 32) is optimal, because,
-    // computation is minimal and overhead of CUDA preparing
-    // all threads is minimal.
     NormalizeCudaKernel<gpu, DType>
-        <<<blocks, dim3(32, 32), 0, stream>>>(input, output,
+        <<<blocks, dim3(H, cuda::kMaxThreadsPerBlock / H), 0, stream>>>(input, output,
             req, N, H, W, C, mean_d0, mean_d1, mean_d2,
             std_d0, std_d1, std_d2);
     MSHADOW_CUDA_POST_KERNEL_CHECK(NormalizeCudaKernel);
@@ -343,11 +341,8 @@ void NormalizeBackwardImplCUDA(mshadow::Stream<gpu> *s,
         blocks = N > 0 ? N : 1;
     }
     // One block per image.
-    // Number of threads = (16, 16) is optimal, because,
-    // computation is minimal and overhead of CUDA preparing
-    // all threads is minimal.
     NormalizeBackwardCudaKernel<gpu, DType>
-        <<<blocks, dim3(16, 16), 0, stream>>>(out_grad, in_grad,
+        <<<blocks, dim3(H, cuda::kMaxThreadsPerBlock / H), 0, stream>>>(out_grad, in_grad,
             req, N, H, W, C, std_d0, std_d1, std_d2);
     MSHADOW_CUDA_POST_KERNEL_CHECK(NormalizeBackwardCudaKernel);
 }
