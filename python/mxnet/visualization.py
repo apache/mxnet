@@ -277,13 +277,13 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
         raise TypeError("symbol must be a Symbol")
     internals = symbol.get_internals()
     draw_shape = shape is not None
-    if draw_shape
+    if draw_shape:
         _, out_shapes, _ = internals.infer_shape(**shape)
         if out_shapes is None:
             raise ValueError("Input shape is incomplete")
         shape_dict = dict(zip(internals.list_outputs(), out_shapes))
     draw_type = dtype is not None
-    if draw_type
+    if draw_type:
         _, out_types, _ = internals.infer_type(**dtype)
         if out_types is None:
             raise ValueError("Input type is incomplete")
