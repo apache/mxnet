@@ -5,18 +5,15 @@
 .*html
 .*json
 .*txt
-.*md
 3rdparty/*
 R-package/*
 trunk/*
-docker/*
 .*\\.m
 .*\\.mk
 .*\\.R
 .*svg
 .*cfg
 .*config
-docs/*
 __init__.py
 build/*
 .*\\.t
@@ -37,7 +34,6 @@ special_functions-inl.h
 im2col.cuh
 im2col.h
 pool.h
-README.rst
 dataset.cPickle
 image-classification/*
 rat-excludes
@@ -49,3 +45,5 @@ REQUIRE
 include/*
 .*.iml
 .*.json.ref
+searchtools_custom.js
+theme.conf
