@@ -309,6 +309,11 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
   }
 };
 
+static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  return param.dtype.has_value() && param.dtype.value() != -1;
+}
+
 static inline bool SoftmaxOpType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int>* in_attrs,
                                  std::vector<int>* out_attrs) {
@@ -316,36 +321,13 @@ static inline bool SoftmaxOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
 
-  int arg_dtype = param.dtype.has_value() ? param.dtype.value() : -1;
-  int in_dtype = (*in_attrs)[0];
-  int out_dtype = (*out_attrs)[0];
-
-  if (out_dtype != -1 && in_dtype != -1) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, arg_dtype);
-    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_dtype);
-    return true;
-  } else if (in_dtype != -1) {
-    if (arg_dtype != -1) {
-      TYPE_ASSIGN_CHECK(*out_attrs, 0, arg_dtype);
-    } else {
-      TYPE_ASSIGN_CHECK(*out_attrs, 0, in_dtype);
-    }
-    return true;
-  } else if (out_dtype != -1) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, arg_dtype);
-    TYPE_ASSIGN_CHECK(*in_attrs, 0, out_dtype);
+  if (softmax_has_dtype_override(attrs)) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
+    type_assign(&(*in_attrs)[0], (*out_attrs)[0]);
     return true;
   } else {
-    if (arg_dtype != -1) {
-      TYPE_ASSIGN_CHECK(*out_attrs, 0, arg_dtype);
-    }
-    return false;
+    return ElemwiseType<1, 1>(attrs, in_attrs, out_attrs);
   }
-}
-
-static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
-  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  return param.dtype.has_value() && param.dtype.value() != -1;
 }
 
 static inline bool SoftmaxGradOpShape(const nnvm::NodeAttrs& attrs,
