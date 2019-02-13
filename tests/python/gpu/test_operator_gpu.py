@@ -902,7 +902,9 @@ def test_pooling_versions():
                 if ctx_type != 'cpu':
                     pool_op_args['cudnn_off'] = ctx_type == 'gpu'
                 if pool_op == 'pool':
-                    sym = mx.sym.Pooling(**pool_op_args)
+                    # isolate pooling input from symbol input to test shared tensor optimizations
+                    buffered_input = mx.sym.identity(name='pool')
+                    sym = mx.sym.Pooling(buffered_input, **pool_op_args)
                 elif pool_op == 'pool_transposed':
                     ndim = len(data)
                     # NCW->NWC axes=(0,2,1) NCHW->NHWC axes=(0,2,3,1) NCDHW->NDHWC axes=(0,2,3,4,1);
@@ -924,24 +926,24 @@ def test_pooling_versions():
                          tol=None):
         if dim == '1D':
             data = (3, 3, 10)
-            kernels = [(4,), (4,)]
-            pads = [(0,), (2,)]
-            strides = [(1,), (2,)]
+            kernels = [(4,), (4,), (5,)]
+            pads = [(0,), (2,), (2,)]
+            strides = [(1,), (2,), (1,)]
         elif dim == '2D_no_padding':
             data = (3, 2, 20, 20)
             kernels = [(3, 3), (4, 5)]
             pads = [(0, 0), (0, 0)]
-            strides = [(1, 1), (2,1)]
+            strides = [(1, 1), (2, 1)]
         elif dim == '2D':
             data = (2, 2, 20, 20)
-            kernels = [(3, 3), (4, 5), (4, 5)]
-            pads = [(0, 0), (0, 0), (2, 3)]
-            strides = [(1, 1), (2,1), (1, 1)]
+            kernels = [(3, 3), (3, 5), (4, 5), (4, 5)]
+            pads = [(0, 0), (1, 2), (0, 0), (2, 3)]
+            strides = [(1, 1), (1, 1), (2, 1), (1, 1)]
         elif dim == '3D':
             data = (2, 3, 20, 20, 20)
-            kernels = [(4, 5, 3), (4, 5, 3)]
-            pads = [(0, 0, 0), (2, 3, 2)]
-            strides = [(1, 1, 1), (2, 3, 1)]
+            kernels = [(4, 5, 3), (4, 5, 3), (3, 5, 7)]
+            pads = [(0, 0, 0), (2, 3, 2), (1, 2, 3)]
+            strides = [(1, 1, 1), (2, 3, 1), (1, 1, 1)]
         else:
             raise RuntimeError('Unexpected pooling test class: {}.'.format(dim))
 

@@ -463,11 +463,8 @@ NNVM_REGISTER_OP(_backward_Pooling)
 .set_attr<nnvm::FInplaceOption>(
     "FInplaceOption",
     [](const NodeAttrs &attrs) {
-#if MXNET_USE_MKLDNN == 1 && MXNET_USE_CUDA == 0 && MXNET_USE_CUDNN == 0
-  // Since this routine is not provided the cpu/gpu context info, only in the case
-  // where CUDA and CUDNN implementations are not available can we be sure the MKLDNN
-  // implementation will be employed.  The MKLDNN FInplaceOptions are not compatible
-  // with the other (i.e. cpu, cuda and cudnn) implementations.
+// Different backend requires different FInplaceOption
+#if MXNET_USE_MKLDNN == 1
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
     return std::vector<std::pair<int, int> >{{1, 0}};
