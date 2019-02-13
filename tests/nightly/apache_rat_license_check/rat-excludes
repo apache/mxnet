@@ -8,7 +8,6 @@
 3rdparty/*
 R-package/*
 trunk/*
-docker/*
 .*\\.m
 .*\\.mk
 .*\\.R
