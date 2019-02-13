@@ -22,20 +22,12 @@ import os
 
 
 def binary_op_ex(sym, x_shape, y_shape):
-    output_names = []
-    def get_output_names_callback(name, arr):
-        output_names.append(py_str(name))
-
     np.random.seed(0)
     x_npy = np.random.randint(0, 10, size=x_shape).astype(np.float32)
     y_npy = np.random.randint(0, 10, size=y_shape).astype(np.float32)
     exe = sym.simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
-    exe.set_monitor_callback(get_output_names_callback)
     mx_out = exe.forward(is_train=True, x=x_npy, y=y_npy)[0].asnumpy()
     exe.backward()
-    if ('MXNET_SUBGRAPH_BACKEND' in os.environ and 
-        os.environ['MXNET_SUBGRAPH_BACKEND'] == "ngraph"):
-        assert any(['ngraph' in name for name in output_names])
     return mx_out
 
 
