@@ -1,5 +1,21 @@
-<img src=https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/logo-m/mxnet2.png width=135/> Deep Learning for Scala/Java
-=====
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+MXNet Package for Scala/Java
 
 [![Build Status](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/badge/icon)](http://jenkins.mxnet-ci.amazon-ml.com/job/incubator-mxnet/job/master/)
 [![GitHub license](http://dmlc.github.io/img/apache2.svg)](./LICENSE)
@@ -11,10 +27,10 @@ It brings flexible and efficient GPU/CPU computing and state-of-art deep learnin
   in Scala, Java and other languages built on JVM.
 - It also enables you to construct and customize the state-of-art deep learning models in JVM languages,
   and apply them to tasks such as image classification and data science challenges.
-  
+
 Install
 ------------
- 
+
 Technically, all you need is the `mxnet-full_2.11-{arch}-{xpu}-{version}.jar` in your classpath.
 It will automatically extract the native library to a tempfile and load it.
 You can find the pre-built jar file in [here](https://search.maven.org/search?q=g:org.apache.mxnet)
