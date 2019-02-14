@@ -1,108 +1,43 @@
-sudo: false
+sudo: true
 
 language: cpp
 
+cache:
+  directories:
+    - $HOME/.ccache
+    - $HOME/.cache/pip
+    - $HOME/.mxnet
+    - $HOME/Library/Caches/Homebrew
+
 os:
-  # - linux
   - osx
 
-osx_image: xcode8
-
-env:
-  # code analysis
-  # - TASK=lint
-  # build mxnet.so with CUDA
-  # - TASK=build
-  # run tests/cpp
-  - TASK=cpp_test
-  # run tests/python
-  - TASK=python_test
-  - TASK=r_test
-  # - TASK=julia JULIA_VER=0.4
-  # - TASK=scala_test
-
-  # TODO, R test, distributed test, clang, more g++ versions
+osx_image: xcode9.4
 
 matrix:
   include:
-    - # os: linux
-      # dist: trusty
-      # env: TASK=perl_test
     - os: osx
-      ## sudo is required because
-      ## prexexisting packages conflict
-      ## with new ones.
-      ## would be nice to have macports
-      ## on travis osx, it has all needed perl packages
-      sudo: required
-      env: TASK=perl_test
-#       env: TASK=julia JULIA_VER=0.4
-#     - os: linux
-#       env: TASK=build
-#     - os: linux
-#       env: TASK=cpp_test
-#     - os: linux
-#       env: TASK=python_test
-#     - os: linux
-#       env: TASK=r_test
-#     - os: linux
-#       env: TASK=scala_test
-
-# dependent apt packages
-addons:
-  apt:
-    sources:
-      - ubuntu-toolchain-r-test
-    packages:
-      - doxygen
-      - wget
-      - git
-      - libcurl4-openssl-dev
-      - unzip
-      - libatlas-dev
-      - libopencv-dev
-      - gcc-4.8
-      - g++-4.8
-      - python-numpy
-      - python-nose
-      - python3-numpy
-      - python3-dev
-      - python3-nose
-      - python-h5py
-      - python3-h5py
-      - graphviz
-      - libmouse-perl
-      - pdl
-      - cpanminus
-      - swig
-      - libgraphviz-perl
 
 before_install:
-  - export NVCC_PREFIX=${HOME}
-  - source dmlc-core/scripts/travis/travis_setup_env.sh
   - export PYTHONPATH=${PYTHONPATH}:${PWD}/python
-  - export MAVEN_SKIP_RC=true
-  - export MAVEN_OPTS="-Xmx512m -XX:MaxPermSize=256m -XX:-UseGCOverheadLimit -XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC"
 
 install:
-  - source tests/travis/setup.sh
+  - HOMEBREW_NO_AUTO_UPDATE=1 brew install ccache
+  - export PATH="/usr/local/opt/ccache/libexec:$PATH"
+  - source ci/travis/install.sh
 
+# We build with 2 concurrent jobs to match the number of cores present on MacOS virutal machines.
+# nproc does not report the correct number of cores reliably in Travis, so using nproc is not
+# recommended.
+# https://docs.travis-ci.com/user/reference/overview/
 script:
-  - tests/travis/run_test.sh
+  - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+  - mv make/osx.mk config.mk
+  - make -j 2
 
-cache:
-  directories:
-    - ${HOME}/.cache/usr
-
-before_cache:
-  - dmlc-core/scripts/travis/travis_before_cache.sh
-
-after_failure:
-  - tests/travis/travis_after_failure.sh
-
-notifications:
-# Emails are sent to the committer's git-configured email address by default,
-  email:
-    on_success: change
-    on_failure: always
-  #slack: dmlc:NmroCzntCiWOuxUZpii40USd
+  # Temporarily disabled due to https://github.com/apache/incubator-mxnet/issues/13136
+  # We ignore several tests to avoid possible timeouts on large PRs.
+  # This lowers our test coverage, but is required for consistent Travis runs.
+  # These tests will be tested in a variety of environments in Jenkins based tests.
+#  - python -m nose --with-timer --exclude-test=test_sparse_operator.test_elemwise_binary_ops --exclude-test=test_gluon_model_zoo.test_models --exclude-test=test_random.test_shuffle --exclude-test=test_operator.test_broadcast_binary_op --exclude-test=test_operator.test_pick --exclude-test=test_profiler.test_continuous_profile_and_instant_marker --exclude-test=test_metric_perf.test_metric_performance --exclude-test=test_operator.test_order --verbose tests/python/unittest/
+#  - python2 -m nose --verbose tools/coreml/test --exclude-test=test_mxnet_image
