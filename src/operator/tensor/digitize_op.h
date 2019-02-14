@@ -72,7 +72,7 @@ bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
   CHECK_GT(bin_shape.ndim(), 0) << "Bin shape undefined";
 
   CHECK_EQ(bin_shape.ndim(), data_shape.ndim())
-    << "Bins tensor nust have same number of dimensions than the input data";
+    << "Bins tensor must have same number of dimensions as the input data";
 
   // Check if the first n-1 dims of data & bins are the same
   nnvm::dim_t *bin_shape_last = (bin_shape.end() - 1);

@@ -7462,56 +7462,58 @@ def test_invalid_max_pooling_pad_type_same():
 
 @with_seed()
 def test_digitize():
-    def f(x, bins, right):
-        x = x.asnumpy()
+    def f(data, bins, right):
+        data = data.asnumpy()
         bins = bins.asnumpy()
 
-        N = bins.ndim
-        x1 = x.reshape((-1,) + x.shape[N-1:])
-        x2 = np.atleast_2d((x1.reshape(x1.shape[0], -1)))
-        b1 = np.atleast_2d(bins.reshape(-1, bins.shape[-1]))
-        out = np.zeros_like(x2)
+        d1 = data.reshape(-1, data.shape[-1])
+        b1 = bins.reshape(-1, bins.shape[-1])
+        out = np.zeros_like(d1)
 
-        for idx,batch in enumerate(zip(x2, b1)):
-            out[idx] = np.digitize(batch[0], batch[1])
+        for idx,row in enumerate(d1):
+            out[idx] = np.digitize(row, b1[idx])
 
-        return out.reshape(x.shape)
+        return out.reshape(data.shape)
 
     data = mx.symbol.Variable('data')
     dig_sym = mx.sym.digitize(data=data)
-    x = mx.nd.array(np.random.randn(100, 200) * 100)
 
-    # Test with 1D bin vector
-    bins = mx.nd.array(np.linspace(0, np.random.randint(90)+10, np.random.randint(20)))
+    # Create sample data and bins tensors
+    first_dimensions = [(), (10,), (5, 10, 20)] # N-1 dims of the data and bins tensors to create
 
-    # right = False (default)
-    output = mx.nd.digitize(x, bins)
-    expected = f(x, bins, False)
-    assert_equal(output.asnumpy(), expected)
-    check_symbolic_forward(dig_sym, [x, bins], [expected])
+    for dims in first_dimensions:
+        x_shape = dims + (np.random.randint(5)+1,)
+        bin_shape = dims + (1,)
 
-    # right = True
-    output = mx.nd.digitize(x, bins, right=True)
-    expected = f(x, bins, True)
-    assert_equal(output.asnumpy(), expected)
+        x = np.random.randn(*x_shape) * 100
+        bins_row = np.linspace(0, 100, np.random.randint(3)+1)
+        bins = np.tile(bins_row, bin_shape)
 
-    # Test with 2D bins vector
-    x = np.random.randn(2, 200) * 100
-    bins = np.vstack(np.linspace(np.linspace(0, np.random.randint(90)+10, np.random.randint(20)),
-                                 np.linspace(0, np.random.randint(90) + 10, np.random.randint(20))))
-    output = mx.nd.digitize(x, bins)
-    assert_equal(output.asnumpy(), f(x, bins, False))
+        x = mx.nd.array(x)
+        bins = mx.nd.array(bins)
+
+        # right = False (default)
+        output = mx.nd.digitize(x, bins)
+        expected = f(x, bins, False)
+        assert_equal(output.asnumpy(), expected)
+        check_symbolic_forward(dig_sym, [x, bins], [expected])
+
+        # right = True
+        output = mx.nd.digitize(x, bins, right=True)
+        expected = f(x, bins, True)
+        assert_equal(output.asnumpy(), expected)
 
     # Test exception raising
     def test_invalid_inputs():
         # bins not monotonic and ascending
-        bins = mx.nd.ones(10)
+        bins = mx.nd.ones((5,5))
+        x = mx.nd.ones((5,5))
         assert_exception(mx.nd.digitize, MXNetError, [x, bins])
 
 
-        # bins.ndim > data.ndim
+        # bins.ndim != data.ndim
         bins = mx.nd.array(np.tile(np.linspace(0, 10, 10), (2, 1)))
-        x = mx.nd.array(np.random.randn(100) * 100)
+        x = mx.nd.ones(10)
         assert_exception(mx.nd.digitize, MXNetError, [x, bins])
 
     test_invalid_inputs()
