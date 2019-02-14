@@ -162,6 +162,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
     when kvstore's type is `device`.
 
+* MXNET_UPDATE_ON_KVSTORE
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If true, weight updates are performed during the communication step, if possible.
+
 ## Memonger
 
 * MXNET_BACKWARD_DO_MIRROR
