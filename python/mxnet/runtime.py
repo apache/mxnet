@@ -63,7 +63,7 @@ class Features(collections.OrderedDict):
     OrderedDict of name to Feature
     """
     def __init__(self):
-        super().__init__([(f.name, f) for f in feature_list()])
+        super(Features, self).__init__([(f.name, f) for f in feature_list()])
 
     def __repr__(self):
         return str(list(self.values()))
@@ -82,5 +82,6 @@ class Features(collections.OrderedDict):
         """
         feature_name = feature_name.upper()
         if feature_name not in self:
-            raise RuntimeError("Feature '{}' is unknown, known features are: {}".format(feature_name, list(self.keys())))
+            raise RuntimeError("Feature '{}' is unknown, known features are: {}".format(
+                feature_name, list(self.keys())))
         return self[feature_name].enabled
