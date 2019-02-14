@@ -616,7 +616,7 @@ rpkg:
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
 	rm R-package/NAMESPACE
-	Rscript -e "devtools::document('R-package'); warnings()"
+	Rscript -e "devtools::document('R-package');warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
