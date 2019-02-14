@@ -23,8 +23,9 @@
 
 import ctypes
 from .base import _LIB, check_call
+import collections
 
-class LibFeature(ctypes.Structure):
+class Feature(ctypes.Structure):
     """
     Compile time feature description
     """
@@ -44,7 +45,7 @@ class LibFeature(ctypes.Structure):
         else:
             return "✖ {}".format(self.name)
 
-def libinfo_features():
+def feature_list():
     """
     Check the library for compile-time features. The list of features are maintained in libinfo.h and libinfo.cc
 
@@ -52,25 +53,35 @@ def libinfo_features():
     -------
     :return: list of class LibFeature indicating which features are available and enabled
     """
-    lib_features = ctypes.POINTER(LibFeature)()
+    lib_features_c_array = ctypes.POINTER(Feature)()
     lib_features_size = ctypes.c_size_t()
-    check_call(_LIB.MXLibInfoFeatures(ctypes.byref(lib_features), ctypes.byref(lib_features_size)))
-    feature_list = [lib_features[i] for i in range(lib_features_size.value)]
-    return feature_list
+    check_call(_LIB.MXLibInfoFeatures(ctypes.byref(lib_features_c_array), ctypes.byref(lib_features_size)))
+    features = [lib_features_c_array[i] for i in range(lib_features_size.value)]
+    return features
 
-def is_enabled(tocheck):
+class Features(collections.OrderedDict):
     """
-    Check for a particular feature by name
-
-    Parameters
-    ----------
-    :param x: str The name of a valid feature as string for example 'CUDA'
-
-    Returns
-    -------
-    :return: bool True if it's enabled, False if it's disabled, RuntimeError if the feature is not known
+    OrderedDict of name to Feature
     """
-    feature_dict = {f.name: f.enabled for f in libinfo_features()}
-    if tocheck not in feature_dict:
-        raise RuntimeError("Feature '{}' is unknown, known features are: {}".format(tocheck, list(feature_dict.keys())))
-    return feature_dict[tocheck]
+    def __init__(self):
+        super().__init__([(f.name, f) for f in feature_list()])
+
+    def __repr__(self):
+        return str(list(self.values()))
+
+    def is_enabled(self, feature_name):
+        """
+        Check for a particular feature by name
+
+        Parameters
+        ----------
+        :param x: str The name of a valid feature as string for example 'CUDA'
+
+        Returns
+        -------
+        :return: bool True if it's enabled, False if it's disabled, RuntimeError if the feature is not known
+        """
+        feature_name = feature_name.upper()
+        if feature_name not in self:
+            raise RuntimeError("Feature '{}' is unknown, known features are: {}".format(feature_name, list(self.keys())))
+        return self[feature_name].enabled

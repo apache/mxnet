@@ -21,25 +21,24 @@ from mxnet.runtime import *
 from mxnet.base import MXNetError
 from nose.tools import *
 
-def test_libinfo_features():
-    features = libinfo_features()
-    print("Lib features: ")
-    for f in features:
-        print(f.name, f.enabled, f.index)
-    ok_(type(features) is list)
-    ok_(len(features) > 0)
+def test_features():
+    features = Features()
+    print(features)
+    ok_('CUDA' in features)
+    ok_(len(features) >= 30)
 
 def test_is_enabled():
-    features = libinfo_features()
+    features = Features()
     for f in features:
-        if f.enabled:
-            ok_(is_enabled(f.name))
+        if features[f].enabled:
+            ok_(features.is_enabled(f))
         else:
-            ok_(not is_enabled(f.name))
+            ok_(not features.is_enabled(f))
 
 @raises(RuntimeError)
 def test_is_enabled_not_existing():
-    is_enabled('this girl is on fire')
+    features = Features()
+    features.is_enabled('this girl is on fire')
 
 
 if __name__ == "__main__":
