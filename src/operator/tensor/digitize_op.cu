@@ -60,22 +60,6 @@ struct ForwardKernel<gpu> {
 };
 
 
-    const auto data = in_data[i];
-    const auto batch = i / batch_size;
-
-    auto
-        elem = right ? thrust::lower_bound(bins + bins_length * batch,
-                                        bins + bins_length * (batch + 1),
-                                        data)
-                     : thrust::upper_bound(bins + bins_length * batch,
-                                        bins + bins_length * (batch + 1),
-                                        data);
-
-    out_data[i] = thrust::distance(bins, elem);
-  }
-};
-
-
 NNVM_REGISTER_OP(digitize)
 .set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward<gpu>);
 

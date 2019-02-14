@@ -105,8 +105,6 @@ inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-  // Verify Have bins & data share the same type to simplify templating
-  CHECK_EQ(data_type, bins_type);
 
 template<typename xpu>
 struct ForwardKernel {
@@ -118,34 +116,6 @@ struct ForwardKernel {
                                   size_t batch_size,
                                   size_t bins_length,
                                   bool right);
-};
-
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, OType);
-
-template<>
-struct ForwardKernel<cpu> {
-  template<typename DType, typename OType>
-  static MSHADOW_XINLINE void Map(int i,
-                                  DType *in_data,
-                                  OType *out_data,
-                                  DType *bins,
-                                  size_t batch_size,
-                                  size_t bins_length,
-                                  bool right) {
-
-    const auto data = in_data[i];
-    const auto batch = i / batch_size;
-
-    auto elem = right ? std::lower_bound(bins + bins_length * batch,
-                                         bins + bins_length * (batch + 1),
-                                         data)
-                      : std::upper_bound(bins + bins_length * batch,
-                                         bins + bins_length * (batch + 1),
-                                         data);
-
-    auto index = std::distance(bins, elem);
-    out_data[i] = OType(index);
-  }
 };
 
 
@@ -185,29 +155,8 @@ struct CheckMonotonic {
       }
     }
   }
-
-  return true;
-}
-
-
-inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
-                           std::vector<int> *in_attrs,
-                           std::vector<int> *out_attrs) {
-  auto &input_type = (*in_attrs)[0];
-  auto &output_type = (*out_attrs)[0];
-
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, input_type);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, output_type);
-  return out_attrs->at(0) != -1;
-}
-
-
-template<typename xpu, typename DType, typename BType>
-struct ForwardKernel {
-  static MSHADOW_XINLINE void Map(int i, DType *input_data, DType *out_data, mshadow::Tensor<cpu,
-      1, BType>
-  &bins, const bool right);
 };
+
 
 
 template<typename xpu>
