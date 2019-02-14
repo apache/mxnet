@@ -96,8 +96,7 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
               "\"to_odd_down\" - resize input to nearest odd height and width "
               "(if original height is odd then result height = original height - 1);"
               "\"to_odd_up\" - resize input to nearest odd height and width "
-              "(if original height is odd then result height = original height + 1);"
-    );
+              "(if original height is odd then result height = original height + 1);");
   }
 };
 
