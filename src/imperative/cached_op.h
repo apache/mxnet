@@ -35,6 +35,7 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t backward_bulk_size;
   bool static_alloc;
   bool static_shape;
+  bool is_dynamic;
   nnvm::Tuple<uint32_t> data_indices;
   nnvm::Tuple<uint32_t> param_indices;
   std::string subgraph;
@@ -66,6 +67,9 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(subgraph)
     .set_default(std::string(""))
     .describe("JSON string of a subgraph.");
+    DMLC_DECLARE_FIELD(is_dynamic)
+    .set_default(false)
+    .describe("Whether the graph contains dynamic shape operators.");
   }
 };
 
