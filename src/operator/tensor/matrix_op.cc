@@ -661,7 +661,16 @@ Example::
     return std::vector<std::string>{"data", "shape_like"};
   })
 .set_attr<nnvm::FInferShape>("FInferShape", SliceLikeShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
+    std::vector<int> checked_in_attrs = { (*in_attrs)[0] };
+    bool ret = !type_is_none((*in_attrs)[1]) &&
+               ElemwiseType<1, 1>(attrs, &checked_in_attrs, out_attrs);
+    (*in_attrs)[0] = checked_in_attrs[0];
+    return ret;
+  })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_like"})
 .set_attr<FCompute>("FCompute<cpu>", SliceLikeForward<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "Source input")
