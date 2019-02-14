@@ -141,7 +141,6 @@ struct MXCallbackList {
 
 struct LibFeature {
   const char* name;
-  uint32_t index;
   bool enabled;
 };
 

@@ -31,7 +31,6 @@ class Feature(ctypes.Structure):
     """
     _fields_ = [
         ("_name", ctypes.c_char_p),
-        ("index", ctypes.c_uint32),
         ("enabled", ctypes.c_bool)
     ]
 
