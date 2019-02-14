@@ -146,8 +146,8 @@ def test_where():
     assert np.sum(res[0].asnumpy() == 1) == b.shape[1]
 
 def test_pick():
-    a = mx.nd.ones(shape=(LARGE_X, SMALL_Y))
-    b = mx.nd.ones(shape=(LARGE_X,))
+    a = mx.nd.ones(shape=(256*35, 1024*1024))
+    b = mx.nd.ones(shape=(256*35,))
     res = mx.nd.pick(a,b)
     assert res.shape == b.shape
 
