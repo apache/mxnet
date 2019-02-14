@@ -110,13 +110,14 @@ inline bool MPUpdateInferType(const nnvm::NodeAttrs& attrs,
       attrs, in_attrs, out_attrs, -1);
 }
 
+template<int req>
 struct MPAdamWKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data, float* mean_data,
     float* var_data, const DType* weight_data, const DType* grad_data, float* weight32,
     const float param_clip_gradient, const float param_beta1, const float param_beta2,
     const float param_eta, const float param_lr, const float param_wd,
-    const float param_rescale_grad, const float param_epsilon, const OpReqType req) {
+    const float param_rescale_grad, const float param_epsilon) {
     float w = weight32[i];
     float mean = mean_data[i];
     float var = var_data[i];
@@ -158,10 +159,11 @@ struct MPAdamWUpdate {
       Tensor<xpu, 2, float> var = inputs[3].FlatTo2D<xpu, float>(s);
       Tensor<xpu, 2, float> weight32 = inputs[4].FlatTo2D<xpu, float>(s);
       Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
-      // TODO(haibin): use MXNET_ASSIGN_REQ_SWITCH
-      Kernel<MPAdamWKernel, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
-        var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient, param.beta1,
-        param.beta2, param.eta, param.lr, param.wd, rescale_grad, param.epsilon, req[0]);
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<MPAdamWKernel<req_type>, xpu>::Launch(s, weight.shape_.Size(), out.dptr_, mean.dptr_,
+          var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_, param.clip_gradient, param.beta1,
+          param.beta2, param.eta, param.lr, param.wd, rescale_grad, param.epsilon);
+      });
     });
   }
 };

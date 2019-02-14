@@ -41,8 +41,7 @@ inline void MPUpdateGPU(const nnvm::NodeAttrs& attrs,
     CUDA_CALL(cudaMemcpy(&scale, scale_blob.dptr<DType>(), sizeof(DType),
        cudaMemcpyDeviceToHost));
     float scalef = static_cast<float>(scale);
-    //if (std::isnan(scalef)) return;
-    if (scalef == 0 || std::isnan(scalef)) return;
+    if (std::isnan(scalef)) return;
     std::vector<TBlob> inputs_wo_scale;
     size_t num_in = inputs.size();
     inputs_wo_scale.reserve(num_in - 1);

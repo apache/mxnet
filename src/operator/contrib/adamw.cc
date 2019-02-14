@@ -41,7 +41,7 @@ inline void MPUpdateCPU(const nnvm::NodeAttrs& attrs,
   TBlob scale_blob = inputs[inputs.size() - 1];
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType, {
     float scalef = static_cast<float>(*scale_blob.dptr<DType>());
-    if (scalef == 0 || std::isnan(scalef)) return;
+    if (std::isnan(scalef)) return;
     std::vector<TBlob> inputs_wo_scale;
     size_t num_in = inputs.size();
     inputs_wo_scale.reserve(num_in - 1);
@@ -51,8 +51,10 @@ inline void MPUpdateCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_mp_adamw_update)
-.describe(R"code(Update function for multi-precision AdamW optimizer. AdamW is seen as a modification of
-Adam by decoupling the weight decay from the optimization steps taken w.r.t. the loss function.
+.describe(R"code(Update function for multi-precision AdamW optimizer.
+
+AdamW is seen as a modification of Adam by decoupling the weight decay from the
+optimization steps taken w.r.t. the loss function.
 
 Adam update consists of the following steps, where g represents gradient and m, v
 are 1st and 2nd order moment estimates (mean and variance).
@@ -70,7 +72,8 @@ It updates the weights using::
  v = beta2*v + (1-beta2)*(grad**2)
  w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
 
-//.describe("Rescale gradient to grad = rescale_grad*grad.");
+Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN,
+the update is skipped.
 )code" ADD_FILELINE)
 .set_num_inputs(6)
 .set_num_outputs(1)
@@ -111,6 +114,8 @@ It updates the weights using::
  v = beta2*v + (1-beta2)*(grad**2)
  w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
 
+Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN,
+the update is skipped.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(1)
