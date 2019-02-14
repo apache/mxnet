@@ -23,17 +23,19 @@
  * \brief Quantize operator a la numpy.digitize.
  * \author Jose Luis Contreras, Anton Chernov and contributors
  */
-#ifndef MXNET_OPERATOR_TENSOR_DIGITIZE_H_
-#define MXNET_OPERATOR_TENSOR_DIGITIZE_H_
+#ifndef MXNET_OPERATOR_TENSOR_DIGITIZE_OP_H_
+#define MXNET_OPERATOR_TENSOR_DIGITIZE_OP_H_
 
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
+#include <inttypes.h>
+#include <algorithm>
+#include <vector>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include <algorithm>
-#include <inttypes.h>
+
 
 namespace mxnet {
 namespace op {
@@ -56,13 +58,13 @@ struct DigitizeParam : public dmlc::Parameter<DigitizeParam> {
   }
 };
 
-bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
+inline bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
                 std::vector<TShape> *in_attrs,
                 std::vector<TShape> *out_attrs) {
   using namespace mshadow;
 
-  CHECK_EQ(in_attrs->size(), 2); // Size 2: data and bins
-  CHECK_EQ(out_attrs->size(), 1); // Only one output tensor
+  CHECK_EQ(in_attrs->size(), 2);  // Size 2: data and bins
+  CHECK_EQ(out_attrs->size(), 1);  // Only one output tensor
 
   auto &data_shape = (*in_attrs)[0];
   auto &bin_shape = (*in_attrs)[1];
@@ -79,13 +81,13 @@ bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
   CHECK(std::equal(bin_shape.begin(), bin_shape_last, data_shape.begin()))
     << "First N-1 dimensions of the input data and bins tensors should be the same (N = bins.ndim)";
 
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, data_shape); // First arg is a shape array
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, data_shape);  // First arg is a shape array
 
   return true;
 }
 
 
-bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
+inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
                            std::vector<int> *in_attrs,
                            std::vector<int> *out_attrs) {
   auto &data_type = (*in_attrs)[0];
@@ -130,7 +132,6 @@ struct ForwardKernel<cpu> {
                                   size_t batch_size,
                                   size_t bins_length,
                                   bool right) {
-
     const auto data = in_data[i];
     const auto batch_index = static_cast<size_t>(i) / batch_size;
 
@@ -173,7 +174,6 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
   const auto &bins = inputs[1];
 
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
-
     // Verify bins is strictly monotonic
     bool mono = true;
     const auto bins_length = bins.shape_[bins.ndim() - 1];
@@ -203,4 +203,4 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_H_
+#endif  // MXNET_OPERATOR_TENSOR_DIGITIZE_OP_H_

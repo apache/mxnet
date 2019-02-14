@@ -46,14 +46,15 @@ is closed, resulting in bins[i-1] <= x < bins[i].
   - otype: type of the output tensor (must be an integer type).
 
 .. Input:
-  - X: K-dimensional data tensor to be quantized. Can have any arbitrary shape.
+  - X: N-dimensional data tensor to be quantized. Can have any arbitrary shape.
   - bins: N-dimensional tensor containing the bin edges. The first N-1 dimensions must be the
-same as those of the input data X. The last dimension corresponds to the vectors containing the
-bin edges. Within this last dimension, bins must be strictly monotonically increasing. Bins and
-data tensors must have the same type.
+  same as those of the input data X. The last dimension corresponds to the vectors containing the
+  bin edges. Within this last dimension, bins must be strictly monotonically increasing. Bins and
+  data tensors must have the same type.
 
 .. Requirements:
- - (1 <= N <= K)
+  - x.ndim == bins.ndim
+  - type(x) == type(bins)
 
 .. Output:
   - Tensor of the same shape as the input X containing the indices.
@@ -74,6 +75,7 @@ data tensors must have the same type.
   [[0, 3, 2, 1],
    [3, 3, 2, 2]]
 
+
 )code" ADD_FILELINE)
     .set_attr_parser(ParamParser<DigitizeParam>)
     .set_num_inputs(2)
@@ -85,7 +87,7 @@ data tensors must have the same type.
                                      })
     .set_attr<nnvm::FInferShape>("FInferShape", DigitizeOpShape)
     .set_attr<nnvm::FInferType>("FInferType", DigitizeOpType)
-    .set_attr<FCompute>("FCompute", DigitizeOpForward<cpu>)
+    .set_attr<FCompute>("FCompute<cpu>", DigitizeOpForward<cpu>)
     .add_argument("data", "NDArray-or-Symbol", "Input data ndarray")
     .add_argument("bins", "NDArray-or-Symbol", "Bins ndarray")
     .add_arguments(DigitizeParam::__FIELDS__());

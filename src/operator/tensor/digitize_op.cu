@@ -25,9 +25,9 @@
 */
 
 #include "./digitize_op.h"
-
 #include <thrust/binary_search.h>
 #include <thrust/distance.h>
+#include <thrust/execution_policy.h>
 
 namespace mxnet {
 namespace op {
@@ -43,21 +43,19 @@ struct ForwardKernel<gpu> {
                                   size_t batch_size,
                                   size_t bins_length,
                                   bool right) {
-
     const auto data = in_data[i];
     const auto batch_index = static_cast<size_t>(i) / batch_size;
 
     const auto begin = bins + bins_length * batch_index;
     const auto end = begin + bins_length;
 
-    const auto elem = right ? thrust::lower_bound(begin, end, data)
-                            : thrust::upper_bound(begin, end, data);
+    const auto elem = right ? thrust::lower_bound(thrust::device, begin, end, data)
+                            : thrust::upper_bound(thrust::device, begin, end, data);
 
     const auto index = static_cast<uint64_t>(thrust::distance(begin, elem));
     out_data[i] = static_cast<OType>(index);
   }
 };
-
 
 NNVM_REGISTER_OP(digitize)
 .set_attr<FCompute>("FCompute<gpu>", DigitizeOpForward<gpu>);

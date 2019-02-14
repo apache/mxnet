@@ -7495,26 +7495,24 @@ def test_digitize():
         # right = False (default)
         output = mx.nd.digitize(x, bins)
         expected = f(x, bins, False)
-        assert_equal(output.asnumpy(), expected)
-        check_symbolic_forward(dig_sym, [x, bins], [expected])
+        assert same(output.asnumpy(), expected)
 
         # right = True
         output = mx.nd.digitize(x, bins, right=True)
         expected = f(x, bins, True)
-        assert_equal(output.asnumpy(), expected)
+        assert same(output.asnumpy(), expected)
 
     # Test exception raising
     def test_invalid_inputs():
         # bins not monotonic and ascending
         bins = mx.nd.ones((5,5))
         x = mx.nd.ones((5,5))
-        assert_exception(mx.nd.digitize, MXNetError, [x, bins])
-
+        assert_exception(mx.nd.digitize, MXNetError, x, bins)
 
         # bins.ndim != data.ndim
         bins = mx.nd.array(np.tile(np.linspace(0, 10, 10), (2, 1)))
         x = mx.nd.ones(10)
-        assert_exception(mx.nd.digitize, MXNetError, [x, bins])
+        assert_exception(mx.nd.digitize, MXNetError, x, bins)
 
     test_invalid_inputs()
 
