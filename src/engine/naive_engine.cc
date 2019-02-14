@@ -62,6 +62,8 @@ class NaiveEngine final : public Engine {
   };
 
   NaiveEngine() {
+    objpool_opr_ref_ = common::ObjectPool<NaiveOpr>::_GetSharedRef();
+    objpool_var_ref_ = common::ObjectPool<NaiveVar>::_GetSharedRef();
   }
   // virtual destructor
   virtual ~NaiveEngine() {
@@ -232,6 +234,13 @@ class NaiveEngine final : public Engine {
   // GPU auxiliary streams
   std::vector<GPUAuxStream*> aux_streams_;
 #endif
+/*!
+ * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early
+ * See also #309 (https://github.com/dmlc/mxnet/issues/309) and similar fix in threaded_engine.h.
+ * Without this, segfaults seen on CentOS7 in test_operator_gpu.py:test_convolution_multiple_streams
+ */
+  std::shared_ptr<common::ObjectPool<NaiveOpr> > objpool_opr_ref_;
+  std::shared_ptr<common::ObjectPool<NaiveVar> > objpool_var_ref_;
 };  // class NaiveEngine
 
 Engine *CreateNaiveEngine() {
