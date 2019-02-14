@@ -114,7 +114,7 @@ void ToTensorImplCUDA(mshadow::Stream<gpu> *s,
     }
 
     ToTensorCudaKernel<gpu, DType>
-            <<<blocks, dim3(H, cuda::kMaxThreadsPerBlock / H), 0, stream>>>(input, output,
+            <<<blocks, dim3(32, 32), 0, stream>>>(input, output,
                 req, N, H, W, C, normalize_factor);
         MSHADOW_CUDA_POST_KERNEL_CHECK(ToTensorCudaKernel);
 }
