@@ -179,7 +179,7 @@ inline void SetShapeType(const Context& ctx,
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
-    if (outputs[i]->is_none()) {
+    if (outputs[i]->is_none() || outputs[i]->shape().ndim() == 0) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
         *outputs[i] = NDArray(ctx, out_types[i]);
@@ -566,8 +566,12 @@ inline void PushOperator(const OpStatePtr& state,
 inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
                                bool use_inputs,
                                std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                               std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                               std::pair<uint32_t, uint32_t> entry_range = {0, 0},
+                               bool *contain_unknown = nullptr) {
   using namespace nnvm;
+  if (contain_unknown != nullptr) {
+    *contain_unknown = false;
+  }
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
     if (g.attrs.count("shape_inputs") &&
@@ -601,8 +605,11 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
     g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
     g = exec::InferShape(std::move(g));
   }
-  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
-
+  if (contain_unknown == nullptr) {
+    CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
+  } else {
+    *contain_unknown = g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U;
+  }
   return false;
 }
 
