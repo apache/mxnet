@@ -5480,9 +5480,9 @@ def test_laop():
     dtype = np.float64
     rtol_fw = 1e-7
     atol_fw = 1e-9
-    num_eps = 1e-6
+    num_eps = 2e-6
     rtol_bw = 1e-5
-    atol_bw = 1e-6
+    atol_bw = 2e-6
     # enable numerical checking of gradients
     grad_check = 1
 
@@ -6778,6 +6778,69 @@ def test_quadratic_function():
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
+@with_seed()
+def test_allclose_function():
+    def getRandom(base, percent = 1.):
+        return base * (1 + percent * (2 * np.random.random_sample() - 1.) / 100)
+
+    result = [False, False]
+    for dtype in [np.float16, np.float32, np.float64]:
+        rtol = getRandom(1e-2 if dtype is np.float16 else 1e-5)
+        atol = getRandom(1e-4 if dtype is np.float16 else 1e-7)
+        print('\n{}  atol = {}  rtol = {}'.format(dtype, atol, rtol))
+        print('exp cpu gpu        nElem     shape')
+        for ndim in range(1, 10):
+            shape = rand_shape_nd(ndim, 8)
+            a_np = np.random.randn(*shape).astype(dtype)
+            b_np = (a_np + np.random.randn(*shape).astype(dtype) / 10000000).astype(dtype)
+            expected = np.allclose(a_np, b_np, rtol, atol)
+
+            for i, ctx in enumerate([mx.cpu(), mx.gpu(0)]):
+                a_ctx = mx.nd.array(a_np, dtype = dtype, ctx=ctx)
+                b_ctx = mx.nd.array(b_np, dtype = dtype, ctx=ctx)
+                output = mx.nd.contrib.allclose(a_ctx, b_ctx, rtol=rtol, atol=atol)
+                result[i] = output.asnumpy() == 1
+                if expected != result[i]:
+                    # Preparing the output of elements of the array, which are considered as "not close" AND
+                    # corresponding elements of comparison CPU/GPU/Python vectors, which are considered as "close"
+                    v_ctx = 'CPU' if i == 0 else 'GPU'
+                    if expected:
+                        v_cmp = 'Python'
+                        a_b = a_ctx.asnumpy()
+                        b_b = b_ctx.asnumpy()
+                        a_g = np.asarray(a_np)
+                        b_g = np.asarray(b_np)
+
+                    else:
+                        v_cmp = v_ctx
+                        v_ctx = 'Python'
+                        a_b = np.asarray(a_np)
+                        b_b = np.asarray(b_np)
+                        a_g = a_ctx.asnumpy()
+                        b_g = b_ctx.asnumpy()
+
+                    print('\n *** Violations found on %s, but not on %s side  ***' % (v_ctx, v_cmp))
+                    frmt = "                 a[{0:d}]:                 b[{0:d}]:"  \
+                           "          abs(a[{0:d}]-b[{0:d}]) - atol + rtol*abs(b[{0:d}]):"
+
+                    # Define the indices of all violations and corresponding values of coordinates
+                    bad_indexes = np.abs(a_b - b_b) >= atol + rtol * abs(b_b)
+                    a_values = [a_b[bad_indexes], a_g[bad_indexes]]
+                    b_values = [b_b[bad_indexes], b_g[bad_indexes]]
+                    idx = np.asarray(np.where(bad_indexes == True))
+                    idx = idx.reshape(1, idx.size)
+                    idx_flat = np.asarray(np.where(bad_indexes.flatten() == True)).flatten()
+                    for i in range(len(a_values[0])):
+                        flat_idx = idx_flat[i]
+                        print('{}:  index = {}   flat_index = {}'.format('%4d'%i, idx[i], flat_idx))
+                        print(frmt.format(flat_idx))
+                        for j in range(2):
+                            diff = np.abs(a_values[j][i]-b_values[j][i]) - atol + rtol*abs(b_values[j][i])
+                            print('{}:  {}  {}              {}'.format('%6s'%v_ctx, a_values[j][i], b_values[j][i], diff))
+
+            print(' {0:d}   {1:d}   {2:d}    {3:10d}   {4:}'.format(expected, result[0], result[1], np.prod(shape), shape))
+            if expected != result[0] or expected != result[1]:
+                assert(False)
 
 @with_seed()
 def test_histogram():
