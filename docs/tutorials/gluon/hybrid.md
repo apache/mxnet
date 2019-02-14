@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Hybrid - Faster training and easy deployment
 
 *Related Content:*
@@ -154,33 +171,33 @@ However, that's not the case in Symbol API. It's not automatically broadcasted, 
 
 | NDArray APIs  | Description  |
 |---|---|
-| [*NDArray.\__add\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__add__) | x.\__add\__(y) <=> x+y <=> mx.nd.add(x, y)  |
-| [*NDArray.\__sub\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__sub__) | x.\__sub\__(y) <=> x-y <=> mx.nd.subtract(x, y)  |
-| [*NDArray.\__mul\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mul__) | x.\__mul\__(y) <=> x*y <=> mx.nd.multiply(x, y)  |
-| [*NDArray.\__div\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__div__) | x.\__div\__(y) <=> x/y <=> mx.nd.divide(x, y)  |
-| [*NDArray.\__mod\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mod__) | x.\__mod\__(y) <=> x%y <=> mx.nd.modulo(x, y)  |
-| [*NDArray.\__lt\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__lt__) |  x.\__lt\__(y) <=> x<y <=> x mx.nd.lesser(x, y) |
-| [*NDArray.\__le\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__le__) |  x.\__le\__(y) <=> x<=y <=> mx.nd.less_equal(x, y) |
-| [*NDArray.\__gt\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__gt__) |  x.\__gt\__(y) <=> x>y <=> mx.nd.greater(x, y) |
-| [*NDArray.\__ge\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ge__) |  x.\__ge\__(y) <=> x>=y <=> mx.nd.greater_equal(x, y)|
-| [*NDArray.\__eq\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__eq__) |  x.\__eq\__(y) <=> x==y <=> mx.nd.equal(x, y) |
-| [*NDArray.\__ne\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ne__) |  x.\__ne\__(y) <=> x!=y <=> mx.nd.not_equal(x, y) |
+| [NDArray.\__add\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__add__) | x.\__add\__(y) <=> x+y <=> mx.nd.add(x, y)  |
+| [NDArray.\__sub\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__sub__) | x.\__sub\__(y) <=> x-y <=> mx.nd.subtract(x, y)  |
+| [NDArray.\__mul\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mul__) | x.\__mul\__(y) <=> x*y <=> mx.nd.multiply(x, y)  |
+| [NDArray.\__div\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__div__) | x.\__div\__(y) <=> x/y <=> mx.nd.divide(x, y)  |
+| [NDArray.\__mod\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__mod__) | x.\__mod\__(y) <=> x%y <=> mx.nd.modulo(x, y)  |
+| [NDArray.\__lt\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__lt__) |  x.\__lt\__(y) <=> x<y <=> x mx.nd.lesser(x, y) |
+| [NDArray.\__le\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__le__) |  x.\__le\__(y) <=> x<=y <=> mx.nd.less_equal(x, y) |
+| [NDArray.\__gt\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__gt__) |  x.\__gt\__(y) <=> x>y <=> mx.nd.greater(x, y) |
+| [NDArray.\__ge\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ge__) |  x.\__ge\__(y) <=> x>=y <=> mx.nd.greater_equal(x, y)|
+| [NDArray.\__eq\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__eq__) |  x.\__eq\__(y) <=> x==y <=> mx.nd.equal(x, y) |
+| [NDArray.\__ne\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__ne__) |  x.\__ne\__(y) <=> x!=y <=> mx.nd.not_equal(x, y) |
 
 The current workaround is to use corresponding broadcast operators for arithmetic and comparison to avoid potential hybridization failure when input shapes are different.
 
 | Symbol APIs  | Description  |
 |---|---|
-|[*broadcast_add*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_add) | Returns element-wise sum of the input arrays with broadcasting. |
-|[*broadcast_sub*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_sub) | Returns element-wise difference of the input arrays with broadcasting. |
-|[*broadcast_mul*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_mul) | Returns element-wise product of the input arrays with broadcasting. |
-|[*broadcast_div*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_div) | Returns element-wise division of the input arrays with broadcasting. |
-|[*broadcast_mod*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_mod) | Returns element-wise modulo of the input arrays with broadcasting. |
-|[*broadcast_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_equal) | Returns the result of element-wise *equal to* (==) comparison operation with broadcasting. |
-|[*broadcast_not_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_not_equal) | Returns the result of element-wise *not equal to* (!=) comparison operation with broadcasting. |
-|[*broadcast_greater*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_greater) | Returns the result of element-wise *greater than* (>) comparison operation with broadcasting. |
-|[*broadcast_greater_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_greater_equal) | Returns the result of element-wise *greater than or equal to* (>=) comparison operation with broadcasting. |
-|[*broadcast_lesser*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser) |	Returns the result of element-wise *lesser than* (<) comparison operation with broadcasting. |
-|[*broadcast_lesser_equal*](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser_equal) | Returns the result of element-wise *lesser than or equal to* (<=) comparison operation with broadcasting. |
+|[broadcast_add](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_add) | Returns element-wise sum of the input arrays with broadcasting. |
+|[broadcast_sub](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_sub) | Returns element-wise difference of the input arrays with broadcasting. |
+|[broadcast_mul](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_mul) | Returns element-wise product of the input arrays with broadcasting. |
+|[broadcast_div](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_div) | Returns element-wise division of the input arrays with broadcasting. |
+|[broadcast_mod](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_mod) | Returns element-wise modulo of the input arrays with broadcasting. |
+|[broadcast_equal](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_equal) | Returns the result of element-wise *equal to* (==) comparison operation with broadcasting. |
+|[broadcast_not_equal](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_not_equal) | Returns the result of element-wise *not equal to* (!=) comparison operation with broadcasting. |
+|[broadcast_greater](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_greater) | Returns the result of element-wise *greater than* (>) comparison operation with broadcasting. |
+|[broadcast_greater_equal](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_greater_equal) | Returns the result of element-wise *greater than or equal to* (>=) comparison operation with broadcasting. |
+|[broadcast_lesser](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser) |	Returns the result of element-wise *lesser than* (<) comparison operation with broadcasting. |
+|[broadcast_lesser_equal](https://mxnet.incubator.apache.org/api/python/symbol/symbol.html#mxnet.symbol.broadcast_lesser_equal) | Returns the result of element-wise *lesser than or equal to* (<=) comparison operation with broadcasting. |
 
 For example, if you want to add a NDarray to your input x, use `broadcast_add` instead of `+`:
 
@@ -196,7 +213,7 @@ If you used `+`, it would still work before hybridization, but will throw an err
 
 Gluon's imperative interface is very flexible and allows you to print the shape of the NDArray. However, Symbol does not have shape attributes. As a result, you need to avoid printing shapes in `hybrid_forward`.
 Otherwise, you will get the following error:
-```bash
+```
 AttributeError: 'Symbol' object has no attribute 'shape'
 ```
 
@@ -230,11 +247,11 @@ For example, avoid writing `x += y` and use `x  = x + y`, otherwise you will get
 
 | NDArray in-place arithmetic operators | Description |
 |---|---|
-|[*NDArray.\__iadd\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__iadd__) |	x.\__iadd\__(y) <=> x+=y |
-|[*NDArray.\__isub\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__isub__) |	x.\__isub\__(y) <=> x-=y |
-|[*NDArray.\__imul\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imul__) |	x.\__imul\__(y) <=> x*=y |
-|[*NDArray.\__idiv\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__idiv__) |	x.\__rdiv\__(y) <=> x/=y |
-|[*NDArray.\__imod\__*](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imod__) |	x.\__rmod\__(y) <=> x%=y |
+|[NDArray.\__iadd\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__iadd__) |	x.\__iadd\__(y) <=> x+=y |
+|[NDArray.\__isub\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__isub__) |	x.\__isub\__(y) <=> x-=y |
+|[NDArray.\__imul\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imul__) |	x.\__imul\__(y) <=> x*=y |
+|[NDArray.\__idiv\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__idiv__) |	x.\__rdiv\__(y) <=> x/=y |
+|[NDArray.\__imod\__](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.__imod__) |	x.\__rmod\__(y) <=> x%=y |
 
 
 

@@ -78,6 +78,14 @@ def uniform(low=0, high=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        An NDArray of type `dtype`. If input `shape` has shape, e.g.,
+        `(m, n)` and `low` and `high` are scalars, output shape will be `(m, n)`.
+        If `low` and `high` are NDArrays with shape, e.g., `(x, y)`, then the
+        return NDArray will have shape `(x, y, m, n)`, where `m*n` uniformly distributed
+        samples are drawn for each `[low, high)` pair.
 
     Examples
     --------
@@ -128,6 +136,13 @@ def normal(loc=0, scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        An NDArray of type `dtype`. If input `shape` has shape, e.g., `(m, n)` and
+        `loc` and `scale` are scalars, output shape will be `(m, n)`. If `loc` and
+        `scale` are NDArrays with shape, e.g., `(x, y)`, then output will have shape
+        `(x, y, m, n)`, where `m*n` samples are drawn for each `[loc, scale)` pair.
 
     Examples
     --------
@@ -178,6 +193,13 @@ def randn(*shape, **kwargs):
     out : NDArray
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `loc` and `scale` are scalars, output
+        shape will be `(m, n)`. If `loc` and `scale` are NDArrays with shape, e.g., `(x, y)`,
+        then output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for
+        each `[loc, scale)` pair.
 
     Examples
     --------
@@ -227,6 +249,13 @@ def poisson(lam=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `lam` is
+        a scalar, output shape will be `(m, n)`. If `lam`
+        is an NDArray with shape, e.g., `(x, y)`, then output will have shape
+        `(x, y, m, n)`, where `m*n` samples are drawn for each entry in `lam`.
 
     Examples
     --------
@@ -274,6 +303,12 @@ def exponential(scale=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs)
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `scale` is a scalar, output shape will
+        be `(m, n)`. If `scale` is an NDArray with shape, e.g., `(x, y)`, then `output`
+        will have shape `(x, y, m, n)`, where `m*n` samples are drawn for each entry in scale.
 
     Examples
     --------
@@ -320,6 +355,13 @@ def gamma(alpha=1, beta=1, shape=_Null, dtype=_Null, ctx=None, out=None, **kwarg
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `alpha` and `beta` are scalars, output
+        shape will be `(m, n)`. If `alpha` and `beta` are NDArrays with shape, e.g.,
+        `(x, y)`, then output will have shape `(x, y, m, n)`, where `m*n` samples are
+        drawn for each `[alpha, beta)` pair.
 
     Examples
     --------
@@ -369,6 +411,12 @@ def negative_binomial(k=1, p=1, shape=_Null, dtype=_Null, ctx=None,
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `k` and `p` are scalars, output shape
+        will be `(m, n)`. If `k` and `p` are NDArrays with shape, e.g., `(x, y)`, then
+        output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for each `[k, p)` pair.
 
     Examples
     --------
@@ -420,6 +468,13 @@ def generalized_negative_binomial(mu=1, alpha=1, shape=_Null, dtype=_Null, ctx=N
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        If input `shape` has shape, e.g., `(m, n)` and `mu` and `alpha` are scalars, output
+        shape will be `(m, n)`. If `mu` and `alpha` are NDArrays with shape, e.g., `(x, y)`,
+        then output will have shape `(x, y, m, n)`, where `m*n` samples are drawn for
+        each `[mu, alpha)` pair.
 
     Examples
     --------
@@ -469,8 +524,27 @@ def multinomial(data, shape=_Null, get_prob=False, out=None, dtype='int32', **kw
         Data type of the sample output array. The default is int32.
         Note that the data type of the log likelihood array is the same with that of `data`.
 
+    Returns
+    -------
+    List, or NDArray
+        For input `data` with `n` dimensions and shape `(d1, d2, ..., dn-1, k)`, and input
+        `shape` with shape `(s1, s2, ..., sx)`, returns an NDArray with shape
+        `(d1, d2, ... dn-1, s1, s2, ..., sx)`. The `s1, s2, ... sx` dimensions of the
+        returned NDArray consist of 0-indexed values sampled from each respective multinomial
+        distribution provided in the `k` dimension of `data`.
+
+        For the case `n`=1, and `x`=1 (one shape dimension), returned NDArray has shape `(s1,)`.
+
+        If `get_prob` is set to True, this function returns a list of format:
+        `[ndarray_output, log_likelihood_output]`, where `log_likelihood_output` is an NDArray of the
+        same shape as the sampled outputs.
+
     Examples
     --------
+    >>> probs = mx.nd.array([0, 0.1, 0.2, 0.3, 0.4])
+    >>> mx.nd.random.multinomial(probs)
+    [3]
+    <NDArray 1 @cpu(0)>
     >>> probs = mx.nd.array([[0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0]])
     >>> mx.nd.random.multinomial(probs)
     [3 1]
@@ -502,6 +576,13 @@ def shuffle(data, **kwargs):
         Input data array.
     out : NDArray, optional
         Array to store the result.
+
+    Returns
+    -------
+    NDArray
+        A new NDArray with the same shape and type as input `data`, but
+        with items in the first axis of the returned NDArray shuffled randomly.
+        The original input `data` is not modified.
 
     Examples
     --------
@@ -545,6 +626,12 @@ def randint(low, high, shape=_Null, dtype=_Null, ctx=None, out=None, **kwargs):
     out : NDArray, optional
         Store output to an existing NDArray.
 
+    Returns
+    -------
+    NDArray
+        An NDArray of type `dtype`. If input `shape` has shape, e.g.,
+        `(m, n)`, the returned NDArray will shape will be `(m, n)`. Contents
+        of the returned NDArray will be samples from the interval `[low, high)`.
 
     Examples
     --------

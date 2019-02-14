@@ -35,6 +35,7 @@ apt-get install -y \
     libatlas-base-dev \
     libcurl4-openssl-dev \
     libjemalloc-dev \
+    libhdf5-dev \
     liblapack-dev \
     libopenblas-dev \
     libopencv-dev \

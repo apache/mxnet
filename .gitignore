@@ -63,11 +63,10 @@ __pycache__
 *.states
 *.json
 *.d
-build
 cmake-build*
 data
+model
 recommonmark
-deps
 
 # R
 *.Rcheck
@@ -96,6 +95,8 @@ input.txt*
 
 # Jetbrain
 .idea
+.gradle
+*.iml
 
 # ctags
 tags
@@ -104,28 +105,14 @@ tags
 cscope.out
 cscope.files
 
-# Scala package
-*.class
-scala-package/*/target/
-scala-package/*/*/target/
-*.scala_dependencies
-*.worksheet
-*.idea
-*.iml
-*.classpath
-*.project
-*.settings
-!scala-package/*/bin
-*.bak
-*/node_modules/
-
 # Eclipse project config
 .project
 .cproject
+.classpath
+.settings
 .pydevproject
 CMakeFiles
 cmake_install.cmake
-lib
 
 # Visual Studio Code
 .vscode
@@ -145,13 +132,12 @@ tools/pip_package/mxnet.egg-info
 tools/pip_package/mxnet
 
 # temporary path for building dependencies when building wheel
-./deps/
-./staticdeps/
-bld
-./tmp/*
-*.jar
-target
-bin/im2rec
+deps/
+staticdeps/
+tmp/
+build/
+lib/
+bin/
 model/
 
 # VTune

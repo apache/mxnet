@@ -45,6 +45,7 @@
   (let [detector (create-detector)
         predictions (detect-single-image detector image-file)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
+    (clojure.pprint/pprint predictions)
     (is (some? predictions))
     (is (= 5 (count predictions)))
     (is (string? class))
@@ -55,11 +56,13 @@
 (deftest test-batch-detection
   (let [detector (create-detector)
         batch-predictions (detect-images-in-dir detector image-dir)
+        _ (clojure.pprint/pprint batch-predictions)
         predictions (first batch-predictions)
         {:keys [class prob x-min x-max y-min y-max] :as pred} (first predictions)]
     (is (some? batch-predictions))
     (is (= 5 (count predictions)))
     (is (string? class))
     (is (< 0.8 prob))
+    (println [x-min x-max y-min y-max])
     (every? #(< 0 % 1) [x-min x-max y-min y-max])
-    (is (= #{"dog" "person" "bicycle" "car"} (set (mapv :class predictions))))))
+    (is (= #{"dog" "person"} (set (mapv :class predictions))))))

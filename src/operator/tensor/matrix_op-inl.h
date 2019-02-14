@@ -37,6 +37,7 @@
 #include "broadcast_reduce_op.h"
 #include "./init_op.h"
 #include "../../common/static_array.h"
+#include "./slice-inl.h"
 
 #if MXNET_USE_CUDA
 #include <thrust/device_vector.h>
@@ -398,19 +399,15 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-struct SliceParam : public dmlc::Parameter<SliceParam> {
-  nnvm::Tuple<dmlc::optional<int>> begin, end;
-  nnvm::Tuple<dmlc::optional<int>> step;
-  DMLC_DECLARE_PARAMETER(SliceParam) {
-    DMLC_DECLARE_FIELD(begin)
-    .describe("starting indices for the slice operation, supports negative indices.");
-    DMLC_DECLARE_FIELD(end)
-    .describe("ending indices for the slice operation, supports negative indices.");
-    DMLC_DECLARE_FIELD(step)
-    .set_default(nnvm::Tuple<dmlc::optional<int>>())
-    .describe("step for the slice operation, supports negative values.");
+// Currently MKLDNN only supports step = 1 or step has no value
+inline bool SupportMKLDNNSlice(const SliceParam& param) {
+  if (param.step.ndim() == 0U) return true;
+  for (uint32_t i = 0; i < param.step.ndim(); ++i) {
+    if (param.step[i].has_value() && param.step[i].value() != 1)
+      return false;
   }
-};
+  return true;
+}
 
 inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -432,9 +429,19 @@ inline bool SliceForwardInferStorageType(const nnvm::NodeAttrs& attrs,
       && (!param.step[0].has_value() || param.step[0].value() == 1)) {
     trivial_step = true;
   }
-  if (!dispatched && in_stype == kDefaultStorage) {
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFCompute);
+
+  if (in_stype == kDefaultStorage) {
+#if MXNET_USE_MKLDNN == 1
+    if (dev_mask == Context::kCPU && MKLDNNEnvSet()
+        && SupportMKLDNNSlice(param)) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, dispatch_ex);
+    }
+#endif
+    if (!dispatched) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
   }
 
   if (!dispatched && in_stype == kCSRStorage && trivial_step) {
@@ -2518,6 +2525,319 @@ void SpaceToDepthOpForward(const nnvm::NodeAttrs& attrs,
           block, size, offset_arr);
     });
   });
+}
+
+namespace split_enum {
+enum SplitOpInputs {kData};
+}  // namespace split_enum
+
+struct SplitParam : public dmlc::Parameter<SplitParam> {
+  TShape indices;
+  int axis;
+  bool squeeze_axis;
+  int sections;
+  DMLC_DECLARE_PARAMETER(SplitParam) {
+    DMLC_DECLARE_FIELD(indices)
+    .describe("Indices of splits. The elements should denote the boundaries of at which split"
+              " is performed along the `axis`.");
+    DMLC_DECLARE_FIELD(axis).set_default(1)
+    .describe("Axis along which to split.");
+    DMLC_DECLARE_FIELD(squeeze_axis).set_default(0)
+    .describe("If true, Removes the axis with length 1 from the shapes of the output arrays."
+              " **Note** that setting `squeeze_axis` to ``true`` removes axis with length 1"
+              " only along the `axis` which it is split."
+              " Also `squeeze_axis` can be set to ``true``"
+              " only if ``input.shape[axis] == num_outputs``.");
+    DMLC_DECLARE_FIELD(sections).set_default(0)
+    .describe("Number of sections if equally splitted. Default to 0 which means split by indices.");
+  }
+};  // struct SplitParam
+
+inline TShape GetSplitIndices(const TShape& ishape, int axis, int sections) {
+  TShape indices(sections+1);
+  indices[0] = 0;
+  int64_t section_size = ishape[axis] / sections;
+  for (int i = 0; i < sections; ++i) {
+    indices[i+1] = section_size * (i + 1);
+  }
+  return indices;
+}
+
+inline bool SplitOpType(const nnvm::NodeAttrs& attrs,
+                        std::vector<int>* in_attrs,
+                        std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  int dtype = (*in_attrs)[0];
+  CHECK_NE(dtype, -1) << "First input must have specified type";
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  out_attrs->clear();
+  int num_outputs = (param.sections > 0) ? param.sections : param.indices.ndim();
+  for (int i = 0; i < num_outputs; ++i) {
+    out_attrs->push_back(dtype);
+  }
+  return true;
+}
+
+inline bool SplitOpShape(const nnvm::NodeAttrs& attrs,
+                         std::vector<TShape>* in_attrs,
+                         std::vector<TShape>* out_attrs) {
+  using namespace mshadow;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 1U);
+  TShape dshape = in_attrs->at(split_enum::kData);
+  TShape ishape = in_attrs->at(split_enum::kData);
+  if (dshape.ndim() == 0) return false;
+  if (param.axis >= 0) {
+    CHECK_LT(static_cast<size_t>(param.axis), dshape.ndim());
+  } else {
+    CHECK_LT(param.axis + dshape.ndim(), dshape.ndim());
+  }
+  int real_axis = param.axis;
+  if (real_axis < 0) {
+    real_axis += dshape.ndim();
+  }
+  const TShape indices =
+    (param.sections > 0) ? GetSplitIndices(ishape, real_axis, param.sections) : param.indices;
+  int num_outputs = (param.sections > 0) ? indices.ndim() - 1 : indices.ndim();
+  // Pre-compute squeezed output shape for future usage
+  TShape squeezed_dshape = dshape;
+  for (int d = real_axis; d < static_cast<int>(squeezed_dshape.ndim()) - 1; ++d) {
+    squeezed_dshape[d] = squeezed_dshape[d+1];
+  }
+  squeezed_dshape = TShape(&squeezed_dshape[0], &squeezed_dshape[squeezed_dshape.ndim()-1]);
+  // Assign shape to every output
+  for (int i = 0; i < num_outputs; ++i) {
+    int start = indices[i];
+    int end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
+    CHECK(start < end)
+      << "start " << start << " is not less than end " << end << "for subarray " << i;
+    CHECK(end <= ishape[real_axis])
+      << "end " << end << " is no less than the size of the axis " << ishape[real_axis];
+    dshape[real_axis] = (end - start);
+    if (param.squeeze_axis) {
+      CHECK_EQ(end - start, 1U) << "expected axis size of 1 but got " << end - start;
+      SHAPE_ASSIGN_CHECK(*out_attrs, i, squeezed_dshape);
+    } else {
+      SHAPE_ASSIGN_CHECK(*out_attrs, i, dshape);
+    }
+  }
+  TShape back_calculate_dshape = ishape;
+  back_calculate_dshape[real_axis] = 0;
+  for (int d = 0; d < real_axis; ++d) {
+    back_calculate_dshape[d] = (*out_attrs)[0][d];
+  }
+  if (param.squeeze_axis) {
+    back_calculate_dshape[real_axis] = num_outputs;
+  } else {
+    for (int i = 0; i < num_outputs; ++i) {
+      back_calculate_dshape[real_axis] += (*out_attrs)[i][real_axis];
+    }
+  }
+  for (int d = real_axis + 1; d < static_cast<int>(ishape.ndim()); ++d) {
+    if (param.squeeze_axis) {
+      back_calculate_dshape[d] = (*out_attrs)[0][d - 1];
+    } else {
+      back_calculate_dshape[d] = (*out_attrs)[0][d];
+    }
+  }
+  SHAPE_ASSIGN_CHECK(*in_attrs, split_enum::kData, back_calculate_dshape);
+  return true;
+}
+
+struct SplitKernel {
+  /*!
+   * \brief Map function for forward split_v2 operator
+   * \param i              global thread id
+   * \param in_data        ptr to input buffer
+   * \param out_data       ptr to ptr of outputs buffer
+   * \param indices        ptr to indices buffer
+   * \param num_sections   # of sections after split
+   * \param axis_size      size of axis to be splitted on
+   * \param trailing_size  step size within the data buffer of the axis to be splitted on
+   */
+  template<typename DType>
+  static MSHADOW_XINLINE void Map(size_t i,
+                                  const DType *in_data, DType** out_data, const size_t* indices,
+                                  const size_t num_sections, const size_t axis_size,
+                                  const size_t trailing_size) {
+    size_t idx = i / trailing_size % axis_size;
+    size_t target = 0;
+    for (size_t section = 0;
+         section < num_sections && indices[section] <= idx;
+         target = section++) {}
+    DType* target_data = out_data[target];
+    const size_t mid_idx = idx - indices[target];
+    const size_t head_idx = i / (trailing_size * axis_size);
+    const size_t tail_idx = i % trailing_size;
+    const size_t section_size = indices[target + 1] - indices[target];
+    const size_t target_idx =
+      head_idx * trailing_size * section_size + mid_idx * trailing_size + tail_idx;
+    target_data[target_idx] = in_data[i];
+  }
+};
+
+struct ConcatenateKernel {
+  /*!
+   * \brief Map function for backward split_v2 operator
+   * \param i              global thread id
+   * \param out_grad       ptr to ptr of out grads buffer
+   * \param in_grad        ptr to input grad buffer
+   * \param indices        ptr to indices buffer
+   * \param num_sections   # of sections after split
+   * \param axis_size      size of axis to be splitted on
+   * \param trailing_size  step size within the data buffer of the axis to be splitted on
+   */
+  template<typename DType>
+  static MSHADOW_XINLINE void Map(size_t i,
+                                  DType** out_grad, DType* in_grad, const size_t* indices,
+                                  const size_t num_sections, const size_t axis_size,
+                                  const size_t trailing_size) {
+    size_t idx = i / trailing_size % axis_size;
+    size_t src = 0;
+    for (size_t section = 0;
+         section < num_sections && indices[section] <= idx;
+         src = section++) {}
+    DType* src_grad = out_grad[src];
+    const size_t mid_idx = idx - indices[src];
+    const size_t head_idx = i / (trailing_size * axis_size);
+    const size_t tail_idx = i % trailing_size;
+    const size_t section_size = indices[src + 1] - indices[src];
+    const size_t src_idx =
+      head_idx * trailing_size * section_size + mid_idx * trailing_size + tail_idx;
+    in_grad[i] = src_grad[src_idx];
+  }
+};
+
+template<typename xpu>
+inline void SplitOpForward(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), (param.sections > 0) ? param.sections : param.indices.ndim());
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& input_data = inputs[split_enum::kData];
+  size_t leading = 1, trailing = 1;
+  int real_axis = param.axis;
+  if (real_axis < 0) {
+    real_axis += input_data.ndim();
+  }
+  CHECK_LT(real_axis, input_data.ndim());
+  size_t mid = input_data.shape_[real_axis];
+  for (int i = 0; i < real_axis; ++i) {
+    leading *= input_data.shape_[i];
+  }
+  for (int i = real_axis + 1; i < input_data.ndim(); ++i) {
+    trailing *= input_data.shape_[i];
+  }
+
+  size_t workspace_size = 0;
+  const TShape& ishape = input_data.shape_;
+  const TShape split_pts =
+    (param.sections > 0) ? GetSplitIndices(ishape, real_axis, param.sections) : param.indices;
+  std::vector<size_t> indices;
+  for (const auto& section : split_pts) {
+    indices.push_back(section);
+  }
+  if (param.sections == 0) {
+    indices.push_back(ishape[real_axis]);
+  }
+  workspace_size += indices.size() * sizeof(size_t);
+  MSHADOW_TYPE_SWITCH(input_data.type_flag_, DType, {
+    std::vector<DType*> output_data;
+    for (const TBlob& data : outputs) {
+      output_data.push_back(data.dptr<DType>());
+    }
+    workspace_size += output_data.size() * sizeof(DType*);
+    Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+    Tensor<cpu, 1, size_t> indices_cpu_tensor(indices.data(), Shape1(indices.size()));
+    Tensor<xpu, 1, size_t> indices_xpu_tensor(
+      reinterpret_cast<size_t*>(workspace.dptr_), Shape1(indices.size()));
+    Tensor<cpu, 1, DType*> ptrs_cpu_tensor(output_data.data(), Shape1(output_data.size()));
+    Tensor<xpu, 1, DType*> ptrs_xpu_tensor(
+      reinterpret_cast<DType**>(workspace.dptr_ + indices.size() * sizeof(size_t)),
+      Shape1(output_data.size()));
+    mshadow::Copy(indices_xpu_tensor, indices_cpu_tensor, s);
+    mshadow::Copy(ptrs_xpu_tensor, ptrs_cpu_tensor, s);
+    Kernel<SplitKernel, xpu>::Launch(
+      s, input_data.Size(), input_data.dptr<DType>(), ptrs_xpu_tensor.dptr_,
+      indices_xpu_tensor.dptr_, indices.size() - 1, mid, trailing);
+  });
+}
+
+template<typename xpu>
+inline void SplitOpBackward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), (param.sections > 0) ? param.sections : param.indices.ndim())
+    << "out grad vector size mush match the output size";
+  CHECK_EQ(outputs.size(), 1U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  TBlob input_grad = outputs[split_enum::kData];
+  size_t leading = 1, trailing = 1;
+  int real_axis = param.axis;
+  if (real_axis < 0) {
+      real_axis += input_grad.ndim();
+  }
+  CHECK_LT(real_axis, input_grad.ndim());
+  size_t mid = input_grad.shape_[real_axis];
+  for (int i = 0; i < real_axis; ++i) {
+    leading *= input_grad.shape_[i];
+  }
+  for (int i = real_axis + 1; i < input_grad.ndim(); ++i) {
+    trailing *= input_grad.shape_[i];
+  }
+
+  size_t workspace_size = 0;
+  const TShape& ishape = input_grad.shape_;
+  const TShape split_pts =
+    (param.sections > 0) ? GetSplitIndices(ishape, real_axis, param.sections) : param.indices;
+  std::vector<size_t> indices;
+  for (const auto& section : split_pts) {
+    indices.push_back(section);
+  }
+  if (param.sections == 0) {
+    indices.push_back(ishape[real_axis]);
+  }
+  workspace_size += indices.size() * sizeof(size_t);
+  MSHADOW_TYPE_SWITCH(input_grad.type_flag_, DType, {
+    std::vector<DType*> out_grads;
+    for (const TBlob& output_grad : inputs) {
+      out_grads.push_back(output_grad.dptr<DType>());
+    }
+    workspace_size += out_grads.size() * sizeof(DType*);
+    Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+    Tensor<cpu, 1, size_t> indices_cpu_tensor(indices.data(), Shape1(indices.size()));
+    Tensor<xpu, 1, size_t> indices_xpu_tensor(
+      reinterpret_cast<size_t*>(workspace.dptr_), Shape1(indices.size()));
+    Tensor<cpu, 1, DType*> ptrs_cpu_tensor(out_grads.data(), Shape1(inputs.size()));
+    Tensor<xpu, 1, DType*> ptrs_xpu_tensor(
+      reinterpret_cast<DType**>(workspace.dptr_ + indices.size() * sizeof(size_t)),
+      Shape1(inputs.size()));
+    mshadow::Copy(indices_xpu_tensor, indices_cpu_tensor, s);
+    mshadow::Copy(ptrs_xpu_tensor, ptrs_cpu_tensor, s);
+    Kernel<ConcatenateKernel, xpu>::Launch(
+      s, input_grad.Size(), ptrs_xpu_tensor.dptr_, input_grad.dptr<DType>(),
+      indices_xpu_tensor.dptr_, indices.size() - 1, mid, trailing);
+  });
+}
+
+inline uint32_t SplitNumOutputs(const NodeAttrs& attrs) {
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  return (param.sections > 0) ? param.sections : param.indices.ndim();
 }
 
 }  // namespace op

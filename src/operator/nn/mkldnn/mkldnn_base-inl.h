@@ -174,11 +174,13 @@ struct ActivationParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
+struct SoftmaxOutputParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
 bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
+bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param);
 }  // namespace op
 
 static int GetTypeSize(int dtype) {
@@ -190,6 +192,9 @@ static int GetTypeSize(int dtype) {
 }
 
 static inline size_t GetArraySize(const NDArray &arr) {
+  if (arr.IsMKLDNNData()) {
+    return arr.GetMKLDNNData()->get_primitive_desc().get_size();
+  }
   return arr.shape().Size() * GetTypeSize(arr.dtype());
 }
 
@@ -238,26 +243,25 @@ static inline size_t GetMemDescSize(const mkldnn::memory::desc &md) {
   return ret;
 }
 
-inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
+inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int dtype = -1) {
+  int ndim = arr.shape().ndim();
   mkldnn::memory::dims dims(ndim);
+  dtype = (dtype == -1) ? arr.dtype() : dtype;
   for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
-  return mkldnn::memory::desc{dims, get_mkldnn_type(arr.dtype()),
-                              mkldnn::memory::format::any};
-}
-
-inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
-  return GetMemDesc(arr, arr.shape().ndim());
+  return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format::any};
 }
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
-                                                 int num_groups) {
-  auto ndim = arr.shape().ndim();
-  mkldnn::memory::dims tz = mkldnn::memory::dims{0};
+                                                 int num_groups,
+                                                 bool quantized = false) {
+  int dtype = quantized ? mshadow::kInt8 : arr.dtype();
   if (num_groups == 1) {
-    return GetMemDesc(arr);
+    return GetMemDesc(arr, dtype);
   } else {
+    auto ndim = arr.shape().ndim();
     CHECK((ndim == 3) || (ndim == 4))
         << "MKL-DNN weight currectly supports 3d and 4d layout";
+    auto tz = mkldnn::memory::dims{0};
     const int N = 0, H = 2, W = 3, C = 1;
     if (ndim == 3) {
       tz = mkldnn::memory::dims{
@@ -269,8 +273,7 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
           static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
           static_cast<int>(arr.shape()[W])};
     }
-    return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-                                mkldnn::memory::format::any};
+    return mkldnn::memory::desc{tz, get_mkldnn_type(dtype), mkldnn::memory::format::any};
   }
 }
 
@@ -446,6 +449,8 @@ static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
       out_arrs->push_back(arrs[i]);
   }
 }
+
+const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups);
 
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,

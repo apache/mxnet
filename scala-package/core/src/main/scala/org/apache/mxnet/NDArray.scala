@@ -28,6 +28,7 @@ import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.language.implicitConversions
 import scala.ref.WeakReference
+import scala.util.Try
 
 /**
   * NDArray Object extends from NDArrayBase for abstract function signatures
@@ -96,9 +97,11 @@ object NDArray extends NDArrayBase {
           case ndArr: Seq[NDArray @unchecked] =>
             if (ndArr.head.isInstanceOf[NDArray]) (ndArr.toArray, ndArr.toArray.map(_.handle))
             else throw new IllegalArgumentException(
-              "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
+              s"""Unsupported out ${output.getClass} type,
+                 | should be NDArray or subclass of Seq[NDArray]""".stripMargin)
           case _ => throw new IllegalArgumentException(
-            "Unsupported out var type, should be NDArray or subclass of Seq[NDArray]")
+            s"""Unsupported out ${output.getClass} type,
+               | should be NDArray or subclass of Seq[NDArray]""".stripMargin)
         }
       } else {
         (null, null)
@@ -510,6 +513,61 @@ object NDArray extends NDArrayBase {
   }
 
   /**
+    * Create a new NDArray based on the structure of source Array
+    * @param sourceArr Array[Array...Array[MX_PRIMITIVE_TYPE]...]
+    * @param ctx context like to pass in
+    * @return an NDArray with the same shape of the input
+    * @throws IllegalArgumentException if the data type is not valid
+    */
+  def toNDArray(sourceArr: Array[_], ctx : Context = null) : NDArray = {
+    val shape = shapeGetter(sourceArr)
+    val container = new Array[Any](shape.product)
+    flattenArray(sourceArr, container, 0, container.length - 1)
+    val finalArr = container(0) match {
+      case f: Float => array(container.map(_.asInstanceOf[Float]), Shape(shape), ctx)
+      case d: Double => array(container.map(_.asInstanceOf[Double]), Shape(shape), ctx)
+      case _ => throw new IllegalArgumentException(
+        s"Unsupported type ${container(0).getClass}, please check MX_PRIMITIVES for valid types")
+    }
+    finalArr
+  }
+
+  private def shapeGetter(sourceArr : Any) : ArrayBuffer[Int] = {
+    sourceArr match {
+        // e.g : Array[Double] the inner layer
+      case arr: Array[_] if MX_PRIMITIVES.isValidMxPrimitiveType(arr(0)) => {
+        ArrayBuffer[Int](arr.length)
+      }
+        // e.g : Array[Array...[]]
+      case arr: Array[_] => {
+        var arrBuffer = new ArrayBuffer[Int]()
+        if (!arr.isEmpty) arrBuffer = shapeGetter(arr(0))
+        for (idx <- arr.indices) {
+          require(arrBuffer == shapeGetter(arr(idx)))
+        }
+        arrBuffer.insert(0, arr.length)
+        arrBuffer
+      }
+      case _ => throw new IllegalArgumentException(s"Wrong type passed: ${sourceArr.getClass}")
+    }
+  }
+
+  private def flattenArray(sourceArr : Any, arr : Array[Any],
+                            start : Int, end : Int) : Unit = {
+    sourceArr match {
+      case arrValid: Array[_] if MX_PRIMITIVES.isValidMxPrimitiveType(arrValid(0)) => {
+        for (i <- arrValid.indices) arr(start + i) = arrValid(i)
+      }
+      case arrAny: Array[_] => {
+        val fragment = (end - start + 1) / arrAny.length
+        for (i <- arrAny.indices)
+          flattenArray(arrAny(i), arr, start + i * fragment, start + (i + 1) * fragment)
+      }
+      case _ => throw new IllegalArgumentException(s"Wrong type passed: ${sourceArr.getClass}")
+    }
+  }
+
+  /**
    * Returns evenly spaced values within a given interval.
    * Values are generated within the half-open interval [`start`, `stop`). In other
    * words, the interval includes `start` but excludes `stop`.
@@ -667,16 +725,18 @@ object NDArray extends NDArrayBase {
     genericNDArrayFunctionInvoke("_crop_assign", args, kwargs)
   }
 
-  // TODO: imdecode
 }
 
 /**
- * NDArray object in mxnet.
- * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
- * <b>
- * WARNING: it is your responsibility to clear this object through dispose().
- * </b>
- */
+  * NDArray object in mxnet.
+  * NDArray is basic ndarray/Tensor like data structure in mxnet. <br />
+  * <b>
+  * NOTE: NDArray is stored in native memory. Use NDArray in a try-with-resources() construct
+  * or a [[org.apache.mxnet.ResourceScope]] in a try-with-resource to have them
+  * automatically disposed. You can explicitly control the lifetime of NDArray
+  * by calling dispose manually. Failure to do this will result in leaking native memory.
+  * </b>
+  */
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true,
                              addToCollector: Boolean = true) extends NativeResource {
@@ -693,6 +753,11 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
+
+  private val lengthProperty = "mxnet.setNDArrayPrintLength"
+  private val layerProperty = "mxnet.setNDArrayPrintLayerLength"
+  private lazy val printLength = Try(System.getProperty(lengthProperty).toInt).getOrElse(1000)
+  private lazy val layerLength = Try(System.getProperty(layerProperty).toInt).getOrElse(10)
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -713,21 +778,22 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   /**
-   * Dispose all NDArrays who help to construct this array. <br />
-   * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
-   * @return this array
-   */
+    * Dispose all NDArrays who help to construct this array. <br />
+    * e.g. (a * b + c).disposeDeps() will dispose a, b, c (including their deps) and a * b
+    * @return this NDArray
+    */
   def disposeDeps(): NDArray = {
     disposeDepsExcept()
   }
 
   /**
-   * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
-   * e.g. (a * b + c).disposeDepsExcept(a, b)
-   * will dispose c and a * b.
-   * Note that a, b's dependencies will not be disposed either.
-   * @return this array
-   */
+    * Dispose all NDArrays who help to construct this array, excepts those in the arguments. <br />
+    * e.g. (a * b + c).disposeDepsExcept(a, b)
+    * will dispose c and a * b.
+    * Note that a, b's dependencies will not be disposed either.
+    * @param arrs array of NDArrays
+    * @return this array
+    */
   def disposeDepsExcept(arrs: NDArray*): NDArray = {
     if (dependencies != null) {
       val excepts = mutable.HashSet.empty[Long]
@@ -761,6 +827,56 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     require(source.length == size,
       s"array size (${source.length}) do not match the size of NDArray ($size)")
     checkCall(_LIB.mxFloat64NDArraySyncCopyFromCPU(handle, source, source.length))
+  }
+
+  /**
+    * Visualize the internal structure of NDArray
+    * @return String that show the structure
+    */
+  override def toString: String = {
+    val abstractND = buildStringHelper(this, this.shape.length)
+    val otherInfo = s"<NDArray ${this.shape} ${this.context} ${this.dtype}>"
+    s"$abstractND\n$otherInfo"
+  }
+
+  /**
+    * Helper function to create formatted NDArray output
+    * The NDArray will be represented in a reduced version if too large
+    * @param nd NDArray as the input
+    * @param totalSpace totalSpace of the lowest dimension
+    * @return String format of NDArray
+    */
+  private def buildStringHelper(nd : NDArray, totalSpace : Int) : String = {
+    var result = ""
+    val THRESHOLD = layerLength        // longest NDArray[NDArray[...]] to show in full
+    val ARRAYTHRESHOLD = printLength   // longest array to show in full
+    val shape = nd.shape
+    val space = totalSpace - shape.length
+    if (shape.length != 1) {
+      val (length, postfix) =
+        if (shape(0) > THRESHOLD) {
+          // reduced NDArray
+          (10, s"\n${" " * (space + 1)}... with length ${shape(0)}\n")
+        } else {
+          (shape(0), "")
+        }
+      for (num <- 0 until length) {
+        val output = buildStringHelper(nd.at(num), totalSpace)
+        result += s"$output\n"
+      }
+      result = s"${" " * space}[\n$result${" " * space}$postfix${" " * space}]"
+    } else {
+      if (shape(0) > ARRAYTHRESHOLD) {
+        // reduced Array
+        val front = nd.slice(0, 10)
+        val back = nd.slice(shape(0) - 10, shape(0) - 1)
+        result = s"""${" " * space}[${front.toArray.mkString(",")}
+             | ... ${back.toArray.mkString(",")}]""".stripMargin
+      } else {
+        result = s"${" " * space}[${nd.toArray.mkString(",")}]"
+      }
+    }
+    result
   }
 
   /**

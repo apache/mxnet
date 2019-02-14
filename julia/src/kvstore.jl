@@ -128,7 +128,7 @@ One can use ``barrier()`` to sync all workers.
 julia> kv = KVStore(:local)
 mx.KVStore @ local
 
-julia> x = mx.empty(2, 3);
+julia> x = NDArray(undef, 2, 3);
 
 julia> init!(kv, 3, x)
 
@@ -161,11 +161,11 @@ julia> x
 ```jldoctest
 julia> keys = [4, 5];
 
-julia> init!(kv, keys, [empty(2, 3), empty(2, 3)])
+julia> init!(kv, keys, [NDArray(undef, 2, 3), NDArray(undef, 2, 3)])
 
 julia> push!(kv, keys, [x, x])
 
-julia> y, z = empty(2, 3), empty(2, 3);
+julia> y, z = NDArray(undef, 2, 3), NDArray(undef, 2, 3);
 
 julia> pull!(kv, keys, [y, z])
 ```
@@ -279,7 +279,7 @@ julia> init!(kv, 42, mx.ones(2, 3))
 
 julia> push!(kv, 42, mx.ones(2, 3))
 
-julia> x = empty(2, 3);
+julia> x = NDArray(undef, 2, 3);
 
 julia> pull!(kv, 42, x)
 

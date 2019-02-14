@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # JVM Memory Management
 The Scala and Java bindings of Apache MXNet use native memory (memory from the C++ heap in either RAM or GPU memory) for most of the MXNet objects such as NDArray, Symbol, Executor, KVStore, Data Iterators, etc.
 The associated Scala classes act only as wrappers. The operations done on these wrapper objects are then directed to the high performance MXNet C++ backend via the Java Native Interface (JNI). Therefore, the bytes are stored in the C++ native heap which allows for fast access.

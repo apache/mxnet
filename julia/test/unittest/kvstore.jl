@@ -47,7 +47,7 @@ function test_single_kv_pair()
 
   kv = init_kv()
   mx.push!(kv, 3, mx.ones(SHAPE))
-  val = mx.empty(SHAPE)
+  val = NDArray(undef, SHAPE)
   mx.pull!(kv, 3, val)
   @test maximum(abs.(copy(val) .- 1)) == 0
 end

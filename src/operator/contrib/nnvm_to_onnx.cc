@@ -263,7 +263,7 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   AttributeProto* const kernel_shape = node_proto->add_attribute();
   kernel_shape->set_name("kernel_shape");
   kernel_shape->set_type(AttributeProto::INTS);
-  for (int kval : kernel) {
+  for (dim_t kval : kernel) {
     kernel_shape->add_ints(static_cast<int64>(kval));
   }
 
@@ -283,7 +283,7 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   AttributeProto* const strides = node_proto->add_attribute();
   strides->set_name("strides");
   strides->set_type(AttributeProto::INTS);
-  for (int kval : stride) {
+  for (dim_t kval : stride) {
     strides->add_ints(static_cast<int64>(kval));
   }
 

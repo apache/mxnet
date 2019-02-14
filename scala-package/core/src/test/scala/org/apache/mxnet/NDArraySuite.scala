@@ -22,9 +22,13 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import org.apache.mxnet.NDArrayConversions._
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.slf4j.LoggerFactory
+import scala.collection.mutable.ArrayBuffer
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
   private val sequence: AtomicInteger = new AtomicInteger(0)
+
+  private val logger = LoggerFactory.getLogger(classOf[NDArraySuite])
 
   test("to java array") {
     val ndarray = NDArray.zeros(2, 2)
@@ -83,6 +87,84 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     val ndarray = NDArray.empty(4, 1)
     ndarray.set(Array(1f, 2f, 3f, 4f))
     assert(ndarray.toArray === Array(1f, 2f, 3f, 4f))
+  }
+
+  test("create NDArray based on Java Matrix") {
+    def arrayGen(num : Any) : Array[Any] = {
+      val array = num match {
+        case f: Float =>
+          (for (_ <- 0 until 100) yield Array(1.0f, 1.0f, 1.0f, 1.0f)).toArray
+        case d: Double =>
+          (for (_ <- 0 until 100) yield Array(1.0d, 1.0d, 1.0d, 1.0d)).toArray
+        case _ => throw new IllegalArgumentException(s"Unsupported Type ${num.getClass}")
+      }
+      Array(
+        Array(
+          array
+        ),
+        Array(
+          array
+        )
+      )
+    }
+    val floatData = 1.0f
+    var nd = NDArray.toNDArray(arrayGen(floatData))
+    require(nd.shape == Shape(2, 1, 100, 4))
+    val arr2 = Array(1.0f, 1.0f, 1.0f, 1.0f)
+    nd = NDArray.toNDArray(arr2)
+    require(nd.shape == Shape(4))
+    val doubleData = 1.0d
+    nd = NDArray.toNDArray(arrayGen(doubleData))
+    require(nd.shape == Shape(2, 1, 100, 4))
+    require(nd.dtype == DType.Float64)
+  }
+
+  test("test Visualize") {
+    var nd = NDArray.ones(Shape(1, 2, 1000, 1))
+    var data : String =
+      """
+        |[
+        | [
+        |  [
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |
+        |   ... with length 1000
+        |  ]
+        |  [
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |   [1.0]
+        |
+        |   ... with length 1000
+        |  ]
+        |  ]
+        |]
+        |<NDArray (1,2,1000,1) cpu(0) float32>""".stripMargin
+    require(nd.toString.split("\\s+").mkString == data.split("\\s+").mkString)
+    nd = NDArray.ones(Shape(1, 4))
+    data =
+      """
+        |[
+        | [1.0,1.0,1.0,1.0]
+        |]
+        |<NDArray (1,4) cpu(0) float32>""".stripMargin
+    require(nd.toString.split("\\s+").mkString == data.split("\\s+").mkString)
   }
 
   test("plus") {

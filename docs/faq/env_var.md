@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Environment Variables
 =====================
 MXNet has several settings that you can change with environment variables.
@@ -145,6 +162,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
     when kvstore's type is `device`.
 
+* MXNET_UPDATE_ON_KVSTORE
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If true, weight updates are performed during the communication step, if possible.
+
 ## Memonger
 
 * MXNET_BACKWARD_DO_MIRROR
@@ -217,6 +238,31 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - The minimum size to call parallel copy by OpenMP in CPU2CPU mode.
   - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
   - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
+
+* MXNET_OPTIMIZER_AGGREGATION_SIZE
+  - Values: Int ```(default=4)```
+  - Maximum value is 60.
+  - This variable controls how many weights will be updated in a single call to optimizer (for optimizers that support aggregation, currently limited to SGD).
+
+* MXNET_CPU_TEMP_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many temporary memory resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_TEMP_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many temporary memory resources to create for each GPU context for use in operator.
+
+* MXNET_CPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many parallel random number generator resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many parallel random number generator resources to create for each GPU context for use in operator.
+
+* MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
 Settings for Minimum Memory Usage
 ---------------------------------

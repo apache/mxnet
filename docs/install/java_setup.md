@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Setup the MXNet Package for Java
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
@@ -85,6 +102,13 @@ Also, add the dependency which corresponds to your platform to the `dependencies
 The official Java Packages will be released with the release of MXNet 1.4 and will be available on  [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 <hr>
 
+### Eclipse IDE Support
+You can convert your existing Maven project to a project that can run in Eclipse by:
+```
+mvn eclipse:eclipse
+```
+This can be done once you have your maven project properly configured.
+
 ## Source
 
 The previously mentioned setup with Maven is recommended. Otherwise, the following instructions for macOS and Ubuntu are provided for reference only:
@@ -99,11 +123,10 @@ The previously mentioned setup with Maven is recommended. Otherwise, the followi
 
 
 #### Build Java from an Existing MXNet Installation
-If you have already built MXNet **from source** and are looking to setup Java from that point, you may simply run the following from the MXNet source root:
+If you have already built MXNet **from source** and are looking to setup Java from that point, you may simply run the following from the MXNet `scala-package` folder:
 
 ```
-make scalapkg
-make scalainstall
+mvn install
 ```
 This will install both the Java Inference API and the required MXNet-Scala package. 
 <hr>

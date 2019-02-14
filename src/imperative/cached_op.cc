@@ -285,12 +285,20 @@ bool CachedOp::SetForwardGraph(
   }
 
   bool match = true;
-  match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
+  bool contain_dynamic_shape = false;
+  match &= CheckAndInferShape(&g, std::move(shape_inputs), true,
+                              {0, 0}, {0, 0}, &contain_dynamic_shape);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
   exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
+  // When dynmaic shape exists, it is not feasible to plan memory ahead of time
+  if (contain_dynamic_shape) {
+    g.attrs.erase("forward_mem_plan");
+    g.attrs.erase("full_mem_plan");
+    return false;
+  }
   if (!match) {
     g.attrs.erase("forward_mem_plan");
     g.attrs.erase("full_mem_plan");
@@ -583,14 +591,11 @@ void CachedOp::StaticInitExec(
     }
 
     size_t bulk_size = idx.num_nodes();
-    std::unordered_set<uint32_t> excludes;
     if (recording || keep_fwd) {
       bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
-      for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
-      for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
     }
 
-    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
+    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size,
                       state.execs, skip_plus_node, &state.opr_segs);
   }
 
