@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-fnames <- list.files("R-package/vignettes/", pattern="*.Rmd")
-sapply(fnames, function(x){
-	knitr::purl(paste0("R-package/vignettes/", x))
-	})
+# Disable brew auto-update to avoid long running updates while running tests in CI.
+export HOMEBREW_NO_AUTO_UPDATE=1
+
+if [ ${TRAVIS_OS_NAME} == "osx" ]; then
+    brew install opencv
+    python -m pip install --user nose numpy cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
+fi
