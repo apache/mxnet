@@ -33,6 +33,7 @@ NNVM_REGISTER_OP(_contrib_allclose)
 .describe(R"code(This operators implements the numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)
 .. math::
     f(x) = |a−b|≤atol+rtol|b|
+
 where
 :math:`a, b` are the input tensors of equal types an shapes
 :math:`atol, rtol` the values of absolute and relative tolerance (by default, rtol=1e-05, atol=1e-08)
@@ -47,6 +48,7 @@ Examples::
   b = [1.00001e10, 1e-9]
   y = allclose(a, b)
   y = True
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<AllCloseParam>)
 .set_num_inputs(2)
