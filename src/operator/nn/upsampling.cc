@@ -56,10 +56,10 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
       CHECK_EQ(shape.ndim(), 4U) << \
         "UpSamplingNearest: Input data should be 4D in (batch, channel, y, x)";
       int oh = dshape[2]*scale_h, ow = dshape[3]*scale_w;
-      // CHECK_EQ(oh%shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2] << \
-      //   "does not divide output height of " << oh;
-      // CHECK_EQ(ow%shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3] << \
-      //   "does not divide output width of " << ow;
+      CHECK_EQ(oh%shape[2], 0U) << "UpSamplingNearest: input height of " << shape[2] << \
+        "does not divide output height of " << oh;
+      CHECK_EQ(ow%shape[3], 0U) << "UpSamplingNearest: input width of " << shape[3] << \
+        "does not divide output width of " << ow;
       if (param_.multi_input_mode == up_enum::kSum) {
         CHECK(oshape[1] == 0 || oshape[1] == shape[1]) << \
                          "Number of channels must be the same when multi_input_mode==sum";
