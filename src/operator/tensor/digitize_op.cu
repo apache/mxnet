@@ -21,10 +21,11 @@
 * Copyright (c) 2018 by Contributors
 * \file digitize_op.cu
 * \brief GPU Implementation of the digitize op
-* \author Contributors
+* \author Jose Luis Contreras, Anton Chernov and contributors
 */
 
 #include "./digitize_op.h"
+
 #include <thrust/binary_search.h>
 #include <thrust/distance.h>
 
@@ -44,18 +45,16 @@ struct ForwardKernel<gpu> {
                                   bool right) {
 
     const auto data = in_data[i];
-    const auto batch = i / batch_size;
+    const auto batch_index = static_cast<size_t>(i) / batch_size;
 
-    auto
-        elem = right ? thrust::lower_bound(bins + bins_length * batch,
-                                        bins + bins_length * (batch + 1),
-                                        data)
-                     : thrust::upper_bound(bins + bins_length * batch,
-                                        bins + bins_length * (batch + 1),
-                                        data);
+    const auto begin = bins + bins_length * batch_index;
+    const auto end = begin + bins_length;
 
-    auto index = thrust::distance(bins, elem);
-    out_data[i] = OType(index);
+    const auto elem = right ? thrust::lower_bound(begin, end, data)
+                            : thrust::upper_bound(begin, end, data);
+
+    const auto index = static_cast<uint64_t>(thrust::distance(begin, elem));
+    out_data[i] = static_cast<OType>(index);
   }
 };
 

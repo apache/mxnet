@@ -21,14 +21,12 @@
 * Copyright (c) 2018 by Contributors
 * \file digitize_op.cc
 * \brief
-* \author Contributors
+* \author Jose Luis Contreras, Anton Chernov and contributors
 */
 
 #include "./digitize_op.h"
 #include <mxnet/base.h>
 #include <vector>
-#include <algorithm>
-
 
 namespace mxnet {
 namespace op {
@@ -51,7 +49,8 @@ is closed, resulting in bins[i-1] <= x < bins[i].
   - X: K-dimensional data tensor to be quantized. Can have any arbitrary shape.
   - bins: N-dimensional tensor containing the bin edges. The first N-1 dimensions must be the
 same as those of the input data X. The last dimension corresponds to the vectors containing the
-bin edges. Within this last dimension, bins must be strictly monotonically increasing.
+bin edges. Within this last dimension, bins must be strictly monotonically increasing. Bins and
+data tensors must have the same type.
 
 .. Requirements:
  - (1 <= N <= K)

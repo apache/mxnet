@@ -21,6 +21,7 @@
  * Copyright (c) 2018 by Contributors
  * \file digitize_op.h
  * \brief Quantize operator a la numpy.digitize.
+ * \author Jose Luis Contreras, Anton Chernov and contributors
  */
 #ifndef MXNET_OPERATOR_TENSOR_DIGITIZE_H_
 #define MXNET_OPERATOR_TENSOR_DIGITIZE_H_
@@ -31,8 +32,8 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-
-
+#include <algorithm>
+#include <inttypes.h>
 
 namespace mxnet {
 namespace op {
@@ -55,7 +56,7 @@ struct DigitizeParam : public dmlc::Parameter<DigitizeParam> {
   }
 };
 
-inline bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
+bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
                 std::vector<TShape> *in_attrs,
                 std::vector<TShape> *out_attrs) {
   using namespace mshadow;
@@ -70,8 +71,8 @@ inline bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
   CHECK_GT(data_shape.ndim(), 0) << "Data shape undefined";
   CHECK_GT(bin_shape.ndim(), 0) << "Bin shape undefined";
 
-  CHECK_LE(bin_shape.ndim(), data_shape.ndim())
-    << "Bins tensor cannot have a higher dimension than input data";
+  CHECK_EQ(bin_shape.ndim(), data_shape.ndim())
+    << "Bins tensor nust have same number of dimensions than the input data";
 
   // Check if the first n-1 dims of data & bins are the same
   nnvm::dim_t *bin_shape_last = (bin_shape.end() - 1);
@@ -84,7 +85,7 @@ inline bool DigitizeOpShape(const nnvm::NodeAttrs &attrs,
 }
 
 
-inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
+bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
                            std::vector<int> *in_attrs,
                            std::vector<int> *out_attrs) {
   auto &data_type = (*in_attrs)[0];
@@ -93,14 +94,14 @@ inline bool DigitizeOpType(const nnvm::NodeAttrs &attrs,
   CHECK_NE(data_type, -1) << "Input data type undefined";
   CHECK_NE(bins_type, -1) << "Bins type undefined";
 
-  // Verify Have bins & data share the same type to simplify templating
+  // Verify that bins & data share the same type to simplify templating
   CHECK_EQ(data_type, bins_type);
 
   // Assign output_type the param
-  const int OType = nnvm::get<DigitizeParam>(attrs.parsed).otype;
-  if (OType == -1) { return false; }
+  const auto out_type = nnvm::get<DigitizeParam>(attrs.parsed).otype;
+  if (out_type == -1) { return false; }
 
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, OType);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, out_type);
 
   return true;
 }
@@ -131,33 +132,32 @@ struct ForwardKernel<cpu> {
                                   bool right) {
 
     const auto data = in_data[i];
-    const auto batch = i / batch_size;
+    const auto batch_index = static_cast<size_t>(i) / batch_size;
 
-    auto elem = right ? std::lower_bound(bins + bins_length * batch,
-                                         bins + bins_length * (batch + 1),
-                                         data)
-                      : std::upper_bound(bins + bins_length * batch,
-                                         bins + bins_length * (batch + 1),
-                                         data);
+    const auto begin = bins + bins_length * batch_index;
+    const auto end = begin + bins_length;
 
-    auto index = std::distance(bins, elem);
-    out_data[i] = OType(index);
+    const auto elem = right ? std::lower_bound(begin, end, data)
+                            : std::upper_bound(begin, end, data);
+
+    const auto index = static_cast<uint64_t>(std::distance(begin, elem));
+    out_data[i] = static_cast<OType>(index);
   }
 };
 
 
 template<typename DType>
-struct CheckMonotonic {
+struct CheckMonotonicKernel {
   static MSHADOW_XINLINE void Map(int i, int bins_length, DType *bins, bool* mono) {
-    if ((i + 1) % bins_length != 0) {
-      if(bins[i] >= bins[i + 1]){
-        *mono = false;
-      }
+    if ((i + 1) % bins_length == 0) {
+      return;
+    }
+
+    if (bins[i] >= bins[i + 1]) {
+      *mono = false;
     }
   }
 };
-
-
 
 template<typename xpu>
 void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
@@ -176,23 +176,26 @@ void DigitizeOpForward(const nnvm::NodeAttrs &attrs,
 
     // Verify bins is strictly monotonic
     bool mono = true;
-    auto bins_length = bins.shape_[bins.ndim() - 1];
-    mxnet_op::Kernel<CheckMonotonic<DType>, xpu>::Launch(s, bins.Size(), bins_length,
-                                                         bins.dptr<DType>(), &mono);
+    const auto bins_length = bins.shape_[bins.ndim() - 1];
+    mxnet_op::Kernel<CheckMonotonicKernel<DType>, xpu>::Launch(s,
+                                                         bins.Size(),
+                                                         bins_length,
+                                                         bins.dptr<DType>(),
+                                                         &mono);
+
     CHECK(mono) << "Bins vector is not strictly monotonic and increasing";
 
-
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-        auto batch_size = data.shape_.ProdShape(bins.ndim() - 1, data.ndim());
+      const auto batch_size = data.shape_[data.ndim() - 1];
 
-        mxnet_op::Kernel<ForwardKernel<xpu>, xpu>::Launch(s,
-        outputs[0].Size(),
-        data.dptr<DType>(),
-        outputs[0].dptr<OType>(),
-        bins.dptr<DType>(),
-        batch_size,
-        bins_length,
-        right);
+      mxnet_op::Kernel<ForwardKernel<xpu>, xpu>::Launch(s,
+          outputs[0].Size(),
+          data.dptr<DType>(),
+          outputs[0].dptr<OType>(),
+          bins.dptr<DType>(),
+          batch_size,
+          bins_length,
+          right);
     });
   });
 }
