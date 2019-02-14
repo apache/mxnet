@@ -1,7 +1,6 @@
 # Superresolution
 
-This example trains a convolutional neural network to enhance the resolution of images (also known as superresolution). The network has the following layout:
-
+This example trains a convolutional neural network to enhance the resolution of images (also known as superresolution). 
 The script takes the following commandline arguments:
 
 ```

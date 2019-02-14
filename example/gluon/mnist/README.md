@@ -1,7 +1,7 @@
 # MNIST classification example
 
 This script shows a simple example how to do image classification with Gluon. 
-The model is trained on MNIST digits image dataset and the goal is to classify the digits ```0-10```.  The model has the following layout:
+The model is trained on MNIST digits image dataset and the goal is to classify the digits ```0-9```.  The model has the following layout:
 ```
 net = nn.Sequential()
 with net.name_scope():
