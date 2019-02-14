@@ -22,8 +22,8 @@
 """runtime querying of compile time features in the native library"""
 
 import ctypes
-from .base import _LIB, check_call
 import collections
+from .base import _LIB, check_call
 
 class Feature(ctypes.Structure):
     """
