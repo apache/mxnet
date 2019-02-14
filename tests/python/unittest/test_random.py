@@ -613,6 +613,7 @@ def test_negative_binomial_generator():
         verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
 
 @with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14158")
 def test_multinomial_generator():
     # This test fails with dtype float16 if the probabilities themselves cannot be
     # well-represented in float16.  When the float16 random picks are assigned to buckets,
