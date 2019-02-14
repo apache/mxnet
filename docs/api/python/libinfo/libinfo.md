@@ -35,8 +35,9 @@ In [6]:
 .. autosummary::
     :nosignatures:
 
-    LibFeature
-    libinfo_features
+    Features
+    Feature
+    feature_list
 ```
 
 ## API Reference
