@@ -39,5 +39,5 @@ python actor_critic.py --render
 ```
 
 You will get an output like the following:
-![](actor_critic.gif)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gluon/actor_critic/actor_critic.gif)
 

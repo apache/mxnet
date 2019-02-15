@@ -30,8 +30,9 @@ optional arguments:
 
 After one epoch we get the following output vector for the given test image:
 
-<img src="test_image.png" width="250" height="250">
+<img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gluon/mnist/test_image.png" width="250" height="250">
 
 [-5.461655  -4.745     -1.8203478 -0.5705207  8.923972  -2.2358544 -3.3020825 -2.409004   4.0074944 10.362008] 
 
+As we can see the highest activation is 10.362 which corresponds to label `9`.
 

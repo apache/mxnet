@@ -7,7 +7,7 @@ A Generative Adversarial Model simultaneously trains two models: a generator tha
 
 The CGAN is a conditional variation of the GAN where the generator is instructed to generate a real sample having specific characteristics rather than a generic sample from full distribution. Such condition could be the label associated with an image like in this tutorial or a more detailed tag as shown in the example below:
 
-![Image credit: (Scott Reed)[https://github.com/reedscot/icml2016]](images/dcgan_network.jpg)
+![Image credit: (Scott Reed)[https://github.com/reedscot/icml2016]](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gan/CGAN_mnist_R/dcgan_network.jpg)
 
 ## Initial setup
 
@@ -27,7 +27,7 @@ The full demo is comprised of the two following scripts:
 
 ## Data preperation
 
-The MNIST dataset is available on Kaggle. Once train.csv is downloaded into the data/ folder, we can import into R.
+The MNIST dataset is available [here](https://www.kaggle.com/c/digit-recognizer/data)). Once train.csv is downloaded into the data/ folder, we can import into R.
 
 ```train <- read_csv('data/train.csv')
 train <- data.matrix(train)
@@ -117,15 +117,15 @@ Below are samples obtained at different stage of the training.
 
 Starting from noise:
 
-![](images/CGAN_1.png)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gan/CGAN_mnist_R/CGAN_1.png)
 
 Slowly getting it - iteration 200:
 
-![](images/CGAN_200.png)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gan/CGAN_mnist_R/CGAN_200.png)
 
 Generate specified digit images on demand - iteration 2400:
 
-![](images/CGAN_2400.png)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gan/CGAN_mnist_R/CGAN_2400.png)
 
 ## Inference
 
@@ -144,7 +144,7 @@ mx.exec.update.aux.arrays(exec_G, G_aux_params, match.name=TRUE)
 
 mx.exec.forward(exec_G, is.train=F)
 ```
-![](images/CGAN_infer_9)
+![](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/gan/CGAN_mnist_R/CGAN_infer_9.png)
 
 Further details of the CGAN methodology can be found in the paper [Generative Adversarial Text to Image Synthesis](https://arxiv.org/abs/1605.05396).
 
