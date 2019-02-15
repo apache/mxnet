@@ -21,14 +21,16 @@
 
 ---
 
-Gluon implementation of [LipNet: End-to-End Sentence-level Lipreading](https://arxiv.org/abs/1611.01599)
+This is a Gluon implementation of [LipNet: End-to-End Sentence-level Lipreading](https://arxiv.org/abs/1611.01599)
 
 ![net_structure](asset/network_structure.png)
 
+![sample output](https://user-images.githubusercontent.com/11376047/52533982-d7227680-2d7e-11e9-9f18-c15b952faf0e.png)
+
 ## Requirements
 - Python 3.6.4
-- MXnet 1.3.0
-- The Required Disk Space: 35Gb
+- MXNet 1.3.0
+- Required disk space: 35 GB
 ```
 pip install -r requirements.txt
 ```
@@ -37,18 +39,58 @@ pip install -r requirements.txt
 
 ## The Data
 - The GRID audiovisual sentence corpus (http://spandh.dcs.shef.ac.uk/gridcorpus/)
-  - GRID is a large multitalker audiovisual sentence corpus to support joint computational-behavioral studies in speech perception. In brief, the corpus consists of high-quality audio and video (facial) recordings of 1000 sentences spoken by each of 34 talkers (18 male, 16 female). Sentences are of the form "put red at G9 now". The corpus, together with transcriptions, is freely available for research use.
+  - GRID is a large multi-talker audiovisual sentence corpus to support joint computational-behavioral studies in speech perception. In brief, the corpus consists of high-quality audio and video (facial) recordings of 1000 sentences spoken by each of 34 talkers (18 male, 16 female). Sentences are of the form "put red at G9 now". The corpus, together with transcriptions, is freely available for research use.
 - Video: (normal)(480 M each)
   - Each movie has one sentence consist of 6 words.
-- Align: word alignments(190 K each) 
+- Align: word alignments (190 K each)
   - One align has 6 words. Each word has start time and end time. But this tutorial needs just sentence because of using ctc-loss.
- 
+
 ---
 
+## Pretrained model
+You can train the model yourself in the following sections, you can test a pretrained model's inference, or resume training from the model checkpoint. To work with the provided pretrained model, first download it, then run one of the provided Python scripts for inference (infer.py) or training (main.py).
+
+* Download the [pretrained model](https://github.com/soeque1/temp_files/files/2848870/epoches_81_loss_15.7157.zip)
+* Try inference with the following:
+
+```
+python infer.py model_path='checkpoint/epoches_81_loss_15.7157'
+```
+
+* Resume training with the following:
+
+```
+python main.py model_path='checkpoint/epoches_81_loss_15.7157'
+```
+
 ## Prepare the Data
-### (1) Download the data
+
+You can prepare the data yourself, or you can download preprocessed data.
+
+### Option 1 - Download the preprocessed data
+
+There are two download routes provided for the preprocessed data.
+
+#### Download and untar the data
+To download tar zipped files by link, download the following files and extract in a folder called `data` in the root of this example folder. You should have the following structure:
+```
+/lipnet/data/align
+/lipnet/data/datasets
+```
+
+* [align files](https://mxnet-public.s3.amazonaws.com/lipnet/data-archives/align.tgz)
+* [datasets files](https://mxnet-public.s3.amazonaws.com/lipnet/data-archives/datasets.tgz)
+
+#### Use AWS CLI to sync the data
+To get the folders and files all unzipped with AWS CLI, can use the following command. This will provide the folder structure for you. Run this command from `/lipnet/`:
+
+```
+ aws s3 sync s3://mxnet-public/lipnet/data .
+```
+
+### Option 2 (part 1)- Download the raw dataset
 - Outputs
-  - The Total Moives(mp4): 16GB
+  - The Total Movies(mp4): 16GB
   - The Total Aligns(text): 134MB
 - Arguments
   - src_path : Path for videos (default='./data/mp4s/')
@@ -59,17 +101,17 @@ pip install -r requirements.txt
 cd ./utils && python download_data.py --n_process=$(nproc)
 ```
 
-### (2) Preprocess the Data: Extracting the mouth images from a video and save it.
+### Option 2 (part 2) Preprocess the raw dataset: Extracting the mouth images from a video and save it
 
 * Using Face Landmark Detection(http://dlib.net/)
 
 #### Preprocess (preprocess_data.py)
-*  If there is no landmark, it download automatically.  
-*  Using Face Landmark Detection, It extract the mouth from a video.  
+*  If there is no landmark, it download automatically.
+*  Using Face Landmark Detection, It extract the mouth from a video.
 
-- example: 
+- example:
  - video: ./data/mp4s/s2/bbbf7p.mpg
- - align(target): ./data/align/s2/bbbf7p.align  
+ - align(target): ./data/align/s2/bbbf7p.align
      : 'sil bin blue by f seven please sil'
 
 
@@ -85,11 +127,11 @@ Frame 0            |  Frame 1 | ... | Frame 74 |
 :-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
 ![](asset/mouth_000.png)  |  ![](asset/mouth_001.png) |  ...  |  ![](asset/mouth_074.png)
 
-* Save the result images into tgt_path.  
+* Save the result images into tgt_path.
 
 ----
 
-### How to run
+#### How to run the preprocess script
 
 - Arguments
   - src_path : Path for videos (default='./data/mp4s/')
@@ -103,16 +145,16 @@ Frame 0            |  Frame 1 | ... | Frame 74 |
   - If you use the multi-processes, you can finish the number of processes faster.
     - e.g) 9 hours using 6 processes
 
-You can run the preprocessing with just one processor, but this will take a long time (>48 hours). To use all of the available processors, use the following command: 
+You can run the preprocessing with just one processor, but this will take a long time (>48 hours). To use all of the available processors, use the following command:
 
 ```
 cd ./utils && python preprocess_data.py --n_process=$(nproc)
 ```
 
-## Output: Data Structure
+#### Output: Data structure of the preprocessed data
 
 ```
-The training data folder should look like : 
+The training data folder should look like :
 <train_data_root>
                 |--datasets
                         |--s1
@@ -136,10 +178,11 @@ The training data folder should look like :
 ---
 
 ## Training
+After you have acquired the preprocessed data you are ready to train the lipnet model.
 
 - According to [LipNet: End-to-End Sentence-level Lipreading](https://arxiv.org/abs/1611.01599), four (S1, S2, S20, S22) of the 34 subjects are used for evaluation.
  The other subjects are used for training.
- 
+
 - To use the multi-gpu, it is recommended to make the batch size $(num_gpus) times larger.
 
   - e.g) 1-gpu and 128 batch_size > 2-gpus 256 batch_size
@@ -153,8 +196,8 @@ The training data folder should look like :
   - dr_rate : Dropout rate(default=0.5)
   - num_gpus : Num of gpus (if num_gpus is 0, then use cpu) (default=1)
   - num_workers : Num of workers when generating data (default=0)
-  - model_path : Path of pretrained model (defalut=None)
-  
+  - model_path : Path of pretrained model (default=None)
+
 ```
 python main.py
 ```
@@ -179,8 +222,8 @@ python main.py
   - num_gpus : Num of gpus (if num_gpus is 0, then use cpu) (default=1)
   - num_workers : Num of workers when generating data (default=0)
   - data_type : 'train' or 'valid' (defalut='valid')
-  - model_path : Path of pretrained model (defalut=None)
-    
+  - model_path : Path of pretrained model (default=None)
+
 ```
 python infer.py --model_path=$(model_path)
 ```
@@ -197,7 +240,7 @@ python infer.py --model_path=$(model_path)
  'bin blue with e one now',
  'lay red at j nine now']
  ```
- 
+
  ```
 [Pred]
 ['lay green with s zero again',
@@ -209,5 +252,3 @@ python infer.py --model_path=$(model_path)
  'bin blue with m one now',
  'lay red at j nine now']
  ```
-  
-
