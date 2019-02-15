@@ -25,7 +25,7 @@
 	url = https://github.com/dmlc/cub
 [submodule "3rdparty/tvm"]
 	path = 3rdparty/tvm
-	url = https://github.com/dmlc/tvm
+	url = https://github.com/ptrendx/tvm
 [submodule "3rdparty/onnx-tensorrt"]
 	path = 3rdparty/onnx-tensorrt
 	url = https://github.com/onnx/onnx-tensorrt.git

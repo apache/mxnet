@@ -19,23 +19,26 @@
 """Functions for enabling AMP (automatic mixed precision)."""
 __all__ = ['init']
 
+import logging
+import contextlib
 import numpy as np
+from types import MethodType
+from functools import partial
 
 from .. import symbol
 from ..symbol import Symbol
 from .. import ndarray
 from ..ndarray import NDArray
 from . import lists
+from ..gluon import trainer
+from .. import optimizer as opt
+from .loss_scaler import *
 
 def _cast_symbol_NDArray(s, dtype):
-    print("Trying to cast... " + str(type(s)))
     if isinstance(s, Symbol):
-        print("Encountered symbol, casting to " + str(dtype))
         return symbol.amp_cast(s, dtype=dtype)
     elif isinstance(s, NDArray):
-        print("Encountered NDArray, with dtype = " + str(s.dtype))
         if s.dtype != dtype and (s.dtype == np.float16 or s.dtype == np.float32):
-            print("Casting to " + str(dtype))
             return ndarray.amp_cast(s, dtype=dtype)
         else:
             return s
@@ -43,26 +46,37 @@ def _cast_symbol_NDArray(s, dtype):
         return s
 
 def _wrap_symbol_functions(module):
-    def _symbol_wrapper(f, target_dtype, cond_arg=None):
+    def _ndarray_wrapper(f, target_dtype, cond_arg=None):
         def _new_fun(*args, **kwargs):
-            print("Wrapper of " + f.__name__ + " to " + str(target_dtype))
-            print("Cond_arg: " + str(cond_arg))
             if cond_arg is not None:
                 if (cond_arg[0] not in kwargs or
                         kwargs[cond_arg[0]] not in cond_arg[1]):
-                    print("No match for " + str(cond_arg))
                     return f(*args, **kwargs)
-            print("Casting *args")
             new_args = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype), args))
             args = tuple(new_args)
-            print("Casting **kwargs")
             kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
             return f(*args, **kwargs)
         return _new_fun
 
+    def _symbol_wrapper(f, target_dtype, cond_arg=None):
+        def _new_fun(*args, **kwargs):
+            if cond_arg is not None:
+                if (cond_arg[0] not in kwargs or
+                        kwargs[cond_arg[0]] not in cond_arg[1]):
+                    return f(*args, **kwargs)
+            sym = f(*args, **kwargs)
+            attr = sym.list_attr()
+            inputs = sym.get_children()
+            wrapped_sym = f(**attr)
+            inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype), inputs))
+            wrapped_sym_argnames = wrapped_sym.list_arguments()
+            wrapped_sym._compose(**dict(zip(wrapped_sym_argnames, inputs)))
+            wrapped_sym._set_attr(name=sym.name)
+            return wrapped_sym
+        return _new_fun
+
     def _symbol_widest_wrapper(f):
         def _new_fun(*args, **kwargs):
-            print("Wrapper of " + f.__name__ + " to widest type")
             symbols = []
             is_symbol = False
             args = list(args)
@@ -96,46 +110,134 @@ def _wrap_symbol_functions(module):
             return f(*args, **kwargs)
         return _new_fun
 
+    _wrapper = _symbol_wrapper if module in (symbol, Symbol) else _ndarray_wrapper
+
     for fun_name in lists.symbol.FP16_FUNCS:
-        print("Wrapping fp16 func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _symbol_wrapper(f_to_wrap, np.float16))
+            setattr(module, fun_name, _wrapper(f_to_wrap, np.float16))
         except AttributeError:
-            print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
 
     for fun_name in lists.symbol.FP32_FUNCS:
-        print("Wrapping fp32 func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _symbol_wrapper(f_to_wrap, np.float32))
+            setattr(module, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
-            print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
 
     for fun_name, arg, arg_values in lists.symbol.CONDITIONAL_FP32_FUNCS:
-        print("Wrapping fp32 func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
-            setattr(module, fun_name, _symbol_wrapper(f_to_wrap, np.float32, (arg, arg_values)))
+            setattr(module, fun_name, _wrapper(f_to_wrap, np.float32, (arg, arg_values)))
         except AttributeError:
-            print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
 
     for fun_name in lists.symbol.WIDEST_TYPE_CASTS:
-        print("Wrapping widest cast func " + fun_name + " in " + module.__name__)
         try:
             f_to_wrap = getattr(module, fun_name)
             setattr(module, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
-            print("Function " + fun_name + " does not exist in " + module.__name__ + ".")
             pass
+
+def __call__(self, index, grad, weight):
+    """Updates weight given gradient and index."""
+    if not isinstance(index, (list, tuple)):
+        indices = [index]
+        grads = [grad]
+        weights = [weight]
+    else:
+        indices = index
+        grads = grad
+        weights = weight
+    for i, idx in enumerate(indices):
+        # convert ctypes.char_p.value back to python str if needed
+        if isinstance(idx, bytes):
+            indices[i] = py_str(idx)
+            idx = indices[i]
+        if idx not in self.states:
+            self.states[idx] = self.optimizer.create_state_multi_precision(idx, weights[i])
+            self.states_synced[idx] = True
+        elif not self.states_synced[idx]:
+            self.states[idx] = \
+                self.sync_state_context(self.states[idx], weights[i].context)
+            self.states_synced[idx] = True
+    if self.aggregate_updates:
+        # segregate values based on type
+        type_map = {}
+        for i, w, g in zip(indices, weights, grads):
+            if w.dtype in type_map:
+                type_map[w.dtype].append((i, w, g))
+            else:
+                type_map[w.dtype] = [(i, w, g)]
+        for idx in type_map:
+            current_index = 0
+            indices, weights, grads = zip(*type_map[idx])
+            while current_index < len(indices):
+                states = []
+                step = min(self.optimizer.aggregate_num, len(indices) - current_index)
+                for j in range(step):
+                    states.append(self.states[indices[current_index + j]])
+                loss.wait_and_update()
+                self.optimizer.update_multi_precision(
+                    indices[current_index:current_index + self.optimizer.aggregate_num],
+                    weights[current_index:current_index + self.optimizer.aggregate_num],
+                    grads[current_index:current_index + self.optimizer.aggregate_num],
+                    states)
+                current_index += self.optimizer.aggregate_num
+    else:
+        for i, w, g in zip(indices, weights, grads):
+            self.optimizer.update_multi_precision(i, w, g, self.states[i])
+
 
 class AMPHandle(object):
     def __init__(self):
         super(AMPHandle, self).__init__()
-        self.loss_scale = 128.0
+        self._loss_scaler = LossScaler()
+
+    @contextlib.contextmanager
+    def scale_loss(self, loss, optimizer_or_trainer, params=None):
+        optimizer_or_trainer._scale = 1. / self._loss_scaler.loss_scale
+        if isinstance(loss, list):
+            yield [l * self._loss_scaler.loss_scale for l in loss]
+        else:
+            yield self._loss_scaler.loss_scale * loss
+        if isinstance(optimizer_or_trainer, trainer.Trainer):
+            assert params == None, "optimizer_or_trainer is a trainer so params should be None."
+            skip_update = self._loss_scaler.wait_and_update
+            optimizer_or_trainer._optimizer.old_update_multi_precision = optimizer_or_trainer._optimizer.update_multi_precision
+            def new_update_multi_precision(self, index, weight, grad, state):
+                if not skip_update():
+                    self.old_update_multi_precision(index, weight, grad, state)
+            optimizer_or_trainer._optimizer.update_multi_precision = MethodType(new_update_multi_precision, optimizer_or_trainer._optimizer)
+            launch_check_overflow = self._loss_scaler.launch_check_overflow
+            optimizer_or_trainer._old_update = optimizer_or_trainer._update
+            def new_update(self, ignore_stale_grad=False):
+                launch_check_overflow(self._params)
+                self._old_update(ignore_stale_grad)
+                self._optimizer.update_multi_precision = self._optimizer.old_update_multi_precision
+                self._update = self._old_update
+            optimizer_or_trainer._update = MethodType(new_update, optimizer_or_trainer)
+
+        elif isinstance(optimizer_or_trainer, opt.Optimizer):
+            assert params == None, "optimizer_or_trainer is an optimizer so params should be None."
+            raise TypeError("only compatible with trainer")
+            if self._loss_scaler.update(list(optimizer_or_trainer.param_dict.values())):
+                pass
+                # TODO(cfujitsang): What is function called with optimizer ? 
+            else:
+                # TODO(cfujitsang): Check why changing the scale can be a problem with kv_store
+                #self._loss_scaler._check_and_rescale_grad
+                optimizer_or_trainer._rescale_grad = self._loss_scaler.loss_scale()
+        # TODO(cfujitsang): but not important because unlikely to be used
+        #elif hasattr(optimizer_or_trainer, '__call__'):
+        #    assert isinstance(params, dict), "optimizer_or_trainer is a function "
+        #                                     "so params should be defined."
+        #    raise NotImplementedError()
+        else:
+            raise TypeError("optimizer_or_trainer should be a trainer, "
+                            "an optimizer or a function, instead is %s" %
+                            type(optimizer_or_trainer))
 
 def init():
     print("AMP init!")
