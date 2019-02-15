@@ -255,12 +255,11 @@ function set_instruction_set() {
 # $ git clone --recursive https://github.com/apache/incubator-mxnet 
 # $ cd incubator-mxnet 
 # if these commands get executed in the jenkins job, we will be testing the build from source instructions
-# against the master branch and not against the version of the repository that Jenkins checksout for testing.
+# against the master branch and not against the version of the repository that Jenkins checks out for testing.
 # This presents a particularly big problem for the version branches and their nightly builds. Because, 
 # we would, in effect, be testing the build from source instructions for one version of MXNet against
 # the master branch.
-# in this function we target the commands cited in the example above, but leave it open for expantion
-# in the future.
+# in this function we target the commands cited in the example above.
 # See also gh issue: https://github.com/apache/incubator-mxnet/issues/13800
 function filter_build_commands() {
     filtered_build_commands="${1}"
