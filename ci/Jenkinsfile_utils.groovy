@@ -188,7 +188,8 @@ def update_github_commit_status(state, message) {
 
     step([
       $class: 'GitHubCommitStatusSetter',
-      reposSource: [$class: "ManuallyEnteredRepositorySource", url: repoUrl],
+      // reposSource: [$class: "ManuallyEnteredRepositorySource", url: 'absolute garbage'],
+      reposSource: [$class: "AnyDefinedRepositorySource"],
       contextSource: [$class: "ManuallyEnteredCommitContextSource", context: context],
       commitShaSource: [$class: "ManuallyEnteredShaSource", sha: commitSha],
       statusBackrefSource: [$class: "ManuallyEnteredBackrefSource", backref: "${env.RUN_DISPLAY_URL}"],
