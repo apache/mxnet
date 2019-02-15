@@ -368,17 +368,13 @@ NNVM_REGISTER_OP(Pooling)
 
 The shapes for 1-D pooling are
 
-- **data**: *(batch_size, channel, width)* (NCW layout) or
-  *(batch_size, width, channel)* (NWC layout, cuDNN only),
-- **out**: *(batch_size, num_filter, out_width)* (NCW layout) or
-  *(batch_size, width, channel)* (NWC layout, cuDNN only).
+- **data** and **out**: *(batch_size, channel, width)* (NCW layout) or
+  *(batch_size, width, channel)* (NWC layout),
 
 The shapes for 2-D pooling are
 
-- **data**: *(batch_size, channel, height, width)* (NCHW layout) pr
-  *(batch_size, height, width, channel)* (NHWC layout, cuDNN only),
-- **out**: *(batch_size, num_filter, out_height, out_width)* (NCHW layout) or
-  *(batch_size, out_height, out_width, num_filter)* (NHWC layout, cuDNN only), with::
+- **data** and **out**: *(batch_size, channel, height, width)* (NCHW layout) or
+  *(batch_size, height, width, channel)* (NHWC layout),
 
     out_height = f(height, kernel[0], pad[0], stride[0])
     out_width = f(width, kernel[1], pad[1], stride[1])
@@ -404,9 +400,8 @@ Three pooling options are supported by ``pool_type``:
 - **lp**: Lp pooling
 
 For 3-D pooling, an additional *depth* dimension is added before
-*height*. Namely the input data will have shape *(batch_size, channel, depth,
-height, width)* (NCDHW) or *(batch_size, depth, height, width, channel)* (NDHWC,
-cuDNN only).
+*height*. Namely the input data and output will have shape *(batch_size, channel, depth,
+height, width)* (NCDHW layout) or *(batch_size, depth, height, width, channel)* (NDHWC layout).
 
 Notes on Lp pooling:
 
