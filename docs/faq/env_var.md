@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Environment Variables
 =====================
 MXNet has several settings that you can change with environment variables.
@@ -226,6 +243,26 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - Values: Int ```(default=4)```
   - Maximum value is 60.
   - This variable controls how many weights will be updated in a single call to optimizer (for optimizers that support aggregation, currently limited to SGD).
+
+* MXNET_CPU_TEMP_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many temporary memory resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_TEMP_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many temporary memory resources to create for each GPU context for use in operator.
+
+* MXNET_CPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many parallel random number generator resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many parallel random number generator resources to create for each GPU context for use in operator.
+
+* MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
 
 Settings for Minimum Memory Usage
 ---------------------------------

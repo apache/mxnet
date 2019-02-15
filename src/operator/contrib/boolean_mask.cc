@@ -98,6 +98,8 @@ which stands for the rows in x where the corresonding element in index is non-ze
 .set_attr<FComputeEx>("FComputeEx<cpu>", BooleanMaskForward<cpu>)
 .set_attr<FInferStorageType>("FInferStorageType", BooleanMaskStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_contrib_boolean_mask"})
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data", "index"};})
 .add_argument("data", "NDArray-or-Symbol", "Data")
 .add_argument("index", "NDArray-or-Symbol", "Mask")
 .add_arguments(BooleanMaskParam::__FIELDS__());

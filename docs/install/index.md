@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Installing MXNet
 
 ```eval_rst
@@ -65,8 +82,8 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- No CPU GPU for other Devices -->
 <div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default processors opt active">CPU</button>
-  <button type="button" class="btn btn-default processors opt">GPU</button>
+  <button type="button" class="btn btn-default processors opt active">GPU</button>
+  <button type="button" class="btn btn-default processors opt">CPU</button>
 </div>
 </div>
 
@@ -1134,11 +1151,36 @@ For more installation options, refer to the <a href="windows_setup.html">MXNet W
 <!-- START - Cloud Python Installation Instructions -->
 
 <div class="cloud">
+<div class="gpu">
 
-AWS Marketplace distributes Deep Learning AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch one of these Deep Learning AMIs by following instructions in the [AWS Deep Learning AMI Developer Guide](http://docs.aws.amazon.com/dlami/latest/devguide/what-is-dlami.html).
+MXNet is available on several cloud providers with GPU support. You can also find GPU/CPU-hybrid support for use cases like scalable inference, or even fractional GPU support with AWS Elastic Inference.
 
-You can also run distributed deep learning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
+* **Alibaba**
+    - [NVIDIA VM](https://docs.nvidia.com/ngc/ngc-alibaba-setup-guide/launching-nv-cloud-vm-console.html#launching-nv-cloud-vm-console)
+* **Amazon Web Services**
+    - [Amazon SageMaker](https://aws.amazon.com/sagemaker/) - Managed training and deployment of MXNet models
+    - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled Conda environments for Python 2 or 3 with MXNet, CUDA, cuDNN, MKL-DNN, and AWS Elastic Inference
+    - [Dynamic Training on AWS](https://github.com/awslabs/dynamic-training-with-apache-mxnet-on-aws) - experimental manual EC2 setup or semi-automated CloudFormation setup
+    - [NVIDIA VM](https://aws.amazon.com/marketplace/pp/B076K31M1S)
+* **Google Cloud Platform**
+    - [NVIDIA VM](https://console.cloud.google.com/marketplace/details/nvidia-ngc-public/nvidia_gpu_cloud_image)
+* **Microsoft Azure**
+    - [NVIDIA VM](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/nvidia.ngc_azure_17_11?tab=Overview)
+* **Oracle Cloud**
+    - [NVIDIA VM](https://docs.cloud.oracle.com/iaas/Content/Compute/References/ngcimage.htm)
 
+All NVIDIA VMs use the [NVIDIA MXNet Docker container](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet).
+Follow the [container usage instructions](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet) found in [NVIDIA's container repository](https://ngc.nvidia.com/).
+
+</div> <!-- END gpu -->
+
+<div class="cpu">
+MXNet should work on any cloud provider's CPU-only instances. Follow the Python pip install instructions, Docker instructions, or try the following preinstalled option.
+
+* **Amazon Web Services**
+    - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled Conda environments for Python 2 or 3 with MXNet and MKL-DNN.
+
+</div> <!-- end cpu -->
 </div> <!-- END - Cloud Python Installation Instructions -->
 
 
@@ -1374,6 +1416,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 <!-- Download -->
 <hr>
+
 
 # Source Download
 

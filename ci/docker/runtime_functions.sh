@@ -365,6 +365,7 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
         -j$(nproc)
 }
 
@@ -953,6 +954,7 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
+    export INTEGRATION_TEST=1
 
     julia -e 'using InteractiveUtils; versioninfo()'
 
