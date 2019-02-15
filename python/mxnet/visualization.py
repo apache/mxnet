@@ -53,17 +53,32 @@ def _str2ints(string):
     return map(int, _str2tuple(string))
 
 
-def convert_size(size_bytes):
+def get_flops(feature_map_size, conv_filter, stride=1, padding=1):
+    n = conv_filter[1] * conv_filter[2] * conv_filter[3]  # vector_length
+    flops_per_instance = n
+
+    num_instances_per_filter = ((feature_map_size - conv_filter[2] + 2 * padding) // stride) + 1  # for rows
+    num_instances_per_filter *= ((feature_map_size - conv_filter[2] + 2 * padding) // stride) + 1  # multiplying with cols
+
+    flops_per_filter = num_instances_per_filter * flops_per_instance
+    total_flops_per_layer = flops_per_filter * conv_filter[0]  # multiply with number of filters
+    return total_flops_per_layer
+
+
+def convert_size(size_bytes, base=1024):
     if size_bytes == 0:
         return "0B"
-    size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
-    i = int(math.floor(math.log(size_bytes, 1024)))
-    p = math.pow(1024, i)
+    if base == 1024:
+        size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+    elif base == 1000:
+        size_name = ("", "thousand", "million", "billion", "trillion", "Peta", "Eta", "Zeta", "Y")
+    i = int(math.floor(math.log(size_bytes, base)))
+    p = math.pow(base, i)
     s = round(size_bytes / p, 2)
     return "%s %s" % (s, size_name[i])
 
 
-def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74, 1.], quantized_bitwidth=32):
+def print_summary(symbol, shape=None, line_length=120, positions=[.40, .52, .60, .68, .73, 1.], quantized_bitwidth=32):
     """Convert symbol for detail information.
 
     Parameters
@@ -96,7 +111,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     if positions[-1] <= 1:
         positions = [int(line_length * p) for p in positions]
     # header names for the different log elements
-    to_display = ['Layer (type)', 'Output Shape', 'Param #', 'Previous Layer']
+    to_display = ['Layer (type)', 'Output Shape', 'Param #', 'FLOPS #', 'Prec.', 'Previous Layer']
     def print_row(fields, positions):
         """Print format row.
 
@@ -135,6 +150,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         op = node["op"]
         pre_node = []
         pre_filter = 0
+        pre_feature_map = 0
         if op != "null":
             inputs = node["inputs"]
             for item in inputs:
@@ -153,14 +169,22 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                             if not shape or op == 'Convolution' and pre_filter > 0:
                                 continue
                             pre_filter += int(shape[0])
-        quantized_params = "_qconv" in node["name"] or "_scaledbinaryconv" in node["name"]
+                            if op == 'Convolution':
+                                pre_feature_map = int(shape[1])
+        is_quantized = "_qconv" in node["name"] or "_scaledbinaryconv" in node["name"]
         cur_param = 0
+        flops = 0
         if op == 'Convolution':
             num_group = int(node['attrs'].get('num_group', '1'))
             num_filter = int(node["attrs"]["num_filter"])
             cur_param = pre_filter * num_filter // num_group
-            cur_param *= reduce(operator.mul,
-                                _str2ints(node["attrs"]["kernel"]))
+            kernel_size = reduce(operator.mul, _str2ints(node["attrs"]["kernel"]))
+            cur_param *= kernel_size
+
+            conv_filter = (pre_filter, num_filter) + tuple(_str2ints(node["attrs"]["kernel"]))
+            stride = tuple(_str2ints(node["attrs"].get("stride", "1")))[0]
+            pad = tuple(_str2ints(node["attrs"].get("pad", "1")))[0]
+            flops = get_flops(pre_feature_map, conv_filter, stride=stride, padding=pad)
             if node["attrs"].get("no_bias", 'False') != 'True':
                 cur_param += num_filter
         elif op == 'FullyConnected':
@@ -168,6 +192,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                 cur_param = pre_filter * int(node["attrs"]["num_hidden"])
             else:
                 cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
+            flops = (pre_filter+1) * int(node["attrs"]["num_hidden"])
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
@@ -180,13 +205,17 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         fields = [node['name'] + '(' + op + ')',
                   "x".join([str(x) for x in out_shape]),
                   cur_param,
+                  '{:.2E}'.format(flops) if flops > 0 else 0,
+                  'Q/B' if is_quantized else 'FP',
                   first_connection]
         print_row(fields, positions)
         if len(pre_node) > 1:
             for i in range(1, len(pre_node)):
-                fields = ['', '', '', pre_node[i]]
+                fields = [''] * (len(fields) - 1) + [pre_node[i]]
                 print_row(fields, positions)
-        return cur_param, quantized_params
+        return cur_param, is_quantized, flops
+    total_flops = 0
+    quantized_flops = 0
     total_params = 0
     quantized_params = 0
     compressed_bytes = 0
@@ -203,19 +232,26 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
                     key = node["name"]
                 if key in shape_dict:
                     out_shape = shape_dict[key][1:]
-        params, is_quantized = print_layer_summary(nodes[i], out_shape)
+        params, is_quantized, flops = print_layer_summary(nodes[i], out_shape)
         total_params += params
+        total_flops += flops
         if is_quantized:
             quantized_params += params
+            quantized_flops += flops
         compressed_bytes += params * (quantized_bitwidth if is_quantized else 32) / 8
         if i == len(nodes) - 1:
             print('=' * line_length)
         else:
             print('_' * line_length)
-    print('Total params: %s' % total_params)
+    print('Total params:     %s' % total_params)
+    print('FP params:        %s (%.2f%%)' % (total_params - quantized_params, 100 * (total_params - quantized_params) / total_params))
     print('Quantized params: %s (%.2f%%)' % (quantized_params, 100 * quantized_params / total_params))
     print('Model size (full-precision): ~%s' % convert_size(total_params * 4))
     print('Model size (compressed):     ~%s' % convert_size(compressed_bytes))
+    print('FLOPS (total):               %s' % convert_size(total_flops, 1000))
+    print('FLOPS (full-precision):      %s' % convert_size(total_flops - quantized_flops, 1000))
+    print('FLOPS (binary):              %s' % convert_size(quantized_flops, 1000))
+    print('FLOPS (combined):            %s' % convert_size(quantized_flops/64 + (total_flops - quantized_flops), 1000))
     print('_' * line_length)
 
 def shrink_qlayers(nodes):
