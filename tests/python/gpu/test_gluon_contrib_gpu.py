@@ -30,7 +30,7 @@ def test_deformable_convolution():
     net.initialize(force_reinit=True, ctx=ctx)
     net.hybridize()
 
-    x = mx.nd.random.uniform(shape=(8, 5, 10, 11), ctx=ctx)
+    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
     with mx.autograd.record():
         y = net(x)
         y.backward()
