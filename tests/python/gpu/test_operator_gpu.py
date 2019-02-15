@@ -2025,6 +2025,10 @@ def test_bilinear_sampler_versions():
                     assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
 
 
+@with_seed()
+def test_allclose_function_gpu():
+    allclose_function([mx.cpu(), mx.gpu(0)])
+
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0

@@ -1096,7 +1096,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         symbolic_grads = {k:v.asnumpy()[0] if v.stype != 'csr' else v[0]
                           for k, v in symbolic_grads.items()}
 
-    location = {k:v.asnumpy() for k, v in location.items()}
+    for k in location:
+        location[k] = location[k].asnumpy()
 
     numeric_gradients = numeric_grad(
         executor, location, grad_nodes, aux_states, use_approx_grad=use_approx_grad,
