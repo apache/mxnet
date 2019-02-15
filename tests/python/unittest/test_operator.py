@@ -6795,32 +6795,40 @@ def test_quadratic_function():
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
-@with_seed()
-def test_allclose_function():
+def allclose_function(contexts=None):
     def getRandom(base, percent = 1.):
         return base * (1 + percent * (2 * np.random.random_sample() - 1.) / 100)
 
+    if contexts is None:
+        contexts = [default_context()]
+
+    title = 'exp'
+    for ctx in contexts:
+        title += ' cpu' if ctx == mx.cpu() else ' gpu'
+
+    title += '        nElem     shape'
+    num_ctx = len(contexts)
     result = [False, False]
     for dtype in [np.float16, np.float32, np.float64]:
         rtol = getRandom(1e-2 if dtype is np.float16 else 1e-5)
         atol = getRandom(1e-4 if dtype is np.float16 else 1e-7)
-        print('\n{}  atol = {}  rtol = {}'.format(dtype, atol, rtol))
-        print('exp cpu gpu        nElem     shape')
+        print('\nnumpy.{}:  atol = {}  rtol = {}'.format(dtype.__name__, atol, rtol))
+        print(title)
         for ndim in range(1, 10):
             shape = rand_shape_nd(ndim, 8)
             a_np = np.random.randn(*shape).astype(dtype)
             b_np = (a_np + np.random.randn(*shape).astype(dtype) / 10000000).astype(dtype)
             expected = np.allclose(a_np, b_np, rtol, atol)
 
-            for i, ctx in enumerate([mx.cpu(), mx.gpu(0)]):
+            for n, ctx in enumerate(contexts):
                 a_ctx = mx.nd.array(a_np, dtype = dtype, ctx=ctx)
                 b_ctx = mx.nd.array(b_np, dtype = dtype, ctx=ctx)
                 output = mx.nd.contrib.allclose(a_ctx, b_ctx, rtol=rtol, atol=atol)
-                result[i] = output.asnumpy() == 1
-                if expected != result[i]:
+                result[n] = output.asnumpy() == 1
+                if expected != result[n]:
                     # Preparing the output of elements of the array, which are considered as "not close" AND
                     # corresponding elements of comparison CPU/GPU/Python vectors, which are considered as "close"
-                    v_ctx = 'CPU' if i == 0 else 'GPU'
+                    v_ctx = 'CPU' if ctx == mx.cpu() else 'GPU'
                     if expected:
                         v_cmp = 'Python'
                         a_b = a_ctx.asnumpy()
@@ -6855,9 +6863,18 @@ def test_allclose_function():
                             diff = np.abs(a_values[j][i]-b_values[j][i]) - atol + rtol*abs(b_values[j][i])
                             print('{}:  {}  {}              {}'.format('%6s'%v_ctx, a_values[j][i], b_values[j][i], diff))
 
-            print(' {0:d}   {1:d}   {2:d}    {3:10d}   {4:}'.format(expected, result[0], result[1], np.prod(shape), shape))
-            if expected != result[0] or expected != result[1]:
-                assert(False)
+
+            if num_ctx == 1:
+                print(' {0:d}   {1:d}    {2:10d}   {3:}'.format(expected, result[0], np.prod(shape), shape))
+            else:
+                print(' {0:d}   {1:d}   {2:d}    {3:10d}   {4:}'.format(expected, result[0], result[1], np.prod(shape), shape))
+
+            if expected != result[0] or num_ctx > 1 and expected != result[1]:
+                assert False
+
+@with_seed()
+def test_allclose_function():
+    allclose_function()
 
 @with_seed()
 def test_histogram():
