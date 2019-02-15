@@ -192,6 +192,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.40, .52, .60,
                 cur_param = pre_filter * int(node["attrs"]["num_hidden"])
             else:
                 cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
+            flops = (pre_filter+1) * int(node["attrs"]["num_hidden"])
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
