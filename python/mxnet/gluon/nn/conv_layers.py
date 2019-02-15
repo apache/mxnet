@@ -718,7 +718,7 @@ class MaxPool1D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
     layout : str, default 'NCW'
-        Dimension ordering of data and weight ('NCW' or 'NWC').
+        Dimension ordering of data and out ('NCW' or 'NWC').
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. Pooling is applied on the W dimension.
     ceil_mode : bool, default False
@@ -764,7 +764,7 @@ class MaxPool2D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
     layout : str, default 'NCHW'
-        Dimension ordering of data and weight ('NCHW' or 'NHWC').
+        Dimension ordering of data and out ('NCHW' or 'NHWC').
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
@@ -813,7 +813,7 @@ class MaxPool3D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
     layout : str, default 'NCDHW'
-        Dimension ordering of data and weight ('NCDHW' or 'NDHWC').
+        Dimension ordering of data and out ('NCDHW' or 'NDHWC').
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
@@ -863,7 +863,7 @@ class AvgPool1D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
     layout : str, default 'NCW'
-        Dimension ordering of data and weight ('NCW' or 'NWC').
+        Dimension ordering of data and out ('NCW' or 'NWC').
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on 'W' dimension.
     ceil_mode : bool, default False
@@ -911,7 +911,7 @@ class AvgPool2D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
     layout : str, default 'NCHW'
-        Dimension ordering of data and weight ('NCHW' or 'NHWC').
+        Dimension ordering of data and out ('NCHW' or 'NHWC').
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
     ceil_mode : bool, default False
@@ -962,7 +962,7 @@ class AvgPool3D(_Pooling):
         If padding is non-zero, then the input is implicitly
         zero-padded on both sides for padding number of points.
     layout : str, default 'NCDHW'
-        Dimension ordering of data and weight ('NCDHW' or 'NDHWC').
+        Dimension ordering of data and out ('NCDHW' or 'NDHWC').
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
@@ -1008,7 +1008,7 @@ class GlobalMaxPool1D(_Pooling):
     Parameters
     ----------
     layout : str, default 'NCW'
-        Dimension ordering of data and weight ('NCW' or 'NWC').
+        Dimension ordering of data and out ('NCW' or 'NWC').
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. Pooling is applied on the W dimension.
 
@@ -1035,7 +1035,7 @@ class GlobalMaxPool2D(_Pooling):
     Parameters
     ----------
     layout : str, default 'NCHW'
-        Dimension ordering of data and weight ('NCHW' or 'NHWC').
+        Dimension ordering of data and out ('NCHW' or 'NHWC').
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively. padding is applied on 'H' and 'W' dimension.
 
@@ -1063,7 +1063,7 @@ class GlobalMaxPool3D(_Pooling):
     Parameters
     ----------
     layout : str, default 'NCDHW'
-        Dimension ordering of data and weight ('NCDHW' or 'NDHWC').
+        Dimension ordering of data and out ('NCDHW' or 'NDHWC').
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.
@@ -1091,7 +1091,7 @@ class GlobalAvgPool1D(_Pooling):
     Parameters
     ----------
     layout : str, default 'NCW'
-        Dimension ordering of data and weight ('NCW' or 'NWC').
+        Dimension ordering of data and out ('NCW' or 'NWC').
         'N', 'C', 'W' stands for batch, channel, and width (time) dimensions
         respectively. padding is applied on 'W' dimension.
 
@@ -1116,7 +1116,7 @@ class GlobalAvgPool2D(_Pooling):
     Parameters
     ----------
     layout : str, default 'NCHW'
-        Dimension ordering of data and weight ('NCHW' or 'NHWC').
+        Dimension ordering of data and out ('NCHW' or 'NHWC').
         'N', 'C', 'H', 'W' stands for batch, channel, height, and width
         dimensions respectively.
 
@@ -1143,7 +1143,7 @@ class GlobalAvgPool3D(_Pooling):
     Parameters
     ----------
     layout : str, default 'NCDHW'
-        Dimension ordering of data and weight ('NCDHW' or 'NDHWC').
+        Dimension ordering of data and out ('NCDHW' or 'NDHWC').
         'N', 'C', 'H', 'W', 'D' stands for batch, channel, height, width and
         depth dimensions respectively. padding is applied on 'D', 'H' and 'W'
         dimension.

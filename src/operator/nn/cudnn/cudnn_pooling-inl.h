@@ -63,7 +63,7 @@ class CuDNNPoolingOp {
         }
         break;
       default:
-        LOG(FATAL) << "Not implemented";
+        LOG(FATAL) << "Pooling type not implemented by cuDNN.";
     }
   }
 
@@ -81,8 +81,7 @@ class CuDNNPoolingOp {
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
-    if (!this->Init(s, in_data, out_data))
-      LOG(FATAL) << "cuDNN Pooling invoked with unsupported parameters.";
+    CHECK(this->Init(s, in_data, out_data)) << "cuDNN Pooling invoked with unsupported parameters.";
     if (param_.kernel.ndim() == 2) {
       // 2d pool
       Tensor<gpu, 4, DType> data = in_data.get<gpu, 4, DType>(s);
@@ -112,7 +111,7 @@ class CuDNNPoolingOp {
                                      out_desc_,
                                      out.dptr_));
     } else {
-      LOG(FATAL) << "Only support 2D or 3D pooling";
+      LOG(FATAL) << "cuDNN only supports 2D or 3D pooling.";
     }
   }
 
@@ -126,8 +125,7 @@ class CuDNNPoolingOp {
     CHECK_EQ(s->dnn_handle_ownership_, mshadow::Stream<gpu>::OwnHandle);
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
-    if (!this->Init(s, in_data, out_data))
-      LOG(FATAL) << "cuDNN Pooling invoked with unsupported parameters.";
+    CHECK(this->Init(s, in_data, out_data)) << "cuDNN Pooling invoked with unsupported parameters.";
     if (param_.kernel.ndim() == 2) {
       // 2d pool
       Tensor<gpu, 4, DType> m_out_grad = out_grad.get<gpu, 4, DType>(s);
@@ -165,7 +163,7 @@ class CuDNNPoolingOp {
                                       in_desc_,
                                       m_in_grad.dptr_));
     } else {
-      LOG(FATAL) << "Only support 2D or 3D pooling";
+      LOG(FATAL) << "cuDNN only supports 2D or 3D pooling.";
     }
   }
 
