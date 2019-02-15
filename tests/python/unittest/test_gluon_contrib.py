@@ -324,8 +324,9 @@ class TestRNNLayer(gluon.HybridBlock):
     def hybrid_forward(self, F, inputs, states, valid_length):
         if isinstance(valid_length, list) and len(valid_length) == 0:
             valid_length = None
-        return contrib.rnn.rnn_cell.unroll(self.cell, inputs, states,
-                                           valid_length=valid_length, layout=self.layout)
+        return contrib.rnn.rnn_cell.dynamic_unroll(self.cell, inputs, states,
+                                                   valid_length=valid_length,
+                                                   layout=self.layout)
 
 def check_unroll(cell_type, num_states, layout):
     batch_size = 20
