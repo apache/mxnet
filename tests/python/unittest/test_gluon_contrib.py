@@ -17,12 +17,14 @@
 
 from __future__ import print_function
 import mxnet as mx
+import copy
+from mxnet import gluon
 from mxnet.gluon import contrib
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import (
     Concurrent, HybridConcurrent, Identity, SparseEmbedding, PixelShuffle1D,
     PixelShuffle2D, PixelShuffle3D)
-from mxnet.test_utils import almost_equal
+from mxnet.test_utils import almost_equal, default_context, assert_almost_equal
 from common import setup_module, with_seed, teardown
 import numpy as np
 from numpy.testing import assert_allclose
@@ -311,6 +313,97 @@ def test_sampler():
     assert sorted(list(interval_sampler)) == list(range(10))
     interval_sampler = contrib.data.IntervalSampler(10, 3, rollover=False)
     assert list(interval_sampler) == [0, 3, 6, 9]
+
+
+class TestRNNLayer(gluon.HybridBlock):
+    def __init__(self, cell_type, hidden_size, layout, prefix=None, params=None):
+        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
+        self.cell = cell_type(hidden_size, prefix='rnn_')
+        self.layout = layout
+
+    def hybrid_forward(self, F, inputs, states, valid_length):
+        if isinstance(valid_length, list) and len(valid_length) == 0:
+            valid_length = None
+        return contrib.rnn.rnn_cell.dynamic_unroll(self.cell, inputs, states,
+                                                   valid_length=valid_length,
+                                                   layout=self.layout)
+
+def check_unroll(cell_type, num_states, layout):
+    batch_size = 20
+    input_size = 50
+    hidden_size = 30
+    seq_len = 10
+    if layout == 'TNC':
+        rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    elif layout == 'NTC':
+        rnn_data = mx.nd.normal(loc=0, scale=1, shape=(batch_size, seq_len, input_size))
+    else:
+        print("Wrong layout")
+        return
+    valid_length = mx.nd.round(mx.nd.random.uniform(low=1, high=10, shape=(batch_size)))
+    state_shape = (batch_size, hidden_size)
+    states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
+
+    cell = cell_type(hidden_size, prefix='rnn_')
+    cell.initialize(ctx=default_context())
+    if layout == 'TNC':
+        cell(rnn_data[0], states)
+    else:
+        cell(rnn_data[:,0,:], states)
+    params1 = cell.collect_params()
+    orig_params1 = copy.deepcopy(params1)
+
+    trainer = gluon.Trainer(params1, 'sgd', {'learning_rate' : 0.03})
+    with mx.autograd.record():
+        res1, states1 = cell.unroll(seq_len, rnn_data, states, valid_length=valid_length,
+                                    layout=layout, merge_outputs=True)
+    res1.backward()
+    trainer.step(batch_size)
+
+    configs = [
+            lambda layer: None,
+            lambda layer: layer.hybridize(),
+            lambda layer: layer.hybridize({'inline_limit': 0}),
+            lambda layer: layer.hybridize({'static_alloc': True}),
+            lambda layer: layer.hybridize({'static_alloc': True, 'static_shape': True}) ]
+    # We can't pass None to a hybrid block, but it accepts an empty list.
+    # so we use an empty list to represent valid_length if it's None.
+    if valid_length is None:
+        valid_length = []
+    for config in configs:
+        layer = TestRNNLayer(cell_type, hidden_size, layout)
+        layer.initialize(ctx=default_context())
+        config(layer)
+        res2, states2 = layer(rnn_data, states, valid_length)
+        params2 = layer.collect_params()
+        for key, val in orig_params1.items():
+            params2[key].set_data(copy.deepcopy(val.data()))
+
+        trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
+        with mx.autograd.record():
+            res2, states2 = layer(rnn_data, states, valid_length)
+        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+        assert len(states1) == len(states2)
+        for i in range(len(states1)):
+            assert_almost_equal(states1[i].asnumpy(), states2[i].asnumpy(),
+                                rtol=0.001, atol=0.0001)
+        res2.backward()
+        trainer.step(batch_size)
+
+        for key, val in params1.items():
+            weight1 = val.data()
+            weight2 = params2[key].data()
+            assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(),
+                    rtol=0.001, atol=0.0001)
+
+
+@with_seed()
+def test_contrib_unroll():
+    cell_types = [(gluon.rnn.RNNCell, 1), (gluon.rnn.LSTMCell, 2),
+            (gluon.rnn.GRUCell, 1)]
+    for cell_type, num_states in cell_types:
+        check_unroll(cell_type, num_states, 'TNC')
+        check_unroll(cell_type, num_states, 'NTC')
 
 
 if __name__ == '__main__':
