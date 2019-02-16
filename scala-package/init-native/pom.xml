@@ -78,7 +78,7 @@
             <executions>
               <execution>
                 <id>post-native-build</id>
-                <phase>package</phase>
+                <phase>compile</phase>
                 <goals>
                   <goal>exec</goal>
                 </goals>

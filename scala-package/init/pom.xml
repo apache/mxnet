@@ -22,7 +22,7 @@
         <executions>
           <execution>
             <id>javah</id>
-            <phase>verify</phase>
+            <phase>process-classes</phase>
             <configuration>
               <javahProvider>default</javahProvider>
               <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
