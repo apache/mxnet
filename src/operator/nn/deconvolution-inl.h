@@ -232,6 +232,19 @@ class DeconvolutionOp {
         << "Must init CuBLAS handle in stream";
 #endif
     auto in_data_shape = in_data[deconv::kData].shape_;
+    // G: num of groups
+    // N: num of batches
+    // C: num of channels
+    // IH: input height
+    // IW: input width
+    // KH: kernel height
+    // KW: kernel width
+    // OH: output width
+    // OW: output height
+    // OC: num of output channels
+
+    // 2D case: data (N, C, IH, IW)
+    // 2D case: out (N, OC, OH, OW)
     Tensor<xpu, 4, DType> data = TBlobTo4DTensor(in_data[deconv::kData], s);
     Tensor<xpu, 4, DType> out = TBlobTo4DTensor(out_data[deconv::kOut], s);
     index_t o_pad[2], o_adj[2];
@@ -252,25 +265,40 @@ class DeconvolutionOp {
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
                param_.num_filter / param_.num_group * kernel_size);
+    // 2D: wmat (G, C/G, OC/G * KH * KW)
     Tensor<xpu, 3, DType> wmat =
         in_data[deconv::kWeight].get_with_shape<xpu, 3, DType>(wmat_shape, s);
     const index_t nbatch = data.size(0);
+
+    // shape_colunit_ : (OC * KH * KW, IH * IW)
+    shape_colunit_ = mshadow::Shape2(out.shape_[1] * kernel_size, data.shape_[2] * data.shape_[3]);
+    // shape_dstunit_ : (G, C/G, IH * IW)
+    shape_dstunit_ = mshadow::Shape3(
+      param_.num_group,
+      data.shape_[1] / param_.num_group,
+      data.shape_[2] * data.shape_[3]
+    );
+
     Tensor<xpu, 1, DType> workspace =
-        ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
-            Shape1(this->InitTemp(out.shape_, data.shape_)), s);
+      ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
+        Shape1(shape_colunit_.Size() + shape_dstunit_.Size()), s);
+//    Tensor<xpu, 1, DType> workspace =
+//        ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
+//            Shape1(this->InitTemp(out.shape_, data.shape_)), s);
     for (index_t i = 0; i < nbatch; ++i) {
-      // temp_col: (N * kernel_size, OW * OH)
+      // temp_col: (OC * KH * KW, IH * IW)
       Tensor<xpu, 2, DType> temp_col = Tensor<xpu, 2, DType>(
                                             workspace.dptr_,
-                                            Shape2(shape_colunit_[0], shape_colunit_[1]),
-                                            s);
-      // temp_dst: (N, N/n_grup, OW * OH)
+                                            Shape2(shape_colunit_[0],
+                                                   shape_colunit_[1]),
+                                                   s);
+      // temp_dst : (G, C/G, IH * IW)
       Tensor<xpu, 3, DType> temp_dst = Tensor<xpu, 3, DType>(
                                            workspace.dptr_ + temp_col.shape_.Size(),
                                            Shape3(shape_dstunit_[0],
                                                   shape_dstunit_[1],
                                                   shape_dstunit_[2]),
-                                           s);
+                                                  s);
       temp_dst = reshape(swapaxis<1, 0>(data.Slice(i, i + 1)), temp_dst.shape_);
 
       im2col(
