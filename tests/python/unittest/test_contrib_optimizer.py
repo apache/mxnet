@@ -94,6 +94,32 @@ def test_group_adagrad():
                 g_stype='row_sparse',
                 compare_states=False)
 
+def test_adamw():
+    shape = (3, 4)
+    weight = mx.nd.random.uniform(shape=shape)
+    weight_ref = weight.copy()
+    grad = mx.nd.random.uniform(shape=shape)
+    m = mx.nd.random.uniform(shape=shape)
+    v = mx.nd.random.uniform(shape=shape)
+    rescale_grad = mx.nd.array([10])
+    eta, lr, wd, epsilon = 1, 1, 0, 1e-8
+    beta1, beta2 = 0.9, 0.999
+    kwargs = {'eta': eta, 'lr': lr, 'wd': wd, 'epsilon': epsilon,
+              'beta1': beta1, 'beta2': beta2}
+    # update is skipped for rescale = nan
+    mx.nd.contrib.adamw_update(weight, grad, m, v,
+                               rescale_grad * np.nan, out=weight, **kwargs)
+    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+
+    # normal update
+    grad_rescale = rescale_grad * grad
+    new_m = beta1*m + (1-beta1)*grad_rescale
+    new_v = beta2*v + (1-beta2)*(grad_rescale**2)
+    weight_ref = weight - eta * (1 * new_m / (new_v.sqrt() + epsilon) + weight * wd)
+    mx.nd.contrib.adamw_update(weight, grad, m, v,
+                               rescale_grad, out=weight, **kwargs)
+    mx.test_utils.assert_almost_equal(weight_ref.asnumpy(), weight.asnumpy())
+
 
 if __name__ == '__main__':
     import nose
