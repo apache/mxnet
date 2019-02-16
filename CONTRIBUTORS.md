@@ -195,6 +195,7 @@ List of Contributors
 * [Xiao Wang](https://github.com/BeyonderXX)
 * [Piyush Ghai](https://github.com/piyushghai)
 * [Zach Boldyga](https://github.com/zboldyga)
+
 * [Ming Yang](http://ufoym.com)
 
 Label Bot
