@@ -276,8 +276,7 @@ class DeconvolutionOp {
     shape_dstunit_ = mshadow::Shape3(
       param_.num_group,
       data.shape_[1] / param_.num_group,
-      data.shape_[2] * data.shape_[3]
-    );
+      data.shape_[2] * data.shape_[3]);
 
     Tensor<xpu, 1, DType> workspace =
       ctx.requested[deconv::kTempSpace].get_space_typed<xpu, 1, DType>(
