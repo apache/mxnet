@@ -32,6 +32,11 @@
        (filter #(= name (str (:name %))))
        first))
 
+(defn ndarray-api-reflect-info [name]
+  (->> gen/ndarray-api-public-no-default
+       (filter #(= name (str (:name %))))
+       first))
+
 (defn symbol-reflect-info [name]
   (->> gen/symbol-public-no-default
        (filter #(= name (str (:name %))))
@@ -68,7 +73,10 @@
 
 (deftest test-rename-duplicate-params
   (is (= ["foo" "bar" "baz"] (gen/rename-duplicate-params ["foo" "bar" "baz"])))
-  (is (= ["foo" "bar" "bar-1"] (gen/rename-duplicate-params ["foo" "bar" "bar"]))))
+  (is (= ["foo" "bar" "bar-1"] (gen/rename-duplicate-params ["foo" "bar" "bar"])))
+  (is (= ["foo" "bar" "bar-1" "foo-1"] (gen/rename-duplicate-params ["foo" "bar" "bar" "foo"])))
+  (is (= ["foo" "bar" "bar-1" "bar-2"] (gen/rename-duplicate-params ["foo" "bar" "bar" "bar"])))
+  (is (= ["foo" "bar" "bar-1" "bar-2" "foo-1" "baz"] (gen/rename-duplicate-params ["foo" "bar" "bar" "bar" "foo" "baz"]))))
 
 (deftest test-is-symbol-hand-gen?
   (is (not (false? (gen/is-symbol-hand-gen? (symbol-reflect-info "max")))))
@@ -197,6 +205,16 @@
                                gen/symbol-gen-ns
                                fname)
           good-contents (slurp "test/good-test-symbol.clj")
+          contents (slurp fname)]
+      (is (= good-contents contents))))
+
+  (testing "ndarray-api"
+    (let [fname "test/test-ndarray-api.clj"
+          _ (gen/write-to-file [(first gen/all-ndarray-api-functions)
+                                (second gen/all-ndarray-api-functions)]
+                               gen/ndarray-api-gen-ns
+                               fname)
+          good-contents (slurp "test/good-test-ndarray-api.clj")
           contents (slurp fname)]
       (is (= good-contents contents))))
 
