@@ -1732,7 +1732,7 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
     inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false>(
       ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
@@ -1914,7 +1914,7 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
     inputs[0].type_flag_, inputs[0].dev_id());
   std::vector<TBlob> newInputs = {iblob};
 
-  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false>(
+  ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false>(
       ctx, newInputs, req, newOutputs, rshapes.first);
 }
 
