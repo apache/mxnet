@@ -273,24 +273,41 @@ inline int get_num_threads<cpu>(const int N) {
     }                                                      \
     break;                                                 \
   case mshadow::kUint8:                                    \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types not uint8";        \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      typedef uint8_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types not uint8";      \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt8:                                     \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types not int8";         \
+    {                                                      \
+      typedef int8_t DType;                                \
+      typedef int8_t AType;                                \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types not int8";       \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt32:                                    \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types, not int32";       \
+    {                                                      \
+      typedef int32_t DType;                               \
+      typedef int32_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types, not int32";     \
+    }                                                      \
     break;                                                 \
   case mshadow::kInt64:                                    \
-    LOG(FATAL) << "This operation only support "           \
-                  "floating point types, not int64";       \
+    {                                                      \
+      typedef int64_t DType;                               \
+      typedef int64_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types, not int64";     \
+    }                                                      \
     break;                                                 \
   default:                                                 \
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
+
 
 /*!
  * \brief assign the val to out according

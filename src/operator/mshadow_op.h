@@ -898,13 +898,13 @@ struct nanprod {
 /*! \brief compute l2 norm */
 struct nrm2 {
   /*! \brief do reduction into dst */
-  template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares, volatile DType src) { // NOLINT(*)
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares, volatile DType src) { // NOLINT(*)
     sum_of_squares += src * src;
   }
   /*! \brief do stable reduction into dst */
-  template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
     if (src != 0) {
       DType abs = mshadow_op::abs::Map(src);
       if (scale < abs) {
@@ -962,6 +962,66 @@ struct nrm2 {
   MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares, DType &scale) { // NOLINT(*)
     SetInitValue(sum_of_squares);
     scale = 0;
+  }
+};
+
+/*! \brief sum reducer */
+struct sum {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
+    dst += src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    DType y = src - residual;
+    DType t = dst + y;
+    residual = (t - dst) - y;
+    dst = t;
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    DType t1 = dst_val + src_val;
+    DType e = t1 - dst_val;
+    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+    dst_val = t1 + t2;
+    dst_residual = t2 - (dst_val - t1);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    SetInitValue(initv);
+    residual = 0;
   }
 };
 

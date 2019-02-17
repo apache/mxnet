@@ -523,7 +523,7 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename reducer, bool normalize = false,
+template<typename xpu, typename reducer, bool safe_acc, bool normalize = false,
          typename OP = op::mshadow_op::identity>
 void ReduceAxesComputeImpl(const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -544,7 +544,7 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
           s, out_data.shape_, req[0], in_data.shape_);
       Tensor<xpu, 1, char> workspace =
           ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      broadcast::Reduce<reducer, NDim, DType, OP>(
+      broadcast::Reduce<reducer, NDim, DType, OP, safe_acc>(
           s, out_data, req[0], workspace, in_data);
       if (normalize) {
         auto out = out_data.FlatTo2D<xpu, DType>(s);
@@ -569,7 +569,7 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
 
-  ReduceAxesComputeImpl<xpu, reducer, normalize, OP>(ctx, inputs, req, outputs, small);
+  ReduceAxesComputeImpl<xpu, reducer, false, normalize, OP>(ctx, inputs, req, outputs, small);
 }
 
 template <typename red_op, int req, int axis>
@@ -1088,10 +1088,10 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
   if (param.ord == 1) {
-    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, mshadow_op::abs>(
-          ctx, inputs, req, outputs, small);
+    ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
+        ctx, inputs, req, outputs, small);
   } else if (param.ord == 2) {
-    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
+    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
         ctx, inputs, req, outputs, small);
   }
 }
