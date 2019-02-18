@@ -773,7 +773,7 @@ class GroupNorm(HybridBlock):
                             name='fwd', **self._kwargs)
         # scale and shift
         y = y.reshape_like(x).reshape(0, 0, -1)
-        y = y * self.gamma.data().reshape(1, -1, 1) + self.beta.data().reshape(1, -1, 1)
+        y = y * gamma.reshape(1, -1, 1) + beta.reshape(1, -1, 1)
         return y.reshape_like(x)
 
     def __repr__(self):

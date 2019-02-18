@@ -2590,7 +2590,7 @@ def test_slice_activation_reshape_activation():
 
 @with_seed()
 def test_groupnorm():
-    ctx=mx.gpu(0)#mx.context.current_context()
+    ctx=mx.context.current_context()
     x = mx.nd.random.uniform(1, 2, (4, 16, 8, 8), ctx=ctx)
     gn = mx.gluon.nn.GroupNorm(4, 16)
     gn.initialize(ctx=ctx)
