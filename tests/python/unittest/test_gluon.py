@@ -2587,6 +2587,16 @@ def test_slice_activation_reshape_activation():
             net = Net(act0, act1, shape, slice)
             check_layer_forward_withinput(net, x)
 
+
+@with_seed()
+def test_groupnorm():
+    x = mx.nd.random.uniform(0, 1, (4, 16, 8, 8))
+    gn = mx.gluon.nn.GroupNorm(4, 16)
+    y = gn(x)
+    mx.test_utils.assert_almost_equal(y.mean(1).asnumpy(), mx.nd.zeros_like(y))
+    mx.test_utils.assert_almost_equal(y.var(1).asnumpy(), mx.nd.ones_like(y))
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
