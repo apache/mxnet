@@ -208,7 +208,7 @@ Caused by: java.lang.ClassNotFoundException: org.apache.mxnet.NDArray
         at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:331)
         at java.lang.ClassLoader.loadClass(ClassLoader.java:357)
 ```
-Please make sure your $ClassPath is able to find `mxnet-full_scala_version-INTERNAL.jar`.
+Please make sure your $CLASSPATH is able to find `mxnet-full_scala_version-INTERNAL.jar`.
 
 - To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
 - Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
