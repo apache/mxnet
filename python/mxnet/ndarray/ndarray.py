@@ -1259,8 +1259,14 @@ fixed-size items.
         """
         return op.sign(self, *args, **kwargs)
 
-    def flatten(self):
-        """Returns a flattened **view** of this array without altering any data.
+    def flatten(self, inplace=False):
+        """Flatten this array without altering any data.
+
+        Parameters
+        ----------
+        inplace : bool, default False
+            If True, this method returns a **view** of this array
+            that shares data with this array. Otherwise, a copy is returned.
 
         Returns
         -------
@@ -1271,7 +1277,8 @@ fixed-size items.
         Examples
         --------
         >>> x = mx.nd.arange(30).reshape(5,2,3)
-        >>> y = x.flatten()
+        >>> y = x.flatten(inplace=True)
+        >>> z = x.flatten()
         >>> y.shape
         (5, 6)
         >>> y[0].asnumpy()
@@ -1280,8 +1287,10 @@ fixed-size items.
         >>> x[0].asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
+        >>> z[0].asnumpy()
+        array([0., 1., 2., 3., 4., 5.], dtype=float32)
         """
-        return self.reshape((0, -1))
+        return op.flatten(self) if not inplace else self.reshape((0, -1))
 
     def shape_array(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`shape_array`.
@@ -1299,8 +1308,8 @@ fixed-size items.
         """
         return op.size_array(self, *args, **kwargs)
 
-    def expand_dims(self, axis):
-        """Returns a **view** of this array with additional dimension without altering any data.
+    def expand_dims(self, axis, inplace=False):
+        """Adds an additional dimension to the current array without altering any data.
 
         Parameters
         ----------
@@ -1308,6 +1317,9 @@ fixed-size items.
             Position where new axis is to be inserted.
             Suppose that the input NDArray's dimension is ndim,
             the range of the inserted axis is [-ndim, ndim].
+        inplace : bool, default False
+            If True, this method returns a **view** of this array
+            that shares data with this array. Otherwise, a copy is returned.
 
         Returns
         -------
@@ -1319,7 +1331,8 @@ fixed-size items.
         Examples
         --------
         >>> x = mx.nd.arange(6).reshape(2,3)
-        >>> y = x.expand_dims(1)
+        >>> y = x.expand_dims(1, inplace=True)
+        >>> z = x.expand_dims(1)
         >>> y.shape
         (2, 1, 3)
         >>> y[0].asnumpy()
@@ -1328,14 +1341,19 @@ fixed-size items.
         >>> x.asnumpy()
         array([[-1., -1., -1.],
                [-1., -1., -1.]], dtype=float32)
+        >>> z[0].asnumpy()
+        array([[0., 1., 2.]], dtype=float32)
         """
-        new_shape = list(self.shape)
-        assert -len(new_shape) <= axis <= len(new_shape), \
-                "axis {} is out of range for {}d array".format(axis, len(new_shape))
-        if axis < 0:
-            axis += len(new_shape)
-        new_shape.insert(axis, 1)
-        return self.reshape(new_shape)
+        if not inplace:
+            return op.expand_dims(self, axis=axis)
+        else:
+            new_shape = list(self.shape)
+            assert -len(new_shape)-1 <= axis <= len(new_shape), \
+                    "axis {} is out of range for {}d array".format(axis, len(new_shape))
+            if axis < 0:
+                axis += len(new_shape) + 1
+            new_shape.insert(axis, 1)
+            return self.reshape(new_shape)
 
     def tile(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tile`.
@@ -1745,35 +1763,45 @@ fixed-size items.
         """
         return op.softmin(self, *args, **kwargs)
 
-    def squeeze(self, axis=None):
-        """Returns a **view** of this array with squeezed shape without altering any data.
+    def squeeze(self, axis=None, inplace=False):
+        """Remove dimensions with size 1 from this array without altering any data.
 
         Parameters
         ----------
         axis : int, tuple of int, or None
             Selects a subset of the single-dimensional entries in the shape.
             If an axis is selected with shape entry greater than one, an error is raised.
+        inplace : bool, default False
+            If True, this method returns a **view** of this array
+            that shares data with this array. Otherwise, a copy is returned.
         """
-        new_shape = list(self.shape)
-        if isinstance(axis, int):
-            axis = [axis]
-        if axis:
-            assert len(axis) == len(set(axis)), \
-                "axis {} contains duplicate which is not allowed.".format(axis)
-            for i in axis:
-                assert 0 <= i < len(new_shape), "axis {} is out of range.".format(i)
-                assert new_shape[i] == 1, \
-                    "Squeeze target axis {} must be size 1, got {}.".format(i, new_shape[i])
-            for i in sorted(axis, reverse=True):
-                del new_shape[i]
+        if not inplace:
+            return op.squeeze(self, axis=axis)
         else:
-            for i in reversed(range(len(new_shape))):
-                if new_shape[i] == 1:
+            new_shape = list(self.shape)
+            axes = axis # rename variable for readability
+            if isinstance(axes, int):
+                axes = [axes]
+            if axes:
+                assert len(axes) == len(set(axes)), \
+                    "axis {} contains duplicate which is not allowed.".format(axes)
+                resolved_axes = [i if i >= 0 else i+len(self.shape) for i in axes]
+                for arg_axis, actual_axis in zip(axes, resolved_axes):
+                    assert -len(new_shape) <= arg_axis < len(new_shape), \
+                        "axis {} is out of range for {}d array".format(arg_axis, len(new_shape))
+                    axis_size = new_shape[actual_axis]
+                    assert axis_size == 1, \
+                        "Squeeze target axis {} must be size 1, got {}.".format(arg_axis, axis_size)
+                for i in sorted(resolved_axes, reverse=True):
                     del new_shape[i]
-        if not new_shape:
-            new_shape.append(1)
+            else:
+                for i in reversed(range(len(new_shape))):
+                    if new_shape[i] == 1:
+                        del new_shape[i]
+            if not new_shape:
+                new_shape.append(1)
 
-        return self.reshape(new_shape)
+            return self.reshape(new_shape)
 
     # pylint: disable= undefined-variable
     def broadcast_to(self, shape):
