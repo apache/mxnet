@@ -424,8 +424,7 @@ def test_poisson_nllloss_mod():
 @with_seed()
 def test_bce_loss_with_pos_weight():
     # Suppose it's a multi-label classification
-    #N = np.random.randint(5, 30)
-    N = 10
+    N = np.random.randint(5, 30)
     data = mx.nd.random.uniform(-1, 1, shape=(N, 20))
     label = mx.nd.array(np.random.randint(2, size=(N, 5)), dtype='float32')
     pos_weight = mx.nd.random.uniform(0, 10, shape=(1, 5))
