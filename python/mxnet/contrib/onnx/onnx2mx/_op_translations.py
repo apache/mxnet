@@ -62,68 +62,22 @@ def sample_multinomial(attrs, inputs, proto_obj):
     new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
     return 'sample_multinomial', new_attrs, inputs
 
-
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
-    new_attr = {}
-    op_names = ['batchnorm, convolution, deconvolution']
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        for op_name in op_names:
-            if inputs[0].name.startswith(op_name):
-                op_value = translation_utils._fix_broadcast('broadcast_add', inputs,
-                                                            broadcast_axis, proto_obj)
-                return op_value, new_attr, inputs
-            else:
-                return 'broadcast_add', attrs, inputs
-    return 'broadcast_add', new_attr, inputs
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_add')
 
 def subtract(attrs, inputs, proto_obj):
     """Subtracting two tensors"""
-    new_attr = {}
-    op_names = ['batchnorm, convolution, deconvolution']
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        for op_name in op_names:
-            if inputs[0].name.startswith(op_name):
-                op_value = translation_utils._fix_broadcast('broadcast_sub', inputs,
-                                                            broadcast_axis, proto_obj)
-                return op_value, new_attr, inputs
-            else:
-                return 'broadcast_sub', attrs, inputs
-    return 'broadcast_sub', new_attr, inputs
-
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_sub')
 
 def multiply(attrs, inputs, proto_obj):
     """Multiply two tensors"""
-    new_attr = {}
-    op_names = ['batchnorm, convolution, deconvolution']
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        for op_name in op_names:
-            if inputs[0].name.startswith(op_name):
-                op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
-                                                            broadcast_axis, proto_obj)
-                return op_value, new_attr, inputs
-            else:
-                return 'broadcast_mul', attrs, inputs
-    return 'broadcast_mul', new_attr, inputs
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_mul')
 
 def divide(attrs, inputs, proto_obj):
     """Divide two tensors"""
-    new_attr = {}
-    op_names = ['batchnorm, convolution, deconvolution']
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        for op_name in op_names:
-            if inputs[0].name.startswith(op_name):
-                op_value = translation_utils._fix_broadcast('broadcast_div', inputs,
-                                                            broadcast_axis, proto_obj)
-                return op_value, new_attr, inputs
-            else:
-                return 'broadcast_div', attrs, inputs
-    return 'broadcast_div', new_attr, inputs
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_div')
 
 def mean(attrs, inputs, proto_obj):
     """Mean of all the input tensors."""
