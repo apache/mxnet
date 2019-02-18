@@ -598,7 +598,7 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
   if (shape_attr_key.length() != 0) {
     graph.attrs["shape_attr_key"] = std::make_shared<any>(shape_attr_key);
   }
-  return InferAttr<nnvm::TShape, nnvm::FInferShape>(
+  return InferShapeAttr(
       std::move(graph), nnvm::TShape(),
       "FInferShape", "shape_inputs", "shape_attr_key",
       "shape", "shape_num_unknown_nodes",
