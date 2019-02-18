@@ -616,12 +616,12 @@ nnvm::Graph InferType(nnvm::Graph&& graph,
   if (dtype_attr_key.length() != 0) {
     graph.attrs["dtype_attr_key"] = std::make_shared<any>(dtype_attr_key);
   }
-  return InferShapeAttr(
-      std::move(graph), nnvm::TShape(),
-      "FInferShape", "shape_inputs", "shape_attr_key",
-      "shape", "shape_num_unknown_nodes",
-      [](const nnvm::TShape& s) { return s.ndim() == 0 || s.Size() == 0; },
-      nullptr, true, nullptr);
+  return InferAttr<int, nnvm::FInferType>(
+      std::move(graph), -1,
+      "FInferType", "dtype_inputs", "dtype_attr_key",
+      "dtype", "dtype_num_unknown_nodes",
+      [](const int t) { return t == -1; },
+      common::SameType, true, nullptr);
 }
 
 nnvm::Graph InferStorageType(nnvm::Graph&& graph,
