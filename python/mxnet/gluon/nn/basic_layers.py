@@ -710,6 +710,7 @@ class HybridLambda(HybridBlock):
 
 class GroupNorm(HybridBlock):
     """GroupNorm normalization layer (Wu and He, 2014).
+
     Parameters
     ----------
     ngroups : int
