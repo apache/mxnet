@@ -258,6 +258,4 @@ def broadcast_arithmetic_helper(attrs, inputs, proto_obj, current_op_name):
             if inputs[0].name.startswith(op_name):
                 op_value = _fix_broadcast(current_op_name, inputs, broadcast_axis, proto_obj)
                 return op_value, new_attr, inputs
-            else:
-                return current_op_name, attrs, inputs
     return current_op_name, new_attr, inputs
