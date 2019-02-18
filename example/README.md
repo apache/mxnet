@@ -128,6 +128,7 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [Numpy Operator Customization](numpy-ops) - Examplea on quick customize new ops with Numpy
 * [Profiling](profiler) - generate profiling results in json files
 * [Python How To](python-howto) - a variety of Python examples
+* [Quantization and Calibration Examples](quantization) - examples of quantizing a FP32 model to INT8 and performing low-precision inference with Intel MKL-DNN on CPU or cuDNN on GPU
 * [R-CNN](rcnn) - R-CNN with distributed implementation and data parallelization
 * [Recommender Systems](recommenders) - examples of how to build various kinds of recommender systems
 * [Reinforcement Learning](reinforcement-learning) - a variety of reinforcement learning examples
