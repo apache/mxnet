@@ -41,7 +41,7 @@ inline void MPUpdateCPU(const nnvm::NodeAttrs& attrs,
   TBlob scale_blob = inputs[inputs.size() - 1];
   MSHADOW_REAL_TYPE_SWITCH(scale_blob.type_flag_, DType, {
     float scalef = static_cast<float>(*scale_blob.dptr<DType>());
-    if (std::isnan(scalef)) return;
+    if (!std::isfinite(scalef) || scalef == 0) return;
     std::vector<TBlob> inputs_wo_scale;
     size_t num_in = inputs.size();
     inputs_wo_scale.reserve(num_in - 1);
@@ -72,7 +72,7 @@ It updates the weights using::
  v = beta2*v + (1-beta2)*(grad**2)
  w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
 
-Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN,
+Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN, Inf, or 0,
 the update is skipped.
 )code" ADD_FILELINE)
 .set_num_inputs(6)
@@ -114,7 +114,7 @@ It updates the weights using::
  v = beta2*v + (1-beta2)*(grad**2)
  w -= eta * (learning_rate * m / (sqrt(v) + epsilon) + w * wd)
 
-Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN,
+Note that gradient is rescaled to grad = rescale_grad * grad. If rescale_grad is NaN, Inf, or 0,
 the update is skipped.
 )code" ADD_FILELINE)
 .set_num_inputs(5)
