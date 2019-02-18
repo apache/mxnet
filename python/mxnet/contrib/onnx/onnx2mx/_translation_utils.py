@@ -246,7 +246,7 @@ def get_input_shape(sym, proto_obj):
 
     return result.shape
 
-def broadcast_arithmetic_helper(attrs, inputs, proto_obj, op_name):
+def broadcast_arithmetic_helper(attrs, inputs, proto_obj, current_op_name):
     """Helper function for broadcast arithmetic ops."""
     new_attr = {}
     op_names = ['batchnorm, convolution, deconvolution']
@@ -256,8 +256,8 @@ def broadcast_arithmetic_helper(attrs, inputs, proto_obj, op_name):
             # if input is bias which comes after conv, deconv, batchnorm operators
             # then only reshape bias term
             if inputs[0].name.startswith(op_name):
-                op_value = _fix_broadcast(op_name, inputs, broadcast_axis, proto_obj)
+                op_value = _fix_broadcast(current_op_name, inputs, broadcast_axis, proto_obj)
                 return op_value, new_attr, inputs
             else:
-                return op_name, attrs, inputs
-    return op_name, new_attr, inputs
+                return current_op_name, attrs, inputs
+    return current_op_name, new_attr, inputs
