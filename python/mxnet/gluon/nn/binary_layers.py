@@ -279,12 +279,12 @@ class BinaryConvolution(HybridBlock):
     r"""
         Typical binary (XNOR) convolution block with binarized activations and weights
     """
-    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, bits=None, bits_a=None,
+    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, dilation=1, bits=None, bits_a=None,
                  clip_threshold=None, activation_method=None, prefix=None, **kwargs):
         super(BinaryConvolution, self).__init__(**kwargs)
         self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold, method=activation_method)
         self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
-                             in_channels=in_channels, prefix=prefix, apply_scaling=False)
+                             in_channels=in_channels, prefix=prefix, apply_scaling=False, dilation=dilation)
 
     def hybrid_forward(self, F, x):
         return self.qconv(self.qact(x))
@@ -296,12 +296,12 @@ class ScaledWeightsBinaryConv(HybridBlock):
     but it only scales the weights (not the feature maps) and the gradient of the scaling is not blocked.
     The later leads to the so-called "magnitude aware gradients" effect mentioned in the Bi-Real Net paper.
     """
-    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, bits=None, bits_a=None,
+    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, dilation=1, bits=None, bits_a=None,
                  clip_threshold=None, activation_method=None, prefix=None, **kwargs):
         super(ScaledWeightsBinaryConv, self).__init__(**kwargs)
         self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold, method=activation_method)
         self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
-                             in_channels=in_channels, prefix=prefix, apply_scaling=True)
+                             in_channels=in_channels, prefix=prefix, apply_scaling=True, dilation=dilation)
 
     def hybrid_forward(self, F, x):
         return self.qconv(self.qact(x))
@@ -312,12 +312,13 @@ class ScaledBinaryConv(HybridBlock):
         ScaledBinaryConv implements scaled binarized 2D convolution,
         introduced by XNOR-Net Paper
     """
-    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, bits=None, bits_a=None,
+    def __init__(self, channels, kernel_size=3, stride=1, padding=0, in_channels=0, dilation=1, bits=None, bits_a=None,
                  clip_threshold=None, activation_method=None, prefix=None, **kwargs):
         super(ScaledBinaryConv, self).__init__(**kwargs)
         self.qact = QActivation(bits=bits_a, gradient_cancel_threshold=clip_threshold, method=activation_method)
         self.qconv = QConv2D(channels, bits=bits, kernel_size=kernel_size, strides=stride, padding=padding,
-                             in_channels=in_channels, prefix=prefix, no_offset=True, apply_scaling=True)
+                             in_channels=in_channels, prefix=prefix, no_offset=True, apply_scaling=True,
+                             dilation=dilation)
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
