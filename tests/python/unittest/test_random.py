@@ -553,6 +553,7 @@ def test_gamma_generator():
                      for _ in range(10)])
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=success_rate)
 
+@unittest.skip("Flaky test. Tracked in https://github.com/apache/incubator-mxnet/issues/14187")
 @with_seed()
 def test_exponential_generator():
     ctx = mx.context.current_context()
