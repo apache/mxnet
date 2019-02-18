@@ -759,14 +759,17 @@ class GroupNorm(HybridBlock):
             dtype = 'float32'
         super(GroupNorm, self).cast(dtype)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, gamma, beta):
         # normalization
         with autograd.train_mode():
-            y = F.BatchNorm(x.reshape(-4, 1, self.ngroups, -1).reshape(1, -3, -2),
-                            F.ones(self.ngroups, ctx=x.context()),
-                            F.zeros(self.ngroups, ctx=x.context()),
-                            F.zeros(self.ngroups, ctx=x.context()),
-                            F.ones(self.ngroups, ctx=x.context()),
+            y = x.expand_dims(0).reshape(0, 0, self.ngroups, -1)
+            y = y.reshape(1, -3, -1)
+            batch = x.shape[0]
+            y = F.BatchNorm(y,
+                            F.ones(batch*self.ngroups, ctx=x.context),
+                            F.zeros(batch*self.ngroups, ctx=x.context),
+                            F.zeros(batch*self.ngroups, ctx=x.context),
+                            F.ones(batch*self.ngroups, ctx=x.context),
                             name='fwd', **self._kwargs)
         # scale and shift
         y = y.reshape_like(x).reshape(0, 0, -1)
