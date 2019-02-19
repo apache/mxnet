@@ -1,14 +1,33 @@
+<!---
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied.  See the License for the
+  specific language governing permissions and limitations
+  under the License.
+-->
+
 # Release Python Docker Images for MXNet
 
 The `docker-python` directory can be used to release mxnet python docker images to dockerhub after any mxnet release.  
 It uses the appropriate pip binaries to build different docker images. Both python2 (default) and python3 images are available as -
 * {version}_cpu
 * {version}_cpu_mkl
-* {version}_gpu_cu90 
+* {version}_gpu_cu90
 * {version}_gpu_cu90_mkl
-* {version}_gpu_cu80 
+* {version}_gpu_cu80
 * {version}_gpu_cu80_mkl
-* {version}_gpu_cu92 
+* {version}_gpu_cu92
 * {version}_gpu_cu92_mkl
 * {version}_cpu_py3
 * {version}_cpu_mkl_py3
