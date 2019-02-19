@@ -89,7 +89,7 @@ class Deformable_Convolution(HybridBlock):
         - **data**: 4D input tensor with shape
           `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
           For other layouts shape is permuted accordingly.
-         
+
     Outputs:
         - **out**: 4D output tensor with shape
           `(batch_size, channels, out_height, out_width)` when `layout` is `NCHW`.
