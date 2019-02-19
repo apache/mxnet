@@ -84,7 +84,6 @@ class Deformable_Convolution(HybridBlock):
     offset_use_bias: bool (default True)
         Whether the layer for generating the offset uses a bias vector.
 
-
     Inputs:
         - **data**: 4D input tensor with shape
           `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
