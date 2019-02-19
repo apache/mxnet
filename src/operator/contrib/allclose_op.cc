@@ -31,7 +31,9 @@ DMLC_REGISTER_PARAMETER(AllCloseParam);
 
 NNVM_REGISTER_OP(_contrib_allclose)
 .describe(R"code(This operators implements the numpy.allclose(a, b, rtol=1e-05, atol=1e-08, equal_nan=False)
+
 .. math::
+
     f(x) = |a−b|≤atol+rtol|b|
 
 where
@@ -39,6 +41,7 @@ where
 :math:`atol, rtol` the values of absolute and relative tolerance (by default, rtol=1e-05, atol=1e-08)
 
 Examples::
+
   a = [1e10, 1e-7],
   b = [1.00001e10, 1e-8]
   y = allclose(a, b)
