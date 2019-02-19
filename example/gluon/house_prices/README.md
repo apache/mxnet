@@ -17,7 +17,7 @@
 
 # House Prices: Advanced Regression Techniques
 
-This example shows how to predict house prices and it is based on the following Kaggle challenge https://www.kaggle.com/c/house-prices-advanced-regression-techniques#description
+This example shows how to predict house prices and it is based on the [House Price Kaggle challenge](https://www.kaggle.com/c/house-prices-advanced-regression-techniques#description)
 
 First you need to download train and test data set from here:
 ```

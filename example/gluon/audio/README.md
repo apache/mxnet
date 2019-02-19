@@ -17,9 +17,7 @@
 
 # Urban Sounds Classification in MXNet Gluon
 
-This example provides an end-to-end pipeline for a common datahack competition - Urban Sounds Classification Example.
-Below is the link to the competition:
-https://datahack.analyticsvidhya.com/contest/practice-problem-urban-sound-classification/
+This example provides an end-to-end pipeline for a common datahack competition - [Urban Sounds Classification Example](https://datahack.analyticsvidhya.com/contest/practice-problem-urban-sound-classification/).
 
 After logging in, the data set can be downloaded.
 The details of the dataset and the link to download it are given below:
