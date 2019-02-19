@@ -151,8 +151,8 @@ NNVM_REGISTER_OP(UpSampling)
 .set_attr<FCompute>("FCompute<cpu>", UpSamplingCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", UpSamplingGrad{"_backward_UpSampling"})
 .set_attr<std::string>("key_var_num_args", "num_args")
-.add_argument("data", "NDArray-or-Symbol[]",
-              "Array of tensors to upsample. For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
+.add_argument("data", "NDArray-or-Symbol[]", "Array of tensors to upsample. "
+              "For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
