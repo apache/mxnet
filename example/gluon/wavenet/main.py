@@ -29,7 +29,9 @@ def main():
     - n_residue : Define number of residue (default=24)
     - n_skip : Define number of skip (default=128)
     - dilation_depth : Define dilation depth (default=10)
-    - use_gpu : use gpu for trainin (default=True)
+    - n_repeat : Define number of repeat (default=2)
+    - seq_size : Define sequence size when generating data (default=20000)
+    - use_gpu : use gpu for training
     - generation : whether or not to generate a wave file for model (default=True)
     - load_file : file name in loading wave file (default=parametric-2.wav)
     - save_file : file name in saving result (default=wav.npy)
