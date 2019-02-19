@@ -54,34 +54,34 @@ class Deformable_Convolution(HybridBlock):
         half the output channels, and both subsequently concatenated.
     num_deformable_group : int, default 1
         Number of deformable group partitions.
-    layout : str, (default NCHW)
+    layout : str, default NCHW
         Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
         'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
         batch, channel, height, width and depth dimensions respectively.
         Convolution is performed over 'D', 'H', and 'W' dimensions.
-    use_bias : bool (default True)
+    use_bias : bool, default True
         Whether the layer for generating the output features uses a bias vector.
     in_channels : int, default 0
         The number of input channels to this layer. If not specified,
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
-    activation : str (default None)
+    activation : str, default None
         Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    weight_initializer : str or `Initializer` (default None)
+    weight_initializer : str or `Initializer`, default None
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the output features
-    bias_initializer : str or `Initializer` (default Zero)
+    bias_initializer : str or `Initializer`, default Zero
         Initializer for the bias vector for the convolution layer
         for generating the output features
-    offset_weight_initializer : str or `Initializer` (default Zero, according to the paper[1])
+    offset_weight_initializer : str or `Initializer`, default Zero, according to the paper[1]
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the offset
-    offset_bias_initializer : str or `Initializer` (default Zero)
+    offset_bias_initializer : str or `Initializer`, default Zero
         Initializer for the bias vector for the convolution layer
         for generating the offset
-    offset_use_bias: bool (default True)
+    offset_use_bias: bool, default True
         Whether the layer for generating the offset uses a bias vector.
 
     Inputs:
@@ -93,6 +93,7 @@ class Deformable_Convolution(HybridBlock):
         - **out**: 4D output tensor with shape
           `(batch_size, channels, out_height, out_width)` when `layout` is `NCHW`.
           out_height and out_width are calculated as::
+
               out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
               out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
 
