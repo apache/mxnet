@@ -6778,12 +6778,9 @@ def test_quadratic_function():
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
-def allclose_function(contexts=None):
+def allclose_function(contexts):
     def getRandom(base, percent = 1.):
         return base * (1 + percent * (2 * np.random.random_sample() - 1.) / 100)
-
-    if contexts is None:
-        contexts = [default_context()]
 
     title = 'exp'
     for ctx in contexts:
@@ -6857,7 +6854,7 @@ def allclose_function(contexts=None):
 
 @with_seed()
 def test_allclose_function():
-    allclose_function()
+    allclose_function([default_context()])
 
 @with_seed()
 def test_histogram():
