@@ -20,6 +20,7 @@
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
 **Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.html) instead of these instructions.
+**Note:** Currently, we only support scala 2.11
 
 <hr>
 
@@ -113,6 +114,33 @@ mvn install
 ```
 
 <hr>
+
+## Interpreter
+
+To run the scala interpreter, first download and install scala 2.11.x (run `scala -version` to make sure you have the right version installed.**
+
+### Installing the Interpreter
+
+**Ubuntu***
+
+```
+sudo apt-get install scala
+```
+
+**macOS***
+
+```
+brew install scala@2.11
+```
+
+Then, add scala to your path by following the instructions output by homebrew.
+
+### Running the Interpreter
+
+To run the interpreter, download the appropriate mxnet jar from [the maven repository](https://search.maven.org/search?q=g:org.apache.mxnet) or build from source following the instructions above.
+
+Then, run `scala -cp {path/to/mxnet-full_2.11-os-version.jar}` to start it.
+If you receive a "NumberFormatException" when running the interpreter, run `export TERM=xterm-color` before starting the interpreter.
 
 ## Documentation
 
