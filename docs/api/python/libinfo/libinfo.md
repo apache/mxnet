@@ -52,9 +52,6 @@ In [6]:
 .. autosummary::
     :nosignatures:
 
-    Features
-    Feature
-    feature_list
 ```
 
 ## API Reference
