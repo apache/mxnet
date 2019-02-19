@@ -19,6 +19,7 @@
 
 This example shows an actor critic model that consists of a critic that measures how good an action taken is and an actor that controls the agent's behavior. 
 In our example actor and critic use the same model:
+
 ```
 class Policy(gluon.Block):
     def __init__(self, **kwargs):
