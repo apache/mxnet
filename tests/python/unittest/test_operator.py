@@ -1530,17 +1530,19 @@ def test_nearest_upsampling():
 
 @with_seed()
 def test_bilinear_upsampling():
-    for root_scale in [2,3]:
-        for scale in [1,2,3]:
-            for num_filter in [1,2,3]:
-                for base in [1,2,3]:
-                    # bilinear upsampling takes only 1 data and 1 weight
-                    # multi input mode is not applicable
-                    dimension = base*root_scale*scale
-                    kernel = 2 * root_scale - root_scale % 2
-                    data_shape = (1, num_filter, dimension, dimension)
-                    weight_shape = (num_filter, 1, kernel, kernel)
-                    check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter)
+    rootscale = [2,3]
+    scales = [1,2,3]
+    filters = [1,2,3]
+    bases = [1,2,3]
+    for params in itertools.product(rootscale, scales, filters, bases):
+        root_scale, scale, num_filter, base = params
+        # bilinear upsampling takes only 1 data and 1 weight
+        # multi input mode is not applicable
+        dimension = base*root_scale*scale
+        kernel = 2 * root_scale - root_scale % 2
+        data_shape = (1, num_filter, dimension, dimension)
+        weight_shape = (1, num_filter, kernel, kernel)
+        check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter)
 
 @with_seed()
 def test_batchnorm_training():
