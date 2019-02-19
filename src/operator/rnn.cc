@@ -264,6 +264,8 @@ The definition of GRU here is slightly different from paper but compatible with 
 .add_argument("state", "NDArray-or-Symbol", "initial hidden state of the RNN")
 .add_argument("state_cell", "NDArray-or-Symbol",
               "initial cell state for LSTM networks (only for LSTM)")
+.add_argument("sequence_length", "NDArray-or-Symbol",
+              "Vector of valid sequence lengths for each element in batch. (Only used if use_sequence_length kwarg is True)")
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)

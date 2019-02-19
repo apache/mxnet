@@ -37,7 +37,7 @@ class _RNNLayer(HybridBlock):
                  i2h_bias_initializer, h2h_bias_initializer,
                  mode, projection_size, h2r_weight_initializer,
                  lstm_state_clip_min, lstm_state_clip_max, lstm_state_clip_nan,
-                 dtype, **kwargs):
+                 dtype, use_sequence_length=False, **kwargs):
         super(_RNNLayer, self).__init__(**kwargs)
         assert layout in ('TNC', 'NTC'), \
             "Invalid layout %s; must be one of ['TNC' or 'NTC']"%layout
@@ -58,6 +58,7 @@ class _RNNLayer(HybridBlock):
         self._lstm_state_clip_max = lstm_state_clip_max
         self._lstm_state_clip_nan = lstm_state_clip_nan
         self._dtype = dtype
+        self._use_sequence_length = use_sequence_length
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 
@@ -219,7 +220,7 @@ class _RNNLayer(HybridBlock):
             states.append(func(name='%sh0_%d'%(self.prefix, i), **info))
         return states
 
-    def hybrid_forward(self, F, inputs, states=None, **kwargs):
+    def hybrid_forward(self, F, inputs, states=None, sequence_length=None, **kwargs):
         if F is ndarray:
             batch_size = inputs.shape[self._layout.find('N')]
         skip_states = states is None
@@ -236,12 +237,12 @@ class _RNNLayer(HybridBlock):
                     raise ValueError(
                         "Invalid recurrent state shape. Expecting %s, got %s."%(
                             str(info['shape']), str(state.shape)))
-        out = self._forward_kernel(F, inputs, states, **kwargs)
+        out = self._forward_kernel(F, inputs, states, sequence_length, **kwargs)
 
         # out is (output, state)
         return out[0] if skip_states else out
 
-    def _forward_kernel(self, F, inputs, states, **kwargs):
+    def _forward_kernel(self, F, inputs, states, sequence_length, **kwargs):
         """ forward using CUDNN or CPU kenrel"""
         if self._layout == 'NTC':
             inputs = F.swapaxes(inputs, dim1=0, dim2=1)
@@ -261,13 +262,22 @@ class _RNNLayer(HybridBlock):
 
         params = F._internal._rnn_param_concat(*params, dim=0)
 
-        rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
-                    projection_size=self._projection_size,
-                    num_layers=self._num_layers, bidirectional=self._dir == 2,
-                    p=self._dropout, state_outputs=True, mode=self._mode,
-                    lstm_state_clip_min=self._lstm_state_clip_min,
-                    lstm_state_clip_max=self._lstm_state_clip_max,
-                    lstm_state_clip_nan=self._lstm_state_clip_nan)
+        if self._use_sequence_length:
+            rnn = F.RNN(inputs, params, states[0], states[1], sequence_length, use_sequence_length=self._use_sequence_length,
+                        state_size=self._hidden_size, projection_size=self._projection_size,
+                        num_layers=self._num_layers, bidirectional=self._dir == 2,
+                        p=self._dropout, state_outputs=True, mode=self._mode,
+                        lstm_state_clip_min=self._lstm_state_clip_min,
+                        lstm_state_clip_max=self._lstm_state_clip_max,
+                        lstm_state_clip_nan=self._lstm_state_clip_nan)
+        else:
+            rnn = F.RNN(inputs, params, *states, state_size=self._hidden_size,
+                        projection_size=self._projection_size,
+                        num_layers=self._num_layers, bidirectional=self._dir == 2,
+                        p=self._dropout, state_outputs=True, mode=self._mode,
+                        lstm_state_clip_min=self._lstm_state_clip_min,
+                        lstm_state_clip_max=self._lstm_state_clip_max,
+                        lstm_state_clip_nan=self._lstm_state_clip_nan)
 
         if self._mode == 'lstm':
             outputs, states = rnn[0], [rnn[1], rnn[2]]

@@ -48,7 +48,7 @@ namespace mxnet {
 namespace op {
 
 namespace rnn_enum {
-  enum RNNOpInputs {kData, kParams, kState, kStateCell};
+  enum RNNOpInputs {kData, kParams, kState, kStateCell, kSequenceLength};
   enum RNNOpOutputs {kOut, kStateOut, kStateCellOut};
   enum RNNModeType {kRnnRelu, kRnnTanh, kLstm, kGru};
   enum RNNOpResource {kCuDNNDropoutDescSpace};
@@ -166,6 +166,8 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   int mode;
   float p;
   int seq_length_, batch_size_, input_size_;
+  bool lstm_q_;  // whether type is lstm
+  bool use_sequence_length;
   dmlc::optional<int> projection_size;
   dmlc::optional<double> lstm_state_clip_min, lstm_state_clip_max;
   bool lstm_state_clip_nan;
@@ -212,6 +214,13 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
     .set_default(false)
     .describe("Whether to stop NaN from propagating in state by clipping it to min/max. "
               "If clipping range is not specified, this option is ignored.");
+
+    DMLC_DECLARE_FIELD(use_sequence_length)
+        .set_default(false)
+        .describe(
+            "If set to true, this layer takes in an extra input parameter "
+            "`sequence_length` "
+            "to specify variable length sequence");
   }
 };
 
@@ -486,6 +495,7 @@ class RNNOp {
         LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
       }
     }
+
   }
 
   ~RNNOp() {
@@ -1038,19 +1048,31 @@ class RNNOp {
     }
   }
 
-
  private:
   inline void Init(const OpContext &ctx,
                    mshadow::Stream<xpu> *s,
                    const std::vector<TBlob> &in_data,
                    const std::vector<TBlob> &out_data) {
     using namespace mshadow;
-    size_t num_inputs = (param_.mode == rnn_enum::kLstm) ? 4 : 3;
+
+    size_t num_inputs;
     //  kOut
     size_t num_outputs = 1;
     if (param_.state_outputs) {
       // kOut, kStateOut, kStateCellOut
       num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
+    }
+    if (param_.mode == rnn_enum::kLstm) {
+      if (param_.use_sequence_length) {
+	num_inputs = 5; // data, parameters, state, cell_state, sequence_length
+      } else {
+	num_inputs = 4; // data, parameters, state, cell_state
+      }
+    } else {
+      if (param_.use_sequence_length)
+	num_inputs = 4; //  data, parameters, state, sequence_length
+      else
+	num_inputs = 3; // data, parameters, state
     }
 
     CHECK_EQ(in_data.size(), num_inputs);
