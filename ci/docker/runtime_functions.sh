@@ -292,6 +292,7 @@ build_centos7_cpu() {
         USE_BLAS=openblas \
         USE_MKLDNN=0 \
         USE_DIST_KVSTORE=1 \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -326,6 +327,7 @@ build_centos7_mkldnn() {
         USE_LAPACK=1 \
         USE_LAPACK_PATH=/usr/lib64/liblapack.so \
         USE_BLAS=openblas \
+        USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
 }
 
@@ -365,6 +367,8 @@ build_ubuntu_cpu_openblas() {
         USE_BLAS=openblas             \
         USE_MKLDNN=0                  \
         USE_DIST_KVSTORE=1            \
+        USE_LIBJPEG_TURBO=1           \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -380,6 +384,7 @@ build_ubuntu_cpu_mkl() {
         USE_MKLDNN=0                  \
         USE_INTEL_PATH=/opt/intel     \
         USE_DIST_KVSTORE=1            \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -510,6 +515,7 @@ build_ubuntu_cpu_clang39_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=0                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -526,6 +532,7 @@ build_ubuntu_cpu_clang60_mkldnn() {
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
         USE_OPENMP=1                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -539,6 +546,7 @@ build_ubuntu_cpu_mkldnn() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=openblas             \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -552,6 +560,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         ENABLE_TESTCOVERAGE=1         \
         USE_CPP_PACKAGE=1             \
         USE_BLAS=mkl                  \
+        USE_SIGNAL_HANDLER=1          \
         -j$(nproc)
 }
 
@@ -635,6 +644,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -651,6 +661,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -669,6 +680,7 @@ build_ubuntu_gpu_cuda91_cudnn7() {
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
@@ -953,6 +965,7 @@ unittest_ubuntu_cpu_julia() {
     export PATH="$1/bin:$PATH"
     export MXNET_HOME='/work/mxnet'
     export JULIA_DEPOT_PATH='/work/julia-depot'
+    export INTEGRATION_TEST=1
 
     julia -e 'using InteractiveUtils; versioninfo()'
 

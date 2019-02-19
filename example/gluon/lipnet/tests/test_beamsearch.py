@@ -15,16 +15,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
-import mxnet as mx
-from mxnet import libinfo
+"""it is the test for the decode using beam search
+Ref:
+https://github.com/ThomasDelteil/HandwrittenTextRecognition_MXNet/blob/master/utils/CTCDecoder/BeamSearch.py
+"""
 
-def test_include_path():
-    incl_path = libinfo.find_include_path()
-    assert os.path.exists(incl_path)
-    assert os.path.isdir(incl_path)
+import unittest
+import numpy as np
+from BeamSearch import ctcBeamSearch
 
+class TestBeamSearch(unittest.TestCase):
+    """Test Beam Search
+    """
+    def test_ctc_beam_search(self):
+        "test decoder"
+        classes = 'ab'
+        mat = np.array([[0.4, 0, 0.6], [0.4, 0, 0.6]])
+        print('Test beam search')
+        expected = 'a'
+        actual = ctcBeamSearch(mat, classes, None, k=2, beamWidth=3)[0]
+        print('Expected: "' + expected + '"')
+        print('Actual: "' + actual + '"')
+        self.assertEqual(expected, actual)
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    unittest.main()

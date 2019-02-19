@@ -607,7 +607,40 @@ def test_convolution_versions():
     check_consistency(syms, ctx_list)
 
 
+# More max-pooling strides and pads to test cudnn pooling implementation code paths
 @with_seed()
+def test_pooling_nhwc_with_convention():
+    def make_pooling_syms(**kwargs):
+        # Conventional NCHW layout pooling
+        sym = mx.sym.Pooling(**kwargs)
+        # NHWC pooling
+        data = mx.sym.Variable('pool_data')
+        sym_nhwc = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym_nhwc = mx.sym.Pooling(sym_nhwc, layout='NHWC', **kwargs)
+        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0,3,1,2), name='pool')
+        return [sym, sym_nhwc]
+
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare nhwc and nchw results only within a given precision.
+    for in_shape in [(3, 4, 8, 8), (2, 2, 20, 20)]:
+        for kernel in [(2,2), (3,3), (4,4)]:
+            for stride in [(1,1), (1,2), (2,1), (2,2)]:
+                for data_type in [np.float64, np.float32, np.float16]:
+                    ctx_list = [{'ctx': mx.gpu(0), 'pool_data': in_shape,
+                                 'type_dict': {'pool_data': data_type}}]
+                    symlist = make_pooling_syms(kernel=kernel, pool_type='max', stride=stride,
+                                                pooling_convention='valid', name='pool')
+                    check_consistency_NxM(symlist, ctx_list)
+
+                    symlist = make_pooling_syms(kernel=kernel, pool_type='max', stride=stride,
+                                                pooling_convention='full', name='pool')
+                    check_consistency_NxM(symlist, ctx_list)
+
+                    symlist = make_pooling_syms(kernel=(300,300), pool_type='max',
+                                                global_pool=True, name='pool')
+                    check_consistency_NxM(symlist, ctx_list)
+
+
 def test_pooling_with_type():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
@@ -768,232 +801,241 @@ def test_spatial_transformer_with_type():
     check_consistency(sym, ctx_list)
     check_consistency(sym, ctx_list, grad_req="add")
 
-
 @with_seed()
 def test_pooling_with_type2():
-    ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
-                {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
-                {'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float16}},
-                {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
-                {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': np.float32}}]
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare cpu and gpu results only within a given precision.
+    for data_type in [np.float64, np.float32, np.float16]:
+        ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}},
+                    {'ctx': mx.cpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list, rand_type=np.float16)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
-    check_consistency(sym, ctx_list, rand_type=np.float16)
+        sym = mx.sym.Pooling(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        check_consistency(sym, ctx_list)
 
-    sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
-    check_consistency(sym, ctx_list)
+        sym = mx.sym.Pooling(name='pool', kernel=(3,3), pad=(1,1), pool_type='sum')
+        check_consistency(sym, ctx_list)
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/11517")
+@with_seed()
+def test_pooling_nhwc_with_type():
+    def make_pooling_syms(**kwargs):
+        # Conventional NCHW layout pooling
+        sym = mx.sym.Pooling(**kwargs)
+        # NHWC pooling
+        data = mx.sym.Variable('pool_data')
+        sym_nhwc = mx.sym.transpose(data, axes=(0,2,3,1))
+        sym_nhwc = mx.sym.Pooling(sym_nhwc, layout='NHWC', **kwargs)
+        sym_nhwc = mx.sym.transpose(sym_nhwc, axes=(0,3,1,2), name='pool')
+        return [sym, sym_nhwc]
+
+    # While the float32 and float64 output is reliably consistent, float16 departs occasionally.
+    # We compare nhwc and nchw results only within a given precision.
+    for data_type in [np.float64, np.float32, np.float16]:
+        # NHWC pooling only enabled on GPU with CUDNN
+        ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (10, 2, 10, 10), 'type_dict': {'pool_data': data_type}}]
+        symlist = make_pooling_syms(name='pool', kernel=(3,3), stride=(2,2), pool_type='max')
+        check_consistency_NxM(symlist, ctx_list)
+
+        symlist = make_pooling_syms(name='pool', kernel=(3,3), pad=(1,1), pool_type='avg')
+        check_consistency_NxM(symlist, ctx_list)
+
+        symlist = make_pooling_syms(name='pool', kernel=(5,5), pad=(2,2), pool_type='max')
+        check_consistency_NxM(symlist, ctx_list)
+
+
 @with_seed()
 def test_pooling_versions():
-    def test_pooling_versions_helper(pool_op_list, data, kernel, pool_type, pad, stride, pooling_convention='valid',
-                                     global_pool=False, p_value=2, count_include_pad=True, tol=None):
+
+    # Produce the name of the 'transposed' layout, given the dimension
+    def transposed_layout(ndim):
+        if ndim < 3 or ndim > 5:
+            raise RuntimeError("Invalid data dim, expecting 3, 4 or 5")
+        return ('NWC', 'NHWC', 'NDHWC')[ndim-3]
+
+    # default padding is all zeros
+    def is_default_pad(pad):
+        return pad == (0,) * len(pad)
+
+    # default stride is all ones
+    def is_default_stride(stride):
+        return stride == (1,) * len(stride)
+
+    # returns True/False randomly with equal probability
+    def random_choice():
+        return np.random.random(1)[0] < 0.5
+
+    def test_pooling_versions_helper(pool_op_list, data, kernel, pool_type, pad, stride,
+                                     pooling_convention='valid', global_pool=False, p_value=2,
+                                     count_include_pad=True, tol=None, dtype=np.float32):
         ctx_list = []
         sym_list = []
-        # PoolingV1 cpu
-        if 'pool_v1_cpu' in pool_op_list:
-            ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            if not global_pool:
-                sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                                  pooling_convention=pooling_convention, name='pool'))
+        for pool_ctx in pool_op_list:
+            (pool_op, ctx_type) = pool_ctx.rsplit('_', 1)
+            expected_ctxs = ['cpu', 'gpu', 'cudnn']
+            if ctx_type not in expected_ctxs:
+                raise RuntimeError('Expected one of {}, saw {}.'.format(expected_ctxs, ctx_type))
+            ctx = mx.cpu(0) if ctx_type == 'cpu' else mx.gpu(0)
+            ctx_list.append({'ctx': ctx, 'pool_data': data, 'type_dict': {'pool_data': dtype}})
+            # start with pool args present in all cases
+            pool_op_args = {'kernel': kernel, 'pool_type': pool_type,
+                            'pooling_convention' : pooling_convention, 'name' : 'pool'}
+            # add other args as needed
+            if global_pool:
+                pool_op_args['global_pool'] = True
             else:
-                sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pool_type=pool_type, global_pool=True, name='pool'))
-        # PoolingV1 gpu
-        if 'pool_v1_gpu' in pool_op_list:
-            ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            if not global_pool:
-                sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                                  pooling_convention=pooling_convention, name='pool'))
+                # Add pad and stride param if needed, plus randomly when it matches the default
+                if not is_default_pad(pad) or random_choice():
+                    pool_op_args.update({'pad' : pad})
+                if not is_default_stride(stride) or random_choice():
+                    pool_op_args.update({'stride' : stride})
+
+            expected_pool_ops = ['pool', 'pool_transposed', 'pool_v1']
+            if pool_op == 'pool_v1':
+                sym = mx.sym.Pooling_v1(**pool_op_args)
             else:
-                sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pool_type=pool_type, global_pool=True, name='pool'))
-        # Pooling cpu
-        if 'pool_cpu' in pool_op_list:
-            ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            if not global_pool:
-                sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                               pooling_convention=pooling_convention, name='pool',
-                                               p_value=p_value, count_include_pad=count_include_pad))
-            else:
-                sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type, global_pool=True, name='pool',
-                                               p_value=p_value, count_include_pad=count_include_pad))
-        # Pooling gpu
-        if 'pool_gpu' in pool_op_list:
-            ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            if not global_pool:
-                sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                               pooling_convention=pooling_convention, cudnn_off=True, name='pool',
-                                               p_value=p_value, count_include_pad=count_include_pad))
-            else:
-                sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type, global_pool=True, cudnn_off=True,
-                                               name='pool', p_value=p_value, count_include_pad=count_include_pad))
-        # CuDNNPooling
-        if 'pool_cudnn' in pool_op_list:
-            ctx_list.append({'ctx': mx.gpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            if not global_pool:
-                sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                               pooling_convention=pooling_convention, p_value=p_value, cudnn_off=False,
-                                               name='pool', count_include_pad=count_include_pad))
-            else:
-                sym_list.append(mx.sym.Pooling(kernel=kernel, pool_type=pool_type, global_pool=True, p_value=p_value,
-                                               cudnn_off=False, name='pool', count_include_pad=count_include_pad))
+                pool_op_args.update({'p_value' : p_value, 'count_include_pad' : count_include_pad})
+                if ctx_type != 'cpu':
+                    pool_op_args['cudnn_off'] = ctx_type == 'gpu'
+                if pool_op == 'pool':
+                    # isolate pooling input from symbol input to test shared tensor optimizations
+                    buffered_input = mx.sym.identity(name='pool')
+                    sym = mx.sym.Pooling(buffered_input, **pool_op_args)
+                elif pool_op == 'pool_transposed':
+                    ndim = len(data)
+                    # NCW->NWC axes=(0,2,1) NCHW->NHWC axes=(0,2,3,1) NCDHW->NDHWC axes=(0,2,3,4,1);
+                    axes = (0,) + tuple(range(2,ndim)) + (1,)
+                    transposed = mx.sym.transpose(axes=axes, name='pool')
+                    pooled = mx.sym.Pooling(data=transposed, layout=transposed_layout(ndim),
+                                            **pool_op_args)
+                    # NWC->NCW axes=(0,2,1) NHWC->NCHW axes=(0,3,1,2) NDHWC->NCDHW axes=(0,4,1,2,3);
+                    axes = (0, ndim-1) + tuple(range(1,ndim-1))
+                    sym = mx.sym.transpose(data=pooled, axes=axes, name='pool')
+                else:
+                    raise RuntimeError('Expected one of {}, saw {}.'.format(expected_pool_ops,
+                                                                            pool_op))
+            sym_list.append(sym)
+
         check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), tol=tol)
 
-    def test_1d_pooling(pool_type, p_value=2, count_include_pad=True):
-        data = (2, 3, 20)
-        kernel = (4,)
-        pad = (0,)
-        stride = (1,)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='valid', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
-
-        pad = (2,)
-        stride = (2,)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='valid', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
-
-        pad = (0,)
-        stride = (1,)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='full', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
-
-        pad = (2,)
-        stride = (2,)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='full', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
-
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     global_pool=True, p_value=p_value, count_include_pad=count_include_pad)
-
-    def test_2d_pooling(pool_type, p_value=2, count_include_pad=True):
-        data = (2, 3, 20, 20)
-        kernel = (4, 5)
-        pad = (0, 0)
-        stride = (1, 1)
-        if pool_type == 'lp':
-            test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu'],
-                                         data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                         pooling_convention='valid', global_pool=False, p_value=p_value)
+    def test_pooling_dim(dim, pool_type, dtype, pool_op_list, p_value=2, count_include_pad=True,
+                         tol=None):
+        if dim == '1D':
+            data = (3, 3, 10)
+            kernels = [(4,), (4,), (5,)]
+            pads = [(0,), (2,), (2,)]
+            strides = [(1,), (2,), (1,)]
+        elif dim == '2D_no_padding':
+            data = (3, 2, 20, 20)
+            kernels = [(3, 3), (4, 5)]
+            pads = [(0, 0), (0, 0)]
+            strides = [(1, 1), (2, 1)]
+        elif dim == '2D':
+            data = (2, 2, 20, 20)
+            kernels = [(3, 3), (3, 5), (4, 5), (4, 5)]
+            pads = [(0, 0), (1, 2), (0, 0), (2, 3)]
+            strides = [(1, 1), (1, 1), (2, 1), (1, 1)]
+        elif dim == '3D':
+            data = (2, 3, 20, 20, 20)
+            kernels = [(4, 5, 3), (4, 5, 3), (3, 5, 7)]
+            pads = [(0, 0, 0), (2, 3, 2), (1, 2, 3)]
+            strides = [(1, 1, 1), (2, 3, 1), (1, 1, 1)]
         else:
-            test_pooling_versions_helper(pool_op_list=['pool_v1_cpu', 'pool_v1_gpu', 'pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                         data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                         pooling_convention='valid', global_pool=False, count_include_pad=count_include_pad)
+            raise RuntimeError('Unexpected pooling test class: {}.'.format(dim))
 
-        # pool_v1 has bugs when pad is not 0, do not test PoolingV1 here
-        pad = (2, 3)
-        stride = (2, 3)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='valid', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
+        for kernel, pad, stride in zip(kernels, pads, strides):
+            for pooling_convention in ['valid', 'full']:
+                try:
+                    test_pooling_versions_helper(pool_op_list=pool_op_list,
+                                     data=data, kernel=kernel, pad=pad, stride=stride,
+                                     pool_type=pool_type, pooling_convention=pooling_convention,
+                                     global_pool=False, p_value=p_value,
+                                     count_include_pad=count_include_pad, tol=tol, dtype=dtype)
+                except:
+                    print('pool_op_list = {}'.format(pool_op_list))
+                    print('kernel={}, pad={}, stride={}'.format(kernel, pad, stride))
+                    print('pool_type={}, pooling_convention={}, global_pool=False'.format(pool_type,
+                          pooling_convention))
+                    print('p_value={}, count_include_pad={}, dtype={}'.format(p_value,
+                          count_include_pad, dtype))
+                    print('environ = \n{}'.format(os.environ))
+                    raise
 
-        pad = (0, 0)
-        stride = (1, 1)
-        if pool_type == 'lp':
-            test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                         data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                         pooling_convention='full', global_pool=False, p_value=p_value)
-        else:
-            if count_include_pad:
-                test_pooling_versions_helper(pool_op_list=['pool_v1_cpu', 'pool_v1_gpu', 'pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                             data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                             pooling_convention='full', global_pool=False,
-                                             count_include_pad=count_include_pad)
-            else:
-                test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                             data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                             pooling_convention='full', global_pool=False,
-                                             count_include_pad=count_include_pad)
+        # Make sure kernel is ignored during global_pool by sometimes setting it to a crazy value
+        kernel = kernels[0]
+        if random_choice():
+            kernel = (300,) * len(kernel)
 
-        # pool_v1 has bugs when pad is not 0, do not test PoolingV1 here
-        pad = (2, 3)
-        stride = (2, 3)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='full', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
+        test_pooling_versions_helper(pool_op_list=pool_op_list,
+                                     data=data, kernel=kernel, pad=None, stride=None,
+                                     pool_type=pool_type, global_pool=True, p_value=p_value,
+                                     count_include_pad=count_include_pad, tol=tol, dtype=dtype)
 
-        if pool_type == 'lp':
-            test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                         data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                         global_pool=True, p_value=p_value)
-        else:
-            test_pooling_versions_helper(pool_op_list=['pool_v1_cpu', 'pool_v1_gpu', 'pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                         data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                         global_pool=True, count_include_pad=count_include_pad)
+    # The various implementations of the standard pooling operator
+    std_pool_op_list = ['pool_cpu', 'pool_transposed_cpu',
+                        'pool_gpu', 'pool_transposed_gpu',
+                        'pool_cudnn', 'pool_transposed_cudnn']
+    # The implementations of the 'v1' pooling operator
+    v1_pool_op_list = ['pool_v1_cpu', 'pool_v1_gpu']
+    # For those cases when all implementations should match- the combined implementation list.
+    combo_pool_op_list = std_pool_op_list + v1_pool_op_list
 
-    def test_3d_pooling(pool_type, p_value=2, count_include_pad=True):
-        data = (2, 3, 20, 20, 20)
-        kernel = (4, 5, 3)
-        pad = (0, 0, 0)
-        stride = (1, 1, 1)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='valid', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
+    for dtype in [np.float32, np.float64, np.float16]:
+        # Testing of the standard (not 'v1') pooling operator is universal across all
+        # data dimensions, implementations and layouts.
+        for dim in ['1D', '2D', '3D']:
+            test_pooling_dim(dim, 'max', dtype, std_pool_op_list)
+            test_pooling_dim(dim, 'avg', dtype, std_pool_op_list, count_include_pad=True)
+            test_pooling_dim(dim, 'avg', dtype, std_pool_op_list, count_include_pad=False)
+            test_pooling_dim(dim, 'sum', dtype, std_pool_op_list)
+            test_pooling_dim(dim, 'lp', dtype, std_pool_op_list, p_value=1)
+            test_pooling_dim(dim, 'lp', dtype, std_pool_op_list, p_value=2)
+            test_pooling_dim(dim, 'lp', dtype, std_pool_op_list, p_value=3)
 
-        pad = (2, 3, 3)
-        stride = (2, 3, 1)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='valid', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
+        # Testing of the 'v1' pooling operator is over its restricted support domain of
+        # 2D data only and not with the 'lp' pooling type.  The 'v1' cpu and gpu versions are
+        # always tested against each other, and sometimes against the standard operator versions.
+        # The slightly different 'v1' definition prevents this in the following cases:
+        #
+        #     1. In max pooling, when multiple input values are the maximum in the input window,
+        #        the 'v1' implementation backprops the gradient to all maxima, whereas the standard
+        #        pooling operator backprops the gradient to the lowest-indexed maximum only.
+        #     2. In max pooling, the 'v1' operator pads with 0's and this value can become the
+        #        maximum output value in the case of an all-negative input.  The standard pooling
+        #        operator effectively considers the padding to be the largest negative value, so
+        #        only input values should appear in the output.
+        #     3. In avg pooling, the 'v1' operator divides the sum by the same window size factor,
+        #        even at the edges, and so does not support count_include_pad = False.
+        #     4. The float16 'v1' pooling operator performs forward sums and averages in
+        #        float16, whereas the std operators perform those calculations in float32, so
+        #        greater float16 tolerances are needed when comparing across implementations.
 
-        pad = (0, 0, 0)
-        stride = (1, 1, 1)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='full', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
+        # Double the float16 tol when comparing v1 and non-v1 implemenations, per note 4 above.
+        relaxed_tol = {np.dtype(np.float16): 2e-1,
+               np.dtype(np.float32): 1e-3,
+               np.dtype(np.float64): 1e-5,
+               np.dtype(np.uint8): 0,
+               np.dtype(np.int32): 0,
+               np.dtype(np.int64): 0}
 
-        pad = (2, 3, 3)
-        stride = (2, 3, 1)
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     pooling_convention='full', global_pool=False, p_value=p_value,
-                                     count_include_pad=count_include_pad)
+        # Exclude std implementations due to points 1 and 2 above.
+        test_pooling_dim('2D', 'max', dtype, v1_pool_op_list)
+        # The standard and 'v1' implementations match for this case.
+        test_pooling_dim('2D', 'avg', dtype, combo_pool_op_list, count_include_pad=True,
+                         tol=relaxed_tol)
+        # Exclude std implementations due to point 3 above.
+        test_pooling_dim('2D', 'avg', dtype, v1_pool_op_list, count_include_pad=False)
+        # The standard and 'v1' implementations match for this case.
+        test_pooling_dim('2D', 'sum', dtype, combo_pool_op_list, tol=relaxed_tol)
 
-        test_pooling_versions_helper(pool_op_list=['pool_cpu', 'pool_gpu', 'pool_cudnn'],
-                                     data=data, kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                     global_pool=True, p_value=p_value, count_include_pad=count_include_pad)
-
-    test_1d_pooling('max')
-    test_1d_pooling('avg', count_include_pad=True)
-    test_1d_pooling('avg', count_include_pad=False)
-    test_1d_pooling('sum')
-    test_1d_pooling('lp', p_value=1)
-    test_1d_pooling('lp', p_value=2)
-    test_1d_pooling('lp', p_value=3)
-
-    test_2d_pooling('max')
-    test_2d_pooling('avg', count_include_pad=True)
-    test_2d_pooling('avg', count_include_pad=False)
-    test_2d_pooling('sum')
-    test_2d_pooling('lp', p_value=1)
-    test_2d_pooling('lp', p_value=2)
-    test_2d_pooling('lp', p_value=3)
-
-    test_3d_pooling('max')
-    test_3d_pooling('avg', count_include_pad=True)
-    test_3d_pooling('avg', count_include_pad=False)
-    test_3d_pooling('sum')
-    test_3d_pooling('lp', p_value=1)
-    test_3d_pooling('lp', p_value=2)
-    test_3d_pooling('lp', p_value=3)
+    # We can compare the standard and 'v1' max pooling implementations if we eliminate padding
+    # (see point 2 above) and use np.float64 data so that no two random input window values are
+    # likely to be the same (see point 1 above).
+    test_pooling_dim('2D_no_padding', 'max', np.float64, combo_pool_op_list)
 
 
 @with_seed()
