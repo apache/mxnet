@@ -1506,7 +1506,9 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
     arr = {'data': mx.random.uniform(-10.0, 10.0, data_shape, ctx=mx.cpu()).copyto(default_context()),
         'weight':  mx.nd.array(_init_bilinear(mx.ndarray.empty(weight_shape).asnumpy(), root_scale))}
 
-    up = mx.sym.UpSampling(mx.sym.Variable('data'),
+    out_grad = arr['data']
+    data = mx.sym.Variable(name="data")
+    up = mx.sym.UpSampling(data,
         mx.sym.Variable('weight'), sample_type='bilinear', scale=root_scale,
         num_filter=num_filter, num_args=2)
     arg_shapes, out_shapes, _ = up.infer_shape(data=data_shape)
@@ -1514,8 +1516,7 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
     exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
     out = exe.outputs[0].asnumpy()
-    exe.backward(exe.outputs)
-
+    exe.backward(out_grad)
 
 @with_seed()
 def test_nearest_upsampling():
