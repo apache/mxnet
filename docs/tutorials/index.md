@@ -27,6 +27,7 @@
    embedded/index.md
    gluon/index.md
    java/index.md
+   mkldnn/index.md
    nlp/index.md
    onnx/index.md
    python/index.md
