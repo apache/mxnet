@@ -31,11 +31,14 @@ DMLC_REGISTER_PARAMETER(ApproxGradientParam);
 
 NNVM_REGISTER_OP(_contrib_approx_gradient)
 .describe(R"code(This operators implements the calculation of numerical gradient approximation
+
 .. math::
+
     grad[i] = (a−b).sum() / eps
-OR
+        OR
     for j in range(i):
           grad[j] = (a(i)−b(i)).sum() / eps
+
 where
 :math:`a, b` are the input tensors of equal types an shapes
 :math:`eps` the values of used for calculation of the numerical approximation of derivative

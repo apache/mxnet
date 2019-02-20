@@ -5482,7 +5482,7 @@ def test_laop():
     atol_fw = 1e-9
     num_eps = 2e-6
     rtol_bw = 1e-5
-    atol_bw = 2e-6
+    atol_bw = 1e-5
     # enable numerical checking of gradients
     grad_check = 1
 
