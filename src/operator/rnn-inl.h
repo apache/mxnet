@@ -598,10 +598,21 @@ class RNNOp {
     }
 
     #if USE_CUDNN_LSTM_PROJ
-    std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
+    std::vector<int> seqLengthArray;
+
+    cudnnRNNDataLayout_t layout_t;
+    if (param_.use_sequence_length) {
+      seqLengthArray = std::vector<int>(sequence_length_ptr, sequence_length_ptr + param_.batch_size_);
+      layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
+    }
+    else {
+      seqLengthArray = std::vector<int>(param_.batch_size_, param_.seq_length_);
+      layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED;
+    }
+
     CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
                                          dtype_,
-                                         CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                         layout_t,
                                          param_.seq_length_,
                                          param_.batch_size_,
                                          param_.input_size_,
@@ -612,7 +623,7 @@ class RNNOp {
     out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
     CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
                                          dtype_,
-                                         CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                         layout_t,
                                          param_.seq_length_,
                                          param_.batch_size_,
                                          out_size,
@@ -621,7 +632,7 @@ class RNNOp {
     if (ctx.is_train) {
       CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
                                            dtype_,
-                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                           layout_t,
                                            param_.seq_length_,
                                            param_.batch_size_,
                                            param_.input_size_,
@@ -629,7 +640,7 @@ class RNNOp {
                                            nullptr));
       CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
                                            dtype_,
-                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                           layout_t,
                                            param_.seq_length_,
                                            param_.batch_size_,
                                            out_size,
