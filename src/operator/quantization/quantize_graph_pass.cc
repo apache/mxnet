@@ -126,7 +126,6 @@ Graph QuantizeGraph(Graph &&src) {
   const auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   const auto excluded_nodes = src.GetAttr<std::unordered_set<std::string>>("excluded_nodes");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
-  const auto use_quantized_data_layer = src.GetAttr<bool>("use_quantized_data_layer");
 
   // mirror_map stores the mapping from the currently visited graph to the newly created quantized
   // graph. Key is the currently visited graph's node pointer, and value is a copied node of the key
@@ -156,10 +155,6 @@ Graph QuantizeGraph(Graph &&src) {
         // reused next time when the same entry is visited again.
         if (avoid_quantize_input_map.count(node->op()) &&
             avoid_quantize_input_map[node->op()](node->attrs, i)) {
-          new_node->inputs.emplace_back(mirror_entry);
-        // If network will directly accept quantized data, simply add data as input.
-        } else if (use_quantized_data_layer && e.node->is_variable() &&
-                   e.node->attrs.name == "data") {
           new_node->inputs.emplace_back(mirror_entry);
         } else if (!NeedQuantize(e.node, excluded_nodes)) {
           if (mirror_entry_map.count(e)) {
@@ -204,8 +199,11 @@ Graph QuantizeGraph(Graph &&src) {
         if (mirror_node->op() == Op::Get("_contrib_dequantize")) {
           mirror_node = mirror_node->inputs[0].node;
         }
-        NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
+        NodeEntry mirror_entry = NodeEntry{
+          mirror_node, e.index, e.version};
         // for quantize node
+        uint32_t min_index = 1;
+        uint32_t max_index = 2;
         if (avoid_quantize_input_map.count(node->op()) &&
             avoid_quantize_input_map[node->op()](node->attrs, i)) {
           // skip non-quantized input
@@ -217,23 +215,19 @@ Graph QuantizeGraph(Graph &&src) {
           // there is only 1min and 1max output from mirror node (which is
           // currently true)
           size_t num_outputs = mirror_node->num_outputs() - 2;
-          uint32_t min_index = num_outputs + 2 * e.index;
-          uint32_t max_index = num_outputs + 2 * e.index + 1;
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
-          new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
-        } else if (use_quantized_data_layer && e.node->is_variable() &&
-                   e.node->attrs.name == "data") {
-          NodePtr min_var = CreateNode("nullptr", e.node->attrs.name + "_min");
-          NodePtr max_var = CreateNode("nullptr", e.node->attrs.name + "_max");
-          new_node->inputs.emplace_back(NodeEntry{min_var, 0, 0});
-          new_node->inputs.emplace_back(NodeEntry{max_var, 0, 0});
+          min_index = num_outputs + 2 * e.index;
+          max_index = num_outputs + 2 * e.index + 1;
         } else {
-          CHECK(mirror_entry_map.count(e)) << "The input is not quantize or quantized_op";
-          uint32_t min_index = 1;
-          uint32_t max_index = 2;
+          CHECK(mirror_entry_map.count(e))
+              << "The input is not quantize or quantized_op";
+        }
+        if (mirror_entry_map.count(e)) {
           auto quantize_entry = mirror_entry_map[e];
           new_node->inputs.emplace_back(NodeEntry{quantize_entry.node, min_index, 0});
           new_node->inputs.emplace_back(NodeEntry{quantize_entry.node, max_index, 0});
+        } else {
+          new_node->inputs.emplace_back(NodeEntry{mirror_node, min_index, 0});
+          new_node->inputs.emplace_back(NodeEntry{mirror_node, max_index, 0});
         }
       }
 
