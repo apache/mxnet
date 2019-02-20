@@ -184,7 +184,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.40, .52, .60,
             conv_filter = (pre_filter, num_filter) + tuple(_str2ints(node["attrs"]["kernel"]))
             stride = tuple(_str2ints(node["attrs"].get("stride", "1")))[0]
             pad = tuple(_str2ints(node["attrs"].get("pad", "1")))[0]
-            flops = get_flops(pre_feature_map, conv_filter, stride=stride, padding=pad)
+            flops = get_flops(pre_feature_map, conv_filter, stride=stride, padding=pad) // num_group
             if node["attrs"].get("no_bias", 'False') != 'True':
                 cur_param += num_filter
         elif op == 'FullyConnected':
@@ -192,7 +192,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.40, .52, .60,
                 cur_param = pre_filter * int(node["attrs"]["num_hidden"])
             else:
                 cur_param = (pre_filter+1) * int(node["attrs"]["num_hidden"])
-            flops = (pre_filter+1) * int(node["attrs"]["num_hidden"])
+            # FC layers are not counted in related work
+            # flops = (pre_filter+1) * int(node["attrs"]["num_hidden"])
         elif op == 'BatchNorm':
             key = node["name"] + "_output"
             if show_shape:
