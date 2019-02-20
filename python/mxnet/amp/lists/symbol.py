@@ -163,4 +163,5 @@ WIDEST_TYPE_CASTS = [
     'dgl_graph_compact',
     'dgl_subgraph',
     'edge_id',
+    'where',
     ]
