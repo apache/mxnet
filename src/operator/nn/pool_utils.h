@@ -25,6 +25,17 @@
 namespace mxnet {
 namespace op {
 
+// Define an accumulator type AccType to permit float16-I/O lp pooling to avoid underflow.
+template<typename DType>
+struct PoolingTypes {
+  typedef DType AccType;
+};
+
+template<>
+struct PoolingTypes<mshadow::half::half_t> {
+  typedef float AccType;
+};
+
 template<typename DType, int p>
 struct a_pow_p {
   static MSHADOW_XINLINE DType Map(const DType a) {
@@ -98,14 +109,17 @@ struct lp_grad<DType, 1> {
 template<typename DType>
 struct lp_grad<DType, 2> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
-    return grad * in_data / out_data;
+    // Avoid inf, if out_data has underflowed to 0 for a non-zero input, or nan if grad is also 0.
+    return (out_data == DType(0.0)) ? DType(0.0) : grad * (in_data / out_data);
   }
 };
 
 template<typename DType>
 struct lp_grad<DType, 3> {
   static MSHADOW_XINLINE DType Map(const DType grad, const DType in_data, const DType out_data) {
-    return grad * in_data * in_data / (out_data * out_data);
+    // Avoid inf, if out_data has underflowed to 0 for a non-zero input, or nan if grad is also 0.
+    DType in_out_ratio = in_data / out_data;
+    return (out_data == DType(0.0)) ? DType(0.0) : grad * in_out_ratio * in_out_ratio;
   }
 };
 

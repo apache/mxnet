@@ -1172,12 +1172,12 @@ void L2NormComputeEx(const nnvm::NodeAttrs& attrs,
 template<int ndim, bool clip = true>
 struct pick {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const DType* a,
-                                  const IType *idx, int M, int stride,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
+                                  const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
-    int j = static_cast<int>(idx[i]);
+    index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
       else if (j >= M) j = M - 1;
@@ -1194,12 +1194,12 @@ struct pick {
 template<int ndim, bool clip = true>
 struct pick_grad {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* igrad, const DType* ograd,
-                                  const IType *idx, int M, int stride,
+  MSHADOW_XINLINE static void Map(index_t i, DType* igrad, const DType* ograd,
+                                  const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
     using namespace broadcast;
-    int j = static_cast<int>(idx[i]);
+    index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
       else if (j >= M) j = M - 1;

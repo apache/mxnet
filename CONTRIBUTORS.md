@@ -213,6 +213,8 @@ List of Contributors
 * [Piyush Ghai](https://github.com/piyushghai)
 * [Zach Boldyga](https://github.com/zboldyga)
 
+* [Ming Yang](http://ufoym.com)
+
 Label Bot
 ---------
 * [mxnet-label-bot](https://github.com/mxnet-label-bot)

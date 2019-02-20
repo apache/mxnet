@@ -15,11 +15,10 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-<!-- This page should be deleted after sometime (Allowing search engines
-to update links) -->
-<meta http-equiv="refresh" content="3; url=https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU" />
-<!-- Just in case redirection does not work -->
-<p>
-  <a href="https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU">
-    This content is moved to a new MXNet install page. Redirecting... </a>
-</p>
+# Examples using Sparse Symbol API
+This folder contains examples that demonstrate the usage of [Sparse Symbol API](https://mxnet.incubator.apache.org/api/python/symbol/sparse.html)
+- [Factorization Machine](https://github.com/apache/incubator-mxnet/tree/master/example/sparse/factorization_machine) uses sparse weights
+- [Linear Classification Using Sparse Matrix Multiplication](https://github.com/apache/incubator-mxnet/tree/master/example/sparse/linear_classification) shows how to use a sparse data loader, sparse dot operator and sparse gradient updaters
+- [Matrix Factorization w/ Sparse Embedding](https://github.com/apache/incubator-mxnet/tree/master/example/sparse/matrix_factorization) uses sparse weights
+- [Wide and Deep Learning](https://github.com/apache/incubator-mxnet/tree/master/example/sparse/wide_deep) shows how to run sparse wide and deep classification
+
