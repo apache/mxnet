@@ -572,6 +572,10 @@ class RNNOp {
     param_.seq_length_ = x.shape_[0];
     param_.batch_size_ = x.shape_[1];
     param_.input_size_ = x.shape_[2];
+
+    param_.seq_length_ = x.shape_[0];
+    param_.batch_size_ = x.shape_[1];
+    param_.input_size_ = x.shape_[2];
     const int direction = param_.bidirectional ? 2 : 1;
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
@@ -601,6 +605,7 @@ class RNNOp {
     std::vector<int> seqLengthArray;
 
     cudnnRNNDataLayout_t layout_t;
+
     if (param_.use_sequence_length) {
       seqLengthArray = std::vector<int>(sequence_length_ptr, sequence_length_ptr + param_.batch_size_);
       layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
@@ -617,7 +622,7 @@ class RNNOp {
                                          param_.batch_size_,
                                          param_.input_size_,
                                          seqLengthArray.data(),
-                                         nullptr));
+                                         (void*)&padding_fill_));
     int out_size =
       (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
     out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
@@ -628,7 +633,7 @@ class RNNOp {
                                          param_.batch_size_,
                                          out_size,
                                          seqLengthArray.data(),
-                                         nullptr));
+                                         (void*)&padding_fill_));
     if (ctx.is_train) {
       CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
                                            dtype_,
@@ -637,7 +642,7 @@ class RNNOp {
                                            param_.batch_size_,
                                            param_.input_size_,
                                            seqLengthArray.data(),
-                                           nullptr));
+                                           (void*)&padding_fill_));
       CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
                                            dtype_,
                                            layout_t,
@@ -645,7 +650,7 @@ class RNNOp {
                                            param_.batch_size_,
                                            out_size,
                                            seqLengthArray.data(),
-                                           nullptr));
+                                           (void*)&padding_fill_));
     }
     #endif
 
@@ -1395,6 +1400,7 @@ class RNNOp {
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
   #if USE_CUDNN_LSTM_PROJ
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
+  DType padding_fill_ = 0;
   #endif
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;
   cudnnTensorDescriptor_t hy_desc_, cy_desc_;
