@@ -63,7 +63,7 @@ class LossScaler(object):
             else:
                 self._unskipped += 1
             if self._unskipped == self._scale_seq_len:
-	        self._unskipped = 0
+                self._unskipped = 0
                 self._next_loss_scale = min(self._max_loss_scale, self._loss_scale * 2.)
                 print("SCALE UP")
                 print("loss scale is %f, but will be %f next iteration" % (self._loss_scale, self._next_loss_scale))
