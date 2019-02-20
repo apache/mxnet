@@ -77,8 +77,8 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
           << "But the first argument is on "
           << ctx << " while the " << i+1 << "-th argument is on "
           << inputs[i]->ctx();
-    */
     }
+    */
   } else if (outputs.size() && !outputs[0]->is_none()) {
     ctx = outputs[0]->ctx();
   } else if (attrs.dict.find("ctx") != attrs.dict.end()) {
