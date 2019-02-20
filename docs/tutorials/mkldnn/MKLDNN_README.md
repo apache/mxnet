@@ -151,7 +151,7 @@ To build and install MXNet yourself using [Microsoft Visual Studio 2017](https:/
 3. Download and install [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download).
 4. Unzip the OpenCV package.
 5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (e.g., ```OpenCV_DIR = C:\utils\opencv\build```).
-6. If you don’t have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
+6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.20/OpenBLAS%200.2.20%20version.zip/download).
 7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories (e.g., ```OpenBLAS_HOME = C:\utils\OpenBLAS```).
 
 After you have installed all of the required dependencies, build the MXNet source code:
@@ -251,7 +251,7 @@ mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nChw16c out:f32_nchw,num:1,32x3
 <h2 id="5">Enable MKL BLAS</h2>
 
 With MKL BLAS, the performace is expected to furtherly improved with variable range depending on the computation load of the models.
-You can redistribute not only dynamic libraries but also headers, examples and static libraries on accepting the license [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license).
+You can redistribute not only dynamic libraries but also headers, examples and static libraries on accepting the license [Intel Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license).
 Installing the full MKL installation enables MKL support for all operators under the linalg namespace.
 
   1. Download and install the latest full MKL version following instructions on the [intel website.](https://software.intel.com/en-us/mkl)
@@ -317,7 +317,7 @@ This limitations of this experimental feature are:
 
 <h2 id="7">Quantization and Inference with INT8</h2>
 
-Benefiting from Intel® MKL-DNN, MXNet built with Intel® MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel® CPU Platform on Intel® Xeon® Scalable Platform.
+Benefiting from Intel MKL-DNN, MXNet built with Intel MKL-DNN brings outstanding performance improvement on quantization and inference with INT8 Intel CPU Platform on Intel Xeon Scalable Platform.
 
 - [CNN Quantization Examples](https://github.com/apache/incubator-mxnet/tree/master/example/quantization).
 
