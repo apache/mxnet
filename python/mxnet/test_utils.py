@@ -906,11 +906,10 @@ def numeric_grad(executor, location, grad_nodes, aux_states=None, eps=1e-4,
 def check_gradient(grad_req, fd_grad, sym_grad, orig_grad, rtol, atol, name, names, equal_nan=False):
     """Gradient check
 
-        Parameters
+    Parameters
     ----------
     grad_req : string
-        Gradient requirement.
-
+        Gradient requirement
     fd_grad : np.ndarray or mx.nd.array
     sym_grad : np.ndarray or mx.nd.array
     orig_grad : np.ndarray or mx.nd.array
@@ -919,13 +918,14 @@ def check_gradient(grad_req, fd_grad, sym_grad, orig_grad, rtol, atol, name, nam
         Relative tolerance used in gradient comparison
     atol : float
         Absolute tolerance used in gradient comparison
-    name: string
+    name : string
         Name of the node where gradient is checked
-    names: Tuple of strings
+    names : Tuple of strings
         The names describing the compared gradients
     equal_nan : boolean, optional
         The flag determining how to treat NAN values in gradient comparison
     """
+
     if grad_req == 'write':
         assert_almost_equal(fd_grad, sym_grad, rtol, atol, names, equal_nan=equal_nan)
     elif grad_req == 'add':
