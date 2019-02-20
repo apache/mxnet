@@ -71,6 +71,8 @@ FP32_FUNCS = [
     'linalg_gelqf',
     'linalg_trmm',
     'linalg_trsm',
+    'quantize',
+    'quantize_v2',
 
     # Neural network
     'SoftmaxOutput',
@@ -92,6 +94,8 @@ FP32_FUNCS = [
     'Custom',
     'CTCLoss',
     'ctc_loss',
+    'DeformableConvolution'
+    'DeformablePSROIPooling',
     ]
 
 CONDITIONAL_FP32_FUNCS = [
@@ -145,4 +149,18 @@ WIDEST_TYPE_CASTS = [
     'stack',
     'maximum',
     'minimum',
+    'MultiBoxDetection',
+    'MultiBoxTarget',
+    'MultiProposal',
+    'PSROIPooling',
+    'Proposal',
+    'ROIAlign',
+    'boolean_mask',
+    'box_iou',
+    'count_sketch',
+    'dgl_csr_neighbor_non_uniform_sample',
+    'dgl_csr_neighbor_uniform_sample',
+    'dgl_graph_compact',
+    'dgl_subgraph',
+    'edge_id',
     ]

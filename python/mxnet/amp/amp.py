@@ -27,8 +27,10 @@ from functools import partial
 
 from .. import symbol
 from ..symbol import Symbol
+from ..symbol import contrib as symbol_contrib
 from .. import ndarray
 from ..ndarray import NDArray
+from ..ndarray import contrib as ndarray_contrib
 from . import lists
 from ..gluon import trainer
 from .. import optimizer as opt
@@ -110,7 +112,7 @@ def _wrap_symbol_functions(module):
             return f(*args, **kwargs)
         return _new_fun
 
-    _wrapper = _symbol_wrapper if module in (symbol, Symbol) else _ndarray_wrapper
+    _wrapper = _symbol_wrapper if module in (symbol, Symbol, symbol_contrib) else _ndarray_wrapper
 
     for fun_name in lists.symbol.FP16_FUNCS:
         try:
@@ -224,7 +226,7 @@ class AMPHandle(object):
             raise TypeError("only compatible with trainer")
             if self._loss_scaler.update(list(optimizer_or_trainer.param_dict.values())):
                 pass
-                # TODO(cfujitsang): What is function called with optimizer ? 
+                # TODO(cfujitsang): What is function called with optimizer ?
             else:
                 # TODO(cfujitsang): Check why changing the scale can be a problem with kv_store
                 #self._loss_scaler._check_and_rescale_grad
@@ -243,6 +245,8 @@ def init():
     print("AMP init!")
     _wrap_symbol_functions(symbol)
     _wrap_symbol_functions(Symbol)
+    _wrap_symbol_functions(symbol_contrib)
     _wrap_symbol_functions(ndarray)
     _wrap_symbol_functions(NDArray)
+    _wrap_symbol_functions(ndarray_contrib)
     return AMPHandle()
