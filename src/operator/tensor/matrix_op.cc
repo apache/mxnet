@@ -431,6 +431,8 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1);
   const SliceParam& param = nnvm::get<SliceParam>(attrs.parsed);
   auto in_stype = inputs[0].storage_type();
+  auto out_size = outputs[0].shape().Size();
+  if (out_size == 0) return;
   if (in_stype == kCSRStorage) {
     SliceCsrImpl<cpu>(param, ctx, inputs[0], req[0], outputs[0]);
 #if MXNET_USE_MKLDNN == 1
