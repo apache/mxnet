@@ -427,9 +427,11 @@ def test_rnn_cells_export_import():
         assert_almost_equal(output1.asnumpy(), output2.asnumpy())
 
 
-def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
-    layer.collect_params().initialize()
+def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, ctx=mx.cpu()):
+    layer.collect_params().initialize(ctx=ctx)
     inputs.attach_grad()
+    inputs = inputs.as_in_context(ctx)
+    states = states.as_in_context(ctx)
     with mx.autograd.record():
         if states is None:
             out = layer(inputs)
@@ -467,47 +469,77 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False):
         mx.test_utils.assert_almost_equal(np_dx, inputs.grad.asnumpy(), rtol=1e-3, atol=1e-5)
 
 
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_rnn_layers():
-    check_rnn_layer_forward(gluon.rnn.RNN(10, 2), mx.nd.ones((8, 3, 20)))
-    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, bidirectional=True), mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)))
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2), mx.nd.ones((8, 3, 20)))
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True), mx.nd.ones((8, 3, 20)), [mx.nd.ones((4, 3, 10)), mx.nd.ones((4, 3, 10))])
-    check_rnn_layer_forward(gluon.rnn.GRU(10, 2), mx.nd.ones((8, 3, 20)))
-    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, bidirectional=True), mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)))
 
-    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dropout=0.5), mx.nd.ones((8, 3, 20)),
+def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
+
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype), mx.nd.ones((8, 3, 20), dtype=dtype))
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, bidirectional=True), mx.nd.ones((8, 3, 20),  dtype=dtype), mx.nd.ones((4, 3, 10),  dtype=dtype))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype), mx.nd.ones((8, 3, 20),  dtype=dtype))
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2,dtype=dtype,  bidirectional=True), mx.nd.ones((8, 3, 20),  dtype=dtype), [mx.nd.ones((4, 3, 10),  dtype=dtype), mx.nd.ones((4, 3, 10),  dtype=dtype)])
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dtype=dtype, ), mx.nd.ones((8, 3, 20)))
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dtype=dtype, bidirectional=True), mx.nd.ones((8, 3, 20),  dtype=dtype), mx.nd.ones((4, 3, 10),  dtype=dtype))
+
+
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, dtype=dtype, dropout=0.5), mx.nd.ones((8, 3, 20), dtype=dtype),
                             run_only=True)
-    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, bidirectional=True, dropout=0.5),
-                            mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)), run_only=True)
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5), mx.nd.ones((8, 3, 20)),
+    check_rnn_layer_forward(gluon.rnn.RNN(10, 2, bidirectional=True, dropout=0.5, dtype=dtype),
+                            mx.nd.ones((8, 3, 20), dtype=dtype), mx.nd.ones((4, 3, 10), dtype=dtype), run_only=True)
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, dropout=0.5, dtype=dtype), mx.nd.ones((8, 3, 20), dtype=dtype),
                             run_only=True)
-    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5),
-                            mx.nd.ones((8, 3, 20)),
-                            [mx.nd.ones((4, 3, 10)), mx.nd.ones((4, 3, 10))], run_only=True)
-    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dropout=0.5), mx.nd.ones((8, 3, 20)),
+    check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, dtype=dtype),
+                            mx.nd.ones((8, 3, 20), dtype=dtype),
+                            [mx.nd.ones((4, 3, 10), dtype=dtype), mx.nd.ones((4, 3, 10), dtype=dtype)], run_only=True)
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, dropout=0.5, dtype=dtype), mx.nd.ones((8, 3, 20), dtype=dtype),
                             run_only=True)
-    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, bidirectional=True, dropout=0.5),
-                            mx.nd.ones((8, 3, 20)), mx.nd.ones((4, 3, 10)), run_only=True)
+    check_rnn_layer_forward(gluon.rnn.GRU(10, 2, bidirectional=True, dropout=0.5, dtype=dtype),
+                            mx.nd.ones((8, 3, 20), dtype=dtype), mx.nd.ones((4, 3, 10), dtype=dtype), run_only=True)
 
     net = gluon.nn.Sequential()
-    net.add(gluon.rnn.LSTM(10, bidirectional=True))
+    net.add(gluon.rnn.LSTM(10, bidirectional=True, dtype=dtype2))
     net.add(gluon.nn.BatchNorm(axis=2))
     net.add(gluon.nn.Flatten())
     net.add(gluon.nn.Dense(3, activation='relu'))
-    net.collect_params().initialize()
+    net.collect_params().initialize(ctx=ctx)
+    net.cast(dtype)
     with mx.autograd.record():
-        net(mx.nd.ones((2, 3, 10))).backward()
+        out = net(mx.nd.ones((2, 3, 10), dtype=dtype, ctx=ctx))
+        out.backward()
+        out = out.asnumpy()
 
     net2 = gluon.nn.HybridSequential()
-    net2.add(gluon.rnn.LSTM(10, bidirectional=True))
+    net2.add(gluon.rnn.LSTM(10, bidirectional=True, dtype=dtype2))
     net2.add(gluon.nn.BatchNorm(axis=2))
     net2.add(gluon.nn.Flatten())
     net2.add(gluon.nn.Dense(3, activation='relu'))
     net2.hybridize()
-    net2.collect_params().initialize()
+    net2.collect_params().initialize(ctx=ctx)
+    net2.cast(dtype)
     with mx.autograd.record():
-        net2(mx.nd.ones((2, 3, 10))).backward()
+        out = net2(mx.nd.ones((2, 3, 10), dtype=dtype, ctx=ctx))
+        out.backward()
+        out = out.asnumpy()
+
+    net3 = gluon.nn.HybridSequential()
+    net3.add(gluon.rnn.LSTM(10, bidirectional=True, dtype=dtype))
+    net3.add(gluon.nn.BatchNorm(axis=2))
+    net3.add(gluon.nn.Flatten())
+    net3.add(gluon.nn.Dense(3, activation='relu'))
+    net3.hybridize()
+    net3.collect_params().initialize(ctx=ctx)
+    net3.cast(dtype2)
+    with mx.autograd.record():
+        out = net2(mx.nd.ones((2, 3, 10), dtype=dtype2, ctx=ctx))
+        out = out.backward()
+        out = out.asnumpy()
+
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_rnn_layers_fp32():
+    run_rnn_layers('float32', 'float32')
+
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@unittest.skipIf(mx.context.num_gpus() == 0, "RNN FP16 only implemented for GPU for now")
+def test_rnn_layers_fp16():
+    run_rnn_layers('float16', 'float32', mx.gpu())
 
 
 def test_rnn_unroll_variant_length():
