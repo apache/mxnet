@@ -431,7 +431,8 @@ def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, ctx=mx.c
     layer.collect_params().initialize(ctx=ctx)
     inputs.attach_grad()
     inputs = inputs.as_in_context(ctx)
-    states = states.as_in_context(ctx)
+    if states is not None:
+        states = [s.as_in_context(ctx) for s in states]
     with mx.autograd.record():
         if states is None:
             out = layer(inputs)
