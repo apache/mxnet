@@ -39,6 +39,7 @@
 #include <string>
 #include <utility>
 #include <cstdint>
+
 #include "./math.h"
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
@@ -1310,6 +1311,9 @@ class RNNOp {
       }
       #endif
       // Get temp space sizes
+      if (param_.use_sequence_length)
+	CUDNN_CALL(cudnnSetRNNPaddingMode(rnn_desc_, CUDNN_RNN_PADDED_IO_ENABLED));
+
       CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.seq_length_,
