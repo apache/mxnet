@@ -42,14 +42,14 @@ The `SCALA_PKG_PROFILE` should be chosen from `osx-x86_64-cpu`, `linux-x86_64-cp
 
 
 ## Run
-### Hello World
+### NDArrayCreation
 The Scala file is being executed using Java. You can execute the helloWorld example as follows:
 ```Bash
 bash bin/java_sample.sh
 ```
 You can also run the following command manually:
 ```Bash
-java -cp $CLASSPATH sample.HelloWorld
+java -cp $CLASSPATH sample.NDArrayCreation
 ```
 However, you have to define the Classpath before you run the demo code. More information can be found in the `java_sample.sh`.
 The `CLASSPATH` should point to the jar file you have downloaded.

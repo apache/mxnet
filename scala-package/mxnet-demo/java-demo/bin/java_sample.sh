@@ -17,4 +17,4 @@
 #!/bin/bash
 CURR_DIR=$(cd $(dirname $0)/../; pwd)
 CLASSPATH=$CLASSPATH:$CURR_DIR/target/*:$CLASSPATH:$CURR_DIR/target/dependency/*
-java -Xmx8G  -cp $CLASSPATH mxnet.HelloWorld
+java -Xmx8G  -cp $CLASSPATH mxnet.NDArrayCreation
