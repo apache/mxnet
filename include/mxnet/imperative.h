@@ -135,7 +135,8 @@ class Imperative {
   /*! \brief make constructor protected. */
   Imperative() {
     if (dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1)) {
-      backward_bulk_size_ =  dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
+      backward_bulk_size_ = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD",
+                                         dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
     }
   }
   /*! \brief find the input/output ndarrays that are needed for backward */
