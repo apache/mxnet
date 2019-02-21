@@ -528,8 +528,8 @@ def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
     net3.collect_params().initialize(ctx=ctx)
     net3.cast(dtype2)
     with mx.autograd.record():
-        out = net2(mx.nd.ones((2, 3, 10), dtype=dtype2, ctx=ctx))
-        out = out.backward()
+        out = net3(mx.nd.ones((2, 3, 10), dtype=dtype2, ctx=ctx))
+        out.backward()
         out = out.asnumpy()
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
