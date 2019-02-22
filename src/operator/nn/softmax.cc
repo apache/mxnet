@@ -67,7 +67,7 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
 }
 #endif
 
-MXNET_OPERATOR_REGISTER_UNARY(softmax)
+NNVM_REGISTER_OP(softmax)
 .describe(R"code(Applies the softmax function.
 
 The resulting array contains elements in the range (0,1) and the elements along the given axis sum up to 1.
@@ -102,15 +102,31 @@ Example::
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxComputeExCPU)
 .set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
 #endif
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmax"})
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmax"})
+.set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array.")
 .add_arguments(SoftmaxParam::__FIELDS__());
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_softmax)
+NNVM_REGISTER_OP(_backward_softmax)
+.set_num_inputs(SoftmaxGradOpNumInputs)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
+.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
 
-MXNET_OPERATOR_REGISTER_UNARY(softmin)
+NNVM_REGISTER_OP(softmin)
 .describe(R"code(Applies the softmin function.
 
 The resulting array contains elements in the range (0,1) and the elements along the given axis sum
@@ -141,15 +157,31 @@ Example::
     return std::vector<std::string>{"output"};
 })
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::softmax_fwd, true>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_softmin"})
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_softmin"})
+.set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array.")
 .add_arguments(SoftmaxParam::__FIELDS__());
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_softmin)
+NNVM_REGISTER_OP(_backward_softmin)
+.set_num_inputs(SoftmaxGradOpNumInputs)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
+.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd, true>);
 
-MXNET_OPERATOR_REGISTER_UNARY(log_softmax)
+NNVM_REGISTER_OP(log_softmax)
 .describe(R"code(Computes the log softmax of the input.
 This is equivalent to computing softmax followed by log.
 
@@ -168,10 +200,26 @@ Examples::
 )code")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_log_softmax"})
+.set_attr<nnvm::FGradient>("FGradient", SoftmaxFGradient{"_backward_log_softmax"})
+.set_attr<nnvm::FInferType>("FInferType", SoftmaxOpType)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array.")
 .add_arguments(SoftmaxParam::__FIELDS__());
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_log_softmax)
+NNVM_REGISTER_OP(_backward_log_softmax)
+.set_num_inputs(SoftmaxGradOpNumInputs)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames", SoftmaxGradOpInputNames)
+.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxGradOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SoftmaxGradOpType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, mshadow_op::left,
                                                         mxnet_op::log_softmax_bwd>);

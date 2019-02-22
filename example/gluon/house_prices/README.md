@@ -15,11 +15,15 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-<!-- This page should be deleted after sometime (Allowing search engines
-to update links) -->
-<meta http-equiv="refresh" content="3; url=https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU" />
-<!-- Just in case redirection does not work -->
-<p>
-  <a href="https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU">
-    This content is moved to a new MXNet install page. Redirecting... </a>
-</p>
+# House Prices: Advanced Regression Techniques
+
+This example shows how to predict house prices and it is based on the [House Price Kaggle challenge](https://www.kaggle.com/c/house-prices-advanced-regression-techniques#description)
+
+First you need to download train and test data set from here:
+```
+https://www.kaggle.com/c/house-prices-advanced-regression-techniques/download/train.csv
+https://www.kaggle.com/c/house-prices-advanced-regression-techniques/download/test.csv
+```
+Afterwards you can execute the script with  ```python kaggle_k_fold_cross_validation.py```
+
+For a detailed explanation of the code, you can check out this [chapter](http://d2l.ai/chapter_deep-learning-basics/kaggle-house-price.html) of the Dive into Deep Learning book.

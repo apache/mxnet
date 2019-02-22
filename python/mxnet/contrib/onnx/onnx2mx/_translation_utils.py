@@ -221,7 +221,7 @@ def get_input_shape(sym, proto_obj):
     model_input_shape = [data[1] for data  in proto_obj.model_metadata.get('input_tensor_data')]
     data_names = [data[0] for data  in proto_obj.model_metadata.get('input_tensor_data')]
 
-    #creating dummy inputs
+    # creating dummy inputs
     inputs = []
     for  in_shape in model_input_shape:
         inputs.append(nd.ones(shape=in_shape))
@@ -245,3 +245,17 @@ def get_input_shape(sym, proto_obj):
     result = mod.get_outputs()[0].asnumpy()
 
     return result.shape
+
+def broadcast_arithmetic_helper(attrs, inputs, proto_obj, current_op_name):
+    """Helper function for broadcast arithmetic ops."""
+    new_attr = {}
+    op_names = ['batchnorm, convolution, deconvolution']
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        broadcast_axis = attrs['axis']
+        for op_name in op_names:
+            # if input is bias which comes after conv, deconv, batchnorm operators
+            # then only reshape bias term
+            if inputs[0].name.startswith(op_name):
+                op_value = _fix_broadcast(current_op_name, inputs, broadcast_axis, proto_obj)
+                return op_value, new_attr, inputs
+    return current_op_name, new_attr, inputs
