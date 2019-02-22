@@ -2121,6 +2121,69 @@ def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
     assert mx.context.num_gpus() > 0
 
+def math_log(shape, dtype, check_value):
+    np_x = np.random.rand(shape[0], shape[1])
+    x = mx.nd.array(np_x, dtype=dtype)
+    mx.nd.waitall()
+    y = mx.nd.log(data=x)
+    y.wait_to_read()
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        mx.nd.waitall()
+        y_ = mx.nd.log(data=x_)
+        y_.wait_to_read()
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def math_erf(shape, dtype, check_value):
+    np_x = np.random.rand(shape[0], shape[1])
+    x = mx.nd.array(np_x, dtype=dtype)
+    mx.nd.waitall()
+    y = mx.nd.erf(data=x)
+    y.wait_to_read()
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        mx.nd.waitall()
+        y_ = mx.nd.erf(data=x_)
+        y_.wait_to_read()
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def math_square(shape, dtype, check_value):
+    np_x = np.random.rand(shape[0], shape[1])
+    x = mx.nd.array(np_x, dtype=dtype)
+    mx.nd.waitall()
+    y = mx.nd.square(data=x)
+    y.wait_to_read()
+    if check_value:
+        x_ = x.as_in_context(mx.cpu())
+        mx.nd.waitall()
+        y_ = mx.nd.square(data=x_)
+        y_.wait_to_read()
+        assert_almost_equal(y.asnumpy(), y_.asnumpy())
+
+def run_math(op, shape, dtype="float32", check_value=True):
+    run_num = 10
+    for i in range(run_num):
+        if op == 'log':
+            math_log(shape=shape, dtype=dtype, check_value=check_value)
+        elif op == 'erf':
+            math_erf(shape=shape, dtype=dtype, check_value=check_value)
+        elif op == 'square':
+            math_square(shape=shape, dtype=dtype, check_value=check_value)
+
+@with_seed()
+def test_math():
+    ops = ['log', 'erf', 'square']
+    check_value= True
+    lshape = 1000
+    rshapes = [1, 10, 100, 1000, 10000]
+    dtypes = ["float32", "float64"]
+    for rshape in rshapes:
+        shape = (lshape, rshape)
+        print("shape:(%d, %d), " % (lshape, rshape), end="")
+        for dtype in dtypes:
+            for op in ops:
+                run_math(op, shape, dtype, check_value=check_value)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

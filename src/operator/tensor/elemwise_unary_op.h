@@ -265,6 +265,27 @@ class UnaryOp : public OpBase {
     }
   }
 
+#if MSHADOW_USE_MKL == 1
+  template<typename OP, typename MKL_OP>
+  static void MKL_ComputeEx(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<NDArray>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<NDArray>& outputs) {
+    CHECK_EQ(inputs.size(), 1U)
+      << "Invalid input, only one input is allowed";
+    CHECK_EQ(outputs.size(), 1U)
+      << "Invalid output, only one output is allowed";
+    CHECK_NE(inputs[0].storage_type(), kDefaultStorage)
+      << "Operation requires a sparse output storage type";
+    CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
+      << "Operation requires a sparse output storage type";
+    if (inputs[0].storage_shape().Size()) {
+      MapToFCompute<cpu>(attrs, ctx, inputs, req, outputs, MKL_Compute<OP, MKL_OP>);
+    }
+  }
+#endif
+
   template<typename xpu, typename op>
   static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
                                const OpContext &ctx,
@@ -370,6 +391,12 @@ class UnaryOp : public OpBase {
       // set DType as float or double according to type_flag
       MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
         MKL_OP::Map(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    } else if (req[0] == kWriteInplace  &&
+        mkl_func::check_size(input_size) &&
+        mkl_func::check_type(type_flag)) {
+      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+        MKL_OP::Map(input_size, inputs[0].dptr<DType>(), inputs[0].dptr<DType>());
       });
     } else {
       Compute<cpu, OP>(attrs, ctx, inputs, req, outputs);
@@ -565,6 +592,34 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
     })                                                              \
   .add_argument("data", "NDArray-or-Symbol", "The input array.")
 
+#if MSHADOW_USE_MKL == 1
+  /*! \bried MKL Unary compute.
+   *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+   *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+  */
+  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$, __mkl_kernel$)      \
+    MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                           \
+    MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                                   \
+    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)      \
+    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)         \
+    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$, __mkl_kernel$>)
+
+  /*! \bried MKL Unary compute.
+   *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
+   *   *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function.
+  */
+  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP(__name$, __xpu$, __kernel$, __mkl_kernel$)          \
+    MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                           \
+    MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                                   \
+    .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, false>)     \
+    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)         \
+    .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::MKL_ComputeEx<__kernel$, __mkl_kerbel$>)
+
+  #define MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$, __mkl_kernel$)    \
+    MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                                                           \
+    .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::MKL_Compute<__kernel$, __mkl_kernel$>)
+#endif
+
 /*! \brief Unary compute, with FComputeEx for csr and rsp available  */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(__name$, __xpu$, __kernel$)                     \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                           \
@@ -582,7 +637,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   .set_attr<FComputeEx>("FComputeEx<" #__xpu$ ">", UnaryOp::ComputeEx<__xpu$, __kernel$>)
 
 /*! \brief Unary compute, dense result.
- *  FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
+ *  *  FInferStorageType attr is not set using this macro. By default DefaultStorageType is used.
  */
 #define MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(__name$, __xpu$, __kernel$)        \
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \

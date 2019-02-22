@@ -812,6 +812,26 @@ The storage type of ``fix`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // square
+#if MSHADOW_USE_MKL == 1
+MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square, mkl_func::square)
+.describe(R"code(Returns element-wise squared value of the input.
+
+.. math::
+   square(x) = x^2
+
+Example::
+
+   square([2, 3, 4]) = [4, 9, 16]
+
+The storage type of ``square`` output depends upon the input storage type:
+
+   - square(default) = default
+   - square(row_sparse) = row_sparse
+   - square(csr) = csr
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
+#else
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(square, cpu, mshadow_op::square)
 .describe(R"code(Returns element-wise squared value of the input.
 
@@ -830,6 +850,7 @@ The storage type of ``square`` output depends upon the input storage type:
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_square"});
+#endif
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
                                                unary_bwd<mshadow_op::square_grad>);
@@ -965,6 +986,23 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
                       unary_bwd<mshadow_op::reciprocal_cube_root_grad>>);
 
 // exp
+#if MSHADOW_USE_MKL == 1
+MXNET_MKL_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(exp, cpu, mshadow_op::exp, mkl_func::exp)
+MXNET_ADD_SPARSE_OP_ALIAS(exp)
+.describe(R"code(Returns element-wise exponential value of the input.
+
+.. math::
+   exp(x) = e^x \approx 2.718^x
+
+Example::
+
+   exp([0, 1, 2]) = [1., 2.71828175, 7.38905621]
+
+The storage type of ``exp`` output is always dense
+
+)code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
+#else
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(exp, cpu, mshadow_op::exp)
 MXNET_ADD_SPARSE_OP_ALIAS(exp)
 .describe(R"code(Returns element-wise exponential value of the input.
@@ -980,6 +1018,7 @@ The storage type of ``exp`` output is always dense
 
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_mul"});
+#endif
 
 // log
 #if MSHADOW_USE_MKL == 1
