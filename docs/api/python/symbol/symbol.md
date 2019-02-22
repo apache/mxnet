@@ -337,6 +337,7 @@ Composite multiple symbols into a new one by an operator.
     :nosignatures:
 
     Symbol.infer_type
+    Symbol.infer_type_partial
     Symbol.infer_shape
     Symbol.infer_shape_partial
 ```
