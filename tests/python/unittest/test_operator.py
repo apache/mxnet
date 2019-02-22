@@ -6523,7 +6523,9 @@ def test_slice():
                   (slice(1, 10), slice(2, 5), slice(3, 6), slice(7, 10)),
                   (slice(1, 10, 2), slice(2, 9, 3), slice(3, 6, 5), slice(7, 10, 2)),
                   (slice(None, None, -1), slice(None, None, -1), slice(None, None, -1)),
-                  (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4))]
+                  (slice(10, 0, -2), slice(5, 2, -1), slice(7, None, 3), slice(None, 12, 4)),
+                  (slice(4, -1, -2), slice(4, -1, -1), slice(0, 5, 1), slice(7, -1, -1)),
+                  (slice(0, 0, -2), slice(0, 5, 1), slice(3, 3, 1), slice(7, -1, -1))]
     for index in index_list:
         test_slice_forward_backward(arr, index)
 
