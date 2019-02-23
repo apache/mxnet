@@ -50,6 +50,9 @@
 (defn ndarray-transform-param-name [parameter-types]
   (transform-param-names util/ndarray-param-coerce parameter-types))
 
+(defn ndarray-api-transform-param-name [parameter-types]
+  (transform-param-names util/ndarray-api-param-coerce parameter-types))
+
 (defn has-variadic? [params]
   (->> params
        (map str)
@@ -85,12 +88,12 @@
        (filter #(not (re-find #"\$default" (str (:name %)))))))
 
 (defn get-public-to-gen-methods [public-to-hand-gen public-no-default]
-  (remove  #(contains? (->> public-to-hand-gen
-                            (mapv :name)
-                            (mapv str)
-                            (set))
-                       (str (:name %)))
-           public-no-default))
+  (remove #(contains? (->> public-to-hand-gen
+                           (mapv :name)
+                           (mapv str)
+                           (set))
+                      (str (:name %)))
+          public-no-default))
 
 (defn public-by-name-and-param-count [public-reflect-info]
  (->> public-reflect-info
@@ -283,6 +286,13 @@
 (into #{} (map :name symbol-api-public-to-hand-gen))
 ;;=>  #{Custom}
 
+(defn symbol-api-reflect-info [name]
+  (->> symbol-api-public-no-default
+       (filter #(= name (str (:name %))))
+       first))
+
+(def activation-sym (symbol-api-reflect-info "Activation"))
+
 (defn gen-symbol-api-function-arity [op-name op-values function-name]
   (mapcat
    (fn [[param-count info]]
@@ -298,7 +308,11 @@
                        (mapv #(clojure.string/join "-or-" %))
                        (rename-duplicate-params)
                        (mapv symbol))
-           coerced-params (mapv (fn [p t] `(~'util/coerce-param ~(symbol (clojure.string/replace p #"\& " "")) ~t)) pnames targets)
+           coerced-params (mapv (fn [p t]
+                                  (if (= #{"scala.Option"} t)
+                                    `(~'util/nil-or-coerce-param (~'util/->option ~(symbol (clojure.string/replace p #"\& " ""))) ~t)
+                                    `(~'util/nil-or-coerce-param ~(symbol (clojure.string/replace p #"\& " "")) ~t)))
+                                pnames targets)
            params (if (= #{:public :static} (:flags (first info)))
                     pnames
                     (into ['sym] pnames))
@@ -313,9 +327,8 @@
             )])))
    op-values))
 
-
-(def all-symbol-api-functions
- (for [operation  (sort (public-by-name-and-param-count symbol-api-public-to-gen))]
+(defn gen-symbol-api-functions [public-to-gen-methods]
+ (for [operation (sort (public-by-name-and-param-count public-to-gen-methods))]
    (let [[op-name op-values] operation
          function-name (-> op-name
                            str
@@ -324,6 +337,11 @@
                            symbol)]
      `(~'defn ~function-name
        ~@(remove nil? (gen-symbol-api-function-arity op-name op-values function-name))))))
+
+(gen-symbol-api-functions [activation-sym])
+
+(def all-symbol-api-functions
+  (gen-symbol-api-functions symbol-api-public-to-gen))
 
 (def symbol-api-gen-ns "(ns org.apache.clojure-mxnet.symbol-api
   (:refer-clojure :exclude [* - + > >= < <= / cast concat identity flatten load max
@@ -467,6 +485,7 @@
 (def activation (ndarray-api-reflect-info "Activation"))
 (def batch-norm (ndarray-api-reflect-info "BatchNorm"))
 
+
 (defn add-ndarray-api-arities [params function-name]
   (let [req-params (->> params
                         reverse
@@ -478,7 +497,7 @@
       `([~@(take (+ num-req i) params)]
         (~function-name
          ~@(take (+ num-req i) params)
-         ~@(repeat (- num-options i) nil))))))
+         ~@(repeat (- num-options i) 'util/none))))))
 
 (defn gen-ndarray-api-function-arity [op-name op-values function-name]
   (mapcat
@@ -489,7 +508,7 @@
                        (partition (count info))
                        (mapv set))
           pnames (->> (mapv :parameter-types info)
-                      (mapv ndarray-transform-param-name)
+                      (mapv ndarray-api-transform-param-name)
                       (apply interleave)
                       (partition (count info))
                       (mapv #(clojure.string/join "-or-" %))
@@ -533,7 +552,7 @@
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
   (:require [org.apache.clojure-mxnet.util :as util])
-  (:import (org.apache.mxnet NDArrayAPI Shape)))")
+  (:import (org.apache.mxnet NDArrayAPI)))")
 
 
 (defn generate-ndarray-api-file []

@@ -35,14 +35,26 @@
                            "int<>" "vec-of-ints"
                            "float<>" "vec-of-floats"
                            "byte<>" "byte-array"
-                           "java.lang.String<>" "vec-of-strings"
-                           "java.lang.String" "string"
-                           "scala.Option" "option"
-                           "org.apache.mxnet.NDArray<>" "vec-of-ndarrays"
                            "org.apache.mxnet.NDArray" "ndarray"
-                           "org.apache.mxnet.Shape" "shape"
                            "org.apache.mxnet.Symbol" "sym"
                            "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE" "double-or-float"})
+
+(def ndarray-api-param-coerce {"float" "num"
+                               "int" "num"
+                               "boolean" "bool"
+                               "scala.collection.immutable.Map" "kwargs-map"
+                               "scala.collection.Seq" "& nd-array-and-params"
+                               "int<>" "vec-of-ints"
+                               "float<>" "vec-of-floats"
+                               "byte<>" "byte-array"
+                               "java.lang.String<>" "vec-of-strings"
+                               "java.lang.String" "string"
+                               "scala.Option" "option"
+                               "org.apache.mxnet.NDArray<>" "vec-of-ndarrays"
+                               "org.apache.mxnet.NDArray" "ndarray"
+                               "org.apache.mxnet.Shape" "shape"
+                               "org.apache.mxnet.Symbol" "sym"
+                               "org.apache.mxnet.MX_PRIMITIVES$MX_PRIMITIVE_TYPE" "double-or-float"})
 
 (def symbol-param-coerce {"java.lang.String" "sym-name"
                           "float" "num"
@@ -63,7 +75,7 @@
                               "boolean" "bool"
                               "scala.collection.immutable.Map" "kwargs-map"
                               "scala.collection.Seq" "symbol-list"
-                              "scala.Option" "option"
+                              "scala.Option" "nil-or-sym"
                               "int<>" "vec-of-ints"
                               "float<>" "vec-of-floats"
                               "byte<>" "byte-array"
@@ -87,6 +99,8 @@
 
 (defn ->option [v]
   ($ Option v))
+
+(def none (->option nil))
 
 (defn ->int-option [v]
   (->option (when v (int v))))
@@ -172,7 +186,6 @@
     (and (get targets "scala.collection.Seq") (instance? org.apache.mxnet.Symbol param)) ($/immutable-list param)
     (and (get targets "scala.collection.Seq") (and (or (vector? param) (seq? param)) (empty? param))) (empty-list)
     (and (get targets "scala.collection.Seq") (or (vector? param) (seq? param))) (apply $/immutable-list param)
-    (get targets "scala.Option") (->option param)
     (and (get targets "org.apache.mxnet.Shape") (or (vector? param) (seq? param) (empty? param))) (mx-shape/->shape param)
     (and (get targets "int<>") (vector? param)) (int-array param)
     (and (get targets "float<>") (vector? param)) (float-array param)

@@ -3,7 +3,7 @@
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
   (:require [org.apache.clojure-mxnet.util :as util])
-  (:import (org.apache.mxnet NDArrayAPI Shape)))
+  (:import (org.apache.mxnet NDArrayAPI)))
 
 ;; Do not edit - this is auto-generated
 
@@ -34,7 +34,7 @@
     (util/coerce-param ndarray #{"org.apache.mxnet.NDArray"})
     (util/coerce-param string #{"java.lang.String"})
     (util/coerce-param option #{"scala.Option"}))))
- ([ndarray string] (activation ndarray string nil)))
+ ([ndarray string] (activation ndarray string util/none)))
 
 (defn
  batch-norm
@@ -73,14 +73,14 @@
    ndarray-2
    ndarray-3
    ndarray-4
-   nil
-   nil
-   nil
-   nil
-   nil
-   nil
-   nil
-   nil))
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none))
  ([ndarray ndarray-1 ndarray-2 ndarray-3 ndarray-4 option]
   (batch-norm
    ndarray
@@ -89,13 +89,13 @@
    ndarray-3
    ndarray-4
    option
-   nil
-   nil
-   nil
-   nil
-   nil
-   nil
-   nil))
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none))
  ([ndarray ndarray-1 ndarray-2 ndarray-3 ndarray-4 option option-1]
   (batch-norm
    ndarray
@@ -105,12 +105,12 @@
    ndarray-4
    option
    option-1
-   nil
-   nil
-   nil
-   nil
-   nil
-   nil))
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none))
  ([ndarray
    ndarray-1
    ndarray-2
@@ -128,11 +128,11 @@
    option
    option-1
    option-2
-   nil
-   nil
-   nil
-   nil
-   nil))
+   util/none
+   util/none
+   util/none
+   util/none
+   util/none))
  ([ndarray
    ndarray-1
    ndarray-2
@@ -152,10 +152,10 @@
    option-1
    option-2
    option-3
-   nil
-   nil
-   nil
-   nil))
+   util/none
+   util/none
+   util/none
+   util/none))
  ([ndarray
    ndarray-1
    ndarray-2
@@ -177,9 +177,9 @@
    option-2
    option-3
    option-4
-   nil
-   nil
-   nil))
+   util/none
+   util/none
+   util/none))
  ([ndarray
    ndarray-1
    ndarray-2
@@ -203,8 +203,8 @@
    option-3
    option-4
    option-5
-   nil
-   nil))
+   util/none
+   util/none))
  ([ndarray
    ndarray-1
    ndarray-2
@@ -230,5 +230,5 @@
    option-4
    option-5
    option-6
-   nil)))
+   util/none)))
 
