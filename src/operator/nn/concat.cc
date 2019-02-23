@@ -345,25 +345,29 @@ The storage type of ``concat`` output depends on storage types of inputs
 
 Example::
 
-   x = [[1,1],[2,2]]
-   y = [[3,3],[4,4],[5,5]]
-   z = [[6,6], [7,7],[8,8]]
-
-   concat(x,y,z,dim=0) = [[ 1.,  1.],
-                          [ 2.,  2.],
-                          [ 3.,  3.],
-                          [ 4.,  4.],
-                          [ 5.,  5.],
-                          [ 6.,  6.],
-                          [ 7.,  7.],
-                          [ 8.,  8.]]
+  >>> x = mx.nd.array([[1,1],[2,2]])
+  >>> y = mx.nd.array([[3,3],[4,4],[5,5]])
+  >>> z = mx.nd.array([[6,6], [7,7],[8,8]])
+  
+  >>> mx.nd.concat(x,y,z,dim=0)
+  [[1. 1.]
+  [2. 2.]
+  [3. 3.]
+  [4. 4.]
+  [5. 5.]
+  [6. 6.]
+  [7. 7.]
+  [8. 8.]]
+  <NDArray 8x2 @cpu(0)>
 
    Note that you cannot concat x,y,z along dimension 1 since dimension
    0 is not the same for all the input arrays.
 
-   concat(y,z,dim=1) = [[ 3.,  3.,  6.,  6.],
-                         [ 4.,  4.,  7.,  7.],
-                         [ 5.,  5.,  8.,  8.]]
+   >>> mx.nd.concat(y,z,dim=1)
+  [[3. 3. 6. 6.]
+  [4. 4. 7. 7.]
+  [5. 5. 8. 8.]]
+  <NDArray 3x4 @cpu(0)>
 
 )code" ADD_FILELINE)
 #if MXNET_USE_MKLDNN == 1

@@ -53,20 +53,26 @@ MXNET_REGISTER_OP_PROPERTY(SwapAxis, SwapAxisProp)
 
 Examples::
 
-  x = [[1, 2, 3]])
-  swapaxes(x, 0, 1) = [[ 1],
-                       [ 2],
-                       [ 3]]
+  >>> x = mx.nd.array([[1, 2, 3]]) //(1,3) array
+  >>> mx.nd.swapaxes(x, 0, 1)
+  [[1.]
+  [2.]
+  [3.]]
 
-  x = [[[ 0, 1],
-        [ 2, 3]],
-       [[ 4, 5],
-        [ 6, 7]]]  // (2,2,2) array
+  >>> x = mx.nd.array([[[ 0, 1],[ 2, 3]],[[ 4, 5],[ 6, 7]]]) // (2,2,2) array
+  >>> x
+  [[[0. 1.]
+    [2. 3.]]
+  [[4. 5.]
+    [6. 7.]]]
+  <NDArray 2x2x2 @cpu(0)>
+  >>> mx.nd.swapaxes(x, 0, 2)
+  [[[0. 4.]
+    [2. 6.]]
+  [[1. 5.]
+    [3. 7.]]]
+  <NDArray 2x2x2 @cpu(0)>
 
- swapaxes(x, 0, 2) = [[[ 0, 4],
-                       [ 2, 6]],
-                      [[ 1, 5],
-                       [ 3, 7]]]
 )code" ADD_FILELINE);
 
 NNVM_REGISTER_OP(SwapAxis).add_alias("swapaxes");
