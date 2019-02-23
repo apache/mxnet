@@ -3005,7 +3005,7 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, d
     Values are generated within the half-open interval [`start`, `stop`). In other
     words, the interval includes `start` but excludes `stop`. The function is
     similar to the built-in Python function `range` and to `numpy.arange`,
-    but returns an `Symbol`.
+    but returns a `Symbol`.
 
     Parameters
     ----------
