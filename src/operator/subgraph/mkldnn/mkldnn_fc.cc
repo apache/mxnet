@@ -127,11 +127,22 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   }
 
   if (!initialized_) {
+    cached_min_data_ = min_data;
+    cached_max_data_ = max_data;
+    cached_min_weight_ = min_weight;
+    cached_max_weight_ = max_weight;
+    if (has_bias) {
+      cached_bias_ = in_data[fullc::kBias];
+    } else {
+      cached_bias_ = NDArray();
+    }
+
     if (mkldnn_param.quantized) {
       CHECK(data.dtype() == mshadow::kInt8 || data.dtype() == mshadow::kUint8);
       auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-      float data_scale  = data_range / MaxAbs(min_data, max_data);
-      float weight_scale = kInt8Range / MaxAbs(min_weight, max_weight);
+      float data_scale  = data_range / MaxAbs(cached_min_data_, cached_max_data_);
+      float weight_scale = kInt8Range / MaxAbs(cached_min_weight_, cached_max_weight_);
+      float quantized_out_range = mkldnn_param.with_relu ? kUint8Range : kInt8Range;
 
       if (has_bias) {
         NDArray bias = in_data[fullc::kBias];
@@ -158,7 +169,8 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
             mkldnn_param.max_calib_range.has_value()) {
               *min_output_ptr = mkldnn_param.min_calib_range.value();
               *max_output_ptr = mkldnn_param.max_calib_range.value();
-              full_param_.requantize_scales[0] = kInt8Range /
+
+              full_param_.requantize_scales[0] = quantized_out_range /
                 MaxAbs(*min_output_ptr, *max_output_ptr) / data_scale / weight_scale;
         } else {
           LOG(FATAL)<<
@@ -169,8 +181,6 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
           min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
       }
-    } else {
-      cached_bias_ = in_data[fullc::kBias];
     }
 
     fwd_.reset(new MKLDNNFullyConnectedForward(full_param_, ctx.is_train, data, weight,
@@ -295,6 +305,8 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
   if (full_param.mkldnn_param.quantized) {
     size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
 
+    // TODO(ciyong): currently, only uint8 fully_connected is upported,
+    // int8 fully_connected will be supported after mkldnn v0.18
     TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kUint8);
     for (size_t i = 1; i < in_types->size(); ++i) {
       if (i < base_num_inputs) {

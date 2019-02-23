@@ -69,15 +69,30 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     }
   }
 
+  auto GetFCFwdPd = [&full_param, &attr,
+                     &engine](const mkldnn::inner_product_forward::desc &desc) {
+    try {
+      return mkldnn::inner_product_forward::primitive_desc(desc, attr, engine);
+    } catch (mkldnn::error &e) {
+      if (e.status == mkldnn_unimplemented &&
+          full_param.mkldnn_param.quantized) {
+        LOG(ERROR) << "AVX512-BW support or MKLDNN v0.18 is required for INT8 fully_connected.";
+      } else {
+        LOG(ERROR) << e.message;
+      }
+      throw;
+    }
+  };
+
   if (bias) {
     auto bias_md = GetMemDesc(*bias);
     mkldnn::inner_product_forward::desc desc(propagation,
         data_md, weight_md, bias_md, out_md);
-    return mkldnn::inner_product_forward::primitive_desc(desc, attr, engine);
+    return GetFCFwdPd(desc);
   } else {
     mkldnn::inner_product_forward::desc desc(propagation,
         data_md, weight_md, out_md);
-    return mkldnn::inner_product_forward::primitive_desc(desc, attr, engine);
+    return GetFCFwdPd(desc);
   }
 }
 
@@ -191,8 +206,8 @@ void MKLDNNFCFlattenData(const FullyConnectedParam &param,
                          const NDArray &out_data,
                          NDArray *in_data,
                          mkldnn::memory::desc *out_md) {
-  const mxnet::TShape& ishape = in_data->shape();
-  const mxnet::TShape& oshape = out_data.shape();
+  const mxnet::TShape ishape = in_data->shape();
+  const mxnet::TShape oshape = out_data.shape();
 
   // If the input data is a view of an MKLDNN array, we should create a new
   // NDArray with reordered data.

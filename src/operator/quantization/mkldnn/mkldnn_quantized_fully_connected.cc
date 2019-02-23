@@ -51,7 +51,6 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
   NDArray weight = in_data[fullc::kWeight];
   const TShape &ishape = data.shape();
 
-  // TODO(ciyong) int8 input will be enabled when mkldnn supports this data type
   CHECK(data.dtype() == mshadow::kUint8)
     << "MKLDNNQuantizedFullyConnected Op only supports uint8 for now, but got "
     << mxnet::op::type_string(data.dtype());
@@ -100,8 +99,10 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
     min_output_ptr, max_output_ptr, &min_data, &max_data, &min_weight, &max_weight);
 
   bool is_train = false;
+  mkldnn::memory::desc out_md = GetMemDesc(out_data[fullc::kOut]);
+  MKLDNNFCFlattenData(param, out_data[fullc::kOut], &data, &out_md);
   auto &fwd = GetFCFwd(param, is_train, data, weight,
-      param.no_bias ? nullptr : &quantized_bias, GetMemDesc(out_data[fullc::kOut]));
+      param.no_bias ? nullptr : &quantized_bias, out_md);
 
   auto data_mem = in_data[fullc::kData].GetMKLDNNDataReorder(fwd.fwd_pd.src_primitive_desc());
   const mkldnn::memory *weight_mem = nullptr;

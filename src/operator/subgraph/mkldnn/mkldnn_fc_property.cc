@@ -118,9 +118,9 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
 
     disable_all = disable_all || disable_fc_relu;
     if (disable_all) {
-      LOG(INFO) << "MKLDNN FullyConnected optimization pass (relu fusion) is disabled.";
+      LOG(INFO) << "MKLDNN FullyConnected optimization pass is disabled.";
     } else {
-      LOG(INFO) << "Start to execute MKLDNN FullyConnected optimization pass (relu fusion).";
+      LOG(INFO) << "Start to execute MKLDNN FullyConnected optimization pass.";
     }
   }
 
@@ -145,7 +145,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
       } else if ((sub_name == "Activation") &&
                  (node->attrs.dict.at("act_type") == "relu")) {
           node_name << "relu_";
-          n->attrs.dict["with_relu"] = "true";
+          n->attrs.dict["with_relu"] = "True";
       }
     });
     node_name << std::to_string(subgraph_id);
