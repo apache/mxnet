@@ -293,14 +293,6 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
                                 std::vector<int> *out_types) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   if (full_param.mkldnn_param.quantized) {
-    /*
-    std::vector<int> base_in_types;
-    std::vector<int> base_out_types;
-    FillBaseInputOutputInfo(full_param.default_param, &base_in_types, &base_out_types,
-                            in_types, out_types);
-    bool ret = DefaultSubgraphOpType(attrs, &base_in_types, &base_out_types);
-    */
-
     size_t base_num_inputs = full_param.default_param.no_bias ? 2 : 3;
 
     TYPE_ASSIGN_CHECK(*in_types, 0, mshadow::kUint8);

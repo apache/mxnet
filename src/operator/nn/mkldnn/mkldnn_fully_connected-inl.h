@@ -82,7 +82,7 @@ class MKLDNNFullyConnectedForward {
  public:
   mkldnn::inner_product_forward::primitive_desc fwd_pd;
 
-  MKLDNNFullyConnectedForward(const MKLDNNFCFullParam &full_param, bool is_train,
+  MKLDNNFullyConnectedForward(const MKLDNNFCFullParam &full_param, const bool is_train,
                               const NDArray &data, const NDArray &weight,
                               const NDArray *bias,
                               const mkldnn::memory::desc &out_md)
@@ -93,15 +93,15 @@ class MKLDNNFullyConnectedForward {
                  const mkldnn::memory *bias, const mkldnn::memory &output);
 
   const mkldnn::inner_product_forward &GetFwd() const {
-    return *fwd;
+    return *fwd_;
   }
 
  private:
-  std::shared_ptr<mkldnn::inner_product_forward> fwd;
-  std::shared_ptr<mkldnn::memory> data;
-  std::shared_ptr<mkldnn::memory> weight;
-  std::shared_ptr<mkldnn::memory> bias;
-  std::shared_ptr<mkldnn::memory> out;
+  std::shared_ptr<mkldnn::inner_product_forward> fwd_;
+  std::shared_ptr<mkldnn::memory> data_;
+  std::shared_ptr<mkldnn::memory> weight_;
+  std::shared_ptr<mkldnn::memory> bias_;
+  std::shared_ptr<mkldnn::memory> out_;
 };
 
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;

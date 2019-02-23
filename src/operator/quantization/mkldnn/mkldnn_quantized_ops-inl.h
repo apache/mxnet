@@ -28,15 +28,8 @@
 
 #if MXNET_USE_MKLDNN == 1
 
-#include <mxnet/io.h>
-#include <mxnet/base.h>
 #include <mxnet/ndarray.h>
-#include <mxnet/operator.h>
-#include <mxnet/operator_util.h>
-#include <dmlc/logging.h>
-#include <dmlc/optional.h>
 #include <vector>
-#include <mkldnn.hpp>
 
 namespace mxnet {
 namespace op {
@@ -51,5 +44,4 @@ void MKLDNNQuantizedFullyConnectedForward(const nnvm::NodeAttrs &attrs,
 }  // namespace mxnet
 
 #endif  // MXNET_USE_MKLDNN == 1
-
 #endif  // MXNET_OPERATOR_QUANTIZATION_MKLDNN_MKLDNN_QUANTIZED_OPS_INL_H_

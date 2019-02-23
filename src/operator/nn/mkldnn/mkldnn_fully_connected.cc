@@ -117,41 +117,44 @@ void MKLDNNFullyConnectedForward::SetNewMem(const mkldnn::memory &data,
                                             const mkldnn::memory &weight,
                                             const mkldnn::memory *bias,
                                             const mkldnn::memory &output) {
-  if (this->data == nullptr)
-    this->data = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+  if (this->data_ == nullptr)
+    this->data_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
             fwd_pd.src_primitive_desc(), data.get_data_handle()));
   else
-    this->data->set_data_handle(data.get_data_handle());
+    this->data_->set_data_handle(data.get_data_handle());
 
-  if (this->weight == nullptr)
-    this->weight = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+  if (this->weight_ == nullptr)
+    this->weight_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
             fwd_pd.weights_primitive_desc(), weight.get_data_handle()));
   else
-    this->weight->set_data_handle(weight.get_data_handle());
+    this->weight_->set_data_handle(weight.get_data_handle());
 
-  if (this->out == nullptr)
-    this->out = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+  if (this->out_ == nullptr)
+    this->out_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
             fwd_pd.dst_primitive_desc(), output.get_data_handle()));
   else
-    this->out->set_data_handle(output.get_data_handle());
+    this->out_->set_data_handle(output.get_data_handle());
 
   if (bias != nullptr) {
-    if (this->bias == nullptr)
-      this->bias = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
+    if (this->bias_ == nullptr)
+      this->bias_ = std::shared_ptr<mkldnn::memory>(new mkldnn::memory(
       fwd_pd.bias_primitive_desc(), bias->get_data_handle()));
     else
-      this->bias->set_data_handle(bias->get_data_handle());
-    if (this->fwd == nullptr)
-      this->fwd = std::shared_ptr<mkldnn::inner_product_forward>(
+      this->bias_->set_data_handle(bias->get_data_handle());
+
+    if (this->fwd_ == nullptr)
+      this->fwd_ = std::shared_ptr<mkldnn::inner_product_forward>(
           new mkldnn::inner_product_forward(
-              fwd_pd, mkldnn::primitive::at(*this->data),
-              mkldnn::primitive::at(*this->weight),
-              mkldnn::primitive::at(*this->bias), *this->out));
-  } else if (this->fwd == nullptr) {
-    this->fwd = std::shared_ptr<mkldnn::inner_product_forward>(
-        new mkldnn::inner_product_forward(
-            fwd_pd, mkldnn::primitive::at(*this->data),
-            mkldnn::primitive::at(*this->weight), *this->out));
+              fwd_pd, mkldnn::primitive::at(*this->data_),
+              mkldnn::primitive::at(*this->weight_),
+              mkldnn::primitive::at(*this->bias_), *this->out_));
+  } else {
+     if (this->fwd_ == nullptr) {
+      this->fwd_ = std::shared_ptr<mkldnn::inner_product_forward>(
+          new mkldnn::inner_product_forward(
+              fwd_pd, mkldnn::primitive::at(*this->data_),
+              mkldnn::primitive::at(*this->weight_), *this->out_));
+    }
   }
 }
 
@@ -196,19 +199,21 @@ void MKLDNNFCFlattenData(const FullyConnectedParam &param,
   if (in_data->IsMKLDNNData() && in_data->IsView())
     *in_data = in_data->Reorder2Default();
 
-  if (ishape.ndim() != 2 && !param.flatten) {
-    *in_data = in_data->MKLDNNDataReshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),
-                                                  ishape[ishape.ndim()-1]));
-    mkldnn::memory::dims out_dims{static_cast<int>(oshape.ProdShape(0, oshape.ndim()-1)),
-      static_cast<int>(oshape[ishape.ndim()-1])};
-    *out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data.dtype()),
-      mkldnn::memory::format::any);
-  } else if (ishape.ndim() != 2) {
-    *in_data = in_data->MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
-    mkldnn::memory::dims out_dims{static_cast<int>(oshape[0]),
-      static_cast<int>(oshape.ProdShape(1, oshape.ndim()))};
-    *out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data.dtype()),
-      mkldnn::memory::format::any);
+  if (ishape.ndim() != 2) {
+    if (!param.flatten) {
+      *in_data = in_data->MKLDNNDataReshape(Shape2(ishape.ProdShape(0, ishape.ndim()-1),
+                                                    ishape[ishape.ndim()-1]));
+      mkldnn::memory::dims out_dims{static_cast<int>(oshape.ProdShape(0, oshape.ndim()-1)),
+        static_cast<int>(oshape[ishape.ndim()-1])};
+      *out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data.dtype()),
+        mkldnn::memory::format::any);
+    } else {
+      *in_data = in_data->MKLDNNDataReshape(Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())));
+      mkldnn::memory::dims out_dims{static_cast<int>(oshape[0]),
+        static_cast<int>(oshape.ProdShape(1, oshape.ndim()))};
+      *out_md = mkldnn::memory::desc(out_dims, get_mkldnn_type(out_data.dtype()),
+        mkldnn::memory::format::any);
+    }
   }
 }
 
