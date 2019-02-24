@@ -38,6 +38,7 @@ from mxnet.test_utils import rand_ndarray
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import test_in_separate_process
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -407,6 +408,78 @@ def test_large_models():
                                     ctx=ctx, dtype="float32")
         # Evaluate model
         net(data_in).asnumpy()
+
+# isolated execution bulking test function to be invoked with different env var settings
+def _test_bulking_in_process(seed, time_per_iteration):
+    # Use flip since it's a simple function with same-sized I/O unlikely to ever be fused.
+    class Flip(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Flip, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x):
+            return F.flip(x, axis=0)
+
+    def get_net(num_ops):
+        net = nn.HybridSequential()
+        with net.name_scope():
+            for _ in range(num_ops):
+                net.add(Flip())
+        return net
+
+    data_shape = (10,)
+    num_ops = 1000
+    num_iterations = 20
+
+    # build model
+    x = mx.ndarray.zeros(data_shape)
+    x.attach_grad()
+    dy = mx.ndarray.ones(data_shape)
+    net = get_net(num_ops)
+    net.hybridize(static_alloc=True, static_shape=True)
+
+    # time a number of forward() and backward() executions after some warm-up iterations
+    warmups = 1
+    for i in range(num_iterations+warmups):
+        with autograd.record():
+            if i == warmups:
+                start = time.time()
+            y = net(x)
+            y.backward(dy)
+            x.grad.wait_to_read()
+
+    time_per_iteration.value = (time.time() - start) / num_iterations
+
+@with_seed()
+def test_bulking():
+    # test case format: (max_fwd_segment_size, max_bwd_segment_size)
+    test_cases = [(0,0), (1,1), (15,0), (0,15), (15,15)]
+    times = {}
+    times_str = ''
+    for seg_sizes in test_cases:
+        # Create shared variable to return measured time from test process
+        time_per_iteration = mp.Manager().Value('d', 0.0)
+        test_in_separate_process(_test_bulking_in_process,
+                                  {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : seg_sizes[0],
+                                   'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1]},
+                                  time_per_iteration)
+        times[seg_sizes] = time_per_iteration.value
+        times_str += '\n    runtime of (fwd,bwd) seg size max ({},{}) =\t{:.1f} msec'.format(
+            seg_sizes[0], seg_sizes[1], 1000.0 * times[seg_sizes])
+
+    fastest_non_bulked_time = min(times[(0,0)], times[(1,1)])
+    slowest_half_bulked_time = max(times[(0,15)], times[(15,0)])
+    fastest_half_bulked_time = min(times[(0,15)], times[(15,0)])
+    fully_bulked_time = times[(15,15)]
+
+    # The non-bulked times[0,0] and times[1,1] should be about the same,
+    # slower than both half-bulked times[0,15] and times[15,0]
+    assert slowest_half_bulked_time < fastest_non_bulked_time, \
+        'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
+            .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
+    # The fully bulked time[15,15] should be faster than both half-bulked runs
+    assert fully_bulked_time < fastest_half_bulked_time, \
+        'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
+            .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 
 if __name__ == '__main__':
