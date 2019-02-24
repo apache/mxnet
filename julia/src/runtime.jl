@@ -22,25 +22,29 @@ module MXRuntime
 using ..mx
 
 export LibFeature
-export libinfo_features, isenabled
+export feature_list, isenabled
 
 # defined in include/mxnet/c_api.h
 struct LibFeature
-  name::Ptr{Cchar}
-  index::UInt32
+  _name::Ptr{Cchar}
   enabled::Bool
 end
 
+function Base.getproperty(x::LibFeature, p::Symbol)
+  (p == :name) && return unsafe_string(getfield(x, :_name))
+  getfield(x, p)
+end
+
 Base.show(io::IO, x::LibFeature) =
-  print(io, ifelse(x.enabled, "✔", "✖"), "  ", unsafe_string(x.name))
+  print(io, ifelse(x.enabled, "✔", "✖"), " ", x.name)
 
 """
-    libinfo_features()
+    feature_list()
 
 Check the library for compile-time features.
 The list of features are maintained in libinfo.h and libinfo.cc
 """
-function libinfo_features()
+function feature_list()
   ref = Ref{Ptr{LibFeature}}(C_NULL)
   s = Ref{Csize_t}(C_NULL)
   @mx.mxcall(:MXLibInfoFeatures, (Ref{Ptr{LibFeature}}, Ref{Csize_t}), ref, s)
@@ -60,11 +64,11 @@ julia> mx.isenabled(:CPU_SSE)
 true
 ```
 
-See also `mx.libinfo_features`.
+See also `mx.feature_list()`.
 """
 isenabled(x::Symbol) =
-  any(libinfo_features()) do i
-    Symbol(unsafe_string(i.name)) == x && i.enabled
+  any(feature_list()) do i
+    Symbol(i.name) == x && i.enabled
   end
 
 end  # module MXRuntime
