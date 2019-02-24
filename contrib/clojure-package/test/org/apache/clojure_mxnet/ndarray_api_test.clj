@@ -331,3 +331,89 @@
     (is (= [3 1] (shape-vec res1)))
     (is (= [0. 4. 2. 6. 1. 5. 3. 7.] (->vec res2)))
     (is (= [2 2 2] (shape-vec res2)))))
+
+(deftest test-abs
+  (let [x (ndarray/array [-2 0 3] [3])
+        res1 (ndarray-api/abs x)]
+    (is (= [2. 0. 3.] (->vec res1)))
+    (is (= [3] (shape-vec res1)))))
+
+(deftest test-arccos
+  (let [x (ndarray/array [-1 -0.707 0 0.707 1] [5])
+        pi Math/PI
+        res1 (ndarray-api/arccos x)]
+    (is (approx= 1e-3 [pi (* 0.75 pi) (* 0.5 pi) (* 0.25 pi) 0.] (->vec res1)))))
+
+(deftest test-arcsin
+  (let [x (ndarray/array [-1 -0.707 0 0.707 1] [5])
+        pi Math/PI
+        res1 (ndarray-api/arcsin x)]
+    (is (approx= 1e-3 [(- (* 0.5 pi)) (- (* 0.25 pi)) 0 (* 0.25 pi) (* 0.5 pi)] (->vec res1)))))
+
+(deftest test-argmax
+  (let [x (ndarray/array (range 6) [2 3])
+        res1 (ndarray-api/argmax x (->option 0))
+        res2 (ndarray-api/argmax x (->option 1))
+        res3 (ndarray-api/argmax x (->option 0) (->option true))
+        res4 (ndarray-api/argmax x (->option 1) (->option true))]
+    (is (= [1. 1. 1.] (->vec res1)))
+    (is (= [3] (shape-vec res1)))
+    (is (= [2. 2.] (->vec res2)))
+    (is (= [2] (shape-vec res2)))
+    (is (= [1. 1. 1.] (->vec res3)))
+    (is (= [1 3] (shape-vec res3)))
+    (is (= [2. 2.] (->vec res4)))
+    (is (= [2 1] (shape-vec res4)))))
+
+(deftest test-argmax-channel
+  (let [x (ndarray/array (range 6) [2 3])
+        res1 (ndarray-api/argmax-channel x)]
+    (is (= [2. 2.] (->vec res1)))
+    (is (= [2] (shape-vec res1)))))
+
+(deftest test-argmin
+  (let [x (ndarray/array (reverse (range 6)) [2 3])
+        res1 (ndarray-api/argmin x (->option 0))
+        res2 (ndarray-api/argmin x (->option 1))
+        res3 (ndarray-api/argmin x (->option 0) (->option true))
+        res4 (ndarray-api/argmin x (->option 1) (->option true))]
+    (is (= [1. 1. 1.] (->vec res1)))
+    (is (= [3] (shape-vec res1)))
+    (is (= [2. 2.] (->vec res2)))
+    (is (= [2] (shape-vec res2)))
+    (is (= [1. 1. 1.] (->vec res3)))
+    (is (= [1 3] (shape-vec res3)))
+    (is (= [2. 2.] (->vec res4)))
+    (is (= [2 1] (shape-vec res4)))))
+
+(deftest test-argsort
+  (let [x (ndarray/array [0.3  0.2  0.4
+                          0.1  0.3  0.2]
+                         [2 3])
+        y (ndarray/array [0.3 0.2 0.4 0.1 0.3 0.2] [6])
+        res1 (ndarray-api/argsort x)
+        res2 (ndarray-api/argsort x (->option 0))
+        res3 (ndarray-api/argsort y)]
+    (is (= [1. 0. 2.
+            0. 2. 1.]
+           (->vec res1)))
+    (is (= [2 3] (shape-vec res1)))
+    (is (= [1. 0. 1.
+            0. 1. 0.]
+           (->vec res2)))
+    (is (= [2 3] (shape-vec res1)))
+    (is (= [3. 1. 5. 0. 4. 2.] (->vec res3)))
+    (is (= [6] (shape-vec res3)))))
+
+(deftest test-batch-take
+  (let [x (ndarray/array (range 6) [3 2])
+        i (ndarray/as-type (ndarray/array [0 1 0] [3]) dtype/INT32)
+        res1 (ndarray-api/batch-take x i)        ]
+    (is (= [0. 3. 4.] (->vec res1)))))
+
+(deftest test-broadcast-add
+  (let [x (ndarray/ones [2 3])
+        y (ndarray/array (range 2) [2 1])
+        res1 (ndarray-api/broadcast-add x y)]
+    (is (= [1. 1. 1. 2. 2. 2.] (->vec res1)))
+    (is (= [2 3] (shape-vec res1)))))
