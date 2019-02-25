@@ -15,6 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
+ifeq ($(OS),Windows_NT)
+	UNAME_S := Windows
+else
+	UNAME_S := $(shell uname -s)
+endif
+
+MXNET_PATH := $(shell cd ../../..; pwd)
 
 CPPEX_SRC = $(wildcard *.cpp)
 CPPEX_EXE = $(patsubst %.cpp, %, $(CPPEX_SRC))
@@ -23,9 +30,8 @@ OPENCV_LDFLAGS=`pkg-config --libs opencv`
 
 CXX=g++
 
-
-CFLAGS=$(COMMFLAGS) -I../../../3rdparty/tvm/nnvm/include -I../../../3rdparty/dmlc-core/include -I ../../include -I ../../../include -Wall -O3 -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
-CPPEX_EXTRA_LDFLAGS := -L../../../lib -lmxnet $(OPENCV_LDFLAGS)
+CFLAGS=$(COMMFLAGS) -I ../../include -I$(MXNET_PATH)/3rdparty/tvm/nnvm/include -I$(MXNET_PATH)/3rdparty/dmlc-core/include -I$(MXNET_PATH)/include -Wall -O3 -msse3 -funroll-loops -Wno-unused-parameter -Wno-unknown-pragmas
+CPPEX_EXTRA_LDFLAGS := -L$(MXNET_PATH)/lib -lmxnet $(OPENCV_LDFLAGS)
 
 all: $(CPPEX_EXE)
 
@@ -34,7 +40,12 @@ debug: all
 
 
 $(CPPEX_EXE):% : %.cpp
-	$(CXX) -std=c++0x $(CFLAGS)  $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+	@mkdir -p build
+	$(CXX) -std=c++0x $(CFLAGS)  $(CPPEX_CFLAGS) -o build/$@ $(filter %.cpp %.a, $^) $(CPPEX_EXTRA_LDFLAGS)
+ifeq ($(UNAME_S), Darwin)
+	install_name_tool -add_rpath @loader_path build/$@
+	install_name_tool -add_rpath $(MXNET_PATH)/lib build/$@
+endif
 
 clean:
-	rm -f $(CPPEX_EXE)
+	rm -rf build

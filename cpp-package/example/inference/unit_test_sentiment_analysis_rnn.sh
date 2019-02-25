@@ -20,15 +20,15 @@ function compare_range() {
 }
 
 set -e # exit on the first error
-export EXE_NAME="sentiment_analysis_rnn"
+EXE_NAME="sentiment_analysis_rnn"
 
 # Running the example with a movie review.
 if [ "$(uname)" == "Darwin" ]; then
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./${EXE_NAME}  --input "This movie is the best." 2&> ${EXE_NAME}.log
+    build/${EXE_NAME}  --input "This movie is the best." 2&> build/${EXE_NAME}.log
 else
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./${EXE_NAME}  --input "This movie is the best." 2&> ${EXE_NAME}.log
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib build/${EXE_NAME}  --input "This movie is the best." 2&> build/${EXE_NAME}.log
 fi
-result=`grep "The sentiment score between 0 and 1.*\=" ${EXE_NAME}.log | cut -d '=' -f2`
+result=`grep "The sentiment score between 0 and 1.*\=" build/${EXE_NAME}.log | cut -d '=' -f2`
 lower_bound=0.8
 upper_bound=0.99
 if [ $(compare_range $result $lower_bound $upper_bound) == 1 ];

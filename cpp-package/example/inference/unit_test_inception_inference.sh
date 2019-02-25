@@ -25,11 +25,11 @@ tar -xvzf inception-bn.tar.gz -C model
 
 # Running the example with dog image.
 if [ "$(uname)" == "Darwin" ]; then
-    DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+    build/inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> build/inception_inference.log
 else
-    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib ./inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> inception_inference.log
+    LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:../../../lib build/inception_inference --symbol "./model/Inception-BN-symbol.json" --params "./model/Inception-BN-0126.params" --synset "./model/synset.txt" --mean "./model/mean_224.nd" --image "./model/dog.jpg" 2&> build/inception_inference.log
 fi
-result=`grep -c "pug-dog" inception_inference.log`
+result=`grep -c "pug-dog" build/inception_inference.log`
 if [ $result == 1 ];
 then
     echo "PASS: inception_inference correctly identified the image."
