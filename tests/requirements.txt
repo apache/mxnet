@@ -3,3 +3,4 @@ mock
 nose
 nose-timer
 ipython
+numpy
