@@ -221,7 +221,7 @@ def convert_activation(net, node, module, builder):
 
 
 def convert_leakyrelu(net, node, module, builder):
-    """Convert an leakyrelu layer from mxnet to coreml.
+    """Convert a leakyrelu layer from mxnet to coreml.
 
     Parameters
     ----------
@@ -237,6 +237,7 @@ def convert_leakyrelu(net, node, module, builder):
     builder: NeuralNetworkBuilder
         A neural network builder object.
     """
+
     input_name, output_name = _get_input_output_name(net, node)
     name = node['name']
     inputs = node['inputs']
@@ -252,6 +253,7 @@ def convert_leakyrelu(net, node, module, builder):
                            input_name = input_name,
                            output_name = output_name,
                            params = params)
+
 
 def convert_elementwise_add(net, node, module, builder):
     """Convert an elementwise add layer from mxnet to coreml.
