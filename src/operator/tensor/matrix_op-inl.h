@@ -1389,13 +1389,15 @@ void SliceLikeBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
-  if (req[0] == kNullOp) return;
   using namespace mshadow;
   Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (req[1] != kNullOp && req[1] != kAddTo) {
+    Fill(s, outputs[1], req[1], 0);  // Second input not relavant to gradients.
+  }
+  if (req[0] == kNullOp) return;
   const TBlob& ograd = inputs[0];
   const TBlob& igrad = outputs[0];
   const SliceLikeParam& param = nnvm::get<SliceLikeParam>(attrs.parsed);
-  Fill(s, outputs[1], req[1], 0);  // Second input not relavant to gradients.
   if (req[0] == kWriteTo) {
     Fill(s, igrad, req[0], 0);
   } else if (req[0] == kWriteInplace) {

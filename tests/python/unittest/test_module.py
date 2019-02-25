@@ -917,6 +917,20 @@ def test_bucket_module_grad_req():
     assert(mod._curr_module._exec_group.execs[0].grad_dict['a'].asscalar() == 2 * batch_size)
 
 
+def test_module_update_no_pragram():
+    # test module to do update on layers without params
+    data_shape = (10, 10)
+    data = mx.sym.Variable('data')
+    out = mx.sym.Dropout(data, 0.5)
+    mod = mx.mod.Module(out)
+    mod.bind(data_shapes=[('data', data_shape)])
+    mod.init_params()
+    mod.init_optimizer()
+    data_batch = mx.io.DataBatch([nd.ones(data_shape)])
+    mod.forward_backward(data_batch)
+    mod.update()
+    assert(mod.get_outputs()[0].shape == data_shape)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -15,11 +15,6 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-<!-- This page should be deleted after sometime (Allowing search engines
-to update links) -->
-<meta http-equiv="refresh" content="3; url=https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU" />
-<!-- Just in case redirection does not work -->
-<p>
-  <a href="https://mxnet.incubator.apache.org/versions/master/install/index.html?platform=Devices&language=Python&processor=CPU">
-    This content is moved to a new MXNet install page. Redirecting... </a>
-</p>
+# Run parts of a model on different devices
+
+This folder contains the example [matrix_factorization](https://github.com/apache/incubator-mxnet/tree/master/example/model-parallel/matrix_factorization) that demonstrates the basic usage of `group2ctxs`. 

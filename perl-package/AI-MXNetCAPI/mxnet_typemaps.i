@@ -115,7 +115,7 @@
     }
 }
 
-%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp)
+%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp), (uint64_t *out) (uint64_t temp)
 {
     temp = 0;
     $1 = &temp;
@@ -130,6 +130,17 @@
         argvi++;
     }
 }
+
+%typemap(argout) (uint64_t *out)
+{
+    if(!result)
+    {
+        $result = newSVnv((double)(*$1));
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
 
 %typemap(in,numinputs=0) (const int **out_stypes) (int* temp)
 {
