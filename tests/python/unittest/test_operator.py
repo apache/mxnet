@@ -5546,87 +5546,75 @@ def test_laop():
 
     data1 = mx.symbol.Variable('data1')
     data2 = mx.symbol.Variable('data2')
-    data3 = mx.symbol.Variable('data3')
 
-    check_fw = lambda sym, location, expected :\
-        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
-                               atol=atol_fw, dtype=dtype)
-    check_grad = lambda sym, location:\
-        check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
-                               atol=atol_bw, dtype=dtype)
     rep_3x = lambda a, m, n :\
         np.reshape(np.tile(np.array(a).flatten(), 3), (3, 1, m, n))
+
+    def check_fw_grad(sym, location, expected):
+        check_symbolic_forward(sym, location, expected, rtol=rtol_fw,
+                               atol=atol_fw, dtype=dtype)
+        if grad_check == 1:
+            check_numeric_gradient(sym, location, numeric_eps=num_eps, rtol=rtol_bw,
+                                   atol=atol_bw, dtype=dtype)
+
+    matrix = np.array([[9., 3., -6., 12.],
+                       [3., 26., -7., -11.],
+                       [-6., -7., 9., 7.],
+                       [12., -11., 7., 65.]])
+    trian  = np.array([[3., 0., 0., 0.],
+                       [1., 5., 0., 0.],
+                       [-2., -1., 2., 0.],
+                       [4., -3., 6., 2.]])
+    pow    = np.array([[2., 1., 1., 1.],
+                       [1., 4., 1., 1.],
+                       [1., 1., 8., 1.],
+                       [1., 1., 1., 16.]])
+    inv    = np.array([[8.95/3., 0.05/3., 2.65, -2.5/3.],
+                       [0.05/3., 0.05, 0.05, 0.],
+                       [2.65, 0.05, 2.5, -0.75],
+                       [-2.5/3., 0., -0.75, 0.25]])
+    ident  = np.eye(4)
+    shape = (4, 4, 1, 1)
 
     for lower in [True, False]:
         upper = not lower
 
         # Tests with trivial 1x1 matrices.
-        shape = (4, 4, 1, 1)
         data_in = np.random.uniform(1, 10, shape)
         # test potrf
         # Note: Have to symmetrize input, for gradient test to work
         res_potrf = np.sqrt(data_in)
         test_potrf = mx.sym.linalg.potrf(data1, lower=lower)
-        check_fw(test_potrf, [data_in], [res_potrf])
-        if grad_check == 1:
-            check_grad(test_potrf, [data_in])
+        check_fw_grad(test_potrf, [data_in], [res_potrf])
         # test potri
         ones = mx.nd.ones(shape).asnumpy()
         res_potri = np.divide(ones, data_in * data_in)
         test_potri = mx.sym.linalg.potri(data1, lower=lower)
-        check_fw(test_potri, [data_in], [res_potri])
-        if grad_check == 1:
-            check_grad(test_potri, [data_in])
+        check_fw_grad(test_potri, [data_in], [res_potri])
         # test trsm
         trian_in = data_in * 7.
         test_trsm = mx.sym.linalg.trsm(data1, data2, alpha=7., lower=lower)
-        check_fw(test_trsm, [trian_in, data_in], [ones])
-        if grad_check == 1:
-            check_grad(test_trsm, [trian_in,data_in])
+        check_fw_grad(test_trsm, [trian_in, data_in], [ones])
         # test trmm
         trian_in = np.divide(ones, trian_in)
         test_trmm = mx.sym.linalg.trmm(data1, data2, alpha=7., transpose=True,
                                        rightside=True, lower=lower)
-        check_fw(test_trmm, [trian_in, data_in], [ones])
-        if grad_check == 1:
-            check_grad(test_trmm, [trian_in, data_in])
+        check_fw_grad(test_trmm, [trian_in, data_in], [ones])
         # test sumlogdiag
         res_sumlogdiag = np.reshape(np.log(data_in), (4, 4))
         test_sumlogdiag = mx.sym.linalg.sumlogdiag(data1)
-        check_fw(test_sumlogdiag, [data_in], [res_sumlogdiag])
-        if grad_check == 1:
-            check_grad(test_sumlogdiag, [data_in])
+        check_fw_grad(test_sumlogdiag, [data_in], [res_sumlogdiag])
 
         # more elaborate example of Cholesky factorization
-        matrix = np.array([[9., 3., -6., 12.],
-                           [3., 26., -7., -11.],
-                           [-6., -7., 9., 7.],
-                           [12., -11., 7., 65.]])
-        trian  = np.array([[3., 0., 0., 0.],
-                           [1., 5., 0., 0.],
-                           [-2., -1., 2., 0.],
-                           [4., -3., 6., 2.]])
-        pow    = np.array([[2., 1., 1., 1.],
-                           [1., 4., 1., 1.],
-                           [1., 1., 8., 1.],
-                           [1., 1., 1., 16.]])
-        inv    = np.array([[8.95/3., 0.05/3., 2.65, -2.5/3.],
-                           [0.05/3., 0.05, 0.05, 0.],
-                           [2.65, 0.05, 2.5, -0.75],
-                           [-2.5/3., 0., -0.75, 0.25]])
-        ident  = np.eye(4)
-
         low_trian = trian
-        if not lower:
+        if upper:
             trian = np.transpose(trian)
 
         # test potrf
         test_potrf = mx.sym.linalg.potrf(_make_symm_symbol(data1, ndims=4), lower=lower)
         a = rep_3x(matrix, 4, 4)
         r = rep_3x(trian, 4, 4)
-        check_fw(test_potrf, [a], [r])
-        if grad_check == 1:
-            check_grad(test_potrf, [a])
+        check_fw_grad(test_potrf, [a], [r])
 
         #test potri
         data1_ltri = _make_triangle_symm(
@@ -5634,77 +5622,54 @@ def test_laop():
         test_potri = mx.sym.linalg.potri(data1_ltri, lower=lower)
         a = rep_3x(trian, 4, 4)
         r = rep_3x(inv, 4, 4)
-        check_fw(test_potri, [a], [r])
-        if grad_check == 1:
-            check_grad(test_potri, [a])
+        check_fw_grad(test_potri, [a], [r])
 
         # test trsm
         test_trsm = mx.sym.linalg.trsm(data1_ltri, data2, alpha=7., transpose=upper, lower=lower)
-        a = rep_3x(trian, 4, 4)
         b = rep_3x(matrix, 4, 4)
         r = rep_3x(7. * np.transpose(low_trian), 4, 4)
-        check_fw(test_trsm, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trsm, [a, b])
+        check_fw_grad(test_trsm, [a, b], [r])
 
         test_trsm2 = mx.sym.linalg.trsm(
             data1_ltri, data2, alpha=-2., rightside=True, transpose=lower, lower=lower)
         r = rep_3x(-2. * low_trian, 4, 4)
-        check_fw(test_trsm2, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trsm2, [a, b])
+        check_fw_grad(test_trsm2, [a, b], [r])
 
         test_trsm3 = mx.sym.linalg.trsm(
             data1_ltri, data2, alpha=0.5, transpose=lower, lower=lower)
         b = rep_3x(np.transpose(low_trian), 4, 4)
         r = rep_3x(0.5 * ident, 4, 4)
-        check_fw(test_trsm3, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trsm3, [a, b])
+        check_fw_grad(test_trsm3, [a, b], [r])
 
         test_trsm4 = mx.sym.linalg.trsm(
             data1_ltri, data2, alpha=-0.5, rightside=True, transpose=upper, lower=lower)
         b = rep_3x(low_trian, 4, 4)
         r = rep_3x(-0.5 * ident, 4, 4)
-        check_fw(test_trsm4, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trsm4, [a, b])
+        check_fw_grad(test_trsm4, [a, b], [r])
 
         # test trmm
         test_trmm = mx.sym.linalg.trmm(
             data1_ltri, data2, alpha=7., transpose=True, rightside=True, lower=lower)
-        a = rep_3x(trian, 4, 4)
-        b = rep_3x(matrix, 4, 4)
+        a = [a, rep_3x(matrix, 4, 4)]
         r = rep_3x(7. * np.dot(matrix, trian.T), 4, 4)
-        check_fw(test_trmm, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trmm, [a, b])
+        check_fw_grad(test_trmm, a, [r])
 
         test_trmm2 = mx.sym.linalg.trmm(data1_ltri, data2, alpha=-2., lower=lower)
         r = rep_3x(-2. * np.dot(trian, matrix), 4, 4)
-        check_fw(test_trmm2, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trmm2, [a, b])
+        check_fw_grad(test_trmm2, a, [r])
 
         test_trmm3 = mx.sym.linalg.trmm(data1_ltri, data2, rightside=True, lower=lower)
         r = rep_3x(np.dot(matrix, trian), 4, 4)
-        check_fw(test_trmm3, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trmm3, [a, b])
+        check_fw_grad(test_trmm3, a, [r])
 
         test_trmm4 = mx.sym.linalg.trmm(
             data1_ltri, data2, alpha=1.2, transpose=True, lower=lower)
         r = rep_3x(1.2 * np.dot(trian.T, matrix), 4, 4)
-        check_fw(test_trmm4, [a, b], [r])
-        if grad_check == 1:
-            check_grad(test_trmm4, [a, b])
+        check_fw_grad(test_trmm4, a, [r])
 
-    # test sumlogdiag
-    a = rep_3x(pow, 4, 4)
-    r = np.reshape(np.tile(10. * np.log(np.array([2.])), 3), (3,))
-    check_fw(test_sumlogdiag, [a], [r])
-    if grad_check == 1:
-        check_grad(test_sumlogdiag, [a])
+        # test sumlogdiag
+        r = np.reshape(np.tile(10. * np.log(np.array([2.])), 3), (3,))
+        check_fw_grad(test_sumlogdiag, [rep_3x(pow, 4, 4)], [r])
 
 
 # Tests for operators linalg.syrk, linalg.gelqf
