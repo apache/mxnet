@@ -33,6 +33,7 @@ from numpy.testing import assert_allclose
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import run_in_spawned_process
 from test_operator import *
 from test_optimizer import *
 from test_random import *
@@ -521,24 +522,6 @@ def test_convolution_options():
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 
-# Helper function to run tests in a subprocess to avoid save/restore of os.environ.
-# Also avoids issues of cached environment variable lookups in the backend.
-def _test_in_separate_process(func, env, *args):
-    try:
-        mpctx = mp.get_context('spawn')
-    except:
-        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
-              sys.version_info[0:2], file=sys.stderr, end='')
-    else:
-        seed = np.random.randint(0,1024*1024*1024)
-        for (key, value) in env.items():
-            os.environ[key] = str(value)
-        # Prepend seed as first arg
-        p = mpctx.Process(target=func, args=(seed,)+args)
-        p.start()
-        p.join()
-        assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
-
 def _conv_with_num_streams(seed):
     with random_seed(seed):
         # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
@@ -566,7 +549,7 @@ def _conv_with_num_streams(seed):
 def test_convolution_multiple_streams():
     for num_streams in [1, 2]:
         for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
-            _test_in_separate_process(_conv_with_num_streams,
+            run_in_spawned_process(_conv_with_num_streams,
                 {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
 
 
