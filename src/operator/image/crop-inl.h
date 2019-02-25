@@ -37,6 +37,7 @@
 #include "../operator_common.h"
 #include "../../common/static_array.h"
 #include "../tensor/matrix_op-inl.h"
+#include "resize-inl.h"
 
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
@@ -121,7 +122,6 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-// the crop implementation without resize
 inline void CropImpl(int x,
                       int y,
                       const std::vector<TBlob> &inputs,
@@ -150,48 +150,6 @@ inline void CropImpl(int x,
           input_tensor.shape_, output_tensor.shape_, begin, step);
     })
   })
-}
-// the crop implementation with resize
-inline void CropImpl(int x,
-                      int y,
-                      int height,
-                      int width,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<TBlob> &outputs,
-                      const SizeParam &size,
-                      int interp,
-                      int input_index = 0,
-                      int output_index = 0) {
-#if MXNET_USE_OPENCV
-  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "opencv image mat doesn't support fp16";
-  CHECK((inputs[0].type_flag_ != mshadow::kInt32) || (inputs[0].type_flag_ != mshadow::kInt64))
-       << "opencv resize doesn't support int32, int64";
-  // mapping to opencv matrix element type according to channel
-  const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
-  if (inputs[0].ndim() == 3) {
-    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
-    cv::Mat buf(inputs[0].shape_[H], inputs[0].shape_[W], cv_type, inputs[0].dptr_);
-    cv::Mat dst(outputs[0].shape_[H], outputs[0].shape_[W], cv_type, outputs[0].dptr_);
-    cv::Rect roi(x, y, width, height);
-    cv::resize(buf(roi), dst, cv::Size(size.width, size.height), 0, 0, interp);
-    CHECK(!dst.empty());
-    CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
-  } else {
-    const int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[3]);
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      cv::Mat buf(inputs[0].shape_[kH], inputs[0].shape_[kW], cv_type,
-        inputs[0].dptr<DType>() + input_index);
-      cv::Mat dst(outputs[0].shape_[kH], outputs[0].shape_[kW], cv_type,
-        outputs[0].dptr<DType>() + output_index);
-      cv::Rect roi(x, y, width, height);
-      cv::resize(buf(roi), dst, cv::Size(size.width, size.height), 0, 0, interp);
-      CHECK(!dst.empty());
-      CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr<DType>() + output_index);
-    });
-  }
-#else
-  LOG(FATAL) << "Build with USE_OPENCV=1 for image crop operator.";
-#endif  // MXNET_USE_OPENCV
 }
 
 inline void Crop(const nnvm::NodeAttrs &attrs,
@@ -230,30 +188,22 @@ inline void Crop(const nnvm::NodeAttrs &attrs,
   }
 
   if (inputs[0].ndim() == 3) {
+    CropImpl(param.x, param.y, inputs, outputs, ctx, req);
     if (need_resize) {
-      CropImpl(param.x, param.y, param.height, param.width,
-        inputs, outputs, size, param.interp.value());
-    } else {
-      CropImpl(param.x, param.y, inputs, outputs, ctx, req);
+      ResizeImpl(inputs, outputs, size.height, size.width, param.interp.value());
     }
   } else {
-    const auto batch_size = inputs[0].shape_[0];
-    const auto input_offset = inputs[0].shape_[1] * inputs[0].shape_[2] * inputs[0].shape_[3];
-    int output_offset;
+    CropImpl(param.x, param.y, inputs, outputs, ctx, req);
     if (need_resize) {
-      output_offset = size.height * size.width * outputs[0].shape_[3];
-    } else {
-      output_offset = param.width * param.height * outputs[0].shape_[3];
-    }
-    if (need_resize) {
+      const auto batch_size = inputs[0].shape_[0];
+      const auto input_step = inputs[0].shape_[1] * inputs[0].shape_[2] * inputs[0].shape_[3];
+      int output_step = size.height * size.width * outputs[0].shape_[3];
       #pragma omp parallel for
-      for (auto i = 0; i < batch_size; ++i) {      
-        CropImpl(param.x, param.y, param.height, param.width,
-          inputs, outputs, size, param.interp.value(), input_offset * i, output_offset * i);
+      for (auto i = 0; i < batch_size; ++i) {
+        ResizeImpl(inputs, outputs, size.height, size.width, param.interp.value(),
+        i * input_step, i * output_step);
       }
-    } else {
-      CropImpl(param.x, param.y, param.height, param.width, inputs, outputs, ctx, req);
-    }
+    }    
   }
 }
 }  // namespace image
