@@ -19,6 +19,7 @@
 
 $env:MXNET_LIBRARY_PATH=join-path $pwd.Path windows_package\lib\libmxnet.dll
 $env:PYTHONPATH=join-path $pwd.Path windows_package\python
+$env:Path += ";$PATH;C:\Program Files\OpenBLAS-v0.2.19\bin;C:\Program Files\OpenCV-v3.4.1\build\x64\vc14\bin;C:\Program Files\mingw64_dll"
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
