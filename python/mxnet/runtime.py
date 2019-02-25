@@ -37,7 +37,7 @@ class Feature(ctypes.Structure):
     @property
     def name(self):
         """
-        feature name
+        Feature name.
         """
         return self._name.decode()
 
