@@ -41,13 +41,18 @@ namespace math {
 //   and returns double
 
 #define MXNET_UNARY_MATH_FUNC(name) \
-template<typename DType> MSHADOW_XINLINE \
-float name(DType a) { \
-  return ::name##f(static_cast<float>(a)); \
+MSHADOW_XINLINE \
+float name(float a) { \
+  return ::name##f(a); \
 } \
 MSHADOW_XINLINE \
 double name(double a) { \
   return ::name(a); \
+} \
+template<typename DType> MSHADOW_XINLINE \
+typename std::enable_if<std::is_integral<DType>::value, double>::type \
+name(DType a) { \
+  return ::name(static_cast<double>(a)); \
 }
 
 #define MXNET_BINARY_MATH_FUNC(name) \
