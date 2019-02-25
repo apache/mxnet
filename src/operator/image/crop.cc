@@ -18,7 +18,7 @@
 */
 
 /*!
- *  Copyright (c) 2016 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file crop-cc.h
  * \brief the image crop operator registration
  */
@@ -35,7 +35,7 @@ namespace image {
 DMLC_REGISTER_PARAMETER(CropParam);
 
 NNVM_REGISTER_OP(_image_crop)
-.describe("Crop the input image with and optionally resize it"
+.describe("Crop the input image and optionally resize it"
             "Input could be either (H x W x C) or (N x H x W x C)")
 .set_num_inputs(1)
 .set_num_outputs(1)
