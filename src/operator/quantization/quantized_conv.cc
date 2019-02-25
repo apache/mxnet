@@ -160,6 +160,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizedConvShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedConvType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizedConvStorageType)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);

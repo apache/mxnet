@@ -689,6 +689,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 .set_attr<FInferStorageType>("FInferStorageType", SgMKLDNNConvOpStorageType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNConvOpForward)
 .set_attr<bool>("TIsMKLDNN", true)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
