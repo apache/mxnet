@@ -44,7 +44,7 @@ class Feature(ctypes.Structure):
     @property
     def enabled(self):
         """
-        True if MXNet was compiled with the given compile-time feature
+        True if MXNet was compiled with the given compile-time feature.
         """
         return self._enabled
 
