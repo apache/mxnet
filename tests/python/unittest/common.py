@@ -271,7 +271,7 @@ def teardown():
     mx.nd.waitall()
 
 
-def test_in_separate_process(func, env, *args):
+def run_in_spawned_process(func, env, *args):
     """
     Helper function to run a test in its own process.
 
@@ -282,10 +282,12 @@ def test_in_separate_process(func, env, *args):
     ----------
 
     func : function to run in a spawned process.
-
     env : dict of additional environment values to set temporarily in the environment before exec.
-
     args : args to pass to the function.
+
+    Returns
+    -------
+    Whether the python version supports running the function as a spawned process.
 
     This routine calculates a random seed and passes it into the test as a first argument.  If the
     test uses random values, it should include an outer 'with random_seed(seed):'.  If the
@@ -296,6 +298,7 @@ def test_in_separate_process(func, env, *args):
     except:
         print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
               sys.version_info[0:2], file=sys.stderr, end='')
+        return False
     else:
         seed = np.random.randint(0,1024*1024*1024)
         orig_environ = os.environ.copy()
@@ -310,3 +313,4 @@ def test_in_separate_process(func, env, *args):
         finally:
             os.environ.clear()
             os.environ.update(orig_environ)
+    return True

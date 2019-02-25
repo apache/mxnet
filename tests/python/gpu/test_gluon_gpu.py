@@ -38,7 +38,7 @@ from mxnet.test_utils import rand_ndarray
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
-from common import test_in_separate_process
+from common import run_in_spawned_process
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -458,10 +458,12 @@ def test_bulking():
     for seg_sizes in test_cases:
         # Create shared variable to return measured time from test process
         time_per_iteration = mp.Manager().Value('d', 0.0)
-        test_in_separate_process(_test_bulking_in_process,
+        if not run_in_spawned_process(_test_bulking_in_process,
                                   {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : seg_sizes[0],
                                    'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1]},
-                                  time_per_iteration)
+                                  time_per_iteration):
+            # skip test since the python version can't run it properly.  Warning msg was logged.
+            return
         times[seg_sizes] = time_per_iteration.value
         times_str += '\n    runtime of (fwd,bwd) seg size max ({},{}) =\t{:.1f} msec'.format(
             seg_sizes[0], seg_sizes[1], 1000.0 * times[seg_sizes])
