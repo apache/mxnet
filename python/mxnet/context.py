@@ -144,6 +144,11 @@ class Context(with_metaclass(_MXClassPropertyMetaClass, object)):
                       DeprecationWarning)
         cls._default_ctx.value = val
     #pylint: enable=no-self-argument
+    
+    def release_all(self):
+        dev_type = ctypes.c_int(self.device_typeid)
+        dev_id = ctypes.c_int(self.device_id)
+        check_call(_LIB.MXStorageReleaseAll(dev_type, dev_id))
 
 # initialize the default context in Context
 Context._default_ctx.value = Context('cpu', 0)

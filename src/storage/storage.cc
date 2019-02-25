@@ -26,6 +26,7 @@
 #include "./pooled_storage_manager.h"
 #include "./cpu_shared_storage_manager.h"
 #include "./cpu_device_storage.h"
+#include "./gpu_device_storage.h"
 #include "./pinned_memory_storage.h"
 #include "../common/lazy_alloc_array.h"
 #include "../profiler/storage_profiler.h"
@@ -38,6 +39,7 @@ class StorageImpl : public Storage {
   void Alloc(Handle* handle) override;
   void Free(Handle handle) override;
   void DirectFree(Handle handle) override;
+  void ReleaseAll(Context ctx) override;
   void SharedIncrementRefCount(Handle handle) override;
   StorageImpl() {}
   virtual ~StorageImpl() = default;
@@ -158,6 +160,16 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
 
   manager->DirectFree(handle);
   profiler_.OnFree(handle);
+}
+
+void StorageImpl::ReleaseAll(Context ctx) {
+  auto&& device = storage_managers_.at(ctx.dev_type);
+  std::shared_ptr<storage::StorageManager> manager = device.Get(
+    ctx.real_dev_id(), []() {
+    LOG(FATAL) << "Cannot Free space to a device you have not allocated";
+    return nullptr;
+  });
+  manager->ReleaseAll();
 }
 
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
