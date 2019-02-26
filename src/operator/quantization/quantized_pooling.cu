@@ -39,7 +39,7 @@ class QuantizedCuDNNPoolingOp {
     CUDNN_CALL(cudnnCreateTensorDescriptor(&out_desc_));
   }
 
-  void Init(const PoolingParam& param, const TShape& dshape, const TShape& oshape) {
+  void Init(const PoolingParam& param, const mxnet::TShape& dshape, const mxnet::TShape& oshape) {
     const int N = 0, H = 2, W = 3, C = 1;
     const cudnnDataType_t dtype = mshadow::DataType<DType>::kCudnnFlag;
     CHECK(param.kernel.ndim() == 2) << "Only support 2D pooling";

@@ -31,7 +31,7 @@ namespace op {
 NNVM_REGISTER_OP(_contrib_quantized_flatten)
 .set_num_inputs(3)
 .set_num_outputs(3)
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizedFlattenShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizedFlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedFlattenType)
 .set_attr<FCompute>("FCompute<cpu>", QuantizedFlattenCompute<cpu>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",

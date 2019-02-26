@@ -296,7 +296,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   int axis = CheckAxis(param.axis, inputs[0].ndim());
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
-  TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     if (shape.ndim() == 2) {
       Softmax<OP, negate>(ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
@@ -323,7 +323,7 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
   int axis = CheckAxis(param.axis, inputs[0].ndim());
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
-  TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       if (shape.ndim() == 2) {

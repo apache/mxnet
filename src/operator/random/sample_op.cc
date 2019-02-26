@@ -51,7 +51,7 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
   .set_num_inputs(0)                                                                         \
   .set_num_outputs(1)                                                                        \
   .set_attr_parser(ParamParser<ParamType>)                                                   \
-  .set_attr<nnvm::FInferShape>("FInferShape", InitShape<ParamType>)                          \
+  .set_attr<mxnet::FInferShape>("FInferShape", InitShape<ParamType>)                          \
   .set_attr<nnvm::FInferType>("FInferType", SampleOpType<ParamType>)                \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                            \
   .add_arguments(ParamType::__FIELDS__())                                                    \
@@ -64,7 +64,7 @@ DMLC_REGISTER_PARAMETER(SampleGenNegBinomialLikeParam);
   .set_num_inputs(1)                                                                      \
   .set_num_outputs(1)                                                                     \
   .set_attr_parser(ParamParser<ParamType>)                                                \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                        \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                        \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)                           \
   .set_attr<FResourceRequest>("FResourceRequest", SampleResource)                         \
   .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",                                         \

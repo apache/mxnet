@@ -323,7 +323,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
 }
 
 nnvm::Graph InferShape(nnvm::Graph&& graph,
-                       nnvm::ShapeVector&& shape_inputs,
+                       mxnet::ShapeVector&& shape_inputs,
                        const std::string& shape_attr_key) {
   using dmlc::any;
   if (shape_inputs.size() != 0) {
@@ -332,11 +332,11 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
   if (shape_attr_key.length() != 0) {
     graph.attrs["shape_attr_key"] = std::make_shared<any>(shape_attr_key);
   }
-  return InferAttr<nnvm::TShape, nnvm::FInferShape>(
-      std::move(graph), nnvm::TShape(),
+  return InferAttr<mxnet::TShape, mxnet::FInferShape>(
+      std::move(graph), mxnet::TShape(),
       "FInferShape", "shape_inputs", "shape_attr_key",
       "shape", "shape_num_unknown_nodes",
-      [](const nnvm::TShape& s) { return s.ndim() == 0 || s.Size() == 0; },
+      [](const mxnet::TShape& s) { return s.ndim() == 0 || s.Size() == 0; },
       nullptr, true, nullptr);
 }
 

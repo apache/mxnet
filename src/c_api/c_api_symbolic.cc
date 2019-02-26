@@ -520,18 +520,18 @@ int MXSymbolInferShape(SymbolHandle sym,
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
-  nnvm::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
   if (keys == nullptr && num_args != 0) {
     std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
     CHECK_LE(num_args, read_only_args.size());
     for (mx_uint i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = nnvm::ShapeTypeCast(
+      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
   } else {
-    std::unordered_map<std::string, TShape> kwargs;
+    std::unordered_map<std::string, mxnet::TShape> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = nnvm::ShapeTypeCast(
+      kwargs[keys[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
@@ -544,7 +544,7 @@ int MXSymbolInferShape(SymbolHandle sym,
   }
 
   // copy back
-  CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
+  CopyAttr(g.indexed_graph(), g.GetAttr<mxnet::ShapeVector>("shape"),
            &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 
   // copy data back

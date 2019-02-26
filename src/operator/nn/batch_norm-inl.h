@@ -304,7 +304,7 @@ class BNTensor3 {
     }
   }
 
-  inline BNTensor3(DType *p, const TShape& shape, const int indexOfChannel)
+  inline BNTensor3(DType *p, const mxnet::TShape& shape, const int indexOfChannel)
     : dptr_(p)
       , indexOfChannel_(static_cast<size_t>(indexOfChannel < 0
                                ? (static_cast<int>(shape.ndim()) + indexOfChannel)
@@ -393,7 +393,7 @@ class BNTensor3 {
   size_t shape_[COUNT];
 };
 
-inline int GetRealAxis(const TShape& shape, int axis) {
+inline int GetRealAxis(const mxnet::TShape& shape, int axis) {
   if (axis < 0) {
     axis += shape.ndim();
   }

@@ -104,7 +104,7 @@ struct InferStorageTypeError : public dmlc::Error {
 };
 
 /*! \brief check if shape is empty or contains unknown (0) dim. */
-inline bool shape_is_none(const TShape& x) {
+inline bool shape_is_none(const mxnet::TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
 
@@ -119,12 +119,12 @@ inline bool storage_type_is_none(const int& x) {
 }
 
 /*! \brief check if shape is scalar({1}). */
-inline bool shape_is_scalar(const TShape& x) {
+inline bool shape_is_scalar(const mxnet::TShape& x) {
   return x.ndim() == 1 && x.Size() == 1;
 }
 
 /*! \brief get string representation of shape */
-inline std::string shape_string(const TShape& x) {
+inline std::string shape_string(const mxnet::TShape& x) {
   std::ostringstream os;
   os << x;
   return os.str();
@@ -158,7 +158,7 @@ inline std::string type_string(const int& x) {
  * \param x source shape.
  * \return whether x and y are compatible.
  */
-inline bool shape_assign(TShape *y, const TShape& x) {
+inline bool shape_assign(mxnet::TShape *y, const mxnet::TShape& x) {
   if (y->ndim() == 0) {
     *y = x;
     return true;
@@ -221,7 +221,7 @@ inline bool dispatch_mode_assign(DispatchMode *y, const DispatchMode& x) {
  */
 #define SHAPE_ASSIGN_CHECK(shape_array, index, shape)                       \
   {                                                                         \
-    if (!::mxnet::op::shape_assign(&(shape_array)[index], TShape(shape))) { \
+    if (!::mxnet::op::shape_assign(&(shape_array)[index], mxnet::TShape(shape))) { \
       std::ostringstream os;                                                \
       os << "Shape inconsistent, Provided = " << (shape_array)[index] << ','\
          << " inferred shape=" << shape;                                    \
@@ -556,13 +556,13 @@ class OpSignature {
 #endif
   }
 
-  void AddSign(const std::vector<TShape> &shapes) {
+  void AddSign(const mxnet::ShapeVector &shapes) {
     for (auto &shape : shapes) {
       AddSign(shape);
     }
   }
 
-  void AddSign(const TShape &shape) {
+  void AddSign(const mxnet::TShape &shape) {
     for (size_t i = 0; i < shape.ndim(); i++) {
       hash = hash * 2 + shape[i];
       eles.push_back(shape[i]);

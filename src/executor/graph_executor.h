@@ -94,7 +94,7 @@ class GraphExecutor : public Executor {
             const std::vector<Context>& in_arg_ctxes,
             const std::vector<Context>& arg_grad_ctxes,
             const std::vector<Context>& aux_state_ctxes,
-            const std::unordered_map<std::string, TShape>& arg_shape_map,
+            const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
             const std::unordered_map<std::string, int>& arg_dtype_map,
             const std::unordered_map<std::string, int>& arg_stype_map,
             const std::vector<OpReqType>& grad_req_types,
@@ -111,7 +111,7 @@ class GraphExecutor : public Executor {
                     const bool allow_up_sizing,
                     const Context& default_ctx,
                     const std::map<std::string, Context>& ctx_map,
-                    const std::unordered_map<std::string, TShape>&
+                    const std::unordered_map<std::string, mxnet::TShape>&
                       provided_arg_shapes,
                     std::vector<NDArray>* in_args,
                     std::vector<NDArray>* arg_grads,
@@ -153,7 +153,7 @@ class GraphExecutor : public Executor {
   };
   // Initialize in_args, arg_grads, and aux_states
   void InitArguments(const nnvm::IndexedGraph& idx,
-                     const nnvm::ShapeVector& inferred_shapes,
+                     const mxnet::ShapeVector& inferred_shapes,
                      const nnvm::DTypeVector& inferred_dtypes,
                      const StorageTypeVector& inferred_stypes,
                      const std::vector<Context>& in_arg_ctxes,
@@ -166,7 +166,7 @@ class GraphExecutor : public Executor {
   // Initialize in_args, arg_grads and aux_states with
   // shared_buffer and shared_exec
   virtual void InitArguments(const nnvm::IndexedGraph& idx,
-                             const nnvm::ShapeVector& inferred_shapes,
+                             const mxnet::ShapeVector& inferred_shapes,
                              const nnvm::DTypeVector& inferred_dtypes,
                              const StorageTypeVector& inferred_stypes,
                              const std::vector<Context>& in_arg_ctxes,

@@ -173,7 +173,7 @@ Graph DetectInplaceAddTo(Graph g);
  *         The index of ShapeVector is given by graph.indexed_graph().entry_id.
  */
 Graph InferShape(Graph&& graph,
-                 nnvm::ShapeVector&& shape_inputs = nnvm::ShapeVector(),
+                 mxnet::ShapeVector&& shape_inputs = mxnet::ShapeVector(),
                  const std::string& shape_attr_key = "");
 
 /*!
