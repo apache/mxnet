@@ -31,8 +31,6 @@ from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, 
                        signsgd_update, signum_update,
                        multi_sgd_update, multi_sgd_mom_update, multi_mp_sgd_update,
                        multi_mp_sgd_mom_update)
-
-#                       signsgd_update, signum_update)
 from ..ndarray import sparse
 from ..random import normal
 
