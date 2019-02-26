@@ -2104,11 +2104,12 @@ def test_bilinear_sampler_versions():
 def test_bulking():
     # Return the execution time of a model with the specified limits to the bulked op segments
     def test_bulking_helper(data_shape, num_ops, num_iterations,
-                            max_fwd_segment_size, max_bwd_segment_size):
+                            max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training):
         orig_environ = os.environ.copy()
         try:
             # Explore different ways of setting the env vars.
             # The framework does not cache the bulked seg size env var lookups during symbolic.
+            os.environ['MXNET_EXEC_BULK_EXEC_TRAIN'] = str(enable_bulking_in_training)
             if max_fwd_segment_size == max_bwd_segment_size:
                 os.environ['MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN'] = str(max_fwd_segment_size)
                 os.environ.pop('MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD', None)
@@ -2147,28 +2148,29 @@ def test_bulking():
     num_ops = 1000
     num_iterations = 20
 
-    # test cases are (max_fwd_segment_size, max_bwd_segment_size)
-    test_cases = [(0,0), (1,1), (15,0), (0,15), (15,15)]
+    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
+    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
     times = {}
     times_str = ''
     for seg_sizes in test_cases:
         times[seg_sizes] = test_bulking_helper(data_shape, num_ops, num_iterations,
-                                               seg_sizes[0], seg_sizes[1])
-        times_str += '\n    runtime of (fwd,bwd) seg size max ({},{}) =\t{:.1f} msec'.format(
-            seg_sizes[0], seg_sizes[1], 1000.0 * times[seg_sizes])
+                                               seg_sizes[0], seg_sizes[1], seg_sizes[2])
+        times_str +=\
+            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
+            seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
 
-    fastest_non_bulked_time = min(times[(0,0)], times[(1,1)])
-    slowest_half_bulked_time = max(times[(0,15)], times[(15,0)])
-    fastest_half_bulked_time = min(times[(0,15)], times[(15,0)])
-    fully_bulked_time = times[(15,15)]
+    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
+    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
+    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
+    fully_bulked_time = times[(15,15,True)]
 
     print(times_str)
-    # The non-bulked times[0,0] and times[1,1] should be about the same,
-    # slower than both half-bulked times[0,15] and times[15,0]
+    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
+    # slower than both half-bulked times[0,15,True] and times[15,0,True]
     assert slowest_half_bulked_time < fastest_non_bulked_time,\
         'A half-bulked exec time is slower than the non-bulked time by {} secs! {}'\
             .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
-    # The fully bulked time[15,15] should be faster than both half-bulked runs
+    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
     assert fully_bulked_time < fastest_half_bulked_time,\
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}'\
             .format(fully_bulked_time - fastest_half_bulked_time, times_str)

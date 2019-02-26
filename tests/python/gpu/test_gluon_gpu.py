@@ -451,8 +451,8 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 @with_seed()
 def test_bulking():
-    # test case format: (max_fwd_segment_size, max_bwd_segment_size)
-    test_cases = [(0,0), (1,1), (15,0), (0,15), (15,15)]
+    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
+    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
     times = {}
     times_str = ''
     for seg_sizes in test_cases:
@@ -460,25 +460,28 @@ def test_bulking():
         time_per_iteration = mp.Manager().Value('d', 0.0)
         if not run_in_spawned_process(_test_bulking_in_process,
                                   {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : seg_sizes[0],
-                                   'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1]},
+                                   'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1],
+                                   'MXNET_EXEC_BULK_EXEC_TRAIN' : seg_sizes[2]},
                                   time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
         times[seg_sizes] = time_per_iteration.value
-        times_str += '\n    runtime of (fwd,bwd) seg size max ({},{}) =\t{:.1f} msec'.format(
-            seg_sizes[0], seg_sizes[1], 1000.0 * times[seg_sizes])
+        times_str += \
+            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
+                seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
 
-    fastest_non_bulked_time = min(times[(0,0)], times[(1,1)])
-    slowest_half_bulked_time = max(times[(0,15)], times[(15,0)])
-    fastest_half_bulked_time = min(times[(0,15)], times[(15,0)])
-    fully_bulked_time = times[(15,15)]
+    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
+    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
+    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
+    fully_bulked_time = times[(15,15,True)]
 
-    # The non-bulked times[0,0] and times[1,1] should be about the same,
-    # slower than both half-bulked times[0,15] and times[15,0]
+    print(times_str)
+    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
+    # slower than both half-bulked times[0,15,True] and times[15,0,True]
     assert slowest_half_bulked_time < fastest_non_bulked_time, \
         'A half-bulked exec time is slower than the non-bulked time by {} secs! {}' \
             .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
-    # The fully bulked time[15,15] should be faster than both half-bulked runs
+    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
     assert fully_bulked_time < fastest_half_bulked_time, \
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
             .format(fully_bulked_time - fastest_half_bulked_time, times_str)
