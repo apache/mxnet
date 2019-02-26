@@ -1655,40 +1655,6 @@ def test_residual_fused():
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
 
 
-def check_rnn_layer(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
-    with mx.gpu(0):
-        x = mx.nd.ones((10, 16, 30))
-        states = layer.begin_state(16)
-        go, gs = layer(x, states)
-
-    with mx.cpu(0):
-        x = mx.nd.ones((10, 16, 30))
-        states = layer.begin_state(16)
-        co, cs = layer(x, states)
-
-    # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
-    for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
-
-def check_rnn_layer_w_rand_inputs(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
-    x = mx.nd.uniform(shape=(10, 16, 30))
-    with mx.gpu(0):
-        x = x.copyto(mx.gpu(0))
-        states = layer.begin_state(16)
-        go, gs = layer(x, states)
-
-    with mx.cpu(0):
-        x = x.copyto(mx.cpu(0))
-        states = layer.begin_state(16)
-        co, cs = layer(x, states)
-
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
-    for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
-
 @with_seed()
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
@@ -1943,11 +1909,11 @@ def test_softmax_activation():
     with mx.autograd.record():
         gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
         cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
-        assert_almost_equal(cpu_y.asnumpy(), gpu_y.asnumpy(), atol = 1e-3, rtol = 1e-3)
+        mx.test_utils.assert_almost_equal(cpu_y, gpu_y, atol = 1e-3, rtol = 1e-3)
 
         gpu_y.backward()
         cpu_y.backward()
-        assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
+        mx.test_utils.assert_almost_equal(cpu_a.grad, gpu_a.grad,
                 atol = 1e-3, rtol = 1e-3)
 
 
@@ -1978,7 +1944,7 @@ def test_bilinear_sampler_versions():
             exe.arg_dict['data'][:] = test_data
             exe.arg_dict['grid'][:] = test_grid
             exe.forward(is_train=True)
-            assert_almost_equal(exe_list[ref_idx].outputs[0].asnumpy(), exe.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+            mx.test_utils.assert_almost_equal(exe_list[ref_idx].outputs[0], exe.outputs[0], rtol=1e-3, atol=1e-5)
 
         out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
         for exe in exe_list:
