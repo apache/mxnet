@@ -523,26 +523,35 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         b = b.asnumpy()
 
     index, rel = find_max_violation(a, b, rtol, atol)
-    np.set_printoptions(threshold=4, suppress=True)
-    msg = npt.build_err_msg([a, b],
-                            err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
-                                    " Location of maximum error:%s, a=%f, b=%f"
-                            % (rel, rtol, atol, str(index), a[index], b[index]),
-                            names=names)
+    indexErr = index
+    relErr = rel
+    aValue = a[index]
+    bValue = b[index]
 
-
-    print('*** Maximum errors for vector of sise {}:  rtol = {}, atol = {}\n'.format(a.size, rtol, atol))
+    print('*** Maximum errors for vector of sise {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
     i = 1
-    while i < 10:
-        print("%3d: Error %f  Location of error:%s, a=%f, b=%f\n" %(i, rel, str(index), a[index], b[index]))
+    while i < a.size:
+        if i < 10:
+            print("%3d: Error %f  Location of error:%s, a=%.8f, b=%.8f\n" %(i, rel, str(index), a[index], b[index]))
+
         a[index] = b[index]
         if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
             break
         i += 1
         index, rel = find_max_violation(a, b, rtol, atol)
 
+
+    np.set_printoptions(threshold=4, suppress=True)
+    msg = npt.build_err_msg([a, b],
+                            err_msg="Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %f%%).\n"
+                                    " Location of maximum error:%s, a=%.8f, b=%.8f"
+                                    % (relErr, rtol, atol, 100*i/a.size, str(indexErr), aValue, bValue),
+                            names=names)
+
     raise AssertionError(msg)
 
+def assert_allclose(a, b, rtol=1e-07, atol=0, equal_nan=True):
+    assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
     """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
@@ -1008,8 +1017,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                 dict[k] = mx.ndarray.tile(dict[k], reps)
 
     location = _parse_location(sym=sym, location=location, ctx=ctx, dtype=dtype)
-    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx,
-                                   dtype=dtype)
+    aux_states = _parse_aux_states(sym=sym, aux_states=aux_states, ctx=ctx, dtype=dtype)
+
     if grad_nodes is None:
         grad_nodes = sym.list_arguments()
         grad_req = {k: 'write' for k in grad_nodes}
@@ -1022,11 +1031,11 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     else:
         raise ValueError
 
+    grad_nodes = sorted(grad_nodes)
     input_shape = {k: v.shape for k, v in location.items()}
     _, out_shape, _ = sym.infer_shape(**input_shape)
     proj = mx.sym.Variable("__random_proj")
-    out = sym * proj
-    out = mx.sym.make_loss(out)
+    out = mx.sym.make_loss(sym * proj)
 
     location = OrderedDict(list(location.items()) +
                            [("__random_proj", mx.nd.array(random_projection(out_shape[0]),

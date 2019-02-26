@@ -286,7 +286,7 @@ def check_elementwise_sum_with_shape(shape, n):
     exec1 = out.bind(default_context(),
                      args=arr,
                      args_grad=arr_grad)
-    out1 = exec1.outputs[0].asnumpy()
+
     exec1.forward(is_train=True)
     out1 = exec1.outputs[0].asnumpy()
     out = sum(a.asnumpy() for a  in arr)
@@ -297,7 +297,7 @@ def check_elementwise_sum_with_shape(shape, n):
     # backward
     exec1.backward([out_grad])
     for a in arr_grad:
-        assert_almost_equal(a.asnumpy(), out_grad.asnumpy(), rtol=1e-5, atol=1e-5)
+        assert_almost_equal(a, out_grad, rtol=1e-5, atol=1e-5)
 
 
 @with_seed()
@@ -342,7 +342,7 @@ def check_concat_with_shape(shapes, dimension, skip_second):
     exec1.forward(is_train=True)
     out1 = exec1.outputs[0]
     ret = np.concatenate([narray.asnumpy() for narray in arr], axis=dimension)
-    assert_almost_equal(out1.asnumpy(), ret)
+    assert_almost_equal(out1, ret)
     # backward
     out1.copyto(out_grad)
     out_grad[:] += 1
@@ -352,7 +352,7 @@ def check_concat_with_shape(shapes, dimension, skip_second):
         if not skip_second or name != 'arg1':
             grad = dict_grad[name]
             np_grad = arr_np[i]
-            assert_almost_equal(grad.asnumpy(), np_grad + 1)
+            assert_almost_equal(grad, np_grad + 1)
 
 
 @with_seed()
@@ -437,18 +437,17 @@ def test_slice_channel():
             gt = data_npy.take(np.arange(i * shape[axis]/num_outputs,
                                          (i+1) * shape[axis]/num_outputs).astype(np.int), axis=axis)
             if squeeze_axis:
-
-                assert_almost_equal(outputs[i].asnumpy(), gt.reshape(outputs[i].shape))
+                assert_almost_equal(outputs[i], gt.reshape(outputs[i].shape))
             else:
-                assert_almost_equal(outputs[i].asnumpy(), gt)
+                assert_almost_equal(outputs[i], gt)
         # test backward
         exe.backward(out_grads=[mx.nd.array(ele, ctx=default_context()) for ele in out_grads_npy])
         if squeeze_axis:
-            assert_almost_equal(exe.grad_arrays[0].asnumpy(),
+            assert_almost_equal(exe.grad_arrays[0],
                                 np.concatenate([np.expand_dims(ele, axis=axis) for ele in out_grads_npy],
                                                axis=axis))
         else:
-            assert_almost_equal(exe.grad_arrays[0].asnumpy(),
+            assert_almost_equal(exe.grad_arrays[0],
                                 np.concatenate(out_grads_npy, axis=axis))
     check_slice_channel(data_ndim=2, axis=1, num_outputs=3, squeeze_axis=True)
     check_slice_channel(data_ndim=4, axis=2, num_outputs=3, squeeze_axis=False)
@@ -480,8 +479,8 @@ def test_regression():
             out_exec.backward()
             np_out = forward(arr_data.asnumpy())
             out_grad = backward(np_out, arr_label.asnumpy().reshape(np_out.shape)) / shape[1]
-            assert_almost_equal(out_exec.outputs[0].asnumpy(), np_out, atol=atol)
-            assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
+            assert_almost_equal(out_exec.outputs[0], np_out, atol=atol)
+            assert_almost_equal(grad_map["data"], out_grad, atol=atol)
 
     shape = (50, 30)
 
@@ -604,7 +603,7 @@ def check_softmax_with_shape(shape, xpu, preserve_shape=False):
     atol = 1e-6
     assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=rtol, atol=atol)
     exec1.backward()
-    assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(grad, np_softmax(x.asnumpy()) - l.asnumpy(), rtol=rtol, atol=atol)
 
 
 def test_python_op():
@@ -617,9 +616,9 @@ def test_python_op():
     dy = mx.ndarray.ones((10))
     exec1 = s.bind(default_context(), args=[x], args_grad = {'X': dx})
     exec1.forward(is_train=True)
-    assert_almost_equal(x.asnumpy(), exec1.outputs[0].asnumpy())
+    assert_almost_equal(x, exec1.outputs[0])
     exec1.backward(dy)
-    assert_almost_equal(dy.asnumpy(), dx.asnumpy())
+    assert_almost_equal(dy, dx)
 
 
 def test_swapaxes():
@@ -633,7 +632,7 @@ def test_swapaxes():
     swap = mx.symbol.SwapAxis(data=swap0, dim1=1, dim2=2)
     exe_c = swap.bind(default_context(), args=[arr_data])
     exe_c.forward(is_train=True)
-    out = exe_c.outputs[0].asnumpy()
+    out = exe_c.outputs[0]
 
     swap0_ = np.swapaxes(data_tmp, 0, 2)
     swap_ = np.swapaxes(swap0_, 1, 2)
@@ -891,7 +890,7 @@ def test_shape_array():
         exe.backward([yg])
         yo = exe.outputs[0].asnumpy()
         same(yo, ya)
-        assert_almost_equal(xg.asnumpy(), np.zeros_like(xg.asnumpy()))
+        assert_almost_equal(xg, np.zeros_like(xg.asnumpy()))
 
 @with_seed()
 def test_size_array():
@@ -909,7 +908,7 @@ def test_size_array():
         exe.backward([yg])
         yo = exe.outputs[0].asnumpy()
         same(yo, ya)
-        assert_almost_equal(xg.asnumpy(), np.zeros_like(xg.asnumpy()))
+        assert_almost_equal(xg, np.zeros_like(xg.asnumpy()))
 
 @with_seed()
 def test_hard_sigmoid():
@@ -968,7 +967,7 @@ def test_binary_logic():
         x_npy = np.random.randint(0, 4, size=x_shape).astype(np.float32)
         y_npy = np.random.randint(0, 4, size=y_shape).astype(np.float32)
         exe = z.simple_bind(ctx=default_context(), x=x_shape, y=y_shape)
-        mx_out = exe.forward(is_train=True, x=x_npy, y=y_npy)[0].asnumpy()
+        mx_out = exe.forward(is_train=True, x=x_npy, y=y_npy)[0]
         assert_almost_equal(mx_out, forward_gt(x_npy, y_npy))
         exe.backward()
         if test_scalar:
@@ -976,8 +975,8 @@ def test_binary_logic():
             z_rscalar = logic_sym(x, 1)
             exe_lscalar = z_lscalar.simple_bind(ctx=default_context(), y=y_shape)
             exe_rscalar = z_rscalar.simple_bind(ctx=default_context(), x=x_shape)
-            mx_lscalar_out = exe_lscalar.forward(is_train=True, y=y_npy)[0].asnumpy()
-            mx_rscalar_out = exe_rscalar.forward(is_train=True, x=x_npy)[0].asnumpy()
+            mx_lscalar_out = exe_lscalar.forward(is_train=True, y=y_npy)[0]
+            mx_rscalar_out = exe_rscalar.forward(is_train=True, x=x_npy)[0]
             assert_almost_equal(mx_lscalar_out, forward_gt(1, y_npy))
             assert_almost_equal(mx_rscalar_out, forward_gt(x_npy, 1))
             exe_lscalar.backward()
@@ -1024,12 +1023,12 @@ def test_unary_logic():
     xa = np.random.randint(-2, 2, size=shape).astype(np.float32)
     mx_xa = mx.nd.array(xa)
     mx_out = mx.nd.logical_not(mx_xa)
-    assert_almost_equal(mx_out.asnumpy(), reference(xa, dtype=xa.dtype))
+    assert_almost_equal(mx_out, reference(xa, dtype=xa.dtype))
     x = mx.sym.Variable('x')
     y = mx.sym.logical_not(data=x)
     exe = y.simple_bind(ctx=default_context(), x=shape)
     sym_out = exe.forward(is_train=True, x=mx_xa)[0]
-    assert_almost_equal(sym_out.asnumpy(), reference(xa, dtype=xa.dtype))
+    assert_almost_equal(sym_out, reference(xa, dtype=xa.dtype))
 
 
 @with_seed()
@@ -1054,13 +1053,13 @@ def test_embedding():
     # Non-zero atol required, as exposed by seed 781663739
     rtol = 1e-5
     atol = 1e-5
-    assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, np_weight), rtol=rtol, atol=atol)
+    assert_almost_equal(exe_test.outputs[0], np.dot(np_onehot, np_weight), rtol=rtol, atol=atol)
     # backward
     np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
     grad = mx.nd.zeros(np_grad.shape)
     grad[:] = np_grad
     exe_test.backward([grad])
-    assert_almost_equal(grad_map["embed_weight"].asnumpy(), np.dot(np_onehot.T, np_grad), rtol=rtol, atol=atol)
+    assert_almost_equal(grad_map["embed_weight"], np.dot(np_onehot.T, np_grad), rtol=rtol, atol=atol)
 
 
 # check ops handle duplicate input correctly.
@@ -1078,9 +1077,9 @@ def test_binary_op_duplicate_input():
     square = data * data
     exe_square = square.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_square.forward(is_train=True)
-    assert_almost_equal(exe_square.outputs[0].asnumpy(), data_tmp * data_tmp)
+    assert_almost_equal(exe_square.outputs[0], data_tmp * data_tmp)
     exe_square.backward(out_grad)
-    assert_almost_equal(arr_grad.asnumpy(), 2.0 * data_tmp)
+    assert_almost_equal(arr_grad, 2.0 * data_tmp)
 
 
 @with_seed()
@@ -1096,7 +1095,7 @@ def test_sign():
     test = mx.sym.sign(data)
     exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout = np.sign(data_tmp)
     assert_almost_equal(out, npout)
 
@@ -1105,7 +1104,7 @@ def test_sign():
     npout_grad = out_grad.asnumpy()
     npout_grad = 0;
     exe_test.backward(out_grad)
-    assert_almost_equal(arr_grad.asnumpy(), npout_grad)
+    assert_almost_equal(arr_grad, npout_grad)
 
 
 @with_seed()
@@ -1121,7 +1120,7 @@ def test_round_ceil_floor():
     test = mx.sym.round(data) + mx.sym.ceil(data) +  mx.sym.floor(data)
     exe_test = test.bind(default_context(), args=[arr_data])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout = np.round(data_tmp) + np.ceil(data_tmp) + np.floor(data_tmp)
     assert_almost_equal(out, npout)
 
@@ -1135,7 +1134,7 @@ def test_trunc():
 
     exe_test = test.bind(default_context(), args=[arr_data])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     # 'trunc' is sensitive to the precision of the calculation.  Force numpy to match mxnet's float32.
     # Repro issue with seed 1660190454
     npout = np.trunc(np.float32(data_tmp))
@@ -1156,7 +1155,7 @@ def test_rsqrt_cos_sin():
     test =  mx.sym.rsqrt(data) + mx.sym.cos(data) + mx.sym.sin(data)
     exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout =  1/ np.sqrt(data_tmp) + np.cos(data_tmp) + np.sin(data_tmp)
     assert_almost_equal(out, npout)
 
@@ -1165,7 +1164,7 @@ def test_rsqrt_cos_sin():
     npout_grad = out_grad.asnumpy()
     npout_grad = npout_grad * -(1.0 / (2.0 * data_tmp * np.sqrt(data_tmp))) + npout_grad * -1 * np.sin(data_tmp) + npout_grad * np.cos(data_tmp)
     exe_test.backward(out_grad)
-    assert_almost_equal(arr_grad.asnumpy(), npout_grad)
+    assert_almost_equal(arr_grad, npout_grad)
 
 
 @with_seed()
@@ -1187,7 +1186,7 @@ def test_maximum_minimum():
     test =  mx.sym.maximum(data1,data2) + mx.sym.minimum(data1,data2);
     exe_test = test.bind(default_context(), args=[arr_data1,arr_data2], args_grad=[arr_grad1,arr_grad2])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout =  np.maximum(data_tmp1,data_tmp2) + np.minimum(data_tmp1,data_tmp2)
     assert_almost_equal(out, npout)
 
@@ -1202,8 +1201,8 @@ def test_maximum_minimum():
     npout_grad1 = npout_grad * mask1 + npout_grad * mask2
     npout_grad2 = (npout_grad - npout_grad * mask1) + (npout_grad - npout_grad * mask2)
 
-    assert_almost_equal(arr_grad1.asnumpy(), npout_grad1)
-    assert_almost_equal(arr_grad2.asnumpy(), npout_grad2)
+    assert_almost_equal(arr_grad1, npout_grad1)
+    assert_almost_equal(arr_grad2, npout_grad2)
 
 
 @with_seed()
@@ -1219,7 +1218,7 @@ def test_maximum_minimum_scalar():
     test =  mx.sym.maximum(data1,3) + mx.sym.maximum(9,data1) + mx.sym.minimum(5,data1) + mx.sym.minimum(data1,4)
     exe_test = test.bind(default_context(), args=[arr_data1], args_grad=[arr_grad1])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout =  np.maximum(data_tmp1,3) + np.maximum(9,data_tmp1) + np.minimum(5,data_tmp1) + np.minimum(data_tmp1,4)
     assert_almost_equal(out, npout)
 
@@ -1235,7 +1234,7 @@ def test_maximum_minimum_scalar():
     mask4 = (data_tmp1 < 4).astype('float')
     npout_grad1 = npout_grad * mask1 + (npout_grad - npout_grad * mask2) + (npout_grad - npout_grad * mask3) + npout_grad * mask4
 
-    assert_almost_equal(arr_grad1.asnumpy(), npout_grad1)
+    assert_almost_equal(arr_grad1, npout_grad1)
 
 
 @with_seed()
@@ -1251,7 +1250,7 @@ def test_abs():
     test = mx.sym.abs(data)
     exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout = abs(data_tmp)
     assert_almost_equal(out, npout)
 
@@ -1260,7 +1259,7 @@ def test_abs():
     npout_grad = out_grad.asnumpy()
     npout_grad = npout_grad * np.sign(data_tmp)
     exe_test.backward(out_grad)
-    assert_almost_equal(arr_grad.asnumpy(), npout_grad)
+    assert_almost_equal(arr_grad, npout_grad)
 
 
 def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride, pad):
@@ -1292,9 +1291,9 @@ def check_deconvolution_forward_backward(input_shape, num_filter, kernel, stride
 
     exe = deconv.bind(default_context(), args=args, args_grad=args_grad)
     exe.forward(is_train=True)
-    out = exe.outputs[0].asnumpy()
+    out = exe.outputs[0]
     exe.backward(out_grad)
-    assert_almost_equal(out, args_grad[0].asnumpy(), rtol=1E-3, atol=1e-3)
+    assert_almost_equal(out, args_grad[0], rtol=1E-3, atol=1e-3)
 
     args_grad_addto_npy = [np.random.normal(size=s) for s in arg_shapes]
     args_grad_addto = [mx.nd.array(ele) for ele in args_grad_addto_npy]
@@ -1351,7 +1350,7 @@ def check_deconvolution_gradient(input_shape, num_filter, pad):
     exe_deconv.forward(is_train=True)
     deconv_out_grad = conv_data[:]
     exe_deconv.backward(deconv_out_grad)
-    assert_almost_equal(conv_args_grad[1].asnumpy(), deconv_args_grad[1].asnumpy(), rtol=1e-3, atol=1e-2)
+    assert_almost_equal(conv_args_grad[1], deconv_args_grad[1], rtol=1e-3, atol=1e-2)
     # Test AddTo
     exe_deconv_addto = deconv.bind(default_context(), args=deconv_args,
                                    args_grad=deconv_addto_args_grad,
@@ -2362,9 +2361,9 @@ def test_broadcast():
                                                  args_grad={'a': grad_nd})
             net.forward(is_train=True)
             assert (net.outputs[0].shape == target_shape).all()
-            assert_almost_equal(net.outputs[0].asnumpy(), groundtruth, rtol=1e-4)
+            assert_almost_equal(net.outputs[0], groundtruth, rtol=1e-4)
             net.backward(out_grads=mx.nd.array(outgrad_npy))
-            assert_almost_equal(grad_nd.asnumpy(), grad_groundtruth, rtol=1e-4)
+            assert_almost_equal(grad_nd, grad_groundtruth, rtol=1e-4)
         test_broadcasting_ele(sym_bcast_axis)
         test_broadcasting_ele(sym_bcast_to)
         test_broadcasting_ele(sym_bcast_like)
@@ -2516,20 +2515,6 @@ def test_slice_like():
             assert_allclose(xgrad1.asnumpy(), mx.nd.zeros_like(xgrad1).asnumpy())
 
 @with_seed()
-def test_slice_like_different_types():
-    x = [[  1.,   2.,   3.,   4.],
-         [  5.,   6.,   7.,   8.],
-         [  9.,  10.,  11.,  12.]]
-
-    y = [[  0.,   0.,   0.],
-         [  0.,   0.,   0.]]
-
-    x = mx.nd.array(x)
-    y = mx.nd.array(y).astype('int32')
-    z = mx.nd.slice_like(x, y)
-    assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
-
-@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
@@ -2575,13 +2560,13 @@ def test_stn():
                     grad_grad = [mx.nd.zeros(shape, ctx=dev) for shape in arg_shapes]
                     exe = stn.bind(dev, args=args, args_grad=grad_grad)
                     exe.forward(is_train=True)
-                    out = exe.outputs[0].asnumpy()
+                    out = exe.outputs[0]
                     # check forward
                     assert_almost_equal(out, args['data'].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
                     out_grad = mx.nd.ones(out.shape, ctx=dev)
                     exe.backward([out_grad])
                     # check backward
-                    assert_almost_equal(out_grad.asnumpy(), grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
+                    assert_almost_equal(out_grad, grad_grad[0].asnumpy()[:, :, h//4:h-h//4, w//4:w-w//4], rtol=1e-2, atol=1e-4)
 
 
 def test_stn_valid_sampling():
@@ -2631,6 +2616,8 @@ def test_stn_valid_sampling():
     ) + target_shape))
 
 
+# @haojin2: Getting rid of fixed seed as flakiness could not be reproduced,
+# tracked at https://github.com/apache/incubator-mxnet/issues/11714
 @with_seed()
 def test_dot():
     ctx = default_context()
@@ -2759,23 +2746,23 @@ def test_batch_dot():
                         exe_add.grad_dict['a'][:] = a_init_grad_npy
                         exe_add.grad_dict['b'][:] = b_init_grad_npy
                         outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                        assert_almost_equal(outputs[0].asnumpy(), c_npy,
+                        assert_almost_equal(outputs[0], c_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
+                        assert_almost_equal(exe.grad_dict['a'], agrad_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
-                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
+                        assert_almost_equal(exe.grad_dict['b'], bgrad_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe_add.forward(is_train=True, a=a_npy, b=b_npy)
                         exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
-                        assert_almost_equal(exe_add.grad_dict['a'].asnumpy(),
+                        assert_almost_equal(exe_add.grad_dict['a'],
                                             agrad_npy + a_init_grad_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
-                        assert_almost_equal(exe_add.grad_dict['b'].asnumpy(),
+                        assert_almost_equal(exe_add.grad_dict['b'],
                                             bgrad_npy + b_init_grad_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
@@ -2907,7 +2894,7 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     forward_result,tmp1,tmp2 = correlation_forward(img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # forward error
-    assert_almost_equal(exe1.outputs[0].asnumpy(), forward_result, rtol=1e-4, atol=1e-4)
+    assert_almost_equal(exe1.outputs[0], forward_result, rtol=1e-4, atol=1e-4)
 
     # out_grad
     a = np.ones(forward_result.shape)
@@ -2918,8 +2905,8 @@ def unittest_correlation(data_shape,kernel_size,max_displacement,stride1,stride2
     grad1,grad2 = correlation_backward(a,tmp1,tmp2,img1,img2,pad_size,kernel_size,stride1,stride2,max_displacement,is_multiply)
 
     # backward error
-    assert_almost_equal(exe1.grad_dict['img1'].asnumpy(), grad1, rtol=1e-3, atol=1e-4)
-    assert_almost_equal(exe1.grad_dict['img2'].asnumpy(), grad2, rtol=1e-3, atol=1e-4)
+    assert_almost_equal(exe1.grad_dict['img1'], grad1, rtol=1e-3, atol=1e-4)
+    assert_almost_equal(exe1.grad_dict['img2'], grad2, rtol=1e-3, atol=1e-4)
 
 
 @with_seed()
@@ -2977,7 +2964,7 @@ def test_support_vector_machine_l1_svm():
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward(is_train=True)
 
-    assert_almost_equal(x_np, exec1.outputs[0].asnumpy())
+    assert_almost_equal(x_np, exec1.outputs[0])
 
     exec1.backward()
 
@@ -2985,7 +2972,7 @@ def test_support_vector_machine_l1_svm():
     l_mask = np.array(l_mask, dtype=np.float32)*2 -1
     grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
 
-    assert_almost_equal(grad_np, grad.asnumpy())
+    assert_almost_equal(grad_np, grad)
 
 
 @with_seed()
@@ -3008,7 +2995,7 @@ def test_support_vector_machine_l2_svm():
     exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
     exec1.forward(is_train=True)
 
-    assert_almost_equal(x_np, exec1.outputs[0].asnumpy())
+    assert_almost_equal(x_np, exec1.outputs[0])
 
     exec1.backward()
 
@@ -3016,7 +3003,7 @@ def test_support_vector_machine_l2_svm():
     l_mask = np.array(l_mask, dtype=np.float32)*2 -1
     grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
     grad_np = grad_np.astype(np.float32)
-    assert_almost_equal(grad_np, grad.asnumpy())
+    assert_almost_equal(grad_np, grad)
 
 
 # Seed set because the test is not robust enough to operate on random data
@@ -3050,7 +3037,7 @@ def check_pad_with_shape(shape, xpu, pad_width, mode, dtype="float64"):
     grad = mx.nd.empty(shape, ctx = xpu, dtype=dtype)
     exec1 = Y.bind(xpu, args = [x], args_grad = {'X': grad})
     exec1.forward(is_train=True)
-    out = exec1.outputs[0].asnumpy()
+    out = exec1.outputs[0]
     # compare numpy + mxnet
     assert_almost_equal(out, np_out)
     # grad check
@@ -3107,7 +3094,7 @@ def check_instance_norm_with_shape(shape, xpu):
     np_out = np_instance_norm(x.asnumpy(), gamma.asnumpy(), beta.asnumpy(), eps)
     exec1 = Y.bind(xpu, args = {'X':x, 'G':gamma, 'B':beta})
     exec1.forward(is_train=False)
-    out = exec1.outputs[0].asnumpy()
+    out = exec1.outputs[0]
     assert_almost_equal(out, np_out, rtol=1e-4, atol=1e-4)
     check_numeric_gradient(Y, {'X':x.asnumpy(), 'G':gamma.asnumpy(), 'B':beta.asnumpy()},
                            numeric_eps=1e-2, rtol=1e-2, atol=1e-2)
@@ -3149,7 +3136,7 @@ def check_l2_normalization(in_shape, mode, dtype, norm_eps=1e-10):
     exe = out.simple_bind(ctx=ctx, data=in_data.shape)
     output = exe.forward(is_train=True, data=in_data)
     # compare numpy + mxnet
-    assert_almost_equal(exe.outputs[0].asnumpy(), np_out, rtol=1e-2 if dtype is 'float16' else 1e-5, atol=1e-5)
+    assert_almost_equal(exe.outputs[0], np_out, rtol=1e-2 if dtype is 'float16' else 1e-5, atol=1e-5)
     # check gradient
     check_numeric_gradient(out, [in_data], numeric_eps=1e-3, rtol=1e-2, atol=5e-3)
 
@@ -3454,7 +3441,7 @@ def mathematical_core_binary(name,
     test = forward_mxnet_call(data1, data2)
     exe_test = test.bind(default_context(), args=[arr_data1, arr_data2], args_grad=[arr_grad1, arr_grad2])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout = forward_numpy_call(data_tmp1, data_tmp2)
     assert_almost_equal(out, npout)
 
@@ -3467,8 +3454,6 @@ def mathematical_core_binary(name,
 
     npout_grad1 = npout_grad * backward_numpy_call1(data_tmp1, data_tmp2)
     npout_grad2 = npout_grad * backward_numpy_call2(data_tmp1, data_tmp2)
-    arr_grad1 = arr_grad1.asnumpy()
-    arr_grad2 = arr_grad2.asnumpy()
 
     assert_almost_equal(arr_grad1, npout_grad1)
     assert_almost_equal(arr_grad2, npout_grad2)
@@ -3486,7 +3471,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     test = forward_mxnet_call(data)
     exe_test = test.bind(default_context(), args=[arr_data], args_grad=[arr_grad])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout = forward_numpy_call(data_tmp)
     assert_almost_equal(out, npout)
 
@@ -3496,7 +3481,7 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     temp = backward_numpy_call(data_tmp)
     npout_grad = npout_grad * temp
     exe_test.backward(out_grad)
-    arr_grad = arr_grad.asnumpy()
+    arr_grad = arr_grad
     # print(name)
     # print(arr_grad)
     # print(npout_grad)
@@ -3538,7 +3523,7 @@ def rounding(name, forward_mxnet_call, forward_numpy_call, data_init=5., grad_in
     test = forward_mxnet_call(data)
     exe_test = test.bind(default_context(), args=[arr_data])
     exe_test.forward(is_train=True)
-    out = exe_test.outputs[0].asnumpy()
+    out = exe_test.outputs[0]
     npout = forward_numpy_call(data_tmp)
     assert_almost_equal(out, npout)
 
@@ -3666,7 +3651,7 @@ def test_init():
         x = sym_func(shape=shape, dtype=dtype)
         exe = x.bind(default_context(), args=[], args_grad=[])
         exe.forward(is_train=True)
-        assert_almost_equal(exe.outputs[0].asnumpy(), np_func(shape=shape, dtype=dtype))
+        assert_almost_equal(exe.outputs[0], np_func(shape=shape, dtype=dtype))
         assert exe.outputs[0].asnumpy().dtype == dtype
 
     def test_arange():
@@ -3824,7 +3809,7 @@ def test_blockgrad():
     exe = b.simple_bind(ctx=default_context(), a=(10, 10))
     a_npy = np.random.rand(10, 10)
     exe.forward(is_train=True, a=a_npy)
-    assert_almost_equal(exe.outputs[0].asnumpy(), a_npy)
+    assert_almost_equal(exe.outputs[0], a_npy)
     exe.backward()  # No error if BlockGrad works
 
 
@@ -3874,13 +3859,13 @@ def test_take():
         exe.arg_dict['a'][:] = mx.nd.array(data_real)
         exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
         exe.forward(is_train=True)
-        assert_almost_equal(exe.outputs[0].asnumpy(), np.take(data_real, idx_real, axis=axis, mode=mode))
+        assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
 
         for i in np.nditer(idx_real):
             grad_helper(grad_in, axis, i)
 
         exe.backward([mx.nd.array(grad_out)])
-        assert_almost_equal(exe.grad_dict['a'].asnumpy(), grad_in)
+        assert_almost_equal(exe.grad_dict['a'], grad_in)
 
     def check_autograd_req():
         row_len = 2
@@ -3905,7 +3890,7 @@ def test_take():
             x = x.sum()
 
         x.backward()
-        assert_almost_equal(np.ones(sc.grad.shape), sc.grad.asnumpy())
+        assert_almost_equal(np.ones(sc.grad.shape), sc.grad)
 
     for mode in ['clip', 'wrap']:
         for data_ndim in range(1, 5):
@@ -3949,7 +3934,7 @@ def test_grid_generator():
         tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
         tmp[2] = 1
         grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
-        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe.grad_dict['affine'], grad_est, rtol=1e-3, atol=1e-5)
         # check addto
         exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
         grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
@@ -3957,7 +3942,7 @@ def test_grid_generator():
         exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(out_grad))
-        assert_almost_equal(exe.grad_dict['affine'].asnumpy(), grad_est + grid_grad_npy, rtol=1e-2, atol=1e-5)
+        assert_almost_equal(exe.grad_dict['affine'], grad_est + grid_grad_npy, rtol=1e-2, atol=1e-5)
 
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]
@@ -3980,7 +3965,7 @@ def test_grid_generator():
         grad_est = np.zeros((1,2)+target_shape)
         grad_est[0,0] = out_grad[0,0] / ((target_shape[1]-1.0) / 2.0)
         grad_est[0,1] = out_grad[0,1] / ((target_shape[0]-1.0) / 2.0)
-        assert_almost_equal(exe.grad_dict['flow'].asnumpy(), grad_est, rtol=1e-3)
+        assert_almost_equal(exe.grad_dict['flow'], grad_est, rtol=1e-3)
         # check addto
         exe_add = grid.simple_bind(ctx=default_context(), flow=(1, 2) + target_shape, grad_req='add')
         flow_grad_npy = np.random.normal(size=exe_add.grad_dict['flow'].shape)
@@ -3988,7 +3973,7 @@ def test_grid_generator():
         exe_add.grad_dict['flow'][:] = flow_grad_npy
         exe_add.forward(is_train=True)
         exe_add.backward(mx.nd.array(out_grad))
-        assert_almost_equal(exe_add.grad_dict['flow'].asnumpy(), grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_add.grad_dict['flow'], grad_est + flow_grad_npy, rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -3999,7 +3984,7 @@ def test_index2d():
         data = mx.random.uniform(-1, 1, shape=(n, m), ctx=default_context())
         x = mx.nd.array(np.random.randint(0, m, size=n), ctx=default_context(), dtype='int32')
         r = mx.nd.batch_take(data, x)
-        assert_almost_equal(r.asnumpy(), data.asnumpy()[np.arange(n), x.asnumpy()])
+        assert_almost_equal(r, data.asnumpy()[np.arange(n), x.asnumpy()])
 
 
 @with_seed()
@@ -4015,8 +4000,8 @@ def test_cast():
             exe.arg_arrays[0][:] = X
             exe.forward(is_train=True)
             exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
-            assert_almost_equal(exe.outputs[0].asnumpy(), X.astype(srctype).astype(dsttype), rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_arrays[0].asnumpy(), X.astype(dsttype).astype(srctype), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.outputs[0], X.astype(srctype).astype(dsttype), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_arrays[0], X.astype(dsttype).astype(srctype), rtol=1e-3, atol=1e-5)
 
 
 # Test requires all platforms to round float32->float16 with same round-to-nearest-even policy.
@@ -4526,54 +4511,12 @@ def test_softmax_with_large_inputs():
         exec1 = out1.bind(default_context(), args={'data': input_data})
         exec1.forward()[0].wait_to_read()
         ndarr = exec1.outputs[0][0][0][0]
-        nparr = ndarr.asnumpy()
-        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
+        assert_almost_equal(ndarr, true_output, rtol=1e-5, atol=1e-5)
 
     softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
-
-@with_seed()
-def test_softmax_dtype():
-    def check_dtypes_almost_equal(op_name,
-                                  atol, rtol,
-                                  grad_atol, grad_rtol,
-                                  idtype, ref_dtype, odtype=None):
-        op = getattr(mx.nd, op_name)
-        input_data = mx.random.uniform(shape=(100, 500))
-        dtype_input = input_data.astype(idtype)
-        ref_input = input_data.astype(ref_dtype)
-        dtype_input.attach_grad()
-        ref_input.attach_grad()
-        with mx.autograd.record():
-            dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
-            ref_softmax = op(ref_input, axis=-1, dtype=odtype)
-        dtype_softmax_np = dtype_softmax.asnumpy()
-        ref_softmax_np = ref_softmax.asnumpy()
-        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
-        dtype_softmax.backward()
-        ref_softmax.backward()
-        dtype_grad_np = dtype_input.grad.asnumpy()
-        ref_grad_np = ref_input.grad.asnumpy()
-        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
-
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                              'float16', 'float32', 'float32')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64')
-    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                              'float32', 'float64', 'float64')
 
 @with_seed()
 def test_pick():
@@ -4606,7 +4549,7 @@ def test_pick():
                 data = mx.nd.array(data, dtype='float32')
                 index = mx.nd.array(index, dtype=index_type)
                 out = mx.nd.pick(data, index, axis=axis, keepdims=True, mode=mode)
-                assert_almost_equal(out.asnumpy(), expected)
+                assert_almost_equal(out, expected)
 
                 data_holder = data
                 index_holder = index
@@ -4633,11 +4576,11 @@ def check_ctc_loss(acts, labels, loss_truth):
     exe.forward(is_train=False)
     outTrain = exe.outputs[0]
     # make sure losses calculated with both modes are the same
-    assert_almost_equal(outTest.asnumpy(), outTrain.asnumpy())
+    assert_almost_equal(outTest, outTrain)
 
     # test against ground truth, if available
     if loss_truth is not None:
-        assert_almost_equal(outTest.asnumpy(), loss_truth)
+        assert_almost_equal(outTest, loss_truth)
     # test grad
     check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
 
@@ -4656,11 +4599,11 @@ def check_contrib_ctc_loss(acts, labels, loss_truth):
     exe.forward(is_train=False)
     outTrain = exe.outputs[0]
     # make sure losses calculated with both modes are the same
-    assert_almost_equal(outTest.asnumpy(), outTrain.asnumpy())
+    assert_almost_equal(outTest, outTrain)
 
     # test against ground truth, if available
     if loss_truth is not None:
-        assert_almost_equal(outTest.asnumpy(), loss_truth)
+        assert_almost_equal(outTest, loss_truth)
     # test grad
     check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
 
@@ -4711,7 +4654,7 @@ def test_ctc_loss_with_large_classes():
     nd_label = mx.nd.array(label)
     loss = mx.nd.ctc_loss(data=nd_data, label=nd_label)
     expected_loss = np.array([688.02826, 145.34462])
-    assert_almost_equal(loss.asnumpy(), expected_loss)
+    assert_almost_equal(loss, expected_loss)
 
 @with_seed()
 def test_ctc_loss_grad():
@@ -4790,8 +4733,8 @@ def test_ctc_loss_grad():
                                        label_lengths=mx.nd.array(label_lens),
                                        blank_label=blank_label)
                 l.backward()
-            assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
-            assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
+            assert_almost_equal(l, loss_truth, atol=1e-5, rtol=1e-5)
+            assert_almost_equal(data.grad, grad_truth, atol=1e-5, rtol=1e-5)
 
     # check contrib operator for backward compatibility
     def check_contrib_ctc_loss_grad(blank_label): # from tf
@@ -4869,8 +4812,8 @@ def test_ctc_loss_grad():
                                                label_lengths=mx.nd.array(label_lens),
                                                blank_label=blank_label)
                 l.backward()
-            assert_almost_equal(l.asnumpy(), loss_truth, atol=1e-5, rtol=1e-5)
-            assert_almost_equal(data.grad.asnumpy(), grad_truth, atol=1e-5, rtol=1e-5)
+            assert_almost_equal(l, loss_truth, atol=1e-5, rtol=1e-5)
+            assert_almost_equal(data.grad, grad_truth, atol=1e-5, rtol=1e-5)
 
 
     check_ctc_loss_grad('first')
@@ -4921,6 +4864,8 @@ def test_index_copy():
 
 @with_seed()
 def test_boolean_mask():
+    if default_context().device_type != 'cpu':
+        return
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 0])
     data.attach_grad()
@@ -5076,8 +5021,8 @@ def test_custom_op():
     expected_grad = 2 * x2
     rtol = 1e-4
     atol = 1e-6
-    assert_almost_equal(output.asnumpy(), expected_output.asnumpy(), rtol=rtol, atol=atol)
-    assert_almost_equal(x2.grad.asnumpy(), expected_grad.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(output, expected_output, rtol=rtol, atol=atol)
+    assert_almost_equal(x2.grad, expected_grad, rtol=rtol, atol=atol)
 
 
     # test for backward compatibility, i.e. the correctness of default implementation of
@@ -5114,8 +5059,8 @@ def test_custom_op():
     with mx.autograd.record():
         y = mx.nd.Custom(lhs, rhs, name='mult', op_type='mult')
         y.backward()
-    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)
-    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(rhs, lhs.grad, rtol=rtol, atol=atol)
+    assert_almost_equal(lhs, rhs.grad, rtol=rtol, atol=atol)
 
     class MultNoGrad(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):
@@ -5148,8 +5093,8 @@ def test_custom_op():
     with mx.autograd.record():
         y2 = mx.nd.Custom(lhs, rhs, name="mult_no_grad", op_type="mult_no_grad")
         y2.backward()
-    assert_almost_equal(rhs.asnumpy(), lhs.grad.asnumpy(), rtol=rtol, atol=atol)
-    assert_almost_equal(lhs.asnumpy(), rhs.grad.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(rhs, lhs.grad, rtol=rtol, atol=atol)
+    assert_almost_equal(lhs, rhs.grad, rtol=rtol, atol=atol)
 
     class NoInputOp(mx.operator.CustomOp):
         def __init__(self, length, depth):
@@ -5186,7 +5131,7 @@ def test_custom_op():
 
     with mx.autograd.record():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
-    assert_almost_equal(x.asnumpy(), np.ones(shape=(10, 10), dtype=np.float32))
+    assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
 @with_seed()
 def test_psroipooling():
@@ -5575,6 +5520,7 @@ def test_laop():
                        [-2.5/3., 0., -0.75, 0.25]])
     ident  = np.eye(4)
     shape = (4, 4, 1, 1)
+    ones = mx.nd.ones(shape).asnumpy()
 
     for lower in [True, False]:
         upper = not lower
@@ -5587,7 +5533,6 @@ def test_laop():
         test_potrf = mx.sym.linalg.potrf(data1, lower=lower)
         check_fw_grad(test_potrf, [data_in], [res_potrf])
         # test potri
-        ones = mx.nd.ones(shape).asnumpy()
         res_potri = np.divide(ones, data_in * data_in)
         test_potri = mx.sym.linalg.potri(data1, lower=lower)
         check_fw_grad(test_potri, [data_in], [res_potri])
@@ -6059,7 +6004,7 @@ def test_dropout():
         with mx.autograd.record(train_mode=False):
             b = mx.nd.Dropout(a, ratio, cudnn_off=cudnn_off) # dropout acts as identity
         b.backward()
-        assert_almost_equal(a.grad.asnumpy(), mx.nd.ones_like(b).asnumpy())
+        assert_almost_equal(a.grad, mx.nd.ones_like(b))
 
     shape = (100, 100)
     check_dropout_ratio(0.5, shape)
@@ -6598,7 +6543,7 @@ def test_adaptive_avg_pool_op():
         else:
             y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=(output_height, output_width))
             npy = py_adaptive_avg_pool(x.asnumpy(), output_height, output_width)
-        assert_almost_equal(y.asnumpy(), npy)
+        assert_almost_equal(y, npy)
     shape = (2, 2, 10, 10)
     for i in range(1, 11):
         check_adaptive_avg_pool_op(shape, i)
@@ -6634,12 +6579,12 @@ def test_bilinear_resize_op():
     def check_bilinear_resize_op(shape, height, width):
         x = mx.nd.random.uniform(shape=shape)
         y = mx.nd.contrib.BilinearResize2D(x, height=height, width=width)
-        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+        assert_almost_equal(y, py_bilinear_resize(x.asnumpy(), height, width))
 
         x_scale = width / shape[-1]
         y_scale = height / shape[-2]
         y = mx.nd.contrib.BilinearResize2D(x, scale_height=y_scale, scale_width=x_scale)
-        assert_almost_equal(y.asnumpy(), py_bilinear_resize(x.asnumpy(), height, width))
+        assert_almost_equal(y, py_bilinear_resize(x.asnumpy(), height, width))
     shape = (2, 2, 10, 10)
     check_bilinear_resize_op(shape, 5, 5)
     check_bilinear_resize_op(shape, 10, 10)
@@ -6778,6 +6723,7 @@ def test_quadratic_function():
     data = mx.symbol.Variable('data')
     quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
     for dtype in [np.float16, np.float32, np.float64]:
+        tol=1e-2 if dtype is np.float16 else 1e-5
         for ndim in range(1, 6):
             shape = rand_shape_nd(ndim, 5)
             data_np = np.random.randn(*shape).astype(dtype)
@@ -6786,18 +6732,12 @@ def test_quadratic_function():
 
             # check imperative forward
             output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
-            assert_almost_equal(output.asnumpy(),expected,
-                                rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                atol=1e-2 if dtype is np.float16 else 1e-5)
+            assert_almost_equal(output, expected, rtol=tol, atol=tol)
             # check forward
-            check_symbolic_forward(quad_sym, [data_np], [expected],
-                                   rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                   atol=1e-2 if dtype is np.float16 else 1e-5)
+            check_symbolic_forward(quad_sym, [data_np], [expected], rtol=tol, atol=tol)
             # check backward
             check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
-                                    [backward_expected],
-                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
-                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+                                    [backward_expected], rtol=tol, atol=tol)
             # check backward using finite difference
             check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 
@@ -6893,12 +6833,12 @@ def test_histogram():
         bin_range = (-2.5, 2.5)
         mx_histo1, mx_bins1 = mx.nd.histogram(x, bins=bin_cnt, range=bin_range)
         np_histo1, np_bins1 = f(x.asnumpy(), bins=bin_cnt, range=bin_range)
-        assert_almost_equal(mx_bins1.asnumpy(), np_bins1)
-        assert_almost_equal(mx_histo1.asnumpy(), np_histo1, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(mx_bins1, np_bins1)
+        assert_almost_equal(mx_histo1, np_histo1, rtol=1e-3, atol=1e-5)
         mx_histo2, mx_bins2 = mx.nd.histogram(x, bins=mx_bins)
         np_histo2, np_bins2 = f(x.asnumpy(), bins=np_bins)
-        assert_almost_equal(mx_histo2.asnumpy(), np_histo2, rtol=1e-3, atol=1e-5)
-        assert_almost_equal(mx_bins2.asnumpy(), np_bins2, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(mx_histo2, np_histo2, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(mx_bins2, np_bins2, rtol=1e-3, atol=1e-5)
 
         data = mx.sym.Variable("data")
 
@@ -6959,51 +6899,6 @@ def test_op_output_names_monitor():
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
 
-def test_op_all_names_monitor():
-    def check_name(op_sym, expected_names):
-        output_names = []
-
-        def get_output_names_callback(name, arr):
-            output_names.append(py_str(name))
-
-        op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
-        op_exe.set_monitor_callback(get_output_names_callback, monitor_all=True)
-        op_exe.forward()
-        for output_name, expected_name in zip(output_names, expected_names):
-            assert output_name == expected_name
-
-    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-    check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
-
-    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-    check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
-
-    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-    check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
-
-    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-    check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
-
-    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-    check_name(act_sym, ['data', 'act_input0', 'act_output'])
-
-    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-    check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
-
-    sm_sym = mx.sym.softmax(data, name='softmax')
-    check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
-
-    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-    check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
-
-    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                               name='upsampling')
-    check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
-
-    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                            name='pooling')
-    check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
 
 @with_seed()
 def test_activation():
@@ -7223,9 +7118,9 @@ def test_op_roi_align():
                                                              spatial_scale, sampling_ratio,
                                                              position_sensitive, dy.asnumpy())
 
-        assert_almost_equal(output.asnumpy(), real_output, atol=1e-3)
-        assert_almost_equal(data.grad.asnumpy(), dx, atol=1e-3)
-        assert_almost_equal(rois.grad.asnumpy(), drois, atol=1e-3)
+        assert_almost_equal(output, real_output, atol=1e-3)
+        assert_almost_equal(data.grad, dx, atol=1e-3)
+        assert_almost_equal(rois.grad, drois, atol=1e-3)
 
     # modified from test_roipooling()
     def test_roi_align_autograd(sampling_ratio=0):
@@ -7306,9 +7201,7 @@ def test_diag():
 
     # k is random
     k = np.random.randint(-d,d)
-    r = mx.nd.diag(a, k=k)
-
-    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+    assert_almost_equal(mx.nd.diag(a, k=k), np.diag(a_np, k=k))
 
     # Test 2d backward, k=0
     data = mx.sym.Variable('data')
@@ -7335,19 +7228,19 @@ def test_diag():
 
     # k = 0, axis1=0, axis2=1
     r = mx.nd.diag(data=a, k=0, axis1=0, axis2=1)
-    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=0, axis1=0, axis2=1))
+    assert_almost_equal(r, np.diagonal(a_np, offset=0, axis1=0, axis2=1))
 
     # k = 1, axis1=1, axis2=0
     r = mx.nd.diag(data=a, k=1, axis1=1, axis2=0)
-    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=1, axis1=1, axis2=0))
+    assert_almost_equal(r, np.diagonal(a_np, offset=1, axis1=1, axis2=0))
 
     # k = -1 axis1=1, axis3=3
     r = mx.nd.diag(data=a, k=-1, axis1=1, axis2=3)
-    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=-1, axis1=1, axis2=3))
+    assert_almost_equal(r, np.diagonal(a_np, offset=-1, axis1=1, axis2=3))
 
     # k = 2, axis1=-2, axis2=0
     r = mx.nd.diag(data=a, k=2, axis1=-2, axis2=0)
-    assert_almost_equal(r.asnumpy(), np.diagonal(a_np, offset=2, axis1=-2, axis2=0))
+    assert_almost_equal(r, np.diagonal(a_np, offset=2, axis1=-2, axis2=0))
 
     # Test 4d backward, k=0, axis1=3, axis2=0
     data = mx.sym.Variable('data')
@@ -7389,7 +7282,7 @@ def test_depthtospace():
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.depth_to_space(data, block)
-    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output, expected, atol=1e-3, rtol=1e-3)
 
     shape_out = (n, c // (block ** 2), h * block, w * block)
     data = mx.sym.Variable('data')
@@ -7440,7 +7333,7 @@ def test_spacetodepth():
     data_np = data.asnumpy()
     expected = f(data_np, block)
     output = mx.nd.space_to_depth(data, block)
-    assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output, expected, atol=1e-3, rtol=1e-3)
 
     shape_out = (n, c * (block ** 2), h // block, w // block)
     data = mx.sym.Variable('data')

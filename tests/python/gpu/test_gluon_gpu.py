@@ -19,20 +19,12 @@ from __future__ import print_function
 import sys
 import os
 import tempfile
-import time
-import multiprocessing as mp
-import unittest
-import random
 import mxnet as mx
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
 import numpy as np
-import unittest
 import math
-from nose.tools import assert_raises
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
-from mxnet.base import MXNetError
 from mxnet import autograd
-from numpy.testing import assert_allclose
-from mxnet.test_utils import rand_ndarray
+
 
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -57,9 +49,9 @@ def check_rnn_layer(layer):
         co, cs = layer(x, states)
 
     # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 @with_seed()
 def check_rnn_layer_w_rand_inputs(layer):
@@ -75,9 +67,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 
 @with_seed()
@@ -111,15 +103,14 @@ def test_lstmp():
         layer_output = lstm_layer(lstm_input.copy())
         cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
                                        merge_outputs=True)[0]
-    assert_almost_equal(layer_output.asnumpy(), cell_output.asnumpy(), rtol=rtol, atol=atol)
+    assert_almost_equal(layer_output, cell_output, rtol=rtol, atol=atol)
     layer_output.backward()
     cell_output.backward()
     for k, v in weights.items():
         layer_grad = layer_params['lstm0_l0_'+k].grad()
         cell_grad = cell_params['lstm0_l0_'+k].grad()
         print('checking gradient for {}'.format('lstm0_l0_'+k))
-        assert_almost_equal(layer_grad.asnumpy(), cell_grad.asnumpy(),
-                            rtol=rtol, atol=atol)
+        assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5), mx.nd.ones((8, 3, 20)))
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, projection_size=5, bidirectional=True), mx.nd.ones((8, 3, 20)), [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))])
 
@@ -202,7 +193,9 @@ def check_layer_bidirectional(size, in_size, proj_size):
         ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
-    assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy())
+    mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=2e-7)
+
+
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -243,7 +236,7 @@ def test_gluon_ctc_consistency():
         l_gpu = loss(gpu_data, gpu_label)
         l_gpu.backward()
 
-    assert_almost_equal(cpu_data.grad.asnumpy(), gpu_data.grad.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(cpu_data.grad, gpu_data.grad, atol=1e-3, rtol=1e-3)
 
 
 @with_seed()
@@ -256,8 +249,8 @@ def test_global_norm_clip_multi_device():
             assert norm == 5.0
         else:
             assert norm.asscalar() == 5.0
-        assert_almost_equal(x1.asnumpy(), np.ones((3, 3)) / 5)
-        assert_almost_equal(x2.asnumpy(), np.ones((4, 4)) / 5)
+        assert_almost_equal(x1, np.ones((3, 3)) / 5)
+        assert_almost_equal(x2, np.ones((4, 4)) / 5)
 
 
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
@@ -311,16 +304,16 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     output2 = mx.nd.concat(*[output.as_in_context(input.context) for output in output2], dim=0)
     # assert forwarding
-    assert_almost_equal(input1.asnumpy(), input2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(output1.asnumpy(), output2.asnumpy(), atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
-                        _find_bn(bn2).running_mean.data(ctx_list[0]).asnumpy(),
+    assert_almost_equal(input1, input2, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(output1, output2, atol=1e-3, rtol=1e-3)
+    assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]),
+                        _find_bn(bn2).running_mean.data(ctx_list[0]),
                         atol=1e-3, rtol=1e-3)
-    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]).asnumpy(),
-                        _find_bn(bn2).running_var.data(ctx_list[0]).asnumpy(),
+    assert_almost_equal(_find_bn(bn1).running_var.data(ctx_list[0]),
+                        _find_bn(bn2).running_var.data(ctx_list[0]),
                         atol=1e-3, rtol=1e-3)
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
-    assert_almost_equal(input1.grad.asnumpy(), input2grad.asnumpy(), atol=1e-3, rtol=1e-3)
+    assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
 @with_seed()
 def test_sync_batchnorm():
