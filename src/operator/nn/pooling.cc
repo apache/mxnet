@@ -39,6 +39,9 @@ void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   using namespace mshadow;
   PoolingParam param;
   param.Init(attrs->dict);
+  // Set default layout if it can be inferred from kernel shape.
+  if (param.kernel.ndim() > 0)
+    param.layout = param.GetLayout(param.kernel.ndim() + 2);
   if (param.kernel.ndim() == 1) {
     if (param.stride.ndim() == 0) param.stride = Shape1(1);
     if (param.pad.ndim() == 0) param.pad = Shape1(0);
@@ -111,38 +114,65 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
-  TShape oshape = dshape;
   if (dshape.ndim() == 0) return false;
+  int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
-      for (size_t i{2}; i < dshape.ndim(); i++)
-          oshape[i] = 1;
-      out_shape->clear();
-      out_shape->push_back(oshape);  // save output shape
+    TShape oshape = dshape;
+    size_t c_index = 0;
+    switch (layout) {
+      case mshadow::kNCW:
+      case mshadow::kNCHW:
+      case mshadow::kNCDHW:
+        c_index = 1;
+        break;
+      case mshadow::kNWC:
+      case mshadow::kNHWC:
+      case mshadow::kNDHWC:
+        c_index = dshape.ndim() - 1;
+        break;
+      default:
+        LOG(FATAL) << "Unsupported tensor layout " << param.layout.value();
+    }
+    for (size_t i{1}; i < dshape.ndim(); i++)
+      if (i != c_index)
+        oshape[i] = 1;
+    out_shape->clear();
+    out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
-      if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+    if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
         out_shape->push_back(oshape);   // for workspace
 #endif
+  } else if (param.kernel.ndim() == 0) {
+    return false;
   } else if (param.kernel.ndim() == 1) {
-    CHECK_EQ(dshape.ndim(), 3U)
-        << "Pooling: Input data should be 3D in (batch, channel, x)";
-    CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
-        << "kernel size (" << param.kernel[0] << ") exceeds input ("
-        << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
-        << ")";
+    CHECK_EQ(dshape.ndim(), 3U) <<
+      "Pooling: Input data should be 3D in (batch, channel, x)";
+    CHECK(layout == mshadow::kNCW || layout == mshadow::kNWC) << "Need 1D layout";
+    // Perform shape calculations in a standard (NCW) layout space
+    mshadow::Shape<3> dshape_ncw = (layout == mshadow::kNWC) ?
+                                    ConvertLayout(dshape.get<3>(), mshadow::kNWC, mshadow::kNCW) :
+                                    dshape.get<3>();
+    mshadow::Shape<3> oshape_ncw = dshape_ncw;
+    CHECK(param.kernel[0] <= dshape_ncw[2] + 2 * param.pad[0])
+        << "kernel size (" << param.kernel[0] << ") exceeds input (" << dshape[2]
+        << " padded to " << (dshape_ncw[2] + 2*param.pad[0]) << ")";
     if (param.pooling_convention == pool_enum::kValid) {
-      oshape[2] = 1 +
-                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
-                      param.stride[0];
+      oshape_ncw[2] = 1 +
+                      (dshape_ncw[2] + 2 * param.pad[0] - param.kernel[0]) /
+                          param.stride[0];
     } else if (param.pooling_convention == pool_enum::kFull) {
-      oshape[2] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
-                                             param.kernel[0]) /
-                          param.stride[0]));
+      oshape_ncw[2] = 1 + static_cast<int>(std::ceil(
+                              static_cast<float>(dshape_ncw[2] + 2 * param.pad[0] -
+                                                 param.kernel[0]) /
+                              param.stride[0]));
     } else {
-      oshape[2] = static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[2] + 2 * param.pad[0]) /
+      oshape_ncw[2] = static_cast<int>(std::ceil(
+                          static_cast<float>(dshape_ncw[2] + 2 * param.pad[0]) /
                           param.stride[0]));
     }
+    // Convert back from standard (NCW) layout space to the actual layout type
+    TShape oshape = (layout == mshadow::kNWC) ?
+                    ConvertLayout(oshape_ncw, mshadow::kNCW, mshadow::kNWC) : oshape_ncw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
@@ -150,33 +180,37 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       out_shape->push_back(oshape);   // for workspace
 #endif
   } else if (param.kernel.ndim() == 2) {
-    CHECK_EQ(dshape.ndim(), 4U)
-        << "Pooling: Input data should be 4D in (batch, channel, y, x)";
-    CHECK(param.kernel[0] <= dshape[2] + 2 * param.pad[0])
-        << "kernel size (" << param.kernel[0] << ") exceeds input ("
-        << dshape[2] << " padded to " << (dshape[2] + 2 * param.pad[0])
-        << ")";
-    CHECK(param.kernel[1] <= dshape[3] + 2 * param.pad[1])
-        << "kernel size (" << param.kernel[1] << ") exceeds input ("
-        << dshape[3] << " padded to " << (dshape[3] + 2 * param.pad[1])
-        << ")";
+    CHECK_EQ(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x)";
+    CHECK(layout == mshadow::kNCHW || layout == mshadow::kNHWC) << "Need 2D layout";
+    // Perform shape calculations in a standard (NCHW) layout space
+    mshadow::Shape<4> dshape_nchw = (layout == mshadow::kNHWC) ?
+                                    ConvertLayout(dshape.get<4>(), mshadow::kNHWC, mshadow::kNCHW) :
+                                    dshape.get<4>();
+    mshadow::Shape<4> oshape_nchw = dshape_nchw;
+    CHECK(param.kernel[0] <= dshape_nchw[2] + 2 * param.pad[0])
+        << "kernel size (" << param.kernel[0] << ") exceeds input (" << dshape_nchw[2]
+        << " padded to " << (dshape_nchw[2] + 2*param.pad[0]) << ")";
+    CHECK(param.kernel[1] <= dshape_nchw[3] + 2 * param.pad[1])
+        << "kernel size (" << param.kernel[1] << ") exceeds input (" << dshape_nchw[3]
+        << " padded to " << (dshape_nchw[3] + 2*param.pad[1]) << ")";
     if (param.pooling_convention == pool_enum::kValid) {
-      oshape[2] = 1 +
-                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
-                      param.stride[0];
-      oshape[3] = 1 +
-                  (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
-                      param.stride[1];
+      oshape_nchw[2] = 1 + (dshape_nchw[2] + 2 * param.pad[0] - param.kernel[0]) /
+                          param.stride[0];
+      oshape_nchw[3] = 1 + (dshape_nchw[3] + 2 * param.pad[1] - param.kernel[1]) /
+                          param.stride[1];
     } else {
-      oshape[2] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
-                                             param.kernel[0]) /
-                          param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[3] + 2 * param.pad[1] -
-                                             param.kernel[1]) /
-                          param.stride[1]));
+      oshape_nchw[2] = 1 + static_cast<int>(ceil(
+                               static_cast<float>(dshape_nchw[2] + 2 * param.pad[0] -
+                                                  param.kernel[0]) /
+                               param.stride[0]));
+      oshape_nchw[3] = 1 + static_cast<int>(ceil(
+                               static_cast<float>(dshape_nchw[3] + 2 * param.pad[1] -
+                                                  param.kernel[1]) /
+                               param.stride[1]));
     }
+    // Convert back from standard (NCHW) layout space to the actual layout type
+    TShape oshape = (layout == mshadow::kNHWC) ?
+                    ConvertLayout(oshape_nchw, mshadow::kNCHW, mshadow::kNHWC) : oshape_nchw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
@@ -185,38 +219,40 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
 #endif
   } else if (param.kernel.ndim() == 3) {
     CHECK_EQ(dshape.ndim(), 5U)
-        << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
-    CHECK_LE(param.kernel[0], dshape[2] + 2 * param.pad[0])
-        << "kernel size exceeds input";
-    CHECK_LE(param.kernel[1], dshape[3] + 2 * param.pad[1])
-        << "kernel size exceeds input";
-    CHECK_LE(param.kernel[2], dshape[4] + 2 * param.pad[2])
-        << "kernel size exceeds input";
+      << "Pooling: Input data should be 5D in (batch, channel, d, y, x)";
+    CHECK(layout == mshadow::kNCDHW || layout == mshadow::kNDHWC) << "Need 3D layout";
+    // Perform shape calculations in a standard (NCDHW) layout space
+    mshadow::Shape<5> dshape_ncdhw = (layout == mshadow::kNDHWC) ?
+                                  ConvertLayout(dshape.get<5>(), mshadow::kNDHWC, mshadow::kNCDHW) :
+                                  dshape.get<5>();
+    mshadow::Shape<5> oshape_ncdhw = dshape_ncdhw;
+    CHECK_LE(param.kernel[0], dshape_ncdhw[2] + 2 * param.pad[0]) << "kernel size exceeds input";
+    CHECK_LE(param.kernel[1], dshape_ncdhw[3] + 2 * param.pad[1]) << "kernel size exceeds input";
+    CHECK_LE(param.kernel[2], dshape_ncdhw[4] + 2 * param.pad[2]) << "kernel size exceeds input";
     if (param.pooling_convention == pool_enum::kValid) {
-      oshape[2] = 1 +
-                  (dshape[2] + 2 * param.pad[0] - param.kernel[0]) /
-                      param.stride[0];
-      oshape[3] = 1 +
-                  (dshape[3] + 2 * param.pad[1] - param.kernel[1]) /
-                      param.stride[1];
-      oshape[4] = 1 +
-                  (dshape[4] + 2 * param.pad[2] - param.kernel[2]) /
-                      param.stride[2];
+      oshape_ncdhw[2] = 1 + (dshape_ncdhw[2] + 2 * param.pad[0] - param.kernel[0]) /
+                          param.stride[0];
+      oshape_ncdhw[3] = 1 + (dshape_ncdhw[3] + 2 * param.pad[1] - param.kernel[1]) /
+                          param.stride[1];
+      oshape_ncdhw[4] = 1 + (dshape_ncdhw[4] + 2 * param.pad[2] - param.kernel[2]) /
+                          param.stride[2];
     } else {
-      oshape[2] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[2] + 2 * param.pad[0] -
-                                             param.kernel[0]) /
-                          param.stride[0]));
-      oshape[3] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[3] + 2 * param.pad[1] -
-                                             param.kernel[1]) /
-                          param.stride[1]));
-      oshape[4] = 1 + static_cast<int>(std::ceil(
-                          static_cast<float>(dshape[4] + 2 * param.pad[2] -
-                                             param.kernel[2]) /
-                          param.stride[2]));
+      oshape_ncdhw[2] = 1 + static_cast<int>(ceil(
+                                static_cast<float>(dshape_ncdhw[2] + 2 * param.pad[0] -
+                                                   param.kernel[0]) /
+                                param.stride[0]));
+      oshape_ncdhw[3] = 1 + static_cast<int>(ceil(
+                                static_cast<float>(dshape_ncdhw[3] + 2 * param.pad[1] -
+                                                   param.kernel[1]) /
+                                param.stride[1]));
+      oshape_ncdhw[4] = 1 + static_cast<int>(ceil(
+                                static_cast<float>(dshape_ncdhw[4] + 2 * param.pad[2] -
+                                                   param.kernel[2]) /
+                                param.stride[2]));
     }
-
+    // Convert back from standard (NCDHW) layout space to the actual layout type
+    TShape oshape = (layout == mshadow::kNDHWC) ?
+                    ConvertLayout(oshape_ncdhw, mshadow::kNCDHW, mshadow::kNDHWC) : oshape_ncdhw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
 #if MXNET_USE_MKLDNN == 1
@@ -224,6 +260,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       out_shape->push_back(oshape);   // for workspace
 #endif
   }
+
   return true;
 }
 
@@ -331,13 +368,13 @@ NNVM_REGISTER_OP(Pooling)
 
 The shapes for 1-D pooling are
 
-- **data**: *(batch_size, channel, width)*,
-- **out**: *(batch_size, num_filter, out_width)*.
+- **data** and **out**: *(batch_size, channel, width)* (NCW layout) or
+  *(batch_size, width, channel)* (NWC layout),
 
 The shapes for 2-D pooling are
 
-- **data**: *(batch_size, channel, height, width)*
-- **out**: *(batch_size, num_filter, out_height, out_width)*, with::
+- **data** and **out**: *(batch_size, channel, height, width)* (NCHW layout) or
+  *(batch_size, height, width, channel)* (NHWC layout),
 
     out_height = f(height, kernel[0], pad[0], stride[0])
     out_width = f(width, kernel[1], pad[1], stride[1])
@@ -363,8 +400,8 @@ Three pooling options are supported by ``pool_type``:
 - **lp**: Lp pooling
 
 For 3-D pooling, an additional *depth* dimension is added before
-*height*. Namely the input data will have shape *(batch_size, channel, depth,
-height, width)*.
+*height*. Namely the input data and output will have shape *(batch_size, channel, depth,
+height, width)* (NCDHW layout) or *(batch_size, depth, height, width, channel)* (NDHWC layout).
 
 Notes on Lp pooling:
 
@@ -421,11 +458,13 @@ NNVM_REGISTER_OP(_backward_Pooling)
 .set_attr<nnvm::FInplaceOption>(
     "FInplaceOption",
     [](const NodeAttrs &attrs) {
-#if MXNET_USE_CUDNN == 1
-  return std::vector<std::pair<int, int> >();
-#else
-  return std::vector<std::pair<int, int> >{{1, 0}};
+// Different backend requires different FInplaceOption
+#if MXNET_USE_MKLDNN == 1
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
+    return std::vector<std::pair<int, int> >{{1, 0}};
 #endif
+  return std::vector<std::pair<int, int> >();
 })
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
