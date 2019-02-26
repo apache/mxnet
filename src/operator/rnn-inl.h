@@ -561,9 +561,16 @@ class RNNOp {
       num_outputs = (param_.mode == rnn_enum::kLstm) ? 3 : 2;
     }
 
+    size_t in_expected = param_.lstm_q_ ? 4 : 3;
+    size_t out_expected = param_.lstm_q_ ? 3 : 2;
+
+    if (param_.use_sequence_length)
+      num_inputs += 1;
+
     CHECK_EQ(in_data.size(), num_inputs);
     CHECK_EQ(out_data.size(), num_outputs);
     Stream<xpu> *s = ctx.get_stream<xpu>();
+
     // get input + output tensors
     Tensor<xpu, 3, DType> x = in_data[rnn_enum::kData].get<xpu, 3, DType>(s);
     Tensor<xpu, 1, DType> w = in_data[rnn_enum::kParams].get<xpu, 1, DType>(s);
@@ -584,6 +591,20 @@ class RNNOp {
     DType* hy_ptr = NULL;
     if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
+
+    sequence_length_array_cpu.resize(param_.batch_size_);
+    if (param_.use_sequence_length) {
+      size_t seq_len_input_idx = rnn_enum::kSequenceLength;
+      if  (!param_.lstm_q_)
+	--seq_len_input_idx;
+      IType *sequence_length_ptr_gpu = (in_data[seq_len_input_idx].get<xpu, 1, IType>(s)).dptr_;
+
+      // Need to copy from GPU -> CPU, becuase cuDNN API requires this array on CPU memory.
+      // TODO: In future, allow users to pass this array on the CPU so we don't have to do this copy
+      //       For now it is required as several places in backend assume that all data arrays share
+      //       the same context.
+      CUDA_CALL(cudaMemcpy(sequence_length_array_cpu.data(),  sequence_length_ptr_gpu, sizeof(IType) * param_.batch_size_,
+			   cudaMemcpyDeviceToHost));
     }
     DType* cx_ptr = NULL;
     DType* cy_ptr = NULL;
@@ -608,7 +629,8 @@ class RNNOp {
     cudnnRNNDataLayout_t layout_t;
 
     if (param_.use_sequence_length) {
-      seqLengthArray = std::vector<int>(sequence_length_ptr, sequence_length_ptr + param_.batch_size_);
+      // sequence_length_ptr_gpu is fo type Itype, need to convert to vector<int>
+      seqLengthArray = std::vector<int>(sequence_length_array_cpu.begin(), sequence_length_array_cpu.end());
       layout_t = CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_UNPACKED;
     }
     else {
@@ -1405,6 +1427,7 @@ class RNNOp {
   #if USE_CUDNN_LSTM_PROJ
   cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
   DType padding_fill_ = 0;
+  std::vector<IType> sequence_length_array_cpu;
   #endif
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;
   cudnnTensorDescriptor_t hy_desc_, cy_desc_;
