@@ -101,9 +101,10 @@ void GraphExecutor::Print(std::ostream &os) const {  // NOLINT(*)
   os << "Total " << 11 << " TempSpace resource requested\n";
 }
 
-void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback) {
+void GraphExecutor::SetMonitorCallback(const MonitorCallback& callback, bool monitor_all) {
   CHECK(callback) << "invalid callback";
   monitor_callback_ = callback;
+  monitor_all_ = monitor_all;
 }
 
 const std::vector<NDArray>& GraphExecutor::outputs() const {
@@ -1291,7 +1292,36 @@ void GraphExecutor::BulkInferenceOpSegs() {
   }
 }
 
-void GraphExecutor::ExecuteMonCallback(size_t nid) {
+void GraphExecutor::ExecuteMonInputCallback(size_t nid) {
+  static const auto& flist_inputs =
+      nnvm::Op::GetAttr<nnvm::FListInputNames>("FListInputNames");
+  const auto& idx = graph_.indexed_graph();
+  std::vector<std::string> input_names;
+  OpNode& opnode = op_nodes_[nid];
+  const auto& inode = idx[nid];
+  const auto& node = idx[nid].source;
+  if (flist_inputs.count(node->op())) {
+    input_names = flist_inputs[node->op()](node->attrs);
+  } else {
+    for (size_t i = 0; i < node->num_inputs(); ++i) {
+      input_names.emplace_back("input" + std::to_string(i));
+    }
+  }
+  CHECK_EQ(opnode.exec->in_array.size(), input_names.size());
+  for (size_t i = 0; i < opnode.exec->in_array.size(); ++i) {
+    if (node->inputs[i].node->is_variable()) {
+    // Monitor variable
+    NDArray *cpy = new NDArray(opnode.exec->in_array[i]);
+    std::string name = node->inputs[i].node->attrs.name;
+    this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+    }
+    NDArray *cpy = new NDArray(opnode.exec->in_array[i]);
+    std::string name = inode.source->attrs.name + "_" + input_names[i];
+    this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
+  }
+}
+
+void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
   static const auto& flist_outputs =
       nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   const auto& idx = graph_.indexed_graph();
@@ -1341,6 +1371,10 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     if (inode.source->is_variable()) continue;
     OpNode& opnode = op_nodes_[nid];
     if (op_nodes_[nid].skip_exec_node) continue;
+    // Monitor callbacks
+    if (monitor_callback_ && monitor_all_) {
+      ExecuteMonInputCallback(nid);
+    }
     opnode.exec->op_ctx.is_train = is_train;
     opnode.exec->op_ctx.need_grad = need_grad_;
     if (opnode.exec->exec_type() == ExecType::kCrossDeviceCopy) {
@@ -1359,7 +1393,7 @@ void GraphExecutor::RunOps(bool is_train, size_t topo_start, size_t topo_end) {
     }
     // Monitor callbacks
     if (monitor_callback_) {
-      ExecuteMonCallback(nid);
+      ExecuteMonOutputCallback(nid);
     }
   }
 }

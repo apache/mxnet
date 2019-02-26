@@ -73,6 +73,8 @@ OptimizationState(batch_size::Int) = OptimizationState(batch_size, 0, 0, 0)
 
 module LearningRate
 
+using Markdown
+
 import Base: get
 import ..mx: AbstractLearningRateScheduler, OptimizationState, update!
 
@@ -100,7 +102,7 @@ end
 
 get(f::Fixed) = f.η
 
-doc"""
+@doc doc"""
     LearningRate.Exp(η₀; γ = 0.9)
 
 ```math
@@ -122,7 +124,7 @@ end
 
 get(a::Exp) = a.η₀ * a.γ^a.t
 
-doc"""
+@doc doc"""
     LearningRate.Inv(η₀; γ = 0.9, p = 0.5)
 
 ```math
@@ -155,6 +157,8 @@ using .LearningRate
 ###############################################################################
 
 module Momentum
+
+using Markdown
 
 import Base: get
 import ..mx: AbstractMomentumScheduler, OptimizationState
@@ -194,7 +198,7 @@ end
 
 get(f::Fixed) = f.μ
 
-doc"""
+@doc doc"""
     NadamScheduler(; μ = 0.99, δ = 0.004, γ = 0.5, α = 0.96)
 
 Nesterov-accelerated adaptive momentum scheduler.

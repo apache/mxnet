@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Survey of Existing Interfaces and Implementations
 
 Commonly used deep learning libraries with good RNN/LSTM support include [Theano](http://deeplearning.net/software/theano/library/scan.html) and its wrappers [Lasagne](http://lasagne.readthedocs.org/en/latest/modules/layers/recurrent.html) and [Keras](http://keras.io/layers/recurrent/); [CNTK](https://cntk.codeplex.com/); [TensorFlow](https://www.tensorflow.org/tutorials/sequences/recurrent); and various implementations in Torch, such as [this well-known character-level language model tutorial](https://github.com/karpathy/char-rnn), [this](https://github.com/Element-Research/rnn).

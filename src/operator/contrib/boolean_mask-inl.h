@@ -50,83 +50,53 @@ struct BooleanMaskParam : public dmlc::Parameter<BooleanMaskParam> {
   }
 };
 
+struct BooleanMaskForwardKernel {
+  template<typename DType>
+  static void MSHADOW_XINLINE Map(int i,
+                                  DType* out,
+                                  const DType* data,
+                                  const int32_t* idx,
+                                  const size_t col_size) {
+    int row_id = i / col_size;
+    int col_id = i % col_size;
+    int32_t prev = (row_id == 0) ? 0 : idx[row_id - 1];
+    int32_t curr = idx[row_id];
+    if (prev != curr) {
+      out[prev * col_size + col_id] = data[i];
+    }
+  }
+};
+
+struct BooleanMaskBackwardKernel {
+  template<typename DType>
+  static void MSHADOW_XINLINE Map(int i,
+                                  DType* igrad,
+                                  const DType* ograd,
+                                  const int32_t* idx,
+                                  const size_t col_size) {
+    int row_id = i / col_size;
+    int col_id = i % col_size;
+    int32_t prev = (row_id == 0) ? 0 : idx[row_id - 1];
+    int32_t curr = idx[row_id];
+    if (prev != curr) {
+      igrad[i] = ograd[prev * col_size + col_id];
+    }
+  }
+};
+
 template<typename xpu>
 inline void BooleanMaskForward(const nnvm::NodeAttrs& attrs,
                                const OpContext &ctx,
                                const std::vector<NDArray> &inputs,
                                const std::vector<OpReqType> &req,
-                               const std::vector<NDArray> &outputs) {
-  // TODO(@junrushao1994): This implementation is a proof-of-concept,
-  // hence very slow actually. Performance should be improved in the future.
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  const BooleanMaskParam& param = nnvm::get<BooleanMaskParam>(attrs.parsed);
-  const int axis = param.axis;
-  const NDArray &data = inputs[0];
-  const NDArray &idx = inputs[1];
-  const NDArray &out = outputs[0];
-  CHECK_EQ(axis, 0) << "Not supported yet";
-  CHECK_EQ(data.shape()[axis], idx.shape()[0]);
-  CHECK_EQ(idx.shape().ndim(), 1U);
-  // count the number of 1s in `idx`, so that we could know the output dimension
-  size_t valid_num = 0;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
-    DType* idx_dptr = idx.data().dptr<DType>();
-    int length = idx.shape()[0];
-    for (int i = 0; i < length; i++) {
-      if (idx_dptr[i]) {
-        ++valid_num;
-      }
-    }
-  });
-  // set the output shape forcefully
-  TShape s = data.shape();
-  s[axis] = valid_num;
-  const_cast<NDArray &>(out).Init(s);
-  // do the copy
-  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
-    DType* idx_dptr = idx.data().dptr<DType>();
-    int length = idx.shape()[0];
-    mshadow::Stream<xpu> *stream = ctx.get_stream<xpu>();
-    for (int i = 0, j = 0; i < length; ++i) {
-      if (idx_dptr[i]) {
-        NDArray src = data.At(i);
-        NDArray dst = out.At(j++);
-        CHECK(src.shape() == dst.shape());
-        mxnet_op::copy(stream, dst.data(), src.data());
-      }
-    }
-  });
-}
+                               const std::vector<NDArray> &outputs);
 
 template<typename xpu>
 inline void BooleanMaskBackward(const nnvm::NodeAttrs& attrs,
                                 const OpContext &ctx,
                                 const std::vector<NDArray> &inputs,
                                 const std::vector<OpReqType> &req,
-                                const std::vector<NDArray> &outputs) {
-  CHECK_EQ(inputs.size(), 3U);
-  CHECK_EQ(outputs.size(), 2U);
-  // inputs: {ograd, data, idx}
-  // outputs: {igrad_data, igrad_idx}
-  const NDArray& ograd = inputs[0];
-  const NDArray& idx = inputs[2];
-  const NDArray& igrad_data = outputs[0];
-  MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
-    DType* idx_dptr = idx.data().dptr<DType>();
-    int length = idx.shape()[0];
-    mshadow::Stream<xpu> *stream = ctx.get_stream<xpu>();
-    Fill<false>(stream, igrad_data.data(), req[0], 0);
-    for (int i = 0, j = 0; i < length; ++i) {
-      if (idx_dptr[i]) {
-        NDArray src = ograd.At(j++);
-        NDArray dst = igrad_data.At(i);
-        CHECK(src.shape() == dst.shape());
-        mxnet_op::copy(stream, dst.data(), src.data());
-      }
-    }
-  });
-}
+                                const std::vector<NDArray> &outputs);
 
 }  // namespace op
 }  // namespace mxnet

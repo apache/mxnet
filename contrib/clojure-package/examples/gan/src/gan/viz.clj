@@ -18,14 +18,9 @@
 (ns gan.viz
   (:require [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.shape :as mx-shape]
-            [org.apache.clojure-mxnet.io :as mx-io])
-  (:import (nu.pattern OpenCV)
-           (org.opencv.core Core CvType Mat Size)
-           (org.opencv.imgproc Imgproc)
-           (org.opencv.highgui Highgui)))
-
-;;; Viz stuff
-(OpenCV/loadShared)
+            [org.apache.clojure-mxnet.io :as mx-io]
+            [opencv4.utils :as cvu]
+            [opencv4.core :as cv :refer [CV_8UC1 new-matofbyte flip! imwrite new-size hconcat! vconcat! new-mat merge!]]))
 
 (defn clip [x]
   (->> x
@@ -37,29 +32,11 @@
        (mapv #(.byteValue %))))
 
 (defn get-img [raw-data channels height width flip]
-  (let [totals (* height width)
-        img (if (> channels 1)
-              ;; rgb image
-              (let [[ra ga ba] (byte-array (partition totals raw-data))
-                    rr (new Mat height width (CvType/CV_8U))
-                    gg (new Mat height width (CvType/CV_8U))
-                    bb (new Mat height width (CvType/CV_8U))
-                    result (new Mat)]
-                (.put rr (int 0) (int 0) ra)
-                (.put gg (int 0) (int 0) ga)
-                (.put bb (int 0) (int 0) ba)
-                (Core/merge (java.util.ArrayList. [bb gg rr]) result)
-                result)
+  (let [img (if (> channels 1)
+              (throw (Exception. "Image with 3 channels (RGB) not supported"))
               ;; gray image
-              (let [result (new Mat height width (CvType/CV_8U))
-                    _ (.put result (int 0) (int 0) (byte-array raw-data))]
-                result))]
-    (do
-      (if flip
-        (let [result (new Mat)
-              _ (Core/flip img result (int 0))]
-          result)
-        img))))
+              (cv/>> (new-mat height width CV_8UC1) (byte-array raw-data)))]
+    (if flip (flip! img 0) img)))
 
 (defn im-sav [{:keys [title output-path x flip]
                :or {flip false} :as g-mod}]
@@ -73,15 +50,10 @@
         line-arrs (into [] (partition (* col c totals) raw-data))
         line-mats (mapv (fn [line]
                           (let [img-arr (into [] (partition (* c totals) line))
-                                col-mats (new Mat)
-                                src (mapv (fn [arr] (get-img (into [] arr) c h w flip)) img-arr)
-                                _ (Core/hconcat (java.util.ArrayList. src) col-mats)]
-                            col-mats))
-                        line-arrs)
-        result (new Mat)
-        resized-img (new Mat)
-        _ (Core/vconcat (java.util.ArrayList. line-mats) result)]
-    (do
-      (Imgproc/resize result resized-img (new Size (* (.width result) 1.5) (* (.height result) 1.5)))
-      (Highgui/imwrite (str output-path title ".jpg") resized-img)
-      (Thread/sleep 1000))))
+                                src (mapv (fn [arr] (get-img (into [] arr) c h w flip)) img-arr)]
+                            (hconcat! src)))
+                        line-arrs)]
+    (-> line-mats
+        (vconcat!)
+        (cvu/resize-by 1.5)
+        (imwrite (str output-path title ".jpg")))))

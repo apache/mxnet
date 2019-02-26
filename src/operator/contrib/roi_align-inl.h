@@ -20,7 +20,7 @@
  * Copyright (c) 2018 by Contributors
  * \file roi_align-inl.h
  * \brief roi align operator and symbol
- * \author Hang Zhang
+ * \author Hang Zhang, Shesung
  * modified from Caffe2
 */
 #ifndef MXNET_OPERATOR_CONTRIB_ROI_ALIGN_INL_H_
@@ -35,7 +35,6 @@
 namespace mxnet {
 namespace op {
 
-
 // Declare enumeration of input order to make code more intuitive.
 // These enums are only visible within this header
 namespace roialign {
@@ -48,6 +47,7 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
   TShape pooled_size;
   float spatial_scale;
   int sample_ratio;
+  bool position_sensitive;
   DMLC_DECLARE_PARAMETER(ROIAlignParam) {
     DMLC_DECLARE_FIELD(pooled_size)
     .set_expect_ndim(2).enforce_nonzero()
@@ -57,6 +57,10 @@ struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
     "Equals the reciprocal of total stride in convolutional layers");
     DMLC_DECLARE_FIELD(sample_ratio).set_default(-1)
     .describe("Optional sampling ratio of ROI align, using adaptive size by default.");
+    DMLC_DECLARE_FIELD(position_sensitive).set_default(false)
+    .describe("Whether to perform position-sensitive RoI pooling. PSRoIPooling is "
+    "first proposaled by R-FCN and it can reduce the input channels by ph*pw times, "
+    "where (ph, pw) is the pooled_size");
   }
 };
 

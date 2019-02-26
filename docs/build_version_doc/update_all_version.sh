@@ -78,20 +78,6 @@ for tag in $tag_list; do
     echo "$tag" >> "$tag_file"
 done
 
-function update_mxnet_css {
-  tag=$1
-  echo "Begin update fixes.."
-  # All fixes are done on the master branch of mxnet-incubator repository
-  # During a nightly build, these fixes will be patched to all the versions in the asf-site repository including the master folder under versions directory.
-  # copy <master folder location> <version folder location>
-
-  echo "Copying mxnet.css from artifacts folder..."
-  cp "artifacts/mxnet.css"  "$built/versions/$tag/_static"
-
-  echo "Update fixes complete.."
-}
-
-
 
 # Update the specified tags with the Versions dropdown
 # Add various artifacts depending on the version
@@ -100,16 +86,6 @@ for tag in $tag_list; do
     # This Python script is expecting the tag_list.txt and it will use that as the entries to populate
 
     python AddVersion.py --root_url "$root_url" --file_path "$built/versions/$tag" --current_version "$tag" --tag_default "$tag_default" || exit 1
-
-    # Patch any fixes to all versions except 0.11.0.
-    # Version 0.11.0 has old theme and does not make use of the current mxnet.css
-    # It also has its install page in /getting_started, so we skip updating that
-    if [ $tag != '0.11.0' ]; then
-        if [ -d $built/versions/$tag ]; then
-            echo "The $tag is going to be updated with new css and install pages."
-            update_mxnet_css $tag
-        fi
-    fi
 
     # Update all the files that are required to go into the root folder or live version
     if [ $tag == $tag_default ]

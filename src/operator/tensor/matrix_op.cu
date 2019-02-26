@@ -217,5 +217,11 @@ NNVM_REGISTER_OP(depth_to_space)
 NNVM_REGISTER_OP(space_to_depth)
 .set_attr<FCompute>("FCompute<gpu>", SpaceToDepthOpForward<gpu>);
 
+NNVM_REGISTER_OP(_split_v2)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpForward<gpu>);
+
+NNVM_REGISTER_OP(_split_v2_backward)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

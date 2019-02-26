@@ -119,25 +119,43 @@ Example::
   for (size_t i = 0; i < nout; ++i) out_type->push_back(dtype);
   return true;
 })
-.set_attr<FCompute>("FCompute<cpu>", DropoutCompute<cpu>)
+.set_attr<FCreateOpState>("FCreateOpState", CreateDropoutState)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DropoutCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", DropoutGrad{"_backward_Dropout"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ ResourceRequest::kParallelRandom };
-})
+.set_attr<FResourceRequestEx>("FResourceRequestEx",
+  [](const NodeAttrs& attrs, const int dev_mask, const DispatchMode dispatch_mode) {
+    std::vector<ResourceRequest> request;
+    const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
+    if (param.p == 0) return request;
+    if (dev_mask == kGPU) {
+#if MXNET_USE_CUDNN_DROPOUT
+      // if cudnn is used, parallel random is not needed.
+      if (1.0f - param.p > 0
+          && !(param.cudnn_off && param.cudnn_off.value())
+          && param.axes.ndim() == 0) {
+        request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
+        return request;
+      }
+#endif
+    }
+    request.emplace_back(ResourceRequest::kParallelRandom);
+    return request;
+  })
 .add_argument("data", "NDArray-or-Symbol", "Input array to which dropout will be applied.")
 .add_arguments(DropoutParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Dropout)
 .set_num_outputs(1)
+.set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<DropoutParam>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
-.set_attr<FCompute>("FCompute<cpu>", DropoutGradCompute<cpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", DropoutGradCompute<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

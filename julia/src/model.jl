@@ -38,7 +38,7 @@ mutable struct FeedForward <: AbstractModel
   arg_params  :: Dict{Symbol}
   aux_params  :: Dict{Symbol}
 
-  pred_exec   :: Union{Executor,Void}
+  pred_exec   :: Union{Executor,Cvoid}
 
   # leave the rest fields undefined
   FeedForward(arch::SymbolicNode, ctx::Vector{Context}) = new(arch, ctx)
@@ -53,9 +53,9 @@ piece.
 function _split_inputs(batch_size::Int, n_split::Int)
   @assert(batch_size >= n_split)
   per_split = floor(Int, batch_size / n_split)
-  counts    = Base.zeros(Int, n_split)+per_split
+  counts    = Base.zeros(Int, n_split) .+ per_split
   extra     = batch_size - Base.sum(counts)
-  counts[1:extra] += 1
+  counts[1:extra] .+= 1
 
   cum = [0, cumsum(counts)...]
   idx = [cum[i-1]+1:cum[i] for i = 2:length(cum)]
@@ -118,11 +118,11 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
         arg_params[name] = self.arg_params[name]
         continue
       else
-        warn("Shape mismatch for $name. Overwriting with new one.")
+        @warn("Shape mismatch for $name. Overwriting with new one.")
         delete!(self.arg_params, name)
       end
     end
-    arg_params[name] = empty(shape)
+    arg_params[name] = NDArray(undef, shape)
   end
 
   for (name, shape) in zip(aux_names, aux_shapes)
@@ -131,11 +131,11 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
         aux_params[name] = self.aux_params[name]
         continue
       else
-        warn("Shape mismatch for $name. Overwriting with new one.")
+        @warn("Shape mismatch for $name. Overwriting with new one.")
         delete!(self.aux_params, name)
       end
     end
-    aux_params[name] = empty(shape)
+    aux_params[name] = NDArray(undef, shape)
   end
 
   for (k,v) in arg_params
@@ -156,7 +156,7 @@ function init_model(self::FeedForward, initializer::AbstractInitializer; overwri
 end
 
 function _setup_predictor(self::FeedForward, overwrite::Bool=false; verbosity::Integer = 1, data_shapes...)
-  if !isdefined(self, :pred_exec) || isa(self.pred_exec, Void) || overwrite
+  if !isdefined(self, :pred_exec) || isa(self.pred_exec, Cvoid) || overwrite
     if !isdefined(self, :arg_params) || !isdefined(self, :aux_params)
       @assert(false, "Model weights not defined, please init or train the model, or load from file")
     end
@@ -164,7 +164,7 @@ function _setup_predictor(self::FeedForward, overwrite::Bool=false; verbosity::I
     # the predictor use only the first device
     self.pred_exec = simple_bind(self.arch, self.ctx[1]; grad_req=GRAD_NOP, data_shapes...)
     dbg_str = mx.debug_str(self.pred_exec)
-    verbosity >= 1 && info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[1]))
+    verbosity >= 1 && @info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[1]))
     copy_params_from(self.pred_exec, self.arg_params, self.aux_params)
   else
     # make sure the new setup is compatible with the existing one
@@ -224,7 +224,7 @@ function predict(callback::Function, self::FeedForward, data::AbstractDataProvid
   predict(self, data; overwrite = overwrite, callback=callback, verbosity = verbosity)
 end
 function predict(self::FeedForward, data::AbstractDataProvider;
-                 overwrite::Bool = true, callback::Union{Function,Void}=nothing, verbosity::Integer = 1)
+                 overwrite::Bool = true, callback::Union{Function,Cvoid}=nothing, verbosity::Integer = 1)
   data_shapes = provide_data(data)
   data_names  = [x[1] for x in data_shapes]
   _setup_predictor(self, overwrite; verbosity = verbosity, data_shapes...)
@@ -235,7 +235,7 @@ function predict(self::FeedForward, data::AbstractDataProvider;
   for batch in eachbatch(data)
     load_data!(data, batch, data_arrays)
     forward(self.pred_exec, is_train=false)
-    if isa(callback, Void)
+    if isa(callback, Cvoid)
       # no callback, accumulate the data and return at the end
       for (o_list, o_nd) in zip(output_list, self.pred_exec.outputs)
         push!(o_list, copy(slice(o_nd, 1:count_samples(data, batch))))
@@ -249,7 +249,7 @@ function predict(self::FeedForward, data::AbstractDataProvider;
     end
   end
 
-  if !isa(callback, Void)
+  if !isa(callback, Cvoid)
     # callback exists, do not accumulate data
     return nothing
   end
@@ -264,7 +264,7 @@ function predict(self::FeedForward, data::AbstractDataProvider;
   end
 
   # concatenate along mini-batches
-  output_arrays = [cat(ndims(x[1]), x...) for x in output_list]
+  output_arrays = [cat(x..., dims = ndims(x[1])) for x in output_list]
   if length(output_arrays) == 1
     # only 1 output, return it directly, instead of a list
     output_arrays = output_arrays[1]
@@ -279,7 +279,7 @@ function _init_model(self::FeedForward, data::AbstractDataProvider,
 end
 
 function _create_kvstore(kv_type::Symbol, num_device::Int, arg_params::Dict{Symbol}, verbosity::Int)
-  if num_device == 1 && !ismatch(r"dist", string(kv_type))
+  if num_device == 1 && !occursin(r"dist", string(kv_type))
     return nothing
   else
     if kv_type == :local
@@ -289,7 +289,7 @@ function _create_kvstore(kv_type::Symbol, num_device::Int, arg_params::Dict{Symb
       else
         kv_type = :local_allreduce_cpu
       end
-      verbosity >= 2 && info("Auto-select kvstore type = $kv_type")
+      verbosity >= 2 && @info("Auto-select kvstore type = $kv_type")
     end
     return KVStore(kv_type)
   end
@@ -298,7 +298,7 @@ end
 @defstruct TrainingOptions (
   initializer :: AbstractInitializer = UniformInitializer(0.01),
   n_epoch     :: Int = 10,
-  eval_data   :: Union{Void,AbstractDataProvider} = nothing,
+  eval_data   :: Union{Cvoid,AbstractDataProvider} = nothing,
   eval_metric :: AbstractEvalMetric = Accuracy(),
   kvstore     :: Union{Symbol,KVStore} = :local,
   force_init  :: Bool = false,
@@ -364,25 +364,25 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
              kwargs...)
   opts = TrainingOptions(; kwargs...)
 
-  opts.verbosity >= 1 && info("Start training on $(self.ctx)")
+  opts.verbosity >= 1 && @info("Start training on $(self.ctx)")
 
   batch_size  = get_batch_size(data)
   num_dev     = length(self.ctx)
   slices      = _split_inputs(batch_size, num_dev)
 
   # initialize parameters
-  opts.verbosity >= 2 && info("Initializing parameters...")
+  opts.verbosity >= 2 && @info("Initializing parameters...")
   arg_names, param_names, aux_names = _init_model(self, data, opts.initializer, opts.force_init)
 
   # setup kvstore
   kvstore = opts.kvstore
   if isa(kvstore, Symbol)
-    opts.verbosity >= 2 && info("Creating KVStore...")
+    opts.verbosity >= 2 && @info("Creating KVStore...")
     kvstore = _create_kvstore(kvstore, length(self.ctx), self.arg_params, opts.verbosity)
   end
 
   update_on_kvstore = true
-  if isa(kvstore, Void) || ismatch(r"local_allreduce", string(get_type(kvstore)))
+  if isa(kvstore, Cvoid) || occursin(r"local_allreduce", string(get_type(kvstore)))
     update_on_kvstore = false
   end
 
@@ -407,13 +407,13 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     end
   end
 
-  train_execs = Array{Executor}(num_dev)
+  train_execs = Array{Executor}(undef, num_dev)
   for i = 1:num_dev
     data_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_data(data)))
     label_shapes = Dict(map((x) -> x[1] => tuple(x[2][1:end-1]...,length(slices[i])), provide_label(data)))
     train_execs[i] = simple_bind(self.arch, self.ctx[i]; grad_req=grad_req, data_shapes..., label_shapes...)
     dbg_str = mx.debug_str(train_execs[i])
-    opts.verbosity >= 2 && info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
+    opts.verbosity >= 2 && @info(string("TempSpace: ", split(dbg_str, ['\n'])[end-2]..., " on ", self.ctx[i]))
 
     copy_params_from(train_execs[i], self.arg_params, self.aux_params)
   end
@@ -441,12 +441,12 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     updater = getupdater(optimizer)
   end
 
-  if !isa(kvstore, Void)
+  if !isa(kvstore, Cvoid)
     if update_on_kvstore
       set_optimizer(kvstore, optimizer)
     end
 
-    opts.verbosity >= 2 && info("Initializing KVStore...")
+    opts.verbosity >= 2 && @info("Initializing KVStore...")
     # init kv with gradients
     for idx = 1:length(param_arrays)
       param_on_devs = param_arrays[idx]
@@ -463,13 +463,13 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   # set up output and labels in CPU for evaluation metric
   output_shapes = [tuple(size(x)[1:end-1]...,batch_size) for x in train_execs[1].outputs]
   cpu_dev = Context(CPU)
-  cpu_output_arrays = [empty(shape, cpu_dev) for shape in output_shapes]
-  cpu_label_arrays  = [empty(shape, cpu_dev) for (name,shape) in provide_label(data)]
+  cpu_output_arrays = [NDArray(undef, shape, ctx = cpu_dev) for shape in output_shapes]
+  cpu_label_arrays  = [NDArray(undef, shape, ctx = cpu_dev) for (name,shape) in provide_label(data)]
 
   # invoke callbacks on epoch 0
   _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback)
 
-  opts.verbosity >= 2 && info("Start training...")
+  opts.verbosity >= 2 && @info("Start training...")
   for i_epoch = 1:opts.n_epoch
     time_start = time()
     reset!(opts.eval_metric)
@@ -506,7 +506,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
         end
 
         # gradient synchronization
-        if !isa(kvstore, Void)
+        if !isa(kvstore, Cvoid)
           # push gradient, priority is negative index
           push!(kvstore, idx, grad_arrays[idx], priority=-idx)
           if update_on_kvstore
@@ -543,17 +543,17 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
 
     time_stop = time()
     metric = get(opts.eval_metric)
-    opts.verbosity >= 2 && info(format("== Epoch {1:0>3d}/{2:0>3d} ==========", i_epoch, opts.n_epoch))
+    opts.verbosity >= 2 && @info(format("== Epoch {1:0>3d}/{2:0>3d} ==========", i_epoch, opts.n_epoch))
     if opts.verbosity >= 3
-        info("## Training summary")
+        @info("## Training summary")
         for (name, value) in metric
-            info(format("{1:>18s} = {2:.4f}", string(name), value))
+            @info(format("{1:>18s} = {2:.4f}", string(name), value))
         end
-        info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
+        @info(format("{1:>18s} = {2:.4f} seconds", "time", time_stop-time_start))
     end
 
     # evaluation on validation set
-    if !isa(opts.eval_data, Void)
+    if !isa(opts.eval_data, Cvoid)
       # because we are re-using the memory allocated for the training network,
       # the batch_size of the validation dataset must be the same as the training
       # batch_size
@@ -577,9 +577,9 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
       end
 
       if opts.verbosity >= 3
-          info("## Validation summary")
+          @info("## Validation summary")
           for (name, value) in get(opts.eval_metric)
-            info(format("{1:>18s} = {2:.4f}", string(name), value))
+            @info(format("{1:>18s} = {2:.4f}", string(name), value))
           end
       end
     end
@@ -603,7 +603,7 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
     _invoke_callbacks(self, opts.callbacks, op_state, AbstractEpochCallback; metric=metric)
   end # end of all epochs
 
-  opts.verbosity >= 1 && info("Finish training on $(self.ctx)")
+  opts.verbosity >= 1 && @info("Finish training on $(self.ctx)")
   nothing
 end
 
@@ -613,13 +613,15 @@ save_checkpoint(self::FeedForward, prefix::AbstractString, state::OptimizationSt
 function save_checkpoint(sym::SymbolicNode, arg_params::Dict{Symbol},
                          aux_params::Dict{Symbol}, prefix::AbstractString, epoch::Int)
   save("$prefix-symbol.json", sym)
-  save_dict = Dict{Symbol, NDArray}(map((x) -> Symbol("arg:$(x[1])") => x[2], arg_params))
+  save_dict = Dict{Symbol,NDArray}(
+    Symbol("arg:$(x[1])") => x[2] for x in arg_params
+  )
   if !isempty(aux_params)
     merge!(save_dict, Dict(map((x) -> Symbol("aux:$(x[1])") => x[2], aux_params)))
   end
   save_filename = format("{1}-{2:04d}.params", prefix, epoch)
   save(save_filename, save_dict)
-  info("Saved checkpoint to '$save_filename'")
+  @info("Saved checkpoint to '$save_filename'")
 end
 
 function load_checkpoint(prefix::AbstractString, epoch::Int)
@@ -656,7 +658,7 @@ end
 function load_checkpoint(self::FeedForward, prefix::AbstractString, epoch::Int;
                          overwrite::Bool = true, allow_different_arch::Bool = false)
   if isdefined(self, :arg_params) && isdefined(self, :aux_params) && !overwrite
-    info("model weights already exists, skip loading... (call with overwrite=true if needed)")
+    @info("model weights already exists, skip loading... (call with overwrite=true if needed)")
     return self
   end
 

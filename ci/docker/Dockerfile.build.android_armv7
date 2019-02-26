@@ -75,6 +75,11 @@ ENV OpenBLAS_DIR=${CROSS_ROOT}
 
 WORKDIR /work
 
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet
 

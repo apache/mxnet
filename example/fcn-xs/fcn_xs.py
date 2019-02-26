@@ -28,9 +28,10 @@ from solver import Solver
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-ctx = mx.gpu(0)
+
 
 def main():
+    ctx = mx.cpu() if not args.gpu else mx.gpu(args.gpu)
     fcnxs = symbol_fcnxs.get_fcn32s_symbol(numclass=21, workspace_default=1536)
     fcnxs_model_prefix = "model_pascal/FCN32s_VGG16"
     if args.model == "fcn16s":
@@ -85,6 +86,7 @@ if __name__ == "__main__":
         help='the init type of fcn-xs model, e.g. vgg16, fcnxs')
     parser.add_argument('--retrain', action='store_true', default=False,
         help='true means continue training.')
+    parser.add_argument("--gpu", type=int, help="0 to use GPU, not set to use CPU")
     args = parser.parse_args()
     logging.info(args)
     main()

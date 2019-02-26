@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Environment Variables
 =====================
 MXNet has several settings that you can change with environment variables.
@@ -37,6 +54,12 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
+* MXNET_MP_WORKER_NTHREADS
+  - Values: Int ```(default=1)```
+  - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
+* MXNET_MP_OPENCV_NUM_THREADS
+  - Values: Int ```(default=0)```
+  - The number of OpenCV execution threads given to multiprocess workers. OpenCV multithreading is disabled if `MXNET_MP_OPENCV_NUM_THREADS` < 1 (default). Enlarge this number may boost the performance of individual workers when executing underlying OpenCV functions but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
 
 ## Memory Options
 
@@ -99,10 +122,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_KVSTORE_REDUCTION_NTHREADS
   - Values: Int ```(default=4)```
   - The number of CPU threads used for summing up big arrays on a single machine
-  - This will also be used for `dist_sync` kvstore to sum up arrays from different contexts on a single machine. 
-  - This does not affect summing up of arrays from different machines on servers. 
+  - This will also be used for `dist_sync` kvstore to sum up arrays from different contexts on a single machine.
+  - This does not affect summing up of arrays from different machines on servers.
   - Summing up of arrays for `dist_sync_device` kvstore is also unaffected as that happens on GPUs.
-  
+
 * MXNET_KVSTORE_BIGARRAY_BOUND
   - Values: Int ```(default=1000000)```
   - The minimum size of a "big array".
@@ -139,6 +162,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If true, MXNet tries to use GPU peer-to-peer communication, if available on your device,
     when kvstore's type is `device`.
 
+* MXNET_UPDATE_ON_KVSTORE
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If true, weight updates are performed during the communication step, if possible.
+
 ## Memonger
 
 * MXNET_BACKWARD_DO_MIRROR
@@ -164,9 +191,15 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 
 ## Other Environment Variables
 
+* MXNET_GPU_WORKER_NSTREAMS
+  - Values: 1, or 2 ```(default=1)```
+  - Determines the number of GPU streams available to operators for their functions.
+  - Setting this to 2 may yield a modest performance increase, since ops like the cuDNN convolution op can then calculate their data- and weight-gradients in parallel.
+  - Setting this to 2 may also increase a model's demand for GPU global memory.
+
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
   - Values: 0, 1, or 2 ```(default=1)```
-  - The default value of cudnn auto tuning for convolution layers. 
+  - The default value of cudnn auto tuning for convolution layers.
   - Value of 0 means there is no auto tuning to pick the convolution algo
   - Performance tests are run to pick the convolution algo when value is 1 or 2
   - Value of 1 chooses the best algo in a limited workspace
@@ -190,12 +223,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 * MXNET_HOME
   - Data directory in the filesystem for storage, for example when downloading gluon models.
   - Default in *nix is .mxnet APPDATA/mxnet in windows.
-  
+
 * MXNET_MKLDNN_ENABLED
   - Values: 0, 1 ```(default=1)```
   - Flag to enable or disable MKLDNN accelerator. On by default.
   - Only applies to mxnet that has been compiled with MKLDNN (```pip install mxnet-mkl``` or built from source with ```USE_MKLDNN=1```)
-  
+
 * MXNET_MKLDNN_CACHE_NUM
   - Values: Int ```(default=-1)```
   - Flag to set num of elements that MKLDNN cache can hold. Default is -1 which means cache size is unbounded. Should only be set if your model has variable input shapes, as cache size may grow unbounded. The number represents the number of items in the cache and is proportional to the number of layers that use MKLDNN and different input shape.
@@ -212,6 +245,31 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
   - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
   - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
 
+* MXNET_OPTIMIZER_AGGREGATION_SIZE
+  - Values: Int ```(default=4)```
+  - Maximum value is 60.
+  - This variable controls how many weights will be updated in a single call to optimizer (for optimizers that support aggregation, currently limited to SGD).
+
+* MXNET_CPU_TEMP_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many temporary memory resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_TEMP_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many temporary memory resources to create for each GPU context for use in operator.
+
+* MXNET_CPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=1)```
+  - This variable controls how many parallel random number generator resources to create for all CPU context for use in operator.
+
+* MXNET_GPU_PARALLEL_RAND_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many parallel random number generator resources to create for each GPU context for use in operator.
+
+* MXNET_GPU_CUDNN_DROPOUT_STATE_COPY
+  - Values: Int ```(default=4)```
+  - This variable controls how many CuDNN dropout state resources to create for each GPU context for use in operator.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```
@@ -222,3 +280,17 @@ Settings for More GPU Parallelism
 - Set ```MXNET_GPU_WORKER_NTHREADS``` to a larger number (e.g., 2)
   - To reduce memory usage, consider setting ```MXNET_EXEC_NUM_TEMP```.
   - This might not speed things up, especially for image applications, because GPU is usually fully utilized even with serialized jobs.
+
+Settings for controlling OMP tuning
+---------------------------------
+- Set ```MXNET_USE_OPERATOR_TUNING=0``` to disable Operator tuning code which decides whether to use OMP or not for operator
+   - Values: String representation of MXNET_ENABLE_OPERATOR_TUNING environment variable
+   -            0=disable all
+   -            1=enable all
+   -            float32, float16, float32=list of types to enable, and disable those not listed
+   - refer : https://github.com/apache/incubator-mxnet/blob/master/src/operator/operator_tune-inl.h#L444
+
+- Set ```MXNET_USE_NUM_CORES_OPERATOR_TUNING``` to define num_cores to be used by operator tuning code.
+  - This reduces operator tuning overhead when there are multiple instances of mxnet running in the system and we know that
+    each mxnet will take only partial num_cores available with system. 
+  - refer: https://github.com/apache/incubator-mxnet/pull/13602

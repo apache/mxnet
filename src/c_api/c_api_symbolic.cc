@@ -22,12 +22,12 @@
  * \file c_api_symbolic.cc
  * \brief C API of mxnet
  */
-#include <mxnet/base.h>
-#include <mxnet/c_api.h>
-#include <nnvm/c_api.h>
-#include <nnvm/pass.h>
-#include <nnvm/pass_functions.h>
-#include <nnvm/symbolic.h>
+#include "mxnet/base.h"
+#include "mxnet/c_api.h"
+#include "nnvm/c_api.h"
+#include "nnvm/pass.h"
+#include "nnvm/pass_functions.h"
+#include "nnvm/symbolic.h"
 #include "./c_api_common.h"
 #include "../operator/operator_common.h"
 #include "../executor/exec_pass.h"
@@ -638,6 +638,27 @@ int MXSymbolInferType(SymbolHandle sym,
   API_END();
 }
 
+int MXSymbolInferTypePartial(SymbolHandle sym,
+                             mx_uint num_args,
+                             const char** keys,
+                             const int *arg_type_data,
+                             mx_uint *in_type_size,
+                             const int **in_type_data,
+                             mx_uint *out_type_size,
+                             const int **out_type_data,
+                             mx_uint *aux_type_size,
+                             const int **aux_type_data,
+                             int *complete) {
+  int succ;
+  *complete = 1;
+  return MXSymbolInferType(sym, num_args, keys,
+                            arg_type_data,
+                            in_type_size, in_type_data,
+                            out_type_size, out_type_data,
+                            aux_type_size, aux_type_data,
+                            &succ);
+}
+
 int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHandle* out) {
   API_BEGIN();
   LOG(FATAL) << "not implemented";
@@ -668,7 +689,6 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
-  g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(calib_quantize);
   g = ApplyPass(std::move(g), "QuantizeGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
@@ -685,10 +705,9 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   API_BEGIN();
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(qsym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
-  const std::string prefix = "quantized_";
   std::unordered_map<std::string, std::pair<float, float>> calib_table;
   for (size_t i = 0; i < num_layers; ++i) {
-    calib_table.emplace(prefix+layer_names[i], std::make_pair(min_ranges[i], max_ranges[i]));
+    calib_table.emplace(layer_names[i], std::make_pair(min_ranges[i], max_ranges[i]));
   }
   g.attrs["calib_table"] = std::make_shared<nnvm::any>(std::move(calib_table));
   g = ApplyPass(std::move(g), "SetCalibTableToQuantizedGraph");

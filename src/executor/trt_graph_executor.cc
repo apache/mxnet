@@ -21,7 +21,7 @@
 
 #include "trt_graph_executor.h"
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 #include <NvInfer.h>
 #include "./onnx_to_tensorrt.h"
 #include "../operator/contrib/tensorrt-inl.h"
@@ -133,7 +133,7 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
   }
 
   auto trt_groups = GetTrtCompatibleSubsets(g, shared_buffer);
-  for (auto trt_group : trt_groups) {
+  for (const auto &trt_group : trt_groups) {
     if (trt_group.size() > 1) {
       g = ReplaceSubgraph(std::move(g), trt_group, shared_buffer);
       g = ReinitGraph(std::move(g), default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
@@ -141,7 +141,6 @@ void TrtGraphExecutor::Init(nnvm::Symbol symbol,
                       arg_stype_map, shared_buffer);
     }
   }
-
 
   InitArguments(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
                 g.GetAttr<nnvm::DTypeVector>("dtype"),
@@ -188,7 +187,7 @@ void TrtGraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const uint32_t eid = idx.entry_id(nid, 0);
     const TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
-    const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
+    const auto inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
     // aux_states
     if (mutable_nodes.count(nid)) {
@@ -407,14 +406,7 @@ nnvm::Symbol TrtGraphExecutor::GetOptimizedSymbol() {
   Symbol ret;
   ret.outputs = std::vector<nnvm::NodeEntry>(graph_.outputs.begin(),
                                              graph_.outputs.begin() + num_forward_outputs_);
-  ret = ret.Copy();
-  static const Op* trt_op = Op::Get("_trt_op");
-  DFSVisit(ret.outputs, [](const nnvm::NodePtr n) {
-    if (n->op() == trt_op) {
-      n->attrs.dict.clear();
-    }
-  });
-  return ret;
+  return ret.Copy();
 }
 
 Executor *TrtGraphExecutor::TensorRTBind(nnvm::Symbol symbol,
@@ -434,7 +426,7 @@ Executor *TrtGraphExecutor::TensorRTBind(nnvm::Symbol symbol,
                                          std::unordered_map<std::string, NDArray> *shared_buffer,
                                          Executor *shared_exec) {
   auto exec = new exec::TrtGraphExecutor();
-  exec->Init(symbol, default_ctx, group2ctx,
+  exec->Init(std::move(symbol), default_ctx, group2ctx,
              in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
              arg_shape_map, arg_dtype_map, arg_stype_map,
              grad_req_types, param_names,

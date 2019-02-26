@@ -562,7 +562,7 @@ mx.model.FeedForward.create <-
 #'
 #' @param model The MXNet Model.
 #' @param X The dataset to predict.
-#' @param ctx mx.cpu() or mx.gpu(i) The device used to generate the prediction.
+#' @param ctx mx.cpu() or mx.gpu(). The device used to generate the prediction.
 #' @param array.batch.size The batch size used in batching. Only used when X is R's array.
 #' @param array.layout can be "auto", "colmajor", "rowmajor", (detault=auto)
 #'     The layout of array. "rowmajor" is only supported for two dimensional array.

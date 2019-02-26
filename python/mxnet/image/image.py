@@ -38,8 +38,6 @@ except ImportError:
 from ..base import numeric_types
 from .. import ndarray as nd
 from ..ndarray import _internal
-from ..ndarray._internal import _cvimresize as imresize
-from ..ndarray._internal import _cvcopyMakeBorder as copyMakeBorder
 from .. import io
 from .. import recordio
 
@@ -47,8 +45,8 @@ from .. import recordio
 def imread(filename, *args, **kwargs):
     """Read and decode an image to an NDArray.
 
-    Note: `imread` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+    .. note:: `imread` uses OpenCV (not the CV2 Python library).
+       MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -85,11 +83,68 @@ def imread(filename, *args, **kwargs):
     return _internal._cvimread(filename, *args, **kwargs)
 
 
+def imresize(src, w, h, *args, **kwargs):
+    r"""Resize image with OpenCV.
+
+    .. note:: `imresize` uses OpenCV (not the CV2 Python library). MXNet must have been built
+       with USE_OPENCV=1 for `imresize` to work.
+
+    Parameters
+    ----------
+    src : NDArray
+        source image
+    w : int, required
+        Width of resized image.
+    h : int, required
+        Height of resized image.
+    interp : int, optional, default=1
+        Interpolation method (default=cv2.INTER_LINEAR).
+        Possible values:
+        0: Nearest Neighbors Interpolation.
+        1: Bilinear interpolation.
+        2: Area-based (resampling using pixel area relation). It may be a
+        preferred method for image decimation, as it gives moire-free
+        results. But when the image is zoomed, it is similar to the Nearest
+        Neighbors method. (used by default).
+        3: Bicubic interpolation over 4x4 pixel neighborhood.
+        4: Lanczos interpolation over 8x8 pixel neighborhood.
+        9: Cubic for enlarge, area for shrink, bilinear for others
+        10: Random select from interpolation method metioned above.
+        Note:
+        When shrinking an image, it will generally look best with AREA-based
+        interpolation, whereas, when enlarging an image, it will generally look best
+        with Bicubic (slow) or Bilinear (faster but still looks OK).
+        More details can be found in the documentation of OpenCV, please refer to
+        http://docs.opencv.org/master/da/d54/group__imgproc__transform.html.
+
+    out : NDArray, optional
+        The output NDArray to hold the result.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+
+    Example
+    -------
+    >>> with open("flower.jpeg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> new_image = mx.img.resize(image, 240, 360)
+    >>> new_image
+    <NDArray 240x360x3 @cpu(0)>
+    """
+    return _internal._cvimresize(src, w, h, *args, **kwargs)
+
+
 def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
-    Note: `imdecode` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+    .. note:: `imdecode` uses OpenCV (not the CV2 Python library).
+       MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -178,6 +233,59 @@ def scale_down(src_size, size):
     return int(w), int(h)
 
 
+def copyMakeBorder(src, top, bot, left, right, *args, **kwargs):
+    """Pad image border with OpenCV.
+
+    Parameters
+    ----------
+    src : NDArray
+        source image
+    top : int, required
+        Top margin.
+    bot : int, required
+        Bottom margin.
+    left : int, required
+        Left margin.
+    right : int, required
+        Right margin.
+    type : int, optional, default='0'
+        Filling type (default=cv2.BORDER_CONSTANT).
+        0 - cv2.BORDER_CONSTANT - Adds a constant colored border.
+        1 - cv2.BORDER_REFLECT - Border will be mirror reflection of the
+        border elements, like this : fedcba|abcdefgh|hgfedcb
+        2 - cv2.BORDER_REFLECT_101 or cv.BORDER_DEFAULT - Same as above,
+        but with a slight change, like this : gfedcb|abcdefgh|gfedcba
+        3 - cv2.BORDER_REPLICATE - Last element is replicated throughout,
+        like this: aaaaaa|abcdefgh|hhhhhhh
+        4 - cv2.BORDER_WRAP - it will look like this : cdefgh|abcdefgh|abcdefg
+    value : double, optional, default=0
+        (Deprecated! Use ``values`` instead.) Fill with single value.
+    values : tuple of <double>, optional, default=[]
+        Fill with value(RGB[A] or gray), up to 4 channels.
+
+    out : NDArray, optional
+        The output NDArray to hold the result.
+
+    Returns
+    -------
+    out : NDArray or list of NDArrays
+        The output of this function.
+
+    Example
+    --------
+    >>> with open("flower.jpeg", 'rb') as fp:
+    ...     str_image = fp.read()
+    ...
+    >>> image = mx.img.imdecode(str_image)
+    >>> image
+    <NDArray 2321x3482x3 @cpu(0)>
+    >>> new_image = mx_border = mx.image.copyMakeBorder(mx_img, 1, 2, 3, 4, type=0)
+    >>> new_image
+    <NDArray 2324x3489x3 @cpu(0)>
+    """
+    return _internal._cvcopyMakeBorder(src, top, bot, left, right, *args, **kwargs)
+
+
 def _get_interp_method(interp, sizes=()):
     """Get the interpolation method for resize functions.
     The major purpose of this function is to wrap a random interp method selection
@@ -236,8 +344,8 @@ def _get_interp_method(interp, sizes=()):
 def resize_short(src, size, interp=2):
     """Resizes shorter edge to size.
 
-    Note: `resize_short` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with OpenCV for `resize_short` to work.
+    .. note:: `resize_short` uses OpenCV (not the CV2 Python library).
+       MXNet must have been built with OpenCV for `resize_short` to work.
 
     Resizes the original image by setting the shorter edge to size
     and setting the longer edge accordingly.

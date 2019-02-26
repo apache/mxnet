@@ -88,6 +88,17 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
               "one-hot encoding of the gold label and distributed uniformly to"
               "all other labels.");
   };
+
+  bool operator==(const SoftmaxOutputParam& other) const {
+    return this->grad_scale == other.grad_scale &&
+           this->ignore_label == other.ignore_label &&
+           this->multi_output == other.multi_output &&
+           this->use_ignore == other.use_ignore &&
+           this->preserve_shape == other.preserve_shape &&
+           this->normalization == other.normalization &&
+           this->out_grad == other.out_grad &&
+           this->smooth_alpha == other.smooth_alpha;
+  }
 };
 
 template<typename xpu, typename DType>
@@ -267,9 +278,43 @@ class SoftmaxOutputOp : public Operator {
   SoftmaxOutputParam param_;
 };  // class SoftmaxOutputOp
 
-// Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(SoftmaxOutputParam param, int dtype);
+void SoftmaxOutputCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
+  const std::vector<TBlob> no_use_but_adapt_origin_api;
+  CHECK_EQ(inputs.size(), 2U);
+
+  MSHADOW_REAL_TYPE_SWITCH(inputs[softmaxout_enum::kData].type_flag_, DType, {
+    SoftmaxOutputOp<xpu, DType> op(param);
+    op.Forward(ctx, inputs, req, outputs, no_use_but_adapt_origin_api);
+  });
+}
+
+template<typename xpu>
+void SoftmaxOutputGradCompute(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  const SoftmaxOutputParam& param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
+  const std::vector<TBlob> no_use_but_adapt_origin_api;
+  CHECK_EQ(inputs.size(), 2U);
+
+  std::vector<TBlob> out_grad{inputs[0]};
+  std::vector<TBlob> out_data{inputs[0]};
+  std::vector<TBlob> in_data(inputs.begin(), inputs.end());
+  int dtype = inputs[0].type_flag_;
+  const std::vector<TBlob> &in_grad = outputs;
+
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    SoftmaxOutputOp<xpu, DType> op(param);
+    op.Backward(ctx, out_grad, in_data, out_data, req, in_grad, no_use_but_adapt_origin_api);
+  });
+}
+
 
 #if DMLC_USE_CXX11
 class SoftmaxOutputProp : public OperatorProperty {
@@ -414,4 +459,23 @@ class DeprecatedSoftmaxProp : public SoftmaxOutputProp {
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::SoftmaxOutputParam> {
+  size_t operator()(const mxnet::op::SoftmaxOutputParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.grad_scale);
+    ret = dmlc::HashCombine(ret, val.ignore_label);
+    ret = dmlc::HashCombine(ret, val.multi_output);
+    ret = dmlc::HashCombine(ret, val.use_ignore);
+    ret = dmlc::HashCombine(ret, val.preserve_shape);
+    ret = dmlc::HashCombine(ret, val.normalization);
+    ret = dmlc::HashCombine(ret, val.out_grad);
+    ret = dmlc::HashCombine(ret, val.smooth_alpha);
+    return ret;
+  }
+};
+}  // namespace std
+
 #endif  // MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_

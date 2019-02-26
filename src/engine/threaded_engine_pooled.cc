@@ -31,6 +31,9 @@
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "./stream_manager.h"
+#if MXNET_USE_CUDA
+#include "../common/cuda_utils.h"
+#endif
 
 namespace mxnet {
 namespace engine {
@@ -130,10 +133,13 @@ class ThreadedEnginePooled : public ThreadedEngine {
    * \param opr_block The operator block.
    */
   void DoExecute(OprBlock* opr_block) {
+#if MXNET_USE_CUDA
+    mxnet::common::cuda::DeviceStore device_store(-1, false);
+#endif
     assert(opr_block->wait.load() == 0);
     if (opr_block->ctx.dev_mask() == gpu::kDevMask) {
       #if MXNET_USE_CUDA
-      CUDA_CALL(cudaSetDevice(opr_block->ctx.dev_id));
+      device_store.SetDevice(opr_block->ctx.dev_id);
       #else   // MXNET_USE_CUDA
       LOG(FATAL) << "Please compile with CUDA enabled";
       #endif  // MXNET_USE_CUDA

@@ -29,11 +29,15 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <climits>
 #include "./cast_storage-inl.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
 #include "../../ndarray/ndarray_function.h"
+#if MSHADOW_USE_MKL == 1
+#include "mkl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -347,6 +351,43 @@ class UnaryOp : public OpBase {
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
+  }
+
+#if MSHADOW_USE_MKL == 1
+  static inline void MKLLog(MKL_INT size, const float* pIn, float* pOut) {
+    vsLn(size, pIn, pOut);
+  }
+
+  static inline void MKLLog(MKL_INT size, const double* pIn, double* pOut) {
+    vdLn(size, pIn, pOut);
+  }
+#endif
+
+  template<typename xpu, typename OP>
+  static void LogCompute(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+    if (req[0] == kNullOp) return;
+    // if defined MSHADOW_USE_MKL then call mkl log when req is KWriteTo, type_flag
+    // is mshadow::kFloat32 or mshadow::kFloat64 and data size less than or equal MKL_INT_MAX
+#if MSHADOW_USE_MKL == 1
+    auto type_flag = inputs[0].type_flag_;
+    const size_t MKL_INT_MAX = (sizeof(MKL_INT) == sizeof(int)) ? INT_MAX : LLONG_MAX;
+    size_t input_size = inputs[0].Size();
+    if (req[0] == kWriteTo &&
+        input_size <= MKL_INT_MAX &&
+        (type_flag == mshadow::kFloat32 || type_flag == mshadow::kFloat64)) {
+      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+        MKLLog(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    } else {
+      Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    }
+#else
+    Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+#endif
   }
 };
 

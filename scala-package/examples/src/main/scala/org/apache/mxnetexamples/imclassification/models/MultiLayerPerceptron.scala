@@ -17,6 +17,7 @@
 
 package org.apache.mxnetexamples.imclassification.models
 
+import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 
 object MultiLayerPerceptron {
@@ -26,8 +27,8 @@ object MultiLayerPerceptron {
     * @param numClasses Number of classes to classify into
     * @return model symbol
     */
-  def getSymbol(numClasses: Int): Symbol = {
-    val data = Symbol.Variable("data")
+  def getSymbol(numClasses: Int, dtype: DType = DType.Float32): Symbol = {
+    val data = Symbol.Variable("data", dType = dtype)
 
     val fc1 = Symbol.api.FullyConnected(data = Some(data), num_hidden = 128, name = "fc1")
     val act1 = Symbol.api.Activation(data = Some(fc1), "relu", name = "relu")

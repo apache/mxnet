@@ -342,7 +342,7 @@ class KVStoreNCCL : public KVStoreLocal {
       } else {
         auto& buf = merge_buf_[key];
         int root = src.ctx().dev_id;
-        assert(root == buf.ctx().dev_id);
+        assert(root == buf.merged.ctx().dev_id);
         root_id = FindRootId(dst, root);
 
         // Check whether we got the same set of devices

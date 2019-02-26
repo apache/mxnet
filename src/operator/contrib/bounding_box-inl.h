@@ -785,7 +785,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
      .get_with_shape<xpu, 2, DType>(Shape2(batch_size, col), s);
     Shape<1> sort_index_shape = Shape1(dshape.Size());
     index_t workspace_size = sort_index_shape.Size();
-    workspace_size += ((sort_index_shape.Size() * sizeof(int32_t) - 1) / sizeof(DType)) * 2;
+    workspace_size += (sort_index_shape.Size() * 2 * sizeof(int32_t) - 1) / sizeof(DType) + 1;
     Tensor<xpu, 1, DType> workspace = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s);
     Tensor<xpu, 1, DType> scores_copy(workspace.dptr_,

@@ -97,8 +97,6 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
   int pad;
   /*! \brief shape of the image data*/
   TShape data_shape;
-  /*! \brief random seed for augmentations */
-  dmlc::optional<int> seed_aug;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(DefaultImageAugmentParam) {
@@ -188,8 +186,6 @@ struct DefaultImageAugmentParam : public dmlc::Parameter<DefaultImageAugmentPara
     DMLC_DECLARE_FIELD(pad).set_default(0)
         .describe("Change size from ``[width, height]`` into "
                   "``[pad + width + pad, pad + height + pad]`` by padding pixes");
-    DMLC_DECLARE_FIELD(seed_aug).set_default(dmlc::optional<int>())
-        .describe("Random seed for augmentations.");
   }
 };
 
@@ -208,9 +204,7 @@ std::vector<dmlc::ParamFieldInfo> ListDefaultAugParams() {
 class DefaultImageAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageAugmenter() {
-    seed_init_state = false;
-  }
+  DefaultImageAugmenter() {}
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     kwargs_left = param_.InitAllowUnknown(kwargs);
@@ -250,10 +244,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
   }
   cv::Mat Process(const cv::Mat &src, std::vector<float> *label,
                   common::RANDOM_ENGINE *prnd) override {
-    if (!seed_init_state && param_.seed_aug.has_value()) {
-      prnd->seed(param_.seed_aug.value());
-      seed_init_state = true;
-    }
     using mshadow::index_t;
     bool is_cropped = false;
 
@@ -558,7 +548,6 @@ class DefaultImageAugmenter : public ImageAugmenter {
   DefaultImageAugmentParam param_;
   /*! \brief list of possible rotate angle */
   std::vector<int> rotate_list_;
-  bool seed_init_state;
 };
 
 ImageAugmenter* ImageAugmenter::Create(const std::string& name) {

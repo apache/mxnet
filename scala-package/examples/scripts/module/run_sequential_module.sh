@@ -18,7 +18,7 @@
 # under the License.
 
 ROOT_DIR=$(cd `dirname $0`/../../..; pwd)
-CLASSPATH=$ROOT_DIR/assembly/linux-x86_64-cpu/target/*:$ROOT_DIR/examples/target/*:$ROOT_DIR/examples/target/classes/lib/*
+CLASSPATH=$ROOT_DIR/assembly/target/*:$ROOT_DIR/examples/target/*:$ROOT_DIR/examples/target/classes/lib/*
 
 DATA_DIR=$ROOT_DIR/core/data
 
