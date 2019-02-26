@@ -228,6 +228,54 @@ class RandomResizedCrop(Block):
         return image.random_size_crop(x, *self._args)[0]
 
 
+class Crop(HybridBlock):
+    """Crop the input image with and optionally resize it.
+    Makes a crop of the original image then optionally resize it to the specified size.
+    Parameters
+    ----------
+    x0 : int
+        Left boundary of the cropping area
+    y0 : int
+        Top boundary of the cropping area
+    w : int
+        Width of the cropping area
+    h : int
+        Height of the cropping area
+    size : int or tuple of (w, h)
+        Optional, resize to new size after cropping
+    interp : int, optional
+        Optional, interpolation method. See opencv for details.
+    Inputs:
+        - **data**: input tensor with (H x W x C) or (N x H x W x C) shape.
+    Outputs:
+        - **out**: output tensor with (H x W x C) or (N x H x W x C) shape.
+    Examples
+    --------
+    >>> transformer = vision.transforms.Crop(0, 0, 100, 100)
+    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 500x1000x3 @cpu(0)>
+    >>> image = mx.nd.random.uniform(0, 255, (3, 224, 224, 3)).astype(dtype=np.uint8)
+    <NDArray 3x500x1000x3 @cpu(0)>
+    >>> transformer = vision.transforms.Crop(0, 0, 100, 100, (50, 50), 1)
+    >>> transformer(image)
+    <NDArray 3x50x50 @cpu(0)>
+    """
+    def __init__(self, x0, y0, width, height, size=None, interpolation=None):
+        super(Crop, self).__init__()
+        self._x0 = x0
+        self._y0 = y0
+        self._width = width
+        self._height = height
+        self._size = size
+        self._interpolation = interpolation
+
+    def hybrid_forward(self, F, x):
+        out = F.image.crop(x, self._x0, self._y0, self._width, self._height)
+        if self._size is not None:
+            out = F.image.resize(out, self._size, False, self._interpolation)
+        return out 
+
 class CenterCrop(Block):
     """Crops the image `src` to the given `size` by trimming on all four
     sides and preserving the center of the image. Upsamples if `src` is
