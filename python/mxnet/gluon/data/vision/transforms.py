@@ -274,7 +274,7 @@ class Crop(HybridBlock):
         out = F.image.crop(x, self._x0, self._y0, self._width, self._height)
         if self._size is not None:
             out = F.image.resize(out, self._size, False, self._interpolation)
-        return out 
+        return out
 
 class CenterCrop(Block):
     """Crops the image `src` to the given `size` by trimming on all four
