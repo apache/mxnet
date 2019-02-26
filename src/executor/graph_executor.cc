@@ -1191,16 +1191,17 @@ void GraphExecutor::InitOpSegs() {
   cached_seg_opr_.resize(total_num_nodes, p);
   if (monitor_callback_) return;
 
+  // Symbolic bulking is set by the same environment variables as Imperative bulking.
   // Generate segments based on the graph structure
-  bool prefer_bulk_exec_inference = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
+  bool prefer_bulk_exec_inference = Imperative::PreferBulkExecInference();
   // Whether to perform bulk exec for training
   const profiler::Profiler *prof = profiler::Profiler::Get();
-  bool prefer_bulk_exec = dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1)
-                          && (!prof || !prof->AggregateEnabled());
+  bool prefer_bulk_exec_train = Imperative::PreferBulkExecTrain()
+                                && (!prof || !prof->AggregateEnabled());
 
   bool is_training = num_forward_nodes_ != total_num_nodes;
 
-  if (prefer_bulk_exec  && is_training) {
+  if (prefer_bulk_exec_train && is_training) {
     this->BulkTrainingOpSegs(total_num_nodes);
   }
 
@@ -1211,15 +1212,10 @@ void GraphExecutor::InitOpSegs() {
 
 
 void GraphExecutor::BulkTrainingOpSegs(size_t total_num_nodes) {
-  // The maximum number of nodes in a segment executed in bulk (excluding variables).
-  size_t segment_num_nodes_threshold =
-      dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
   // The maximum number of nodes in a segment executed in bulk (excluding variables) in fwd pass.
-  size_t segment_num_nodes_threshold_fwd =
-      dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD", segment_num_nodes_threshold);
+  size_t segment_num_nodes_threshold_fwd = Imperative::BulkExecMaxNodeTrainFwd();
   // The maximum number of nodes in a segment executed in bulk (excluding variables) in bwd pass.
-  size_t segment_num_nodes_threshold_bwd =
-      dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD", segment_num_nodes_threshold);
+  size_t segment_num_nodes_threshold_bwd = Imperative::BulkExecMaxNodeTrainBwd();
 
   // create forward segments for training
   size_t topo_start = 0;
