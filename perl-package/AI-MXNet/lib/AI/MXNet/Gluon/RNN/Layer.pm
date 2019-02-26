@@ -21,7 +21,7 @@ package AI::MXNet::Gluon::RNN::Layer;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Gluon::Mouse;
 use AI::MXNet::Base;
-extends 'AI::MXNet::Gluon::Block';
+extends 'AI::MXNet::Gluon::HybridBlock';
 
 has 'hidden_size'   => (is => 'rw', isa => 'Int');
 has 'num_layers'    => (is => 'rw', isa => 'Int');
@@ -29,18 +29,19 @@ has 'layout'        => (is => 'rw', isa => 'Str');
 has 'dropout'       => (is => 'rw', isa => 'Num');
 has 'bidirectional' => (is => 'rw', isa => 'Bool');
 has 'input_size'    => (is => 'rw', isa => 'Int', default => 0);
+has 'projection_size' => (is => 'rw', isa => 'Maybe[Int]');
+has [qw/lstm_state_clip_min
+        lstm_state_clip_max/] => (is => 'rw', isa => 'Maybe[Num]');
+has 'lstm_state_clip_nan' => (is => 'rw', isa => 'Bool', default => 0);
 has [qw/
     i2h_weight_initializer
     h2h_weight_initializer
     i2h_bias_initializer
     h2h_bias_initializer
+    h2r_weight_initializer
     /]              => (is => 'rw', isa => 'Maybe[Initializer]');
 has 'mode'          => (is => 'rw', isa => 'Str');
 has [qw/dir gates
-    i2h_weight
-    h2h_weight
-    i2h_bias
-    h2h_bias
     unfused/]       => (is => 'rw', init_arg => undef);
 
 method python_constructor_arguments()
@@ -50,7 +51,8 @@ method python_constructor_arguments()
         dropout bidirectional input_size
         i2h_weight_initializer h2h_weight_initializer
         i2h_bias_initializer h2h_bias_initializer
-        mode
+        mode projection_size h2r_weight_initializer
+        lstm_state_clip_min lstm_state_clip_max lstm_state_clip_nan
     /];
 }
 
@@ -61,41 +63,76 @@ sub BUILD
         ($self->layout eq 'TNC' or $self->layout eq 'NTC'),
         "Invalid layout [${\ $self->layout }]; must be one of ['TNC' or 'NTC']"
     );
-    $self->i2h_weight([]);
-    $self->h2h_weight([]);
-    $self->i2h_bias([]);
-    $self->h2h_bias([]);
     $self->dir($self->bidirectional ? 2 : 1);
     $self->gates({qw/rnn_relu 1 rnn_tanh 1 lstm 4 gru 3/}->{$self->mode});
     my ($ng, $ni, $nh) = ($self->gates, $self->input_size, $self->hidden_size);
-    for my $i (0..$self->num_layers-1)
+    if(not $self->projection_size)
     {
-        for my $j ($self->dir == 2 ? ('l', 'r') : ('l'))
+        for my $i (0..$self->num_layers-1)
         {
-            push @{ $self->i2h_weight }, $self->params->get(
-                "$j${i}_i2h_weight", shape=>[$ng*$nh, $ni],
-                init => $self->i2h_weight_initializer,
-                allow_deferred_init => 1
-            );
-            push @{ $self->h2h_weight }, $self->params->get(
-                "$j${i}_h2h_weight", shape=>[$ng*$nh, $nh],
-                init => $self->h2h_weight_initializer,
-                allow_deferred_init => 1
-            );
-            push @{ $self->i2h_bias }, $self->params->get(
-                "$j${i}_i2h_bias", shape=>[$ng*$nh],
-                init => $self->i2h_bias_initializer,
-                allow_deferred_init => 1
-            );
-            push @{ $self->h2h_bias }, $self->params->get(
-                "$j${i}_h2h_bias", shape=>[$ng*$nh],
-                init => $self->h2h_bias_initializer,
-                allow_deferred_init => 1
-            );
+            for my $j ($self->dir == 2 ? ('l', 'r') : ('l'))
+            {
+                $self->_register_param(
+                    "$j${i}_i2h_weight", [$ng*$nh, $ni],
+                    $self->i2h_weight_initializer
+                );
+                $self->_register_param(
+                    "$j${i}_h2h_weight", [$ng*$nh, $nh],
+                    $self->h2h_weight_initializer
+                );
+                $self->_register_param(
+                    "$j${i}_i2h_bias", [$ng*$nh],
+                    $self->i2h_bias_initializer,
+                );
+                $self->_register_param(
+                    "$j${i}_h2h_bias", [$ng*$nh],
+                    $self->h2h_bias_initializer,
+                );
+            }
+            $ni = $nh * $self->dir;
         }
-        $ni = $nh * $self->dir;
     }
-    $self->unfused($self->_unfuse());
+    else
+    {
+        my $np = $self->projection_size;
+        for my $i (0..$self->num_layers-1)
+        {
+            for my $j ($self->dir == 2 ? ('l', 'r') : ('l'))
+            {
+                $self->_register_param(
+                    "$j${i}_i2h_weight", [$ng*$nh, $ni],
+                    $self->i2h_weight_initializer
+                );
+                $self->_register_param(
+                    "$j${i}_h2h_weight", [$ng*$nh, $np],
+                    $self->h2h_weight_initializer
+                );
+                $self->_register_param(
+                    "$j${i}_i2h_bias", [$ng*$nh],
+                    $self->i2h_bias_initializer,
+                );
+                $self->_register_param(
+                    "$j${i}_h2h_bias", [$ng*$nh],
+                    $self->h2h_bias_initializer,
+                );
+                $self->_register_param(
+                    "$j${i}_h2r_weight", [$np, $nh],
+                    $self->h2r_weight_initializer,
+                );
+            }
+            $ni = $np * $self->dir;
+        }
+    }
+}
+
+method _register_param($name, $shape, $init)
+{
+    my $p = $self->params->get(
+        $name, shape=>$shape, init=>$init,
+        allow_deferred_init=>1
+    );
+    $self->$name($p);
+    return $p;
 }
 
 use overload '""' => sub {
@@ -119,15 +156,55 @@ use overload '""' => sub {
     return $s;
 };
 
+method _collect_params_with_prefix(Str $prefix='')
+{
+    $prefix .= '.' if($prefix);
+    my $pattern = qr/(l|r)(\d+)_(i2h|h2h)_(weight|bias)$/;
+    my $convert_key = sub { my ($m, $bidirectional) = @_;
+        my ($d, $l, $g, $t) = @$m;
+        if($bidirectional)
+        {
+            return "_unfused.$l.${d}_cell.${g}_$t";
+        }
+        else
+        {
+            return "_unfused.$l.${g}_$t";
+        }
+    };
+    my $bidirectional = 0;
+    my %params = %{ $self->_reg_params };
+    for my $k (keys %params)
+    {
+        $k =~ $pattern;
+        $bidirectional = 1 if $1 and $1 eq 'r';
+    }
+    my %ret;
+    for my $k (keys %params)
+    {
+        $k =~ $pattern;
+        $ret{ $prefix . $convert_key->([$1, $2, $3, $4], $bidirectional) } = $params{$k};
+    }
+    my $iter = $self->_children->iterator;
+    while(my ($name, $child) = $iter->())
+    {
+        %ret = (%ret, %{ $child->_collect_params_with_prefix("$prefix$name") });
+    }
+    return \%ret;
+}
+
 method state_info($batch_size=0)
 {
     confess('NotImplementedError');
 }
 
-# Unfuses the fused RNN in to a stack of rnn cells.
 
 method _unfuse()
 {
+    assert((not $self->projection_size), "_unfuse does not support projection layer yet!");
+    assert(
+        (not $self->lstm_state_clip_min and not $self->lstm_state_clip_max),
+        "_unfuse does not support state clipping yet!"
+    );
     my $get_cell = {
         rnn_relu => sub {
             my %kwargs = @_;
@@ -218,89 +295,105 @@ method begin_state(
 }
 
 use Data::Dumper;
-method forward(GluonInput $inputs, Maybe[GluonInput] $states=)
+method hybrid_forward(GluonClass $F, GluonInput $inputs, @args)
 {
-    my $batch_size = $inputs->shape->[index($self->layout, 'N')];
+    my $states;
+    if(@args)
+    {
+        if(not defined $args[0] or ref $args[0])
+        {
+            $states = shift(@args);
+            undef $states if(ref $states eq 'ARRAY' and not @$states);
+        }
+    }
+    use Data::Dumper;
+
+    my $batch_size;
+    if($F eq 'AI::MXNet::NDArray')
+    {
+        $batch_size = $inputs->shape->[index($self->layout, 'N')];
+    }
     my $skip_states = not defined $states;
     if($skip_states)
     {
-        $states = $self->begin_state($batch_size, ctx=>$inputs->context);
+        if($F eq 'AI::MXNet::NDArray')
+        {
+            $states = $self->begin_state($batch_size, ctx=>$inputs->context, dtype=>$inputs->dtype);
+        }
+        else
+        {
+            $states = $self->begin_state(0, func=>sub { return AI::MXNet::Symbol->zeros(@_) });
+        }
     }
-    if(blessed $states and $states->isa('AI::MXNet::NDArray'))
+    if(blessed $states and ($states->isa('AI::MXNet::NDArray') or $states->isa('AI::MXNet::Symbol')))
     {
         $states = [$states];
     }
-    for(zip($states, $self->state_info($batch_size))) {
-        my ($state, $info) = @$_;
-        if(Dumper($state->shape) ne Dumper($info->{shape}))
+    if($F eq 'AI::MXNet::NDArray')
+    {
+        for(zip($states, $self->state_info($batch_size)))
         {
-            my @state_shape = @{ $state->shape };
-            confess("Invalid recurrent state shape. Expecting @{$info->{shape}}, got @state_shape.");
+            my ($state, $info) = @$_;
+            if(Dumper($state->shape) ne Dumper($info->{shape}))
+            {
+                my @state_shape = @{ $state->shape };
+                confess("Invalid recurrent state shape. Expecting @{$info->{shape}}, got @state_shape.");
+            }
         }
     }
-    if($self->input_size == 0)
-    {
-        for my $i (0..$self->dir-1)
-        {
-            $self->i2h_weight->[$i]->shape([$self->gates*$self->hidden_size, $inputs->shape->[2]]);
-            $self->i2h_weight->[$i]->_finish_deferred_init();
-        }
-    }
-    my $out;
-    if($inputs->context->device_type eq 'gpu')
-    {
-        $out = $self->_forward_gpu($inputs, $states);
-    }
-    else
-    {
-        $out = $self->_forward_cpu($inputs, $states);
-    }
-
-    # out is (output, state)
+    my $out = $self->_forward_kernel($F, $inputs, $states, @args);
     return $skip_states ? $out->[0] : $out;
 }
 
-method _forward_cpu($inputs, $states)
-{
-    my $ns = @{ $states };
-    my $axis = index($self->layout, 'T');
-    $states = [map { @{$_} } @{ $states }];
-    my $outputs;
-    ($outputs, $states) = $self->unfused->unroll(
-        $inputs->shape->[$axis], $inputs, begin_state => $states,
-        layout => $self->layout, merge_outputs => 1
-    );
-    my @new_states;
-    for my $i (0..$ns-1)
-    {
-        my @tmp;
-        for (my $j = $i; $j < @{ $states }; $j += $ns)
-        {
-            push @tmp, $states->[$j];
-        }
-        my $state = AI::MXNet::NDArray->concat((map { $_->reshape([1, @{ $_->shape }]) } @tmp), dim => 0);
-        push @new_states, $state;
-    }
-    return [$outputs, \@new_states];
-}
-
-method _forward_gpu($inputs, $states)
+method _forward_kernel($F, $inputs, $states, %kwargs)
 {
     if($self->layout eq 'NTC')
     {
-        $inputs = $inputs->swapaxes(dim1 => 0, dim2 => 1);
+        $inputs = $F->swapaxes($inputs, dim1=>0, dim2=>1);
     }
-    my $ctx = $inputs->context;
-    my @params = map { $_->data($ctx)->reshape([-1]) } map { @{ $_ } } (
-        $self->i2h_weight, $self->h2h_weight,
-        $self->i2h_bias, $self->h2h_bias
-    );
-    my $params = AI::MXNet::NDArray->concat(@params, dim => 0);
-    my $rnn = AI::MXNet::NDArray->RNN(
-        $inputs, $params, @{ $states }, state_size => $self->hidden_size,
+    my @params;
+    if(not defined $self->projection_size)
+    {
+        for my $t ('weight', 'bias')
+        {
+            for my $l (0..$self->num_layers-1)
+            {
+                for my $d ($self->dir == 2 ? ('l', 'r') : ('l'))
+                {
+                    for my $g ('i2h', 'h2h')
+                    {
+                        push @params, $kwargs{"$d${l}_${g}_$t"}->reshape([-1]);
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        for my $t ('weight', 'bias')
+        {
+            for my $l (0..$self->num_layers-1)
+            {
+                for my $d ($self->dir == 2 ? ('l', 'r') : ('l'))
+                {
+                    for my $g ('i2h', 'h2h', 'h2r')
+                    {
+                        push @params, $kwargs{"$d${l}_${g}_$t"}->reshape([-1])
+                            unless($g eq 'h2r' and $t eq 'bias');
+                    }
+                }
+            }
+        }
+    }
+    my $params = $F->_rnn_param_concat(@params, dim=>0);
+    my $rnn = $F->RNN(
+        $inputs, $params, @{ $states }, { state_size => $self->hidden_size,
         num_layers => $self->num_layers, bidirectional => $self->dir == 2 ? 1 : 0,
-        p => $self->dropout, state_outputs => 1, mode => $self->mode
-    );
+        p => $self->dropout, state_outputs => 1, mode => $self->mode,
+        (defined $self->lstm_state_clip_min ? (lstm_state_clip_min=>$self->lstm_state_clip_min) : ()),
+        (defined $self->lstm_state_clip_max ? (lstm_state_clip_max=>$self->lstm_state_clip_max) : ()),
+        (defined $self->lstm_state_clip_nan ? (lstm_state_clip_nan=>$self->lstm_state_clip_nan) : ())
+    });
     my $outputs;
     my @rnn = @{$rnn};
     if($self->mode eq 'lstm')
@@ -317,7 +410,6 @@ method _forward_gpu($inputs, $states)
     }
     return [$outputs, $states];
 }
-
 
 package AI::MXNet::Gluon::RNN::RNN;
 
@@ -552,7 +644,10 @@ method state_info(DimSize $batch_size=0)
 {
     return [
         {
-            shape => [$self->num_layers * $self->dir, $batch_size, $self->hidden_size],
+            shape => [
+                $self->num_layers * $self->dir, $batch_size, 
+                defined $self->projection_size ? $self->projection_size : $self->hidden_size
+            ],
             __layout__ => 'LNC'
         },
         {

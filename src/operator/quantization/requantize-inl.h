@@ -87,20 +87,6 @@ struct RequantizeKernel {
   }
 };
 
-template<typename xpu, typename DType>
-inline size_t ConfigReduce(mshadow::Stream<xpu>* s,
-                           const TShape& data_shape,
-                           const TShape& out_shape,
-                           TShape* src_shape,
-                           TShape* dst_shape) {
-  BroadcastReduceShapeCompact(data_shape, out_shape, src_shape, dst_shape);
-  constexpr int NDim = 2;
-  CHECK_EQ(src_shape->ndim(), NDim);
-  CHECK_EQ(dst_shape->ndim(), NDim);
-
-  return broadcast::ReduceWorkspaceSize<NDim, DType>(s, *dst_shape, kWriteTo, *src_shape);
-}
-
 template<typename xpu>
 void RequantizeForward(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,

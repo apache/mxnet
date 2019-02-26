@@ -53,6 +53,7 @@ class CuDNNConvolutionOp {
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&forward_conv_desc_));
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_));
     CUDNN_CALL(cudnnCreateConvolutionDescriptor(&back_conv_desc_w_));
+    parallelize_backward_kernels_ = Context::GetGPUStreamsPerWorker() >= 2;
   }
 
   void Init(const ConvolutionParam& param,
@@ -110,6 +111,7 @@ class CuDNNConvolutionOp {
     // future cuDNN releases.
     SelectAlgo(rctx, in_shape, out_shape,
                cudnn_forward_compute_type, cudnn_backward_compute_type);
+    GetTempSize(rctx);
   }
 
   ~CuDNNConvolutionOp() {
@@ -131,7 +133,6 @@ class CuDNNConvolutionOp {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1U);
     Stream<gpu> *s = ctx.get_stream<gpu>();
-    GetTempSize(ctx);
     Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, forward_workspace_byte_);
     size_t workspace_size = TensorSizeBytes(workspace);
 
@@ -224,6 +225,8 @@ class CuDNNConvolutionOp {
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(in_grad.size(), expected);
     Stream<gpu> *s = ctx.get_stream<gpu>();
+    // RAII object to handle syncing of the underlying auxiliary stream with the primary stream
+    SyncedGPUAuxStream s_dgrad = ctx.get_gpu_aux_stream();
 
     // I/O's should have 2 more dims than the kernel dim
     DType *grad_ptr = GetNdPtr(out_grad[conv::kOut], param_.kernel.ndim() + 2, s);
@@ -232,9 +235,27 @@ class CuDNNConvolutionOp {
     DType *data_ptr = GetNdPtr(in_data[conv::kData], param_.kernel.ndim() + 2, s);
     DType *gdata_ptr = GetNdPtr(in_grad[conv::kData], param_.kernel.ndim() + 2, s);
 
-    GetTempSize(ctx);
-    Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte_);
+    size_t backward_workspace_byte =
+        parallelize_backward_kernels_ ? back_workspace_byte_dgrad_ + back_workspace_byte_wgrad_
+                                      : std::max(back_workspace_byte_dgrad_,
+                                                 back_workspace_byte_wgrad_);
+    Tensor<gpu, 1, DType> workspace = AllocateTempWorkspace(ctx, backward_workspace_byte);
     size_t workspace_size = TensorSizeBytes(workspace);
+    DType *workspace_dptr_wgrad = workspace.dptr_;
+    DType *workspace_dptr_dgrad = workspace.dptr_;
+    if (parallelize_backward_kernels_) {
+      CHECK_LE(back_workspace_byte_dgrad_ + back_workspace_byte_wgrad_, workspace_size);
+      // Large allocations at some point will be given their own page.  Pass this alignment on to
+      // the larger of the two separate dgrad/wgrad workspaces.  This probably doesn't matter, but
+      // corresponds more closely to the workspace alignments used during cudnnFind.
+      if (back_workspace_byte_dgrad_ > back_workspace_byte_wgrad_)
+        workspace_dptr_wgrad = workspace.dptr_ + back_workspace_byte_dgrad_ / sizeof(DType);
+      else
+        workspace_dptr_dgrad = workspace.dptr_ + back_workspace_byte_wgrad_ / sizeof(DType);
+    } else {
+      CHECK_LE(back_workspace_byte_dgrad_, workspace_size);
+      CHECK_LE(back_workspace_byte_wgrad_, workspace_size);
+    }
     #if CUDNN_MAJOR >= 7
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
@@ -259,14 +280,14 @@ class CuDNNConvolutionOp {
             grad_ptr,
             back_conv_desc_w_,
             back_algo_w_.AlgoNumber(),
-            workspace.dptr_,
-            workspace_size,
+            workspace_dptr_wgrad,
+            back_workspace_byte_wgrad_,
             req[conv::kWeight] == kAddTo? &beta_add : &beta,
             filter_desc_,
             gwmat_ptr));
     }
     if (req[conv::kData] != kNullOp) {
-        CUDNN_CALL(cudnnConvolutionBackwardData(s->dnn_handle_,
+        CUDNN_CALL(cudnnConvolutionBackwardData(s_dgrad.GetStream()->dnn_handle_,
             &alpha,
             filter_desc_,
             wmat_ptr,
@@ -274,8 +295,8 @@ class CuDNNConvolutionOp {
             grad_ptr,
             back_conv_desc_,
             back_algo_.AlgoNumber(),
-            workspace.dptr_,
-            workspace_size,
+            workspace_dptr_dgrad,
+            back_workspace_byte_dgrad_,
             req[conv::kData] == kAddTo? &beta_add : &beta,
             in_desc_,
             gdata_ptr));
@@ -912,24 +933,30 @@ class CuDNNConvolutionOp {
   }
 
 
-  void GetTempSize(const OpContext& ctx) {
-    mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-    size_t back_size = 0, back_size_w = 0;
+  void GetTempSize(const RunContext& rctx) {
+    mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
     CUDNN_CALL(cudnnGetConvolutionBackwardDataWorkspaceSize(s->dnn_handle_,
                filter_desc_,
                out_desc_,
                back_conv_desc_,
                in_desc_,
                back_algo_.AlgoNumber(),
-               &back_size));
+               &back_workspace_byte_dgrad_));
     CUDNN_CALL(cudnnGetConvolutionBackwardFilterWorkspaceSize(s->dnn_handle_,
                in_desc_,
                out_desc_,
                back_conv_desc_w_,
                filter_desc_,
                back_algo_w_.AlgoNumber(),
-               &back_size_w));
-    backward_workspace_byte_ = std::max(back_size, back_size_w);
+               &back_workspace_byte_wgrad_));
+    // cudaMalloc returns addresses that are aligned for large accesses (e.g. to 512 bytes).
+    // Since we only make one allocation and divide it into two parts when we parallelize
+    // the dgrad and wgrad kernels, we round the sizes up to this alignment size so the
+    // dptrs respect this alignment, even if the separate areas are stacked.
+    const size_t dptr_alignment = 512;
+    back_workspace_byte_dgrad_ = RoundToMultiple(back_workspace_byte_dgrad_, dptr_alignment);
+    back_workspace_byte_wgrad_ = RoundToMultiple(back_workspace_byte_wgrad_, dptr_alignment);
+
     CUDNN_CALL(cudnnGetConvolutionForwardWorkspaceSize(s->dnn_handle_,
                in_desc_,
                filter_desc_,
@@ -983,11 +1010,18 @@ class CuDNNConvolutionOp {
     CastTShapeToIntPtr(param_.pad, &param_pad_);
   }
 
+  // Round a value 'x' up to the next multiple of 'multiple'
+  size_t RoundToMultiple(size_t x, size_t multiple) {
+    size_t retVal = ((x + multiple - 1) / multiple) * multiple;
+    return retVal;
+  }
+
   // Allocates a 1D Tensor of words with size in bytes >= `size_bytes`.
   // Always allocates at least one word.
   mshadow::Tensor<gpu, 1, DType> AllocateTempWorkspace(const OpContext &ctx, size_t size_bytes) {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-    size_t size_words = size_bytes / sizeof(DType) + 1;
+    size_t size_words =
+      std::max<size_t>(1, RoundToMultiple(size_bytes, sizeof(DType)) / sizeof(DType));
     return ctx.requested[conv::kTempSpace].get_space_typed<gpu, 1, DType>(
         mshadow::Shape1(size_words), s);
   }
@@ -1035,8 +1069,10 @@ class CuDNNConvolutionOp {
 
   // Temp workspace size in bytes needed for Forward() operation.
   size_t forward_workspace_byte_;
-  // Temp workspace size in bytes needed for Backward() operation.
-  size_t backward_workspace_byte_;
+  // Temp workspace size in bytes needed for Backward() dgrad (data gradient) operation.
+  size_t back_workspace_byte_dgrad_;
+  // Temp workspace size in bytes needed for Backward() wgrad (weight gradient) operation.
+  size_t back_workspace_byte_wgrad_;
   size_t data_offset_;
   size_t out_offset_;
   size_t weight_offset_;
@@ -1052,6 +1088,8 @@ class CuDNNConvolutionOp {
   cudnnConvolutionDescriptor_t back_conv_desc_;
   // Convolution descriptor for back-prop operations to the weights
   cudnnConvolutionDescriptor_t back_conv_desc_w_;
+  // Should dgrad and wgrad be launched into separate streams
+  bool parallelize_backward_kernels_;
   // Algorithm for the forward inference operation
   CuDNNAlgo<cudnnConvolutionFwdAlgo_t> forward_algo_;
   // Algorithm for the back-prop operation to the data

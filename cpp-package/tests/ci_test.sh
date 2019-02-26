@@ -25,22 +25,22 @@ ls -l ../../lib/
 ./get_data.sh
 
 cp ../../build/cpp-package/example/lenet .
-./lenet 10
+./lenet 1
 
 cp ../../build/cpp-package/example/alexnet .
 ./alexnet 1
 
 cp ../../build/cpp-package/example/lenet_with_mxdataiter .
-./lenet_with_mxdataiter 5
+./lenet_with_mxdataiter 1
 
 cp ../../build/cpp-package/example/resnet .
-./resnet 5
+./resnet 1
 
 cp ../../build/cpp-package/example/inception_bn .
-./inception_bn 5
+./inception_bn 1
 
 cp ../../build/cpp-package/example/mlp .
-./mlp
+./mlp 150
 
 cp ../../build/cpp-package/example/mlp_cpu .
 ./mlp_cpu

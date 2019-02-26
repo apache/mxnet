@@ -2515,6 +2515,20 @@ def test_slice_like():
             assert_allclose(xgrad1.asnumpy(), mx.nd.zeros_like(xgrad1).asnumpy())
 
 @with_seed()
+def test_slice_like_different_types():
+    x = [[  1.,   2.,   3.,   4.],
+         [  5.,   6.,   7.,   8.],
+         [  9.,  10.,  11.,  12.]]
+
+    y = [[  0.,   0.,   0.],
+         [  0.,   0.,   0.]]
+
+    x = mx.nd.array(x)
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.slice_like(x, y)
+    assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
+
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
@@ -2616,47 +2630,47 @@ def test_stn_valid_sampling():
     ) + target_shape))
 
 
-# @haojin2: Getting rid of fixed seed as flakiness could not be reproduced,
-# tracked at https://github.com/apache/incubator-mxnet/issues/11714
 @with_seed()
 def test_dot():
-    ctx=default_context()
+    ctx = default_context()
     dtypes = ['float32', 'float64']
+    ndims = [2]
     if ctx.device_type == 'gpu':
         dtypes += ['float16']
+        ndims += [1]
 
     # Test normal dot.
-    for data_type in dtypes:
-        for m in range(1, 5):
-            for k in range(1, 5):
-                for n in range(1, 5):
-                    a_npy = np.random.normal(0, 1, (m, k))
-                    a_npy = a_npy.astype(data_type)
-                    b_npy = np.random.normal(0, 1, (k, n))
-                    b_npy = b_npy.astype(data_type)
-                    c_npy = np.empty((m, n), dtype=data_type)
-                    ograd_npy = np.random.normal(0, 1, (m, n))
-                    ograd_npy = ograd_npy.astype(data_type)
-                    agrad_npy = np.empty((m, k), dtype=data_type)
-                    bgrad_npy = np.empty((k, n), dtype=data_type)
-                    c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
-                    bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
-                    agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
-                    a = mx.sym.Variable('a', dtype=data_type)
-                    b = mx.sym.Variable('b', dtype=data_type)
-                    c = mx.sym.dot(a, b)
-                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
-                    outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0], c_npy,
-                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                        atol=1e-2 if data_type == 'float16' else 1e-3)
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
-                    assert_almost_equal(exe.grad_dict['a'], agrad_npy,
-                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                        atol=1e-2 if data_type == 'float16' else 1e-3)
-                    assert_almost_equal(exe.grad_dict['b'], bgrad_npy,
-                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                        atol=1e-2 if data_type == 'float16' else 1e-3)
+    for ndim in ndims:
+        for data_type in dtypes:
+            tol = 1e-2 if data_type == 'float16' else 1e-3
+            for m in range(1, 5):
+                for k in range(1, 5):
+                    if ndim == 1 and k != 1:
+                        pass
+                    for n in range(1, 5):
+                        a_shape = (m, k) if ndim == 2 else (m,)
+                        b_shape = (k, n) if ndim == 2 else (n,)
+                        a_npy = np.random.normal(0, 1, (m, k))
+                        a_npy = a_npy.astype(data_type)
+                        b_npy = np.random.normal(0, 1, (k, n))
+                        b_npy = b_npy.astype(data_type)
+                        c_npy = np.empty((m, n), dtype=data_type)
+                        ograd_npy = np.random.normal(0, 1, (m, n))
+                        ograd_npy = ograd_npy.astype(data_type)
+                        agrad_npy = np.empty((m, k), dtype=data_type)
+                        bgrad_npy = np.empty((k, n), dtype=data_type)
+                        c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
+                        bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
+                        agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
+                        a = mx.sym.Variable('a', dtype=data_type)
+                        b = mx.sym.Variable('b', dtype=data_type)
+                        c = mx.sym.dot(a, b)
+                        exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                        outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                        assert_almost_equal(outputs[0], c_npy, rtol=tol, atol=tol)
+                        exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
+                        assert_almost_equal(exe.grad_dict['a'], agrad_npy, rtol=tol, atol=tol)
+                        assert_almost_equal(exe.grad_dict['b'], bgrad_npy, rtol=tol, atol=tol)
 
     # Test dot with transpose flag using gradient checker.
     def dot_sym(data_type):
@@ -4512,6 +4526,47 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+def test_softmax_dtype():
+    def check_dtypes_almost_equal(op_name,
+                                  atol, rtol,
+                                  grad_atol, grad_rtol,
+                                  idtype, ref_dtype, odtype=None):
+        op = getattr(mx.nd, op_name)
+        input_data = mx.random.uniform(shape=(100, 500))
+        dtype_input = input_data.astype(idtype)
+        ref_input = input_data.astype(ref_dtype)
+        dtype_input.attach_grad()
+        ref_input.attach_grad()
+        with mx.autograd.record():
+            dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
+            ref_softmax = op(ref_input, axis=-1, dtype=odtype)
+        dtype_softmax_np = dtype_softmax.asnumpy()
+        ref_softmax_np = ref_softmax.asnumpy()
+        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
+        dtype_softmax.backward()
+        ref_softmax.backward()
+        dtype_grad_np = dtype_input.grad.asnumpy()
+        ref_grad_np = ref_input.grad.asnumpy()
+        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
+
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64', 'float64')
+
+@with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
@@ -4857,8 +4912,6 @@ def test_index_copy():
 
 @with_seed()
 def test_boolean_mask():
-    if default_context().device_type != 'cpu':
-        return
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 0])
     data.attach_grad()
@@ -6854,7 +6907,7 @@ def test_op_output_names_monitor():
             output_names.append(py_str(name))
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
-        op_exe.set_monitor_callback(get_output_names_callback)
+        op_exe.set_monitor_callback(get_output_names_callback, monitor_all=False)
         op_exe.forward()
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
@@ -6892,6 +6945,51 @@ def test_op_output_names_monitor():
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
 
+def test_op_all_names_monitor():
+    def check_name(op_sym, expected_names):
+        output_names = []
+
+        def get_output_names_callback(name, arr):
+            output_names.append(py_str(name))
+
+        op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        op_exe.set_monitor_callback(get_output_names_callback, monitor_all=True)
+        op_exe.forward()
+        for output_name, expected_name in zip(output_names, expected_names):
+            assert output_name == expected_name
+
+    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
+
+    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+    check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
+
+    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+    check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
+
+    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+    check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
+
+    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+    check_name(act_sym, ['data', 'act_input0', 'act_output'])
+
+    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+    check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
+
+    sm_sym = mx.sym.softmax(data, name='softmax')
+    check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
+
+    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+    check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
+
+    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                               name='upsampling')
+    check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
+
+    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                            name='pooling')
+    check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
 
 @with_seed()
 def test_activation():

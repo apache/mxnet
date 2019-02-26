@@ -68,7 +68,7 @@ class GraphExecutor : public Executor {
   const std::unordered_map<std::string, NDArray>& arg_grad_map() const override;
   const std::unordered_map<std::string, NDArray>& aux_state_map() const override;
   void Print(std::ostream &os) const override; // NOLINT(*)
-  void SetMonitorCallback(const MonitorCallback& callback) override;
+  void SetMonitorCallback(const MonitorCallback& callback, bool monitor_all = false) override;
   // Initialize the rest of attributes
   // after setting up arguments.
   void FinishInitGraph(nnvm::Symbol symbol, nnvm::Graph g,
@@ -209,8 +209,10 @@ class GraphExecutor : public Executor {
    *  ret.opr Can be nullptr if creation failed.
   */
   CachedSegOpr CreateCachedSegOpr(size_t topo_start, size_t topo_end);
-  // run the monitor callback for node `nid`
-  void ExecuteMonCallback(size_t nid);
+  // run the monitor callback for input of node `nid`
+  void ExecuteMonInputCallback(size_t nid);
+  // run the monitor callback for output of node `nid`
+  void ExecuteMonOutputCallback(size_t nid);
   // peform bulking and segmentation on an inference graph
   void BulkInferenceOpSegs();
   // perform bulking and segmentation on a training graph
@@ -250,6 +252,8 @@ class GraphExecutor : public Executor {
   size_t num_forward_nodes_{0};
   // monitor call back
   std::function<void(const char*, void*)> monitor_callback_{nullptr};
+  // monitor both input and output from monitor call back
+  bool monitor_all_{false};
   // whether to enable bulk execution
   bool prefer_bulk_execution_;
   // cached segment operator

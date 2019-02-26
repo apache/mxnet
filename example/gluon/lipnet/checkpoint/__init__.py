@@ -14,27 +14,3 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-import mxnet as mx
-import sys
-from mxnet.mxfeatures import *
-from mxnet.base import MXNetError
-from nose.tools import *
-
-def test_runtime_features():
-    for f in Feature:
-        res = has_feature(f.value)
-        ok_(type(res) is bool)
-    for f in features_enabled():
-        ok_(type(f) is Feature)
-    ok_(type(features_enabled_str()) is str)
-    print("Features enabled: {}".format(features_enabled_str()))
-
-@raises(MXNetError)
-def test_has_feature_2large():
-    has_feature(sys.maxsize)
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
