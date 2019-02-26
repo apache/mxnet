@@ -76,9 +76,6 @@ class QuantizedCuDNNConvOp {
     if (param_.pad.ndim() == 0U)    param_.pad = mshadow::Shape2(0, 0);
     N = 0, H = 2, W = 3, C = 1;
     src_type_ = mshadow::DataType<SrcType>::kCudnnFlag;
-    CHECK_EQ(src_type_, 5U)
-      << "currently, uint8 quantization is only supported by CPU, "
-         "please switch to the context of CPU or int8 data type for GPU.";
     dst_type_ = mshadow::DataType<DstType>::kCudnnFlag;
     cmp_type_ = mshadow::DataType<CmpType>::kCudnnFlag;
     algo_ = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
@@ -113,6 +110,8 @@ class QuantizedCuDNNConvOp {
     const TShape& fshape = filter.shape_;
     const TShape& oshape = out.shape_;
 
+    CHECK_EQ(data.type_flag_, mshadow::kInt8) << "currently, uint8 quantization is only supported by CPU, "
+                                                 "please switch to the context of CPU or int8 data type for GPU.";
     // allocate workspace
     const int dev_id = ctx.run_ctx.ctx.dev_id;
     const int dev_mask = gpu::kDevMask;
