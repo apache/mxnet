@@ -106,11 +106,12 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
             if (strategy == "Round") {
               ptr = new storage::GPUPooledRoundedStorageManager(handle->ctx);
               LOG(INFO) << "Using GPUPooledRoundedStorageManager.";
-            } else {
-              if (strategy != "Naive") {
-                LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
-              }
+            } else if (strategy == "Naive") {
               ptr = new storage::GPUPooledStorageManager(handle->ctx);
+            } else if (strategy == "Unpooled") {
+              ptr = new storage::NaiveStorageManager<storage::GPUDeviceStorage>();
+            } else {
+              LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
             }
 #else
             LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
