@@ -532,19 +532,19 @@ class Block(object):
         for _, param in self.params.items():
             param.cast(dtype)
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args):
         """Calls forward. Only accepts positional arguments."""
         for hook in self._forward_pre_hooks.values():
             hook(self, args)
 
-        out = self.forward(*args, **kwargs)
+        out = self.forward(*args)
 
         for hook in self._forward_hooks.values():
             hook(self, args, out)
 
         return out
 
-    def forward(self, *args, **kwargs):
+    def forward(self, *args):
         """Overrides to implement forward computation using :py:class:`NDArray`. Only
         accepts positional arguments.
 
@@ -898,13 +898,13 @@ class HybridBlock(Block):
                 arg_dict['aux:%s'%name] = param._reduce()
         ndarray.save('%s-%04d.params'%(path, epoch), arg_dict)
 
-    def forward(self, x, *args, **kwargs):
+    def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
         :py:class:`NDArray` or :py:class:`Symbol`."""
         if isinstance(x, NDArray):
             with x.context as ctx:
                 if self._active:
-                    return self._call_cached_op(x, *args, **kwargs)
+                    return self._call_cached_op(x, *args)
 
                 try:
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
@@ -914,18 +914,14 @@ class HybridBlock(Block):
                         i._finish_deferred_init()
                     params = {i: j.data(ctx) for i, j in self._reg_params.items()}
 
-                for k,v in params.items():
-                    kwargs[k] = v
-                return self.hybrid_forward(ndarray, x, *args, **kwargs)
+                return self.hybrid_forward(ndarray, x, *args, **params)
 
         assert isinstance(x, Symbol), \
             "HybridBlock requires the first argument to forward be either " \
             "Symbol or NDArray, but got %s"%type(x)
         params = {i: j.var() for i, j in self._reg_params.items()}
-        for k,v in params.items():
-            kwargs[k] = v
         with self.name_scope():
-            return self.hybrid_forward(symbol, x, *args, **kwargs)
+            return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         """Overrides to construct symbolic graph for this `Block`.
