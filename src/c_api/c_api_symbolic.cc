@@ -638,6 +638,27 @@ int MXSymbolInferType(SymbolHandle sym,
   API_END();
 }
 
+int MXSymbolInferTypePartial(SymbolHandle sym,
+                             mx_uint num_args,
+                             const char** keys,
+                             const int *arg_type_data,
+                             mx_uint *in_type_size,
+                             const int **in_type_data,
+                             mx_uint *out_type_size,
+                             const int **out_type_data,
+                             mx_uint *aux_type_size,
+                             const int **aux_type_data,
+                             int *complete) {
+  int succ;
+  *complete = 1;
+  return MXSymbolInferType(sym, num_args, keys,
+                            arg_type_data,
+                            in_type_size, in_type_data,
+                            out_type_size, out_type_data,
+                            aux_type_size, aux_type_data,
+                            &succ);
+}
+
 int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHandle* out) {
   API_BEGIN();
   LOG(FATAL) << "not implemented";

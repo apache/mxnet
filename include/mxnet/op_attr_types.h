@@ -83,6 +83,15 @@ struct OpContext {
   inline mshadow::Stream<xpu>* get_stream() const {
     return run_ctx.get_stream<xpu>();
   }
+#if MXNET_USE_CUDA
+  /*!
+   * \brief get auxilary gpu stream auto-syncing object from Context
+   * \return the aux stream auto-syncing object
+   */
+  inline SyncedGPUAuxStream get_gpu_aux_stream() const {
+    return run_ctx.get_gpu_aux_stream();
+  }
+#endif
 };
 
 /*! \brief the execution type of the operator */

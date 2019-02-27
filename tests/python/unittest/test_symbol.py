@@ -120,6 +120,13 @@ def test_symbol_infer_type():
     assert out == [np.float32]
     assert aux == []
 
+    # partial infer type
+    arg, out, aux = mlp.infer_type_partial()
+    assert arg == [None, np.float32, np.float32, np.float32]
+    assert out == [np.float32]
+    assert aux == []
+
+
 def test_symbol_infer_shape():
     num_hidden = 128
     num_dim    = 64

@@ -1826,7 +1826,7 @@ void NDArray::SyncCopyFromCPU(const void *data, size_t size) const {
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToWrite();
-    RunContext rctx{this->ctx(), nullptr};
+    RunContext rctx{this->ctx(), nullptr, nullptr, false};
     TBlob dst = this->data();
     ndarray::Copy<cpu, cpu>(src, &dst, Context::CPU(), Context::CPU(), rctx);
   } else {
@@ -1957,7 +1957,7 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
 
   if (this->ctx().dev_mask() == cpu::kDevMask) {
     this->WaitToRead();
-    RunContext rctx{this->ctx(), nullptr};
+    RunContext rctx{this->ctx(), nullptr, nullptr, false};
     NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
     if (src.IsMKLDNNData())
