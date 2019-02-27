@@ -370,7 +370,7 @@ def convert_convolution(net, node, module, builder):
     border_mode = "valid"
 
     n_filters = int(param['num_filter'])
-    n_groups = int(param['num_group'])
+    n_groups = int(param['num_group']) if 'num_group' in param else 1
 
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
