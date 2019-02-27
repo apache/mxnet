@@ -448,7 +448,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
     };
 
   if (exec_type == ExecType::kCrossDeviceCopy) {
-    run(RunContext{ctx, nullptr});
+    run(RunContext{ctx, nullptr, nullptr, false});
   } else {
     CHECK(exec_type == ExecType::kSync);
     Engine::Get()->PushSync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -498,7 +498,7 @@ inline void PushOperator(const OpStatePtr& state,
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
     if (exec_type == ExecType::kSubgraphExec) {
-      RunContext rctx{ctx, nullptr};
+      RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
@@ -546,7 +546,7 @@ inline void PushOperator(const OpStatePtr& state,
       };
 
     if (exec_type == ExecType::kSubgraphExec) {
-      RunContext rctx{ctx, nullptr};
+      RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
