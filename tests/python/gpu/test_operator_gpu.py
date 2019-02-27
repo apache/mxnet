@@ -520,6 +520,56 @@ def test_convolution_options():
     sym_no_cudnn = mx.sym.Convolution(num_filter=3, kernel=(1,1,1), pad=(0,0,0), cudnn_off=True, name='conv')
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
+
+# Helper function to run tests in a subprocess to avoid save/restore of os.environ.
+# Also avoids issues of cached environment variable lookups in the backend.
+def _test_in_separate_process(func, env, *args):
+    try:
+        mpctx = mp.get_context('spawn')
+    except:
+        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
+              sys.version_info[0:2], file=sys.stderr, end='')
+    else:
+        seed = np.random.randint(0,1024*1024*1024)
+        for (key, value) in env.items():
+            os.environ[key] = str(value)
+        # Prepend seed as first arg
+        p = mpctx.Process(target=func, args=(seed,)+args)
+        p.start()
+        p.join()
+        assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
+
+def _conv_with_num_streams(seed):
+    with random_seed(seed):
+        # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
+        num_trials = 20
+        for _ in range(num_trials):
+            size = np.random.randint(32, 128)
+            # The cudnn conv operator runs dgrad and wgrad in separate streams if enabled, with possible
+            # kernel overlap.  The non-cudnn conv op doesn't do this so is used as the 'golden copy'.
+            ctx = {'ctx': mx.gpu(0), 'conv_data': (2, 2, size, size),
+                   'type_dict': {'conv_data': np.float32}}
+            # Adding 'flip' here isolates the model from the input node (which can't use inplace store)
+            flipped = mx.sym.flip(axis=0, name='conv')
+            sym = mx.sym.Convolution(data=flipped, num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
+            flipped_no_cudnn = mx.sym.flip(axis=0, name='conv')
+            sym_no_cudnn = mx.sym.Convolution(data=flipped_no_cudnn, num_filter=3, kernel=(3,3), pad=(1,1),
+                                              cudnn_off=True, name='conv')
+            try:
+                # tol can be pretty high- we're looking for a large diff due to garbaged workspace
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=1e-2)
+            except:
+                print('Failing conv size = {}'.format(size))
+                raise
+
+@with_seed()
+def test_convolution_multiple_streams():
+    for num_streams in [1, 2]:
+        for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
+            _test_in_separate_process(_conv_with_num_streams,
+                {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
+
+
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
 # Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
 @with_seed()

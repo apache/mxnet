@@ -1563,6 +1563,38 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 int *complete);
 
 /*!
+ * \brief partially infer type of unknown input types given the known one.
+ *
+ *  Return partially inferred results if not all types could be inferred.
+ *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_type_data the content of the CSR
+ * \param in_type_size sizeof the returning array of in_types
+ * \param in_type_data returning array of pointers to head of the input type.
+ * \param out_type_size sizeof the returning array of out_types
+ * \param out_type_data returning array of pointers to head of the input type.
+ * \param aux_type_size sizeof the returning array of aux_types
+ * \param aux_type_data returning array of pointers to head of the auxiliary type.
+ * \param complete whether infer type completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
+                                       mx_uint num_args,
+                                       const char** keys,
+                                       const int *arg_type_data,
+                                       mx_uint *in_type_size,
+                                       const int **in_type_data,
+                                       mx_uint *out_type_size,
+                                       const int **out_type_data,
+                                       mx_uint *aux_type_size,
+                                       const int **aux_type_data,
+                                       int *complete);
+
+/*!
  * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result

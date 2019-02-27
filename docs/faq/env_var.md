@@ -191,6 +191,12 @@ When USE_PROFILER is enabled in Makefile or CMake, the following environments ca
 
 ## Other Environment Variables
 
+* MXNET_GPU_WORKER_NSTREAMS
+  - Values: 1, or 2 ```(default=1)```
+  - Determines the number of GPU streams available to operators for their functions.
+  - Setting this to 2 may yield a modest performance increase, since ops like the cuDNN convolution op can then calculate their data- and weight-gradients in parallel.
+  - Setting this to 2 may also increase a model's demand for GPU global memory.
+
 * MXNET_CUDNN_AUTOTUNE_DEFAULT
   - Values: 0, 1, or 2 ```(default=1)```
   - The default value of cudnn auto tuning for convolution layers.
