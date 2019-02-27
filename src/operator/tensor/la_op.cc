@@ -315,7 +315,6 @@ If *n>2*, *trmm* is performed separately on the trailing two dimensions for all 
 
 .. note:: The operator supports float32 and float64 data types only.
 
-
 Examples::
 
    // Single triangular matrix multiply
