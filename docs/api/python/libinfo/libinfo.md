@@ -92,7 +92,6 @@ In []: type(features[0])
 Out[]: mxnet.runtime.Feature
 ```
 
-
 ```eval_rst
 .. autosummary::
     :nosignatures:
