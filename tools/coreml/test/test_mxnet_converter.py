@@ -497,7 +497,6 @@ class SingleLayerTest(unittest.TestCase):
         np.random.seed(1988)
         input_shape = (1, 3, 10, 10)
         num_filter = 64
-        num_group = 1
         kernel = (5, 5)
         stride = (1, 1)
         pad = (0, 0)
@@ -505,7 +504,6 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.symbol.Convolution(
             data=net,
             num_filter=num_filter,
-            num_group=num_group,
             kernel=kernel,
             stride=stride,
             pad=pad,
