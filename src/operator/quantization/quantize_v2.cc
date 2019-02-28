@@ -83,6 +83,7 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr<nnvm::FInferShape>("FInferShape", QuantizeV2Shape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizeV2Type)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeV2StorageType)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeV2Compute)
