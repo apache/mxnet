@@ -288,7 +288,7 @@ def check_elementwise_sum_with_shape(shape, n):
                      args_grad=arr_grad)
 
     exec1.forward(is_train=True)
-    out1 = exec1.outputs[0].asnumpy()
+    out1 = exec1.outputs[0]
     out = sum(a.asnumpy() for a  in arr)
     assert_almost_equal(out, out1, rtol=1e-5, atol=1e-5)
 
@@ -1160,7 +1160,7 @@ def test_rsqrt_cos_sin():
     assert_almost_equal(out, npout)
 
     out_grad = mx.nd.empty(shape)
-    out_grad[:] = 2;
+    out_grad[:] = 2
     npout_grad = out_grad.asnumpy()
     npout_grad = npout_grad * -(1.0 / (2.0 * data_tmp * np.sqrt(data_tmp))) + npout_grad * -1 * np.sin(data_tmp) + npout_grad * np.cos(data_tmp)
     exe_test.backward(out_grad)
@@ -2515,6 +2515,20 @@ def test_slice_like():
             assert_allclose(xgrad1.asnumpy(), mx.nd.zeros_like(xgrad1).asnumpy())
 
 @with_seed()
+def test_slice_like_different_types():
+    x = [[  1.,   2.,   3.,   4.],
+         [  5.,   6.,   7.,   8.],
+         [  9.,  10.,  11.,  12.]]
+
+    y = [[  0.,   0.,   0.],
+         [  0.,   0.,   0.]]
+
+    x = mx.nd.array(x)
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.slice_like(x, y)
+    assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
+
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
@@ -2630,6 +2644,7 @@ def test_dot():
     # Test normal dot.
     for ndim in ndims:
         for data_type in dtypes:
+            tol = 1e-2 if data_type == 'float16' else 1e-3
             for m in range(1, 5):
                 for k in range(1, 5):
                     if ndim == 1 and k != 1:
@@ -2654,16 +2669,10 @@ def test_dot():
                         c = mx.sym.dot(a, b)
                         exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
                         outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                        assert_almost_equal(outputs[0].asnumpy(), c_npy,
-                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                            atol=1e-2 if data_type == 'float16' else 1e-3)
+                        assert_almost_equal(outputs[0], c_npy, rtol=tol, atol=tol)
                         exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
-                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
-                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                            atol=1e-2 if data_type == 'float16' else 1e-3)
-                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
-                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                            atol=1e-2 if data_type == 'float16' else 1e-3)
+                        assert_almost_equal(exe.grad_dict['a'], agrad_npy, rtol=tol, atol=tol)
+                        assert_almost_equal(exe.grad_dict['b'], bgrad_npy, rtol=tol, atol=tol)
 
     # Test dot with transpose flag using gradient checker.
     def dot_sym(data_type):
@@ -3180,7 +3189,7 @@ def check_layer_normalization(in_shape, axis, eps, dtype=np.float32, forward_che
     exe.arg_dict['beta'][:] = beta
     out_nd = exe.forward()[0]
     out = npy_layer_norm(data, gamma, beta, axis, eps)
-    assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps, forward_check_eps)
+    assert_almost_equal(out, out_nd, forward_check_eps, forward_check_eps)
     for req in ['write', 'add']:
         check_numeric_gradient(out_s, {'data': data, 'gamma': gamma, 'beta': beta},
                                grad_nodes={'data': req, 'gamma': req, 'beta': req},
@@ -3668,14 +3677,14 @@ def test_init():
                 repeats = random.choice([1, 3])
                 np_out = np.repeat(np.arange(*config, dtype=dtype), repeats)
                 nd_out = mx.nd.arange(*config, repeat=repeats, dtype=dtype)
-                assert_almost_equal(np_out, nd_out.asnumpy())
+                assert_almost_equal(np_out, nd_out)
 
     def test_arange_inferstop():
         s = mx.sym.arange(start=0, stop=None, infer_range=True)
         s = mx.sym.elemwise_add(s, mx.sym.zeros(shape=[5]))
         exe = s.bind(ctx=mx.cpu(), args={})
         exe.forward()
-        assert_almost_equal(exe.outputs[0].asnumpy(), np.array([0,1,2,3,4]))
+        assert_almost_equal(exe.outputs[0], np.array([0,1,2,3,4]))
 
     test_basic_val_init(mx.sym.zeros, np.zeros, (3, 4), np.float32)
     test_basic_val_init(mx.sym.ones, np.ones, 3, np.int32)
@@ -4059,12 +4068,12 @@ def test_repeat():
             a = np.random.random_sample(size=shape)
             aa = np.repeat(a, repeats)
             b = mx.nd.array(a, ctx=default_context())
-            bb = mx.nd.repeat(b, repeats).asnumpy()
+            bb = mx.nd.repeat(b, repeats)
             assert_almost_equal(aa, bb)
 
             for axis in range(0, ndim):
                 aa = np.repeat(a, repeats, axis)
-                bb = mx.nd.repeat(b, repeats, axis).asnumpy()
+                bb = mx.nd.repeat(b, repeats, axis)
                 assert_almost_equal(aa, bb)
 
     def test_repeat_backward(axis):
@@ -4102,7 +4111,7 @@ def test_repeat():
         else:
             raise RuntimeError("Invalid axis value")
 
-        assert_almost_equal(expected_grad, arr_grad.asnumpy(), rtol=1e-3)
+        assert_almost_equal(expected_grad, arr_grad, rtol=1e-3)
 
     def test_repeat_numeric_gradient():
         data = mx.sym.Variable('data')
@@ -4198,7 +4207,7 @@ def test_tile():
             for j in range(shape[1]):
                 expected_grad[i][j] += sum(sum(npout_grad[i:(n1 * reps1):reps1, j:(n2 * reps2):reps2]))
 
-        assert_almost_equal(expected_grad, arr_grad.asnumpy(), rtol=1e-3)
+        assert_almost_equal(expected_grad, arr_grad, rtol=1e-3)
 
     def test_tile_numeric_gradient():
         data = mx.sym.Variable('data')
@@ -4519,6 +4528,47 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+def test_softmax_dtype():
+    def check_dtypes_almost_equal(op_name,
+                                  atol, rtol,
+                                  grad_atol, grad_rtol,
+                                  idtype, ref_dtype, odtype=None):
+        op = getattr(mx.nd, op_name)
+        input_data = mx.random.uniform(shape=(100, 500))
+        dtype_input = input_data.astype(idtype)
+        ref_input = input_data.astype(ref_dtype)
+        dtype_input.attach_grad()
+        ref_input.attach_grad()
+        with mx.autograd.record():
+            dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
+            ref_softmax = op(ref_input, axis=-1, dtype=odtype)
+        dtype_softmax_np = dtype_softmax.asnumpy()
+        ref_softmax_np = ref_softmax.asnumpy()
+        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
+        dtype_softmax.backward()
+        ref_softmax.backward()
+        dtype_grad_np = dtype_input.grad.asnumpy()
+        ref_grad_np = ref_input.grad.asnumpy()
+        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
+
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64', 'float64')
+
+@with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
@@ -4562,39 +4612,19 @@ def test_pick():
     test_pick_helper(np.float32)
 
 
-def check_ctc_loss(acts, labels, loss_truth):
+def check_ctc_loss(acts, labels, loss_truth, contrib=False):
     in_var = mx.sym.Variable('input')
     labels_var = mx.sym.Variable('labels')
-    ctc = mx.sym.ctc_loss(in_var, labels_var)
+    if contrib:
+        ctc = mx.sym.contrib.ctc_loss(in_var, labels_var)
+    else:
+        ctc = mx.sym.ctc_loss(in_var, labels_var)
     acts_nd = mx.nd.array(acts, ctx=default_context())
     labels_nd = mx.nd.array(labels, ctx=default_context())
     exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
     # test forward with grad calc
     exe.forward(is_train=True)
-    outTest = exe.outputs[0]
-    # test forward without grad calc
-    exe.forward(is_train=False)
-    outTrain = exe.outputs[0]
-    # make sure losses calculated with both modes are the same
-    assert_almost_equal(outTest, outTrain)
-
-    # test against ground truth, if available
-    if loss_truth is not None:
-        assert_almost_equal(outTest, loss_truth)
-    # test grad
-    check_numeric_gradient(ctc, [acts, labels], grad_nodes=['input'], rtol=0.05, atol=1e-3)
-
-# check contrib operator for backward compatibility
-def check_contrib_ctc_loss(acts, labels, loss_truth):
-    in_var = mx.sym.Variable('input')
-    labels_var = mx.sym.Variable('labels')
-    ctc = mx.sym.contrib.ctc_loss(in_var, labels_var)
-    acts_nd = mx.nd.array(acts, ctx=default_context())
-    labels_nd = mx.nd.array(labels, ctx=default_context())
-    exe = ctc.bind(ctx=default_context(), args=[acts_nd, labels_nd])
-    # test forward with grad calc
-    exe.forward(is_train=True)
-    outTest = exe.outputs[0]
+    outTest = exe.outputs[0].copy()
     # test forward without grad calc
     exe.forward(is_train=False)
     outTrain = exe.outputs[0]
@@ -4617,8 +4647,9 @@ def test_ctc_loss():
                     dtype=np.float32)
     labels = np.array([[2, 3, 0], [2, 3, 0]])
     true_loss = np.array([4.04789, 4.04789], dtype=np.float32) # from Torch
-    check_ctc_loss(acts, labels, true_loss)
-    check_contrib_ctc_loss(acts, labels, true_loss)
+    for contrib in [False, True]:
+        check_ctc_loss(acts, labels, true_loss, contrib=contrib)
+
 
     # Test 2:
     acts2 = np.array([
@@ -4627,14 +4658,14 @@ def test_ctc_loss():
         [[-15, -14, -13, -12, -11], [-15, -14.2, -13.5, -12.2, -11.22]]], dtype=np.float32)
     labels2 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.float32)
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
-    check_ctc_loss(acts2, labels2, true_loss)
-    check_contrib_ctc_loss(acts2, labels2, true_loss)
+    for contrib in [False, True]:
+        check_ctc_loss(acts2, labels2, true_loss, contrib=contrib)
 
     # Test 3: check use integer type as label
     labels3 = np.array([[2, 3, 1], [2, 0, 0]], dtype=np.int32)
     true_loss = np.array([7.3557, 5.4091], dtype=np.float32) # from Torch
-    check_ctc_loss(acts2, labels3, true_loss)
-    check_contrib_ctc_loss(acts2, labels3, true_loss)
+    for contrib in [False, True]:
+        check_ctc_loss(acts2, labels3, true_loss, contrib=contrib)
 
 @with_seed()
 def test_ctc_loss_with_large_classes():
@@ -4658,7 +4689,7 @@ def test_ctc_loss_with_large_classes():
 
 @with_seed()
 def test_ctc_loss_grad():
-    def check_ctc_loss_grad(blank_label): # from tf
+    def check_ctc_loss_grad(blank_label, contrib=False): # from tf
         vocab_size = 5
         max_label_len = 5
         padding_mask = -1+ (blank_label=='first')
@@ -4726,101 +4757,28 @@ def test_ctc_loss_grad():
             label = mx.nd.array(labels)
             data.attach_grad()
             with mx.autograd.record():
-                l = mx.ndarray.CTCLoss(data, label,
-                                       use_data_lengths=True,
-                                       use_label_lengths=True,
-                                       data_lengths=mx.nd.array(seq_lens),
-                                       label_lengths=mx.nd.array(label_lens),
-                                       blank_label=blank_label)
+                if contrib:
+                    l = mx.contrib.ndarray.CTCLoss(data, label,
+                                           use_data_lengths=True,
+                                           use_label_lengths=True,
+                                           data_lengths=mx.nd.array(seq_lens),
+                                           label_lengths=mx.nd.array(label_lens),
+                                           blank_label=blank_label)
+                else:
+                    l = mx.ndarray.CTCLoss(data, label,
+                                           use_data_lengths=True,
+                                           use_label_lengths=True,
+                                           data_lengths=mx.nd.array(seq_lens),
+                                           label_lengths=mx.nd.array(label_lens),
+                                           blank_label=blank_label)
                 l.backward()
+
             assert_almost_equal(l, loss_truth, atol=1e-5, rtol=1e-5)
             assert_almost_equal(data.grad, grad_truth, atol=1e-5, rtol=1e-5)
 
-    # check contrib operator for backward compatibility
-    def check_contrib_ctc_loss_grad(blank_label): # from tf
-        vocab_size = 5
-        max_label_len = 5
-        padding_mask = -1+ (blank_label=='first')
-
-        targets_0 = [0, 1, 2, 1, 0]
-        loss_log_prob_0 = -3.34211
-        input_prob_matrix_0 = np.asarray(
-            [[0.633766, 0.221185, 0.0917319, 0.0129757, 0.0142857, 0.0260553],
-             [0.111121, 0.588392, 0.278779, 0.0055756, 0.00569609, 0.010436],
-             [0.0357786, 0.633813, 0.321418, 0.00249248, 0.00272882, 0.0037688],
-             [0.0663296, 0.643849, 0.280111, 0.00283995, 0.0035545, 0.00331533],
-             [0.458235, 0.396634, 0.123377, 0.00648837, 0.00903441, 0.00623107]],
-            dtype=np.float32)
-        gradient_log_prob_0 = np.asarray(
-            [[-0.366234, 0.221185, 0.0917319, 0.0129757, 0.0142857, 0.0260553],
-             [0.111121, -0.411608, 0.278779, 0.0055756, 0.00569609, 0.010436],
-             [0.0357786, 0.633813, -0.678582, 0.00249248, 0.00272882, 0.0037688],
-             [0.0663296, -0.356151, 0.280111, 0.00283995, 0.0035545, 0.00331533],
-             [-0.541765, 0.396634, 0.123377, 0.00648837, 0.00903441, 0.00623107]],
-            dtype=np.float32)
-
-        targets_1 = [0, 1, 1, 0]
-        loss_log_prob_1 = -5.42262
-        input_prob_matrix_1 = np.asarray(
-            [[0.30176, 0.28562, 0.0831517, 0.0862751, 0.0816851, 0.161508],
-             [0.24082, 0.397533, 0.0557226, 0.0546814, 0.0557528, 0.19549],
-             [0.230246, 0.450868, 0.0389607, 0.038309, 0.0391602, 0.202456],
-             [0.280884, 0.429522, 0.0326593, 0.0339046, 0.0326856, 0.190345],
-             [0.423286, 0.315517, 0.0338439, 0.0393744, 0.0339315, 0.154046]],
-            dtype=np.float32)
-        gradient_log_prob_1 = np.asarray(
-            [[-0.69824, 0.28562, 0.0831517, 0.0862751, 0.0816851, 0.161508],
-             [0.24082, -0.602467, 0.0557226, 0.0546814, 0.0557528, 0.19549],
-             [0.230246, 0.450868, 0.0389607, 0.038309, 0.0391602, -0.797544],
-             [0.280884, -0.570478, 0.0326593, 0.0339046, 0.0326856, 0.190345],
-             [-0.576714, 0.315517, 0.0338439, 0.0393744, 0.0339315, 0.154046]],
-            dtype=np.float32)
-
-        inputs = [
-            np.vstack(
-                [input_prob_matrix_0[t, :], input_prob_matrix_1[t, :]])
-            for t in range(5)
-        ] + 2 * [np.nan * np.ones((2, vocab_size+1), np.float32)]
-        inputs = np.log(np.asarray(inputs, dtype=np.float32))
-
-        grad_truth = np.array([
-            np.vstack(
-                [gradient_log_prob_0[t, :], gradient_log_prob_1[t, :]])
-            for t in range(5)
-        ] + 2 * [np.zeros((2, vocab_size+1), np.float32)])
-
-        if blank_label == 'first':
-            inputs = np.roll(inputs, 1, axis=2)
-            grad_truth = np.roll(grad_truth, 1, axis=2)
-
-        labels = (np.asarray([x + [padding_mask]*(max_label_len-len(x))
-                             for x in [targets_0, targets_1]])+(blank_label == 'first'))
-
-        seq_lens = np.array([5, 5], dtype=np.int32)
-        label_lens = np.array([5, 4], dtype=np.int32)
-        loss_truth = np.array([-loss_log_prob_0, -loss_log_prob_1], np.float32)
-
-        with default_context():
-            data = mx.nd.array(inputs)
-            label = mx.nd.array(labels)
-            data.attach_grad()
-            with mx.autograd.record():
-                l = mx.contrib.ndarray.CTCLoss(data, label,
-                                               use_data_lengths=True,
-                                               use_label_lengths=True,
-                                               data_lengths=mx.nd.array(seq_lens),
-                                               label_lengths=mx.nd.array(label_lens),
-                                               blank_label=blank_label)
-                l.backward()
-            assert_almost_equal(l, loss_truth, atol=1e-5, rtol=1e-5)
-            assert_almost_equal(data.grad, grad_truth, atol=1e-5, rtol=1e-5)
-
-
-    check_ctc_loss_grad('first')
-    check_ctc_loss_grad('last')
-    check_contrib_ctc_loss_grad('first')
-    check_contrib_ctc_loss_grad('last')
-
+    for contrib in [False, True]:
+        for label in ['first', 'last']:
+            check_ctc_loss_grad(label, contrib=contrib)
 
 @with_seed()
 def test_quantization_op():
@@ -4864,8 +4822,6 @@ def test_index_copy():
 
 @with_seed()
 def test_boolean_mask():
-    if default_context().device_type != 'cpu':
-        return
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 0])
     data.attach_grad()
@@ -6899,6 +6855,51 @@ def test_op_output_names_monitor():
                             name='pooling')
     check_name(us_sym, ['pooling_output'])
 
+def test_op_all_names_monitor():
+    def check_name(op_sym, expected_names):
+        output_names = []
+
+        def get_output_names_callback(name, arr):
+            output_names.append(py_str(name))
+
+        op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        op_exe.set_monitor_callback(get_output_names_callback, monitor_all=True)
+        op_exe.forward()
+        for output_name, expected_name in zip(output_names, expected_names):
+            assert output_name == expected_name
+
+    data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+    conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+    check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
+
+    deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+    check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
+
+    fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+    check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
+
+    lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+    check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
+
+    act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+    check_name(act_sym, ['data', 'act_input0', 'act_output'])
+
+    cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+    check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
+
+    sm_sym = mx.sym.softmax(data, name='softmax')
+    check_name(sm_sym, ['data', 'softmax_input0', 'softmax_output'])
+
+    sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+    check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
+
+    us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                               name='upsampling')
+    check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
+
+    us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                            name='pooling')
+    check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
 
 @with_seed()
 def test_activation():
@@ -7156,24 +7157,8 @@ def test_diag():
     a_np = np.random.random((h, w)).astype(np.float32)
     a = mx.nd.array(a_np).astype('float32')
 
-    # k == 0
-    r = mx.nd.diag(a)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np))
-
-    # k == 1
-    k = 1
-    r = mx.nd.diag(a, k=k)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
-
-    # k == -1
-    k = -1
-    r = mx.nd.diag(a, k=k)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
-
-    # random k
-    k = np.random.randint(-min(h,w) + 1, min(h,w))
-    r = mx.nd.diag(a, k=k)
-    assert_almost_equal(r.asnumpy(), np.diag(a_np, k=k))
+    for k in [0, 1, -1, np.random.randint(-min(h,w) + 1, min(h,w))]:
+        assert_almost_equal(mx.nd.diag(a, k=k), np.diag(a_np, k=k))
 
     # invalid k
     k = max(h,w) + 1
