@@ -122,6 +122,7 @@ def check_quantize(sym, data_shape, out_type, check_conv=True, check_scale_align
                                                                    calib_layer=calib_layer,
                                                                    num_calib_examples=5)
   qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
+  qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE_ALIGN_SCALE")
   if check_conv:
     check_qsym_calibrated(qsym, out_type)
   if check_scale_align:

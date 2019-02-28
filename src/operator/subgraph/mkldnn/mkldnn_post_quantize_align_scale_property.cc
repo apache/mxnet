@@ -16,8 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
+
 #if MXNET_USE_MKLDNN == 1
 
 #include <string>
@@ -149,8 +148,10 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
   int disable_all_;
 };
 
+MXNET_REGISTER_SUBGRAPH_PROPERTY(MKLDNN_POST_QUANTIZE_ALIGN_SCALE,
+                                 SgMKLDNNPostQuantizeAlignScaleProperty);
+
 }  // namespace op
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_

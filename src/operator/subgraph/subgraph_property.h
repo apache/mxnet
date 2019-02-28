@@ -330,27 +330,35 @@ class SubgraphPropertyRegistry {
     return &inst;
   }
 
-  std::vector<SubgraphPropertyPtr> CreateSubgraphProperty(const std::string& name) {
+  SubgraphPropertyPtr CreateSubgraphProperty(const std::string& name) {
     auto it = prop_fn_map_.find(name);
     CHECK(it != prop_fn_map_.end()) << "SubgraphProperty " << name
                                     << " is not found in SubgraphPropertyRegistry";
-    std::vector<SubgraphPropertyPtr> ret;
-    ret.reserve(it->second.size());
-    for (auto i : it->second) ret.emplace_back(i());
-    return ret;
+    return it->second();
   }
 
-  SubgraphPropertyCreateFn __REGISTER__(const std::string& name, SubgraphPropertyCreateFn fn) {
-    prop_fn_map_[name].push_back(fn);
-    return fn;
+  SubgraphPropertyCreateFn __REGISTER_OR_GET__(const std::string& name,
+                                               SubgraphPropertyCreateFn fn) {
+    if (prop_fn_map_.count(name) == 0U) {
+      return __REGISTER__(name, fn);
+    } else {
+      return prop_fn_map_.at(name);
+    }
   }
 
  private:
+  SubgraphPropertyCreateFn __REGISTER__(const std::string& name, SubgraphPropertyCreateFn fn) {
+    CHECK_EQ(prop_fn_map_.count(name), 0U) << "Subgraph property " << name
+                                           << " has been registered";
+    prop_fn_map_[name] = fn;
+    return prop_fn_map_[name];
+  }
+
   SubgraphPropertyRegistry() = default;
   SubgraphPropertyRegistry(const SubgraphPropertyRegistry&) = delete;
   SubgraphPropertyRegistry(SubgraphPropertyRegistry&&) = delete;
   SubgraphPropertyRegistry& operator=(const SubgraphPropertyRegistry&) = delete;
-  std::unordered_map<std::string, std::vector<SubgraphPropertyCreateFn>> prop_fn_map_;
+  std::unordered_map<std::string, SubgraphPropertyCreateFn> prop_fn_map_;
 };
 
 // This op name set is for setting the names of operators that should be grouped into
@@ -362,8 +370,7 @@ typedef dmlc::ThreadLocalStore<std::unordered_map<std::string, std::unordered_se
 
 #define MXNET_REGISTER_SUBGRAPH_PROPERTY(Name, SubgraphPropertyType) \
   static DMLC_ATTRIBUTE_UNUSED auto __make_ ## SubgraphPropertyType ## _ ## Name ## __ = \
-    SubgraphPropertyRegistry::Get()->__REGISTER__(#Name, &SubgraphPropertyType::Create)
-
+    SubgraphPropertyRegistry::Get()->__REGISTER_OR_GET__(#Name, &SubgraphPropertyType::Create)
 
 }  // namespace op
 }  // namespace mxnet

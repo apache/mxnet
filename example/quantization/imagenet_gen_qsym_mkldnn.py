@@ -305,6 +305,7 @@ if __name__ == '__main__':
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
     qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+    qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE_ALIGN_SCALE')
     save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)
