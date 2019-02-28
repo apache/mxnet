@@ -37,51 +37,51 @@ class Deformable_Convolution(HybridBlock):
     channels : int,
         The dimensionality of the output space
         i.e. the number of output channels in the convolution.
-    kernel_size : int or tuple/list of 2 ints, default (1,1),
+    kernel_size : int or tuple/list of 2 ints, (Default value = (1,1)) 
         Specifies the dimensions of the convolution window.
-    strides : int or tuple/list of 2 ints, default (1,1),
+    strides : int or tuple/list of 2 ints, (Default value = (1,1)) 
         Specifies the strides of the convolution.
-    padding : int or tuple/list of 2 ints, default (0,0),
+    padding : int or tuple/list of 2 ints, (Default value = (0,0)) 
         If padding is non-zero, then the input is implicitly zero-padded
         on both sides for padding number of points.
-    dilation : int or tuple/list of 2 ints, default (1,1),
+    dilation : int or tuple/list of 2 ints, (Default value = (1,1)) 
         Specifies the dilation rate to use for dilated convolution.
-    groups : int, default 1,
+    groups : int, (Default value = 1) 
         Controls the connections between inputs and outputs.
         At groups=1, all inputs are convolved to all outputs.
         At groups=2, the operation becomes equivalent to having two convolution
         layers side by side, each seeing half the input channels, and producing
         half the output channels, and both subsequently concatenated.
-    num_deformable_group : int, default 1,
+    num_deformable_group : int, (Default value = 1) 
         Number of deformable group partitions.
-    layout : str, default NCHW,
+    layout : str, (Default value = NCHW)
         Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
         'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
         batch, channel, height, width and depth dimensions respectively.
         Convolution is performed over 'D', 'H', and 'W' dimensions.
-    use_bias : bool, default True,
+    use_bias : bool, (Default value = True)
         Whether the layer for generating the output features uses a bias vector.
-    in_channels : int, default 0,
+    in_channels : int, (Default value = 0)
         The number of input channels to this layer. If not specified,
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
-    activation : str, default None,
+    activation : str, (Default value = None)
         Activation function to use. See :func:`~mxnet.ndarray.Activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    weight_initializer : str or `Initializer`, default None,
+    weight_initializer : str or `Initializer`, (Default value = None)
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the output features.
-    bias_initializer : str or `Initializer`, default Zero,
+    bias_initializer : str or `Initializer`, (Default value = zeros)
         Initializer for the bias vector for the convolution layer
         for generating the output features.
-    offset_weight_initializer : str or `Initializer`, default Zero, according to the paper[1],
+    offset_weight_initializer : str or `Initializer`, (Default value = zeros)
         Initializer for the `weight` weights matrix for the convolution layer
         for generating the offset.
-    offset_bias_initializer : str or `Initializer`, default Zero,
+    offset_bias_initializer : str or `Initializer`, (Default value = zeros),
         Initializer for the bias vector for the convolution layer
         for generating the offset.
-    offset_use_bias: bool, default True,
+    offset_use_bias: bool, (Default value = True)
         Whether the layer for generating the offset uses a bias vector.
 
     Inputs:
