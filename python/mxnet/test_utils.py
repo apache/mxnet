@@ -502,9 +502,9 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     rtol = get_rtol(rtol)
     atol = get_atol(atol)
 
-    use_np_allclose = isinstance(a, np.ndarray)
+    use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
-        if not hasattr(a, 'context') or not hasattr(b, 'context') or a.context != b.context:
+        if not (hasattr(a, 'context') and hasattr(b, 'context') and a.context == b.context and a.dtype == b.dtype):
             use_np_allclose = True
             if isinstance(a, mx.nd.NDArray):
                 a = a.asnumpy()
@@ -545,7 +545,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     msg = npt.build_err_msg([a, b],
                             err_msg="Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %f%%).\n"
                                     " Location of maximum error:%s, a=%.8f, b=%.8f"
-                                    % (relErr, rtol, atol, 100*i/a.size, str(indexErr), aValue, bValue),
+                            % (relErr, rtol, atol, 100*i/a.size, str(indexErr), aValue, bValue),
                             names=names)
 
     raise AssertionError(msg)
