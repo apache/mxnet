@@ -243,7 +243,15 @@ def convert_leakyrelu(net, node, module, builder):
     inputs = node['inputs']
     args, _ = module.get_params()
     mx_non_linearity = _get_attrs(node)['act_type']
-    if mx_non_linearity == 'prelu':
+    if mx_non_linearity == 'elu':
+        non_linearity = 'ELU'
+        slope = _get_attrs(node)['slope'] if 'slope' in _get_attrs(node) else 0.25
+        params = slope
+    elif mx_non_linearity == 'leaky':
+        non_linearity = 'LEAKYRELU'
+        slope = _get_attrs(node)['slope'] if 'slope' in _get_attrs(node) else 0.25
+        params = [slope]
+    elif mx_non_linearity == 'prelu':
         non_linearity = 'PRELU'
         params = args[_get_node_name(net, inputs[1][0])].asnumpy()
     else:

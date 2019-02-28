@@ -192,6 +192,24 @@ class SingleLayerTest(unittest.TestCase):
         net = mx.sym.Activation(net, name='tanh1', act_type="tanh")
         self._test_mxnet_model(net, input_shape=input_shape, mode='random')
 
+    def test_tiny_elu_leakyrelu_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
+        slope = 0.1
+        net = mx.sym.LeakyReLU(net, name='elu1', act_type="elu", slope=slope)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
+    def test_tiny_leaky_leakyrelu_random_input(self):
+        np.random.seed(1988)
+        input_shape = (1, 10)
+        net = mx.sym.Variable('data')
+        net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=5)
+        slope = 0.1
+        net = mx.sym.LeakyReLU(net, name='leaky1', act_type="leaky", slope=slope)
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random')
+
     def test_tiny_prelu_leakyrelu_random_input(self):
         np.random.seed(1988)
         input_shape = (1, 10)
