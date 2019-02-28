@@ -272,12 +272,7 @@ void LoopState::Backward(int iter_no,
   }
   CHECK_EQ(inputs.size(), op->num_backward_inputs());
   for (size_t i = 0; i < igrads.size(); i++)
-    if (!out_bufs[i].IsSame(coutputs[i])) {
-      if (coutputs[i].shape().ndim() == 0) {
-        const_cast<NDArray &>(coutputs[i]).Init(out_bufs[i].shape());
-      }
-      CopyFromTo(out_bufs[i], coutputs[i]);
-    }
+    outputs.push_back(&igrad_bufs[i]);
   CHECK_EQ(outputs.size(), op->num_inputs());
   auto state = all_states[iter_no];
   op->Backward(false, state, inputs, req, outputs);
