@@ -14,15 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package mxnet;
 
 import org.apache.mxnet.javaapi.*;
-import java.util.Arrays;
 
-public class HelloWorld {
+public class NDArrayCreation {
+    static NDArray$ NDArray = NDArray$.MODULE$;
     public static void main(String[] args) {
-    	System.out.println("Hello World!");
+
+        // Create new NDArray
         NDArray nd = new NDArray(new float[]{2.0f, 3.0f}, new Shape(new int[]{1, 2}), Context.cpu());
-        System.out.println(nd.shape());
+        System.out.println(nd);
+
+        // create new Double NDArray
+        NDArray ndDouble = new NDArray(new double[]{2.0d, 3.0d}, new Shape(new int[]{2, 1}), Context.cpu());
+        System.out.println(ndDouble);
+
+        // create ones
+        NDArray ones = NDArray.ones(Context.cpu(), new int[] {1, 2, 3});
+        System.out.println(ones);
+
+        // random
+        NDArray random = NDArray.random_uniform(
+                NDArray.new random_uniformParam()
+                        .setLow(0.0f)
+                        .setHigh(2.0f)
+                        .setShape(new Shape(new int[]{10, 10}))
+        )[0];
+        System.out.println(random);
     }
 }

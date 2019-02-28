@@ -16,11 +16,17 @@
 <!--- under the License. -->
 
 # MXNet Java Sample Project
-This is an project created to use Maven-published Scala/Java package with two Java examples.
+This is a project demonstrating how to use the Maven published Scala/Java MXNet package. 
+The examples provided include:
+* NDArray creation
+* NDArray operation
+* Object Detection using the Inference API
+* Image Classification using the Predictor API
+
 ## Setup
-You can use the `Makefile` to make the Java package. Simply do the following:
-```Bash
-make javademo
+You are required to use Maven to build the package with the following commands under `java-demo`:
+```
+mvn package
 ```
 This will load the default parameter for all the environment variable.
 If you want to run with GPU on Linux, just simply add `USE_CUDA=1` when you run the make file
@@ -41,16 +47,16 @@ The `SCALA_PKG_PROFILE` should be chosen from `osx-x86_64-cpu`, `linux-x86_64-cp
 
 
 ## Run
-### Hello World
-The Scala file is being executed using Java. You can execute the helloWorld example as follows:
+### NDArrayCreation
+The Scala file is being executed using Java. You can execute the `NDArrayCreation` example as follows:
 ```Bash
 bash bin/java_sample.sh
 ```
 You can also run the following command manually:
 ```Bash
-java -cp $CLASSPATH sample.HelloWorld
+java -cp $CLASSPATH sample.NDArrayCreation
 ```
-However, you have to define the Classpath before you run the demo code. More information can be found in the `java_sample.sh`.
+However, you have to define the Classpath before you run the demo code. More information can be found in `bin/java_sample.sh`.
 The `CLASSPATH` should point to the jar file you have downloaded.
 
 It will load the library automatically and run the example

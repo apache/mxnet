@@ -43,6 +43,12 @@
             <version>${mxnet.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.mxnet</groupId>
+            <artifactId>mxnet-full_${mxnet.scalaprofile}-${mxnet.profile}</artifactId>
+            <version>${mxnet.version}</version>
+            <classifier>sources</classifier>
+        </dependency>
+        <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.4</version>

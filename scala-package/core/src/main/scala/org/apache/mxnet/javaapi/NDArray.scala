@@ -209,6 +209,8 @@ class NDArray private[mxnet] (val nd: org.apache.mxnet.NDArray ) {
     this(NDArray.array(arr, shape, ctx))
   }
 
+  override def toString: String = nd.toString
+
   def serialize(): Array[Byte] = nd.serialize()
 
   /**
