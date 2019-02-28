@@ -479,7 +479,7 @@ def compile_windows_cpu() {
         ws('workspace/build-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'C:\\Python37\\python ci/build_windows.py -f WIN_CPU'
+            powershell 'py -3 ci/build_windows.py -f WIN_CPU'
             stash includes: 'windows_package.7z', name: 'windows_package_cpu'
           }
         }
@@ -493,7 +493,7 @@ def compile_windows_gpu() {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
               utils.init_git_win()
-              powershell 'C:\\Python37\\python ci/build_windows.py -f WIN_GPU'
+              powershell 'py -3 ci/build_windows.py -f WIN_GPU'
               stash includes: 'windows_package.7z', name: 'windows_package_gpu'
           }
         }
@@ -507,7 +507,7 @@ def compile_windows_gpu_mkldnn() {
         ws('workspace/build-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git_win()
-            powershell 'C:\\Python37\\python ci/build_windows.py -f WIN_GPU_MKLDNN'
+            powershell 'py -3 ci/build_windows.py -f WIN_GPU_MKLDNN'
             stash includes: 'windows_package.7z', name: 'windows_package_gpu_mkldnn'
           }
         }
