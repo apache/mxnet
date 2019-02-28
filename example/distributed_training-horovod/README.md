@@ -16,17 +16,21 @@
 <!--- under the License. -->
 
 # MXNet + Horovod
-Horovod is a distributed training framework for MXNet, TensorFlow, Keras, and PyTorch. The goal of Horovod is to make distributed Deep Learning fast and easy to use. Horovod is created at Uber and currently hosted by the [Linux Foundation Deep Learning](https://lfdl.io) (LF DL). For details about who's involved and how Horovod plays a role, read the LF DL [announcement](https://lfdl.io/press/2018/12/13/lf-deep-learning-welcomes-horovod-distributed-training-framework-as-newest-project/).
+[Horovod](https://github.com/horovod/horovod) is a distributed training framework that demonstrates 
+excellent scaling efficiency for dense models running on a large number of nodes. It currently 
+supports mainstream deep learning frameworks such as MXNet, TensorFlow, Keras, and PyTorch. 
+It is created at Uber and currently hosted by the [Linux Foundation Deep Learning](https://lfdl.io)(LF DL). 
 
-Since 0.16.0 release, MXNet is supported in Horovod. 
+MXNet is recently supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
 
-## Difference between Horovod and Parameter Server
-Horovod uses ring allreduce algorithm to communicate parameters between workers. There is no server to store 
-and aggregate parameters. The data communication between workers does not depend on the number of workers and therefore scales well when the number of workers is large the network bandwidth becomes bottleneck.
+## What's New?
+Compared with the standard distributed training script in MXNet which uses parameter server to 
+distribute and aggregate parameters, Horovod uses ring allreduce algorithm to communicate parameters 
+between workers. There is no dedicated server and the communication data size 
+between workers does not depend on the number of workers. Therefore, it scales well in the case where 
+there are a large number of workers and network bandwidth becomes bottleneck.
 
 # Install
-
-**Note**: we recommend users to build MXNet from source following this [guide](https://mxnet.incubator.apache.org/install/build_from_source.html) when running Horovod with MXNet on a Linux OS with GCC version 5.X and above. The MXNet shared library distributed through MXNet pip package is currently built using GCC 4.8.4. If we build and install Horovod on a Linux OS with GCC 5.X+ with MXNet pip package, we will hit segmentation fault due to std::function definition change from GCC [4.X](https://github.com/gcc-mirror/gcc/blob/gcc-4_8_4-release/libstdc++-v3/include/std/functional#L2069) to GCC [5.X](https://github.com/gcc-mirror/gcc/blob/gcc-5_4_0-release/libstdc++-v3/include/std/functional#L1854).
 
 To install Horovod:
 
@@ -44,12 +48,18 @@ $ pip install horovod
 ```
 
 This basic installation is good for laptops and for getting to know Horovod.
-If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](docs/gpus.md) page.
-If you want to use Docker, read the [Horovod in Docker](docs/docker.md) page.
+If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](https://github.com/horovod/horovod/blob/master/docs/gpus.md) page.
+If you want to use Docker, read the [Horovod in Docker](https://github.com/horovod/horovod/blob/master/docs/docker.md) page.
+
+**Note**: we recommend users to build MXNet from source when running on a Linux OS with GCC version 5.X and above. 
+The MXNet shared library distributed through MXNet pip package is currently built using GCC 4.8.4. If we build and install Horovod 
+on a Linux OS with GCC 5.X+ with MXNet pip package, we will hit segmentation fault due to std::function definition change from 
+GCC [4.X](https://github.com/gcc-mirror/gcc/blob/gcc-4_8_4-release/libstdc++-v3/include/std/functional#L2069) to 
+GCC [5.X](https://github.com/gcc-mirror/gcc/blob/gcc-5_4_0-release/libstdc++-v3/include/std/functional#L1854).
 
 # Usage
 
-To use MXNet with Horovod, make the following additions to your training script:
+To run MXNet with Horovod, make the following additions to your training script:
 
 1. Run `hvd.init()`.
 
@@ -70,9 +80,8 @@ To use MXNet with Horovod, make the following additions to your training script:
 
 # Example
 
-Here we provide the skeleton of a typical script to train a model using MXNet with Horovod.
-The examples are written in Gluon and Module APIs respectively.
-See the full examples in [MINST](mxnet_mnist.py) and [ImageNet](mxnet_imagenet_resnet50.py).
+Here we provide the building blocks to train a model using MXNet with Horovod.
+The full examples are in [MINST](mxnet_mnist.py) and [ImageNet](mxnet_imagenet_resnet50.py).
 
 ## Gluon API
 ```python
@@ -172,7 +181,7 @@ model.fit(train_data,
 
 # Running Horovod
 
-The example commands below show how to run distributed training. See the [Running Horovod](docs/running.md)
+The example commands below show how to run distributed training. See the [Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.md)
 page for more instructions, including RoCE/InfiniBand tweaks and tips for dealing with hangs.
 
 1. To run on a machine with 4 GPUs:
