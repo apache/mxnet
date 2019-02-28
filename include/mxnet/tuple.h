@@ -650,62 +650,33 @@ struct type_name_helper<mxnet::Tuple<T> > {
 }  // namespace dmlc
 
 namespace mxnet {
-
+/*!
+ * \brief The result holder of shape of each NodeEntry in the graph.
+ * \note Stored under graph.attrs["shape"], provided by Pass "InferShape"
+ *
+ * \code
+ *  Graph g = ApplyPass(src_graph, "InferShape");
+ *  const ShapeVector& shapes = g.GetAttr<ShapeVector>("shape");
+ *  // get shape by entry id
+ *  TShape entry_shape = shapes[g.indexed_graph().entry_id(my_entry)];
+ * \endcode
+ *
+ * \sa FInferShape
+ */
 using ShapeVector = std::vector<mxnet::TShape>;
 
+/*!
+ * \brief Shape inference function.
+ *  Update the shapes given the input shape information.
+ *  TShape.ndim() == -1 means the shape is still unknown.
+ *
+ * \note Register under "FInferShape",
+ *  by default do not update any shapes.
+ *
+ *  FInferShape is needed by shape inference
+ */
 using FInferShape = nnvm::FInferNodeEntryAttr<mxnet::TShape>;
 
 }  // namespace mxnet
 
 #endif  // MXNET_TUPLE_H_
-
-namespace nnvm {
-namespace pass {
-/*!
- * \brief Get the gradient graph whose outputs are gradients of xs wrt to ys.
- * \param graph The input graph.
- * \param ys The entries we want to take gradient from.
- * \param xs The input to take gradient with respect to.
- * \param ys_out_grad The symbol for additional gradient to be propagate back to y.
- * \param aggregate_fun Aggregation function applied to aggregate the inputs.
- * \param mirror_fun Optional mirror function to do mirror optimization and save memory.
- * \param attr_hint_fun Optional, hint function to output a node that like src, but its attr is same as like.
- * \param zero_ops Optional, list of operators that outputs a single zero array. The first one
- *  must be zeros_like.
- * \param copy_op_str Optional, name of the copy operation required to handle duplicates
- *  on the edge of the graph
- * \return A new graph, whose outputs correspond to inputs of xs.
- */
-inline Graph MXGradient(
-    Graph graph,
-    std::vector<NodeEntry> ys,
-    std::vector<NodeEntry> xs,
-    std::vector<NodeEntry> ys_out_grad,
-    std::function<NodeEntry(std::vector<NodeEntry>&& inputs)> aggregate_fun = nullptr,
-    std::function<int(const Node& node)> mirror_fun = nullptr,
-    std::function<NodeEntry(const NodeEntry& src, const NodeEntry &like)>
-    attr_hint_fun = nullptr,
-    std::vector<const Op*> zero_ops = std::vector<const Op*>(),
-    std::string copy_op_str = std::string()) {
-  graph.attrs["grad_ys"] = std::make_shared<any>(std::move(ys));
-  graph.attrs["grad_xs"] = std::make_shared<any>(std::move(xs));
-  graph.attrs["grad_ys_out_grad"] = std::make_shared<any>(std::move(ys_out_grad));
-  if (aggregate_fun != nullptr) {
-    graph.attrs["grad_aggregate_fun"] = std::make_shared<any>(aggregate_fun);
-  }
-  if (mirror_fun != nullptr) {
-    graph.attrs["grad_mirror_fun"] = std::make_shared<any>(mirror_fun);
-  }
-  if (attr_hint_fun != nullptr) {
-    graph.attrs["attr_hint_fun"] = std::make_shared<any>(attr_hint_fun);
-  }
-  if (zero_ops.size()) {
-    graph.attrs["zero_ops"] = std::make_shared<any>(std::move(zero_ops));
-  }
-  if (copy_op_str != std::string()) {
-      graph.attrs["copy_op"] = std::make_shared<any>(std::move(copy_op_str));
-  }
-  return ApplyPass(std::move(graph), "MXGradient");
-}
-}  // namespace pass
-}  // namespace nnvm
