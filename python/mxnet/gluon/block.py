@@ -205,6 +205,9 @@ class Block(object):
                 "If you want to share parameters between blocks, please set " \
                 "'params' at Block construction instead."
             self._reg_params[name] = value
+        elif isinstance(value, list) and all(isinstance(item, Block) for item in value):
+            for i, v in enumerate(value):
+                self.register_child(v, "%s_%d" % (name, i))
 
         super(Block, self).__setattr__(name, value)
 
