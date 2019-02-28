@@ -32,7 +32,6 @@
 #include <mshadow/base.h>
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
-#include <nnvm/tuple.h>
 
 #include <fstream>
 #include <cstring>

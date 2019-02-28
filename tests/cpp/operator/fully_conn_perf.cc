@@ -26,7 +26,6 @@
 
 #include <dmlc/logging.h>
 #include <mxnet/tensor_blob.h>
-#include <nnvm/tuple.h>
 #include "../../src/operator/nn/fully_connected-inl.h"
 #include "../include/test_op_runner.h"
 #include "../include/test_core_op.h"

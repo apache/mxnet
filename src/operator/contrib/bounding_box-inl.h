@@ -26,7 +26,6 @@
 #define MXNET_OPERATOR_CONTRIB_BOUNDING_BOX_INL_H_
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
-#include <nnvm/tuple.h>
 #include <vector>
 #include <utility>
 #include <string>

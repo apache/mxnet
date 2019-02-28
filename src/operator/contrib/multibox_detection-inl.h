@@ -29,7 +29,6 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
-#include <nnvm/tuple.h>
 #include <map>
 #include <vector>
 #include <string>
