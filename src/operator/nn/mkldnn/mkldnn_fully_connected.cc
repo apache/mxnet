@@ -182,8 +182,8 @@ void MKLDNNFCForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                      const std::vector<NDArray> &out_data) {
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  const TShape& ishape = in_data[fullc::kData].shape();
-  const TShape& oshape = out_data[fullc::kOut].shape();
+  const mxnet::TShape& ishape = in_data[fullc::kData].shape();
+  const mxnet::TShape& oshape = out_data[fullc::kOut].shape();
   NDArray weight = in_data[fullc::kWeight];
   NDArray data = in_data[fullc::kData];
   // If the input data is a view of an MKLDNN array, we should create a new
@@ -232,8 +232,8 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
   TmpMemMgr::Get()->Init(ctx.requested[fullc::kTempSpace]);
   const std::vector<NDArray> &in_grad = outputs;
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
-  const TShape& ishape = inputs[fullc::kData + 1].shape();
-  const TShape& oshape = inputs[fullc::kOut].shape();
+  const mxnet::TShape& ishape = inputs[fullc::kData + 1].shape();
+  const mxnet::TShape& oshape = inputs[fullc::kOut].shape();
 
   NDArray weight = inputs[fullc::kWeight + 1];
   NDArray data = inputs[fullc::kData + 1];

@@ -91,14 +91,14 @@ static bool PoolingType(const nnvm::NodeAttrs& attrs,
 }
 
 static bool PoolingShape(const nnvm::NodeAttrs &attrs,
-                         std::vector<TShape> *in_shape,
-                         std::vector<TShape> *out_shape) {
+                         mxnet::ShapeVector *in_shape,
+                         mxnet::ShapeVector *out_shape) {
   const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 1U);
   if (param.pool_type == pool_enum::kLpPooling) {
     CHECK(param.p_value.has_value());
   }
-  const TShape &dshape = (*in_shape)[0];
+  const mxnet::TShape &dshape = (*in_shape)[0];
   if (param.pooling_convention == pool_enum::kSame) {
     CHECK_EQ(dshape.ndim(), 3U)
       << "Pooling: Input data should be 3D in (batch, channel, x)"
@@ -117,7 +117,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
   if (dshape.ndim() == 0) return false;
   int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
-    TShape oshape = dshape;
+    mxnet::TShape oshape = dshape;
     size_t c_index = 0;
     switch (layout) {
       case mshadow::kNCW:
@@ -171,7 +171,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                           param.stride[0]));
     }
     // Convert back from standard (NCW) layout space to the actual layout type
-    TShape oshape = (layout == mshadow::kNWC) ?
+    mxnet::TShape oshape = (layout == mshadow::kNWC) ?
                     ConvertLayout(oshape_ncw, mshadow::kNCW, mshadow::kNWC) : oshape_ncw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -209,7 +209,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                                param.stride[1]));
     }
     // Convert back from standard (NCHW) layout space to the actual layout type
-    TShape oshape = (layout == mshadow::kNHWC) ?
+    mxnet::TShape oshape = (layout == mshadow::kNHWC) ?
                     ConvertLayout(oshape_nchw, mshadow::kNCHW, mshadow::kNHWC) : oshape_nchw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -251,7 +251,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
                                 param.stride[2]));
     }
     // Convert back from standard (NCDHW) layout space to the actual layout type
-    TShape oshape = (layout == mshadow::kNDHWC) ?
+    mxnet::TShape oshape = (layout == mshadow::kNDHWC) ?
                     ConvertLayout(oshape_ncdhw, mshadow::kNCDHW, mshadow::kNDHWC) : oshape_ncdhw;
     out_shape->clear();
     out_shape->push_back(oshape);  // save output shape
@@ -440,7 +440,7 @@ For each window ``X``, the mathematical expression for Lp pooling is:
 .set_attr<FInferStorageType>("FInferStorageType", PoolingStorageType)
 #endif
 .set_attr<nnvm::FInferType>("FInferType", PoolingType)
-.set_attr<nnvm::FInferShape>("FInferShape", PoolingShape)
+.set_attr<mxnet::FInferShape>("FInferShape", PoolingShape)
 .set_attr<FCompute>("FCompute<cpu>", PoolingCompute<cpu>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)

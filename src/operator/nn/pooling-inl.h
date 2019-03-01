@@ -44,9 +44,9 @@ namespace op {
 void PoolingParamParser(nnvm::NodeAttrs *attrs);
 
 struct PoolingParam : public dmlc::Parameter<PoolingParam> {
-  TShape kernel;
-  TShape stride;
-  TShape pad;
+  mxnet::TShape kernel;
+  mxnet::TShape stride;
+  mxnet::TShape pad;
   int pool_type;
   int pooling_convention;
   bool global_pool;
@@ -55,7 +55,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   dmlc::optional<bool> count_include_pad;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
-    DMLC_DECLARE_FIELD(kernel).set_default(TShape())  // add default value here
+    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape())  // add default value here
     .enforce_nonzero()
     .describe("Pooling kernel size: (y, x) or (d, y, x)");
 
@@ -78,11 +78,11 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("same", pool_enum::kSame)
     .describe("Pooling convention to be applied.");
 
-    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
     .enforce_nonzero()
     .describe("Stride: for pooling (y, x) or (d, y, x). Defaults to 1 for each dimension.");
 
-    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
     .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
 
     DMLC_DECLARE_FIELD(p_value).set_default(dmlc::optional<int>())
@@ -185,26 +185,26 @@ class PoolingOp {
                const OpReqType& req, const TBlob& out_data) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TShape& ishape = in_data.shape_;
-    TShape kernel = param_.kernel;
-    TShape padding = param_.pad;
-    TShape stride = param_.stride;
+    const mxnet::TShape& ishape = in_data.shape_;
+    mxnet::TShape kernel = param_.kernel;
+    mxnet::TShape padding = param_.pad;
+    mxnet::TShape stride = param_.stride;
     int layout = param_.GetLayout(ishape.ndim());
     if (param_.global_pool) {
       // with global pooling, kernel shape corresponds to input shape with 'N' and 'C' removed
       if (layout == mshadow::kNWC || layout == mshadow::kNHWC || layout == mshadow::kNDHWC) {
-        kernel = TShape(ishape.data() + 1,
+        kernel = mxnet::TShape(ishape.data() + 1,
                         ishape.data() + ishape.ndim() - 1);
 
       } else {
-        kernel = TShape(ishape.data() + 2,
+        kernel = mxnet::TShape(ishape.data() + 2,
                         ishape.data() + ishape.ndim());
       }
-      padding = TShape(ishape.ndim() - 2);
+      padding = mxnet::TShape(ishape.ndim() - 2);
       for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
       }
-      stride = TShape(ishape.ndim() - 2);
+      stride = mxnet::TShape(ishape.ndim() - 2);
     }
     const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?
                         param_.p_value.value() : 1;
@@ -242,26 +242,26 @@ class PoolingOp {
                 const OpReqType& req, const TBlob& in_grad) {
     using namespace mshadow;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TShape& ishape = in_data.shape_;
-    TShape kernel = param_.kernel;
-    TShape padding = param_.pad;
-    TShape stride = param_.stride;
+    const mxnet::TShape& ishape = in_data.shape_;
+    mxnet::TShape kernel = param_.kernel;
+    mxnet::TShape padding = param_.pad;
+    mxnet::TShape stride = param_.stride;
     int layout = param_.GetLayout(ishape.ndim());
     if (param_.global_pool) {
       // with global pooling, kernel shape corresponds to input shape with 'N' and 'C' removed
       if (layout == mshadow::kNWC || layout == mshadow::kNHWC || layout == mshadow::kNDHWC) {
-        kernel = TShape(ishape.data() + 1,
+        kernel = mxnet::TShape(ishape.data() + 1,
                         ishape.data() + ishape.ndim() - 1);
 
       } else {
-        kernel = TShape(ishape.data() + 2,
+        kernel = mxnet::TShape(ishape.data() + 2,
                         ishape.data() + ishape.ndim());
       }
-      padding = TShape(ishape.ndim() - 2);
+      padding = mxnet::TShape(ishape.ndim() - 2);
       for (index_t i = 0; i < ishape.ndim() - 2; i++) {
         padding[i] = 0;
       }
-      stride = TShape(ishape.ndim() - 2);
+      stride = mxnet::TShape(ishape.ndim() - 2);
     }
 
     const int p_value = (param_.pool_type == pool_enum::kLpPooling && param_.p_value.has_value()) ?

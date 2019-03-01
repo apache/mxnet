@@ -73,7 +73,7 @@ class OpBase {
                                const NDArray* clone_from = nullptr) {
     if (req != kNullOp) {
       if (clone_from) {
-        const TShape& ishape = clone_from->storage_shape();
+        const mxnet::TShape& ishape = clone_from->storage_shape();
         dest->CheckAndAllocData(ishape);
         CHECK_EQ(dest->storage_type(), clone_from->storage_type());
         for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
@@ -144,7 +144,7 @@ class OpBase {
                                                           const TBlob& blob) {
     const size_t dim = blob.shape_.ndim();
     if (dim) {
-      TShape shape({blob.shape_[0], 1});
+      mxnet::TShape shape({blob.shape_[0], 1});
       for (size_t i = 1; i < dim; ++i) {
         shape[1] *= blob.shape_[i];
       }
@@ -181,7 +181,7 @@ class UnaryOp : public OpBase {
     CHECK_EQ(outputs.size(), static_cast<size_t>(n_out))
       << " in operator " << attrs.name;
     static_assert(n_in > 0 && n_out > 0, "Invalid input and/or output count values");
-    const TShape& isshape = inputs[0].storage_shape();
+    const mxnet::TShape& isshape = inputs[0].storage_shape();
     if (!shape_is_none(isshape)) {
       NDArray *output = nullptr;
       for (size_t i = 0, n = inputs.size(); i < n; ++i) {
@@ -192,7 +192,7 @@ class UnaryOp : public OpBase {
         CHECK_EQ(output->shape(), inputs[i].shape());
         CHECK_EQ(output->storage_type(), input.storage_type());
         CHECK_EQ(output->aux_shapes().size(), input.aux_shapes().size());
-        std::vector<TShape> aux_shapes;
+        mxnet::ShapeVector aux_shapes;
         const size_t aux_shape_count = input.aux_shapes().size();
         aux_shapes.reserve(aux_shape_count);
         for (size_t j = 0; j < aux_shape_count; ++j) {
@@ -554,7 +554,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \

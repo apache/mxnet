@@ -48,7 +48,7 @@ enum ROIPoolingOpOutputs {kOut, kMaxIdx};
 }  // roipool
 
 struct ROIPoolingParam : public dmlc::Parameter<ROIPoolingParam> {
-  TShape pooled_size;
+  mxnet::TShape pooled_size;
   float spatial_scale;
   DMLC_DECLARE_PARAMETER(ROIPoolingParam) {
     DMLC_DECLARE_FIELD(pooled_size)
@@ -167,18 +167,18 @@ class ROIPoolingProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, rois]";
 
     // data: [batch_size, c, h, w]
-    TShape dshape = in_shape->at(roipool::kData);
+    mxnet::TShape dshape = in_shape->at(roipool::kData);
     CHECK_EQ(dshape.ndim(), 4U) << "data should be a 4D tensor";
 
     // bbox: [num_rois, 5]
-    TShape bshape = in_shape->at(roipool::kBox);
+    mxnet::TShape bshape = in_shape->at(roipool::kBox);
     CHECK_EQ(bshape.ndim(), 2U) << "bbox should be a 2D tensor of shape [batch, 5]";
     CHECK_EQ(bshape[1], 5U) << "bbox should be a 2D tensor of shape [batch, 5]";
 
@@ -229,7 +229,7 @@ class ROIPoolingProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

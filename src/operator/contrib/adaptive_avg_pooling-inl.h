@@ -48,9 +48,9 @@ namespace mxnet {
 namespace op {
 
 struct AdaptiveAvgPoolParam : public dmlc::Parameter<AdaptiveAvgPoolParam> {
-  TShape output_size;
+  mxnet::TShape output_size;
   DMLC_DECLARE_PARAMETER(AdaptiveAvgPoolParam) {
-    DMLC_DECLARE_FIELD(output_size).set_default(TShape())
+    DMLC_DECLARE_FIELD(output_size).set_default(mxnet::TShape())
     .describe("int (output size) or a tuple of int for output (height, width).");
   }
 };
@@ -118,13 +118,13 @@ inline void AdaptiveAvgPoolOpBackward(const nnvm::NodeAttrs& attrs,
 
 
 static bool AdaptiveAvgPoolOpInferShape(const nnvm::NodeAttrs& attrs,
-                                       std::vector<TShape> *in_shape,
-                                       std::vector<TShape> *out_shape) {
+                                       mxnet::ShapeVector *in_shape,
+                                       mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
   const AdaptiveAvgPoolParam& param = nnvm::get<AdaptiveAvgPoolParam>(attrs.parsed);
-  TShape dshape(in_shape->at(0));
+  mxnet::TShape dshape(in_shape->at(0));
   if (dshape.ndim() == 0) return false;
   if (param.output_size.ndim() == 0) {
     dshape[2] = 1;

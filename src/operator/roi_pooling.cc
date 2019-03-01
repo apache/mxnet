@@ -241,7 +241,7 @@ Operator *CreateOp<cpu>(ROIPoolingParam param, int dtype) {
   return op;
 }
 
-Operator *ROIPoolingProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *ROIPoolingProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                            std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }

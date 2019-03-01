@@ -33,17 +33,17 @@ namespace mxnet {
 namespace op {
 
 static bool ConcatShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) {
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-  TShape dshape;
+  mxnet::TShape dshape;
   index_t size = 0;
   bool has_zero = false;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
-    TShape tmp = (*in_shape)[i];
+    mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
       axis = CheckAxis(param_.dim, tmp.ndim());
       has_zero = tmp[axis] == 0 || has_zero;
@@ -53,7 +53,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
     }
   }
 
-  TShape tmp = (*out_shape)[0];
+  mxnet::TShape tmp = (*out_shape)[0];
   if (tmp.ndim()) {
     axis = CheckAxis(param_.dim, tmp.ndim());
     tmp[axis] = 0;
@@ -79,17 +79,17 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
 // The first (and sometimes the second) input may be unknown on the target axis.
 // If the two inputs are unknown, they always have the same shape.
 static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
-                                std::vector<TShape> *in_shape,
-                                std::vector<TShape> *out_shape) {
+                                mxnet::ShapeVector *in_shape,
+                                mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-  TShape dshape;
+  mxnet::TShape dshape;
   index_t size = 0;
   std::vector<int> zero_indices;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
-    TShape tmp = (*in_shape)[i];
+    mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
       axis = CheckAxis(param_.dim, tmp.ndim());
       if (tmp[axis] == 0) {
@@ -102,7 +102,7 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
     }
   }
 
-  TShape tmp = (*out_shape)[0];
+  mxnet::TShape tmp = (*out_shape)[0];
   if (tmp.ndim()) {
     axis = CheckAxis(param_.dim, tmp.ndim());
     tmp[axis] = 0;
@@ -373,7 +373,7 @@ Example::
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 CONCAT_FORWARD_ATTRS
-.set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 
@@ -406,7 +406,7 @@ NNVM_REGISTER_OP(_rnn_param_concat)
 })
 #endif
 CONCAT_FORWARD_ATTRS
-.set_attr<nnvm::FInferShape>("FInferShape", RNNParamConcatShape)
+.set_attr<mxnet::FInferShape>("FInferShape", RNNParamConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 
