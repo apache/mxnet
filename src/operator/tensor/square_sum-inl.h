@@ -53,7 +53,7 @@ inline bool SquareSumForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   const auto& in_stype = in_attrs->at(0);
   auto& out_stype = out_attrs->at(0);
   bool dispatched = false;
-  const TShape axis = param.axis.has_value() ? param.axis.value() : TShape();
+  const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
   if (!dispatched && in_stype == kRowSparseStorage &&
       axis.ndim() > 0 && axis[0] == 1 && param.keepdims) {
     // sum per row and keep dims
@@ -267,7 +267,7 @@ void SquareSumRspImpl(const nnvm::NodeAttrs& attrs,
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   CHECK(param.axis.has_value());
-  const TShape axis = param.axis.value();
+  const mxnet::TShape axis = param.axis.value();
   CHECK_EQ(axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
   CHECK(axis[0] == 0 || axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";
@@ -382,7 +382,7 @@ void SquareSumRspGradImpl(const nnvm::NodeAttrs& attrs,
   if (req == kNullOp) return;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   CHECK(param.axis.has_value());
-  const TShape axis = param.axis.value();
+  const mxnet::TShape axis = param.axis.value();
   CHECK_EQ(axis.ndim(), 1U) << "_square_sum(row_sparse_matrix) only supports axis=0/1";
   CHECK(axis[0] == 0 || axis[0] == 1)
     << "_square_sum(row_sparse_matrix) only supports axis=0 or 1";

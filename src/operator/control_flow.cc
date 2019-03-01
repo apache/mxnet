@@ -266,22 +266,22 @@ static void remap(const std::vector<T> &op_in, size_t start,
   }
 }
 
-static inline TShape SliceFirstDim(const TShape &s) {
+static inline mxnet::TShape SliceFirstDim(const mxnet::TShape &s) {
   if (s.ndim() > 1) {
-    return TShape(s.begin() + 1, s.end());
+    return mxnet::TShape(s.begin() + 1, s.end());
   } else {
-    return TShape(mshadow::Shape1(1));
+    return mxnet::TShape(mshadow::Shape1(1));
   }
 }
 
 static bool ForeachShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape> *in_shape,
-                         std::vector<TShape> *out_shape) {
+                         mxnet::ShapeVector *in_shape,
+                         mxnet::ShapeVector *out_shape) {
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
   CHECK_EQ(attrs.subgraphs.size(), 1U);
 
-  std::vector<TShape> subg_in_shape(in_shape->size());
+  mxnet::ShapeVector subg_in_shape(in_shape->size());
   // data shape
   std::vector<bool> data_1d(params.in_data_locs.ndim(), false);
   for (size_t i = 0; i < params.in_data_locs.ndim(); i++) {
@@ -297,9 +297,9 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
   remap(*in_shape, params.in_data_locs.ndim() + params.in_state_locs.ndim(),
         params.remain_locs, &subg_in_shape);
 
-  std::vector<TShape> subg_out_shape = *out_shape;
+  mxnet::ShapeVector subg_out_shape = *out_shape;
   for (int i = 0; i < params.num_out_data; i++) {
-    TShape shape = subg_out_shape[i];
+    mxnet::TShape shape = subg_out_shape[i];
     // If we don't have shape info, we don't need to do anything.
     if (shape.ndim() == 0)
       continue;
@@ -320,7 +320,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     if (g_out_shape.ndim() == 0)
       continue;
 
-    auto out = TShape(g_out_shape.ndim() + 1);
+    auto out = mxnet::TShape(g_out_shape.ndim() + 1);
     out[0] = len;
     for (size_t i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
@@ -340,11 +340,11 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
       continue;
 
     if (data_1d[i]) {
-      TShape s(1);
+      mxnet::TShape s(1);
       s[0] = len;
       SHAPE_ASSIGN_CHECK(*in_shape, i, s);
     } else {
-      auto in = TShape(shape.ndim() + 1);
+      auto in = mxnet::TShape(shape.ndim() + 1);
       in[0] = len;
       for (size_t i = 1; i < in.ndim(); i++)
         in[i] = shape[i - 1];
@@ -465,7 +465,7 @@ static bool BackwardForeachStorageType(const nnvm::NodeAttrs& attrs,
 
 static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
                                      Context ctx,
-                                     const std::vector<TShape>& ishape,
+                                     const mxnet::ShapeVector& ishape,
                                      const std::vector<int>& itype) {
   const ForeachParam& params = nnvm::get<ForeachParam>(attrs.parsed);
   return OpStatePtr::Create<ForeachState>(*attrs.subgraphs[0], params);
@@ -727,11 +727,11 @@ static void WhileLoopGradComputeExCPU(const OpStatePtr& state_ptr,
 }
 
 static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_shape,
-                           std::vector<TShape> *out_shape) {
-  using nnvm::ShapeVector;
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape) {
+  using mxnet::ShapeVector;
   const WhileLoopParam& params = nnvm::get<WhileLoopParam>(attrs.parsed);
-  static const std::function<bool(const TShape &)> is_udf = is_shape_udf;
+  static const std::function<bool(const mxnet::TShape &)> is_udf = is_shape_udf;
   // sanity checks
   CHECK_EQ(in_shape->size() + 2U, (size_t) params.num_args);
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
@@ -776,7 +776,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
     g = exec::InferShape(std::move(g));
     // now `shapes' won't be used anymore, use new_shapes instead
-    const auto& new_shapes = g.GetAttr<ShapeVector>("shape");
+    const auto& new_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     // copy subg_in back to in_shape
     for (size_t i = 0; i < subg_in.size(); ++i) {
       auto eid = idx.entry_id(input_nids[i], 0);
@@ -799,7 +799,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
         // when the shape is not fully inferred
         continue;
       }
-      auto out = TShape(g_out_shape.ndim() + 1);
+      auto out = mxnet::TShape(g_out_shape.ndim() + 1);
       out[0] = params.max_iterations;
       for (size_t i = 1; i < out.ndim(); i++)
         out[i] = g_out_shape[i - 1];
@@ -817,8 +817,8 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  ShapeVector cond_out_shape{TShape(1U)};  // this means: [(1, )]
-  ShapeVector func_out_shape(params.num_outputs);
+  mxnet::ShapeVector cond_out_shape{mxnet::TShape(1U)};  // this means: [(1, )]
+  mxnet::ShapeVector func_out_shape(params.num_outputs);
   CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, params.cond_input_locs, 0, false);
   CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
@@ -898,7 +898,7 @@ static bool BackwardWhileLoopStorageType(const nnvm::NodeAttrs& attrs,
 
 static OpStatePtr CreateWhileLoopState(const NodeAttrs& attrs,
                                        Context ctx,
-                                       const std::vector<TShape>& ishape,
+                                       const mxnet::ShapeVector& ishape,
                                        const std::vector<int>& itype) {
   const WhileLoopParam& params = nnvm::get<WhileLoopParam>(attrs.parsed);
   return OpStatePtr::Create<WhileLoopState>(params, *attrs.subgraphs[0], *attrs.subgraphs[1]);
@@ -1034,11 +1034,11 @@ static void CondGradComputeExCPU(const OpStatePtr& state_ptr,
 }
 
 static bool CondShape(const nnvm::NodeAttrs& attrs,
-                      std::vector<TShape> *in_shape,
-                      std::vector<TShape> *out_shape) {
-  using nnvm::ShapeVector;
+                      mxnet::ShapeVector *in_shape,
+                      mxnet::ShapeVector *out_shape) {
+  using mxnet::ShapeVector;
   const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
-  static const std::function<bool(const TShape &)> is_udf = is_shape_udf;
+  static const std::function<bool(const mxnet::TShape &)> is_udf = is_shape_udf;
   // sanity checks
   CHECK_EQ(in_shape->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(out_shape->size(), (size_t) params.num_outputs);
@@ -1051,8 +1051,8 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
                                                    const nnvm::Tuple<dim_t> &input_locs,
                                                    bool fill_out_shape) {
     // create subg_in
-    ShapeVector subg_in;
-    ShapeVector &subg_out = *_subg_out;
+    mxnet::ShapeVector subg_in;
+    mxnet::ShapeVector &subg_out = *_subg_out;
     extract_by_loc(*in_shape, input_locs, &subg_in);
     // create an indexed graph
     nnvm::Graph g;
@@ -1066,7 +1066,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(idx.input_nodes().size(), subg_in.size());
     CHECK_EQ(idx.outputs().size(), subg_out.size());
     // create empty shapes for inference
-    ShapeVector shapes(idx.num_node_entries());
+    mxnet::ShapeVector shapes(idx.num_node_entries());
     // copy subg_in into shapes
     for (size_t i = 0; i < subg_in.size(); ++i) {
       auto eid = idx.entry_id(input_nids[i], 0);
@@ -1081,7 +1081,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
     g = exec::InferShape(std::move(g));
     // now `shapes' won't be used anymore, use new_shapes instead
-    const auto& new_shapes = g.GetAttr<ShapeVector>("shape");
+    const auto& new_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     // copy subg_in back to in_shape
     for (size_t i = 0; i < subg_in.size(); ++i) {
       auto eid = idx.entry_id(input_nids[i], 0);
@@ -1107,7 +1107,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  ShapeVector cond_out_shape{TShape(1U)};  // this means: [(1, )]
+  ShapeVector cond_out_shape{mxnet::TShape(1U)};  // this means: [(1, )]
   ShapeVector then_out_shape(params.num_outputs);
   ShapeVector else_out_shape(params.num_outputs);
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, \
@@ -1234,7 +1234,7 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
 
 static OpStatePtr CreateCondState(const NodeAttrs& attrs,
                                   Context ctx,
-                                  const std::vector<TShape>& ishape,
+                                  const mxnet::ShapeVector& ishape,
                                   const std::vector<int>& itype) {
   const CondParam& params = nnvm::get<CondParam>(attrs.parsed);
   return OpStatePtr::Create<CondState>(
@@ -1279,7 +1279,7 @@ NNVM_REGISTER_OP(_foreach)
 })
 .set_attr<nnvm::FGradient>("FGradient", ForeachGradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateForeachState)
-.set_attr<nnvm::FInferShape>("FInferShape", ForeachShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ForeachShape)
 .set_attr<nnvm::FInferType>("FInferType", ForeachType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", ForeachComputeExCPU)
 // Foreach operator works like an executor. Its code will always run on CPU.
@@ -1342,7 +1342,7 @@ NNVM_REGISTER_OP(_while_loop)
 })
 .set_attr<nnvm::FGradient>("FGradient", WhileLoopGradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateWhileLoopState)
-.set_attr<nnvm::FInferShape>("FInferShape", WhileLoopShape)
+.set_attr<mxnet::FInferShape>("FInferShape", WhileLoopShape)
 .set_attr<nnvm::FInferType>("FInferType", WhileLoopType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", WhileLoopComputeExCPU)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {
@@ -1405,7 +1405,7 @@ NNVM_REGISTER_OP(_cond)
 })
 .set_attr<nnvm::FGradient>("FGradient", CondGradient)
 .set_attr<FCreateOpState>("FCreateOpState", CreateCondState)
-.set_attr<nnvm::FInferShape>("FInferShape", CondShape)
+.set_attr<mxnet::FInferShape>("FInferShape", CondShape)
 .set_attr<nnvm::FInferType>("FInferType", CondType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CondComputeExCPU)
 .set_attr<FExecType>("FExecType", [](const NodeAttrs& attrs) {

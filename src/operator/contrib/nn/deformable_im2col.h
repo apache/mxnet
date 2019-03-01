@@ -87,8 +87,8 @@ namespace op {
 template <typename DType>
 inline void deformable_im2col(mshadow::Stream<cpu>* s,
   const DType* data_im, const DType* data_offset,
-  const TShape& im_shape, const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride, const TShape& dilation,
+  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+  const mxnet::TShape& pad, const mxnet::TShape& stride, const mxnet::TShape& dilation,
   const uint32_t deformable_group, DType* data_col) {
   if (2 == kernel_shape.ndim()) {
     LOG(FATAL) << "only implemented in GPU";
@@ -115,9 +115,9 @@ inline void deformable_im2col(mshadow::Stream<cpu>* s,
 template <typename DType>
 inline void deformable_col2im(mshadow::Stream<cpu>* s,
   const DType* data_col, const DType* data_offset,
-  const TShape& im_shape, const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride,
-  const TShape& dilation, const uint32_t deformable_group,
+  const mxnet::TShape& im_shape, const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+  const mxnet::TShape& pad, const mxnet::TShape& stride,
+  const mxnet::TShape& dilation, const uint32_t deformable_group,
   DType* grad_im, OpReqType req) {
   LOG(FATAL) << "only implemented in GPU";
 }
@@ -141,10 +141,12 @@ inline void deformable_col2im(mshadow::Stream<cpu>* s,
 
 template <typename DType>
 inline void deformable_col2im_coord(mshadow::Stream<cpu>* s,
-  const DType* data_col, const DType* data_im, const DType* data_offset, const TShape& im_shape,
-  const TShape& col_shape, const TShape& kernel_shape,
-  const TShape& pad, const TShape& stride,
-  const TShape& dilation, const uint32_t deformable_group, DType* grad_offset, OpReqType req) {
+  const DType* data_col, const DType* data_im,
+  const DType* data_offset, const mxnet::TShape& im_shape,
+  const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+  const mxnet::TShape& pad, const mxnet::TShape& stride,
+  const mxnet::TShape& dilation, const uint32_t deformable_group,
+  DType* grad_offset, OpReqType req) {
   LOG(FATAL) << "only implemented in GPU";
 }
 

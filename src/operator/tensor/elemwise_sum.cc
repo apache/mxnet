@@ -60,11 +60,11 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
 }
 
 bool ElementWiseSumShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape> *in_attrs,
-                         std::vector<TShape> *out_attrs) {
+                         mxnet::ShapeVector *in_attrs,
+                         mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
-  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string>(
-    attrs, in_attrs, out_attrs, TShape());
+  return ElemwiseAttr<mxnet::TShape, shape_is_none, shape_assign, true, shape_string>(
+    attrs, in_attrs, out_attrs, mxnet::TShape());
 }
 
 bool ElementWiseSumType(const nnvm::NodeAttrs& attrs,
@@ -182,7 +182,7 @@ The storage type of ``add_n`` output depends on storage types of inputs
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
-.set_attr<nnvm::FInferShape>("FInferShape", ElementWiseSumShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ElementWiseSumShape)
 .set_attr<nnvm::FInferType>("FInferType", ElementWiseSumType)
 .set_attr<FInferStorageType>("FInferStorageType", ElementWiseSumForwardInferStorageType)
 .set_attr<nnvm::FGradient>("FGradient", ElementWiseSumGrad)

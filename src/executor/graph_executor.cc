@@ -279,7 +279,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   zero_ops.push_back(nnvm::Op::Get("_zeros"));
 
   // take gradient
-  nnvm::Graph g_grad = nnvm::pass::Gradient(
+  nnvm::Graph g_grad = nnvm::pass::MXGradient(
       g, symbol.outputs, xs, head_grad_entry_,
       AggregateGradient, need_mirror, nullptr,
       zero_ops, "_copy");
@@ -325,7 +325,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   const auto& mutable_nodes = idx.mutable_input_nodes();
   size_t arg_top = 0, aux_top = 0;
   data_entry_.resize(idx.num_node_entries());
-  nnvm::ShapeVector arg_shapes;
+  mxnet::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_dtypes;
   StorageTypeVector arg_stypes(idx.num_node_entries(), -1);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
@@ -367,11 +367,11 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   }
 
   // expand arg_shapes and arg_dtypes to contain backward inputs
-  arg_shapes.resize(idx.input_nodes().size(), TShape());
+  arg_shapes.resize(idx.input_nodes().size(), mxnet::TShape());
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<nnvm::ShapeVector>("shape"));
+                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
 
   arg_dtypes.resize(idx.input_nodes().size(), -1);
@@ -401,7 +401,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
  * shared data arrays are provided.
  */
 void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
-                                  const nnvm::ShapeVector& inferred_shapes,
+                                  const mxnet::ShapeVector& inferred_shapes,
                                   const nnvm::DTypeVector& inferred_dtypes,
                                   const StorageTypeVector& inferred_stypes,
                                   const std::vector<Context>& in_arg_ctxes,
@@ -419,7 +419,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
-    const TShape& inferred_shape = inferred_shapes[eid];
+    const mxnet::TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -471,7 +471,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
  * and shared_exec if available.
  */
 void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
-                                  const nnvm::ShapeVector& inferred_shapes,
+                                  const mxnet::ShapeVector& inferred_shapes,
                                   const nnvm::DTypeVector& inferred_dtypes,
                                   const StorageTypeVector& inferred_stypes,
                                   const std::vector<Context>& in_arg_ctxes,
@@ -491,7 +491,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const uint32_t eid = idx.entry_id(nid, 0);
-    const TShape& inferred_shape = inferred_shapes[eid];
+    const mxnet::TShape& inferred_shape = inferred_shapes[eid];
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
@@ -635,7 +635,7 @@ void GraphExecutor::FinishInitGraph(nnvm::Symbol symbol,
       if (vstorage_type[i] != kDefaultStorage) arg_storage_id[i] = kDynamicStorageID;
     }
     g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(arg_storage_id));
-    g = nnvm::ApplyPass(g, "PlanMemory");
+    g = nnvm::ApplyPass(g, "MXPlanMemory");
   }
   g = DetectInplaceAddTo(g);
 
@@ -694,7 +694,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          const std::vector<Context>& in_arg_ctxes,
                          const std::vector<Context>& arg_grad_ctxes,
                          const std::vector<Context>& aux_state_ctxes,
-                         const std::unordered_map<std::string, TShape>& arg_shape_map,
+                         const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
                          const std::unordered_map<std::string, int>& arg_dtype_map,
                          const std::unordered_map<std::string, int>& arg_stype_map,
                          const std::vector<OpReqType>& grad_req_types,
@@ -714,7 +714,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   // Initialize arg_shapes and arg_dtypes for shape and type inferences.
   // It contains all in_args and aux_states' shapes and types in a certain order.
   const nnvm::IndexedGraph& idx = g.indexed_graph();
-  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(idx.input_nodes().size(), mxnet::TShape());
   nnvm::DTypeVector arg_dtypes(idx.input_nodes().size(), -1);
   StorageTypeVector arg_stypes(idx.input_nodes().size(), kUndefinedStorage);
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
@@ -736,7 +736,7 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<nnvm::ShapeVector>("shape"));
+                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
 
   g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
@@ -754,13 +754,13 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   // Create in_args, arg_grads, and aux_states using
   // the inferred shapes and dtypes.
   if (nullptr == shared_buffer) {  // regular simple bind
-    InitArguments(idx, g.GetAttr<nnvm::ShapeVector>("shape"),
+    InitArguments(idx, g.GetAttr<mxnet::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
                   g.GetAttr<StorageTypeVector>("storage_type"),
                   in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
                   grad_req_types, in_arg_vec, arg_grad_vec, aux_state_vec);
   } else {  // simple bind using shared data arrays and shared_exec
-    InitArguments(idx, g.GetAttr<nnvm::ShapeVector>("shape"),
+    InitArguments(idx, g.GetAttr<mxnet::ShapeVector>("shape"),
                   g.GetAttr<nnvm::DTypeVector>("dtype"),
                   g.GetAttr<StorageTypeVector>("storage_type"),
                   in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
@@ -788,7 +788,7 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
                                  const bool allow_up_sizing,
                                  const Context& default_ctx,
                                  const std::map<std::string, Context>& ctx_map,
-                                 const std::unordered_map<std::string, TShape>&
+                                 const std::unordered_map<std::string, mxnet::TShape>&
                                    provided_arg_shapes,
                                  std::vector<NDArray>* in_args,
                                  std::vector<NDArray>* arg_grads,
@@ -799,7 +799,7 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
   nnvm::Symbol symbol;
   symbol.outputs = g.outputs;
   const nnvm::IndexedGraph& idx = g.indexed_graph();
-  nnvm::ShapeVector arg_shapes(idx.input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(idx.input_nodes().size(), mxnet::TShape());
   for (size_t i = 0; i < num_forward_inputs_; ++i) {
     const uint32_t nid = idx.input_nodes().at(i);
     const std::string& name = idx[nid].source->attrs.name;
@@ -811,9 +811,9 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs_, g.indexed_graph(),
-                          g.GetAttr<nnvm::ShapeVector>("shape"));
+                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
-  const nnvm::ShapeVector& shape_vec = g.GetAttr<nnvm::ShapeVector>("shape");
+  const mxnet::ShapeVector& shape_vec = g.GetAttr<mxnet::ShapeVector>("shape");
   std::vector<OpReqType> grad_req_types;
   size_t grad_top = 0;
   const size_t num_args = in_arg_map_.size();
@@ -824,7 +824,7 @@ Executor* GraphExecutor::Reshape(const bool partial_shaping,
   aux_states->reserve(num_aux);
   for (uint32_t nid : idx.input_nodes()) {
     std::string name = idx[nid].source->attrs.name;
-    const TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
+    const mxnet::TShape& new_shape = shape_vec[idx.entry_id(nid, 0)];
     if (idx.mutable_input_nodes().count(nid) == 0) {
       NDArray& arr = in_arg_map_.at(name);
       auto it = arg_grad_map_.find(name);
@@ -927,13 +927,13 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
 // initialize the memory of each entries
 void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   using nnvm::DTypeVector;
-  using nnvm::ShapeVector;
+  using mxnet::ShapeVector;
   using nnvm::StorageVector;
   // get the graph
   const auto& idx = graph_.indexed_graph();
   // get the storage
   const auto& vdtype = graph_.GetAttr<DTypeVector>("dtype");
-  const auto& vshape = graph_.GetAttr<ShapeVector>("shape");
+  const auto& vshape = graph_.GetAttr<mxnet::ShapeVector>("shape");
   const auto& vstorage = graph_.GetAttr<StorageVector>("storage_id");
   const auto& vstorage_type = graph_.GetAttr<StorageTypeVector>("storage_type");
   const auto& vctx = graph_.GetAttr<ContextVector>("context");
@@ -1036,7 +1036,7 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       size_t nword = (bytes + 3) / 4;
       CHECK_LE(nword, std::numeric_limits<nnvm::dim_t>::max());
       // allocate float arrays
-      TShape shape{static_cast<nnvm::dim_t>(nword)};
+      mxnet::TShape shape{static_cast<nnvm::dim_t>(nword)};
       // TODO(junwu): adding delay_alloc=true to create nd
       // is a temporary solution.
       NDArray nd(shape, ctx, true);
@@ -1467,7 +1467,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
 
 // Infer shapes, dtypes, stypes, contexts for the forward graph
 static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
-                                     nnvm::ShapeVector arg_shapes,
+                                     mxnet::ShapeVector arg_shapes,
                                      nnvm::DTypeVector arg_dtypes,
                                      StorageTypeVector arg_stypes,
                                      const Context& default_ctx,
@@ -1481,7 +1481,7 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
   g = InferShape(std::move(g), std::move(arg_shapes), "__shape__");
   if (g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U) {
     HandleInferShapeError(num_forward_inputs, indexed_graph,
-                          g.GetAttr<nnvm::ShapeVector>("shape"));
+                          g.GetAttr<mxnet::ShapeVector>("shape"));
   }
   g = InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
   if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
@@ -1500,7 +1500,7 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
 // This is a common function for bind and simple_bind flows.
 static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    mxnet::op::SubgraphPropertyPtr subgraph_prop,
-                                   const nnvm::ShapeVector& arg_shapes,
+                                   const mxnet::ShapeVector& arg_shapes,
                                    const nnvm::DTypeVector& arg_dtypes,
                                    const StorageTypeVector& arg_stypes,
                                    const Context& default_ctx,
@@ -1521,8 +1521,10 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
 
 // Given input attr dicts, partition the graph using the backend name equal to prop_name.
 // This is for simple_bind flow.
-static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src, const std::string& prop_name,
-                                   const std::unordered_map<std::string, TShape>& arg_shape_map,
+static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
+                                   const std::string& prop_name,
+                                   const std::unordered_map<std::string, mxnet::TShape>
+                                                                             & arg_shape_map,
                                    const std::unordered_map<std::string, int>& arg_dtype_map,
                                    const std::unordered_map<std::string, int>& arg_stype_map,
                                    const Context& default_ctx,
@@ -1582,7 +1584,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src, const std::string& p
     }
     subgraph_prop->SetAttr("op_names", op_names_set);
     const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
-    nnvm::ShapeVector arg_shapes(input_names.size(), TShape());
+    mxnet::ShapeVector arg_shapes(input_names.size(), mxnet::TShape());
     nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
     StorageTypeVector arg_stypes(input_names.size(), kUndefinedStorage);
     for (size_t i = 0; i < input_names.size(); ++i) {
@@ -1687,7 +1689,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src, const std::string& p
     const std::vector<std::string> aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
     CHECK_EQ(arg_names.size(), in_args_map.size());
     CHECK_EQ(aux_names.size(), aux_states_map.size());
-    nnvm::ShapeVector arg_shapes;  // all input shapes
+    mxnet::ShapeVector arg_shapes;  // all input shapes
     arg_shapes.reserve(input_names.size());
     nnvm::DTypeVector arg_dtypes;  // all input dtypes
     arg_dtypes.reserve(input_names.size());
@@ -1750,7 +1752,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                const std::vector<Context>& in_arg_ctxes,
                                const std::vector<Context>& arg_grad_ctxes,
                                const std::vector<Context>& aux_state_ctxes,
-                               const std::unordered_map<std::string, TShape>& arg_shape_map,
+                               const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
                                const std::unordered_map<std::string, int>& arg_dtype_map,
                                const std::unordered_map<std::string, int>& arg_stype_map,
                                const std::vector<OpReqType>& grad_req_types,

@@ -152,10 +152,11 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
     }
   } else {  // model is not calibrated
-    TShape src_shape, dst_shape;
+    mxnet::TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);
     const size_t temp_reduce_size =
-        ConfigReduce<xpu, SrcDType>(s, inputs[0].shape_, TShape({1}), &src_shape, &dst_shape);
+        ConfigReduce<xpu, SrcDType>(s, inputs[0].shape_, mxnet::TShape({1}),
+                                    &src_shape, &dst_shape);
     Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
         Shape1(2 * actual_float_size + temp_reduce_size), s);
     const int dev_id = ctx.run_ctx.ctx.dev_id;
@@ -185,14 +186,14 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
 }
 
-static inline bool QuantizeV2Shape(const nnvm::NodeAttrs &attrs, std::vector<TShape> *in_attrs,
-                                   std::vector<TShape> *out_attrs) {
+static inline bool QuantizeV2Shape(const nnvm::NodeAttrs &attrs, mxnet::ShapeVector *in_attrs,
+                                   mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 3U);
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape{1});
-  SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape{1});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 2, mxnet::TShape{1});
   return !shape_is_none(out_attrs->at(0));
 }
 

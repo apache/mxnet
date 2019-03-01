@@ -26,7 +26,6 @@
 #define MXNET_OPERATOR_CONTRIB_BOUNDING_BOX_INL_H_
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
-#include <nnvm/tuple.h>
 #include <vector>
 #include <utility>
 #include <string>
@@ -89,8 +88,8 @@ struct BoxNMSParam : public dmlc::Parameter<BoxNMSParam> {
 };  // BoxNMSParam
 
 inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
   const BoxNMSParam& param = nnvm::get<BoxNMSParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
@@ -98,7 +97,7 @@ inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  TShape& ishape = (*in_attrs)[0];
+  mxnet::TShape& ishape = (*in_attrs)[0];
   int indim = ishape.ndim();
   CHECK(indim >= 2)
     << "input must have dim >= 2"
@@ -137,7 +136,7 @@ inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
     CHECK_NE(id_index, score_index)
       << "id_index: " << id_index << " conflict with score_index: " << score_index;
   }
-  TShape oshape = ishape;
+  mxnet::TShape oshape = ishape;
   oshape[indim - 1] = 1;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);  // out_shape[0] == in_shape
   SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);  // out_shape[1]
@@ -398,7 +397,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U) << "BoxNMS output: [output, temp]";
   const BoxNMSParam& param = nnvm::get<BoxNMSParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape in_shape = inputs[box_nms_enum::kData].shape_;
+  mxnet::TShape in_shape = inputs[box_nms_enum::kData].shape_;
   int indim = in_shape.ndim();
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
@@ -547,7 +546,7 @@ void BoxNMSBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 4U);
   CHECK_EQ(outputs.size(), 1U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape in_shape = outputs[box_nms_enum::kData].shape_;
+  mxnet::TShape in_shape = outputs[box_nms_enum::kData].shape_;
   int indim = in_shape.ndim();
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
@@ -579,12 +578,12 @@ struct BoxOverlapParam : public dmlc::Parameter<BoxOverlapParam> {
 };  // BoxOverlapParam
 
 inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
 
   CHECK_GE(lshape.ndim(), 2)
     << "lhs must have dim >= 2 "
@@ -602,7 +601,7 @@ inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
     << rdim << " provided";
 
   // assign output shape
-  TShape oshape(lshape.ndim() + rshape.ndim() - 2);
+  mxnet::TShape oshape(lshape.ndim() + rshape.ndim() - 2);
   int idx = 0;
   for (index_t i = 0; i < lshape.ndim() - 1; ++i) {
     oshape[idx++] = lshape[i];
@@ -648,8 +647,8 @@ void BoxOverlapForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   const BoxOverlapParam& param = nnvm::get<BoxOverlapParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape lshape = inputs[0].shape_;
-  TShape rshape = inputs[1].shape_;
+  mxnet::TShape lshape = inputs[0].shape_;
+  mxnet::TShape rshape = inputs[1].shape_;
   int lsize = lshape.ProdShape(0, lshape.ndim() - 1);
   int rsize = rshape.ProdShape(0, rshape.ndim() - 1);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -703,19 +702,19 @@ struct BipartiteMatchingParam : public dmlc::Parameter<BipartiteMatchingParam> {
 };  // BipartiteMatchingParam
 
 inline bool MatchingShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   // const BipartiteMatchingParam& param = nnvm::get<BipartiteMatchingParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
-  TShape& dshape = (*in_attrs)[0];
+  mxnet::TShape& dshape = (*in_attrs)[0];
 
   CHECK_GE(dshape.ndim(), 2)
     << "score matrix must have dim >= 2 "
     << dshape.ndim() << " provided";
 
   // assign output shape
-  TShape oshape(dshape.ndim() - 1);
+  mxnet::TShape oshape(dshape.ndim() - 1);
   for (index_t i = 0; i < dshape.ndim() - 1; ++i) {
     oshape[i] = dshape[i];
   }
@@ -772,7 +771,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   const BipartiteMatchingParam& param = nnvm::get<BipartiteMatchingParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape dshape = inputs[0].shape_;
+  mxnet::TShape dshape = inputs[0].shape_;
   int row = dshape[dshape.ndim() - 2];
   int col = dshape[dshape.ndim() - 1];
   int batch_size = dshape.Size() / row / col;
