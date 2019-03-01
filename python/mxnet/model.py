@@ -181,8 +181,10 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
             w, g = p
             updates[k].append((index*num_device+k, g, w))
     for dev_updates in updates:
-        i, w, g = zip(*dev_updates)
-        updater(i, w, g)
+        # update params if param_arrays and grad_arrays are not empty
+        if dev_updates:
+            i, w, g = zip(*dev_updates)
+            updater(i, w, g)
 
 
 def _multiple_callbacks(callbacks, *args, **kwargs):

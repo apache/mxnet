@@ -44,7 +44,7 @@ enum ROIAlignOpOutputs {kOut};
 
 
 struct ROIAlignParam : public dmlc::Parameter<ROIAlignParam> {
-  TShape pooled_size;
+  mxnet::TShape pooled_size;
   float spatial_scale;
   int sample_ratio;
   bool position_sensitive;

@@ -53,8 +53,8 @@ struct QuadraticParam : public dmlc::Parameter<QuadraticParam> {
 };
 
 inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape>* in_attrs,
-                             std::vector<TShape>* out_attrs) {
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 

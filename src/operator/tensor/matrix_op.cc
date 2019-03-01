@@ -34,8 +34,8 @@ namespace op {
 
 
 template<>
-void SliceDimTwoCsrImpl<cpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
+void SliceDimTwoCsrImpl<cpu>(const mxnet::TShape &begin, const mxnet::TShape &end,
+                             const OpContext& ctx, const NDArray &in, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -223,7 +223,7 @@ If the argument `reverse` is set to 1, then the special values are inferred from
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReshapeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ReshapeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ReshapeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_reshape"})
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
@@ -315,7 +315,7 @@ Example::
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", FlattenShape)
+.set_attr<mxnet::FInferShape>("FInferShape", FlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", FlattenStorageType)
@@ -371,7 +371,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<TransposeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", TransposeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
@@ -381,7 +381,7 @@ Examples::
           "transpose", n, ograds, {},
           std::unordered_map<std::string, std::string>());
     } else {
-      TShape axes = TShape(param.axes.ndim());
+      mxnet::TShape axes = mxnet::TShape(param.axes.ndim());
       for (index_t i = 0; i < axes.ndim(); ++i) {
         axes[param.axes[i]] = i;
       }
@@ -407,7 +407,7 @@ will return a new array with shape ``(2,1,3,4)``.
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ExpandDimParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ExpandDimShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ExpandDimShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -495,7 +495,7 @@ Example::
                                                             [1.,  3.]]
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<SliceParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
@@ -530,7 +530,7 @@ NNVM_REGISTER_OP(_slice_assign)
     return std::vector<std::string>{"lhs", "rhs"};
   })
 .set_attr_parser(ParamParser<SliceParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceAssignOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -551,7 +551,7 @@ NNVM_REGISTER_OP(_slice_assign_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceAssignScalarParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAssignScalarOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceAssignScalarOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
@@ -587,7 +587,7 @@ Examples::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SliceAxisParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SliceAxisShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceAxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SliceAxis<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_slice_axis"})
@@ -660,7 +660,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "shape_like"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SliceLikeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SliceLikeShape)
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
                                              std::vector<int> *in_attrs,
                                              std::vector<int> *out_attrs) {
@@ -714,7 +714,7 @@ parameter values:
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ClipParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Clip<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ClipEx<cpu>)
@@ -791,7 +791,7 @@ The parameter ``axis`` specifies the axis along which to perform repeat::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", RepeatOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", RepeatOpShape)
 .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
 .set_attr<FCompute>("FCompute<cpu>", RepeatOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_repeat"})
@@ -852,7 +852,7 @@ three cases:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", TileOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TileOpShape)
 .set_attr<nnvm::FInferType>("FInferType", TileOpType)
 .set_attr<FCompute>("FCompute<cpu>", TileOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_tile"})
@@ -898,7 +898,7 @@ Examples::
 [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest> {ResourceRequest::kTempSpace};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", ReverseOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_reverse" })
@@ -949,7 +949,7 @@ Examples::
     return ret;
   })
 .set_attr<std::string>("key_var_num_args", "num_args")
-.set_attr<nnvm::FInferShape>("FInferShape", StackOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", StackOpShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", StackOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_stack"})
@@ -990,7 +990,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SqueezeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SqueezeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
@@ -1045,7 +1045,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", DepthToSpaceOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DepthToSpaceOpShape)
 .set_attr<nnvm::FInferType>("FInferType", DepthToSpaceOpType)
 .set_attr<FCompute>("FCompute<cpu>", DepthToSpaceOpForward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -1099,7 +1099,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SpaceToDepthOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SpaceToDepthOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SpaceToDepthOpType)
 .set_attr<FCompute>("FCompute<cpu>", SpaceToDepthOpForward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -1185,7 +1185,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SplitOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SplitOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SplitOpType)
 .set_attr<FCompute>("FCompute<cpu>", SplitOpForward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",

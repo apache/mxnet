@@ -95,7 +95,7 @@ Example:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ToTensorShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ToTensorShape)
 .set_attr<nnvm::FInferType>("FInferType", ToTensorType)
 .set_attr<FCompute>("FCompute<cpu>", ToTensorOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
@@ -170,7 +170,7 @@ Example:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", NormalizeOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", NormalizeOpShape)
 .set_attr<nnvm::FInferType>("FInferType", NormalizeOpType)
 .set_attr<FCompute>("FCompute<cpu>", NormalizeOpForward<cpu>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
