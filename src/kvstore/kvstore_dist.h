@@ -383,8 +383,9 @@ class KVStoreDist : public KVStoreLocal {
 
     // Init the small buffer and residual_ buffer for quantize
     if (small_buf.is_none()) {
-      small_buf = NDArray(TShape{pskv.size}, comm_buf.ctx(), false, dtype);
-      res_buf = NDArray(TShape{static_cast<int64_t>(original_size)}, comm_buf.ctx(), false, dtype);
+      small_buf = NDArray(mxnet::TShape{pskv.size}, comm_buf.ctx(), false, dtype);
+      res_buf = NDArray(mxnet::TShape{static_cast<int64_t>(original_size)},
+                        comm_buf.ctx(), false, dtype);
       res_buf = 0;
     }
     gradient_compression_->Quantize(comm_buf, &small_buf, &res_buf, priority);

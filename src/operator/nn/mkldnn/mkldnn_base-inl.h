@@ -115,7 +115,7 @@ struct data_type_enum<uint8_t> {
   enum { type = mkldnn::memory::data_type::u8 };
 };
 
-static inline bool SupportMKLDNNArray(int dtype, const TShape &shape) {
+static inline bool SupportMKLDNNArray(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   bool support = ndim == 1 || ndim == 2 || ndim == 4;
   support = support && (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32
@@ -127,7 +127,7 @@ static inline bool SupportStorageMKLDNN(int stype) {
   return stype == kDefaultStorage;
 }
 
-static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
+static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
@@ -461,7 +461,7 @@ mkldnn_memory_format_t GetDefaultFormat(int num_dims);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
                                                 mkldnn_memory_format_t format);
 
-inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims) {
+inline bool same_shape(const mxnet::TShape &shape, const mkldnn_dims_t dims, int ndims) {
   if (shape.ndim() != (size_t)ndims)
     return false;
   for (int i = 0; i < ndims; i++)
@@ -480,7 +480,7 @@ inline bool same_shape(const mkldnn::memory::desc &desc1,
   return true;
 }
 
-inline bool same_shape(const TShape &shape, int dtype,
+inline bool same_shape(const mxnet::TShape &shape, int dtype,
                        const mkldnn::memory::desc &desc) {
   return same_shape(shape, desc.data.dims, desc.data.ndims)
       && get_mkldnn_type(dtype) == desc.data.data_type;
@@ -553,7 +553,7 @@ class MKLDNNMemory {
     return mem->get_primitive_desc() == pd;
   }
 
-  bool SameFormat(const TShape &shape, int dtype) const {
+  bool SameFormat(const mxnet::TShape &shape, int dtype) const {
     return same_shape(shape, dtype, desc);
   }
 

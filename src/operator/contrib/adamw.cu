@@ -50,10 +50,10 @@ inline void MPUpdateGPU(const nnvm::NodeAttrs& attrs,
   });
 }
 
-NNVM_REGISTER_OP(_contrib_adamw_update)
+NNVM_REGISTER_OP(_adamw_update)
 .set_attr<FCompute>("FCompute<gpu>", MPUpdateGPU<AdamWUpdate>);
 
-NNVM_REGISTER_OP(_contrib_mp_adamw_update)
+NNVM_REGISTER_OP(_mp_adamw_update)
 .set_attr<FCompute>("FCompute<gpu>", MPUpdateGPU<MPAdamWUpdate>);
 
 }  // namespace op

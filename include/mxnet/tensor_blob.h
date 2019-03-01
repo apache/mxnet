@@ -69,7 +69,7 @@ class TBlob {
   /*! \brief pointer to the data */
   void *dptr_;
   /*! \brief shape of the tensor */
-  TShape shape_;
+  mxnet::TShape shape_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
@@ -87,7 +87,7 @@ class TBlob {
    * \param dev_id the device id
    */
   template<typename DType>
-  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
+  TBlob(DType *dptr, const mxnet::TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
         type_flag_(mshadow::DataType<DType>::kFlag) {
     SetDLTensor(dev_mask, dev_id);
@@ -100,7 +100,7 @@ class TBlob {
    * \param type_flag the type flag. Can be one of enum mshadow::dtype
    * \param dev_id the device id
    */
-  TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
+  TBlob(void *dptr, const mxnet::TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
     SetDLTensor(dev_mask, dev_id);
   }
@@ -110,7 +110,7 @@ class TBlob {
    */
   explicit TBlob(const DLTensor &dltensor)
       : dptr_(dltensor.data),
-        shape_(TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
+        shape_(mxnet::TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
         type_flag_(DLDataTypeTransform(dltensor.dtype)),
         dltensor_(dltensor) {
     // compactness check for DLTensor
@@ -175,7 +175,7 @@ class TBlob {
    * \param shape desired shape
    * \return reshaped blob
    */
-  inline TBlob reshape(const TShape& shape) const {
+  inline TBlob reshape(const mxnet::TShape& shape) const {
     CHECK_EQ(this->shape_.Size(), shape.Size()) << "Shape size mismatch "
     << this->shape_.Size() << " v.s. "  << shape.Size();
     TBlob ret(this->dptr_, shape, this->dev_mask(), this->type_flag_, this->dev_id());
@@ -417,7 +417,7 @@ class TBlob {
 }  // namespace mxnet
 
 namespace dmlc {
-// Add a few patches to support TShape in dmlc/parameter.
+// Add a few patches to support mxnet::TShape in dmlc/parameter.
 DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<int>, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<dmlc::optional<int>>, "Shape(tuple)");

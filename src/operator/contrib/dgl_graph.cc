@@ -241,8 +241,8 @@ static bool CSRNeighborNonUniformSampleStorageType(const nnvm::NodeAttrs& attrs,
  * Check uniform Shape
  */
 static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
-                                          std::vector<TShape> *in_attrs,
-                                          std::vector<TShape> *out_attrs) {
+                                          mxnet::ShapeVector *in_attrs,
+                                          mxnet::ShapeVector *out_attrs) {
   const NeighborSampleParam& params =
     nnvm::get<NeighborSampleParam>(attrs.parsed);
 
@@ -259,7 +259,7 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
 
   // Output
   bool success = true;
-  TShape out_shape(1);
+  mxnet::TShape out_shape(1);
   // We use the last element to store the actual
   // number of vertices in the subgraph.
   out_shape[0] = params.max_num_vertices + 1;
@@ -270,7 +270,7 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
               out_attrs->at(i).Size() != 0U;
   }
   // sub_csr
-  TShape out_csr_shape(2);
+  mxnet::TShape out_csr_shape(2);
   out_csr_shape[0] = params.max_num_vertices;
   out_csr_shape[1] = in_attrs->at(0)[1];
   for (size_t i = 0; i < num_subgraphs; i++) {
@@ -280,7 +280,7 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
               out_attrs->at(i + num_subgraphs).Size() != 0U;
   }
   // sub_layer
-  TShape out_layer_shape(1);
+  mxnet::TShape out_layer_shape(1);
   out_layer_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_layer_shape);
@@ -296,8 +296,8 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
  * Check non-uniform Shape
  */
 static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
-                                             std::vector<TShape> *in_attrs,
-                                             std::vector<TShape> *out_attrs) {
+                                             mxnet::ShapeVector *in_attrs,
+                                             mxnet::ShapeVector *out_attrs) {
   const NeighborSampleParam& params =
     nnvm::get<NeighborSampleParam>(attrs.parsed);
 
@@ -317,7 +317,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
 
   // Output
   bool success = true;
-  TShape out_shape(1);
+  mxnet::TShape out_shape(1);
   // We use the last element to store the actual
   // number of vertices in the subgraph.
   out_shape[0] = params.max_num_vertices + 1;
@@ -328,7 +328,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
               out_attrs->at(i).Size() != 0U;
   }
   // sub_csr
-  TShape out_csr_shape(2);
+  mxnet::TShape out_csr_shape(2);
   out_csr_shape[0] = params.max_num_vertices;
   out_csr_shape[1] = in_attrs->at(0)[1];
   for (size_t i = 0; i < num_subgraphs; i++) {
@@ -338,7 +338,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
               out_attrs->at(i + num_subgraphs).Size() != 0U;
   }
   // sub_probability
-  TShape out_prob_shape(1);
+  mxnet::TShape out_prob_shape(1);
   out_prob_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_prob_shape);
@@ -347,7 +347,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
               out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
   }
   // sub_layer
-  TShape out_layer_shape(1);
+  mxnet::TShape out_layer_shape(1);
   out_layer_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 3*num_subgraphs, out_prob_shape);
@@ -679,8 +679,8 @@ static void SampleSubgraph(const NDArray &csr,
     }
   }
   // Construct sub_csr_graph
-  TShape shape_1(1);
-  TShape shape_2(1);
+  mxnet::TShape shape_1(1);
+  mxnet::TShape shape_2(1);
   shape_1[0] = num_edges;
   shape_2[0] = max_num_vertices+1;
   sub_csr.CheckAndAllocData(shape_1);
@@ -809,7 +809,7 @@ Example:
   return num_subgraphs * 3;
 })
 .set_attr<FInferStorageType>("FInferStorageType", CSRNeighborUniformSampleStorageType)
-.set_attr<nnvm::FInferShape>("FInferShape", CSRNeighborUniformSampleShape)
+.set_attr<mxnet::FInferShape>("FInferShape", CSRNeighborUniformSampleShape)
 .set_attr<nnvm::FInferType>("FInferType", CSRNeighborUniformSampleType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CSRNeighborUniformSampleComputeExCPU)
 .add_argument("csr_matrix", "NDArray-or-Symbol", "csr matrix")
@@ -908,7 +908,7 @@ Example:
   return num_subgraphs * 4;
 })
 .set_attr<FInferStorageType>("FInferStorageType", CSRNeighborNonUniformSampleStorageType)
-.set_attr<nnvm::FInferShape>("FInferShape", CSRNeighborNonUniformSampleShape)
+.set_attr<mxnet::FInferShape>("FInferShape", CSRNeighborNonUniformSampleShape)
 .set_attr<nnvm::FInferType>("FInferType", CSRNeighborNonUniformSampleType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CSRNeighborNonUniformSampleComputeExCPU)
 .add_argument("csr_matrix", "NDArray-or-Symbol", "csr matrix")
@@ -951,8 +951,8 @@ static bool DGLSubgraphStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 static bool DGLSubgraphShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
   const DGLSubgraphParam& params = nnvm::get<DGLSubgraphParam>(attrs.parsed);
   CHECK_EQ(in_attrs->at(0).ndim(), 2U);
   for (size_t i = 1; i < in_attrs->size(); i++)
@@ -960,13 +960,13 @@ static bool DGLSubgraphShape(const nnvm::NodeAttrs& attrs,
 
   size_t num_g = params.num_args - 1;
   for (size_t i = 0; i < num_g; i++) {
-    TShape gshape(2);
+    mxnet::TShape gshape(2);
     gshape[0] = in_attrs->at(i + 1)[0];
     gshape[1] = in_attrs->at(i + 1)[0];
     out_attrs->at(i) = gshape;
   }
   for (size_t i = num_g; i < out_attrs->size(); i++) {
-    TShape gshape(2);
+    mxnet::TShape gshape(2);
     gshape[0] = in_attrs->at(i - num_g + 1)[0];
     gshape[1] = in_attrs->at(i - num_g + 1)[0];
     out_attrs->at(i) = gshape;
@@ -1081,9 +1081,9 @@ static void GetSubgraph(const NDArray &csr_arr, const NDArray &varr,
     row_idx[i + 1] = col_idx.size();
   }
 
-  TShape nz_shape(1);
+  mxnet::TShape nz_shape(1);
   nz_shape[0] = col_idx.size();
-  TShape indptr_shape(1);
+  mxnet::TShape indptr_shape(1);
   indptr_shape[0] = row_idx.size();
 
   // Store the non-zeros in a subgraph with edge attributes of new edge ids.
@@ -1176,7 +1176,7 @@ Example:
   return names;
 })
 .set_attr<FInferStorageType>("FInferStorageType", DGLSubgraphStorageType)
-.set_attr<nnvm::FInferShape>("FInferShape", DGLSubgraphShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DGLSubgraphShape)
 .set_attr<nnvm::FInferType>("FInferType", DGLSubgraphType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DGLSubgraphComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")
@@ -1188,8 +1188,8 @@ Example:
 ///////////////////////// Edge Id ///////////////////////////
 
 inline bool EdgeIDShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape>* in_attrs,
-                        std::vector<TShape>* out_attrs) {
+                        mxnet::ShapeVector* in_attrs,
+                        mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_EQ(in_attrs->at(1).ndim(), 1U);
@@ -1339,7 +1339,7 @@ The storage type of ``edge_id`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "u", "v"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", EdgeIDShape)
+.set_attr<mxnet::FInferShape>("FInferShape", EdgeIDShape)
 .set_attr<nnvm::FInferType>("FInferType", EdgeIDType)
 .set_attr<FInferStorageType>("FInferStorageType", EdgeIDStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", EdgeIDForwardEx<cpu>)
@@ -1350,8 +1350,8 @@ The storage type of ``edge_id`` output depends on storage types of inputs
 ///////////////////////// DGL Adjacency ///////////////////////////
 
 inline bool DGLAdjacencyShape(const nnvm::NodeAttrs& attrs,
-                              std::vector<TShape>* in_attrs,
-                              std::vector<TShape>* out_attrs) {
+                              mxnet::ShapeVector* in_attrs,
+                              mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -1411,7 +1411,7 @@ Example:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", DGLAdjacencyShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DGLAdjacencyShape)
 .set_attr<nnvm::FInferType>("FInferType", DGLAdjacencyType)
 .set_attr<FInferStorageType>("FInferStorageType", DGLAdjacencyStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", DGLAdjacencyForwardEx<cpu>)
@@ -1460,9 +1460,9 @@ static void CompactSubgraph(const NDArray &csr, const NDArray &vids,
     CHECK_NE(row_ids[i], -1);
   }
 
-  TShape nz_shape(1);
+  mxnet::TShape nz_shape(1);
   nz_shape[0] = num_elems;
-  TShape indptr_shape(1);
+  mxnet::TShape indptr_shape(1);
   CHECK_EQ(out_csr.shape()[0], graph_size);
   indptr_shape[0] = graph_size + 1;
   CHECK_GE(in_ptr_data.shape_[0], indptr_shape[0]);
@@ -1522,8 +1522,8 @@ static bool SubgraphCompactStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 static bool SubgraphCompactShape(const nnvm::NodeAttrs& attrs,
-                                 std::vector<TShape> *in_attrs,
-                                 std::vector<TShape> *out_attrs) {
+                                 mxnet::ShapeVector *in_attrs,
+                                 mxnet::ShapeVector *out_attrs) {
   const SubgraphCompactParam& params = nnvm::get<SubgraphCompactParam>(attrs.parsed);
   size_t num_g = get_num_graphs(params);
   CHECK_EQ(num_g * 2, in_attrs->size());
@@ -1540,7 +1540,7 @@ static bool SubgraphCompactShape(const nnvm::NodeAttrs& attrs,
   }
 
   for (size_t i = 0; i < num_g; i++) {
-    TShape gshape(2);
+    mxnet::TShape gshape(2);
     gshape[0] = params.graph_sizes[i];
     gshape[1] = params.graph_sizes[i];
     out_attrs->at(i) = gshape;
@@ -1620,7 +1620,7 @@ Example:
   return names;
 })
 .set_attr<FInferStorageType>("FInferStorageType", SubgraphCompactStorageType)
-.set_attr<nnvm::FInferShape>("FInferShape", SubgraphCompactShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SubgraphCompactShape)
 .set_attr<nnvm::FInferType>("FInferType", SubgraphCompactType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SubgraphCompactComputeExCPU)
 .set_attr<std::string>("key_var_num_args", "num_args")

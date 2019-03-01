@@ -136,7 +136,7 @@ inline void BooleanMaskForward<cpu>(const nnvm::NodeAttrs& attrs,
     valid_num = prefix_sum[idx_size - 1];
   });
   // set the output shape forcefully
-  TShape s = data.shape();
+  mxnet::TShape s = data.shape();
   s[axis] = valid_num;
   const_cast<NDArray &>(out).Init(s);
   // do the copy
