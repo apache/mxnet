@@ -707,7 +707,7 @@ int MXGenBackendSubgraph(SymbolHandle sym_handle, const char *backend,
           backend);
   g.attrs["subgraph_property"] =
       std::make_shared<nnvm::any>(std::move(property));
-  g = ApplyPass(std::move(g), "PartitionGraph");
+  g = ApplyPass(std::move(g), "BuildSubgraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);

@@ -30,17 +30,17 @@
 namespace mxnet {
 namespace op {
 
-struct SimpleNode;
-using SimpleNodePtr = std::shared_ptr<SimpleNode>;
+struct BiDirectionalNode;
+using BiDirectionalNodePtr = std::shared_ptr<BiDirectionalNode>;
 
 /*!
  * \brief Node of the undirected graph which replicates the network structures
  * of the computational graph. It is used to ease the graph traversal for finding
  * subgraphs.
  */
-struct SimpleNode {
-  static SimpleNodePtr Create() { return std::make_shared<SimpleNode>(); }
-  SimpleNode() : label(-1), node(nullptr) {}
+struct BiDirectionalNode {
+  static BiDirectionalNodePtr Create() { return std::make_shared<BiDirectionalNode>(); }
+  BiDirectionalNode() : label(-1), node(nullptr) {}
   /*! subgraph label */
   int label;
   /*! the original node in the computational graph it references*/
@@ -51,7 +51,7 @@ struct SimpleNode {
    * in key->inputs whose source is the current node.
    */
   std::unordered_map<nnvm::Node*, std::vector<size_t>> outputs;
-};  // struct SimpleNode
+};  // struct BiDirectionalNode
 
 /*
  * This provides criteria for the graph partitioning algorithm to select
@@ -114,28 +114,28 @@ class SubgraphSelectorV2 {
   /*!
    * \brief Determines if to search for other nodes to form a subgraph from the seed_node.
    */
-  virtual bool Select(const SimpleNode &seed_node) = 0;
+  virtual bool Select(const BiDirectionalNode &seed_node) = 0;
   /*!
    * \brief Determines if to select input_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its input_node should be selected
    * \param input_node the input node of the cur_node
    * \return true if input_node is selected
    */
-  virtual bool SelectInput(const SimpleNode &cur_node, const SimpleNode &input_node) = 0;
+  virtual bool SelectInput(const BiDirectionalNode &cur_node, const BiDirectionalNode &input_node) = 0;
   /*!
    * \brief Determines if to select output_node when traverse to the cur_node.
    * \param cur_node the node for determining whether its output_node should be selected
    * \param output_node the output node of the cur_node
    * \return true if output_node is selected
    */
-  virtual bool SelectOutput(const SimpleNode &cur_node, const SimpleNode &output_node) = 0;
+  virtual bool SelectOutput(const BiDirectionalNode &cur_node, const BiDirectionalNode &output_node) = 0;
   /*!
    * \brief Post processes pre-selected subgraph nodes. Return a list of nodes that
    *        users want to keep in subgraph(s).
    * \param candidates re-selected subgraph nodes to filt
    * \return a list of nodes to keep
    */
-  virtual std::vector<SimpleNode*> Filter(const std::vector<SimpleNode*>& candidates) {
+  virtual std::vector<BiDirectionalNode*> Filter(const std::vector<BiDirectionalNode*>& candidates) {
     return candidates;
   }
 };
@@ -148,25 +148,25 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
 
   virtual ~SubgraphSelectorV2Bridge() {}
 
-  bool Select(const SimpleNode& seed_node) override { return ss_ptr_->Select(*seed_node.node); }
+  bool Select(const BiDirectionalNode& seed_node) override { return ss_ptr_->Select(*seed_node.node); }
 
-  bool SelectInput(const SimpleNode& cur_node, const SimpleNode& input_node) override {
+  bool SelectInput(const BiDirectionalNode& cur_node, const BiDirectionalNode& input_node) override {
     return ss_ptr_->SelectInput(*cur_node.node, *input_node.node);
   }
 
-  bool SelectOutput(const SimpleNode& cur_node, const SimpleNode& output_node) override {
+  bool SelectOutput(const BiDirectionalNode& cur_node, const BiDirectionalNode& output_node) override {
     return ss_ptr_->SelectOutput(*cur_node.node, *output_node.node);
   }
 
-  std::vector<SimpleNode*> Filter(const std::vector<SimpleNode*>& candidates) override {
-    std::unordered_map<nnvm::Node*, SimpleNode*> node_2_snode_map;
+  std::vector<BiDirectionalNode*> Filter(const std::vector<BiDirectionalNode*>& candidates) override {
+    std::unordered_map<nnvm::Node*, BiDirectionalNode*> node_2_snode_map;
     std::vector<nnvm::Node*> n_candidates;
     for (auto i : candidates) {
       node_2_snode_map[i->node] = i;
       n_candidates.push_back(i->node);
     }
     auto n_ret = ss_ptr_->Filter(n_candidates);
-    std::vector<SimpleNode*> ret;
+    std::vector<BiDirectionalNode*> ret;
     for (auto i : n_ret) ret.push_back(node_2_snode_map[i]);
     return ret;
   }

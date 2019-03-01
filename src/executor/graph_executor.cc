@@ -1498,7 +1498,7 @@ static nnvm::Graph InferForwardAttrs(nnvm::Graph g,
 
 // Given input attr arrays, partition the graph using the backend name equal to prop_name.
 // This is a common function for bind and simple_bind flows.
-static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
+static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
                                    const std::string& prop_name,
                                    const nnvm::ShapeVector& arg_shapes,
                                    const nnvm::DTypeVector& arg_dtypes,
@@ -1523,14 +1523,14 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
     subgraph_prop->SetAttr("op_names", it->second);
   }
   g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(std::move(subgraph_prop));
-  g = ApplyPass(std::move(g), "PartitionGraph");
+  g = ApplyPass(std::move(g), "BuildSubgraph");
   ret.outputs = g.outputs;
   return ret;
 }
 
 // Given input attr dicts, partition the graph using the backend name equal to prop_name.
 // This is for simple_bind flow.
-static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
+static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
                                    const std::string& prop_name,
                                    const std::unordered_map<std::string, TShape>& arg_shape_map,
                                    const std::unordered_map<std::string, int>& arg_dtype_map,
@@ -1557,13 +1557,13 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
       arg_stypes[i] = it3->second;
     }
   }
-  return PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
+  return BuildSubgraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
                         default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes);
 }
 
 // Given input ndarrays, partition the graph using the backend name equal to prop_name.
 // This is for bind flow.
-static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
+static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src,
                                    const std::string& prop_name,
                                    std::vector<NDArray> *in_args,
                                    const std::vector<NDArray> &aux_states,
@@ -1607,7 +1607,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
   for (size_t i = 0; i < in_args->size(); ++i) {
     in_args_map[arg_names[i]] = in_args->at(i);
   }
-  auto result = PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
+  auto result = BuildSubgraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
                                ctx_map, in_arg_ctxes, aux_state_ctxes);
   // Reorder in_args into new_in_args according to partitioned symbol input sequence
   std::vector<NDArray> new_in_args(in_args->size());
@@ -1641,7 +1641,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
                                Executor* shared_exec) {
   auto exec = new exec::GraphExecutor();
   if (!exec->subgraph_property().empty()) {
-    symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), arg_shape_map, arg_dtype_map,
+    symbol = exec::BuildSubgraph(symbol, exec->subgraph_property(), arg_shape_map, arg_dtype_map,
                                   arg_stype_map, default_ctx, group2ctx, in_arg_ctxes,
                                   aux_state_ctxes);
   }
@@ -1665,7 +1665,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
   auto exec = new exec::GraphExecutor();
   std::vector<NDArray> tmp_in_args = in_args;
   if (!exec->subgraph_property().empty()) {
-    symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), &tmp_in_args, aux_states,
+    symbol = exec::BuildSubgraph(symbol, exec->subgraph_property(), &tmp_in_args, aux_states,
                                   default_ctx, group2ctx);
   }
   exec->Init(symbol, default_ctx, group2ctx,

@@ -31,7 +31,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
  public:
   explicit SgMKLDNNConcatPostQuantizeSelector(int dis_all) : disable_all_(dis_all) {}
 
-  bool Select(const SimpleNode &sn) override {
+  bool Select(const BiDirectionalNode &sn) override {
     const auto &n = *sn.node;
     if ((!disable_all_) && n.op() == Op::Get("_contrib_quantized_concat")) {
       matched_list_.clear();
@@ -43,7 +43,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  bool SelectInput(const SimpleNode &sn, const SimpleNode &snew_node) override {
+  bool SelectInput(const BiDirectionalNode &sn, const BiDirectionalNode &snew_node) override {
     const auto &n = *sn.node;
     const auto &new_node = *snew_node.node;
     if (new_node.is_variable()) return false;
@@ -68,7 +68,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  bool SelectOutput(const SimpleNode &sn, const SimpleNode &snew_node) override {
+  bool SelectOutput(const BiDirectionalNode &sn, const BiDirectionalNode &snew_node) override {
     if (!select_output_) return false;
     const auto &n = *sn.node;
     const auto &new_node = *snew_node.node;
@@ -84,13 +84,13 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
     return false;
   }
 
-  virtual std::vector<SimpleNode*> Filter(const std::vector<SimpleNode*>& candidates) {
+  virtual std::vector<BiDirectionalNode*> Filter(const std::vector<BiDirectionalNode*>& candidates) {
     if (matched_list_.size() < 2) {
-      return std::vector<SimpleNode*>(0);
+      return std::vector<BiDirectionalNode*>(0);
     } else {
-      std::vector<SimpleNode *> ret;
+      std::vector<BiDirectionalNode *> ret;
       for (auto i : matched_list_) {
-        ret.push_back(const_cast<SimpleNode *>(i));
+        ret.push_back(const_cast<BiDirectionalNode *>(i));
       }
       return ret;
     }
@@ -99,7 +99,7 @@ class SgMKLDNNConcatPostQuantizeSelector : public SubgraphSelectorV2 {
  private:
   bool disable_all_;
   bool select_output_;
-  std::vector<const SimpleNode *> matched_list_;
+  std::vector<const BiDirectionalNode *> matched_list_;
   std::unordered_set<const nnvm::Node*> visit_list_;
 };
 
