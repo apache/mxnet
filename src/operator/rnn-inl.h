@@ -666,16 +666,16 @@ class RNNProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (param_.mode == rnn_enum::kLstm) {
       CHECK_EQ(in_shape->size(), 4U) << "Input:[data, parameters, state, cell_state]";
     } else {
       CHECK_EQ(in_shape->size(), 3U) << "Input:[data, parameters, state]";
     }
-    const TShape &dshape = (*in_shape)[rnn_enum::kData];
+    const mxnet::TShape &dshape = (*in_shape)[rnn_enum::kData];
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 3U) \
         << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
@@ -705,7 +705,7 @@ class RNNProp : public OperatorProperty {
 
     out_shape->clear();
     // output: [sequence len, batch, output size]
-    TShape oshape = dshape;
+    mxnet::TShape oshape = dshape;
     if (param_.projection_size.has_value()) {
       oshape[2] = numDirections * param_.projection_size.value();
     } else {
@@ -716,7 +716,7 @@ class RNNProp : public OperatorProperty {
       return true;
     } else {
       // outStateShape: [layer_num, batch, state size]
-      TShape outStateShape = dshape;
+      mxnet::TShape outStateShape = dshape;
       outStateShape[0] = total_layers;
       outStateShape[1] = batch_size;
       if (param_.projection_size.has_value()) {
@@ -727,7 +727,7 @@ class RNNProp : public OperatorProperty {
       out_shape->push_back(outStateShape);
       // Deal with lstm cell state
       if (param_.mode == rnn_enum::kLstm) {
-        TShape cellStateShape = dshape;
+        mxnet::TShape cellStateShape = dshape;
         cellStateShape[0] = total_layers;
         cellStateShape[1] = batch_size;
         cellStateShape[2] = param_.state_size;
@@ -796,12 +796,12 @@ class RNNProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -810,7 +810,7 @@ class RNNProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

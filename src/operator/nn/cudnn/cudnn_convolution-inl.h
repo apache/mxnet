@@ -59,8 +59,8 @@ class CuDNNConvolutionOp {
   void Init(const ConvolutionParam& param,
             int forward_compute_type,
             int backward_compute_type,
-            const std::vector<TShape>& in_shape,
-            const std::vector<TShape>& out_shape,
+            const mxnet::ShapeVector& in_shape,
+            const mxnet::ShapeVector& out_shape,
             const RunContext& rctx,
             bool add_to_weight) {
     using namespace mshadow;
@@ -430,8 +430,8 @@ class CuDNNConvolutionOp {
     return converted;
   }
 
-  void InitDescriptors(const std::vector<TShape>& in_shape,
-                       const std::vector<TShape>& out_shape,
+  void InitDescriptors(const mxnet::ShapeVector& in_shape,
+                       const mxnet::ShapeVector& out_shape,
                        cudnnDataType_t cudnn_forward_compute_type,
                        cudnnDataType_t cudnn_backward_compute_type) {
     using namespace mshadow;
@@ -439,10 +439,10 @@ class CuDNNConvolutionOp {
     CHECK_EQ(in_shape.size(), expected);
     CHECK_EQ(out_shape.size(), 1U);
 
-    TShape dshape = in_shape[conv::kData];
-    TShape wshape = in_shape[conv::kWeight];
-    TShape oshape = out_shape[conv::kOut];
-    TShape dstride, ostride;
+    mxnet::TShape dshape = in_shape[conv::kData];
+    mxnet::TShape wshape = in_shape[conv::kWeight];
+    mxnet::TShape oshape = out_shape[conv::kOut];
+    mxnet::TShape dstride, ostride;
 #if CUDNN_MAJOR <= 6
     wshape[0] /= param_.num_group;
 #endif
@@ -456,9 +456,12 @@ class CuDNNConvolutionOp {
 #endif
     if (param_.kernel.ndim() == 1 || param_.kernel.ndim() == 2) {
       // 1d or 2d conv
-      auto pad = param_.kernel.ndim() == 2 ? param_.pad : TShape({0, param_.pad[0]});
-      auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
-      auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
+      auto pad = param_.kernel.ndim() == 2 ?
+        param_.pad : mxnet::TShape({0, param_.pad[0]});
+      auto stride = param_.kernel.ndim() == 2 ?
+        param_.stride : mxnet::TShape({1, param_.stride[0]});
+      auto dilate = param_.kernel.ndim() == 2 ?
+        param_.dilate : mxnet::TShape({1, param_.dilate[0]});
       CUDNN_CALL(cudnnSetConvolution2dDescriptor(forward_conv_desc_,
                                                pad[0],
                                                pad[1],
@@ -501,15 +504,15 @@ class CuDNNConvolutionOp {
         oshape = ConvertLayout(oshape.get<4>(), param_.layout.value(), kNCHW);
       } else {
         wshape = ConvertLayout(wshape.get<3>(), param_.layout.value(), kNCW);
-        wshape = TShape({wshape[0], wshape[1], 1, wshape[2]});
+        wshape = mxnet::TShape({wshape[0], wshape[1], 1, wshape[2]});
         dstride = ConvertLayout(Strides<3>(dshape), param_.layout.value(), kNCW);
-        dstride = TShape({dstride[0], dstride[1], dstride[1], dstride[2]});
+        dstride = mxnet::TShape({dstride[0], dstride[1], dstride[1], dstride[2]});
         dshape = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW);
-        dshape = TShape({dshape[0], dshape[1], 1, dshape[2]});
+        dshape = mxnet::TShape({dshape[0], dshape[1], 1, dshape[2]});
         ostride = ConvertLayout(Strides<3>(oshape), param_.layout.value(), kNCW);
-        ostride = TShape({ostride[0], ostride[1], ostride[1], ostride[2]});
+        ostride = mxnet::TShape({ostride[0], ostride[1], ostride[1], ostride[2]});
         oshape = ConvertLayout(oshape.get<3>(), param_.layout.value(), kNCW);
-        oshape = TShape({oshape[0], oshape[1], 1, oshape[2]});
+        oshape = mxnet::TShape({oshape[0], oshape[1], 1, oshape[2]});
       }
       CUDNN_CALL(cudnnSetFilter4dDescriptor(filter_desc_,
                                             dtype_,
@@ -608,7 +611,7 @@ class CuDNNConvolutionOp {
                                           ostride_buffer.data()));
 
     if (!param_.no_bias) {
-      TShape bias = in_shape[conv::kBias];
+      mxnet::TShape bias = in_shape[conv::kBias];
       #if CUDNN_MAJOR >= 7
       bias_offset_ = bias[0];
       std::vector<int> bias_shape = {1,
@@ -634,8 +637,8 @@ class CuDNNConvolutionOp {
   }
 
   void CuDNNAlgoSetter(const RunContext& rctx,
-                  const std::vector<TShape>& in_shape,
-                  const std::vector<TShape>& out_shape,
+                  const mxnet::ShapeVector& in_shape,
+                  const mxnet::ShapeVector& out_shape,
                   cudnnDataType_t cudnn_forward_compute_type,
                   cudnnDataType_t cudnn_backward_compute_type,
                   CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *fwd,
@@ -845,8 +848,8 @@ class CuDNNConvolutionOp {
   }
 
   void SelectAlgo(const RunContext& rctx,
-                  const std::vector<TShape>& in_shape,
-                  const std::vector<TShape>& out_shape,
+                  const mxnet::ShapeVector& in_shape,
+                  const mxnet::ShapeVector& out_shape,
                   cudnnDataType_t cudnn_forward_compute_type,
                   cudnnDataType_t cudnn_backward_compute_type) {
     auto algo_setter = [&](CuDNNAlgo<cudnnConvolutionFwdAlgo_t> *fwd,
@@ -966,7 +969,7 @@ class CuDNNConvolutionOp {
                &forward_workspace_byte_));
   }
 
-  int *CastTShapeToIntPtr(const TShape& s, std::vector<int> *buffer) {
+  int *CastTShapeToIntPtr(const mxnet::TShape& s, std::vector<int> *buffer) {
     buffer->resize(s.ndim());
     nnvm::ShapeTypeCast(s.begin(), s.end(), buffer->data());
     return buffer->data();
@@ -993,12 +996,12 @@ class CuDNNConvolutionOp {
     return data_ptr;
   }
 
-  // Converts a TShape to a Shape<> of strides.
+  // Converts a mxnet::TShape to a Shape<> of strides.
   // e.g. {shape[0], shape[1], shape[2]} -> {shape[1]*shape[2], shape[2], 1}
   template <int dim>
-  inline Shape<dim> Strides(const TShape &s) {
+  inline Shape<dim> Strides(const mxnet::TShape &s) {
     uint32_t ndim = s.ndim();
-    TShape strides(ndim);
+    mxnet::TShape strides(ndim);
     for (uint32_t i = 0; i != ndim; ++i)
       strides[i] = s.ProdShape(i+1, ndim);
     return strides.get<dim>();
@@ -1032,7 +1035,7 @@ class CuDNNConvolutionOp {
   }
 
   // Given a tensor shape of this operation, return the number of features 'c'
-  int64_t Features(const TShape &dshape) {
+  int64_t Features(const mxnet::TShape &dshape) {
     int c = 0;
     switch (dshape.ndim()) {
       case 3: c = ConvertLayout(dshape.get<3>(), param_.layout.value(), kNCW)[1]; break;
