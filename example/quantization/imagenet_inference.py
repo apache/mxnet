@@ -107,15 +107,15 @@ def benchmark_score(symbol_file, ctx, batch_size, num_batches, data_layer_type, 
         logger.info('Loading symbol from file %s' % symbol_file_path)
     sym = mx.sym.load(symbol_file_path)
     mod = mx.mod.Module(symbol=sym, context=ctx)
-    if data_layer_type == "float32":
+    if data_layer_type == "int8":
         dshape = mx.io.DataDesc(name='data', shape=(
-            batch_size,) + data_shape, dtype=np.float32)
+            batch_size,) + data_shape, dtype=np.int8)
     elif data_layer_type == 'uint8':
         dshape = mx.io.DataDesc(name='data', shape=(
             batch_size,) + data_shape, dtype=np.uint8)
-    else:  # int8
+    else:  # float32
         dshape = mx.io.DataDesc(name='data', shape=(
-            batch_size,) + data_shape, dtype=np.int8)
+            batch_size,) + data_shape, dtype=np.float32)
     mod.bind(for_training=False,
              inputs_need_grad=False,
              data_shapes=[dshape])
@@ -217,19 +217,19 @@ if __name__ == '__main__':
         logger.info('Dataset for inference: %s' % dataset)
 
         # creating data iterator
-        if data_layer_type == 'float32':
-            data = mx.io.ImageRecordIter(path_imgrec=dataset,
-                                         label_width=1,
-                                         preprocess_threads=data_nthreads,
-                                         batch_size=batch_size,
-                                         data_shape=data_shape,
-                                         label_name=label_name,
-                                         rand_crop=False,
-                                         rand_mirror=False,
-                                         shuffle=args.shuffle_dataset,
-                                         shuffle_chunk_seed=args.shuffle_chunk_seed,
-                                         seed=args.shuffle_seed,
-                                         **combine_mean_std)
+        if data_layer_type == 'int8':
+            data = mx.io.ImageRecordInt8Iter(path_imgrec=dataset,
+                                             label_width=1,
+                                             preprocess_threads=data_nthreads,
+                                             batch_size=batch_size,
+                                             data_shape=data_shape,
+                                             label_name=label_name,
+                                             rand_crop=False,
+                                             rand_mirror=False,
+                                             shuffle=args.shuffle_dataset,
+                                             shuffle_chunk_seed=args.shuffle_chunk_seed,
+                                             seed=args.shuffle_seed,
+                                             **combine_mean_std)
         elif data_layer_type == 'uint8':
             data = mx.io.ImageRecordUInt8Iter(path_imgrec=dataset,
                                               label_width=1,
@@ -243,19 +243,19 @@ if __name__ == '__main__':
                                               shuffle_chunk_seed=args.shuffle_chunk_seed,
                                               seed=args.shuffle_seed,
                                               **combine_mean_std)
-        else:  #int8
-            data = mx.io.ImageRecordInt8Iter(path_imgrec=dataset,
-                                             label_width=1,
-                                             preprocess_threads=data_nthreads,
-                                             batch_size=batch_size,
-                                             data_shape=data_shape,
-                                             label_name=label_name,
-                                             rand_crop=False,
-                                             rand_mirror=False,
-                                             shuffle=args.shuffle_dataset,
-                                             shuffle_chunk_seed=args.shuffle_chunk_seed,
-                                             seed=args.shuffle_seed,
-                                             **combine_mean_std)
+        else:  #float32
+            data = mx.io.ImageRecordIter(path_imgrec=dataset,
+                                         label_width=1,
+                                         preprocess_threads=data_nthreads,
+                                         batch_size=batch_size,
+                                         data_shape=data_shape,
+                                         label_name=label_name,
+                                         rand_crop=False,
+                                         rand_mirror=False,
+                                         shuffle=args.shuffle_dataset,
+                                         shuffle_chunk_seed=args.shuffle_chunk_seed,
+                                         seed=args.shuffle_seed,
+                                         **combine_mean_std)
 
         # loading model
         sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)
