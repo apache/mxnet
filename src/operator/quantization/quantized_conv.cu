@@ -110,8 +110,9 @@ class QuantizedCuDNNConvOp {
     const TShape& fshape = filter.shape_;
     const TShape& oshape = out.shape_;
 
-    CHECK_EQ(data.type_flag_, mshadow::kInt8) << "currently, uint8 quantization is only supported by CPU, "
-                                                 "please switch to the context of CPU or int8 data type for GPU.";
+    CHECK_EQ(data.type_flag_, mshadow::kInt8)
+      << "currently, uint8 quantization is only supported by CPU, "
+         "please switch to the context of CPU or int8 data type for GPU.";
     // allocate workspace
     const int dev_id = ctx.run_ctx.ctx.dev_id;
     const int dev_mask = gpu::kDevMask;
