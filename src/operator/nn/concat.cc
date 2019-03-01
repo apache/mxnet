@@ -38,6 +38,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+  //TODO: Logic to perform correct shape inference
   mxnet::TShape dshape;
   index_t size = 0;
   bool has_zero = false;
