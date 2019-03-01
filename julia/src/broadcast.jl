@@ -15,22 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-using TakingBroadcastSeriously: Broadcasted, unwrap
+struct NDArrayStyle{N} <: Broadcast.AbstractArrayStyle{N} end
+NDArrayStyle(::Val{N}) where N        = NDArrayStyle{N}()
+NDArrayStyle{M}(::Val{N}) where {N,M} = NDArrayStyle{N}()
 
-for f in :[%,
-           tan, asin, acos, atan,
-           sinh, cosh, tanh, asinh, acosh, atanh,
-           min, max,
-           hypot].args
-  # copy from TakingBroadcastSeriously
-  @eval Base.$f(a::Broadcasted...) = Broadcasted(broadcast_($f, unwrap.(a)...))
-  @eval Base.$f(a::Broadcasted, b) = Broadcasted(broadcast_($f, unwrap(a), b))
-  @eval Base.$f(b, a::Broadcasted) = Broadcasted(broadcast_($f, b, unwrap(a)))
-end
+# Determin the output type
+Base.BroadcastStyle(::Type{<:NDArray{T,N}}) where {T,N} = NDArrayStyle{N}()
 
-for f in :[σ, sigmoid, relu, softmax, log_softmax].args
-  # copy from TakingBroadcastSeriously
-  @eval $f(a::Broadcasted...) = Broadcasted(broadcast_($f, unwrap.(a)...))
-  @eval $f(a::Broadcasted, b) = Broadcasted(broadcast_($f, unwrap(a), b))
-  @eval $f(b, a::Broadcasted) = Broadcasted(broadcast_($f, b, unwrap(a)))
-end
+Base.broadcastable(x::NDArray) = x
+
+# Make it non-lazy
+broadcasted(f, x::NDArray, args...)    = f(x, args...)
+broadcasted(f, y, x::NDArray, args...) = f(y, x, args...)
+broadcasted(f, x::NDArray{T,N}, y::NDArray{T,N}, args...) where {T,N} =
+  f(x, y, args...)

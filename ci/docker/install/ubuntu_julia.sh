@@ -22,16 +22,22 @@
 
 set -ex
 
-export JLBINARY='julia.tar.gz'
-export JULIADIR='/work/julia'
-export JULIA="${JULIADIR}/bin/julia"
+function install_julia() {
+    local suffix=`echo $1 | sed 's/\.//'`  # 0.7 -> 07; 1.0 -> 10
+    local JLBINARY="julia-$1.tar.gz"
+    local JULIADIR="/work/julia$suffix"
+    local JULIA="${JULIADIR}/bin/julia"
 
-mkdir -p $JULIADIR
-# The julia version in Ubuntu repo is too old
-# We download the tarball from the official link:
-#   https://julialang.org/downloads/
-wget -O $JLBINARY https://julialang-s3.julialang.org/bin/linux/x64/0.6/julia-0.6.2-linux-x86_64.tar.gz
-tar xzvf $JLBINARY -C $JULIADIR --strip 1
-rm $JLBINARY
+    mkdir -p $JULIADIR
+    # The julia version in Ubuntu repo is too old
+    # We download the tarball from the official link:
+    #   https://julialang.org/downloads/
+    wget -qO $JLBINARY https://julialang-s3.julialang.org/bin/linux/x64/$1/julia-$2-linux-x86_64.tar.gz
+    tar xzf $JLBINARY -C $JULIADIR --strip 1
+    rm $JLBINARY
 
-$JULIA -e 'versioninfo()'
+    $JULIA -e 'using InteractiveUtils; versioninfo()'
+}
+
+install_julia 0.7 0.7.0
+install_julia 1.0 1.0.3

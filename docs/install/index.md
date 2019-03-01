@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Installing MXNet
 
 ```eval_rst
@@ -66,8 +83,8 @@ Indicate your preferred configuration. Then, follow the customized commands to i
 <!-- No CPU GPU for other Devices -->
 <div class="linux macos windows cloud">
 <div class="btn-group opt-group" role="group">
-  <button type="button" class="btn btn-default processors opt active">CPU</button>
-  <button type="button" class="btn btn-default processors opt">GPU</button>
+  <button type="button" class="btn btn-default processors opt active">GPU</button>
+  <button type="button" class="btn btn-default processors opt">CPU</button>
 </div>
 </div>
 
@@ -494,9 +511,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-    <scope>system</scope>
-    <version>1.4.0</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-gpu-1.4.0-SNAPSHOT.jar</systemPath>
+    <version>[1.4.0, )</version>
 </dependency>
 ```
 
@@ -513,9 +528,7 @@ You can use the Maven packages defined in the following dependency to include MX
 <dependency>
     <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <version>1.4.0</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-linux-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
+    <version>[1.4.0, )</version>
 </dependency>
 ```
 <br>
@@ -718,13 +731,13 @@ To run MXNet you also should have OpenCV and OpenBLAS installed. You may install
 
 ```bash
 brew install opencv
-brew install openblas@0.3.1
+brew install openblas
 ```
 
-Add a soft link to the OpenBLAS installation. This example links the 0.3.1 version:
+To ensure MXNet R package runs with the version of OpenBLAS installed, create a symbolic link as follows:
 
 ```bash
-ln -sf /usr/local/opt/openblas/lib/libopenblasp-r0.3.* /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
+ln -sf /usr/local/opt/openblas/lib/libopenblas.dylib /usr/local/opt/openblas/lib/libopenblasp-r0.3.1.dylib
 ```
 
 Install the latest version (3.5.1+) of R from [CRAN](https://cran.r-project.org/bin/macosx/).
@@ -802,10 +815,8 @@ You can use the Maven packages defined in the following dependency to include MX
 ```html
 <dependency>
     <groupId>org.apache.mxnet</groupId>
-    <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-    <scope>system</scope>
-    <version>1.4.0</version>
-    <systemPath>/system/path/to/jar/mxnet-full_2.11-osx-x86_64-cpu-1.4.0-SNAPSHOT.jar</systemPath>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <version>[1.4.0, )</version>
 </dependency>
 ```
 <br>
@@ -816,30 +827,6 @@ Not available at this time. <br>
 
 </div>
 </div> <!-- End of java -->
-
-
-<div class="clojure">
-<div class="cpu">
-</br>
-You can use the Maven packages defined in the following `dependency` to include MXNet in your Clojure project. To maximize leverage, the Clojure package has been built on the existing Scala package. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for a detailed set of instructions to help you with the setup process that is required to use the Clojure dependency.
-
-<a href="https://mvnrepository.com/artifact/org.apache.mxnet.contrib.clojure/clojure-mxnet-osx-cpu"><img src="https://img.shields.io/badge/org.apache.mxnet-mac cpu-green.svg" alt="maven badge"/></a>
-
-```html
-<dependency>
-    <groupId>org.apache.mxnet.contrib.clojure</groupId>
-    <artifactId>clojure-mxnet-osx-cpu</artifactId>
-</dependency>
-```
-<br>
-</div> <!-- End of cpu  -->
-<div class="gpu">
-
-Not available at this time. <br>
-
-</div> <!-- End of gpu -->
-</div> <!-- End of clojure -->
-
 
 
 <div class="julia">
@@ -1199,11 +1186,36 @@ For more installation options, refer to the <a href="windows_setup.html">MXNet W
 <!-- START - Cloud Python Installation Instructions -->
 
 <div class="cloud">
+<div class="gpu">
 
-AWS Marketplace distributes Deep Learning AMIs (Amazon Machine Image) with MXNet pre-installed. You can launch one of these Deep Learning AMIs by following instructions in the [AWS Deep Learning AMI Developer Guide](http://docs.aws.amazon.com/dlami/latest/devguide/what-is-dlami.html).
+MXNet is available on several cloud providers with GPU support. You can also find GPU/CPU-hybrid support for use cases like scalable inference, or even fractional GPU support with AWS Elastic Inference.
 
-You can also run distributed deep learning with *MXNet* on AWS using [Cloudformation Template](https://github.com/awslabs/deeplearning-cfn/blob/master/README.md).
+* **Alibaba**
+    - [NVIDIA VM](https://docs.nvidia.com/ngc/ngc-alibaba-setup-guide/launching-nv-cloud-vm-console.html#launching-nv-cloud-vm-console)
+* **Amazon Web Services**
+    - [Amazon SageMaker](https://aws.amazon.com/sagemaker/) - Managed training and deployment of MXNet models
+    - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled Conda environments for Python 2 or 3 with MXNet, CUDA, cuDNN, MKL-DNN, and AWS Elastic Inference
+    - [Dynamic Training on AWS](https://github.com/awslabs/dynamic-training-with-apache-mxnet-on-aws) - experimental manual EC2 setup or semi-automated CloudFormation setup
+    - [NVIDIA VM](https://aws.amazon.com/marketplace/pp/B076K31M1S)
+* **Google Cloud Platform**
+    - [NVIDIA VM](https://console.cloud.google.com/marketplace/details/nvidia-ngc-public/nvidia_gpu_cloud_image)
+* **Microsoft Azure**
+    - [NVIDIA VM](https://azuremarketplace.microsoft.com/en-us/marketplace/apps/nvidia.ngc_azure_17_11?tab=Overview)
+* **Oracle Cloud**
+    - [NVIDIA VM](https://docs.cloud.oracle.com/iaas/Content/Compute/References/ngcimage.htm)
 
+All NVIDIA VMs use the [NVIDIA MXNet Docker container](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet).
+Follow the [container usage instructions](https://ngc.nvidia.com/catalog/containers/nvidia:mxnet) found in [NVIDIA's container repository](https://ngc.nvidia.com/).
+
+</div> <!-- END gpu -->
+
+<div class="cpu">
+MXNet should work on any cloud provider's CPU-only instances. Follow the Python pip install instructions, Docker instructions, or try the following preinstalled option.
+
+* **Amazon Web Services**
+    - [AWS Deep Learning AMI](https://aws.amazon.com/machine-learning/amis/) - Preinstalled Conda environments for Python 2 or 3 with MXNet and MKL-DNN.
+
+</div> <!-- end cpu -->
 </div> <!-- END - Cloud Python Installation Instructions -->
 
 
@@ -1211,13 +1223,16 @@ You can also run distributed deep learning with *MXNet* on AWS using [Cloudforma
 <div class="devices">
   <div class="raspberry-pi">
 
-MXNet supports the Debian based Raspbian ARM based operating system so you can run MXNet on Raspberry Pi Devices.
+MXNet supports the Debian based Raspbian ARM based operating system so you can run MXNet on Raspberry Pi 3B devices.
 
 These instructions will walk through how to build MXNet for the Raspberry Pi and install the Python bindings for the library.
 
 You can do a dockerized cross compilation build on your local machine or a native build on-device.
 
 The complete MXNet library and its requirements can take almost 200MB of RAM, and loading large models with the library can take over 1GB of RAM. Because of this, we recommend running MXNet on the Raspberry Pi 3 or an equivalent device that has more than 1 GB of RAM and a Secure Digital (SD) card that has at least 4 GB of free memory.
+
+## Quick installation
+You can use this [pre-built Python wheel](wget https://mxnet-public.s3.amazonaws.com/install/raspbian/mxnet-1.5.0-py2.py3-none-any.whl) on a Raspberry Pi 3B with Stretch. You will likely need to install several dependencies to get MXNet to work. Refer to the following **Build** section for details.
 
 **Cross compilation build (Experimental)**
 
@@ -1245,11 +1260,48 @@ ci/build.py -p armv7
 
 ## Install
 
-Create a virtualenv and install the package we created previously.
+Your Pi will need several dependencies.
+
+Install MXNet dependencies with the following:
+```
+sudo apt-get update
+sudo apt-get install -y \
+    apt-transport-https \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    libatlas-base-dev \
+    libcurl4-openssl-dev \
+    libjemalloc-dev \
+    liblapack-dev \
+    libopenblas-dev \
+    libopencv-dev \
+    libzmq3-dev \
+    ninja-build \
+    python-dev \
+    software-properties-common \
+    sudo \
+    unzip \
+    virtualenv \
+    wget
+```
+Install virtualenv with:
+```
+sudo pip install virtualenv
+```
+Create a Python 2.7 environment for MXNet with:
+```
+virtualenv -p `which python` mxnet_py27
+```
+You may use Python 3, however the [wine bottle detection example](https://mxnet.incubator.apache.org/versions/master/tutorials/embedded/wine_detector.html) for the Pi with camera requires Python 2.7.
+
+Create a virtualenv and install the wheel we created previously, or the wheel that you downloaded.
 
 ```
-virtualenv -p `which python3` mxnet_py3
-source mxnet_py3/bin/activate
+virtualenv -p `which python3` mxnet_py27
+source mxnet_py27/bin/activate
 pip install mxnet-x.x.x-py2.py3-none-any.whl
 ```
 
@@ -1280,7 +1332,7 @@ Install these dependencies using the following commands in any directory:
 
 ```
     sudo apt-get update
-    sudo apt-get -y install git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack* libblas* libopencv* libopenblas* python3-dev virtualenv
+    sudo apt-get -y install git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack* libblas* libopencv* libopenblas* python3-dev python-dev virtualenv
 ```
 
 Clone the MXNet source code repository using the following `git` command in your home directory:
@@ -1439,6 +1491,7 @@ You are now ready to run MXNet on your NVIDIA Jetson TX2 device.
 
 <!-- Download -->
 <hr>
+
 
 # Source Download
 

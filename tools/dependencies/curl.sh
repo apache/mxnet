@@ -18,12 +18,14 @@
 # under the License.
 
 # This script builds the static library of libcurl that can be used as dependency of mxnet.
+set -ex
 LIBCURL_VERSION=7.61.0
 if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
     # download and build libcurl
     >&2 echo "Building libcurl..."
     curl -s -L https://curl.haxx.se/download/curl-$LIBCURL_VERSION.zip -o $DEPS_PATH/libcurl.zip
     unzip -q $DEPS_PATH/libcurl.zip -d $DEPS_PATH
+    pushd .
     cd $DEPS_PATH/curl-$LIBCURL_VERSION
     if [[ $PLATFORM == 'linux' ]]; then
         CONFIG_FLAG=""
@@ -58,7 +60,7 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
                 --disable-gopher \
                 --disable-manual \
                 --prefix=$DEPS_PATH
-    make
-    make install
-    cd -
+    $MAKE
+    $MAKE install
+    popd
 fi

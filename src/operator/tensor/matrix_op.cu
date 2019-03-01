@@ -67,8 +67,8 @@ struct SliceMarkCsrIndPtr {
 
 
 template<>
-void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
+void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &end,
+                             const OpContext& ctx, const NDArray &in, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -216,6 +216,12 @@ NNVM_REGISTER_OP(depth_to_space)
 
 NNVM_REGISTER_OP(space_to_depth)
 .set_attr<FCompute>("FCompute<gpu>", SpaceToDepthOpForward<gpu>);
+
+NNVM_REGISTER_OP(_split_v2)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpForward<gpu>);
+
+NNVM_REGISTER_OP(_split_v2_backward)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

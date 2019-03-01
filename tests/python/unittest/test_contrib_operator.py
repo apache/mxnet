@@ -261,6 +261,42 @@ def test_multibox_target_op():
     assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
+def test_gradient_multiplier_op():
+    # We use the quadratic function in combination with gradient multiplier
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    c = np.random.random_sample()
+    m = np.random.random_sample() - 0.5
+    
+    data = mx.symbol.Variable('data')
+    quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+    gr_q_sym = mx.sym.contrib.gradientmultiplier(quad_sym, scalar=m)
+
+    for dtype in [np.float16, np.float32, np.float64]:
+        for ndim in range(1, 6):
+            shape = rand_shape_nd(ndim, 5)
+            data_np = np.random.randn(*shape).astype(dtype)
+            expected = f(data_np, a, b, c)
+            backward_expected = (2 * a * data_np + b) * m
+
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            output = mx.nd.contrib.gradientmultiplier(output, scalar=m)
+            assert_almost_equal(output.asnumpy(), expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check forward
+            check_symbolic_forward(gr_q_sym, [data_np], [expected],
+                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward
+            check_symbolic_backward(gr_q_sym, [data_np], [np.ones(expected.shape)],
+                                        [backward_expected],
+                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                        atol=1e-2 if dtype is np.float16 else 1e-5)
 
 if __name__ == '__main__':
     import nose

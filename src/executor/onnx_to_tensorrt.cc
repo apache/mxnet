@@ -28,7 +28,7 @@
 
 #include "./onnx_to_tensorrt.h"
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include <NvInfer.h>
 #include <google/protobuf/io/coded_stream.h>
@@ -100,8 +100,8 @@ nvinfer1::ICudaEngine* onnxToTrtCtx(
   }
 
   if ( !trt_parser->parse(onnx_model.c_str(), onnx_model.size()) ) {
-      int nerror = trt_parser->getNbErrors();
-      for ( int i=0; i < nerror; ++i ) {
+      size_t nerror = trt_parser->getNbErrors();
+      for ( size_t i=0; i < nerror; ++i ) {
         nvonnxparser::IParserError const* error = trt_parser->getError(i);
         if ( error->node() != -1 ) {
           ::ONNX_NAMESPACE::NodeProto const& node =

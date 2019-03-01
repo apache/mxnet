@@ -73,17 +73,14 @@ def rand_zipfian(true_classes, num_sampled, range_max):
 
     Examples
     --------
-    >>> true_cls = mx.nd.array([3])
-    >>> samples, exp_count_true, exp_count_sample = mx.nd.contrib.rand_zipfian(true_cls, 4, 5)
-    >>> samples
-    [1 3 3 3]
-    <NDArray 4 @cpu(0)>
-    >>> exp_count_true
-    [ 0.12453879]
-    <NDArray 1 @cpu(0)>
-    >>> exp_count_sample
-    [ 0.22629439  0.12453879  0.12453879  0.12453879]
-    <NDArray 4 @cpu(0)>
+    >>> true_cls = mx.sym.Variable('true_cls')
+    >>> samples, exp_count_true, exp_count_sample = mx.sym.contrib.rand_zipfian(true_cls, 4, 5)
+    >>> samples.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
+    array([1, 3, 3, 3])
+    >>> exp_count_true.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
+    array([0.12453879])
+    >>> exp_count_sample.eval(true_cls=mx.nd.array([3]))[0].asnumpy()
+    array([0.22629439, 0.12453879, 0.12453879, 0.12453879])
     """
     assert(isinstance(true_classes, Symbol)), "unexpected type %s" % type(true_classes)
     log_range = math.log(range_max + 1)
@@ -730,3 +727,25 @@ def cond(pred, then_func, else_func, name="cond"):
     outputs = [result[i] for i in range(then_num_outputs)]
     outputs, _ = _regroup(outputs, then_fmt)
     return outputs
+
+def adamw_update(weight, grad, mean, var, rescale_grad, lr, eta, beta1=0.9, beta2=0.999,
+                 epsilon=1e-8, wd=0, clip_gradient=-1, out=None, name=None, **kwargs):
+    if not isinstance(rescale_grad, Symbol):
+        rescale_grad = symbol.full(shape=(1,), val=rescale_grad)
+    return symbol._internal._adamw_update(weight=weight, grad=grad, mean=mean, var=var,
+                                          rescale_grad=rescale_grad, lr=lr, eta=eta,
+                                          beta1=beta1, beta2=beta2, epsilon=epsilon,
+                                          wd=wd, clip_gradient=clip_gradient, out=out,
+                                          name=name, **kwargs)
+
+def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, beta1=0.9,
+                    beta2=0.999, epsilon=1e-8, wd=0, clip_gradient=-1, out=None,
+                    name=None, **kwargs):
+    if not isinstance(rescale_grad, Symbol):
+        rescale_grad = symbol.full(shape=(1,), val=rescale_grad)
+    return symbol._internal._mp_adamw_update(weight=weight, grad=grad, mean=mean, var=var,
+                                             weight32=weight32,
+                                             rescale_grad=rescale_grad, lr=lr, eta=eta,
+                                             beta1=beta1, beta2=beta2, epsilon=epsilon,
+                                             wd=wd, clip_gradient=clip_gradient, out=out,
+                                             name=name, **kwargs)

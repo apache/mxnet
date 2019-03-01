@@ -66,17 +66,21 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    if (status == kFail || status == kSuccess || new_node.is_variable())
-      return false;
     // If n isn't the last matched node, then we encoutered a internal
     // branch, we should pop out the node behind n and stop fusion.
     if (matched_list.back() != &n) {
-      while (matched_list.back() != &n) {
-        matched_list.pop_back();
+      if (std::find(matched_list.begin(), matched_list.end(), &n) !=
+          matched_list.end()) {
+        while (matched_list.back() != &n) {
+          matched_list.pop_back();
+        }
       }
       status = kSuccess;
       return false;
     }
+    if (status == kFail || status == kSuccess || new_node.is_variable())
+      return false;
+
     // Use status machine to do selection. The status change is
     // kStart -> kBN -> kSum -> kSuccess
     switch (status) {
@@ -99,12 +103,11 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
               nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if (param.act_type == activation::kReLU) {
             matched_list.push_back(&new_node);
-            // If we find conv+relu, then we can't match bn anymore.
-            if (status == kStart) status = kBN;
-            return true;
-          } else {
+            // If we find conv+relu, then we can't match anymore.
+            // TODO(zhennan): mkldnn only supports convolution + relu + sum in
+            // int8, not in fp32. So we disable this pattern at moment.
             status = kSuccess;
-            return false;
+            return true;
           }
         }
         status = kSuccess;
@@ -117,7 +120,15 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
     if (status == kFail) {
       return std::vector<nnvm::Node *>(0);
     } else {
-      return candidates;
+      std::vector<nnvm::Node *> ret;
+      for (auto i : matched_list) {
+        auto non_const_i = const_cast<nnvm::Node *>(i);
+        if (std::find(candidates.begin(), candidates.end(), non_const_i) !=
+            candidates.end()) {
+          ret.push_back(non_const_i);
+        }
+      }
+      return ret;
     }
   }
 };
@@ -130,8 +141,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
     disable_conv_relu = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_RELU", 0);
     disable_conv_sum = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_CONV_SUM", 0);
 
-    disable_all =
-        disable_all && disable_conv_bn && disable_conv_relu && disable_conv_sum;
+    disable_all = disable_all || (disable_conv_bn && disable_conv_relu && disable_conv_sum);
     if (disable_all) {
       LOG(INFO) << "MKLDNN Convolution optimization pass is disabled.";
     } else {

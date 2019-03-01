@@ -18,6 +18,8 @@
 # under the License.
 
 # Build on Ubuntu 14.04 LTS for LINUX CPU/GPU
+set -ex
+
 apt-get update
 apt-get install -y software-properties-common
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
@@ -35,14 +37,34 @@ apt-get install -y git \
     nasm \
     libtool \
     curl \
+    wget \
+    sudo \
+    gnupg \
+    gnupg2 \
+    gnupg-agent \
     pandoc \
     python3-pip \
     automake \
     pkg-config \
     openjdk-8-jdk
-curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz  
-tar xzf apache-maven-3.3.9-bin.tar.gz   
-mkdir /usr/local/maven  
-mv apache-maven-3.3.9/ /usr/local/maven/    
+
+curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+    || curl -o apache-maven-3.3.9-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/apache/maven/apache-maven/3.3.9/apache-maven-3.3.9-bin.tar.gz
+
+tar xzf apache-maven-3.3.9-bin.tar.gz
+mkdir /usr/local/maven
+mv apache-maven-3.3.9/ /usr/local/maven/
 update-alternatives --install /usr/bin/mvn mvn /usr/local/maven/apache-maven-3.3.9/bin/mvn 1
 update-ca-certificates -f
+
+apt-get install -y python python3
+
+# the version of the pip shipped with ubuntu may be too lower, install a recent version here
+wget -nv https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+python2 get-pip.py
+
+apt-get remove -y python3-urllib3
+
+pip2 install nose cpplint==1.3.0 pylint==1.9.3 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
+pip3 install nose cpplint==1.3.0 pylint==2.1.1 'numpy<=1.15.2,>=1.8.2' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3

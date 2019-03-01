@@ -17,7 +17,7 @@
 
 module TestOptimizer
 
-using Base.Test
+using Test
 
 using MXNet
 using MXNet.mx.LearningRate
@@ -25,7 +25,7 @@ using MXNet.mx.Momentum
 
 
 function test_fixed_η()
-  info("Optimizer::LearningRate::Fixed")
+  @info "Optimizer::LearningRate::Fixed"
   x = LearningRate.Fixed(.42)
   @test get(x) == .42
   update!(x)
@@ -34,7 +34,7 @@ end  # function test_fixed_η
 
 
 function check_η_decay(x)
-  info("Optimizer::LearningRate::$x")
+  @info "Optimizer::LearningRate::$x"
 
   η = get(x)
   @test η == 1
@@ -55,14 +55,14 @@ test_inv_η() = LearningRate.Inv(1) |> check_η_decay
 
 
 function test_μ_null()
-  info("Optimizer::Momentum::Null")
+  @info "Optimizer::Momentum::Null"
   x = Momentum.Null()
   @test iszero(get(x))
 end
 
 
 function test_μ_fixed()
-  info("Optimizer::Momentum::Fixed")
+  @info "Optimizer::Momentum::Fixed"
   x = Momentum.Fixed(42)
   @test get(x) == 42
 end

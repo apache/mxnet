@@ -25,47 +25,18 @@
 #ifndef MXNET_BASE_H_
 #define MXNET_BASE_H_
 
-#include <dmlc/base.h>
-#include <dmlc/io.h>
-#include <dmlc/type_traits.h>
-#include <dmlc/parameter.h>
-#include <mshadow/tensor.h>
-// nnvm headers for symbolic construction.
-#include <nnvm/op.h>
-#include <nnvm/tuple.h>
-#include <nnvm/symbolic.h>
+#include "dmlc/base.h"
 #include <string>
+#include "dmlc/io.h"
+#include "dmlc/type_traits.h"
+#include "dmlc/parameter.h"
+#include "mshadow/tensor.h"
+// nnvm headers for symbolic construction.
+#include "nnvm/op.h"
+#include "nnvm/symbolic.h"
+#include "libinfo.h"
+#include "tuple.h"
 
-/*!
- *\brief whether to use opencv support
- */
-#ifndef MXNET_USE_OPENCV
-#define MXNET_USE_OPENCV 1
-#endif
-
-/*!
- *\brief whether to use cuda support
- */
-#ifndef MXNET_USE_CUDA
-#define MXNET_USE_CUDA MSHADOW_USE_CUDA
-#endif
-
-/*!
- *\brief whether to use cudnn library for convolution
- */
-#ifndef MXNET_USE_CUDNN
-#define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
-#endif
-
-/*!
- *\brief whether to use cusolver library
- */
-#ifndef MXNET_USE_CUSOLVER
-#define MXNET_USE_CUSOLVER MSHADOW_USE_CUSOLVER
-#endif
-
-/*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
-#define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
 
 /*!
  * \brief define compatible keywords in g++
@@ -124,8 +95,6 @@ typedef mshadow::gpu gpu;
 typedef mshadow::index_t index_t;
 /*! \brief data type that will be used to store ndarray */
 typedef mshadow::default_real_t real_t;
-/*! \brief Shape data structure used to record shape information */
-using TShape = nnvm::TShape;
 /*! \brief operator structure from NNVM */
 using Op = nnvm::Op;
 
@@ -223,6 +192,11 @@ struct Context {
    */
   inline static int32_t GetGPUCount();
   /*!
+   * Get the number of streams that a GPU Worker has available to operations.
+   * \return The number of streams that are available.
+   */
+  inline static int32_t GetGPUStreamsPerWorker();
+  /*!
    * \brief get the free and total available memory on a GPU
    * \param dev the GPU number to query
    * \param free_mem pointer to the uint64_t holding free GPU memory
@@ -250,6 +224,112 @@ struct Context {
   inline static Context FromString(const std::string& str);
 };
 
+#if MXNET_USE_CUDA
+/*! \brief Holds an auxiliary mshadow gpu stream that can be synced with a primary stream. */
+class GPUAuxStream {
+ public:
+  /*!
+   * \brief constructor.
+   * \param primary_stream gpu stream that is synced with the created auxiliary stream.
+   */
+  explicit GPUAuxStream(mshadow::Stream<gpu> *primary_stream) :
+      primary_stream_(primary_stream),
+      aux_stream_(primary_stream),
+      gpu_stream_sync_event_(nullptr) {
+    if (Context::GetGPUStreamsPerWorker() >= 2) {
+      // Create auxiliary stream on the same device with the same properties as the primary stream
+      bool primary_has_blas_handle =
+          primary_stream->blas_handle_ownership_ == mshadow::Stream<gpu>::OwnHandle;
+      bool primary_has_dnn_handle =
+          primary_stream->dnn_handle_ownership_ == mshadow::Stream<gpu>::OwnHandle;
+      aux_stream_ = mshadow::NewStream<gpu>(primary_has_blas_handle,
+                                            primary_has_dnn_handle,
+                                            primary_stream->dev_id);
+      MSHADOW_CUDA_CALL(cudaEventCreateWithFlags(&gpu_stream_sync_event_, cudaEventDisableTiming));
+    }
+  }
+  /*! \brief destructor */
+  ~GPUAuxStream() {
+    // If the aux_stream_ == primary_stream_, then we created no new streams to destroy.
+    if (aux_stream_ != primary_stream_) {
+      MSHADOW_CATCH_ERROR(mshadow::DeleteStream<gpu>(aux_stream_));
+      MSHADOW_CATCH_ERROR(cudaEventDestroy(gpu_stream_sync_event_));
+    }
+  }
+  /*!
+   * \brief Makes future aux stream work wait on the completion of existing primary stream work.
+   */
+  void PreAuxStreamUseSync() {
+    // If the aux_stream_ == primary_stream_, then no synchronization is necessary.
+    if (aux_stream_ != primary_stream_)
+      StreamSync(primary_stream_, aux_stream_, gpu_stream_sync_event_);
+  }
+  /*!
+   * \brief Makes future primary stream work wait on the completion of existing aux stream work.
+   */
+  void PostAuxStreamUseSync() {
+    // If the aux_stream_ == primary_stream_, then no synchronization is necessary.
+    if (aux_stream_ != primary_stream_)
+      StreamSync(aux_stream_, primary_stream_, gpu_stream_sync_event_);
+  }
+  /*! \brief Getter for created auxiliary stream. */
+  mshadow::Stream<gpu> *GetStream() { return aux_stream_; }
+  /*!
+   * \brief Make future work enqueued to `s2` wait on completion of current work enqueued to `s1`.
+   * \param s1 stream with work that must be completed before future s2 work can begin.
+   * \param s2 stream whose future work is made to wait on the completion of existing s1 work.
+   * \param event used to pass s1 state to s2.
+   */
+  static void StreamSync(mshadow::Stream<gpu> *s1, mshadow::Stream<gpu> *s2, cudaEvent_t event) {
+    MSHADOW_CUDA_CALL(cudaEventRecord(event, s1->stream_));
+    MSHADOW_CUDA_CALL(cudaStreamWaitEvent(s2->stream_, event, 0));
+  }
+
+ private:
+  mshadow::Stream<gpu> *primary_stream_;
+  mshadow::Stream<gpu> *aux_stream_;
+  cudaEvent_t gpu_stream_sync_event_;
+};
+
+/*!
+ * \brief Provides automatic coordination of an auxilary stream with a primary one.
+ * This object, upon construction, prepares an aux stream for use by syncing it with enqueued
+ * primary-stream work.  Object destruction will sync again so future primary-stream work
+ * will wait on enqueued aux-stream work.  If MXNET_GPU_WORKER_NSTREAMS == 1, then this defaults
+ * simply: the primary stream will equal the aux stream and the syncs will be executed as nops.
+ * See ./src/operator/cudnn/cudnn_convolution-inl.h for a usage example.
+ */
+class SyncedGPUAuxStream {
+ public:
+  /*!
+   * \brief constructor.
+   * \param gpu_aux_stream auxilary gpu stream that is managed by this RAII object.
+   */
+  explicit SyncedGPUAuxStream(GPUAuxStream *gpu_aux_stream) : gpu_aux_stream_(gpu_aux_stream) {
+    gpu_aux_stream_->PreAuxStreamUseSync();
+  }
+  /*! \brief destructor */
+  ~SyncedGPUAuxStream() {
+    gpu_aux_stream_->PostAuxStreamUseSync();
+  }
+  /*! \brief copy constructor deleted to prevent unexpected synchronizations. */
+  SyncedGPUAuxStream(const SyncedGPUAuxStream&) = delete;
+  /*! \brief copy assignment operator deleted to prevent unexpected synchronizations. */
+  void operator=(const SyncedGPUAuxStream&) = delete;
+  /*! \brief move constructor permitted as alternative to copying. */
+  SyncedGPUAuxStream(SyncedGPUAuxStream&&) = default;
+  /*! \brief move assignment operator permitted as alternative to copy assignment. */
+  SyncedGPUAuxStream& operator=(SyncedGPUAuxStream&&) = default;
+  /*! \brief Getter for underlying mshadow::Stream<gpu>. */
+  inline mshadow::Stream<gpu>* GetStream() const {
+    return gpu_aux_stream_->GetStream();
+  }
+
+ private:
+  GPUAuxStream *gpu_aux_stream_;
+};
+#endif  // MXNET_USE_CUDA
+
 /*!
  * \brief execution time context.
  *  The information needed in runtime for actual execution.
@@ -262,6 +342,14 @@ struct RunContext {
    */
   void *stream;
   /*!
+   * \brief the auxiliary stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   */
+  void *aux_stream;
+  /*!
+   * \brief indicator of whether this execution is run in bulk mode
+   */
+  bool is_bulk;
+  /*!
    * \brief get mshadow stream from Context
    * \return the mshadow stream
    * \tparam xpu the device type of the stream
@@ -270,6 +358,15 @@ struct RunContext {
   inline mshadow::Stream<xpu>* get_stream() const {
     return static_cast<mshadow::Stream<xpu>*>(stream);
   }
+#if MXNET_USE_CUDA
+  /*!
+   * \brief get an RAII object that transparently handles the syncing of the auxiliary stream.
+   * \return the aux stream auto-syncing object
+   */
+  inline SyncedGPUAuxStream get_gpu_aux_stream() const {
+    return SyncedGPUAuxStream(static_cast<GPUAuxStream*>(aux_stream));
+  }
+#endif
   /*! \brief get the base Context from RunContext */
   inline const Context& get_ctx() const {
     return ctx;
@@ -332,6 +429,15 @@ inline int32_t Context::GetGPUCount() {
 #else
   return 0;
 #endif
+}
+
+inline int32_t Context::GetGPUStreamsPerWorker() {
+  // The default number of streams available if the user has not set MXNET_GPU_WORKER_NSTREAMS.
+  const int32_t default_num_streams = 1;
+  // The get_aux_stream() interface can supply one additional stream beyond the standard one.
+  static int32_t num_streams =
+      dmlc::GetEnv("MXNET_GPU_WORKER_NSTREAMS", default_num_streams) >= 2 ? 2 : 1;
+  return num_streams;
 }
 
 inline void Context::GetGPUMemoryInformation(int dev, uint64_t *free_mem,
@@ -412,6 +518,7 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
 #define MXNET_DESCRIBE(...) describe(__VA_ARGS__ "\n\nFrom:" __FILE__ ":" STRINGIZE(__LINE__))
 #define ADD_FILELINE "\n\nDefined in " __FILE__ ":L" STRINGIZE(__LINE__)
 
+
 #if MXNET_USE_MKLDNN == 1
 constexpr size_t kMKLDNNAlign = 64;
 #endif
@@ -427,7 +534,14 @@ template<> struct hash<mxnet::Context> {
     return res;
   }
 };
+
+#if __cplusplus < 201402L && !defined(_MSC_VER)
+template<typename T, typename... Args>
+inline std::unique_ptr<T> make_unique(Args&&... args) {
+  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
+#endif
+}  // namespace std
 
 #include "./tensor_blob.h"
 //! \endcond

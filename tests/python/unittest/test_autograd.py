@@ -21,6 +21,7 @@ from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
 from common import setup_module, with_seed, teardown
+from mxnet.test_utils import EnvManager
 
 
 def grad_and_loss(func, argnum=None):
@@ -120,8 +121,9 @@ def test_unary_func():
         autograd_assert(x, func=f_square, grad_func=f_square_grad)
     uniform = nd.uniform(shape=(4, 5))
     stypes = ['default', 'row_sparse', 'csr']
-    for stype in stypes:
-        check_unary_func(uniform.tostype(stype))
+    with EnvManager('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+        for stype in stypes:
+            check_unary_func(uniform.tostype(stype))
 
 @with_seed()
 def test_binary_func():
@@ -138,11 +140,12 @@ def test_binary_func():
     uniform_x = nd.uniform(shape=(4, 5))
     uniform_y = nd.uniform(shape=(4, 5))
     stypes = ['default', 'row_sparse', 'csr']
-    for stype_x in stypes:
-        for stype_y in stypes:
-            x = uniform_x.tostype(stype_x)
-            y = uniform_y.tostype(stype_y)
-            check_binary_func(x, y)
+    with EnvManager('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+        for stype_x in stypes:
+            for stype_y in stypes:
+                x = uniform_x.tostype(stype_x)
+                y = uniform_y.tostype(stype_y)
+                check_binary_func(x, y)
 
 
 @with_seed()

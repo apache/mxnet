@@ -51,7 +51,7 @@ use AI::MXNet::Gluon;
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
 use AI::MXNet::Engine;
-our $VERSION = '1.33';
+our $VERSION = '1.4';
 
 sub import
 {

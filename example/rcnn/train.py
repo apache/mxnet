@@ -33,7 +33,7 @@ def train_net(sym, roidb, args):
     logger.info('called with args\n{}'.format(pprint.pformat(vars(args))))
 
     # setup multi-gpu
-    ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
+    ctx = [mx.cpu()] if not args.gpus else [mx.gpu(int(i)) for i in args.gpus.split(',')]
     batch_size = args.rcnn_batch_size * len(ctx)
 
     # load training data
@@ -127,7 +127,7 @@ def parse_args():
     parser.add_argument('--pretrained', type=str, default='', help='path to pretrained model')
     parser.add_argument('--dataset', type=str, default='voc', help='training dataset')
     parser.add_argument('--imageset', type=str, default='', help='imageset splits')
-    parser.add_argument('--gpus', type=str, default='0', help='gpu devices eg. 0,1')
+    parser.add_argument('--gpus', type=str, help='GPU devices, eg: "0,1,2,3" , not set to use CPU')
     parser.add_argument('--epochs', type=int, default=10, help='training epochs')
     parser.add_argument('--lr', type=float, default=0.001, help='base learning rate')
     parser.add_argument('--lr-decay-epoch', type=str, default='7', help='epoch to decay lr')

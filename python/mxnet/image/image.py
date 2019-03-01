@@ -46,7 +46,7 @@ def imread(filename, *args, **kwargs):
     """Read and decode an image to an NDArray.
 
     .. note:: `imread` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+       MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -87,7 +87,7 @@ def imresize(src, w, h, *args, **kwargs):
     r"""Resize image with OpenCV.
 
     .. note:: `imresize` uses OpenCV (not the CV2 Python library). MXNet must have been built
-    with USE_OPENCV=1 for `imresize` to work.
+       with USE_OPENCV=1 for `imresize` to work.
 
     Parameters
     ----------
@@ -144,7 +144,7 @@ def imdecode(buf, *args, **kwargs):
     """Decode an image to an NDArray.
 
     .. note:: `imdecode` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
+       MXNet must have been built with USE_OPENCV=1 for `imdecode` to work.
 
     Parameters
     ----------
@@ -345,7 +345,7 @@ def resize_short(src, size, interp=2):
     """Resizes shorter edge to size.
 
     .. note:: `resize_short` uses OpenCV (not the CV2 Python library).
-    MXNet must have been built with OpenCV for `resize_short` to work.
+       MXNet must have been built with OpenCV for `resize_short` to work.
 
     Resizes the original image by setting the shorter edge to size
     and setting the longer edge accordingly.

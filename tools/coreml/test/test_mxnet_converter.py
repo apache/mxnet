@@ -938,6 +938,40 @@ class SingleLayerTest(unittest.TestCase):
             name='batch_norm_1')
         self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
 
+    def test_batch_norm_with_fix_gamma(self):
+        """ The gamma will always be an array of ones when fix_gamma=True. The values
+            of gamma may be changed accidentally if there have been fix_gamma=False before
+            the final trained model.
+        """
+        np.random.seed(1988)
+        input_shape = (1, 1, 2, 3)
+
+        net = mx.sym.Variable('data')
+        gamma = mx.sym.Variable('gamma')
+        beta = mx.sym.Variable('beta')
+        moving_mean = mx.sym.Variable('moving_mean')
+        moving_var = mx.sym.Variable('moving_var')
+        net = mx.symbol.BatchNorm(
+            data=net,
+            gamma=gamma,
+            beta=beta,
+            moving_mean=moving_mean,
+            moving_var=moving_var,
+            fix_gamma=True,
+            name='batch_norm_1')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
+
+        np.random.seed(1988)
+        net = mx.symbol.BatchNorm(
+            data=net,
+            gamma=gamma,
+            beta=beta,
+            moving_mean=moving_mean,
+            moving_var=moving_var,
+            fix_gamma=False,
+            name='batch_norm_2')
+        self._test_mxnet_model(net, input_shape=input_shape, mode='random', delta=1e-2)
+
     def test_pre_processing_args(self):
         np.random.seed(1988)
         input_shape = (1, 10)

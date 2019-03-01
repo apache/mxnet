@@ -664,7 +664,7 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
   std::vector<TBlob> in_data(inputs.begin(), inputs.begin() + 3);
   std::vector<TBlob> aux_states(inputs.begin() + 3, inputs.end());
   int dtype = inputs[0].type_flag_;
-  TShape shape = inputs[0].shape_;
+  mxnet::TShape shape = inputs[0].shape_;
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
@@ -693,7 +693,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 8U);
   BatchNormParam param = nnvm::get<BatchNormParam>(attrs.parsed);
   int dtype = inputs[0].type_flag_;
-  TShape shape = inputs[0].shape_;
+  mxnet::TShape shape = inputs[0].shape_;
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5

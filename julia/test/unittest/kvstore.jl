@@ -17,7 +17,7 @@
 
 module TestKVStore
 using MXNet
-using Base.Test
+using Test
 
 using ..Main: rand_dims
 
@@ -34,7 +34,7 @@ function init_kv()
 end
 
 function test_kv_basic()
-  info("KVStore::basic")
+  @info("KVStore::basic")
 
   kv = init_kv()
   @test mx.get_type(kv) == :local
@@ -43,17 +43,17 @@ function test_kv_basic()
 end
 
 function test_single_kv_pair()
-  info("KVStore::single")
+  @info("KVStore::single")
 
   kv = init_kv()
   mx.push!(kv, 3, mx.ones(SHAPE))
-  val = mx.empty(SHAPE)
+  val = NDArray(undef, SHAPE)
   mx.pull!(kv, 3, val)
   @test maximum(abs.(copy(val) .- 1)) == 0
 end
 
 function test_aggregator()
-  info("KVStore::aggregator")
+  @info("KVStore::aggregator")
 
   kv = init_kv()
 
@@ -64,7 +64,7 @@ function test_aggregator()
   mx.push!(kv, 3, vals)
   mx.pull!(kv, 3, vals)
   for v in vals
-    @test maximum(abs.(copy(v)) - num_devs) == 0
+    @test maximum(abs.(copy(v)) .- num_devs) == 0
   end
 
   # list
@@ -74,7 +74,7 @@ function test_aggregator()
 
   for vv in vals
     for v in vv
-      @test maximum(abs.(copy(v)) - 2 * num_devs) == 0
+      @test maximum(abs.(copy(v)) .- 2 * num_devs) == 0
     end
   end
 end
@@ -95,7 +95,7 @@ function check_setupdater!(f)
 end  # function check_setupdater!
 
 function test_setupdater!()
-  info("KVStore::setupdater!")
+  @info("KVStore::setupdater!")
 
   f(key, Δ, x) = @mx.inplace x += 2Δ
   g(key, Δ, x) = (x[:] += 2Δ)

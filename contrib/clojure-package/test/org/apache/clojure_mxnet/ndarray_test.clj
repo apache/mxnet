@@ -97,7 +97,7 @@
     (is (= [1.0 1.0] (->vec ndhalves)))))
 
 (deftest test-full
-  (let [nda (full [1 2] 3)]
+  (let [nda (full [1 2] 3.0)]
     (is (= (shape nda) (mx-shape/->shape [1 2])))
     (is (= [3.0 3.0] (->vec nda)))))
 

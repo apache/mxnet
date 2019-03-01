@@ -35,8 +35,8 @@ DMLC_REGISTER_PARAMETER(GroupAdagradParam);
  * \brief Shape inference function for Group AdaGrad.
  */
 inline bool GroupAdagradShape(const nnvm::NodeAttrs &attrs,
-                              std::vector<TShape> *in_attrs,
-                              std::vector<TShape> *out_attrs) {
+                              mxnet::ShapeVector *in_attrs,
+                              mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -72,7 +72,7 @@ Note that non-zero values for the weight decay option are not supported.
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<GroupAdagradParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", GroupAdagradShape)
+.set_attr<mxnet::FInferShape>("FInferShape", GroupAdagradShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", GroupAdagradStorageType)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",

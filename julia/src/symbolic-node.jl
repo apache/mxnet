@@ -19,20 +19,21 @@
     SymbolicNode
 
 SymbolicNode is the basic building block of the symbolic graph in MXNet.jl.
+It's a callable object and supports following calls:
 
-    (self :: SymbolicNode)(args :: SymbolicNode...)
-    (self :: SymbolicNode)(; kwargs...)
+    (s::SymbolicNode)(args::SymbolicNode...)
+    (s::SymbolicNode)(; kwargs...)
 
-Make a new node by composing `self` with `args`. Or the arguments
+Make a new node by composing `s` with `args`. Or the arguments
 can be specified using keyword arguments.
 """
 mutable struct SymbolicNode
   handle::MX_SymbolHandle
 end
 
-const SymbolicNodeOrReal = Union{SymbolicNode, Real}
+const SymbolicNodeOrReal = Union{SymbolicNode,Real}
 
-@unfuse SymbolicNode  # for broadcasting
+# @unfuse SymbolicNode  # for broadcasting
 
 Base.unsafe_convert(::Type{MX_handle}, obj::SymbolicNode) =
   Base.unsafe_convert(MX_handle, obj.handle)
@@ -40,31 +41,31 @@ Base.convert(t::Type{MX_handle}, obj::SymbolicNode) = Base.unsafe_convert(t, obj
 Base.cconvert(t::Type{MX_handle}, obj::SymbolicNode) = Base.unsafe_convert(t, obj)
 
 """
-    deepcopy(self :: SymbolicNode)
+    deepcopy(s::SymbolicNode)
 
 Make a deep copy of a SymbolicNode.
 """
-function Base.deepcopy(self :: SymbolicNode)
-  ref_hdr = Ref{MX_handle}(0)
-  @mxcall(:MXSymbolCopy, (MX_handle, Ref{MX_handle}), self, ref_hdr)
-  return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
+function Base.deepcopy(s::SymbolicNode)
+  ref_hdr = Ref{MX_handle}(C_NULL)
+  @mxcall(:MXSymbolCopy, (MX_handle, Ref{MX_handle}), s, ref_hdr)
+  SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
 """
-    copy(self :: SymbolicNode)
+    copy(s::SymbolicNode)
 
 Make a copy of a SymbolicNode. The same as making a deep copy.
 """
-function Base.copy(self :: SymbolicNode)
-  Base.deepcopy(self)
-end
+Base.copy(s::SymbolicNode) = Base.deepcopy(s)
 
-function (self::SymbolicNode)(args :: SymbolicNode...)
-  s = deepcopy(self)
+
+function (s::SymbolicNode)(args::SymbolicNode...)
+  s = deepcopy(s)
   _compose!(s, args...)
 end
-function (self::SymbolicNode)(;kwargs...)
-  s = deepcopy(self)
+
+function (s::SymbolicNode)(; kwargs...)
+  s = deepcopy(s)
   _compose!(s; kwargs...)
 end
 
@@ -82,7 +83,7 @@ macro _list_symbol_info(self, func_name)
 end
 
 """
-    list_arguments(self :: SymbolicNode)
+    list_arguments(s::SymbolicNode)
 
 List all the arguments of this node. The argument for a node contains both
 the inputs and parameters. For example, a `FullyConnected` node will
@@ -91,24 +92,20 @@ list all the arguments for intermediate nodes.
 
 Returns a list of symbols indicating the names of the arguments.
 """
-function list_arguments(self :: SymbolicNode)
-  @_list_symbol_info(self, :MXSymbolListArguments)
-end
+list_arguments(s::SymbolicNode) = @_list_symbol_info(s, :MXSymbolListArguments)
 
 """
-    list_outputs(self :: SymbolicNode)
+    list_outputs(s::SymbolicNode)
 
 List all the outputs of this node.
 
 Returns a list of symbols indicating the names of the outputs.
 """
-function list_outputs(self :: SymbolicNode)
-  @_list_symbol_info(self, :MXSymbolListOutputs)
-end
+list_outputs(s::SymbolicNode) = @_list_symbol_info(s, :MXSymbolListOutputs)
 
 
 """
-    list_auxiliary_states(self :: SymbolicNode)
+    list_auxiliary_states(s::SymbolicNode)
 
 
 List all auxiliary states in the symbool.
@@ -120,19 +117,18 @@ Most operators do not have Auxiliary states.
 
 Returns a list of symbols indicating the names of the auxiliary states.
 """
-function list_auxiliary_states(self :: SymbolicNode)
-  @_list_symbol_info(self, :MXSymbolListAuxiliaryStates)
-end
+list_auxiliary_states(s::SymbolicNode) =
+  @_list_symbol_info(s, :MXSymbolListAuxiliaryStates)
 
 """
-    get_internals(self :: SymbolicNode)
+    get_internals(s::SymbolicNode)
 
 Get a new grouped `SymbolicNode` whose output contains all the internal outputs of
 this `SymbolicNode`.
 """
-function get_internals(self :: SymbolicNode)
+function get_internals(s::SymbolicNode)
   ref_hdr = Ref{MX_handle}(0)
-  @mxcall(:MXSymbolGetInternals, (MX_handle, Ref{MX_handle}), self, ref_hdr)
+  @mxcall(:MXSymbolGetInternals, (MX_handle, Ref{MX_handle}), s, ref_hdr)
   return SymbolicNode(MX_SymbolHandle(ref_hdr[]))
 end
 
@@ -166,37 +162,38 @@ function get_children(x::SymbolicNode)
 end
 
 """
-    get_attr(self :: SymbolicNode, key :: Symbol)
+    get_attr(s::SymbolicNode, key::Symbol)
 
 Get attribute attached to this `SymbolicNode` belonging to key.
 
-Returns the value belonging to key as a `Nullable`.
+Returns the value belonging to key as a `String`.
+If not available, returns `missing`.
 """
-function get_attr(self :: SymbolicNode, key :: Symbol)
+function get_attr(s::SymbolicNode, key::Symbol)
   key_s = string(key)
   ref_out = Ref{Cstring}()
   ref_success = Ref{Cint}(-1)
   @mxcall(:MXSymbolGetAttr, (MX_handle, Cstring, Ref{Cstring}, Ref{Cint}),
-          self, key_s, ref_out, ref_success)
+          s, key_s, ref_out, ref_success)
   if ref_success[] == 1
-    return Nullable{String}(unsafe_string(ref_out[]))
+    unsafe_string(ref_out[])
   else
-    return Nullable{String}()
+    missing
   end
 end
 
 """
-    list_attr(self :: SymbolicNode)
+    list_attr(s::SymbolicNode)
 
 Get all attributes from a symbol.
 
 Returns a dictionary of attributes.
 """
-function list_attr(self :: SymbolicNode)
+function list_attr(s::SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
   ref_strings = Ref{char_pp}(0)
   @mxcall(:MXSymbolListAttrShallow, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
-            self, ref_sz, ref_strings)
+            s, ref_sz, ref_strings)
   narg = 2*ref_sz[]
   strings = unsafe_wrap(Array, ref_strings[], narg)
   out = Dict{Symbol, String}()
@@ -209,17 +206,17 @@ function list_attr(self :: SymbolicNode)
 end
 
 """
-    list_all_attr(self :: SymbolicNode)
+    list_all_attr(s::SymbolicNode)
 
 Get all attributes from the symbol graph.
 
 Returns a dictionary of attributes.
 """
-function list_all_attr(self :: SymbolicNode)
+function list_all_attr(s::SymbolicNode)
   ref_sz    = Ref{MX_uint}(0)
   ref_strings = Ref{char_pp}(0)
   @mxcall(:MXSymbolListAttr, (MX_handle, Ref{MX_uint}, Ref{char_pp}),
-            self, ref_sz, ref_strings)
+            s, ref_sz, ref_strings)
   narg = 2*ref_sz[]
   strings = unsafe_wrap(Array, ref_strings[], narg)
   out = Dict{Symbol, String}()
@@ -232,7 +229,7 @@ function list_all_attr(self :: SymbolicNode)
 end
 
 """
-    set_attr(self:: SymbolicNode, key :: Symbol, value :: AbstractString)
+    set_attr(s::SymbolicNode, key::Symbol, value::AbstractString)
 
 Set the attribute key to value for this `SymbolicNode`.
 
@@ -242,15 +239,15 @@ Set the attribute key to value for this `SymbolicNode`.
     the attributes of a `SymbolicNode` that is already been used somewhere else might
     cause unexpected behavior and inconsistency.
 """
-function set_attr(self :: SymbolicNode, key :: Symbol, value :: AbstractString)
+function set_attr(s::SymbolicNode, key::Symbol, value::AbstractString)
   key_s = string(key)
   value_s = String(value)
 
-  @mxcall(:MXSymbolSetAttr, (MX_handle, Cstring, Cstring), self, key_s, value_s)
+  @mxcall(:MXSymbolSetAttr, (MX_handle, Cstring, Cstring), s, key_s, value_s)
 end
 
 """
-    get_name(self :: SymbolicNode)
+    get_name(s::SymbolicNode)
 
 Get the name of the symbol.
 
@@ -262,15 +259,15 @@ Get the name of the symbol.
     julia> mx.get_name(y)
     :fullyconnected0
 """
-function get_name(self :: mx.SymbolicNode)
-    name = Ref{mx.char_p}(0)
+function get_name(s::mx.SymbolicNode)
+    name = Ref{mx.char_p}(C_NULL)
     success = Ref(0)
-    @mxcall(:MXSymbolGetName, (MX_handle, Ref{char_p}, Ref{Int}), self.handle.value, name, success)
+    @mxcall(:MXSymbolGetName, (MX_handle, Ref{char_p}, Ref{Int}), s.handle.value, name, success)
     @assert success[] != -1
 
     str = name[]
     if str == C_NULL  # e.g. the symbol returned via get_internals
-        string(self.handle.value)
+        string(s.handle.value)
     else
         Symbol(unsafe_string(str))
     end
@@ -278,16 +275,6 @@ end
 
 Base.show(io::IO, sym::SymbolicNode) =
   print(io, "$(typeof(sym)) $(get_name(sym))")
-
-import Base: print
-
-function print(io::IO, sym::SymbolicNode)
-  out = Ref{mx.char_p}(C_NULL)
-  @mx.mxcall(:MXSymbolPrint, (mx.MX_SymbolHandle, Ref{mx.char_p}), sym.handle, out)
-  print(io, unsafe_string(out[]))
-end
-
-print(sym::SymbolicNode) = print(STDOUT, sym)
 
 """
     print([io::IO], sym::SymbolicNode)
@@ -298,7 +285,7 @@ Print the content of symbol, used for debug.
 julia> layer = @mx.chain mx.Variable(:data)           =>
          mx.FullyConnected(name=:fc1, num_hidden=128) =>
          mx.Activation(name=:relu1, act_type=:relu)
-MXNet.mx.SymbolicNode(MXNet.mx.MX_SymbolHandle(Ptr{Void} @0x000055b29b9c3520))
+MXNet.mx.SymbolicNode(MXNet.mx.MX_SymbolHandle(Ptr{Nothing} @0x000055b29b9c3520))
 
 julia> print(layer)
 Symbol Outputs:
@@ -322,25 +309,32 @@ Attrs:
         act_type=relu
 ```
 """
-print
+function Base.print(io::IO, sym::SymbolicNode)
+  out = Ref{mx.char_p}(C_NULL)
+  @mx.mxcall(:MXSymbolPrint, (mx.MX_SymbolHandle, Ref{mx.char_p}), sym.handle, out)
+  print(io, unsafe_string(out[]))
+end
+
+Base.print(sym::SymbolicNode) = print(STDOUT, sym)
 
 """
-    grad(self :: SymbolicNode, wrt :: Vector{SymbolicNode})
+    grad(s::SymbolicNode, wrt::Vector{Symbol})
 
 Get the autodiff gradient of the current `SymbolicNode`. This function can
 only be used if the current symbol is a loss function.
 
 # Arguments:
-* `self::SymbolicNode`: current node.
+* `s::SymbolicNode`: current node.
 * `wrt::Vector{Symbol}`: the names of the arguments to the gradient.
 
 Returns a gradient symbol of the corresponding gradient.
 """
-function grad(self :: SymbolicNode, wrt :: Vector{Symbol})
-  hdr_ref = Ref{MX_handle}(0)
-  keys = String[string(key) for key in wrt]
+function grad(s::SymbolicNode, wrt::Vector{Symbol})
+  hdr_ref = Ref{MX_handle}(C_NULL)
+  keys = string.(key)
 
-  @mxcall(:MXSymbolGrad, (MX_handle, MX_uint, char_pp, Ptr{MX_handle}), self, length(keys), keys, hdr_ref)
+  @mxcall(:MXSymbolGrad, (MX_handle, MX_uint, char_pp, Ptr{MX_handle}),
+          self, length(keys), keys, hdr_ref)
   return SymbolicNode(MX_SymbolHandle(hdr_ref[]))
 end
 
@@ -403,7 +397,7 @@ function _build_shapes(shape_size::MX_uint, shape_ndim::Ptr{MX_uint}, shape_data
   shape_data = unsafe_wrap(Array, shape_data, shape_size)
   shapes = map(1:shape_size) do i
     my_shape = unsafe_wrap(Array, shape_data[i], shape_ndim[i])
-    tuple(flipdim(Int[my_shape...],1)...)
+    tuple(reverse(Int[my_shape...], dims = 1)...)
   end
   convert(Vector{Tuple}, shapes)
 end
@@ -458,18 +452,18 @@ function infer_shape(self :: SymbolicNode; kwargs...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
   for (k,v) in kwargs
-    append!(sdata, flipdim([v...],1))
+    append!(sdata, reverse([v...], dims = 1))
     push!(indptr, length(sdata))
   end
   keys = AbstractString[string(x[1]) for x in kwargs]
   _infer_shape(self, keys, indptr, sdata)
 end
-function infer_shape(self :: SymbolicNode, args :: Union{Tuple, Void}...)
+function infer_shape(self :: SymbolicNode, args::Union{Tuple, Cvoid}...)
   sdata  = MX_uint[]
   indptr = MX_uint[0]
   for arg in args
-    if isa(arg, Void); continue; end
-    append!(sdata, flipdim([arg...],1))
+    if isa(arg, Cvoid); continue; end
+    append!(sdata, reverse([arg...], dims = 1))
     push!(indptr, length(sdata))
   end
   keys = Ptr{char_p}(0)
@@ -528,12 +522,12 @@ function infer_type(self :: SymbolicNode; kwargs...)
   _infer_type(self, keys, types)
 end
 
-function infer_type(self :: SymbolicNode, args :: Union{Tuple, Void}...)
+function infer_type(self :: SymbolicNode, args :: Union{Tuple,Cvoid}...)
   types = Cint[]
   keys = Ptr{char_p}(0)
 
   for arg in args
-    if isa(arg, Void); continue; end
+    if isa(arg, Cvoid); continue; end
     push!(types, toTypeFlag(arg))
   end
   _infer_type(self, keys, types)
@@ -548,7 +542,7 @@ indicating the index, as in the list of [`list_outputs`](@ref).
 """
 function Base.getindex(self :: SymbolicNode, idx :: Union{Base.Symbol, AbstractString})
   idx   = Symbol(idx)
-  i_idx = find(idx .== list_outputs(self))
+  i_idx = findall(idx .== list_outputs(self))
   @assert(length(i_idx) > 0, "Cannot find output with name '$idx'")
   @assert(length(i_idx) < 2, "Found duplicated output with name '$idx'")
   Base.getindex(self, i_idx[1])
@@ -582,8 +576,8 @@ end
 
 +(s::Real, x::SymbolicNode, ys::SymbolicNodeOrReal...) = +(x + s, ys...)
 
-broadcast_(::typeof(+), x::SymbolicNode, ys::SymbolicNodeOrReal...) = +(x, ys...)
-broadcast_(::typeof(+), s::Real, x::SymbolicNode, ys::SymbolicNodeOrReal...) = +(x + s, ys...)
+broadcasted(::typeof(+), x::SymbolicNode, ys::SymbolicNodeOrReal...) = +(x, ys...)
+broadcasted(::typeof(+), s::Real, x::SymbolicNode, ys::SymbolicNodeOrReal...) = +(x + s, ys...)
 
 import Base: -
 
@@ -600,8 +594,8 @@ s::Real         - x::SymbolicNode = _rminus_scalar(x, scalar=MX_float(s))
 
 -(x::SymbolicNode) = 0 - x
 
-broadcast_(::typeof(-), x::SymbolicNode, y::SymbolicNodeOrReal) = x - y
-broadcast_(::typeof(-), s::Real, x::SymbolicNode) = s - x
+broadcasted(::typeof(-), x::SymbolicNode, y::SymbolicNodeOrReal) = x - y
+broadcasted(::typeof(-), s::Real, x::SymbolicNode) = s - x
 
 import Base: *
 
@@ -613,7 +607,7 @@ Elementwise multiplication of `SymbolicNode`.
 x::SymbolicNode * s::Real = _mul_scalar(x, scalar=MX_float(s))
 s::Real * x::SymbolicNode = _mul_scalar(x, scalar=MX_float(s))
 
-function broadcast_(::typeof(*), x::SymbolicNode, ys::SymbolicNodeOrReal...)
+function broadcasted(::typeof(*), x::SymbolicNode, ys::SymbolicNodeOrReal...)
   ret = x
   for y in ys
     if y isa SymbolicNode
@@ -625,8 +619,8 @@ function broadcast_(::typeof(*), x::SymbolicNode, ys::SymbolicNodeOrReal...)
   ret
 end
 
-broadcast_(::typeof(*), s::Real, x::SymbolicNode, ys::SymbolicNodeOrReal...) =
-  broadcast_(*, x * s, ys...)
+broadcasted(::typeof(*), s::Real, x::SymbolicNode, ys::SymbolicNodeOrReal...) =
+  broadcasted(*, x * s, ys...)
 
 import Base: /
 
@@ -642,9 +636,9 @@ of the same shape.
 """
 x::SymbolicNode / s::Real = _DivScalar(x, scalar=MX_float(s))
 
-broadcast_(::typeof(/), x::SymbolicNode, y::SymbolicNode) = _div(x, y)
-broadcast_(::typeof(/), x::SymbolicNode, s::Real) = _div_scalar(x,  scalar=MX_float(s))
-broadcast_(::typeof(/), s::Real, x::SymbolicNode) = _rdiv_scalar(x, scalar=MX_float(s))
+broadcasted(::typeof(/), x::SymbolicNode, y::SymbolicNode) = _div(x, y)
+broadcasted(::typeof(/), x::SymbolicNode, s::Real) = _div_scalar(x,  scalar=MX_float(s))
+broadcasted(::typeof(/), s::Real, x::SymbolicNode) = _rdiv_scalar(x, scalar=MX_float(s))
 
 
 import Base: ^
@@ -657,22 +651,24 @@ Operating with `Real` is available.
 """
 ^
 
-broadcast_(::typeof(^), x::SymbolicNode, y::SymbolicNode) = _power(x, y)
-broadcast_(::typeof(^), x::SymbolicNode, s::Real) = _power_scalar(x,  scalar=MX_float(s))
-broadcast_(::typeof(^), s::Real, x::SymbolicNode) = _rpower_scalar(x, scalar=MX_float(s))
+broadcasted(::typeof(^), x::SymbolicNode, y::SymbolicNode) = _power(x, y)
+broadcasted(::typeof(^), x::SymbolicNode, s::Real) = _power_scalar(x,  scalar = s)
+broadcasted(::typeof(^), s::Real, x::SymbolicNode) = _rpower_scalar(x, scalar = s)
+broadcasted(::typeof(Base.literal_pow), ::typeof(^), x::SymbolicNode, ::Val{s}) where {s} =
+  _power_scalar(x, scalar = s)
 
-broadcast_(::typeof(^), ::Irrational{:e}, x::SymbolicNode) = exp(x)
-broadcast_(::typeof(^), x::SymbolicNode, s::Irrational) =
+broadcasted(::typeof(^), ::Irrational{:ℯ}, x::SymbolicNode) = exp(x)
+broadcasted(::typeof(^), x::SymbolicNode, s::Irrational) =
   _power_scalar(x, scalar=MX_float(s))
-broadcast_(::typeof(^), s::Irrational, x::SymbolicNode) =
+broadcasted(::typeof(^), s::Irrational, x::SymbolicNode) =
   _rpower_scalar(x, scalar=MX_float(s))
 
-function _compose!(node :: SymbolicNode; kwargs...)
-  name     = char_p(0)
-  arg_keys = AbstractString[]
+function _compose!(node::SymbolicNode; kwargs...)
+  name     = char_p(C_NULL)
+  arg_keys = AbstractString[]  # FIXME: can it be String[] ?
   arg_vals = MX_handle[]
 
-  for (k,v) in kwargs
+  for (k, v) in kwargs
     if k == :name
       name = string(v)
     else
@@ -685,20 +681,21 @@ function _compose!(node :: SymbolicNode; kwargs...)
   @mxcall(:MXSymbolCompose,
           (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
           node, name, length(arg_keys), arg_keys, arg_vals)
-  return node
+  node
 end
-function _compose!(node :: SymbolicNode, args::SymbolicNode...)
+_compose!(node::SymbolicNode, args::SymbolicNode...) =
   _compose!(node, char_p(0), args...)
-end
-function _compose!(node :: SymbolicNode, name :: Union{Base.Symbol, char_p}, args::SymbolicNode...)
-  if isa(name, Base.Symbol); name = string(name); end
-  arg_keys = Ptr{char_p}(0)
+function _compose!(node::SymbolicNode, name::Union{Symbol, char_p}, args::SymbolicNode...)
+  if name isa Symbol
+    name = string(name)
+  end
+  arg_keys = Ptr{char_p}(C_NULL)
   arg_vals = MX_handle[args...]
 
   @mxcall(:MXSymbolCompose,
           (MX_handle, char_p, MX_uint, Ptr{char_p}, Ptr{MX_handle}),
           node, name, length(arg_vals), arg_keys, arg_vals)
-  return node
+  node
 end
 
 """
@@ -844,30 +841,26 @@ end
   node
 end
 
-function _define_atomic_symbol_creator(name :: String)
+function _define_atomic_symbol_creator(name::String)
   handle = _get_libmx_op_handle(name)
   f_desc, key_narg = _get_libmx_op_description(name, handle)
 
   f_desc *= "* `name::Symbol`: The name of the `SymbolicNode`. (e.g. `:my_symbol`), optional.\n"
-  f_desc *= "* `attrs::Dict{Symbol, AbstractString}`: The attributes associated with this `SymbolicNode`.\n\n"
+  f_desc *= "* `attrs::Dict{Symbol,String}`: The attributes associated with this `SymbolicNode`.\n\n"
 
   func_name = Symbol(name)
-  func_def = quote
-  function $func_name(::Type{SymbolicNode}, args::SymbolicNode...; kwargs...)
-    idx = findfirst(x -> x[1] == :name, kwargs)
-    if idx > 0
-      name = kwargs[idx][2]
-    else
-      name = ""
-    end
+  import_expr = _import_expr(func_name)
 
-    # XXX: hacky way of solving the problem that the arguments of `dot` should be swapped
+  func_def = quote
+  function $func_name(::Type{SymbolicNode}, args::SymbolicNode...; name = "", kwargs...)
+
+    # NOTE: hacky way of solving the problem that the arguments of `dot` should be swapped
     # See https://github.com/dmlc/MXNet.jl/issues/55
     if $name == "dot"
       args = reverse(args)
     end
 
-    # XXX: hacky way of solving the semantic difference of the axes parameter in Julia
+    # NOTE: hacky way of solving the semantic difference of the axes parameter in Julia
     # and in libmxnet.
     # See https://github.com/dmlc/MXNet.jl/pull/123
     if $name == "transpose"
@@ -876,8 +869,8 @@ function _define_atomic_symbol_creator(name :: String)
 
     param_keys = String[]
     param_vals = String[]
-    symbol_kws = Dict{Symbol, SymbolicNode}()
-    attrs = Dict{Symbol, String}()
+    symbol_kws = Dict{Symbol,SymbolicNode}()
+    attrs = Dict{Symbol,String}()
 
     $(if key_narg != ""
       quote
@@ -936,23 +929,24 @@ function _define_atomic_symbol_creator(name :: String)
   end # quote
 
   func_def2 = quote
-  @doc $f_desc ->
+  @doc $f_desc
   function $func_name(args::SymbolicNode...; kwargs...)
     $func_name(SymbolicNode, args...; kwargs...)
   end # function
   end # quote
 
   return quote
+    $import_expr
     $func_def
     $func_def2
   end
 end
 
 macro _import_atomic_symbol_creators()
-  # XXX: those are operators defined for NDArray, we exclude them here
+  # NOTE: those are operators defined for NDArray, we exclude them here
   # because the calling convention for the type signature is not strong
   # enough to disambiguate the method for NDArray and SymbolicNode
-  const ignored_ops = ["_set_value", "reshape"]  # in lowercase
+  ignored_ops = ("_set_value", "reshape")  # in lowercase
 
   op_names = _get_libmx_op_names()
   func_exprs = map(op_names) do name
@@ -966,7 +960,7 @@ macro _import_atomic_symbol_creators()
   end)
 end
 
-@_import_atomic_symbol_creators()
+@_import_atomic_symbol_creators
 
 ################################################################################
 # Utility macros to chain up symbols
@@ -976,7 +970,7 @@ macro chain(layers)
     last_layer = nothing
 
     function _chain_layer(layer, last_layer)
-        if isa(last_layer, Void)
+        if last_layer ≡ nothing
             return esc(layer)
         else
             if @capture(layer, f_(x__))

@@ -143,6 +143,10 @@ NormalInitializer(; mu=0, sigma=0.01) = NormalInitializer(mu, sigma)
 _init_weight(i::NormalInitializer, name::Symbol, x::NDArray) =
   randn!(x, μ = i.μ, σ = i.σ)
 
+@enum XavierDistribution xv_uniform xv_normal
+@enum XavierRegularization xv_avg xv_in xv_out
+
+
 """
     XavierInitializer
 
@@ -161,10 +165,6 @@ used by various libraries.
 * [K. He, X. Zhang, S. Ren, and J. Sun 2015]: `mx.XavierInitializer(distribution = mx.xv_gaussian, regularization = mx.xv_in, magnitude = 2)`
 * caffe_avg: `mx.XavierInitializer(distribution = mx.xv_uniform, regularization = mx.xv_avg, magnitude = 3)`
 """
-
-@enum XavierDistribution xv_uniform xv_normal
-@enum XavierRegularization xv_avg xv_in xv_out
-
 struct XavierInitializer <: AbstractInitializer
   distribution :: XavierDistribution
   regularization :: XavierRegularization
