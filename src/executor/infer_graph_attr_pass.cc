@@ -369,7 +369,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
  */
 template<typename IsNone, typename FDefault, typename FNumUnknown>
 nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
-                           const nnvm::TShape empty_val,
+                           const mxnet::TShape empty_val,
                            const char* infer_name,
                            const char* input_name,
                            const char* attr_key_name,
