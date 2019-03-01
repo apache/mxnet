@@ -40,7 +40,9 @@ def _cast_symbol_NDArray(s, dtype):
     if isinstance(s, Symbol):
         return symbol.amp_cast(s, dtype=dtype)
     elif isinstance(s, NDArray):
-        if s.dtype != dtype and (s.dtype == np.float16 or s.dtype == np.float32):
+        if (s.dtype != dtype and
+                (s.dtype == np.float16 or s.dtype == np.float32) and
+                s.context.device_type != 'cpu'):
             return ndarray.amp_cast(s, dtype=dtype)
         else:
             return s
