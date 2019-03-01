@@ -100,18 +100,18 @@ inline void SetShapeType(const Context& ctx,
                          const std::vector<NDArray*>& inputs,
                          const std::vector<NDArray*>& outputs,
                          DispatchMode* dispatch_mode) {
-  static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
+  static auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   // infer shape
-  std::vector<TShape>& in_shapes  = ret->arg_shapes;
+  mxnet::ShapeVector& in_shapes  = ret->arg_shapes;
   in_shapes.clear();
   in_shapes.reserve(inputs.size());
   for (auto& i : inputs) {
     in_shapes.push_back(i->shape());
   }
-  std::vector<TShape>& out_shapes = ret->out_shapes;
+  mxnet::ShapeVector& out_shapes = ret->out_shapes;
   out_shapes.clear();
   out_shapes.reserve(outputs.size());
   for (auto& i : outputs) {
@@ -179,7 +179,7 @@ inline void SetShapeType(const Context& ctx,
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
-    if (outputs[i]->is_none()) {
+    if (outputs[i]->is_none() || outputs[i]->shape().ndim() == 0) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
         *outputs[i] = NDArray(ctx, out_types[i]);
@@ -448,7 +448,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
     };
 
   if (exec_type == ExecType::kCrossDeviceCopy) {
-    run(RunContext{ctx, nullptr});
+    run(RunContext{ctx, nullptr, nullptr, false});
   } else {
     CHECK(exec_type == ExecType::kSync);
     Engine::Get()->PushSync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -498,7 +498,7 @@ inline void PushOperator(const OpStatePtr& state,
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
     if (exec_type == ExecType::kSubgraphExec) {
-      RunContext rctx{ctx, nullptr};
+      RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
@@ -546,7 +546,7 @@ inline void PushOperator(const OpStatePtr& state,
       };
 
     if (exec_type == ExecType::kSubgraphExec) {
-      RunContext rctx{ctx, nullptr};
+      RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
@@ -563,17 +563,21 @@ inline void PushOperator(const OpStatePtr& state,
   }
 }
 
-inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
+inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
                                bool use_inputs,
                                std::pair<uint32_t, uint32_t> node_range = {0, 0},
-                               std::pair<uint32_t, uint32_t> entry_range = {0, 0}) {
+                               std::pair<uint32_t, uint32_t> entry_range = {0, 0},
+                               bool *contain_unknown = nullptr) {
   using namespace nnvm;
+  if (contain_unknown != nullptr) {
+    *contain_unknown = false;
+  }
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
     if (g.attrs.count("shape_inputs") &&
-        g.GetAttr<ShapeVector>("shape_inputs") == shapes) return true;
+        g.GetAttr<mxnet::ShapeVector>("shape_inputs") == shapes) return true;
   } else if (g.attrs.count("shape")) {
-    const auto& prev_shapes = g.GetAttr<ShapeVector>("shape");
+    const auto& prev_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     CHECK_EQ(prev_shapes.size(), shapes.size());
     bool match = true;
     for (size_t i = 0; i < shapes.size(); ++i) {
@@ -601,8 +605,11 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
     g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
     g = exec::InferShape(std::move(g));
   }
-  CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
-
+  if (contain_unknown == nullptr) {
+    CHECK_EQ(g.GetAttr<size_t>("shape_num_unknown_nodes"), 0U);
+  } else {
+    *contain_unknown = g.GetAttr<size_t>("shape_num_unknown_nodes") != 0U;
+  }
   return false;
 }
 
@@ -766,11 +773,11 @@ inline MemoryPlanVector PlanMemory(
   }
   g.attrs["ref_count"] = std::make_shared<dmlc::any>(ref_count);
   g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(storage));
-  g = nnvm::ApplyPass(g, "PlanMemory");
+  g = nnvm::ApplyPass(g, "MXPlanMemory");
   if (detect_inplace_addto) g = exec::DetectInplaceAddTo(g);
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
   const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
@@ -811,7 +818,7 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     std::multimap<size_t, NDArray>&& pool = std::multimap<size_t, NDArray>()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
   std::multimap<size_t, NDArray> new_pool;
@@ -833,7 +840,7 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
         new_pool.insert(*iter);
         pool.erase(iter);
       } else {
-        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
+        NDArray buff(mxnet::TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
                      default_ctx, true, mshadow::kUint8);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
         new_pool.insert({mem_plan[i].size, buff});

@@ -1,8 +1,26 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Setup the MXNet Package for Scala
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
 **Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.html) instead of these instructions.
+**Note:** Currently, we only support scala 2.11
 
 <hr>
 
@@ -96,6 +114,33 @@ mvn install
 ```
 
 <hr>
+
+## Interpreter
+
+To run the scala interpreter, first download and install scala 2.11.x (run `scala -version` to make sure you have the right version installed.**
+
+### Installing the Interpreter
+
+**Ubuntu***
+
+```
+sudo apt-get install scala
+```
+
+**macOS***
+
+```
+brew install scala@2.11
+```
+
+Then, add scala to your path by following the instructions output by homebrew.
+
+### Running the Interpreter
+
+To run the interpreter, download the appropriate mxnet jar from [the maven repository](https://search.maven.org/search?q=g:org.apache.mxnet) or build from source following the instructions above.
+
+Then, run `scala -cp {path/to/mxnet-full_2.11-os-version.jar}` to start it.
+If you receive a "NumberFormatException" when running the interpreter, run `export TERM=xterm-color` before starting the interpreter.
 
 ## Documentation
 

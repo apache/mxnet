@@ -114,7 +114,6 @@ LibInfo::LibInfo() {
     for (size_t i = 0; i < MAX_FEATURES; ++i) {
         m_lib_features[i].name = EnumNames::names[i].c_str();
         m_lib_features[i].enabled = is_enabled(i);
-        m_lib_features[i].index = i;
     }
 }
 

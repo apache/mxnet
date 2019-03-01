@@ -72,7 +72,7 @@ op::ONNXParam ConvertNnvmGraphToOnnx(
   const nnvm::IndexedGraph& ig = g.indexed_graph();
   const auto& storage_types = g.GetAttr<StorageTypeVector>("storage_type");
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shape_inputs = g.GetAttr<ShapeVector>("shape_inputs");
+  const auto& shape_inputs = g.GetAttr<mxnet::ShapeVector>("shape_inputs");
 
   // TODO(kellens): At the moment this check always passes no matter the weight dtypes used in your
   // graph.  We should first iterate over datatypes by name and ensure  they're valid types
@@ -104,7 +104,7 @@ op::ONNXParam ConvertNnvmGraphToOnnx(
   auto subgraph_name_id = subgraph_count.fetch_add(1);
   graph_proto->set_name("MXNetTRTSubgraph" + std::to_string(subgraph_name_id));
 
-  std::unordered_map<std::string, TShape> placeholder_shapes =
+  std::unordered_map<std::string, mxnet::TShape> placeholder_shapes =
       GetPlaceholderShapes(shape_inputs, ig);
   std::unordered_map<std::string, uint32_t> output_lookup = GetOutputLookup(ig);
   uint32_t current_input = 0;
@@ -189,10 +189,10 @@ void ConvertConvolution(NodeProto* node_proto, const NodeAttrs& attrs,
 
   node_proto->set_op_type("Conv");
 
-  const TShape kernel = conv_param.kernel;
-  const TShape stride = conv_param.stride;
-  const TShape dilate = conv_param.dilate;
-  const TShape pad = conv_param.pad;
+  const mxnet::TShape kernel = conv_param.kernel;
+  const mxnet::TShape stride = conv_param.stride;
+  const mxnet::TShape dilate = conv_param.dilate;
+  const mxnet::TShape pad = conv_param.pad;
   const uint32_t num_group = conv_param.num_group;
   // const bool no_bias = conv_param.no_bias;
   const dmlc::optional<int> layout = conv_param.layout;
@@ -244,9 +244,9 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
   const auto& pooling_param = nnvm::get<op::PoolingParam>(attrs.parsed);
 
-  const TShape kernel = pooling_param.kernel;
-  const TShape stride = pooling_param.stride;
-  const TShape pad = pooling_param.pad;
+  const mxnet::TShape kernel = pooling_param.kernel;
+  const mxnet::TShape stride = pooling_param.stride;
+  const mxnet::TShape pad = pooling_param.pad;
   const int pool_type = pooling_param.pool_type;
   const bool global_pool = pooling_param.global_pool;
 
@@ -411,12 +411,12 @@ void ConvertElementwiseAdd(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
   node_proto->set_op_type("Add");
 }
 
-std::unordered_map<std::string, TShape> GetPlaceholderShapes(
+std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(
     const ShapeVector& shape_inputs, const nnvm::IndexedGraph& ig) {
-  std::unordered_map<std::string, TShape> placeholder_shapes;
+  std::unordered_map<std::string, mxnet::TShape> placeholder_shapes;
   for (uint32_t i = 0; i < shape_inputs.size(); ++i) {
     std::string name = ig[ig.input_nodes()[i]].source->attrs.name;
-    TShape shp = shape_inputs[i];
+    mxnet::TShape shp = shape_inputs[i];
     if (shp.ndim() > 0) {
       placeholder_shapes.emplace(name, shp);
     }
@@ -441,7 +441,7 @@ std::unordered_map<std::string, uint32_t> GetOutputLookup(
 
 void ConvertPlaceholder(
     const std::string& node_name,
-    const std::unordered_map<std::string, TShape>& placeholder_shapes,
+    const std::unordered_map<std::string, mxnet::TShape>& placeholder_shapes,
     GraphProto* const graph_proto) {
   auto val_info_proto = graph_proto->add_input();
   auto type_proto = val_info_proto->mutable_type()->mutable_tensor_type();
@@ -470,7 +470,7 @@ void ConvertConstant(
 
   const NDArray nd = shared_buffer->find(node_name)->second;
   const TBlob& blob = nd.data();
-  const TShape shape = blob.shape_;
+  const mxnet::TShape shape = blob.shape_;
 
   for (auto& dim : shape) {
     initializer_proto->add_dims(static_cast<int64>(dim));
@@ -506,7 +506,7 @@ void ConvertOutput(
     const StorageTypeVector& storage_types, const DTypeVector& dtypes) {
   const nnvm::IndexedGraph& ig = g.indexed_graph();
   uint32_t out_idx = ig.entry_id(ig.outputs()[out_iter->second]);
-  TShape out_shape = g.GetAttr<nnvm::ShapeVector>("shape")[out_idx];
+  mxnet::TShape out_shape = g.GetAttr<mxnet::ShapeVector>("shape")[out_idx];
   int storage_type = storage_types[out_idx];
   int dtype = dtypes[out_idx];
 

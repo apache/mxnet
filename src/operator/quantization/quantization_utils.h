@@ -174,10 +174,10 @@ struct QuantizationRangeForMultiplicationStruct {
 
 template<typename xpu, typename DType>
 inline size_t ConfigReduce(mshadow::Stream<xpu>* s,
-                           const TShape& data_shape,
-                           const TShape& out_shape,
-                           TShape* src_shape,
-                           TShape* dst_shape) {
+                           const mxnet::TShape& data_shape,
+                           const mxnet::TShape& out_shape,
+                           mxnet::TShape* src_shape,
+                           mxnet::TShape* dst_shape) {
   BroadcastReduceShapeCompact(data_shape, out_shape, src_shape, dst_shape);
   constexpr int NDim = 2;
   CHECK_EQ(src_shape->ndim(), NDim);

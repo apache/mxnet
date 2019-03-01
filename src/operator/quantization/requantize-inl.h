@@ -107,11 +107,11 @@ void RequantizeForward(const nnvm::NodeAttrs& attrs,
         inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
         MaxAbs(param.min_calib_range.value(), param.max_calib_range.value()));
   } else {  // model is not calibrated
-    TShape src_shape, dst_shape;
+    mxnet::TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);
     const size_t actual_quantized_size = sizeof(SrcDType);
     const size_t temp_reduce_size = ConfigReduce<xpu, SrcDType>(
-        s, inputs[0].shape_, TShape({1}), &src_shape, &dst_shape);
+        s, inputs[0].shape_, mxnet::TShape({1}), &src_shape, &dst_shape);
     Tensor<xpu, 1, char> temp_space =
       ctx.requested[0].get_space_typed<xpu, 1, char>(
           Shape1(2*actual_float_size+2*actual_quantized_size+temp_reduce_size), s);

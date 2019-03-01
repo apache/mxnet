@@ -54,7 +54,7 @@ void ShuffleForwardGPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   CHECK_NE(req[0], kAddTo) << "Shuffle does not support AddTo";
-  const TShape& input_shape = inputs[0].shape_;
+  const mxnet::TShape& input_shape = inputs[0].shape_;
   const index_t size = inputs[0].Size();
   const index_t first_axis_len = input_shape[0];
   const index_t stride = size / first_axis_len;

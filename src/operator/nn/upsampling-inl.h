@@ -177,13 +177,13 @@ static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& pa
   p.num_filter = param.num_filter;
   p.no_bias =  true;
   int shape[] = {1, 1};
-  p.dilate = TShape(shape, shape + 2);
+  p.dilate = mxnet::TShape(shape, shape + 2);
   shape[0] = shape[1] = kernel;
-  p.kernel = TShape(shape, shape + 2);
+  p.kernel = mxnet::TShape(shape, shape + 2);
   shape[0] = shape[1] = stride;
-  p.stride = TShape(shape, shape + 2);
+  p.stride = mxnet::TShape(shape, shape + 2);
   shape[0] = shape[1] = pad;
-  p.pad = TShape(shape, shape + 2);
+  p.pad = mxnet::TShape(shape, shape + 2);
   return p;
 }
 

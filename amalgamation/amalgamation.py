@@ -143,7 +143,12 @@ def expand(x, pending, stage):
                 continue
             path = m.groups()[0]
             h = path.strip('./') if "../3rdparty/" not in path else path
-            source = find_source(h, x, stage)
+            if h.endswith('complex.h') and x.endswith('openblas_config.h'):
+                source = ''
+            elif h.startswith('ps/'):
+                source = '../3rdparty/ps-lite/include/' + h
+            else:
+                source = find_source(h, x, stage)
             if not source:
                 if (h not in blacklist and
                     h not in sysheaders and

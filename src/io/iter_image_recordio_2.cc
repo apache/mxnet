@@ -278,12 +278,12 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     for (index_t dim = 0; dim < param_.data_shape.ndim(); ++dim) {
       shape_vec.push_back(param_.data_shape[dim]);
     }
-    TShape data_shape(shape_vec.begin(), shape_vec.end());
+    mxnet::TShape data_shape(shape_vec.begin(), shape_vec.end());
 
     shape_vec.clear();
     shape_vec.push_back(batch_param_.batch_size);
     shape_vec.push_back(param_.label_width);
-    TShape label_shape(shape_vec.begin(), shape_vec.end());
+    mxnet::TShape label_shape(shape_vec.begin(), shape_vec.end());
 
     auto ctx = Context::CPU(0);
     auto dev_id = param_.device_id;
