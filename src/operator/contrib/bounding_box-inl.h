@@ -256,10 +256,10 @@ struct compute_area {
 template<typename DType>
 void NMSApply(mshadow::Stream<cpu> *s,
               int num_batch, int topk,
-              mshadow::Tensor<cpu, 1, int32_t>& sorted_index,
-              mshadow::Tensor<cpu, 1, int32_t>& batch_start,
-              mshadow::Tensor<cpu, 3, DType>& buffer,
-              mshadow::Tensor<cpu, 1, DType>& areas,
+              mshadow::Tensor<cpu, 1, int32_t>* sorted_index,
+              mshadow::Tensor<cpu, 1, int32_t>* batch_start,
+              mshadow::Tensor<cpu, 3, DType>* buffer,
+              mshadow::Tensor<cpu, 1, DType>* areas,
               int num_elem, int width_elem,
               int coord_start, int id_index,
               float threshold, bool force_suppress,
@@ -271,7 +271,7 @@ void NMSApply(mshadow::Stream<cpu> *s,
     int num_worker = topk - ref - 1;
     if (num_worker < 1) continue;
     Kernel<nms_impl, cpu>::Launch(s, num_batch * num_worker,
-      sorted_index.dptr_, batch_start.dptr_, buffer.dptr_, areas.dptr_,
+      sorted_index->dptr_, batch_start->dptr_, buffer->dptr_, areas->dptr_,
       num_worker, ref, num_elem,
       width_elem, coord_start, id_index,
       threshold, force_suppress, in_format);
@@ -448,8 +448,8 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
      topk, num_elem, width_elem, param.in_format);
 
     // apply nms
-    mxnet::op::NMSApply(s, num_batch, topk, sorted_index,
-                        batch_start, buffer, areas,
+    mxnet::op::NMSApply(s, num_batch, topk, &sorted_index,
+                        &batch_start, &buffer, &areas,
                         num_elem, width_elem, coord_start,
                         id_index, param.overlap_thresh,
                         param.force_suppress, param.in_format);
