@@ -6502,7 +6502,7 @@ def test_SoftmaxOutput_normalization():
         grad_scale = np.random.random()
         batch_size = 8
         num_labels = 6
-        ignore_label = np.random.randint(0, num_labels)
+        ignore_label = np.random.randint(0, num_labels) if use_ignore else -1
 
         data = mx.nd.random.uniform(-1, 1, shape=(batch_size, num_labels))
         data.attach_grad()
@@ -6532,10 +6532,7 @@ def test_SoftmaxOutput_normalization():
         if normalization == 'batch':
             valid_cnt = batch_size
         elif normalization == 'valid':
-            if use_ignore:
-                valid_cnt = mx.nd.maximum(1, (label != ignore_label).sum())
-            else:
-                valid_cnt = batch_size
+            valid_cnt = mx.nd.maximum(1, (label != ignore_label).sum())
 
         data_grad *= (grad_scale / valid_cnt)
 
