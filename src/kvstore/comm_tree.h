@@ -58,7 +58,7 @@ class CommDeviceTree : public CommDevice {
 
   virtual ~CommDeviceTree() { }
 
-  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+  void Init(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) override {
     tree_sorted_key_attrs_.emplace_back(key, shape, dtype);
     sorted_key_attrs_.emplace_back(key, shape, dtype);
@@ -385,7 +385,7 @@ class CommDeviceTree : public CommDevice {
 #endif
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBufferTree() {
     LOG(INFO) << "Using Tree";
@@ -402,7 +402,7 @@ class CommDeviceTree : public CommDevice {
 
     for (auto& tree_sorted_key_attr : tree_sorted_key_attrs_) {
       const int key  = std::get<0>(tree_sorted_key_attr);
-      const TShape& shape = std::get<1>(tree_sorted_key_attr);
+      const mxnet::TShape& shape = std::get<1>(tree_sorted_key_attr);
       const int type = std::get<2>(tree_sorted_key_attr);
 
       if (key_dist.find(shape.Size()) == key_dist.end())
@@ -444,7 +444,7 @@ class CommDeviceTree : public CommDevice {
 
         // buf.merged enforces that we only visit each GPU once
         if (buf.merged.empty()) {
-          TShape shape_copy = shape;
+          mxnet::TShape shape_copy = shape;
           int total_size = shape.Size();
           unsigned first_size = shape[0];
           if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {

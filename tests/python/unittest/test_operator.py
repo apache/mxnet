@@ -2516,6 +2516,20 @@ def test_slice_like():
             assert_allclose(xgrad1.asnumpy(), mx.nd.zeros_like(xgrad1).asnumpy())
 
 @with_seed()
+def test_slice_like_different_types():
+    x = [[  1.,   2.,   3.,   4.],
+         [  5.,   6.,   7.,   8.],
+         [  9.,  10.,  11.,  12.]]
+
+    y = [[  0.,   0.,   0.],
+         [  0.,   0.,   0.]]
+
+    x = mx.nd.array(x)
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.slice_like(x, y)
+    assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
+
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
@@ -2617,47 +2631,52 @@ def test_stn_valid_sampling():
     ) + target_shape))
 
 
-# @haojin2: Getting rid of fixed seed as flakiness could not be reproduced,
-# tracked at https://github.com/apache/incubator-mxnet/issues/11714
 @with_seed()
 def test_dot():
-    ctx=default_context()
+    ctx = default_context()
     dtypes = ['float32', 'float64']
+    ndims = [2]
     if ctx.device_type == 'gpu':
         dtypes += ['float16']
+        ndims += [1]
 
     # Test normal dot.
-    for data_type in dtypes:
-        for m in range(1, 5):
-            for k in range(1, 5):
-                for n in range(1, 5):
-                    a_npy = np.random.normal(0, 1, (m, k))
-                    a_npy = a_npy.astype(data_type)
-                    b_npy = np.random.normal(0, 1, (k, n))
-                    b_npy = b_npy.astype(data_type)
-                    c_npy = np.empty((m, n), dtype=data_type)
-                    ograd_npy = np.random.normal(0, 1, (m, n))
-                    ograd_npy = ograd_npy.astype(data_type)
-                    agrad_npy = np.empty((m, k), dtype=data_type)
-                    bgrad_npy = np.empty((k, n), dtype=data_type)
-                    c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
-                    bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
-                    agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
-                    a = mx.sym.Variable('a', dtype=data_type)
-                    b = mx.sym.Variable('b', dtype=data_type)
-                    c = mx.sym.dot(a, b)
-                    exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
-                    outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
-                    assert_almost_equal(outputs[0].asnumpy(), c_npy,
-                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                        atol=1e-2 if data_type == 'float16' else 1e-3)
-                    exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
-                    assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
-                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                        atol=1e-2 if data_type == 'float16' else 1e-3)
-                    assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
-                                        rtol=1e-2 if data_type == 'float16' else 1e-3,
-                                        atol=1e-2 if data_type == 'float16' else 1e-3)
+    for ndim in ndims:
+        for data_type in dtypes:
+            for m in range(1, 5):
+                for k in range(1, 5):
+                    if ndim == 1 and k != 1:
+                        pass
+                    for n in range(1, 5):
+                        a_shape = (m, k) if ndim == 2 else (m,)
+                        b_shape = (k, n) if ndim == 2 else (n,)
+                        a_npy = np.random.normal(0, 1, (m, k))
+                        a_npy = a_npy.astype(data_type)
+                        b_npy = np.random.normal(0, 1, (k, n))
+                        b_npy = b_npy.astype(data_type)
+                        c_npy = np.empty((m, n), dtype=data_type)
+                        ograd_npy = np.random.normal(0, 1, (m, n))
+                        ograd_npy = ograd_npy.astype(data_type)
+                        agrad_npy = np.empty((m, k), dtype=data_type)
+                        bgrad_npy = np.empty((k, n), dtype=data_type)
+                        c_npy[:, :] = np.dot(a_npy[:, :], b_npy[:, :])
+                        bgrad_npy[:, :] = np.dot(a_npy[:, :].T, ograd_npy[:, :])
+                        agrad_npy[:, :] = np.dot(ograd_npy[:, :], b_npy[:, :].T)
+                        a = mx.sym.Variable('a', dtype=data_type)
+                        b = mx.sym.Variable('b', dtype=data_type)
+                        c = mx.sym.dot(a, b)
+                        exe = c.simple_bind(ctx=ctx, a=a_npy.shape, b=b_npy.shape)
+                        outputs = exe.forward(is_train=True, a=a_npy, b=b_npy)
+                        assert_almost_equal(outputs[0].asnumpy(), c_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-3)
+                        exe.backward(out_grads=[mx.nd.array(ograd_npy, mx.cpu()).astype(data_type)])
+                        assert_almost_equal(exe.grad_dict['a'].asnumpy(), agrad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-3)
+                        assert_almost_equal(exe.grad_dict['b'].asnumpy(), bgrad_npy,
+                                            rtol=1e-2 if data_type == 'float16' else 1e-3,
+                                            atol=1e-2 if data_type == 'float16' else 1e-3)
 
     # Test dot with transpose flag using gradient checker.
     def dot_sym(data_type):
@@ -4516,6 +4535,47 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+def test_softmax_dtype():
+    def check_dtypes_almost_equal(op_name,
+                                  atol, rtol,
+                                  grad_atol, grad_rtol,
+                                  idtype, ref_dtype, odtype=None):
+        op = getattr(mx.nd, op_name)
+        input_data = mx.random.uniform(shape=(100, 500))
+        dtype_input = input_data.astype(idtype)
+        ref_input = input_data.astype(ref_dtype)
+        dtype_input.attach_grad()
+        ref_input.attach_grad()
+        with mx.autograd.record():
+            dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
+            ref_softmax = op(ref_input, axis=-1, dtype=odtype)
+        dtype_softmax_np = dtype_softmax.asnumpy()
+        ref_softmax_np = ref_softmax.asnumpy()
+        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
+        dtype_softmax.backward()
+        ref_softmax.backward()
+        dtype_grad_np = dtype_input.grad.asnumpy()
+        ref_grad_np = ref_input.grad.asnumpy()
+        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
+
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64', 'float64')
+
+@with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
@@ -4861,8 +4921,6 @@ def test_index_copy():
 
 @with_seed()
 def test_boolean_mask():
-    if default_context().device_type != 'cpu':
-        return
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 0])
     data.attach_grad()

@@ -67,8 +67,8 @@ struct SliceMarkCsrIndPtr {
 
 
 template<>
-void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
+void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &end,
+                             const OpContext& ctx, const NDArray &in, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;

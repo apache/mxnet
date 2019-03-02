@@ -62,48 +62,22 @@ def sample_multinomial(attrs, inputs, proto_obj):
     new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
     return 'sample_multinomial', new_attrs, inputs
 
-
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
-    new_attr = {}
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_add', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_add', new_attr, inputs
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_add')
 
 def subtract(attrs, inputs, proto_obj):
     """Subtracting two tensors"""
-    new_attr = {}
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_sub', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_sub', new_attr, inputs
-
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_sub')
 
 def multiply(attrs, inputs, proto_obj):
     """Multiply two tensors"""
-    new_attr = {}
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_mul', new_attr, inputs
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_mul')
 
 def divide(attrs, inputs, proto_obj):
     """Divide two tensors"""
-    new_attr = {}
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_div', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_div', new_attr, inputs
+    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_div')
 
 def mean(attrs, inputs, proto_obj):
     """Mean of all the input tensors."""
@@ -484,13 +458,15 @@ def split(attrs, inputs, proto_obj):
     if not split_list:
         num_outputs = len(proto_obj.model_metadata.get('output_tensor_data'))
     else:
-        raise NotImplementedError("Operator {} in MXNet does not support variable splits."
-                                  "Tracking the issue to support variable split here: "
-                                  "https://github.com/apache/incubator-mxnet/issues/11594"
-                                  .format('split'))
+        if len(set(split_list)) == 1:
+            num_outputs = len(split_list)
+        else:
+            raise NotImplementedError("Operator {} in MXNet does not support variable splits."
+                                      "Tracking the issue to support variable split here: "
+                                      "https://github.com/apache/incubator-mxnet/issues/11594"
+                                      .format('split'))
 
     new_attrs['num_outputs'] = num_outputs
-
     return 'split', new_attrs, inputs
 
 def _slice(attrs, inputs, proto_obj):

@@ -191,6 +191,16 @@ method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
             $self->$method($desc, $arr);
             $self->_verbose_print($desc, $1, $arr);
         }
+        elsif($desc =~ /min$/)
+        {
+            $self->_init_zero($desc, $arr);
+            $self->_verbose_print($desc, 'min', $arr);
+        }
+        elsif($desc =~ /max$/)
+        {
+            $self->_init_one($desc, $arr);
+            $self->_verbose_print($desc, 'max', $arr);
+        }
         else
         {
             $self->_init_default($desc, $arr)
@@ -249,6 +259,14 @@ method _legacy_init(Str $name, AI::MXNet::NDArray $arr)
     elsif($name =~ /moving_avg$/)
     {
         $self->_init_zero($name, $arr);
+    }
+    elsif($name =~ /min$/)
+    {
+        $self->_init_zero($name, $arr);
+    }
+    elsif($name =~ /max$/)
+    {
+        $self->_init_one($name, $arr);
     }
     else
     {
