@@ -637,12 +637,12 @@ nnvm::Graph InferSubgraphAttrs(
   auto orig_ctx = g->GetAttr<exec::ContextVector>("context");
   auto orig_dev_masks = g->GetAttr<exec::DevMaskVector>("dev_mask");
 
-  auto oshapes = g->GetAttr<nnvm::ShapeVector>("shape");
+  auto oshapes = g->GetAttr<mxnet::ShapeVector>("shape");
   auto odtypes = g->GetAttr<nnvm::DTypeVector>("dtype");
   auto ostypes = g->GetAttr<mxnet::StorageTypeVector>("storage_type");
 
   exec::ContextVector contexts(idx_g.num_nodes(), orig_ctx[0]);
-  nnvm::ShapeVector shapes(num_nodes);
+  mxnet::ShapeVector shapes(num_nodes);
   nnvm::DTypeVector types(num_nodes, -1);
   StorageTypeVector stypes(num_nodes, kUndefinedStorage);
   exec::DevMaskVector dev_masks(idx_g.num_nodes(), orig_ctx[0].dev_mask());
