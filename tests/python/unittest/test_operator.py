@@ -6497,6 +6497,56 @@ def test_softmax():
 
 
 @with_seed()
+def test_SoftmaxOutput_normalization():
+    def _softmaxoutput_normalization(use_ignore, normalization):
+        grad_scale = np.random.random()
+        batch_size = 8
+        num_labels = 6
+        ignore_label = np.random.randint(0, num_labels)
+
+        data = mx.nd.random.uniform(-1, 1, shape=(batch_size, num_labels))
+        data.attach_grad()
+
+        label = mx.nd.random.randint(
+            0, num_labels, shape=(batch_size, )).astype('float32')
+
+        kwargs = dict(grad_scale=grad_scale, normalization=normalization)
+        if use_ignore:
+            kwargs.update(use_ignore=True, ignore_label=ignore_label)
+
+        with autograd.record():
+            out = mx.nd.SoftmaxOutput(data=data, label=label, **kwargs)
+        out.backward(mx.nd.ones_like(data))
+
+        exp_data = mx.nd.exp(data)
+        softmax_data = exp_data / exp_data.sum(1, keepdims=True)
+        argmax_data = mx.nd.argmax(data, axis=1)
+
+        assert_almost_equal(out.asnumpy(), softmax_data.asnumpy())
+        data_grad = softmax_data - mx.nd.one_hot(label, num_labels)
+
+        if use_ignore:
+            data_grad *= (label != ignore_label).reshape((batch_size, 1))
+
+        valid_cnt = 1
+        if normalization == 'batch':
+            valid_cnt = batch_size
+        elif normalization == 'valid':
+            if use_ignore:
+                valid_cnt = mx.nd.maximum(1, (label != ignore_label).sum())
+            else:
+                valid_cnt = batch_size
+
+        data_grad *= (grad_scale / valid_cnt)
+
+        assert_almost_equal(data.grad.asnumpy(), data_grad.asnumpy())
+
+    for use_ignore in [False, True]:
+        for normalization in ['null', 'batch', 'valid']:
+            _softmaxoutput_normalization(use_ignore, normalization)
+
+
+@with_seed()
 def test_slice():
     def test_slice_forward_backward(a, index):
         a_np = a.asnumpy()
@@ -6533,6 +6583,7 @@ def test_slice():
     slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
     check_numeric_gradient(slice_sym, [in_data])
 
+
 def test_slice_partial_infer():
     def check_slice_partial_infer(data, begin, end, step, expected_out_shape):
         out = mx.sym.slice(data, begin=begin, end=end, step=step)
@@ -6554,6 +6605,7 @@ def test_slice_partial_infer():
     var1 = mx.sym.var(name="data", shape=(10, 0))
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
+
 
 @with_seed()
 def test_float16_min_max():
