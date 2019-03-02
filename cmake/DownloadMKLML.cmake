@@ -31,7 +31,7 @@ if(MSVC)
 
   file(DOWNLOAD "https://github.com/intel/mkl-dnn/releases/download/${MKLDNN_RELEASE}/${MKL_NAME}.zip"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/${MKL_NAME}.zip"
-       EXPECTED_MD5 "${MKLML_WIM_MD5}" SHOW_PROGRESS)
+       EXPECTED_MD5 "${MKLML_WIN_MD5}" SHOW_PROGRESS)
   file(DOWNLOAD "https://github.com/apache/incubator-mxnet/releases/download/utils/7z.exe"
        "${CMAKE_CURRENT_BINARY_DIR}/mklml/7z2.exe"
        EXPECTED_MD5 "E1CF766CF358F368EC97662D06EA5A4C" SHOW_PROGRESS)
