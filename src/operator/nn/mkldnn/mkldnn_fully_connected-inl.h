@@ -38,8 +38,7 @@ namespace op {
 
 struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool quantized;
-  bool fuse_requantize;
-  bool fuse_dequantize;
+  bool enable_float_output;
   bool with_relu;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
@@ -47,10 +46,8 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
     .describe("enable quantization");
-    DMLC_DECLARE_FIELD(fuse_requantize).set_default(false)
-    .describe("Whether to fuse requantize");
-    DMLC_DECLARE_FIELD(fuse_dequantize).set_default(false)
-    .describe("Whether to fuse dequantize");
+    DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
+    .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_relu).set_default(false)
     .describe("Add post relu");
     DMLC_DECLARE_FIELD(min_calib_range)

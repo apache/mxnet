@@ -44,16 +44,17 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
   if (full_param.mkldnn_param.with_relu) {
-    float scale = 1.0f;
-    float alpha = 0.0f;
-    float beta = 1.0f;
+    const float scale = 1.0f;
+    const float alpha = 0.0f;
+    const float beta = 1.0f;
     ops.append_eltwise(scale, eltwise_relu, alpha, beta);
   }
   attr.set_post_ops(ops);
 
   if (full_param.mkldnn_param.quantized) {
-    if (full_param.mkldnn_param.fuse_requantize ||
-        full_param.mkldnn_param.fuse_dequantize) {
+    if ((full_param.mkldnn_param.min_calib_range.has_value() &&
+         full_param.mkldnn_param.max_calib_range.has_value()) ||
+        full_param.mkldnn_param.enable_float_output) {
       int mask = 0;
       std::vector<float> scales = {0.0};
       if (full_param.requantize_scales.size()) {

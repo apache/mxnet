@@ -97,7 +97,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       min_bias = in_data[base_num_inputs + 4].data().dptr<float>()[0];
       max_bias = in_data[base_num_inputs + 5].data().dptr<float>()[0];
     }
-    if (!mkldnn_param.fuse_dequantize) {
+    if (!mkldnn_param.enable_float_output) {
       total_num_outputs = base_num_outputs * 3;
       min_output_ptr = out_data[1].data().dptr<float>();
       max_output_ptr = out_data[2].data().dptr<float>();
@@ -160,22 +160,17 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         }
       }
 
-      if (mkldnn_param.fuse_dequantize) {
+      if (mkldnn_param.enable_float_output) {
         full_param_.output_scales[0] = 1.0 / data_scale / weight_scale;
         full_param_.requantize_scales.resize(0);
-      } else if (mkldnn_param.fuse_requantize) {
+      } else if (mkldnn_param.min_calib_range.has_value() &&
+                 mkldnn_param.max_calib_range.has_value()) {
         full_param_.output_scales.resize(0);
-        if (mkldnn_param.min_calib_range.has_value() &&
-            mkldnn_param.max_calib_range.has_value()) {
-              *min_output_ptr = mkldnn_param.min_calib_range.value();
-              *max_output_ptr = mkldnn_param.max_calib_range.value();
+        *min_output_ptr = mkldnn_param.min_calib_range.value();
+        *max_output_ptr = mkldnn_param.max_calib_range.value();
 
-              full_param_.requantize_scales[0] = quantized_out_range /
-                MaxAbs(*min_output_ptr, *max_output_ptr) / data_scale / weight_scale;
-        } else {
-          LOG(FATAL)<<
-            "Failed to fuse requantize due to no min_calib_range and max_calib_range found.";
-        }
+        full_param_.requantize_scales[0] = quantized_out_range /
+          MaxAbs(*min_output_ptr, *max_output_ptr) / data_scale / weight_scale;
       } else {
         Stream<cpu> *s = ctx.get_stream<cpu>();
         mxnet_op::Kernel<QuantizationRangeForMultiplicationStruct, cpu>::Launch(s, 1,
@@ -246,7 +241,7 @@ static std::vector<std::string> SgMKLDNNFCListInputNames(const NodeAttrs &attrs)
 static std::vector<std::string> SgMKLDNNFCListOutputNames(const NodeAttrs &attrs) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   if (full_param.mkldnn_param.quantized) {
-    if (full_param.mkldnn_param.fuse_dequantize)
+    if (full_param.mkldnn_param.enable_float_output)
       return std::vector<std::string>{"output"};
     else
       return std::vector<std::string>{"output", "min_output", "max_output"};
@@ -288,7 +283,7 @@ static bool SgMKLDNNFCInferShape(const nnvm::NodeAttrs &attrs,
     }
 
     out_shapes->at(0) = base_out_shapes[0];
-    if (!full_param.mkldnn_param.fuse_dequantize) {
+    if (!full_param.mkldnn_param.enable_float_output) {
       SHAPE_ASSIGN_CHECK(*out_shapes, 1, Shape1(1));
       SHAPE_ASSIGN_CHECK(*out_shapes, 2, Shape1(1));
     }
@@ -316,10 +311,11 @@ static bool SgMKLDNNFCInferType(const nnvm::NodeAttrs &attrs,
       }
     }
 
-    if (full_param.mkldnn_param.fuse_dequantize) {
+    if (full_param.mkldnn_param.enable_float_output) {
       TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kFloat32);
     } else {
-      if (full_param.mkldnn_param.fuse_requantize) {
+      if (full_param.mkldnn_param.min_calib_range.has_value() &&
+          full_param.mkldnn_param.max_calib_range.has_value()) {
         if (full_param.mkldnn_param.with_relu) {
           TYPE_ASSIGN_CHECK(*out_types, 0, mshadow::kUint8);
         } else {
@@ -359,7 +355,7 @@ static bool SgMKLDNNFCStorageType(const nnvm::NodeAttrs &attrs,
     }
 
     out_attrs->at(0) = base_out_attrs[0];
-    if (!full_param.mkldnn_param.fuse_dequantize) {
+    if (!full_param.mkldnn_param.enable_float_output) {
       type_assign(&out_attrs->at(1), mxnet::kDefaultStorage);
       type_assign(&out_attrs->at(2), mxnet::kDefaultStorage);
     }
@@ -412,7 +408,8 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 })
 .set_num_outputs([](const NodeAttrs& attrs) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
-  return (full_param.mkldnn_param.quantized && !full_param.mkldnn_param.fuse_dequantize) ? 3 : 1;
+  return (full_param.mkldnn_param.quantized &&
+          !full_param.mkldnn_param.enable_float_output) ? 3 : 1;
 })
 .set_attr_parser(SgMKLDNNFCParamParser)
 .set_attr<nnvm::FListInputNames>("FListInputNames", SgMKLDNNFCListInputNames)
