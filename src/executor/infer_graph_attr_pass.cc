@@ -383,7 +383,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
                            const DispatchMode default_mode_val = DispatchMode::kUndefined) {
   using nnvm::IndexedGraph;
   using nnvm::Op;
-  using AttrType = nnvm::TShape;
+  using AttrType = mxnet::TShape;
   using FInferType = nnvm::FInferShape;
   using AttrVector = std::vector<AttrType>;
   using NodeAttrVector = std::vector<DispatchMode>;
