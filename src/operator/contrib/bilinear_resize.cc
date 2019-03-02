@@ -176,7 +176,7 @@ for more details.
 .set_attr_parser(ParamParser<BilinearSampleParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", BilinearSampleOpInferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BilinearSampleOpInferShape)
 .set_attr<FCompute>("FCompute<cpu>", BilinearSampleOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
   ElemwiseGradUseNone{"_backward_contrib_BilinearResize2D"})

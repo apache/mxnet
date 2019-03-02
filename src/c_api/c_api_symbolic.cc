@@ -520,18 +520,18 @@ int MXSymbolInferShape(SymbolHandle sym,
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   API_BEGIN();
   nnvm::Graph g = Symbol2Graph(*s);
-  nnvm::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), TShape());
+  mxnet::ShapeVector arg_shapes(g.indexed_graph().input_nodes().size(), mxnet::TShape());
   if (keys == nullptr && num_args != 0) {
     std::vector<uint32_t> read_only_args = mxnet::ReadOnlyArgIndices(g.indexed_graph());
     CHECK_LE(num_args, read_only_args.size());
     for (mx_uint i = 0; i < num_args; ++i) {
-      arg_shapes[read_only_args[i]] = nnvm::ShapeTypeCast(
+      arg_shapes[read_only_args[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
   } else {
-    std::unordered_map<std::string, TShape> kwargs;
+    std::unordered_map<std::string, mxnet::TShape> kwargs;
     for (mx_uint i = 0; i < num_args; ++i) {
-      kwargs[keys[i]] = nnvm::ShapeTypeCast(
+      kwargs[keys[i]] = mxnet::ShapeTypeCast(
           arg_shape_data + arg_ind_ptr[i], arg_shape_data + arg_ind_ptr[i+1]);
     }
     mxnet::MatchArguments(g.indexed_graph(), kwargs, &arg_shapes, "InferShape");
@@ -544,7 +544,7 @@ int MXSymbolInferShape(SymbolHandle sym,
   }
 
   // copy back
-  CopyAttr(g.indexed_graph(), g.GetAttr<nnvm::ShapeVector>("shape"),
+  CopyAttr(g.indexed_graph(), g.GetAttr<mxnet::ShapeVector>("shape"),
            &(ret->arg_shapes), &(ret->out_shapes), &(ret->aux_shapes));
 
   // copy data back
@@ -638,6 +638,27 @@ int MXSymbolInferType(SymbolHandle sym,
   API_END();
 }
 
+int MXSymbolInferTypePartial(SymbolHandle sym,
+                             mx_uint num_args,
+                             const char** keys,
+                             const int *arg_type_data,
+                             mx_uint *in_type_size,
+                             const int **in_type_data,
+                             mx_uint *out_type_size,
+                             const int **out_type_data,
+                             mx_uint *aux_type_size,
+                             const int **aux_type_data,
+                             int *complete) {
+  int succ;
+  *complete = 1;
+  return MXSymbolInferType(sym, num_args, keys,
+                            arg_type_data,
+                            in_type_size, in_type_data,
+                            out_type_size, out_type_data,
+                            aux_type_size, aux_type_data,
+                            &succ);
+}
+
 int MXSymbolGrad(SymbolHandle sym, mx_uint num_wrt, const char** wrt, SymbolHandle* out) {
   API_BEGIN();
   LOG(FATAL) << "not implemented";
@@ -668,7 +689,6 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
-  g.attrs["calib_quantize"] = std::make_shared<nnvm::any>(calib_quantize);
   g = ApplyPass(std::move(g), "QuantizeGraph");
   s->outputs = g.outputs;
   *ret_sym_handle = s;
@@ -685,10 +705,9 @@ int MXSetCalibTableToQuantizedSymbol(SymbolHandle qsym_handle,
   API_BEGIN();
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(qsym_handle);
   nnvm::Graph g = Symbol2Graph(*sym);
-  const std::string prefix = "quantized_";
   std::unordered_map<std::string, std::pair<float, float>> calib_table;
   for (size_t i = 0; i < num_layers; ++i) {
-    calib_table.emplace(prefix+layer_names[i], std::make_pair(min_ranges[i], max_ranges[i]));
+    calib_table.emplace(layer_names[i], std::make_pair(min_ranges[i], max_ranges[i]));
   }
   g.attrs["calib_table"] = std::make_shared<nnvm::any>(std::move(calib_table));
   g = ApplyPass(std::move(g), "SetCalibTableToQuantizedGraph");

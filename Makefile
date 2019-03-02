@@ -489,7 +489,7 @@ build/plugin/%_gpu.o: plugin/%.cu
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
+build/plugin/%.o: plugin/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -608,11 +608,7 @@ rpkg:
 
 	$(RM) -rf R-package/inst/include
 	mkdir -p R-package/inst/include
-	cp -rf include/* R-package/inst/include
-	rm R-package/inst/include/dmlc
-	rm R-package/inst/include/nnvm
-	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
-	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
+	cp -rl include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "if(!require(roxygen2)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
@@ -620,18 +616,18 @@ rpkg:
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
-	$(RM) R-package/NAMESPACE
-	Rscript -e "devtools::document('R-package'); warnings()"
-	export R_TEXI2DVI=$${R_TEXI2DVI:-$${TEXI2DVI:-$$(Rscript -e 'Sys.getenv("R_TEXI2DVI")'|awk '{print $$2}'|grep -v '""')}}; \
-	    export R_TEXI2DVI=$${R_TEXI2DVI:-$$(ls /usr/bin/texi2dvi* | tail -1)}; \
-	    echo $$R_TEXI2DVI; \
-	    if [ -x "$${R_TEXI2DVI}" ]; then \
-		echo "resolved R texi2dvi: R_TEXI2DVI=$${R_TEXI2DVI}"; \
-		$(RM) -r .Rd2pdf*; \
-		mkdir -p R-package/inst/doc; \
-		R CMD Rd2pdf --title=mxnet --batch -no-preview --force --no-index --no-clean --internals R-package; \
-		if [ -f "$$(ls .Rd2pdf*/Rd2.pdf)" ]; then cp -f .Rd2pdf*/Rd2.pdf R-package/inst/doc/mxnet.pdf; else echo "No PDF found in: $$(ls -d .Rd2pdf*)"; fi; \
-	    else echo "Cannot resolve R texi2dvi or not executable: R_TEXI2DVI=$${R_TEXI2DVI}"; \
+	rm R-package/NAMESPACE
+	Rscript -e "devtools::document('R-package');warnings()"
+  export R_TEXI2DVI=$${R_TEXI2DVI:-$${TEXI2DVI:-$$(Rscript -e 'Sys.getenv("R_TEXI2DVI")'|awk '{print $$2}'|grep -v '""')}}; \
+    export R_TEXI2DVI=$${R_TEXI2DVI:-$$(ls /usr/bin/texi2dvi* | tail -1)}; \
+    echo $$R_TEXI2DVI; \
+    if [ -x "$${R_TEXI2DVI}" ]; then \
+      echo "resolved R texi2dvi: R_TEXI2DVI=$${R_TEXI2DVI}"; \
+      $(RM) -r .Rd2pdf*; \
+      mkdir -p R-package/inst/doc; \
+      R CMD Rd2pdf --title=mxnet --batch -no-preview --force --no-clean --internals R-package; \
+      if [ -f "$$(ls .Rd2pdf*/Rd2.pdf)" ]; then cp -f .Rd2pdf*/Rd2.pdf R-package/inst/doc/mxnet.pdf; else echo "No PDF found in: $$(ls -d .Rd2pdf*)"; fi; \
+    else echo "Cannot resolve R texi2dvi or not executable: R_TEXI2DVI=$${R_TEXI2DVI}"; \
 	fi
 	R CMD INSTALL R-package
 

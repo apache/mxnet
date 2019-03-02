@@ -351,7 +351,7 @@ std::vector<NDArray*> Imperative::Backward(
         << "There are no inputs in computation graph that require gradients.";
   }
 
-  Graph g_graph = pass::Gradient(
+  Graph g_graph = pass::MXGradient(
       graph, graph.outputs, xs, ograd_entries,
       exec::AggregateGradient, nullptr, nullptr,
       zero_ops, "_copy");
@@ -479,7 +479,7 @@ std::vector<NDArray*> Imperative::Backward(
     array_reqs[eid] = x_reqs[i - num_forward_outputs];
   }
 
-  const auto& shapes = graph.GetAttr<ShapeVector>("shape");
+  const auto& shapes = graph.GetAttr<mxnet::ShapeVector>("shape");
   const auto& dtypes = graph.GetAttr<DTypeVector>("dtype");
   const auto& stypes = graph.GetAttr<StorageTypeVector>("storage_type");
   const auto& dispatch_modes = graph.GetAttr<DispatchModeVector>("dispatch_mode");

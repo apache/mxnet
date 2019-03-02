@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 
 # Gluon: from experiment to deployment, an end to end tutorial
 
@@ -52,7 +69,6 @@ Now let's first import necessary packages:
 import math
 import os
 import time
-from multiprocessing import cpu_count
 
 from mxnet import autograd
 from mxnet import gluon, init
@@ -77,7 +93,8 @@ lr_factor = 0.75
 lr_epochs = [10, 20, 30]
 
 num_gpus = mx.context.num_gpus()
-num_workers = cpu_count()
+# you can replace num_workers with the number of cores on you device
+num_workers = 8
 ctx = [mx.gpu(i) for i in range(num_gpus)] if num_gpus > 0 else [mx.cpu()]
 batch_size = per_device_batch_size * max(num_gpus, 1)
 ```

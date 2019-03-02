@@ -170,8 +170,8 @@ void EmbeddingOpForwardDnsImpl<gpu>(mshadow::Stream<gpu>* s,
                                     const OpReqType req,
                                     const TBlob& output) {
   using namespace mxnet_op;
-  const TShape& ishape = data.shape_;
-  const TShape& oshape = output.shape_;
+  const mxnet::TShape& ishape = data.shape_;
+  const mxnet::TShape& oshape = output.shape_;
 
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
@@ -475,9 +475,9 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
-  const TShape& idxshape = inputs[take_::kIdx].shape_;
-  const TShape& arrshape = inputs[take_::kArr].shape_;
-  const TShape& oshape = outputs[take_::kOut].shape_;
+  const mxnet::TShape& idxshape = inputs[take_::kIdx].shape_;
+  const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
+  const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
