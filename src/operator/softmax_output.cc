@@ -262,6 +262,9 @@ NNVM_REGISTER_OP(_backward_SoftmaxOutput)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
 })
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n){
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr_parser(ParamParser<SoftmaxOutputParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxOutputGradCompute<cpu>);
 }  // namespace op
