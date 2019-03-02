@@ -478,10 +478,14 @@ inline void ThreadedEngine::ThrowException(ThreadedVar* threaded_var) {
   return;
 }
 
-void ThreadedEngine::OnCompleteStatic(
-    Engine *engine, void *opr_block_) {
+void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
+                                      const dmlc::Error* error) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
+  if (error != nullptr) {
+    auto ex_p = std::make_exception_ptr(*error);
+    threaded_opr->opr_exception = std::make_shared<std::exception_ptr>(ex_p);
+  }
   if (opr_block->profiling && threaded_opr->opr_name) {
     // record operator end timestamp
     opr_block->opr_profile->stop();

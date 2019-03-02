@@ -146,7 +146,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
   /*! \brief base iterator */
   IIterator<DataInst> *base_;
   /*! \brief data shape */
-  std::vector<TShape> shape_;
+  mxnet::ShapeVector shape_;
   /*! \brief unit size */
   std::vector<size_t> unit_size_;
   // initialize the data holder by using from the first batch.
@@ -155,7 +155,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
     data_.resize(first_batch.data.size());
     unit_size_.resize(first_batch.data.size());
     for (size_t i = 0; i < first_batch.data.size(); ++i) {
-      TShape src_shape = first_batch.data[i].shape_;
+      mxnet::TShape src_shape = first_batch.data[i].shape_;
       int src_type_flag = first_batch.data[i].type_flag_;
       // init object attributes
       std::vector<index_t> shape_vec;
@@ -163,7 +163,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
       for (index_t dim = 0; dim < src_shape.ndim(); ++dim) {
         shape_vec.push_back(src_shape[dim]);
       }
-      TShape dst_shape(shape_vec.begin(), shape_vec.end());
+      mxnet::TShape dst_shape(shape_vec.begin(), shape_vec.end());
       shape_[i] = dst_shape;
       data_[i].resize(mshadow::Shape1(dst_shape.Size()), src_type_flag);
       unit_size_[i] = src_shape.Size();

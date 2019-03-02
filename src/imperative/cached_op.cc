@@ -175,7 +175,7 @@ CachedOp::CachedOp(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
 
-    grad_graph_ = pass::Gradient(
+    grad_graph_ = pass::MXGradient(
         fwd_graph_, fwd_graph_.outputs, xs, ograd_entries_,
         exec::AggregateGradient, nullptr, nullptr,
         zero_ops, "_copy");
@@ -285,12 +285,20 @@ bool CachedOp::SetForwardGraph(
   }
 
   bool match = true;
-  match &= CheckAndInferShape(&g, std::move(shape_inputs), true);
+  bool contain_dynamic_shape = false;
+  match &= CheckAndInferShape(&g, std::move(shape_inputs), true,
+                              {0, 0}, {0, 0}, &contain_dynamic_shape);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
   exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
+  // When dynmaic shape exists, it is not feasible to plan memory ahead of time
+  if (contain_dynamic_shape) {
+    g.attrs.erase("forward_mem_plan");
+    g.attrs.erase("full_mem_plan");
+    return false;
+  }
   if (!match) {
     g.attrs.erase("forward_mem_plan");
     g.attrs.erase("full_mem_plan");
@@ -397,8 +405,8 @@ bool CachedOp::SetBackwardGraph(
     g.attrs["backward_ref_count"] = std::make_shared<dmlc::any>(std::move(ref_count));
   }
 
-  auto shapes = info->fwd_graph.GetAttr<ShapeVector>("shape");
-  shapes.resize(idx.num_node_entries(), TShape());
+  auto shapes = info->fwd_graph.GetAttr<mxnet::ShapeVector>("shape");
+  shapes.resize(idx.num_node_entries(), mxnet::TShape());
   auto dtypes = info->fwd_graph.GetAttr<DTypeVector>("dtype");
   dtypes.resize(idx.num_node_entries(), -1);
   auto stypes = info->fwd_graph.GetAttr<StorageTypeVector>("storage_type");
@@ -583,14 +591,11 @@ void CachedOp::StaticInitExec(
     }
 
     size_t bulk_size = idx.num_nodes();
-    std::unordered_set<uint32_t> excludes;
     if (recording || keep_fwd) {
       bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
-      for (const auto& i : idx.outputs()) excludes.insert(idx.entry_id(i));
-      for (const auto& i : idx.input_nodes()) excludes.insert(idx.entry_id(i, 0));
     }
 
-    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size, excludes,
+    CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size,
                       state.execs, skip_plus_node, &state.opr_segs);
   }
 
@@ -619,7 +624,7 @@ void CachedOp::StaticRunOps(
   const auto& op_execs = state.execs;
 
   std::vector<NDArray*> ndinputs, ndoutputs;
-  nnvm::ShapeVector arg_shapes;
+  mxnet::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_dtypes;
   std::vector<OpReqType> req;
 
@@ -734,7 +739,7 @@ OpStatePtr CachedOp::StaticForward(
   }
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
   for (size_t i = 0; i < outputs.size(); ++i) {
@@ -811,7 +816,7 @@ OpStatePtr CachedOp::DynamicForward(
                  mem_plan, arrays, &array_reqs);
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
   for (size_t i = 0; i < outputs.size(); ++i) {
@@ -1225,7 +1230,7 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
 
 OpStatePtr CreateCachedOpState(const NodeAttrs& attrs,
                                Context ctx,
-                               const std::vector<TShape>& in_shapes,
+                               const mxnet::ShapeVector& in_shapes,
                                const std::vector<int>& in_types) {
   const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
   return OpStatePtr::Create<CachedOpActualState>(op);
@@ -1330,10 +1335,10 @@ NNVM_REGISTER_OP(_CachedOp)
     return op->ListForwardOutputNames();
   })
 .set_attr<FCreateOpState>("FCreateOpState", CreateCachedOpState)
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_shapes,
-     std::vector<TShape> *out_shapes) {
+     mxnet::ShapeVector *in_shapes,
+     mxnet::ShapeVector *out_shapes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
     return op::DefaultSubgraphOpShapeHelper(op->GetForwardSym(), in_shapes, out_shapes);
   })

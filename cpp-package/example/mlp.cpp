@@ -49,7 +49,7 @@ void OutputAccuracy(mx_float* pred, mx_float* target) {
   std::cout << "Accuracy: " << right / 128.0 << std::endl;
 }
 
-void MLP() {
+void MLP(int max_epoch) {
   auto sym_x = Symbol::Variable("X");
   auto sym_label = Symbol::Variable("label");
 
@@ -144,7 +144,6 @@ void MLP() {
                                grad_req_type, aux_states);
 
   std::cout << "Training" << std::endl;
-  int max_epoch = 15000;
   mx_float learning_rate = 0.0001;
   for (int epoch_num = 0; epoch_num < max_epoch; ++epoch_num) {
     exe->Forward(true);
@@ -173,8 +172,8 @@ void MLP() {
 }
 
 int main(int argc, char** argv) {
-  MLP();
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 15000;
+  MLP(max_epoch);
   MXNotifyShutdown();
   return 0;
 }
-

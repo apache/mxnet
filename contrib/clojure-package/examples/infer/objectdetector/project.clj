@@ -17,9 +17,12 @@
 
 (defproject objectdetector "0.1.0-SNAPSHOT"
   :description "Object detection using infer with MXNet"
+  :repositories [["vendredi" "https://repository.hellonico.info/repository/hellonico/"]]
   :plugins [[lein-cljfmt "0.5.7"]]
+  :aliases {"run-detector" ["run" "--" "-m" "models/resnet50_ssd/resnet50_ssd_model" "-i" "images/dog.jpg" "-d" "images/"]}
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/tools.cli "0.4.1"]
+                 [origami "4.0.0-3"]
                  [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.5.0-SNAPSHOT"]]
   :main ^:skip-aot infer.objectdetector-example
   :profiles {:uberjar {:aot :all}})

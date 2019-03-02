@@ -70,9 +70,9 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
   const TBlob& data   =  inputs[0];
   const TBlob& weight =  inputs[1];
   const TBlob& out    = outputs[0];
-  TShape dshape = data.shape_;
-  TShape wshape = weight.shape_;
-  TShape oshape = out.shape_;
+  mxnet::TShape dshape = data.shape_;
+  mxnet::TShape wshape = weight.shape_;
+  mxnet::TShape oshape = out.shape_;
   // (m, n) * (k, n).T = (m, k)
   // A * B.T = C
 

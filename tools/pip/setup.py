@@ -65,6 +65,14 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/dmlc-core/tracke
                 os.path.join(CURRENT_DIR, 'dmlc_tracker'))
 shutil.copy(LIB_PATH[0], os.path.join(CURRENT_DIR, 'mxnet'))
 
+# copy license and notice
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/LICENSE'),
+            os.path.join(CURRENT_DIR, 'mxnet/LICENSE'))
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/DISCLAIMER'),
+            os.path.join(CURRENT_DIR, 'mxnet/DISCLAIMER'))
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/NOTICE'),
+            os.path.join(CURRENT_DIR, 'mxnet/NOTICE'))
+
 # copy tools to mxnet package
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet/tools'), ignore_errors=True)
 os.mkdir(os.path.join(CURRENT_DIR, 'mxnet/tools'))
@@ -112,7 +120,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU92'):
+    if variant.startswith('CU100'):
+        libraries.append('CUDA-10.0')
+    elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
     elif variant.startswith('CU91'):
         libraries.append('CUDA-9.1')
@@ -151,6 +161,11 @@ if platform.system() == 'Linux':
     package_data['mxnet'].append('mxnet/libgfortran.so.3')
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
+
+# copy licenses
+if variant.startswith('CU'):
+    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), '../CUB_LICENSE'), os.path.join(CURRENT_DIR, 'mxnet'))
+    package_data['mxnet'].append('mxnet/CUB_LICENSE')
 
 from mxnet.base import _generate_op_module_signature
 from mxnet.ndarray.register import _generate_ndarray_function_code

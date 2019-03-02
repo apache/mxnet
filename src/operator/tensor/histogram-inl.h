@@ -73,8 +73,8 @@ struct FillBinBoundsKernel {
 };
 
 inline bool HistogramOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape>* in_attrs,
-                             std::vector<TShape>* out_attrs) {
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
   HistogramParam param = nnvm::get<HistogramParam>(attrs.parsed);
   const bool has_cnt = param.bin_cnt.has_value();
   const bool has_range = param.range.has_value();
@@ -87,17 +87,17 @@ inline bool HistogramOpShape(const nnvm::NodeAttrs& attrs,
     // if cnt is specified, the output histogram has shape (cnt,)
     // while output bins has shape (cnt+1,)
     const int bin_cnt = param.bin_cnt.value();
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({bin_cnt}));
-    SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({bin_cnt + 1}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({bin_cnt}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape({bin_cnt + 1}));
   } else {
     // if cnt is not specified, the output histogram has shape (bins.Size() - 1)
     // while output bins has same shape as input bins
-    TShape oshape = (*in_attrs)[1];
+    mxnet::TShape oshape = (*in_attrs)[1];
 
     CHECK_EQ(oshape.ndim(), 1U) << "bins argument should be an 1D vector";
     CHECK_GE(oshape.Size(), 2U) << "number of bounds should be >= 2";
 
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({(oshape[0] - 1)}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({(oshape[0] - 1)}));
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(1));
   }
 

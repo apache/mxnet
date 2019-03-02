@@ -50,7 +50,7 @@ parser.add_argument('--use-gpu', action='store_true',
                     help='use gpu for training.')
 parser.add_argument('--clip_gr', type=float, default=10.0,
                     help='Clip the gradient by projecting onto the box. default is 10.0.')
-parser.add_argument('--z-dim', type=int, default=10,
+parser.add_argument('--z-dim', type=int, default=100,
                     help='dimension of the latent z vector. default is 100.')
 opt = parser.parse_args()
 

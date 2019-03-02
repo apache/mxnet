@@ -62,6 +62,14 @@ NNVM_REGISTER_OP(_backward_erf)
 .set_attr<FCompute>("FCompute<gpu>",
                     ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::erf_grad>>);
 
+// erfinv
+NNVM_REGISTER_OP(erfinv)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::erfinv>);
+
+NNVM_REGISTER_OP(_backward_erfinv)
+.set_attr<FCompute>("FCompute<gpu>",
+                    ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::erfinv_grad>>);
+
 // copy
 NNVM_REGISTER_OP(_copy)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>)

@@ -24,13 +24,12 @@ The root type for all data provider. A data provider should implement the follow
 * [`provide_data`](@ref)
 * [`provide_label`](@ref)
 
-As well as the Julia iterator interface (see [the Julia manual](http://docs.julialang.org/en/stable/manual/interfaces/)).
+As well as the Julia iterator interface (see
+[the Julia manual](https://docs.julialang.org/en/v1/manual/interfaces/#man-interface-iteration-1)).
 Normally this involves defining:
 
 * `Base.eltype(provider) -> AbstractDataBatch`
-* `Base.start(provider) -> AbstractDataProviderState`
-* `Base.done(provider, state) -> Bool`
-* `Base.next(provider, state) -> (AbstractDataBatch, AbstractDataProvider)`
+* `Base.iterate(provider[, state]) -> (AbstractDataBatch, AbstractDataProvider)`
 """
 abstract type AbstractDataProvider end
 
@@ -361,7 +360,7 @@ function ArrayDataProvider(data, label; batch_size::Int = 0, shuffle::Bool = fal
   function gen_batch_nds(arrs :: Vector{Array{MX_float}}, bsize :: Int)
     map(arrs) do arr
       shape = size(arr)
-      empty(shape[1:end-1]..., bsize)
+      NDArray(undef, shape[1:end-1]..., bsize)
     end
   end
 
@@ -395,7 +394,11 @@ end
 
 Base.eltype(provider :: ArrayDataProvider) = ArrayDataProviderState
 
-function Base.start(provider :: ArrayDataProvider)
+struct ArrayDataBatch <: AbstractDataBatch
+  idx :: UnitRange{Int}
+end
+
+function _start(provider::ArrayDataProvider)
   if provider.shuffle
     # re-shuffle all data
     idx_perm = randperm(provider.sample_count)
@@ -406,13 +409,9 @@ function Base.start(provider :: ArrayDataProvider)
   return ArrayDataProviderState(1)
 end
 
-Base.done(provider::ArrayDataProvider, state::ArrayDataProviderState) =
-  state.curr_idx > provider.sample_count
-
-struct ArrayDataBatch <: AbstractDataBatch
-  idx :: UnitRange{Int}
-end
-function Base.next(provider :: ArrayDataProvider, state :: ArrayDataProviderState)
+function Base.iterate(provider::ArrayDataProvider,
+                      state::ArrayDataProviderState = _start(provider))
+  (state.curr_idx > provider.sample_count) && return nothing
   idx = state.curr_idx:Base.min(state.curr_idx+provider.batch_size-1, provider.sample_count)
   return (ArrayDataBatch(idx), ArrayDataProviderState(idx.stop+1))
 end
@@ -480,12 +479,12 @@ end
 
 function MXDataProvider(handle     :: MX_DataIterHandle;
                         data_name  :: Symbol = :data,
-                        label_name :: Union{Symbol,Void} = :softmax_label,
+                        label_name :: Union{Symbol,Nothing} = :softmax_label,
                         kwargs...) # for convenience, we ignore the rest keyword arguments
   # init iterator, load the first batch and get shapes
   @assert(_iter_next(handle), "Failed to load the first batch in MXDataProvider")
   data_shape = Tuple{Base.Symbol, Tuple}[(data_name, size(_get_data(handle)))]
-  if !isa(label_name, Void)
+  if !isa(label_name, Nothing)
     label_shape = Tuple{Base.Symbol, Tuple}[(label_name::Base.Symbol, size(_get_label(handle)))]
   else
     label_shape = Tuple{Base.Symbol, Tuple}[]
@@ -504,10 +503,9 @@ end
 struct MXDataBatch <: AbstractDataBatch
 end
 
-function Base.eltype(provider :: MXDataProvider)
-  MXDataBatch
-end
-function Base.start(provider :: MXDataProvider)
+Base.eltype(::MXDataProvider) = MXDataBatch
+
+function _start(provider::MXDataProvider)
   if !provider.first_epoch
     _reset_data_iter(provider.handle)
   else
@@ -516,7 +514,8 @@ function Base.start(provider :: MXDataProvider)
 
   return MXDataProviderState(true)
 end
-function Base.done(provider :: MXDataProvider, state :: MXDataProviderState)
+
+function _done(provider::MXDataProvider, state::MXDataProviderState)
   if provider.first_batch
     state.has_next = true
     provider.first_batch = false
@@ -525,8 +524,10 @@ function Base.done(provider :: MXDataProvider, state :: MXDataProviderState)
   end
   return !state.has_next
 end
-function Base.next(provider :: MXDataProvider, state :: MXDataProviderState)
-  return (MXDataBatch(), state)
+
+function Base.iterate(provider::MXDataProvider, state::MXDataProviderState = _start(provider))
+  _done(provider, state) && return nothing
+  MXDataBatch(), state
 end
 
 function get_data(provider :: MXDataProvider, batch :: MXDataBatch)
@@ -574,7 +575,7 @@ function _populate_iter_creator_cache!()
   end
 end
 
-_get_iter_creator(name :: Symbol) = _iter_creator_cache[name]
+_get_iter_creator(name::Symbol) = _iter_creator_cache[name]
 
 function _define_data_iter_creator(hdr :: MX_handle)
   ref_name      = Ref{char_p}(0)
@@ -611,7 +612,7 @@ function _define_data_iter_creator(hdr :: MX_handle)
   end
 
   defun = quote
-    @doc $f_desc ->
+    @doc $f_desc
     function $iter_name(; kwargs...)
       arg_keys = String[string(k) for (k,v) in kwargs]
       arg_vals = String[dump_mx_param(v) for (k,v) in kwargs]

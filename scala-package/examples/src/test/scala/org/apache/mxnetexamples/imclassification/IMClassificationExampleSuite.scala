@@ -19,7 +19,7 @@ package org.apache.mxnetexamples.imclassification
 
 import java.io.File
 
-import org.apache.mxnet.Context
+import org.apache.mxnet.{Context, DType}
 import org.apache.mxnetexamples.Util
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
@@ -55,8 +55,14 @@ class IMClassificationExampleSuite extends FunSuite with BeforeAndAfterAll {
 
   for(model <- List("mlp", "lenet", "resnet")) {
     test(s"Example CI: Test Image Classification Model ${model}") {
-      var context = Context.cpu()
       val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true)
+    }
+  }
+
+  for(model <- List("mlp", "lenet", "resnet")) {
+    test(s"Example CI: Test Image Classification Model ${model} with Float64 input") {
+      val valAccuracy = TrainModel.test(model, "", 10, 1, benchmark = true,
+        dtype = DType.Float64)
     }
   }
 

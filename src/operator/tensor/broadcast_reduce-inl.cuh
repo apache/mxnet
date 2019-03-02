@@ -366,8 +366,8 @@ static inline uint64_t calc_num_load(const int X, const int Y, const int* stride
 }
 
 template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const TShape& small, const TShape& big, const TShape* lhs,
-  const TShape* rhs) {
+ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small, const mxnet::TShape& big, const mxnet::TShape* lhs,
+  const mxnet::TShape* rhs) {
 
   ReduceImplConfig<ndim> config;
 
@@ -636,16 +636,16 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const TShape& small, const OpReqType req,
-                           const TShape& big) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
   return config.workspace_size;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const TShape& small, const OpReqType req,
-                           const TShape& big, const TShape& lhs, const TShape& rhs) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big, const mxnet::TShape& lhs, const mxnet::TShape& rhs) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
   return config.workspace_size;

@@ -37,7 +37,7 @@
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
 
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include <algorithm>
 #include <iostream>
@@ -58,7 +58,7 @@ namespace op {
 namespace nnvm_to_onnx {
     enum class TypeIO { Inputs = 0, Outputs = 1 };
     using NameToIdx_t = std::map<std::string, int32_t>;
-    using InferenceTuple_t = std::tuple<uint32_t, TShape, int, int>;
+    using InferenceTuple_t = std::tuple<uint32_t, mxnet::TShape, int, int>;
     using InferenceMap_t = std::map<std::string, InferenceTuple_t>;
 }  // namespace nnvm_to_onnx
 
@@ -70,7 +70,7 @@ struct ONNXParam : public dmlc::Parameter<ONNXParam> {
   nnvm_to_onnx::InferenceMap_t output_map;
   ::onnx::ModelProto onnx_pb_graph;
 
-  ONNXParam() {}
+  ONNXParam() = default;
 
   ONNXParam(const ::onnx::ModelProto& onnx_graph,
            const nnvm_to_onnx::InferenceMap_t& input_map,
@@ -96,22 +96,22 @@ using namespace nnvm;
 using namespace ::onnx;
 using int64 = ::google::protobuf::int64;
 
-std::unordered_map<std::string, TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
+std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
     const nnvm::IndexedGraph& ig);
 
 std::unordered_map<std::string, uint32_t> GetOutputLookup(const nnvm::IndexedGraph& ig);
 
 void ConvertPlaceholder(
   const std::string& node_name,
-  const std::unordered_map<std::string, TShape>& placeholder_shapes,
-  GraphProto* const graph_proto);
+  const std::unordered_map<std::string, mxnet::TShape>& placeholder_shapes,
+  GraphProto* graph_proto);
 
-void ConvertConstant(GraphProto* const graph_proto,
+void ConvertConstant(GraphProto* graph_proto,
   const std::string& node_name,
-  std::unordered_map<std::string, NDArray>* const shared_buffer);
+  std::unordered_map<std::string, NDArray>* shared_buffer);
 
-void ConvertOutput(op::nnvm_to_onnx::InferenceMap_t* const trt_output_map,
-                   GraphProto* const graph_proto,
+void ConvertOutput(op::nnvm_to_onnx::InferenceMap_t* trt_output_map,
+                   GraphProto* graph_proto,
                    const std::unordered_map<std::string, uint32_t>::iterator& out_iter,
                    const std::string& node_name,
                    const nnvm::Graph& g,
@@ -169,7 +169,7 @@ void ConvertElementwiseAdd(NodeProto *node_proto,
 
 ONNXParam ConvertNnvmGraphToOnnx(
     const nnvm::Graph &g,
-    std::unordered_map<std::string, NDArray> *const shared_buffer);
+    std::unordered_map<std::string, NDArray>* shared_buffer);
 
 static const std::unordered_map<std::string, ConverterFunction> converter_map = {
   {"Convolution", ConvertConvolution},

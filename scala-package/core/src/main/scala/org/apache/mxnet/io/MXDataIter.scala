@@ -53,9 +53,9 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
       val label = currentBatch.label(0)
       // properties
       val res = (
-        // TODO: need to allow user to specify DType and Layout
-        IndexedSeq(new DataDesc(dataName, data.shape, DType.Float32, Layout.UNDEFINED)),
-        IndexedSeq(new DataDesc(labelName, label.shape, DType.Float32, Layout.UNDEFINED)),
+        // TODO: need to allow user to specify Layout
+        IndexedSeq(new DataDesc(dataName, data.shape, data.dtype, Layout.UNDEFINED)),
+        IndexedSeq(new DataDesc(labelName, label.shape, label.dtype, Layout.UNDEFINED)),
         ListMap(dataName -> data.shape),
         ListMap(labelName -> label.shape),
         data.shape(0))

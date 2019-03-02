@@ -37,7 +37,7 @@ object Image {
     * @param flag   Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb Whether to convert decoded image
     *               to mxnet's default RGB format (instead of opencv's default BGR).
-    * @return NDArray in HWC format
+    * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(buf: Array[Byte], flag: Int,
                to_rgb: Boolean,
@@ -56,7 +56,7 @@ object Image {
   /**
     * Same imageDecode with InputStream
     * @param inputStream the inputStream of the image
-    * @return NDArray in HWC format
+    * @return NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imDecode(inputStream: InputStream, flag: Int = 1,
                to_rgb: Boolean = true,
@@ -78,7 +78,7 @@ object Image {
     * @param flag     Convert decoded image to grayscale (0) or color (1).
     * @param to_rgb   Whether to convert decoded image to mxnet's default RGB format
     *                 (instead of opencv's default BGR).
-    * @return org.apache.mxnet.NDArray in HWC format
+    * @return org.apache.mxnet.NDArray in HWC format with DType [[DType.UInt8]]
     */
   def imRead(filename: String, flag: Option[Int] = None,
              to_rgb: Option[Boolean] = None,

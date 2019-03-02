@@ -61,7 +61,7 @@ inference accuracy.
 .set_attr_parser(ParamParser<RequantizeParam>)
 .set_num_inputs(3)
 .set_num_outputs(3)
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", RequantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", RequantizeStorageType)
 #if MXNET_USE_MKLDNN == 1

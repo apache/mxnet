@@ -71,7 +71,8 @@ def prepare_tests(backend, oper):
     for std_model_test in std_models:
         BACKEND_TESTS.include(std_model_test)
 
-    BACKEND_TESTS.exclude('.*bcast.*')
+    # Tests for scalar ops are in test_node.py
+    BACKEND_TESTS.exclude('.*scalar.*')
 
     return BACKEND_TESTS
 

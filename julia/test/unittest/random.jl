@@ -17,19 +17,20 @@
 
 module TestRandom
 using MXNet
-using Base.Test
+using Test
+using Statistics
 
 function test_uniform()
   dims = (100, 100, 2)
-  info("random::uniform::dims = $dims")
+  @info "random::uniform::dims = $dims"
 
   low = -10; high = 10
   seed = 123
-  mx.srand(seed)
+  mx.seed!(seed)
   ret1 = mx.rand(dims..., low = low, high = high)
 
-  mx.srand(seed)
-  ret2 = mx.empty(dims)
+  mx.seed!(seed)
+  ret2 = NDArray(undef, dims)
   mx.rand!(ret2, low = low, high = high)
 
   @test copy(ret1) == copy(ret2)
@@ -38,15 +39,15 @@ end
 
 function test_gaussian()
   dims = (80, 80, 4)
-  info("random::gaussian::dims = $dims")
+  @info "random::gaussian::dims = $dims"
 
   μ = 10; σ = 2
   seed = 456
-  mx.srand(seed)
+  mx.seed!(seed)
   ret1 = mx.randn(dims..., μ = μ, σ = σ)
 
-  mx.srand(seed)
-  ret2 = mx.empty(dims)
+  mx.seed!(seed)
+  ret2 = NDArray(undef, dims)
   mx.randn!(ret2, μ = μ, σ = σ)
 
   @test copy(ret1) == copy(ret2)

@@ -17,19 +17,18 @@
 
 module TestUtil
 
-using Base.Test
-
 using MXNet
+using Test
 
 
 function test_getdocdefine()
-  info("Util::_getdocdefine")
-  @test contains(mx._getdocdefine("sgd_update"), "Defined in")
+  @info("Util::_getdocdefine")
+  @test occursin("Defined in", mx._getdocdefine("sgd_update"))
 end  # function test_getdocdefine
 
 
 function test_firstarg()
-  info("Util::_firstarg")
+  @info("Util::_firstarg")
   @test mx._firstarg(:(f(x, y))) == :x
   @test mx._firstarg(:(f(x::mx.NDArray, y))) == :x
   @test mx._firstarg(:(f(x::mx.NDArray, y::mx.NDArray))) == :x

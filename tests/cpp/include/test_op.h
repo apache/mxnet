@@ -281,8 +281,8 @@ static test::op::OpInfo<OperatorProp, OperatorExecutor> createOpAndInfoF(const k
   return info;
 }
 
-inline std::vector<TShape> ShapesOf(const std::vector<NDArray>& arrays) {
-  std::vector<TShape> res;
+inline mxnet::ShapeVector ShapesOf(const std::vector<NDArray>& arrays) {
+  mxnet::ShapeVector res;
   res.reserve(arrays.size());
   for (const NDArray& ar : arrays) {
     res.emplace_back(ar.shape());

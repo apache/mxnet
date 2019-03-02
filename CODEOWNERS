@@ -20,6 +20,7 @@
 /python/mxnet/optimizer/          @eric-haibin-lin
 /python/mxnet/gluon/trainer.py    @eric-haibin-lin
 /contrib/clojure-package/         @gigasquid
+/julia/                           @iblis17
 
 # C++ base
 /src/kvstore/     @rahul003 @anirudh2290

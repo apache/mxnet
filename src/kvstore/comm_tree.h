@@ -58,7 +58,7 @@ class CommDeviceTree : public CommDevice {
 
   virtual ~CommDeviceTree() { }
 
-  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+  void Init(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) override {
     tree_sorted_key_attrs_.emplace_back(key, shape, dtype);
     sorted_key_attrs_.emplace_back(key, shape, dtype);
@@ -77,9 +77,6 @@ class CommDeviceTree : public CommDevice {
       //  BroadcastRowSparse
       InitMergeBuffer(devs_);
       InitMergeBufferTree();
-      if (dmlc::GetEnv("MXNET_ENABLE_GPU_P2P", 1)) {
-        EnableP2P();
-      }
     }
   }
 
@@ -328,7 +325,7 @@ class CommDeviceTree : public CommDevice {
   }
 
  private:
-  void EnableP2P() {
+  void EnableP2P(std::vector<int>* p2p) {
 #if MXNET_USE_CUDA
     std::vector<int> gpus;
     for (const auto& d : devs_) {
@@ -338,10 +335,10 @@ class CommDeviceTree : public CommDevice {
     }
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
-    std::vector<int> p2p(n*n);
-    mxnet::common::cuda::DeviceStore device_store;
+    p2p->clear();
+    p2p->resize(n*n, 0);
     for (int i = 0; i < n; ++i) {
-      device_store.SetDevice(gpus[i]);
+      mxnet::common::cuda::DeviceStore device_store(gpus[i]);
       for (int j = 0; j < n; j++) {
         int access;
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);
@@ -349,7 +346,7 @@ class CommDeviceTree : public CommDevice {
           cudaError_t e = cudaDeviceEnablePeerAccess(gpus[j], 0);
           if (e == cudaSuccess || e == cudaErrorPeerAccessAlreadyEnabled) {
             ++enabled;
-            p2p[i*n+j] = 1;
+            (*p2p)[i*n+j] = 1;
           }
         }
       }
@@ -363,7 +360,7 @@ class CommDeviceTree : public CommDevice {
       std::string access(n, '.');
       for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-          access[j] = p2p[i*n+j] ? 'v' : '.';
+          access[j] = (*p2p)[i*n+j] ? 'v' : '.';
         }
         LOG(WARNING) << access;
       }
@@ -374,7 +371,9 @@ class CommDeviceTree : public CommDevice {
   void QueryTopology() {
 #if MXNET_USE_CUDA
     std::vector<float> link_matrix(devs_.size()*devs_.size());
-    GetP2PWeight(devs_, &link_matrix);
+    std::vector<int> p2p_matrix(devs_.size()*devs_.size());
+    EnableP2P(&p2p_matrix);
+    GetP2PWeight(devs_, p2p_matrix, &link_matrix);
     if (backtrack_)
       LOG(INFO) << "Using Backtracking to generate trees";
     else
@@ -386,7 +385,7 @@ class CommDeviceTree : public CommDevice {
 #endif
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBufferTree() {
     LOG(INFO) << "Using Tree";
@@ -403,7 +402,7 @@ class CommDeviceTree : public CommDevice {
 
     for (auto& tree_sorted_key_attr : tree_sorted_key_attrs_) {
       const int key  = std::get<0>(tree_sorted_key_attr);
-      const TShape& shape = std::get<1>(tree_sorted_key_attr);
+      const mxnet::TShape& shape = std::get<1>(tree_sorted_key_attr);
       const int type = std::get<2>(tree_sorted_key_attr);
 
       if (key_dist.find(shape.Size()) == key_dist.end())
@@ -445,7 +444,7 @@ class CommDeviceTree : public CommDevice {
 
         // buf.merged enforces that we only visit each GPU once
         if (buf.merged.empty()) {
-          TShape shape_copy = shape;
+          mxnet::TShape shape_copy = shape;
           int total_size = shape.Size();
           unsigned first_size = shape[0];
           if (total_size > gpuarray_bound_ && first_size >= 2*devs_.size()) {
