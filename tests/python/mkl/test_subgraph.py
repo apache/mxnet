@@ -62,7 +62,7 @@ def check_qsym_calibrated(qsym, out_type, name='conv'):
     if k.find('_quantize') != -1:
       assert v['out_type'] == out_type
     if k.find(quantized_op_name) != -1:
-      if name == 'fc' and 'fuse_dequantize' in v:
+      if name == 'fc' and 'enable_float_output' in v:
         continue
       assert 'min_calib_range' in v
       assert 'max_calib_range' in v
@@ -180,7 +180,7 @@ def check_fusion(sym, data_shape, attrs_op, name='conv', check_quantization=True
   for k, v in sym_sg.attr_dict().items():
     if k.find(op_name) != -1:
       for attr_op in attrs_op:
-        assert v[attr_op] == 'true'
+        assert v[attr_op] in ['true', 'True']
 
   arg_shapes, _, aux_shapes = sym.infer_shape()
   arg_array = [mx.nd.random.uniform(-1, 1, shape=shape) for shape in arg_shapes]

@@ -109,7 +109,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   NDArray output = out_data[fullc::kOut];
-  const TShape &ishape = data.shape();
+  const mxnet::TShape &ishape = data.shape();
   if (mkldnn_param.quantized && ishape.ndim() != 2) {
     CHECK(default_param.flatten)
       << "QuantizedFullyConnected only supports flatten=true when ishape.ndim() != 2 for now.";
@@ -265,12 +265,12 @@ static inline void FillBaseInputOutputInfo(const FullyConnectedParam &param,
 }
 
 static bool SgMKLDNNFCInferShape(const nnvm::NodeAttrs &attrs,
-                                 std::vector<TShape> *in_shapes,
-                                 std::vector<TShape> *out_shapes) {
+                                 mxnet::ShapeVector *in_shapes,
+                                 mxnet::ShapeVector *out_shapes) {
   auto const &full_param = nnvm::get<MKLDNNFCFullParam>(attrs.parsed);
   if (full_param.mkldnn_param.quantized) {
-    std::vector<TShape> base_in_shapes;
-    std::vector<TShape> base_out_shapes;
+    mxnet::ShapeVector base_in_shapes;
+    mxnet::ShapeVector base_out_shapes;
     FillBaseInputOutputInfo(full_param.default_param, &base_in_shapes, &base_out_shapes,
                             in_shapes, out_shapes);
     bool ret = DefaultSubgraphOpShape(attrs, &base_in_shapes, &base_out_shapes);
@@ -368,7 +368,7 @@ static bool SgMKLDNNFCStorageType(const nnvm::NodeAttrs &attrs,
 
 static OpStatePtr CreateSgMKLDNNFCState(const nnvm::NodeAttrs &attrs,
                                         Context ctx,
-                                        const std::vector<TShape> &in_shapes,
+                                        const mxnet::ShapeVector &in_shapes,
                                         const std::vector<int> &in_types) {
   return OpStatePtr::Create<SgMKLDNNFCOp>(attrs);
 }
@@ -414,7 +414,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_fully_connected)
 .set_attr_parser(SgMKLDNNFCParamParser)
 .set_attr<nnvm::FListInputNames>("FListInputNames", SgMKLDNNFCListInputNames)
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", SgMKLDNNFCListOutputNames)
-.set_attr<nnvm::FInferShape>("FInferShape", SgMKLDNNFCInferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SgMKLDNNFCInferShape)
 .set_attr<nnvm::FInferType>("FInferType", SgMKLDNNFCInferType)
 .set_attr<FInferStorageType>("FInferStorageType", SgMKLDNNFCStorageType)
 .set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNFCState)
