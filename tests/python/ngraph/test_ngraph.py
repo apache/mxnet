@@ -19,6 +19,7 @@ from __future__ import print_function
 import numpy as np
 import mxnet as mx
 import os
+import unittest
 
 
 def binary_op_ex(sym, x_shape, y_shape):
@@ -79,6 +80,7 @@ def test_batch_normalized_softmax_grad():
     expected_grad_out[:, k] = - 1
     assert np.isclose(grad_out , (expected_softmax_out + expected_grad_out) / 2).all()
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14301")
 def test_valid_normalized_softmax_grad():
     xpu = mx.cpu()
     x = mx.sym.Variable('x')
