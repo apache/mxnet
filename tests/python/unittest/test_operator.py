@@ -6498,19 +6498,27 @@ def test_softmax():
 
 @with_seed()
 def test_SoftmaxOutput_normalization():
-    def _softmaxoutput_normalization(use_ignore, normalization):
+    def _softmaxoutput_normalization(multi_output, use_ignore, normalization):
         grad_scale = np.random.random()
         batch_size = 8
         num_labels = 6
+        H, W = 3, 3
         ignore_label = np.random.randint(0, num_labels) if use_ignore else -1
 
-        data = mx.nd.random.uniform(-1, 1, shape=(batch_size, num_labels))
+        if multi_output:
+            data_shape = (batch_size, num_labels, H, W)
+            label_shape = (batch_size, H, W)
+        else:
+            data_shape = (batch_size, num_labels)
+            label_shape = (batch_size, )
+
+        data = mx.nd.random.uniform(-1, 1, shape=data_shape)
+        label = mx.nd.random.randint(
+            0, num_labels, shape=label_shape).astype('float32')
         data.attach_grad()
 
-        label = mx.nd.random.randint(
-            0, num_labels, shape=(batch_size, )).astype('float32')
-
-        kwargs = dict(grad_scale=grad_scale, normalization=normalization)
+        kwargs = dict(grad_scale=grad_scale,
+                      normalization=normalization, multi_output=multi_output)
         if use_ignore:
             kwargs.update(use_ignore=True, ignore_label=ignore_label)
 
@@ -6523,24 +6531,38 @@ def test_SoftmaxOutput_normalization():
         argmax_data = mx.nd.argmax(data, axis=1)
 
         assert_almost_equal(out.asnumpy(), softmax_data.asnumpy())
-        data_grad = softmax_data - mx.nd.one_hot(label, num_labels)
+        one_hot_label = mx.nd.one_hot(label, num_labels)
+        if multi_output:
+            one_hot_label = one_hot_label.transpose((0, 3, 1, 2))
+        data_grad = softmax_data - one_hot_label
 
         if use_ignore:
-            data_grad *= (label != ignore_label).reshape((batch_size, 1))
+            if multi_output:
+                data_grad *= (label !=
+                              ignore_label).reshape((batch_size, 1, H, W))
+            else:
+                data_grad *= (label != ignore_label).reshape((batch_size, 1))
 
         valid_cnt = 1
         if normalization == 'batch':
             valid_cnt = batch_size
         elif normalization == 'valid':
             valid_cnt = mx.nd.maximum(1, (label != ignore_label).sum())
+        scale = grad_scale / valid_cnt
 
-        data_grad *= (grad_scale / valid_cnt)
+        if multi_output:
+            if normalization != 'valid':
+                scale /= H * W
+
+        data_grad *= scale
 
         assert_almost_equal(data.grad.asnumpy(), data_grad.asnumpy())
 
-    for use_ignore in [False, True]:
-        for normalization in ['null', 'batch', 'valid']:
-            _softmaxoutput_normalization(use_ignore, normalization)
+    for multi_output in [False, True]:
+        for use_ignore in [False, True]:
+            for normalization in ['null', 'batch', 'valid']:
+                _softmaxoutput_normalization(
+                    multi_output, use_ignore, normalization)
 
 
 @with_seed()
