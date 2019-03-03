@@ -91,6 +91,22 @@
   ([start stop]
    (arange start stop {})))
 
+(defn ->ndarray
+  "Creates a new NDArray based on the given n-dimensional
+   float/double vector.
+    `nd-vec`: n-dimensional vector with floats or doubles.
+    `opts-map` {
+       `ctx`: Context of the output ndarray, will use default context if unspecified.
+    }
+    returns: `ndarray` with the given values and matching the shape of the input vector.
+   Ex:
+    (->ndarray [5.0 -4.0])
+    (->ndarray [[1.0 2.0 3.0] [4.0 5.0 6.0]])
+    (->ndarray [[[1.0] [2.0]]]"
+  ([nd-vec {:keys [ctx] :as opts}]
+   (NDArray/toNDArray (util/vec->array nd-vec) ctx))
+  ([nd-vec] (->ndarray nd-vec {})))
+
 (defn slice
   "Return a sliced NDArray that shares memory with current one."
   ([ndarray i]

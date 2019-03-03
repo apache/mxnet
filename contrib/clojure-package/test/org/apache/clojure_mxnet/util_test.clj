@@ -163,6 +163,19 @@
   (is (= [1 2] (-> (util/convert-tuple [1 2])
                    (util/tuple->vec)))))
 
+(deftest test-vec->array
+  (is (= [] (-> (util/vec->array nil)
+                vec)))
+  (is (= [1.0 2.0] (-> (util/vec->array [1.0 2.0])
+                       vec)))
+  (is (= [[3.0] [4.0]] (->> (util/vec->array [[3.0] [4.0]])
+                            vec
+                            (mapv vec))))
+  (is (= [[[5 -5]]] (->> (util/vec->array [[[5 -5]]])
+                         vec
+                         (mapv vec)
+                         (mapv #(mapv vec %))))))
+
 (deftest test-coerce-return
   (is (= [] (util/coerce-return (ArrayBuffer.))))
   (is (= [1 2 3] (util/coerce-return (util/vec->indexed-seq [1 2 3]))))

@@ -173,6 +173,12 @@
        (map #(.productElement p %))
        (into [])))
 
+(defn vec->array [v]
+  (cond
+    (empty? v) (to-array v)
+    (vector? (first v)) (to-array (mapv vec->array v))
+    :else (to-array v)))
+
 (defn coerce-return [return-val]
   (cond
     (instance? scala.collection.mutable.ArrayBuffer return-val) (buffer->vec return-val)
