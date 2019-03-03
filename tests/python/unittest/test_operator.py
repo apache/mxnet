@@ -6497,7 +6497,7 @@ def test_softmax():
 
 
 @with_seed()
-def test_SoftmaxOutput_normalization():
+def test_softmax_output_normalization():
     def _softmaxoutput_normalization(multi_output, use_ignore, normalization):
         grad_scale = np.random.random()
         batch_size = 8
