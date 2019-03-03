@@ -1202,84 +1202,37 @@ void GraphExecutor::InitOpSegs() {
   bool is_training = num_forward_nodes_ != total_num_nodes;
 
   if (prefer_bulk_exec_train && is_training) {
-    this->BulkTrainingOpSegs(total_num_nodes);
+    // Bulk the forward portion of the graph per the bulk segment max size for forward training
+    this->BulkOpSegs(0, num_forward_nodes_, Imperative::BulkExecMaxNodeTrainFwd());
+    // Bulk the backward portion of the graph per the bulk segment max size for backward training
+    this->BulkOpSegs(num_forward_nodes_, total_num_nodes, Imperative::BulkExecMaxNodeTrainBwd());
   }
 
   if (prefer_bulk_exec_inference && !is_training) {
-    this->BulkInferenceOpSegs();
+    // Bulk the entire graph as one bulk segment if possible
+    this->BulkOpSegs(0, total_num_nodes, total_num_nodes);
   }
 }
 
 
-void GraphExecutor::BulkTrainingOpSegs(size_t total_num_nodes) {
-  // The maximum number of nodes in a segment executed in bulk (excluding variables) in fwd pass.
-  size_t segment_num_nodes_threshold_fwd = Imperative::BulkExecMaxNodeTrainFwd();
-  // The maximum number of nodes in a segment executed in bulk (excluding variables) in bwd pass.
-  size_t segment_num_nodes_threshold_bwd = Imperative::BulkExecMaxNodeTrainBwd();
-
-  // create forward segments for training
-  size_t topo_start = 0;
+void GraphExecutor::BulkOpSegs(size_t from_node, size_t up_to_node, size_t segment_num_nodes_max) {
+  size_t topo_start = from_node;
   size_t segment_node_count = 0;
-  for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
+  for (size_t nid = from_node; nid < up_to_node; nid++) {
     auto &node = graph_.indexed_graph()[nid].source;
     auto &op_node = op_nodes_[nid];
     // Variables, such as learned weights, are ignored in the segment_node_count
-    bool ignore_node = node->is_variable();
-    if (!ignore_node)
-      segment_node_count++;
-    bool can_bulk = ignore_node || op_node.exec->exec_type() == ExecType::kSync;
-    // check if we need to create the segment based on properties of this node
-    if (!can_bulk || nid == num_forward_nodes_ - 1 ||
-        segment_node_count >= segment_num_nodes_threshold_fwd) {
-      // Create a new segment for the previous nodes- include also this node if it's bulkable
-      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, can_bulk ? nid + 1 : nid);
-      topo_start = nid + 1;
-      segment_node_count = 0;
-    }
-  }
-
-  // create backward segments for training
-  topo_start = num_forward_nodes_;
-  segment_node_count = 0;
-  for (size_t nid = num_forward_nodes_; nid < total_num_nodes; nid++) {
-    auto &node = graph_.indexed_graph()[nid].source;
-    auto &op_node = op_nodes_[nid];
-    // Variables, such as learned weights, are ignored in the segment_node_count and
-    // nodes that are not executed for various reasons.
     bool ignore_node = node->is_variable() || op_node.skip_exec_node || op_node.exec == nullptr;
     if (!ignore_node)
       segment_node_count++;
     bool can_bulk = ignore_node || op_node.exec->exec_type() == ExecType::kSync;
     // check if we need to create the segment based on properties of this node
-    if (!can_bulk || nid == total_num_nodes - 1 ||
-        segment_node_count >= segment_num_nodes_threshold_bwd) {
+    if (!can_bulk || nid == up_to_node - 1 || segment_node_count >= segment_num_nodes_max) {
       // Create a new segment for the previous nodes- include also this node if it's bulkable
       cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, can_bulk ? nid + 1 : nid);
       topo_start = nid + 1;
       segment_node_count = 0;
     }
-  }
-}
-
-void GraphExecutor::BulkInferenceOpSegs() {
-  // Attempt to bulk the whole graph for inference.  We will only create new segments when
-  // required for non-kSync operations.
-  size_t topo_start = 0;
-  for (size_t nid = 0; nid < num_forward_nodes_; nid++) {
-    auto &node = graph_.indexed_graph()[nid].source;
-    auto &op_node = op_nodes_[nid];
-
-    // Variables do not need to be segmented at inference time.
-    if (node->is_variable()) continue;
-
-    if (op_node.exec->exec_type() != ExecType::kSync) {
-      cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, nid);
-      topo_start = nid + 1;
-    }
-  }
-  // The last segment
-  if (topo_start != num_forward_nodes_) {
-    cached_seg_opr_[topo_start] = this->CreateCachedSegOpr(topo_start, num_forward_nodes_);
   }
 }
 
