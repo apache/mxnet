@@ -384,7 +384,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   using nnvm::IndexedGraph;
   using nnvm::Op;
   using AttrType = mxnet::TShape;
-  using FInferType = nnvm::FInferShape;
+  using FInferType = mxnet::FInferShape;
   using AttrVector = std::vector<AttrType>;
   using NodeAttrVector = std::vector<DispatchMode>;
   using dmlc::any;
