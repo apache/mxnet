@@ -521,7 +521,19 @@ class CuDNNConvolutionOp {
                                             wshape[1],
                                             wshape[2],
                                             wshape[3]));
-
+#if CUDNN_VERSION >= 7301 && CUDNN_VERSION < 7500
+      auto kernel_h = wshape[2];
+      auto kernel_w = wshape[3];
+      auto stride_h = stride[0];
+      auto stride_w = stride[1];
+      auto pad_h = pad[0];
+      auto pad_w = pad[1];
+      if (param_.layout.value() == kNCHW &&
+          (((stride_h == 2) && (kernel_h % 2 == 0) && (pad_h % 2 == 0)) ||
+           ((stride_w == 2) && (kernel_w % 2 == 0) && (pad_w % 2 == 0)))) {
+        exclude_dgrad_algo_ = CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING;
+      }
+#endif
     } else if (param_.kernel.ndim() == 3) {
       // 3d conv
       #if CUDNN_MAJOR >= 5
@@ -714,7 +726,7 @@ class CuDNNConvolutionOp {
     bwd_data_results.resize(actual_bwd_data_algos);
     AlgoFinalSelect<cudnnConvolutionBwdDataAlgoPerf_t,
                     cudnnConvolutionBwdDataAlgo_t>(bwd_data_results, "backprop-to-data",
-                                                   workspace_byte, bwd);
+                                                   workspace_byte, bwd, exclude_dgrad_algo_);
 #else
     // CUDNN_MAJOR < 7
     const int kMaxAlgos = 10;
@@ -910,12 +922,14 @@ class CuDNNConvolutionOp {
   // workspace constraints.
   template <typename PerfType, typename AlgoType>
   void AlgoFinalSelect(const std::vector<PerfType> &perf_results, std::string kernel_name,
-                       size_t workspace_byte, CuDNNAlgo<AlgoType> *algo) {
+                       size_t workspace_byte, CuDNNAlgo<AlgoType> *algo,
+                       int32_t algo_exclude = -1) {
     // Determine the fastest acceptable algo that matches the algo_preference (-1 = any),
     // regardless of mathType.
     bool enforce_determinism = dmlc::GetEnv("MXNET_ENFORCE_DETERMINISM", false);
     for (decltype(perf_results.size()) i = 0; i != perf_results.size(); ++i) {
       const auto &result = perf_results[i];
+      bool algo_exclusion = static_cast<int32_t>(result.algo) == algo_exclude;
       bool algo_is_tensor_core = false;
       #if CUDNN_MAJOR >= 7
         algo_is_tensor_core = result.mathType == CUDNN_TENSOR_OP_MATH;
@@ -1104,6 +1118,8 @@ class CuDNNConvolutionOp {
   bool cudnn_tensor_core_;
   // Is req[kWeight] == conv::kAddTo ?
   bool add_to_weight_;
+  // Is there a dgrad algo that should be avoided (-1 == none)?
+  int32_t exclude_dgrad_algo_ = -1;
   ConvolutionParam param_;
 };
 #endif  // __CUDACC__ && CUDNN
