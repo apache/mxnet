@@ -832,6 +832,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export CUDNN_VERSION=7.0.3
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/gpu/test_operator_gpu.py:test_conv_deconv_guards
 }
 
 # quantization gpu currently only runs on P3 instances
