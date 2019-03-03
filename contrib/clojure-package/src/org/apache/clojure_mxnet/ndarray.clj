@@ -16,15 +16,19 @@
 ;;
 
 (ns org.apache.clojure-mxnet.ndarray
+  "NDArray API for Clojure package."
   (:refer-clojure :exclude [* - + > >= < <= / cast concat flatten identity load max
                             min repeat reverse set sort take to-array empty shuffle
                             ref])
-  (:require [org.apache.clojure-mxnet.base :as base]
-            [org.apache.clojure-mxnet.context :as mx-context]
-            [org.apache.clojure-mxnet.shape :as mx-shape]
-            [org.apache.clojure-mxnet.util :as util]
-            [clojure.reflect :as r]
-            [t6.from-scala.core :refer [$] :as $])
+  (:require
+    [clojure.spec.alpha :as s]
+
+    [org.apache.clojure-mxnet.base :as base]
+    [org.apache.clojure-mxnet.context :as mx-context]
+    [org.apache.clojure-mxnet.shape :as mx-shape]
+    [org.apache.clojure-mxnet.util :as util]
+    [clojure.reflect :as r]
+    [t6.from-scala.core :refer [$] :as $])
   (:import (org.apache.mxnet NDArray)))
 
 ;; loads the generated functions into the namespace
@@ -167,3 +171,36 @@
 
 (defn shape-vec [ndarray]
   (mx-shape/->vec (shape ndarray)))
+
+(s/fdef vec->nd-vec
+        :args (s/cat :v vector? :shape-vec vector?)
+        :ret vector?)
+
+(defn- vec->nd-vec
+  "Convert a vector `v` into a n-dimensional vector given the `shape-vec`
+
+   Ex:
+     (vec->nd-vec [1 2 3] [1 1 3])       ;[[[1 2 3]]]
+     (vec->nd-vec [1 2 3 4 5 6] [2 3 1]) ;[[[1] [2] [3]] [[4] [5] [6]]]
+     (vec->nd-vec [1 2 3 4 5 6] [1 2 3]) ;[[[1 2 3]] [4 5 6]]]
+     (vec->nd-vec [1 2 3 4 5 6] [3 1 2]) ;[[[1 2]] [[3 4]] [[5 6]]]
+     (vec->nd-vec [1 2 3 4 5 6] [3 2])   ;[[1 2] [3 4] [5 6]]"
+  [v [s1 & ss :as shape-vec]]
+  (if-not (seq ss)
+    (vec v)
+    (->> v
+         (partition (/ (count v) s1))
+         vec
+         (mapv #(vec->nd-vec % ss)))))
+
+(s/fdef ->nd-vec
+        :args (s/cat :ndarray #(instance? NDArray %))
+        :ret vector?)
+
+(defn ->nd-vec
+  "Convert an ndarray `nd` into a n-dimensional Clojure vector.
+  Ex:
+    (->nd-vec (array [1] [1 1 1]))             ;[[[1.0]]]
+    (->nd-vec (ndarray/array [1 2 3] [3 1 1])) ;[[[1.0]] [[2.0]] [[3.0]]]"
+  [ndarray]
+  (vec->nd-vec (->vec ndarray) (shape-vec ndarray)))
