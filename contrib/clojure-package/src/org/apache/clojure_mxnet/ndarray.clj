@@ -104,7 +104,7 @@
     (->ndarray [[1.0 2.0 3.0] [4.0 5.0 6.0]])
     (->ndarray [[[1.0] [2.0]]]"
   ([nd-vec {:keys [ctx] :as opts}]
-   (NDArray/toNDArray (util/vec->array nd-vec) ctx))
+   (NDArray/toNDArray (util/to-array-nd nd-vec) ctx))
   ([nd-vec] (->ndarray nd-vec {})))
 
 (defn slice

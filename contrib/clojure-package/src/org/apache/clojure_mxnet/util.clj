@@ -173,12 +173,6 @@
        (map #(.productElement p %))
        (into [])))
 
-(defn vec->array [v]
-  (cond
-    (empty? v) (to-array v)
-    (vector? (first v)) (to-array (mapv vec->array v))
-    :else (to-array v)))
-
 (defn coerce-return [return-val]
   (cond
     (instance? scala.collection.mutable.ArrayBuffer return-val) (buffer->vec return-val)
@@ -223,6 +217,16 @@
     (s/explain spec value)
     (throw (ex-info error-msg
                     (s/explain-data spec value)))))
+
+(s/def ::non-empty-seq sequential?)
+(defn to-array-nd
+  "Converts any N-D sequential structure to an array
+   with the same dimensions."
+  [s]
+  (validate! ::non-empty-seq s "Invalid N-D sequence")
+  (if (sequential? (first s))
+    (to-array (map to-array-nd s))
+    (to-array s)))
 
 (defn map->scala-tuple-seq
   "* Convert a map to a scala-Seq of scala-Tubple.
