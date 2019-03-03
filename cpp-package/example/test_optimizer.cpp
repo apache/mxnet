@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
   opt = OptimizerRegistry::Find("adam");
   int ret = (opt == 0) ? 1 : 0;
 
+  delete opt;
   MXNotifyShutdown();
   return ret;
 }

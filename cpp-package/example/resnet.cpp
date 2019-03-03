@@ -242,6 +242,7 @@ int main(int argc, char const *argv[]) {
     LG << "Validation Accuracy: " << val_acc.Get();
   }
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return 0;
 }
