@@ -713,6 +713,20 @@ def test_with_random_seed():
             check_data(data[i],data[j])
 
 @with_seed()
+def test_random_seed():
+    shape = (5, 5)
+    seed = rnd.randint(-(1 << 31), (1 << 31))
+    mx.random.seed(seed)
+    v1 = mx.nd.random_uniform(shape=shape)
+    try:
+        long
+        mx.random.seed(long(seed))
+        v2 = mx.nd.random_uniform(shape=shape)
+        assert (v1.asnumpy() == v2.asnumpy()).all()
+    except NameError:
+        pass
+
+@with_seed()
 def test_unique_zipfian_generator():
     ctx = mx.context.current_context()
     if ctx.device_type == 'cpu':
