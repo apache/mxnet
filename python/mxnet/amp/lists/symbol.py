@@ -96,6 +96,7 @@ FP32_FUNCS = [
     'ctc_loss',
     'DeformableConvolution'
     'DeformablePSROIPooling',
+    'SyncBatchNorm',
     ]
 
 CONDITIONAL_FP32_FUNCS = [
