@@ -190,6 +190,7 @@ int main(int argc, char const *argv[]) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return 0;
 }
