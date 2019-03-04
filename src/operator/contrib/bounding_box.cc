@@ -62,7 +62,7 @@ additional elements are allowed.
   we will skip highly overlapped boxes if one is `apple` while the other is `car`.
 
 - `background_id`: optional, default=-1, class id for background boxes, useful
-  when `id_index >= 0`， which means boxes with background id will be filtered before nms.
+  when `id_index >= 0` which means boxes with background id will be filtered before nms.
 
 - `coord_start`: required, default=2, the starting index of the 4 coordinates.
   Two formats are supported:
