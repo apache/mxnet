@@ -2530,6 +2530,16 @@ def test_slice_like_different_types():
     assert_allclose(z.asnumpy(), [[1,2,3],[5,6,7]])
 
 @with_seed()
+def test_reshape_like_different_types():
+    x = mx.nd.zeros((2, 3))
+
+    y = mx.nd.array([[1, 2], [3, 4], [5, 6]])
+
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.reshape_like(x, y)
+    assert_allclose(z.asnumpy(), [[0,0],[0,0],[0,0]])
+
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
