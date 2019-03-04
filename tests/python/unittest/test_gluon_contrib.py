@@ -26,8 +26,6 @@ from mxnet.gluon.contrib.nn import (
     PixelShuffle2D, PixelShuffle3D)
 from mxnet.test_utils import almost_equal, default_context, assert_almost_equal
 from common import setup_module, with_seed, teardown
-import numpy as np
-from numpy.testing import assert_allclose
 
 
 def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
@@ -193,8 +191,7 @@ def test_concurrent():
 def test_identity():
     model = Identity()
     x = mx.nd.random.uniform(shape=(128, 33, 64))
-    mx.test_utils.assert_almost_equal(model(x).asnumpy(),
-                                      x.asnumpy())
+    assert_almost_equal(model(x), x)
 
 @with_seed()
 def test_sparse_embedding():
@@ -382,19 +379,17 @@ def check_unroll(cell_type, num_states, layout):
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
             res2, states2 = layer(rnn_data, states, valid_length)
-        assert_almost_equal(res1.asnumpy(), res2.asnumpy(), rtol=0.001, atol=0.0001)
+        assert_almost_equal(res1, res2, rtol=0.001, atol=0.0001)
         assert len(states1) == len(states2)
         for i in range(len(states1)):
-            assert_almost_equal(states1[i].asnumpy(), states2[i].asnumpy(),
-                                rtol=0.001, atol=0.0001)
+            assert_almost_equal(states1[i], states2[i], rtol=0.001, atol=0.0001)
         res2.backward()
         trainer.step(batch_size)
 
         for key, val in params1.items():
             weight1 = val.data()
             weight2 = params2[key].data()
-            assert_almost_equal(weight1.asnumpy(), weight2.asnumpy(),
-                    rtol=0.001, atol=0.0001)
+            assert_almost_equal(weight1, weight2, rtol=0.001, atol=0.0001)
 
 
 @with_seed()

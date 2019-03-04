@@ -1672,7 +1672,7 @@ def test_depthwise_convolution():
                             exe2.backward(exe2.outputs[0])
 
                             for arr1, arr2 in zip(exe1.outputs + exe1.grad_arrays, exe2.outputs + exe2.grad_arrays):
-                                np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
+                                assert_allclose(arr1, arr2, rtol=1e-3, atol=1e-3)
 
 def gen_broadcast_data(idx):
     # Manually set test cases
@@ -2709,8 +2709,9 @@ def test_dot():
 
 @with_seed()
 def test_batch_dot():
+    ctx = default_context()
     dtypes = ['float32', 'float64']
-    if default_context().device_type == 'gpu':
+    if ctx.device_type == 'gpu':
         dtypes += ['float16']
 
     for data_type in dtypes:
@@ -2748,9 +2749,9 @@ def test_batch_dot():
                             b_npy = np.transpose(b_npy, axes=(0, 2, 1))
                             bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
                             b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
-                        exe = c.simple_bind(ctx=default_context(),
+                        exe = c.simple_bind(ctx=ctx,
                             a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                        exe_add = c.simple_bind(ctx=default_context(),
+                        exe_add = c.simple_bind(ctx=ctx,
                             a=a_npy.shape, b=b_npy.shape, grad_req='add')
                         exe_add.grad_dict['a'][:] = a_init_grad_npy
                         exe_add.grad_dict['b'][:] = b_init_grad_npy
@@ -3490,10 +3491,6 @@ def mathematical_core(name, forward_mxnet_call, forward_numpy_call, backward_num
     temp = backward_numpy_call(data_tmp)
     npout_grad = npout_grad * temp
     exe_test.backward(out_grad)
-    arr_grad = arr_grad
-    # print(name)
-    # print(arr_grad)
-    # print(npout_grad)
     assert_almost_equal(arr_grad, npout_grad)
 
 
