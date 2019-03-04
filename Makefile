@@ -147,9 +147,11 @@ endif
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1
-	LDFLAGS += -lopencv_core -lopencv_imgcodecs -lopencv_imgproc
 	ifneq ($(USE_OPENCV_PATH), )
 		CFLAGS += -I$(USE_OPENCV_PATH)
+		ifneq ($(USE_OPENCV_LIB_PATH), )
+			LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
+		endif
 	else
 		ifeq ("$(shell pkg-config --exists opencv4; echo $$?)", "0")
 			OPENCV_LIB = opencv4
@@ -157,7 +159,10 @@ ifeq ($(USE_OPENCV), 1)
 			OPENCV_LIB = opencv
 		endif
 		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
+		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
 	endif
+	LDFLAGS += -lopencv_core -lopencv_imgcodecs -lopencv_imgproc
+
 	BIN += bin/im2rec
 else
 	CFLAGS += -DMXNET_USE_OPENCV=0
