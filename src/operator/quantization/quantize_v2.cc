@@ -88,6 +88,12 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr<FComputeEx>("FComputeEx<cpu>", MKLDNNQuantizeV2Compute)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", QuantizeV2Compute<cpu>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs) {
+  return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<nnvm::FInplaceIdentity>("FInplaceIdentity", [](const NodeAttrs& attrs){
+  return std::vector<bool>{true};
+})
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
