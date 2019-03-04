@@ -95,6 +95,14 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_type,
   return true;
 }
 
+void QuantizedConcat(const nnvm::NodeAttrs& attrs, 
+                     const OpContext &ctx,
+                     const std::vector<TBlob> &in_data,
+                     const std::vector<OpReqType> &req,
+                     const std::vector<TBlob> &out_data){
+  LOG(FATAL) << "quantized_concat is not supported for context=mx.cpu() ";
+}
+
 NNVM_REGISTER_OP(_contrib_quantized_concat)
 .describe(R"code(Joins input arrays along a given axis.
 
@@ -133,6 +141,7 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
 .set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<FCompute>("FCompute<cpu>" ,QuantizedConcat)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 

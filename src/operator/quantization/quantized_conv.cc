@@ -126,6 +126,15 @@ bool QuantizedConvStorageType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
+
+void QuantizedConvForward(const nnvm::NodeAttrs& attrs,
+                             const OpContext &ctx,
+                             const std::vector<TBlob> &in_data,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<TBlob> &out_data) {
+  LOG(FATAL) << "Quantizer Convolution operator is not supported for mx.cpu() context";
+}
+
 NNVM_REGISTER_OP(_contrib_quantized_conv)
 .describe(R"code(Convolution operator for input, weight and bias data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
@@ -167,6 +176,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
+.set_attr<FCompute>("FCompute<cpu>", QuantizedConvForward)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("weight", "NDArray-or-Symbol", "weight.")

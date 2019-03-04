@@ -236,6 +236,7 @@ List of Contributors
 * [Zhennan Qin](https://github.com/ZhennanQin)
 * [Zhiyuan Huang](https://github.com/huangzhiyuan)
 * [Zak Jost](https://github.com/zjost)
+* [Rohit Srivastava](https://github.com/access2rohit)
 
 Label Bot
 ---------
