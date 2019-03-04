@@ -717,12 +717,24 @@ def test_random_seed():
     shape = (5, 5)
     seed = rnd.randint(-(1 << 31), (1 << 31))
     mx.random.seed(seed)
-    v1 = mx.nd.random_uniform(shape=shape)
+
+    def _assert_same_mx_arrays(a, b):
+        assert len(a) == len(b)
+        for a_i, b_i in zip(a, b):
+            assert (a_i.asnumpy() == b_i.asnumpy()).all()
+
+    N = 100
+    v1 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
+
+    mx.random.seed(seed)
+    v2 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
+    _assert_same_mx_arrays(v1, v2)
+
     try:
         long
         mx.random.seed(long(seed))
-        v2 = mx.nd.random_uniform(shape=shape)
-        assert (v1.asnumpy() == v2.asnumpy()).all()
+        v3 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
+        _assert_same_mx_arrays(v1, v3)
     except NameError:
         pass
 
