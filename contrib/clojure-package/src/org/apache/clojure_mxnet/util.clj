@@ -225,7 +225,7 @@
   [s]
   (validate! ::non-empty-seq s "Invalid N-D sequence")
   (if (sequential? (first s))
-    (to-array (map to-array-nd s))
+    (to-array (mapv to-array-nd s))
     (to-array s)))
 
 (defn map->scala-tuple-seq
