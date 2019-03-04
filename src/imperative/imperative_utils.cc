@@ -122,7 +122,7 @@ void NaiveRunGraph(
     const Context& default_ctx,
     const nnvm::IndexedGraph& idx,
     const std::vector<NDArray*> arrays,
-    std::vector<TShape> *shapes,
+    mxnet::ShapeVector *shapes,
     size_t node_start, size_t node_end,
     std::vector<OpReqType>&& array_reqs,
     std::vector<uint32_t>&& ref_count,
