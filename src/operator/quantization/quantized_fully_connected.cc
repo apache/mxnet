@@ -79,6 +79,13 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), num_inputs * 3);
   CHECK_EQ(out_type->size(), 3U);
 
+#if MXNET_USE_MKLDNN == 1
+  // TODO(ciyong): currently, only uint8 fully_connected is upported,
+  // int8 fully_connected will be supported after mkldnn v0.18
+  TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kUint8);
+#else
+  TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
+#endif
   for (size_t i = 1; i < num_inputs; ++i) {
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kInt8);
   }
