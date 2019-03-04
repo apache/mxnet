@@ -82,9 +82,12 @@ struct allclose_forward {
   MSHADOW_XINLINE static void Map(int i, int *out_data, const DType* in_a, const DType* in_b,
                                   const float rtol, const float atol, bool equal_nan) {
       const DType a = in_a[i], b = in_b[i];
-      const bool val = (IsNan(a) || IsNan(b))? equal_nan :
-                       a == b ||
-                       (a > b?  a - b : b - a) <= atol + (b > 0? rtol * b :  (-rtol) * b);
+      bool val;
+      if (IsNan(a) || IsNan(b))
+        val = equal_nan;
+      else
+        val = a == b || (a > b?  a - b : b - a) <= atol + (b > 0? rtol * b :  (-rtol) * b);
+
       KERNEL_ASSIGN(out_data[i], req, val? 1 : 0);
   }
 };
@@ -122,7 +125,7 @@ void AllClose(const nnvm::NodeAttrs& attrs,
 
   // Get length of the additional memory (which is used only by DeviceReduce::Min(...) on gpu)
   const size_t extraStorageBytes = GetAdditionalMemorySize<xpu>(num_items);
-  const size_t workspace_total_bytes_ = num_items * sizeof(float) + extraStorageBytes;
+  const size_t workspace_total_bytes_ = num_items * sizeof(int) + extraStorageBytes;
   mshadow::Tensor<xpu, 1, uint8_t> workspace =
     ctx.requested[0].get_space_typed<xpu, 1, uint8_t>(
       mshadow::Shape1(workspace_total_bytes_), s);

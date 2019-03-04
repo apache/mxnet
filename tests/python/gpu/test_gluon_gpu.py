@@ -193,7 +193,7 @@ def check_layer_bidirectional(size, in_size, proj_size):
         ref_net_params[k.replace('l0', 'l0l0').replace('r0', 'r0l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
-    mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=2e-7)
+    mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
 
 
 
