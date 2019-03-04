@@ -148,7 +148,7 @@ endif
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1
 	LDFLAGS += -lopencv_core -lopencv_imgcodecs -lopencv_imgproc
-	ifneq ($(USE_OPENCV_PATH), NONE)
+	ifneq ($(USE_OPENCV_PATH), )
 		CFLAGS += -I$(USE_OPENCV_PATH)
 	else
 		ifeq ("$(shell pkg-config --exists opencv4; echo $$?)", "0")
