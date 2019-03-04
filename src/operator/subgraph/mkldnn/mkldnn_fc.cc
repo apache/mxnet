@@ -17,6 +17,13 @@
 * under the License.
 */
 
+/*!
+ * Copyright (c) 2019 by Contributors
+ * \file mkldnn_fc.cc
+ * \brief MKLDNN (Quantized) FullyConnected operator based on subgraph
+ * \author Ciyong Chen
+*/
+
 #if MXNET_USE_MKLDNN == 1
 
 #include <utility>

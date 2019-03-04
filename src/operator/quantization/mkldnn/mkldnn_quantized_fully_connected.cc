@@ -18,9 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2018 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file mkldnn_quantized_fully_connected.cc
- * \brief
+ * \brief MKLDNN Quantized FullyConnected operator
+ * \author Ciyong Chen
  */
 
 #if MXNET_USE_MKLDNN == 1

@@ -18,9 +18,10 @@
  */
 
 /*!
+ * Copyright (c) 2019 by Contributors
  * \file mkldnn_fully_connected-inl.h
- * \brief
- * \author
+ * \brief Common functions used by MKLDNN (Quantized) FullyConnected operator
+ * \author Ciyong Chen
 */
 
 #ifndef MXNET_OPERATOR_NN_MKLDNN_MKLDNN_FULLY_CONNECTED_INL_H_
@@ -45,11 +46,11 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
-    .describe("enable quantization");
+    .describe("Whether it's a quantized FullyConnected operator");
     DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
     .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_relu).set_default(false)
-    .describe("Add post relu");
+    .describe("Whether there's a post relu after FullyConnected operator");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
