@@ -60,6 +60,9 @@ def _wrap_symbol_functions(module):
             args = tuple(new_args)
             kwargs = {k: _cast_symbol_NDArray(v, target_dtype) for k, v in kwargs.items()}
             return f(*args, **kwargs)
+        _new_fun.__name__ = f.__name__
+        _new_fun.__module__ = f.__module__
+        _new_fun.__doc__ = f.__doc__
         return _new_fun
 
     def _symbol_wrapper(f, target_dtype, cond_arg=None):
@@ -71,12 +74,15 @@ def _wrap_symbol_functions(module):
             sym = f(*args, **kwargs)
             attr = sym.list_attr()
             inputs = sym.get_children()
-            wrapped_sym = f(**attr)
             inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype), inputs))
-            wrapped_sym_argnames = wrapped_sym.list_arguments()
-            wrapped_sym._compose(**dict(zip(wrapped_sym_argnames, inputs)))
+            wrapped_sym = f(*inputs, **attr)
+            #wrapped_sym_argnames = wrapped_sym.list_arguments()
+            #wrapped_sym._compose(**dict(zip(wrapped_sym_argnames, inputs)))
             wrapped_sym._set_attr(name=sym.name)
             return wrapped_sym
+        _new_fun.__name__ = f.__name__
+        _new_fun.__module__ = f.__module__
+        _new_fun.__doc__ = f.__doc__
         return _new_fun
 
     def _symbol_widest_wrapper(f):
@@ -112,6 +118,9 @@ def _wrap_symbol_functions(module):
                     arr[index] = arg
 
             return f(*args, **kwargs)
+        _new_fun.__name__ = f.__name__
+        _new_fun.__module__ = f.__module__
+        _new_fun.__doc__ = f.__doc__
         return _new_fun
 
     _wrapper = _symbol_wrapper if module in (symbol, Symbol, symbol_contrib) else _ndarray_wrapper
