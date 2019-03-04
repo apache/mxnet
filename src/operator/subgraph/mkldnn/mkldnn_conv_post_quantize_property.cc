@@ -108,7 +108,7 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
   }
   static SubgraphPropertyPtr Create() {
     auto property = std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
-    property->SetAttr<std::string>("prop_name",
+    property->SetAttr<std::string>("property_name",
                                    "MKLDNN Convolution post-quantization optimization pass");
     property->SetAttr<bool>("inference_only", true);
     return property;
