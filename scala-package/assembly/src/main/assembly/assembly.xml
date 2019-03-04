@@ -28,6 +28,8 @@
       <excludes>
         <exclude>org.scala-lang:*</exclude>
         <exclude>org.scala-lang.modules:*</exclude>
+        <exclude>commons-io:commons-io</exclude>
+        <exclude>commons-codec:commons-codec</exclude>
       </excludes>
       <outputDirectory>/</outputDirectory>
       <useProjectArtifact>true</useProjectArtifact>
