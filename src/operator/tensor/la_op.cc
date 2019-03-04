@@ -18,7 +18,7 @@
  */
 
 /*!
- * Copyright (c) 2017 by Contributors
+ * Copyright (c) 2019 by Contributors
  * \file la_op.cc
  * \brief CPU implementation of Operators for advanced linear algebra.
  */
