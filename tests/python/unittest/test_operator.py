@@ -2639,7 +2639,6 @@ def test_dot():
     ndims = [2]
     if ctx.device_type == 'gpu':
         dtypes += ['float16']
-        ndims += [1]
 
     # Test normal dot.
     for ndim in ndims:
@@ -4539,14 +4538,10 @@ def test_softmax_dtype():
         with mx.autograd.record():
             dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
             ref_softmax = op(ref_input, axis=-1, dtype=odtype)
-        dtype_softmax_np = dtype_softmax.asnumpy()
-        ref_softmax_np = ref_softmax.asnumpy()
-        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
+        assert_almost_equal(dtype_softmax, ref_softmax, rtol=rtol, atol=atol)
         dtype_softmax.backward()
         ref_softmax.backward()
-        dtype_grad_np = dtype_input.grad.asnumpy()
-        ref_grad_np = ref_input.grad.asnumpy()
-        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
+        assert_almost_equal(dtype_input.grad, ref_input.grad, rtol=grad_rtol, atol=grad_atol)
 
     check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
     check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
@@ -4819,6 +4814,8 @@ def test_index_copy():
 
 @with_seed()
 def test_boolean_mask():
+    if default_context().device_type != 'cpu':
+        return
     data = mx.nd.array([[1, 2, 3],[4, 5, 6],[7, 8, 9]])
     index = mx.nd.array([0, 1, 0])
     data.attach_grad()
@@ -5957,7 +5954,7 @@ def test_dropout():
         with mx.autograd.record(train_mode=False):
             b = mx.nd.Dropout(a, ratio, cudnn_off=cudnn_off) # dropout acts as identity
         b.backward()
-        assert_almost_equal(a.grad, mx.nd.ones_like(b))
+        assert_almost_equal(a.grad.asnumpy(), mx.nd.ones_like(b).asnumpy())
 
     shape = (100, 100)
     check_dropout_ratio(0.5, shape)
@@ -6496,7 +6493,7 @@ def test_adaptive_avg_pool_op():
         else:
             y = mx.nd.contrib.AdaptiveAvgPooling2D(x, output_size=(output_height, output_width))
             npy = py_adaptive_avg_pool(x.asnumpy(), output_height, output_width)
-        assert_almost_equal(y, npy)
+        assert_almost_equal(y.asnumpy(), npy)
     shape = (2, 2, 10, 10)
     for i in range(1, 11):
         check_adaptive_avg_pool_op(shape, i)
