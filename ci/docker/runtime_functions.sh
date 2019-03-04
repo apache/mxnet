@@ -1033,8 +1033,6 @@ integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
 
-    # We do not want to fail the build on ASAN errors until memory leaks have been addressed.
-    export ASAN_OPTIONS=exitcode=0
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
     ./mlp_cpu

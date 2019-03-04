@@ -175,8 +175,8 @@ element-wise multiplication and addition.
 For our `quadratic` operator, shape inference possesses quite similar logic.
 ```cpp
 inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape>* in_attrs,
-                             std::vector<TShape>* out_attrs) {
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -216,8 +216,8 @@ The function `QuadraticOpShape` posted here is for the purpose of illustration o
 ```cpp
 template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs);
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs);
 ```
 
 The same logic goes for data type inference. We will leave the analysis of

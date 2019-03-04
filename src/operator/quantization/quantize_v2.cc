@@ -80,7 +80,7 @@ If min_calib_range isn't presented, the output type will be int8.
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"data"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizeV2Shape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizeV2Shape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizeV2Type)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeV2StorageType)
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,

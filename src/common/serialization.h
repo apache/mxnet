@@ -30,7 +30,6 @@
 #include <dmlc/logging.h>
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
-#include <nnvm/tuple.h>
 
 #include <cstring>
 #include <map>

@@ -343,17 +343,17 @@ Graph UpdateSubgraphAttrs(Graph&& subgraph, const Graph& g,
   const auto& idx     = g.indexed_graph();
   const auto& sub_idx = subgraph.indexed_graph();
 
-  const auto& shape               = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& shape               = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& dtype               = g.GetAttr<nnvm::DTypeVector>("dtype");
   const auto& storage_type        = g.GetAttr<StorageTypeVector>("storage_type");
-  const auto& shape_inputs        = g.GetAttr<nnvm::ShapeVector>("shape_inputs");
+  const auto& shape_inputs        = g.GetAttr<mxnet::ShapeVector>("shape_inputs");
   const auto& dtype_inputs        = g.GetAttr<nnvm::DTypeVector>("dtype_inputs");
   const auto& storage_type_inputs = g.GetAttr<StorageTypeVector>("storage_type_inputs");
 
-  nnvm::ShapeVector sub_shape(sub_idx.num_node_entries());
+  mxnet::ShapeVector sub_shape(sub_idx.num_node_entries());
   nnvm::DTypeVector sub_dtype(sub_idx.num_node_entries());
   StorageTypeVector sub_storage_type(sub_idx.num_node_entries());
-  nnvm::ShapeVector sub_shape_inputs(sub_idx.input_nodes().size());
+  mxnet::ShapeVector sub_shape_inputs(sub_idx.input_nodes().size());
   nnvm::DTypeVector sub_dtype_inputs(sub_idx.input_nodes().size());
   StorageTypeVector sub_storage_type_inputs(sub_idx.input_nodes().size());
 

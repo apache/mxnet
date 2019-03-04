@@ -109,7 +109,7 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param) {
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
-                                 const TShape &dshape) {
+                                 const mxnet::TShape &dshape) {
   bool ret = SupportMKLDNNPooling(param);
   if (!ret)
     return false;
