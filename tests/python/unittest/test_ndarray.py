@@ -626,7 +626,7 @@ def test_broadcast_binary():
 def test_moveaxis():
     X = mx.nd.array([[[1, 2, 3], [4, 5, 6]],
                      [[7, 8, 9], [10, 11, 12]]])
-    res = mx.nd.moveaxis(X, 0, 3).asnumpy()
+    res = mx.nd.moveaxis(X, 0, 2).asnumpy()
     true_res = mx.nd.array([[[  1.,   7.],
                              [  2.,   8.],
                              [  3.,   9.]],
@@ -635,6 +635,66 @@ def test_moveaxis():
                              [  6.,  12.]]])
     assert same(res, true_res.asnumpy())
     assert mx.nd.moveaxis(X, 2, 0).shape == (3, 2, 2)
+
+    def test_move_to_end():
+        x = mx.nd.random.normal(0, 1, (5, 6, 7))
+        for source, expected in [(0, (6, 7, 5)),
+                                 (1, (5, 7, 6)),
+                                 (2, (5, 6, 7)),
+                                 (-1, (5, 6, 7))]:
+            actual = mx.nd.moveaxis(x, source, -1).shape
+            assert actual == expected
+
+    def test_move_new_position():
+        x = mx.nd.random.normal(0, 1, (1, 2, 3, 4))
+        for source, destination, expected in [
+            (0, 1, (2, 1, 3, 4)),
+            (1, 2, (1, 3, 2, 4)),
+            (1, -1, (1, 3, 4, 2)),
+        ]:
+            actual = mx.nd.moveaxis(x, source, destination).shape
+            assert actual == expected
+
+    def test_preserve_order():
+        x = mx.nd.zeros((1, 2, 3, 4))
+        for source, destination in [
+            (0, 0),
+            (3, -1),
+            (-1, 3),
+            ([0, -1], [0, -1]),
+            ([2, 0], [2, 0]),
+            (range(4), range(4)),
+        ]:
+            actual = mx.nd.moveaxis(x, source, destination).shape
+            assert actual == (1, 2, 3, 4)
+
+    def test_move_multiples():
+        x = mx.nd.zeros((0, 1, 2, 3))
+        for source, destination, expected in [
+            ([0, 1], [2, 3], (2, 3, 0, 1)),
+            ([2, 3], [0, 1], (2, 3, 0, 1)),
+            ([0, 1, 2], [2, 3, 0], (2, 3, 0, 1)),
+            ([3, 0], [1, 0], (0, 3, 1, 2)),
+            ([0, 3], [0, 1], (0, 3, 1, 2)),
+        ]:
+            actual = mx.nd.moveaxis(x, source, destination).shape
+            assert actual == expected
+
+    def test_errors():
+        x = mx.nd.random.normal(0, 1, (1, 2, 3))
+        assert_exception(mx.nd.moveaxis, ValueError, x, 3, 0)
+        assert_exception(mx.nd.moveaxis, ValueError, x, -4, 0)
+        assert_exception(mx.nd.moveaxis, ValueError, x, 0, 5)
+        assert_exception(mx.nd.moveaxis, ValueError, x, [0, 0], [0, 1])
+        assert_exception(mx.nd.moveaxis, ValueError, x, [0, 1], [1, 1])
+        assert_exception(mx.nd.moveaxis, ValueError, x, 0, [0, 1])
+        assert_exception(mx.nd.moveaxis, ValueError, x, [0, 1], [0])
+
+    test_move_to_end()
+    test_move_new_position()
+    test_preserve_order()
+    test_move_multiples()
+    test_errors()
 
 
 @with_seed()

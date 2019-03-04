@@ -2513,10 +2513,10 @@ def moveaxis(tensor, source, destination):
     ----------
     tensor : mx.nd.array
         The array which axes should be reordered
-    source : int
-        Original position of the axes to move.
-    destination : int
-        Destination position for each of the original axes.
+    source : int or sequence of int
+        Original position of the axes to move. Can be negative but must be unique.
+    destination : int or sequence of int
+        Destination position for each of the original axes. Can be negative but must be unique.
 
     Returns
     -------
@@ -2528,19 +2528,32 @@ def moveaxis(tensor, source, destination):
     >>> X = mx.nd.array([[1, 2, 3], [4, 5, 6]])
     >>> mx.nd.moveaxis(X, 0, 1).shape
     (3L, 2L)
+
+    >>> X = mx.nd.zeros((3, 4, 5))
+    >>> mx.nd.moveaxis(X, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
     """
-    axes = list(range(tensor.ndim))
     try:
-        axes.pop(source)
+        source = np.core.numeric.normalize_axis_tuple(source, tensor.ndim)
     except IndexError:
         raise ValueError('Source should verify 0 <= source < tensor.ndim'
                          'Got %d' % source)
     try:
-        axes.insert(destination, source)
+        destination = np.core.numeric.normalize_axis_tuple(destination, tensor.ndim)
     except IndexError:
-        raise ValueError('Destination should verify 0 <= destination < tensor.ndim'
-                         'Got %d' % destination)
-    return op.transpose(tensor, axes)
+        raise ValueError('Destination should verify 0 <= destination < tensor.ndim (%d).'
+                         % tensor.ndim, 'Got %d' % destination)
+
+    if len(source) != len(destination):
+        raise ValueError('`source` and `destination` arguments must have '
+                         'the same number of elements')
+
+    order = [n for n in range(tensor.ndim) if n not in source]
+
+    for dest, src in sorted(zip(destination, source)):
+        order.insert(dest, src)
+
+    return op.transpose(tensor, order)
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
