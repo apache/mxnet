@@ -339,6 +339,34 @@ Example::
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array.");
 
+#if MXNET_USE_MKLDNN == 1
+static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                  const OpContext& ctx,
+                                  const std::vector<NDArray>& inputs,
+                                  const std::vector<OpReqType>& req,
+                                  const std::vector<NDArray>& outputs) {
+  const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
+
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (SupportMKLDNNTranspose(param, inputs[0])) {
+    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    return;
+  }
+  FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
+}
+
+inline static bool TransposeStorageType(const nnvm::NodeAttrs& attrs,
+                                        const int dev_mask,
+                                        DispatchMode* dispatch_mode,
+                                        std::vector<int>* in_attrs,
+                                        std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+#endif
+
 NNVM_REGISTER_OP(transpose)
 .describe(R"code(Permutes the dimensions of an array.
 
@@ -393,6 +421,11 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", TransposeComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", TransposeStorageType)
+#endif
 .add_argument("data", "NDArray-or-Symbol", "Source input")
 .add_arguments(TransposeParam::__FIELDS__());
 

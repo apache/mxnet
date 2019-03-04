@@ -238,6 +238,10 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
     DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
     .describe("Target axis order. By default the axes will be inverted.");
   }
+
+  bool operator==(const TransposeParam &other) const {
+    return this->axes == other.axes; 
+  }
 };
 
 template<typename xpu>
@@ -2840,5 +2844,18 @@ inline uint32_t SplitNumOutputs(const NodeAttrs& attrs) {
 
 }  // namespace op
 }  // namespace mxnet
+
+
+namespace std {
+template<>
+struct hash<mxnet::op::TransposeParam> {
+  size_t operator()(const mxnet::op::TransposeParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.axes);
+    return ret;
+  }
+};
+}  // namespace std
+
 
 #endif  // MXNET_OPERATOR_TENSOR_MATRIX_OP_INL_H_
