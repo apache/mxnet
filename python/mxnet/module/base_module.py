@@ -364,9 +364,25 @@ class BaseModule(object):
         """
         assert self.binded and self.params_initialized
 
+        check_context = False
+        # check if context is present
+        if hasattr(self, '_context'):
+            if len(self._context) > 1:
+                warnings.warn("MXNet Module: predicting on multiple devices, "
+                              "make sure data is split into the correct devices")
+            else:
+                # only check data and module context when using single device
+                module_context = self._context[0]
+                check_context = True
+
         if isinstance(eval_data, (ndarray.NDArray, np.ndarray)):
             if isinstance(eval_data, np.ndarray):
                 eval_data = ndarray.array(eval_data)
+            if check_context and eval_data.context != module_context:
+                msg = "MXNet Module: input data and module has different context, " \
+                      "data will be copied from %s to %s"  % (eval_data.context, module_context)
+                warnings.warn(msg)
+                eval_data = eval_data.as_in_context(module_context)
             self.forward(DataBatch([eval_data]))
             return self.get_outputs()[0]
 
@@ -381,6 +397,11 @@ class BaseModule(object):
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
+            if check_context and eval_batch.data[0].context != module_context:
+                msg = "MXNet Module: input data and module has different context, " \
+                      "data will be copied from %s to %s" % (eval_batch.data[0].context, module_context)
+                warnings.warn(msg)
+                eval_batch.data = [data.as_in_context(module_context) for data in eval_batch.data]
             self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
