@@ -173,6 +173,7 @@ class Lenet {
          << ", accuracy: " << ValAccuracy(batch_size * 10, lenet);
     }
     delete exe;
+    delete opt;
   }
 
  private:

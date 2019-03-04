@@ -156,6 +156,7 @@ int main(int argc, char** argv) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return score >= MIN_SCORE ? 0 : 1;
 }
