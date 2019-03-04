@@ -716,7 +716,6 @@ def test_with_random_seed():
 def test_random_seed():
     shape = (5, 5)
     seed = rnd.randint(-(1 << 31), (1 << 31))
-    mx.random.seed(seed)
 
     def _assert_same_mx_arrays(a, b):
         assert len(a) == len(b)
@@ -724,6 +723,7 @@ def test_random_seed():
             assert (a_i.asnumpy() == b_i.asnumpy()).all()
 
     N = 100
+    mx.random.seed(seed)
     v1 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
 
     mx.random.seed(seed)
