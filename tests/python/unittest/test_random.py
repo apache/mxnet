@@ -670,7 +670,7 @@ def test_with_random_seed():
         with random_seed(seed):
             python_data = [rnd.random() for _ in range(size)]
             np_data = np.random.rand(size)
-            mx_data = mx.nd.random_uniform(shape=shape, ctx=ctx).asnumpy()
+            mx_data = mx.random.uniform(shape=shape, ctx=ctx).asnumpy()
         return (seed, python_data, np_data, mx_data)
 
     # check data, expecting them to be the same or different based on the seeds
@@ -724,16 +724,16 @@ def test_random_seed():
 
     N = 100
     mx.random.seed(seed)
-    v1 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
+    v1 = [mx.random.uniform(shape=shape) for _ in range(N)]
 
     mx.random.seed(seed)
-    v2 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
+    v2 = [mx.random.uniform(shape=shape) for _ in range(N)]
     _assert_same_mx_arrays(v1, v2)
 
     try:
         long
         mx.random.seed(long(seed))
-        v3 = [mx.nd.random_uniform(shape=shape) for _ in range(N)]
+        v3 = [mx.random.uniform(shape=shape) for _ in range(N)]
         _assert_same_mx_arrays(v1, v3)
     except NameError:
         pass
