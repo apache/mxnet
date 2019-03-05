@@ -493,9 +493,6 @@ def quantize_model(sym, arg_params, aux_params,
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
-    if quantized_dtype == 'uint8' and ctx != cpu():
-        raise ValueError('currently, uint8 quantization is only supported by CPU,'
-                         ' please switch to the context of CPU or int8 data type for GPU')
     qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype)
