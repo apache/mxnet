@@ -52,11 +52,11 @@ struct RegressionOutputParam : public dmlc::Parameter<RegressionOutputParam> {
 };
 
 inline bool RegressionOpShape(const nnvm::NodeAttrs& attrs,
-                              std::vector<TShape> *in_attrs,
-                              std::vector<TShape> *out_attrs) {
+                              mxnet::ShapeVector *in_attrs,
+                              mxnet::ShapeVector *out_attrs) {
   using namespace mshadow;
   CHECK_EQ(in_attrs->size(), 2U) << "Input:[data, label]";
-  const TShape &dshape = in_attrs->at(0);
+  const mxnet::TShape &dshape = in_attrs->at(0);
   if (dshape.ndim() == 0) return false;
   auto &lshape = (*in_attrs)[1];
   if (lshape.ndim() == 0) {
@@ -219,7 +219,7 @@ inline void RegressionBackwardCSRImpl(mshadow::Stream<xpu> *s,
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
-  const TShape dshape = data.shape();
+  const mxnet::TShape dshape = data.shape();
   const nnvm::dim_t num_rows = dshape[0];
   const nnvm::dim_t row_length = dshape[1];
   CHECK_EQ(label.aux_type(kIndPtr), label.aux_type(kIdx))

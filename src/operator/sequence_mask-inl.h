@@ -239,13 +239,13 @@ class SequenceMaskProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
 
-    const TShape &dshape = (*in_shape)[seq_mask::kData];
+    const mxnet::TShape &dshape = (*in_shape)[seq_mask::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     CHECK((param_.axis == 0) || (param_.axis == 1))
@@ -256,7 +256,7 @@ class SequenceMaskProp : public OperatorProperty {
     if (param_.use_sequence_length)
       SHAPE_ASSIGN_CHECK(*in_shape, seq_mask::kSequenceLength, Shape1(sbatch));
 
-    const TShape &oshape = dshape;
+    const mxnet::TShape &oshape = dshape;
     out_shape->clear();
     out_shape->push_back(oshape);
     return true;
@@ -295,7 +295,7 @@ class SequenceMaskProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -317,7 +317,7 @@ class SequenceMaskProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

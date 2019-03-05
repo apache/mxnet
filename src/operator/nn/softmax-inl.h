@@ -332,8 +332,8 @@ static inline bool SoftmaxOpType(const nnvm::NodeAttrs& attrs,
 }
 
 static inline bool SoftmaxGradOpShape(const nnvm::NodeAttrs& attrs,
-                                      std::vector<TShape> *in_attrs,
-                                      std::vector<TShape> *out_attrs) {
+                                      mxnet::ShapeVector *in_attrs,
+                                      mxnet::ShapeVector *out_attrs) {
   if (softmax_has_dtype_override(attrs)) {
     return ElemwiseShape<3, 1>(attrs, in_attrs, out_attrs);
   } else {
@@ -409,7 +409,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   int axis = CheckAxis(param.axis, inputs[0].ndim());
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
-  TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, DType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       if (shape.ndim() == 2) {
@@ -440,7 +440,7 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
   int axis = CheckAxis(param.axis, inputs[0].ndim());
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
-  TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
+  mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
 
   int out_idx = softmax_has_dtype_override(attrs) ? 2 : 1;
 

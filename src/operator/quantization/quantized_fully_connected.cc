@@ -35,8 +35,8 @@ enum QuantizedfcOpResource {kTempSpace};
 }
 
 bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
-                                  std::vector<TShape> *in_shape,
-                                  std::vector<TShape> *out_shape) {
+                                  mxnet::ShapeVector *in_shape,
+                                  mxnet::ShapeVector *out_shape) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   CHECK(param.flatten) << "QuantizedFullyConnectedOp only supports flatten=true for now";
   using namespace mshadow;
@@ -46,21 +46,21 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
 
   CHECK(!shape_is_none(in_shape->at(0)))
     << "QuantizedFullyConnectedOp input data shape must be given";
-  const TShape& dshape = in_shape->at(0);
-  TShape wshape = Shape2(param.num_hidden, dshape.ProdShape(1, dshape.ndim()));
+  const mxnet::TShape& dshape = in_shape->at(0);
+  mxnet::TShape wshape = Shape2(param.num_hidden, dshape.ProdShape(1, dshape.ndim()));
   SHAPE_ASSIGN_CHECK(*in_shape, 1, wshape);
   if (!param.no_bias) {
-    TShape bshape = Shape1(param.num_hidden);
+    mxnet::TShape bshape = Shape1(param.num_hidden);
     SHAPE_ASSIGN_CHECK(*in_shape, 2, bshape);
   }
 
   for (size_t i = num_inputs; i < 3 * num_inputs; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_shape, i, TShape{1});
+    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape{1});
   }
 
-  SHAPE_ASSIGN_CHECK(*out_shape, 0, TShape({dshape[0], wshape[0]}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 1, TShape({1}));
-  SHAPE_ASSIGN_CHECK(*out_shape, 2, TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 0, mxnet::TShape({dshape[0], wshape[0]}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 1, mxnet::TShape({1}));
+  SHAPE_ASSIGN_CHECK(*out_shape, 2, mxnet::TShape({1}));
   return true;
 }
 
@@ -153,9 +153,9 @@ void QuantizedFullyConnectedForward(const nnvm::NodeAttrs& attrs,
   const NDArray& data = in_data[0];
   const NDArray& weight = in_data[1];
   const NDArray& out = out_data[0];
-  TShape dshape = data.shape();
-  TShape wshape = weight.shape();
-  TShape oshape = out.shape();
+  mxnet::TShape dshape = data.shape();
+  mxnet::TShape wshape = weight.shape();
+  mxnet::TShape oshape = out.shape();
   auto output_temp = out.data().dptr<int32_t>();
   auto weight_temp = weight.data().dptr<SrcType>();
   auto data_temp = data.data().dptr<SrcType>();
@@ -261,7 +261,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output", "min_output", "max_output"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizedFullyConnectedShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizedFullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedFullyConnectedType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizedFullyConnectedStorageType)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })

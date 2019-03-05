@@ -79,7 +79,7 @@ where
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "min_range", "max_range"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", QuantizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", QuantizeShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizeType)
 .set_attr<FInferStorageType>("FInferStorageType", QuantizeStorageType)
 #if MXNET_USE_MKLDNN == 1

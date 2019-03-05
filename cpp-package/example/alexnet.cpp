@@ -319,6 +319,7 @@ int main(int argc, char const *argv[]) {
   }
   /*don't foget to release the executor*/
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return 0;
 }

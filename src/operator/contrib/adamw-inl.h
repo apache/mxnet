@@ -83,14 +83,14 @@ struct AdamWParam : public dmlc::Parameter<AdamWParam> {
 // total_in = 6: weight, grad, mean, var, weight32, rescale_grad (fp32)
 template<int n_in, int n_out, int total_in>
 inline bool MPUpdateInferShape(const nnvm::NodeAttrs& attrs,
-                               std::vector<TShape> *in_attrs,
-                               std::vector<TShape> *out_attrs) {
+                               mxnet::ShapeVector *in_attrs,
+                               mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(total_in)) << " in operator " << attrs.name;
   CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
   // rescale_grad.shape = (1,)
   SHAPE_ASSIGN_CHECK(*in_attrs, total_in - 1, mshadow::Shape1(1));
-  return ElemwiseAttr<TShape, shape_is_none, shape_assign, true, shape_string, n_in, n_out>(
-      attrs, in_attrs, out_attrs, TShape());
+  return ElemwiseAttr<mxnet::TShape, shape_is_none, shape_assign, true, shape_string, n_in, n_out>(
+      attrs, in_attrs, out_attrs, mxnet::TShape());
 }
 
 // rescale_grad is a reserved argument at position -1. Example:
