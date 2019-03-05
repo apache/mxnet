@@ -838,6 +838,7 @@ OpStatePtr CachedOp::DynamicForward(
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   if (!use_naive_run) {
     const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
         recording ? "full_mem_plan" : "forward_mem_plan");
@@ -853,7 +854,6 @@ OpStatePtr CachedOp::DynamicForward(
       *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
                             shapes[eid], default_ctx, true, dtypes[eid]);
     }
-    const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
     // If CachedOp is running in the inline mode, it uses RunGraph to record
     // computation; otherwise, CachedOp records computation itself.
     // So if it's not the inline mode, we disable recording.
@@ -862,7 +862,6 @@ OpStatePtr CachedOp::DynamicForward(
             recording && inlining_);
   } else {
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
     NaiveRunGraph(false, default_ctx, idx, arrays, &shapes, 0, idx.num_nodes(),
                   std::move(array_reqs), std::move(ref_count), &states,
                   dispatch_modes, recording && inlining_);
