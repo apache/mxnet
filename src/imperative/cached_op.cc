@@ -791,7 +791,8 @@ OpStatePtr CachedOp::StaticForward(
 OpStatePtr CachedOp::DynamicForward(
     const Context& default_ctx,
     const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs) {
+    const std::vector<NDArray*>& outputs,
+    bool use_naive_run) {
   using namespace nnvm;
   using namespace imperative;
 
@@ -837,97 +838,43 @@ OpStatePtr CachedOp::DynamicForward(
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
-
-  const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
-      recording ? "full_mem_plan" : "forward_mem_plan");
-  AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
-                 mem_plan, arrays, &array_reqs);
-
-  const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    arrays[eid] = outputs[i];
-    if (!outputs[i]->is_none()) continue;
-    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
+  if (!use_naive_run) {
+    const auto& mem_plan = g.GetAttr<MemoryPlanVector >(
+        recording ? "full_mem_plan" : "forward_mem_plan");
+    AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
+                  mem_plan, arrays, &array_reqs);
+    const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
+    const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+    const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+    for (size_t i = 0; i < outputs.size(); ++i) {
+      auto eid = idx.entry_id(idx.outputs()[i]);
+      arrays[eid] = outputs[i];
+      if (!outputs[i]->is_none()) continue;
+      *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                            shapes[eid], default_ctx, true, dtypes[eid]);
+    }
+    const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+    // If CachedOp is running in the inline mode, it uses RunGraph to record
+    // computation; otherwise, CachedOp records computation itself.
+    // So if it's not the inline mode, we disable recording.
+    RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
+            std::move(ref_count), &states, dispatch_modes,
+            recording && inlining_);
+  } else {
+    mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+    const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+    NaiveRunGraph(false, default_ctx, idx, arrays, &shapes, 0, idx.num_nodes(),
+                  std::move(array_reqs), std::move(ref_count), &states,
+                  dispatch_modes, recording && inlining_);
+    {
+      auto state_ptr = GetCachedOpState(default_ctx);
+      auto& state = state_ptr.get_state<CachedOpState>();
+      auto copied_shape = shapes;
+      std::lock_guard<std::mutex> lock(state.mutex);
+      state.info.fwd_graph.attrs["shape"] = std::make_shared<dmlc::any>(std::move(copied_shape));
+    }
+    g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
   }
-
-  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-
-  // If CachedOp is running in the inline mode, it uses RunGraph to record
-  // computation; otherwise, CachedOp records computation itself.
-  // So if it's not the inline mode, we disable recording.
-  RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
-           std::move(ref_count), &states, dispatch_modes,
-           recording && inlining_);
-
-  return op_state;
-}
-
-OpStatePtr CachedOp::NaiveForward(
-    const Context& default_ctx,
-    const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs) {
-  using namespace nnvm;
-  using namespace imperative;
-  // Initialize
-  bool recording = Imperative::Get()->is_recording();
-  auto op_state = OpStatePtr::Create<DynamicRuntime>();
-  auto& runtime = op_state.get_state<DynamicRuntime>();
-  {
-    auto state_ptr = GetCachedOpState(default_ctx);
-    auto& state = state_ptr.get_state<CachedOpState>();
-    std::lock_guard<std::mutex> lock(state.mutex);
-    SetForwardGraph(&state.info, recording, inputs);
-    runtime.info.fwd_graph = state.info.fwd_graph;
-  }
-  // build the indexed graph
-  nnvm::Graph& g = runtime.info.fwd_graph;
-  const auto& idx = g.indexed_graph();
-  const size_t num_inputs = idx.input_nodes().size();
-  const size_t num_entries = idx.num_node_entries();
-  std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t> >(
-    recording ? "full_ref_count" : "forward_ref_count");
-  // construct `arrays`
-  runtime.buff.resize(num_entries);
-  std::vector<NDArray*> arrays;
-  arrays.reserve(num_entries);
-  for (auto& item : runtime.buff) {
-    arrays.push_back(&item);
-  }
-  for (size_t i = 0; i < num_inputs; ++i) {
-    arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
-  }
-  for (size_t i = 0; i < idx.outputs().size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    if (!arrays[eid]->is_none()) *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-  }
-  // construct `array_reqs`
-  std::vector<OpReqType> array_reqs;
-  array_reqs.reserve(num_entries);
-  for (size_t i = 0; i < num_entries; ++i) {
-    array_reqs.push_back(ref_count[i] == 0 ? kNullOp : kWriteTo);
-  }
-  // other stuff
-  auto& states = runtime.op_states;
-  states.resize(idx.num_nodes());
-  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  ShapeVector shapes = g.GetAttr<ShapeVector>("shape");
-  NaiveRunGraph(false, default_ctx, idx, arrays, &shapes, 0, idx.num_nodes(),
-                std::move(array_reqs), std::move(ref_count), &states,
-                dispatch_modes, recording && inlining_);
-  {
-    auto state_ptr = GetCachedOpState(default_ctx);
-    auto& state = state_ptr.get_state<CachedOpState>();
-    auto copied_shape = shapes;
-    std::lock_guard<std::mutex> lock(state.mutex);
-    state.info.fwd_graph.attrs["shape"] = std::make_shared<dmlc::any>(std::move(copied_shape));
-  }
-  g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
   return op_state;
 }
 
@@ -958,11 +905,11 @@ OpStatePtr CachedOp::Forward(
     if (config_.is_dynamic || CheckDynamicShapeExists(default_ctx, inputs, true)) {
       config_.is_dynamic = true;
       config_.static_alloc = false;
-      op_state = NaiveForward(default_ctx, inputs, outputs);
+      op_state = DynamicForward(default_ctx, inputs, outputs, true);
     } else if (config_.static_alloc) {
       op_state = StaticForward(default_ctx, inputs, outputs);
     } else {
-      op_state = DynamicForward(default_ctx, inputs, outputs);
+      op_state = DynamicForward(default_ctx, inputs, outputs, false);
     }
   } catch (const dmlc::Error& e) {
     Engine::Get()->set_bulk_size(prev_bulk_size);
