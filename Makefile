@@ -489,7 +489,7 @@ build/plugin/%_gpu.o: plugin/%.cu
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
+build/plugin/%.o: plugin/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -648,6 +648,7 @@ rclean:
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
@@ -657,6 +658,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

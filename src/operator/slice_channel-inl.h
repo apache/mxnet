@@ -188,13 +188,13 @@ class SliceChannelProp : public OperatorProperty {
     return true;
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1U);
-    TShape dshape = in_shape->at(slice_enum::kData);
-    TShape ishape = in_shape->at(slice_enum::kData);
+    mxnet::TShape dshape = in_shape->at(slice_enum::kData);
+    mxnet::TShape ishape = in_shape->at(slice_enum::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.axis >= 0) {
       CHECK_LT(static_cast<size_t>(param_.axis), dshape.ndim());
@@ -223,7 +223,7 @@ class SliceChannelProp : public OperatorProperty {
       for (int d = real_axis; d < static_cast<int>(dshape.ndim()) - 1; ++d) {
         dshape[d] = dshape[d+1];
       }
-      dshape = TShape(&dshape[0], &dshape[dshape.ndim()-1]);
+      dshape = mxnet::TShape(&dshape[0], &dshape[dshape.ndim()-1]);
     }
     CHECK_EQ(static_cast<int>((*out_shape).size()), param_.num_outputs)
       << "Size of output shape mismatch!";
@@ -231,7 +231,7 @@ class SliceChannelProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*out_shape, i, dshape);
       // Perform incomplete shape inference.
       // We can back-calculate the inshape based on the out_shape.
-      TShape back_calculate_dshape = ishape;
+      mxnet::TShape back_calculate_dshape = ishape;
       if (param_.squeeze_axis && (dshape.ndim() == ishape.ndim() - 1)) {
         for (int d = 0; d < real_axis; ++d) {
           back_calculate_dshape[d] = (*out_shape)[i][d];
@@ -275,7 +275,7 @@ class SliceChannelProp : public OperatorProperty {
     return nullptr;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

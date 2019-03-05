@@ -4535,6 +4535,47 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+def test_softmax_dtype():
+    def check_dtypes_almost_equal(op_name,
+                                  atol, rtol,
+                                  grad_atol, grad_rtol,
+                                  idtype, ref_dtype, odtype=None):
+        op = getattr(mx.nd, op_name)
+        input_data = mx.random.uniform(shape=(100, 500))
+        dtype_input = input_data.astype(idtype)
+        ref_input = input_data.astype(ref_dtype)
+        dtype_input.attach_grad()
+        ref_input.attach_grad()
+        with mx.autograd.record():
+            dtype_softmax = op(dtype_input, axis=-1, dtype=odtype)
+            ref_softmax = op(ref_input, axis=-1, dtype=odtype)
+        dtype_softmax_np = dtype_softmax.asnumpy()
+        ref_softmax_np = ref_softmax.asnumpy()
+        assert_almost_equal(dtype_softmax_np, ref_softmax_np, rtol=rtol, atol=atol)
+        dtype_softmax.backward()
+        ref_softmax.backward()
+        dtype_grad_np = dtype_input.grad.asnumpy()
+        ref_grad_np = ref_input.grad.asnumpy()
+        assert_almost_equal(dtype_grad_np, ref_grad_np, rtol=grad_rtol, atol=grad_atol)
+
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64', 'float64')
+
+@with_seed()
 def test_pick():
     def test_pick_helper(index_type=np.int32):
         for _ in range(100):
@@ -6456,6 +6497,75 @@ def test_softmax():
 
 
 @with_seed()
+def test_softmax_output_normalization():
+    def _softmaxoutput_normalization(multi_output, use_ignore, normalization):
+        grad_scale = np.random.random()
+        batch_size = 8
+        num_labels = 6
+        H, W = 3, 3
+        ignore_label = np.random.randint(0, num_labels) if use_ignore else -1
+
+        if multi_output:
+            data_shape = (batch_size, num_labels, H, W)
+            label_shape = (batch_size, H, W)
+        else:
+            data_shape = (batch_size, num_labels)
+            label_shape = (batch_size, )
+
+        data = mx.nd.random.uniform(-1, 1, shape=data_shape)
+        label = mx.nd.random.randint(
+            0, num_labels, shape=label_shape).astype('float32')
+        data.attach_grad()
+
+        kwargs = dict(grad_scale=grad_scale,
+                      normalization=normalization, multi_output=multi_output)
+        if use_ignore:
+            kwargs.update(use_ignore=True, ignore_label=ignore_label)
+
+        with mx.autograd.record():
+            out = mx.nd.SoftmaxOutput(data=data, label=label, **kwargs)
+        out.backward(mx.nd.ones_like(data))
+
+        exp_data = mx.nd.exp(data)
+        softmax_data = exp_data / exp_data.sum(1, keepdims=True)
+        argmax_data = mx.nd.argmax(data, axis=1)
+
+        assert_almost_equal(out.asnumpy(), softmax_data.asnumpy())
+        one_hot_label = mx.nd.one_hot(label, num_labels)
+        if multi_output:
+            one_hot_label = one_hot_label.transpose((0, 3, 1, 2))
+        data_grad = softmax_data - one_hot_label
+
+        if use_ignore:
+            if multi_output:
+                data_grad *= (label !=
+                              ignore_label).reshape((batch_size, 1, H, W))
+            else:
+                data_grad *= (label != ignore_label).reshape((batch_size, 1))
+
+        valid_cnt = 1
+        if normalization == 'batch':
+            valid_cnt = batch_size
+        elif normalization == 'valid':
+            valid_cnt = mx.nd.maximum(1, (label != ignore_label).sum())
+        scale = grad_scale / valid_cnt
+
+        if multi_output:
+            if normalization != 'valid':
+                scale /= H * W
+
+        data_grad *= scale
+
+        assert_almost_equal(data.grad.asnumpy(), data_grad.asnumpy())
+
+    for multi_output in [False, True]:
+        for use_ignore in [False, True]:
+            for normalization in ['null', 'batch', 'valid']:
+                _softmaxoutput_normalization(
+                    multi_output, use_ignore, normalization)
+
+
+@with_seed()
 def test_slice():
     def test_slice_forward_backward(a, index):
         a_np = a.asnumpy()
@@ -6492,6 +6602,7 @@ def test_slice():
     slice_sym = mx.sym.slice(data, begin=[0, None], end=[1, None], step=[2, -1])
     check_numeric_gradient(slice_sym, [in_data])
 
+
 def test_slice_partial_infer():
     def check_slice_partial_infer(data, begin, end, step, expected_out_shape):
         out = mx.sym.slice(data, begin=begin, end=end, step=step)
@@ -6513,6 +6624,7 @@ def test_slice_partial_infer():
     var1 = mx.sym.var(name="data", shape=(10, 0))
     check_slice_axis_partial_infer(var1, 0, 0, 5, (5, 0))
     check_slice_axis_partial_infer(var1, 1, 0, 5, (10, 0))
+
 
 @with_seed()
 def test_float16_min_max():

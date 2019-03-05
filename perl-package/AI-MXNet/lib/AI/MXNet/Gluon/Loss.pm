@@ -824,4 +824,175 @@ method hybrid_forward(
 
 __PACKAGE__->register('AI::MXNet::Gluon::Loss');
 
+package AI::MXNet::Gluon::PoissonNLLLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'from_logits'  => (is => 'ro', isa => 'Bool', default => 1);
+has 'compute_full' => (is => 'ro', isa => 'Bool', default => 0);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::PoissonNLLLoss
+=cut
+
+=head1 DESCRIPTION
+
+    For a target (Random Variable) in a Poisson distribution, the function calculates the Negative
+    Log likelihood loss.
+    PoissonNLLLoss measures the loss accrued from a poisson regression prediction made by the model.
+
+    .. math::
+        L = \text{pred} - \text{target} * \log(\text{pred}) +\log(\text{target!})
+
+    `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
+
+    Parameters
+    ----------
+    from_logits : boolean, default True
+        indicating whether log(predicted) value has already been computed. If True, the loss is computed as
+        :math:`\exp(\text{pred}) - \text{target} * \text{pred}`, and if False, then loss is computed as
+        :math:`\text{pred} - \text{target} * \log(\text{pred}+\text{epsilon})`.The default value
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    compute_full: boolean, default False
+        Indicates whether to add an approximation(Stirling factor) for the Factorial term in the formula for the loss.
+        The Stirling factor is:
+        :math:`\text{target} * \log(\text{target}) - \text{target} + 0.5 * \log(2 * \pi * \text{target})`
+    epsilon: float, default 1e-08
+        This is to avoid calculating log(0) which is not defined.
+
+
+    Inputs:
+        - **pred**:   Predicted value
+        - **target**: Random variable(count or number) which belongs to a Poisson distribution.
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as pred. For example, if pred has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+        - **loss**: Average loss (shape=(1,1)) of the loss tensor with shape (batch_size,).
+=cut
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $pred, GluonInput $target,
+    Maybe[GluonInput] $sample_weight=, Maybe[Num] $epsilon=1e-08
+)
+{
+    $target = __PACKAGE__->_reshape_like($F, $target, $pred);
+    my $loss;
+    if($self->from_logits)
+    {
+        $loss = $F->exp($pred) - $target * $pred;
+    }
+    else
+    {
+        $loss = $pred - $target * $F->log($pred + $epsilon);
+        if($self->compute_full)
+        {
+            my $stirling_factor = $target * $F->log($target) - $target + 0.5 * $F->log(2 * $target * 3.1415926);
+            $stirling_factor *= ($target > 1);
+            $loss += $stirling_factor;
+        }
+        $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    }
+    return $F->mean($loss);
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
+package AI::MXNet::Gluon::CosineEmbeddingLoss;
+use AI::MXNet::Gluon::Mouse;
+extends 'AI::MXNet::Gluon::Loss';
+has 'margin' => (is => 'rw', isa => 'Num', default => 0);
+
+=head1 NAME
+
+    AI::MXNet::Gluon::CosineEmbeddingLoss
+=cut
+
+=head1 DESCRIPTION
+
+    For a target label 1 or -1, vectors input1 and input2, the function computes the cosine distance
+    between the vectors. This can be interpreted as how similar/dissimilar two input vectors are.
+
+    .. math::
+
+        L = \sum_i \begin{cases} 1 - {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = 1\\
+                         {cos\_sim({input1}_i, {input2}_i)} & \text{ if } {label}_i = -1 \end{cases}\\
+        cos\_sim(input1, input2) = \frac{{input1}_i.{input2}_i}{||{input1}_i||.||{input2}_i||}
+
+    `input1`, `input2` can have arbitrary shape as long as they have the same number of elements.
+
+    Parameters
+    ----------
+    weight : float or None
+        Global scalar weight for loss.
+    batch_axis : int, default 0
+        The axis that represents mini-batch.
+    margin : float
+        Margin of separation between correct and incorrect pair.
+
+
+    Inputs:
+        - **input1**: a tensor with arbitrary shape
+        - **input2**: another tensor with same shape as pred to which input1 is
+          compared for similarity and loss calculation
+        - **label**: A 1-D tensor indicating for each pair input1 and input2, target label is 1 or -1
+        - **sample_weight**: element-wise weighting tensor. Must be broadcastable
+          to the same shape as input1. For example, if input1 has shape (64, 10)
+          and you want to weigh each sample in the batch separately,
+          sample_weight should have shape (64, 1).
+
+    Outputs:
+        - **loss**: The loss tensor with shape (batch_size,).
+=cut
+
+method hybrid_forward(
+    GluonClass $F, GluonInput $input1, GluonInput $input2, GluonInput $label, Maybe[GluonInput] $sample_weight=
+)
+{
+    $input1 = __PACKAGE__->_reshape_like($F, $input1, $input2);
+    $label = $label->reshape([-1, 1]);
+    my $cos_sim = $self->_cosine_similarity($F, $input1, $input2);
+    my $y_1 = $label == 1;
+    my $y_minus_1 = $label == -1;
+    my $cos_sim_a = (1 - $cos_sim) * $y_1;
+
+    my $z_array;
+    if($F eq 'AI::MXNet::NDArray')
+    {
+        $z_array = $F->array([0]);
+    }
+    else
+    {
+        $z_array = $F->zeros([1, 1]);
+    }
+    my $cos_sim_b = $F->broadcast_maximum($z_array, $y_minus_1 * ($cos_sim - $self->margin), { axis=>1 });
+    my $loss = $cos_sim_a + $cos_sim_b;
+    $loss = __PACKAGE__->_apply_weighting($F, $loss, $self->weight, $sample_weight);
+    return $loss;
+}
+
+method _cosine_similarity($F, $x, $y, $axis=-1)
+{
+    my $x_norm = $F->norm($x, axis=>$axis)->reshape([-1, 1]);
+    my $y_norm = $F->norm($y, axis=>$axis)->reshape([-1, 1]);
+    my $x_dot_y = $F->sum($x*$y, axis=>$axis)->reshape([-1, 1]);
+    my $eps_arr;
+    if($F eq 'AI::MXNet::NDArray')
+    {
+        $eps_arr = $F->array([1e-12]);
+    }
+    else
+    {
+        $eps_arr = $F->full([1, 1], 1e-12);
+    }
+    return ($x_dot_y / $F->broadcast_maximum($x_norm * $y_norm, $eps_arr));
+}
+
+__PACKAGE__->register('AI::MXNet::Gluon::Loss');
+
 1;

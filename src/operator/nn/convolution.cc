@@ -84,8 +84,8 @@ static void ConvolutionGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 #endif
 
 static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape> *in_shape,
-                             std::vector<TShape> *out_shape) {
+                             mxnet::ShapeVector *in_shape,
+                             mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConvolutionParam& param_ = nnvm::get<ConvolutionParam>(attrs.parsed);
   if (!param_.no_bias) {
@@ -94,8 +94,8 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
   }
   // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
-  out_shape->resize(1, TShape());
-  const TShape &dshp = (*in_shape)[conv::kData];
+  out_shape->resize(1, mxnet::TShape());
+  const mxnet::TShape &dshp = (*in_shape)[conv::kData];
   if (dshp.ndim() ==  0) return false;
 
   if (param_.kernel.ndim() == 1) {
@@ -477,7 +477,7 @@ There are other options to tune the performance.
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", ConvolutionShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ConvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", ConvolutionType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", ConvStorageType)

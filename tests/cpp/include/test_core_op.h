@@ -104,7 +104,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param ctx Context to use when creating the array/tensor
    * \return The created NDArray
    */
-  NDArray CreateRandArray(const TShape& shape, const RunContext& run_ctx, int dtype) const {
+  NDArray CreateRandArray(const mxnet::TShape& shape, const RunContext& run_ctx, int dtype) const {
     CHECK_GT(shape.Size(), 0);  // Check it's a valid shape
     NDArray array(shape, run_ctx.ctx, true, dtype);
     array.CheckAndAlloc();
@@ -118,7 +118,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param ctx Context to use when creating the array/tensor
    * \return The created NDArray
    */
-  NDArray CreateZeroArray(const TShape& shape, const RunContext& run_ctx, int dtype) const {
+  NDArray CreateZeroArray(const mxnet::TShape& shape, const RunContext& run_ctx, int dtype) const {
     CHECK_GT(shape.Size(), 0);  // Check it's a valid shape
     NDArray array(shape, run_ctx.ctx, true, dtype);
     array.CheckAndAlloc();
@@ -266,7 +266,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
    * \param isGPU Is this going to be on the GPU?
    * \param shapes Array of input shapes
    */
-  CoreOpExecutor(const bool isGPU, const std::vector<TShape>& shapes)
+  CoreOpExecutor(const bool isGPU, const mxnet::ShapeVector& shapes)
     : input_shapes_(shapes)
       , op_(nullptr)  {
     ctx_.is_train = true;
@@ -397,7 +397,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       // Generic, all shapes the same. Probably this will need to be adjusted for more complex
       // operators such as dot
-      std::vector<nnvm::TShape> input_shapes;
+      std::vector<mxnet::TShape> input_shapes;
       if (!input_shapes_.empty()) {
         for (size_t i = 0, n = num_inputs; i < n; ++i) {
           input_shapes.emplace_back(i < input_shapes_.size() ? input_shapes_[i]
@@ -466,10 +466,10 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
 
       // Output arrays
       if (outputs_.empty()) {
-        std::vector<nnvm::TShape> output_shapes;
-        static auto& finfer_shape = Op::GetAttr<nnvm::FInferShape>("FInferShape");
+        std::vector<mxnet::TShape> output_shapes;
+        static auto& finfer_shape = Op::GetAttr<mxnet::FInferShape>("FInferShape");
         if (finfer_shape.count(op_)) {
-          nnvm::FInferShape call_infer_shapes = finfer_shape[op_];
+          mxnet::FInferShape call_infer_shapes = finfer_shape[op_];
           output_shapes.resize(inferred_num_outputs);
           call_infer_shapes(attrs_, &input_shapes, &output_shapes);
           input_shapes_ = input_shapes;
@@ -482,9 +482,9 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
               for (int i = 0; i < num_inputs; ++i) {
                 const int map_key = bwd_node_ptr->inputs[i].index;
                 CHECK(index2array.find(map_key) != index2array.end());
-                const nnvm::TShape &shp = index2array[map_key]->shape();
+                const mxnet::TShape &shp = index2array[map_key]->shape();
                 input_shapes.push_back(shp);
-                const nnvm::TShape ss = input_shapes[i];
+                const mxnet::TShape ss = input_shapes[i];
               }
             } else {
               // TODO(cjolivier)
@@ -788,7 +788,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
   /*!
    * \brief Input data shape
    */
-  std::vector<TShape> input_shapes_;
+  mxnet::ShapeVector input_shapes_;
   /*
    * \brief Pointer to the operator object
    */
@@ -863,7 +863,7 @@ template<typename DType = float>
 inline void BasicRunCoreOpBidirectional(const bool isGPU,
                                         bool verbose,
                                         const kwargs_t& op_kwargs,
-                                        const std::vector<TShape>& shapes,
+                                        const mxnet::ShapeVector& shapes,
                                         const char *op_name,
                                         const char *backward_op_name = "") {
   test::op::CoreOpExecutor<DType> op(isGPU, shapes);
