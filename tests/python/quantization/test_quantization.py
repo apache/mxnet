@@ -676,8 +676,8 @@ def test_optimal_threshold_adversarial_case():
     arr = np.array([2] * 1000)
     for dtype in ['uint8', 'int8', 'auto']:
         res = mx.contrib.quant._get_optimal_threshold(arr, dtype, num_quantized_bins=5)
-    # The threshold should be 2.
-    assert res[3] - 2 < 1e-5
+        # The threshold should be 2.
+        assert res[3] - 2 < 1e-5
 
 
 @with_seed()
