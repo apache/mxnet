@@ -153,7 +153,6 @@ ifeq ($(USE_OPENCV), 1)
 			USE_OPENCV_LIB_PATH = $(USE_OPENCV_DEP_PATH)/lib
 		endif
 		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
-		LDFLAGS += -lopencv_core -lopencv_imgproc
 		# Add flag -lopencv_imgcodecs for OpenCV 3+
 		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_imgcodecs.*), )
 			LDFLAGS += -lopencv_imgcodecs
@@ -166,9 +165,9 @@ ifeq ($(USE_OPENCV), 1)
 		endif
 		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
 		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
-		LDFLAGS += -lopencv_core -lopencv_imgproc
 		LDFLAGS += $(filter -lopencv_imgcodecs, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
 	endif
+	LDFLAGS += -lopencv_core -lopencv_imgproc -lopencv_highgui
 	BIN += bin/im2rec
 else
 	CFLAGS += -DMXNET_USE_OPENCV=0
