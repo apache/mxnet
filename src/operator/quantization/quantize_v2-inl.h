@@ -139,6 +139,10 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   auto out_type = GetOutputType(param);
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
     if (out_type == mshadow::kUint8) {
+      if (std::is_same<xpu, gpu>::value) {
+        LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                      "please switch to the context of CPU or int8 data type for GPU.";
+      }
       Kernel<quantize_v2_unsigned, xpu>::Launch(
           s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
           outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), param.min_calib_range.value(),
@@ -170,6 +174,10 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     broadcast::Reduce<red::maximum, 2, SrcDType, mshadow::op::identity>(
         s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
     if (out_type == mshadow::kUint8) {
+      if (std::is_same<xpu, gpu>::value) {
+        LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                      "please switch to the context of CPU or int8 data type for GPU.";
+      }
       Kernel<quantize_v2_unsigned, xpu>::Launch(
           s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
           outputs[2].dptr<float>(), inputs[0].dptr<SrcDType>(), in_min_t.dptr<float>(),

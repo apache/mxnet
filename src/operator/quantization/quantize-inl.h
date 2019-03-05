@@ -95,6 +95,10 @@ void QuantizeCompute(const nnvm::NodeAttrs& attrs,
 
   const QuantizeParam& param = nnvm::get<QuantizeParam>(attrs.parsed);
   if (param.out_type == mshadow::kUint8) {
+    if (std::is_same<xpu, gpu>::value) {
+      LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                    "please switch to the context of CPU or int8 data type for GPU.";
+    }
     Kernel<quantize_unsigned, xpu>::Launch(s, outputs[0].Size(),
       outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
       inputs[0].dptr<float>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
