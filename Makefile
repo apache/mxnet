@@ -147,10 +147,16 @@ endif
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
 	CFLAGS += -DMXNET_USE_OPENCV=1
-	ifneq ($(USE_OPENCV_PATH), )
-		CFLAGS += -I$(USE_OPENCV_PATH)
-		ifneq ($(USE_OPENCV_LIB_PATH), )
-			LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
+	ifneq ($(USE_OPENCV_DEP_PATH), NONE)
+		CFLAGS += -I$(USE_OPENCV_DEP_PATH)/include
+		ifeq ($(USE_OPENCV_LIB_PATH), NONE)
+			USE_OPENCV_LIB_PATH = $(USE_OPENCV_DEP_PATH)/lib
+		endif
+		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
+		LDFLAGS += -lopencv_core -lopencv_imgproc
+		# Add flag -lopencv_imgcodecs for OpenCV 3+
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_imgcodecs.*), )
+			LDFLAGS += -lopencv_imgcodecs
 		endif
 	else
 		ifeq ("$(shell pkg-config --exists opencv4; echo $$?)", "0")
@@ -160,9 +166,9 @@ ifeq ($(USE_OPENCV), 1)
 		endif
 		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
 		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
+		LDFLAGS += -lopencv_core -lopencv_imgproc
+		LDFLAGS += $(filter -lopencv_imgcodecs, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
 	endif
-	LDFLAGS += -lopencv_core -lopencv_imgcodecs -lopencv_imgproc
-
 	BIN += bin/im2rec
 else
 	CFLAGS += -DMXNET_USE_OPENCV=0

@@ -89,6 +89,10 @@ USE_NCCL_PATH = NONE
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 0
+# Add OpenCV dependency path, the directory `opencv2` is in $(USE_OPENCV_DEP_PATH)/
+USE_OPENCV_DEP_PATH = NONE
+# Add OpenCV shared library path if the shared libraries are not in $(USE_OPENCV_DEP_PATH)/lib
+USE_OPENCV_LIB_PATH = NONE
 
 #whether use libjpeg-turbo for image decode without OpenCV wrapper
 USE_LIBJPEG_TURBO = 0
