@@ -53,7 +53,7 @@ where
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "b", "grad"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ApproxGradientShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ApproxGradientShape)
 .set_attr<nnvm::FInferType>("FInferType", ApproxGradientType)
 .set_attr<FCompute>("FCompute<cpu>", ApproxGradient<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
