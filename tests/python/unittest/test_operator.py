@@ -6522,7 +6522,7 @@ def test_softmax_output_normalization():
         if use_ignore:
             kwargs.update(use_ignore=True, ignore_label=ignore_label)
 
-        with autograd.record():
+        with mx.autograd.record():
             out = mx.nd.SoftmaxOutput(data=data, label=label, **kwargs)
         out.backward(mx.nd.ones_like(data))
 
