@@ -215,6 +215,7 @@ List of Contributors
 * [Gordon Reid](https://github.com/gordon1992)
 
 * [Ming Yang](http://ufoym.com)
+* [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
 
 Label Bot
 ---------
