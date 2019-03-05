@@ -336,6 +336,7 @@ def test_parallel_random_seed_setting():
         # Avoid excessive test cpu runtimes
         num_temp_seeds = 25 if ctx.device_type == 'gpu' else 1
         # To flush out a possible race condition, run multiple times
+
         for _ in range(20):
             # Create enough samples such that we get a meaningful distribution.
             shape = (200, 200)
