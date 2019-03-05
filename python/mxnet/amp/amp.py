@@ -213,7 +213,7 @@ class AMPHandle(object):
     @contextlib.contextmanager
     def scale_loss(self, loss, optimizer_or_trainer, params=None):
         optimizer_or_trainer._scale = 1. / self._loss_scaler.loss_scale
-        if isinstance(loss, list):
+        if isinstance(loss, (list, tuple)):
             yield [l * self._loss_scaler.loss_scale for l in loss]
         else:
             yield self._loss_scaler.loss_scale * loss
