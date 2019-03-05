@@ -278,6 +278,9 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   for (auto input : inputs) {
     shape_inputs.emplace_back(input->shape());
   }
+  // We leverage the shape inference pass to detect whether dynamic shape exists.
+  // If so, the pass will fail with `contain_dynamic_shape = true`,
+  // This method is only called once, so the overhead is negligible.
   bool contain_dynamic_shape = false;
   CheckAndInferShape(&g, std::move(shape_inputs), true,
                      {0, 0}, {0, 0},
