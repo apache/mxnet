@@ -88,7 +88,8 @@ inline void MultiAllFiniteGPU(const nnvm::NodeAttrs& attrs,
   if (op_param.init_output)
     out = 1.;
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    MultiAllFiniteKernelParam<DType> param = FillMultiAllFiniteParam<gpu, DType>(op_param, ctx, inputs);
+    MultiAllFiniteKernelParam<DType> param =
+      FillMultiAllFiniteParam<gpu, DType>(op_param, ctx, inputs);
     MultiAllFiniteGPUKernel<DType><<<cuda_get_num_blocks(param.max_size),
                                      mshadow::cuda::kBaseThreadNum, 1,
                                      mshadow::Stream<gpu>::GetStream(s)>>>(param, out.dptr_);

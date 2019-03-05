@@ -24,8 +24,8 @@
  * \author Clement Fuji Tsang
  */
 
-#ifndef MXNET_OPERATOR_CONTRIB_ALL_FINITE_OP_INL_H_
-#define MXNET_OPERATOR_CONTRIB_ALL_FINITE_OP_INL_H_
+#ifndef MXNET_OPERATOR_CONTRIB_ALL_FINITE_INL_H_
+#define MXNET_OPERATOR_CONTRIB_ALL_FINITE_INL_H_
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/operator_util.h>
@@ -56,7 +56,7 @@ struct AllFiniteParam: public dmlc::Parameter<AllFiniteParam> {
 struct MultiAllFiniteParam : public dmlc::Parameter<MultiAllFiniteParam> {
   int num_arrays;
   bool init_output;
-  DMLC_DECLARE_PARAMETER(MultiAllFiniteParam) { 
+  DMLC_DECLARE_PARAMETER(MultiAllFiniteParam) {
     DMLC_DECLARE_FIELD(num_arrays)
     .set_default(1)
     .describe("Number of arrays.");
@@ -94,7 +94,7 @@ MultiAllFiniteKernelParam<DType> FillMultiAllFiniteParam(const MultiAllFinitePar
   return param;
 }
 
-} // namespace op
-} // namespace mxnet
+}  // namespace op
+}  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_CONTRIB_ALL_FINITE_OP_INL_H_
+#endif  // MXNET_OPERATOR_CONTRIB_ALL_FINITE_INL_H_
