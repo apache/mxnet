@@ -166,7 +166,6 @@ $(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_P
 			OPENCV_LIB = opencv
 		endif
 		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
-		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
 		LDFLAGS += $(filter -lopencv_imgcodecs -lopencv_highgui, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
 	endif
 	LDFLAGS += -lopencv_core -lopencv_imgproc
