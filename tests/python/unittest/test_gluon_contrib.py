@@ -24,7 +24,7 @@ from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import (
     Concurrent, HybridConcurrent, Identity, SparseEmbedding, PixelShuffle1D,
     PixelShuffle2D, PixelShuffle3D)
-from mxnet.test_utils import almost_equal, default_context, assert_almost_equal
+from mxnet.test_utils import almost_equal, default_context, assert_almost_equal, assert_allclose
 from common import setup_module, with_seed, teardown
 import numpy as np
 
@@ -217,7 +217,7 @@ def test_pixelshuffle1d():
     y = layer(x)
     assert y.shape == shape_after
     assert_allclose(
-        y.asnumpy(),
+        y,
         [[[0, 3, 1, 4, 2, 5],
           [6, 9, 7, 10, 8, 11]]]
     )
@@ -240,7 +240,7 @@ def test_pixelshuffle2d():
     # - Increasing the block index adds an offset of 1
     # - Increasing the channel index adds an offset of `nx * up_x * ny * up_y`
     assert_allclose(
-        y.asnumpy(),
+        y,
         [[[[ 0,  6, 12,  1,  7, 13,  2,  8, 14],
            [18, 24, 30, 19, 25, 31, 20, 26, 32],
            [ 3,  9, 15,  4, 10, 16,  5, 11, 17],
@@ -271,7 +271,7 @@ def test_pixelshuffle3d():
     #   column index by 1, e.g. the block [[[ 0, 24]], [[48, 72]]]
     # - Increasing the block index adds an offset of 1
     assert_allclose(
-        y.asnumpy(),
+        y,
         [[[[[ 0, 24,  1, 25,  2, 26,  3, 27],
             [ 4, 28,  5, 29,  6, 30,  7, 31],
             [ 8, 32,  9, 33, 10, 34, 11, 35]],
