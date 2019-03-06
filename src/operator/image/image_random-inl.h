@@ -87,21 +87,21 @@ void NormalizeBackwardImplCUDA(mshadow::Stream<gpu> *s,
 
 // Shape and Type inference for image to tensor operator
 inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
-  TShape &shp = (*in_attrs)[0];
+  mxnet::TShape &shp = (*in_attrs)[0];
   if (!shp.ndim()) return false;
 
   CHECK((shp.ndim() == 3) || (shp.ndim() == 4))
       << "Input image must have shape (height, width, channels), or "
       << "(N, height, width, channels) but got " << shp;
   if (shp.ndim() == 3) {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({shp[2], shp[0], shp[1]}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({shp[2], shp[0], shp[1]}));
   } else if (shp.ndim() == 4) {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({shp[0], shp[3], shp[1], shp[2]}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({shp[0], shp[3], shp[1], shp[2]}));
   }
 
   return true;
@@ -234,8 +234,8 @@ struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
 
 // Shape inference
 inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
 
   const auto& dshape = (*in_attrs)[0];
@@ -532,9 +532,9 @@ inline uint8_t saturate_cast(const float& src) {
 }
 
 inline bool ImageShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
-  TShape& dshape = (*in_attrs)[0];
+                       mxnet::ShapeVector *in_attrs,
+                       mxnet::ShapeVector *out_attrs) {
+  mxnet::TShape& dshape = (*in_attrs)[0];
   CHECK_EQ(dshape.ndim(), 3)
       << "Input image must have shape (height, width, channels), but got " << dshape;
   auto nchannels = dshape[dshape.ndim()-1];
@@ -546,7 +546,7 @@ inline bool ImageShape(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename DType, int axis>
-void FlipImpl(const TShape &shape, DType *src, DType *dst) {
+void FlipImpl(const mxnet::TShape &shape, DType *src, DType *dst) {
   int head = 1, mid = shape[axis], tail = 1;
   for (int i = 0; i < axis; ++i) head *= shape[i];
   for (uint32_t i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
@@ -1067,7 +1067,7 @@ inline void RandomLighting(const nnvm::NodeAttrs &attrs,
     [](const NodeAttrs& attrs){                                             \
       return std::vector<std::pair<int, int> >{{0, 0}};                     \
     })                                                                      \
-  .set_attr<nnvm::FInferShape>("FInferShape", ImageShape)                   \
+  .set_attr<mxnet::FInferShape>("FInferShape", ImageShape)                   \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)             \
   .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })   \
   .add_argument("data", "NDArray-or-Symbol", "The input.")

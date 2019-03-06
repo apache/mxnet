@@ -58,7 +58,7 @@ namespace op {
 namespace nnvm_to_onnx {
     enum class TypeIO { Inputs = 0, Outputs = 1 };
     using NameToIdx_t = std::map<std::string, int32_t>;
-    using InferenceTuple_t = std::tuple<uint32_t, TShape, int, int>;
+    using InferenceTuple_t = std::tuple<uint32_t, mxnet::TShape, int, int>;
     using InferenceMap_t = std::map<std::string, InferenceTuple_t>;
 }  // namespace nnvm_to_onnx
 
@@ -96,14 +96,14 @@ using namespace nnvm;
 using namespace ::onnx;
 using int64 = ::google::protobuf::int64;
 
-std::unordered_map<std::string, TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
+std::unordered_map<std::string, mxnet::TShape> GetPlaceholderShapes(const ShapeVector& shape_inputs,
     const nnvm::IndexedGraph& ig);
 
 std::unordered_map<std::string, uint32_t> GetOutputLookup(const nnvm::IndexedGraph& ig);
 
 void ConvertPlaceholder(
   const std::string& node_name,
-  const std::unordered_map<std::string, TShape>& placeholder_shapes,
+  const std::unordered_map<std::string, mxnet::TShape>& placeholder_shapes,
   GraphProto* graph_proto);
 
 void ConvertConstant(GraphProto* graph_proto,

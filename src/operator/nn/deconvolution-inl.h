@@ -49,12 +49,12 @@ namespace deconv {
 }
 
 struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
-  TShape kernel;
-  TShape stride;
-  TShape dilate;
-  TShape pad;
-  TShape adj;
-  TShape target_shape;
+  mxnet::TShape kernel;
+  mxnet::TShape stride;
+  mxnet::TShape dilate;
+  mxnet::TShape pad;
+  mxnet::TShape adj;
+  mxnet::TShape target_shape;
   uint32_t num_filter;
   uint32_t num_group;
   uint64_t workspace;
@@ -65,13 +65,13 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   DMLC_DECLARE_PARAMETER(DeconvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Deconvolution kernel size: (w,), (h, w) or (d, h, w). "
                   "This is same as the kernel size used for the corresponding convolution");
-    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
         .describe("The stride used for the corresponding convolution: (w,), (h, w) or (d, h, w). "
                   "Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
         .describe("Dilation factor for each dimension of the input: (w,), (h, w) or (d, h, w). "
                   "Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
         .describe("The amount of implicit zero padding added during convolution for each "
                   "dimension of the input: "
                   "(w,), (h, w) or (d, h, w). "
@@ -79,11 +79,11 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
                   "If `target_shape` is set, "
                   "`pad` will be ignored and a padding that will generate the target shape "
                   "will be used. Defaults to no padding.");
-    DMLC_DECLARE_FIELD(adj).set_default(TShape())
+    DMLC_DECLARE_FIELD(adj).set_default(mxnet::TShape())
         .describe("Adjustment for output shape: (w,), (h, w) or (d, h, w). "
                   "If `target_shape` is set, "
                   "`adj` will be ignored and computed accordingly.");
-    DMLC_DECLARE_FIELD(target_shape).set_default(TShape())
+    DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape())
         .describe("Shape of the output tensor: (w,), (h, w) or (d, h, w).");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
         .describe("Number of output filters.");
@@ -118,7 +118,7 @@ struct DeconvolutionParam : public dmlc::Parameter<DeconvolutionParam> {
   }
 
   template<size_t ndim>
-  void InferPad(TShape input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim] ) const {
+  void InferPad(mxnet::TShape input, index_t (&o_pad)[ndim], index_t (&o_adj)[ndim] ) const {
     // Modified by Li.bs
     // Use tag to control the calculation of pad
     bool bCal = false;
@@ -231,7 +231,7 @@ class DeconvolutionOp {
     Tensor<xpu, 4, DType> out = TBlobTo4DTensor(out_data[deconv::kOut], s);
     index_t o_pad[2], o_adj[2];
     if (param_.kernel.ndim() == 2) {
-      param_.InferPad(TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
+      param_.InferPad(mxnet::TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
     } else {
       index_t o_pad_1D[1], o_adj_1D[1];
       param_.InferPad({in_data_shape[2]}, o_pad_1D, o_adj_1D);
@@ -240,9 +240,9 @@ class DeconvolutionOp {
       o_adj[0] = 0;
       o_adj[1] = o_adj_1D[0];
     }
-    auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
-    auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
-    auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
+    auto stride = param_.kernel.ndim() == 2 ? param_.stride : mxnet::TShape({1, param_.stride[0]});
+    auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : mxnet::TShape({1, param_.dilate[0]});
+    auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : mxnet::TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
     Shape<3> wmat_shape =
@@ -351,7 +351,7 @@ class DeconvolutionOp {
 
     index_t o_pad[2], o_adj[2];
     if (param_.kernel.ndim() == 2) {
-      param_.InferPad(TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
+      param_.InferPad(mxnet::TShape({in_data_shape[2], in_data_shape[3]}), o_pad, o_adj);
     } else {
       index_t o_pad_1D[1], o_adj_1D[1];
       param_.InferPad({in_data_shape[2]}, o_pad_1D, o_adj_1D);
@@ -360,9 +360,9 @@ class DeconvolutionOp {
       o_adj[0] = 0;
       o_adj[1] = o_adj_1D[0];
     }
-    auto stride = param_.kernel.ndim() == 2 ? param_.stride : TShape({1, param_.stride[0]});
-    auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : TShape({1, param_.dilate[0]});
-    auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
+    auto stride = param_.kernel.ndim() == 2 ? param_.stride : mxnet::TShape({1, param_.stride[0]});
+    auto dilate = param_.kernel.ndim() == 2 ? param_.dilate : mxnet::TShape({1, param_.dilate[0]});
+    auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : mxnet::TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
 
     Shape<3> wmat_shape =

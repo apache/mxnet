@@ -331,23 +331,23 @@ class SoftmaxOutputProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
-    const TShape &dshape = in_shape->at(0);
+    const mxnet::TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
 
     // label.shape == data.shape: use probability as label
     if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
       if (param_.multi_output) {
-        TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
-        TShape lshape2(dshape.ndim() - 1);
+        mxnet::TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
+        mxnet::TShape lshape2(dshape.ndim() - 1);
         lshape2[0] = dshape[0];
         for (index_t i = 2; i < dshape.ndim(); ++i)
           lshape2[i-1] = dshape[i];
-        TShape lshape3 = dshape;
+        mxnet::TShape lshape3 = dshape;
         lshape3[1] = 1;
         if (in_shape->at(softmaxout_enum::kLabel).ndim() == 0) {
           in_shape->at(softmaxout_enum::kLabel) = lshape1;
@@ -361,7 +361,7 @@ class SoftmaxOutputProp : public OperatorProperty {
           throw InferShapeError(os.str(), softmaxout_enum::kLabel);
         }
       } else {
-        TShape label_shape(dshape.ndim() - 1);
+        mxnet::TShape label_shape(dshape.ndim() - 1);
         for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
           label_shape[i] = dshape[i];
         SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
@@ -426,17 +426,12 @@ class SoftmaxOutputProp : public OperatorProperty {
     return {{in_data[softmaxout_enum::kData], out_data[softmaxout_enum::kOut]}};
   }
 
-  std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  protected:

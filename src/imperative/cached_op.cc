@@ -175,7 +175,7 @@ CachedOp::CachedOp(
     CHECK_GT(xs.size(), 0)
         << "There are no inputs in computation graph that require gradients.";
 
-    grad_graph_ = pass::Gradient(
+    grad_graph_ = pass::MXGradient(
         fwd_graph_, fwd_graph_.outputs, xs, ograd_entries_,
         exec::AggregateGradient, nullptr, nullptr,
         zero_ops, "_copy");
@@ -405,8 +405,8 @@ bool CachedOp::SetBackwardGraph(
     g.attrs["backward_ref_count"] = std::make_shared<dmlc::any>(std::move(ref_count));
   }
 
-  auto shapes = info->fwd_graph.GetAttr<ShapeVector>("shape");
-  shapes.resize(idx.num_node_entries(), TShape());
+  auto shapes = info->fwd_graph.GetAttr<mxnet::ShapeVector>("shape");
+  shapes.resize(idx.num_node_entries(), mxnet::TShape());
   auto dtypes = info->fwd_graph.GetAttr<DTypeVector>("dtype");
   dtypes.resize(idx.num_node_entries(), -1);
   auto stypes = info->fwd_graph.GetAttr<StorageTypeVector>("storage_type");
@@ -633,7 +633,7 @@ void CachedOp::StaticRunOps(
   const auto& op_execs = state.execs;
 
   std::vector<NDArray*> ndinputs, ndoutputs;
-  nnvm::ShapeVector arg_shapes;
+  mxnet::ShapeVector arg_shapes;
   nnvm::DTypeVector arg_dtypes;
   std::vector<OpReqType> req;
 
@@ -748,7 +748,7 @@ OpStatePtr CachedOp::StaticForward(
   }
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
   for (size_t i = 0; i < outputs.size(); ++i) {
@@ -825,7 +825,7 @@ OpStatePtr CachedOp::DynamicForward(
                  mem_plan, arrays, &array_reqs);
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
   for (size_t i = 0; i < outputs.size(); ++i) {
@@ -1239,7 +1239,7 @@ void CachedOpBackward(const OpStatePtr& state_ptr,
 
 OpStatePtr CreateCachedOpState(const NodeAttrs& attrs,
                                Context ctx,
-                               const std::vector<TShape>& in_shapes,
+                               const mxnet::ShapeVector& in_shapes,
                                const std::vector<int>& in_types) {
   const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
   return OpStatePtr::Create<CachedOpActualState>(op);
@@ -1344,10 +1344,10 @@ NNVM_REGISTER_OP(_CachedOp)
     return op->ListForwardOutputNames();
   })
 .set_attr<FCreateOpState>("FCreateOpState", CreateCachedOpState)
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_shapes,
-     std::vector<TShape> *out_shapes) {
+     mxnet::ShapeVector *in_shapes,
+     mxnet::ShapeVector *out_shapes) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
     return op::DefaultSubgraphOpShapeHelper(op->GetForwardSym(), in_shapes, out_shapes);
   })

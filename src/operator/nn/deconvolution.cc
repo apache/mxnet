@@ -36,8 +36,8 @@ namespace mxnet {
 namespace op {
 
 static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
-                               std::vector<TShape> *in_shape,
-                               std::vector<TShape> *out_shape) {
+                               mxnet::ShapeVector *in_shape,
+                               mxnet::ShapeVector *out_shape) {
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
 #if MXNET_USE_CUDNN == 0
   if (param_.kernel.ndim() > 2) {
@@ -52,8 +52,8 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
   } else {
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
   }
-  out_shape->resize(1, TShape());
-  const TShape &dshape = (*in_shape)[deconv::kData];
+  out_shape->resize(1, mxnet::TShape());
+  const mxnet::TShape &dshape = (*in_shape)[deconv::kData];
   if (dshape.ndim() ==  0) return false;
 
   if (param_.kernel.ndim() == 1) {
@@ -403,7 +403,7 @@ NNVM_REGISTER_OP(Deconvolution)
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", DeconvolutionShape)
+.set_attr<mxnet::FInferShape>("FInferShape", DeconvolutionShape)
 .set_attr<nnvm::FInferType>("FInferType", DeconvolutionType)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", DeconvStorageType)

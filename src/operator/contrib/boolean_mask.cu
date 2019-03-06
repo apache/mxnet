@@ -80,7 +80,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
                        cudaMemcpyDeviceToHost));
   CHECK(valid_num > 0) << "boolean_mask behavior not defined when all masks are 0";
   // Set the output shape forcefully
-  TShape data_shape = data.shape();
+  mxnet::TShape data_shape = data.shape();
   data_shape[axis] = valid_num;
   const_cast<NDArray &>(out).Init(data_shape);
   size_t input_size = data.shape().Size();

@@ -336,6 +336,7 @@ def test_parallel_random_seed_setting():
         # Avoid excessive test cpu runtimes
         num_temp_seeds = 25 if ctx.device_type == 'gpu' else 1
         # To flush out a possible race condition, run multiple times
+
         for _ in range(20):
             # Create enough samples such that we get a meaningful distribution.
             shape = (200, 200)
@@ -560,12 +561,12 @@ def test_exponential_generator():
         for scale in [0.1, 1.0]:
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.expon.ppf(x, loc=0, scale=scale), 5)
             generator_mx = lambda x: mx.nd.random.exponential(scale, shape=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs, success_rate=0.20)
             generator_mx_same_seed = \
                 lambda x: np.concatenate(
                     [mx.nd.random.exponential(scale, shape=x // 10, ctx=ctx, dtype=dtype).asnumpy()
                      for _ in range(10)])
-            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs)
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, success_rate=0.20)
 
 @with_seed()
 def test_poisson_generator():
@@ -670,7 +671,7 @@ def test_with_random_seed():
         with random_seed(seed):
             python_data = [rnd.random() for _ in range(size)]
             np_data = np.random.rand(size)
-            mx_data = mx.nd.random_uniform(shape=shape, ctx=ctx).asnumpy()
+            mx_data = mx.random.uniform(shape=shape, ctx=ctx).asnumpy()
         return (seed, python_data, np_data, mx_data)
 
     # check data, expecting them to be the same or different based on the seeds
@@ -711,6 +712,32 @@ def test_with_random_seed():
     for i in range(0, num_seeds-1):
         for j in range(i+1, num_seeds):
             check_data(data[i],data[j])
+
+@with_seed()
+def test_random_seed():
+    shape = (5, 5)
+    seed = rnd.randint(-(1 << 31), (1 << 31))
+
+    def _assert_same_mx_arrays(a, b):
+        assert len(a) == len(b)
+        for a_i, b_i in zip(a, b):
+            assert (a_i.asnumpy() == b_i.asnumpy()).all()
+
+    N = 100
+    mx.random.seed(seed)
+    v1 = [mx.random.uniform(shape=shape) for _ in range(N)]
+
+    mx.random.seed(seed)
+    v2 = [mx.random.uniform(shape=shape) for _ in range(N)]
+    _assert_same_mx_arrays(v1, v2)
+
+    try:
+        long
+        mx.random.seed(long(seed))
+        v3 = [mx.random.uniform(shape=shape) for _ in range(N)]
+        _assert_same_mx_arrays(v1, v3)
+    except NameError:
+        pass
 
 @with_seed()
 def test_unique_zipfian_generator():

@@ -71,7 +71,7 @@ Example:
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ResizeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ResizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ResizeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Resize<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
