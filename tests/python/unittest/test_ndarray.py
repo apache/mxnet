@@ -144,6 +144,7 @@ def test_ndarray_elementwise():
             check_with_uniform(mx.nd.square, 1, dim, np.square, rmin=0)
             check_with_uniform(lambda x: mx.nd.norm(x).asscalar(), 1, dim, np.linalg.norm)
 
+
 @with_seed()
 def test_ndarray_elementwisesum():
     ones = mx.nd.ones((10,), dtype=np.int32)
