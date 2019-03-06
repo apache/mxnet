@@ -35,6 +35,7 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   uint32_t backward_bulk_size;
   bool static_alloc;
   bool static_shape;
+  bool is_dynamic;
   nnvm::Tuple<uint32_t> data_indices;
   nnvm::Tuple<uint32_t> param_indices;
   std::string subgraph;
@@ -66,6 +67,9 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     DMLC_DECLARE_FIELD(subgraph)
     .set_default(std::string(""))
     .describe("JSON string of a subgraph.");
+    DMLC_DECLARE_FIELD(is_dynamic)
+    .set_default(false)
+    .describe("Whether the graph contains dynamic shape operators.");
   }
 };
 
@@ -149,7 +153,8 @@ class CachedOp {
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      bool use_naive_run = false);
   void DynamicBackward(
       const bool retain_graph,
       const OpStatePtr& op_state,
@@ -181,6 +186,10 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  bool CheckDynamicShapeExists(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      bool erase_result);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;

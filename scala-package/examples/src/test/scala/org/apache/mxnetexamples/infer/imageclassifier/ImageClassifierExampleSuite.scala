@@ -27,7 +27,6 @@ import sys.process.Process
 
 /**
   * Integration test for imageClassifier example.
-  * This will run as a part of "make scalatest"
   */
 class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExampleSuite])

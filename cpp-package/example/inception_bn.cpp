@@ -168,10 +168,14 @@ int main(int argc, char const *argv[]) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
   // initialize parameters
   Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2);
@@ -228,6 +232,7 @@ int main(int argc, char const *argv[]) {
     LG << "Validation Accuracy: " << val_acc.Get();
   }
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return 0;
 }

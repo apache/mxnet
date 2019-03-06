@@ -111,9 +111,9 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kPReLU: {
-        TShape gshape = expand_shape(in_data[leakyrelu::kGamma].shape_,
+        mxnet::TShape gshape = expand_shape(in_data[leakyrelu::kGamma].shape_,
                                      in_data[leakyrelu::kData].shape_);
-        TShape new_lshape, new_rshape, new_oshape;
+        mxnet::TShape new_lshape, new_rshape, new_oshape;
         const int ndim = op::BinaryBroadcastShapeCompact(in_data[leakyrelu::kData].shape_,
                                                          gshape,
                                                          out_data[leakyrelu::kOut].shape_,
@@ -237,9 +237,9 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kPReLU: {
-        TShape gshape = expand_shape(in_grad[leakyrelu::kGamma].shape_,
+        mxnet::TShape gshape = expand_shape(in_grad[leakyrelu::kGamma].shape_,
                                      in_grad[leakyrelu::kData].shape_);
-        TShape new_lshape, new_rshape, new_oshape;
+        mxnet::TShape new_lshape, new_rshape, new_oshape;
         const bool need_bc = BinaryBroadcastShapeCompact(in_grad[leakyrelu::kData].shape_,
                                                          gshape,
                                                          out_grad[leakyrelu::kOut].shape_,
@@ -297,8 +297,8 @@ class LeakyReLUOp : public Operator {
   static MSHADOW_XINLINE size_t minthree(const size_t a, const size_t b, const size_t c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
   }
-  static inline TShape expand_shape(const TShape& src, const TShape& dst) {
-    TShape result(dst.ndim());
+  static inline mxnet::TShape expand_shape(const mxnet::TShape& src, const mxnet::TShape& dst) {
+    mxnet::TShape result(dst.ndim());
     int s = src.ndim() - 1;
     for (int i = dst.ndim() - 1; i >= 0; i--) {
       if (s >= 0 && i <= 1 && (dst[i] == src[s] || src[s] == 1)) {
@@ -328,21 +328,21 @@ class LeakyReLUProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (param_.act_type == leakyrelu::kPReLU) {
       CHECK_EQ(in_shape->size(), 2U) << "Input:[data, gamma]";
     } else {
       CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
     }
-    const TShape &dshape = in_shape->at(leakyrelu::kData);
+    const mxnet::TShape &dshape = in_shape->at(leakyrelu::kData);
     if (dshape.ndim() == 0) return false;
     if (param_.act_type == leakyrelu::kPReLU) {
-      const TShape &gshape = in_shape->at(leakyrelu::kGamma);
+      const mxnet::TShape &gshape = in_shape->at(leakyrelu::kGamma);
       if (gshape.ndim() == 0) {
-        in_shape->at(leakyrelu::kGamma) = TShape(Shape1(dshape[1]));
+        in_shape->at(leakyrelu::kGamma) = mxnet::TShape(Shape1(dshape[1]));
       }
       if (dshape == gshape) {
         SHAPE_ASSIGN_CHECK(*out_shape, 0, dshape);
@@ -450,7 +450,7 @@ class LeakyReLUProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     if (param_.act_type == leakyrelu::kRReLU) {
       return {ResourceRequest::kRandom};
     } else {
@@ -459,7 +459,7 @@ class LeakyReLUProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -468,7 +468,7 @@ class LeakyReLUProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                            std::vector<int> *in_type) const override;
 
  private:

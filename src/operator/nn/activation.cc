@@ -97,9 +97,10 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& inputs,
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
+  const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNNAct(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNNActivationForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
@@ -115,7 +116,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& outputs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), activation::GradNumInputs(param.act_type));
-  if (SupportMKLDNN(inputs[0])) {
+  if (SupportMKLDNNAct(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     // XXX: for y = relu(x), y is passed as "in_data" to Backward()
     const bool relu = param.act_type == activation::kReLU;
@@ -190,7 +191,7 @@ NNVM_REGISTER_OP(_backward_Activation)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<FInferStorageType>("FInferStorageType", BackwardActStorageType)
 #endif
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<-1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<-1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};

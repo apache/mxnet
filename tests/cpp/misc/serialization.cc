@@ -45,13 +45,13 @@ TEST(SerializerTest, InputMapCorrect) {
 }
 
 TEST(SerializerTest, OutputMapCorrect) {
-    std::map<std::string, std::tuple<uint32_t, TShape, int, int> > output_map;
-    output_map.emplace("output_0", std::make_tuple(1, TShape({23, 12, 63, 432}), 0, 1));
-    output_map.emplace("another_output", std::make_tuple(2, TShape({23, 123}), 14, -23));
-    output_map.emplace("last_output", std::make_tuple(0, TShape({0}), -1, 0));
+    std::map<std::string, std::tuple<uint32_t, mxnet::TShape, int, int> > output_map;
+    output_map.emplace("output_0", std::make_tuple(1, mxnet::TShape({23, 12, 63, 432}), 0, 1));
+    output_map.emplace("another_output", std::make_tuple(2, mxnet::TShape({23, 123}), 14, -23));
+    output_map.emplace("last_output", std::make_tuple(0, mxnet::TShape({0}), -1, 0));
     std::string serialized_data;
     common::Serialize(output_map, &serialized_data);
-    std::map<std::string, std::tuple<uint32_t, TShape, int, int> > deserialized_output_map;
+    std::map<std::string, std::tuple<uint32_t, mxnet::TShape, int, int> > deserialized_output_map;
     common::Deserialize(&deserialized_output_map, serialized_data);
     ASSERT_EQ(output_map.size(), deserialized_output_map.size());
     for (auto& p : output_map) {

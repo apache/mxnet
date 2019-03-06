@@ -78,8 +78,8 @@ void EmbeddingOpForwardDnsImpl<cpu>(mshadow::Stream<cpu>* s,
                                     const OpReqType req,
                                     const TBlob& output) {
   using namespace mxnet_op;
-  const TShape& ishape = data.shape_;
-  const TShape& oshape = output.shape_;
+  const mxnet::TShape& ishape = data.shape_;
+  const mxnet::TShape& oshape = output.shape_;
 
   MSHADOW_TYPE_SWITCH(output.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
@@ -284,9 +284,9 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
-  const TShape& idxshape = inputs[take_::kIdx].shape_;
-  const TShape& arrshape = inputs[take_::kArr].shape_;
-  const TShape& oshape = outputs[take_::kOut].shape_;
+  const mxnet::TShape& idxshape = inputs[take_::kIdx].shape_;
+  const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
+  const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
@@ -524,7 +524,7 @@ The storage type of weight can be either row_sparse or default.
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "weight"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape<EmbeddingParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", EmbeddingOpShape<EmbeddingParam>)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<EmbeddingParam>)
 .set_attr<FInferStorageType>("FInferStorageType", EmbeddingOpForwardStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -604,7 +604,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", EmbeddingOpShape<SparseEmbeddingParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", EmbeddingOpShape<SparseEmbeddingParam>)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<SparseEmbeddingParam>)
 .set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
@@ -678,11 +678,14 @@ Examples::
   // In this case we will get rows 0 and 1, then 1 and 2 (calculated by wrapping around).
   // Along axis 1
 
-  take(x, [[0, 3], [-1, -2]], axis=1, mode='wrap') = [[[ 1.,  2.],
-                                                       [ 3.,  4.]],
+  take(x, [[0, 3], [-1, -2]], axis=1, mode='wrap') = [[[ 1.  2.]
+                                                       [ 2.  1.]]
 
-                                                      [[ 3.,  4.],
-                                                       [ 5.,  6.]]]
+                                                      [[ 3.  4.]
+                                                       [ 4.  3.]]
+
+                                                      [[ 5.  6.]
+                                                       [ 6.  5.]]]
 
 The storage type of ``take`` output depends upon the input storage type:
 
@@ -697,7 +700,7 @@ The storage type of ``take`` output depends upon the input storage type:
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", TakeOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", TakeOpShape)
 .set_attr<nnvm::FInferType>("FInferType", TakeOpType)
 .set_attr<FInferStorageType>("FInferStorageType", TakeOpForwardStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -754,7 +757,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchTakeOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BatchTakeOpShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchTakeOpType)
 .set_attr<FCompute>("FCompute<cpu>", BatchTakeOpForward<cpu>)
 .add_argument("a", "NDArray-or-Symbol", "The input array")
@@ -801,7 +804,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", OneHotOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", OneHotOpShape)
 .set_attr<nnvm::FInferType>("FInferType", OneHotOpType)
 .set_attr<FCompute>("FCompute<cpu>", OneHotOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
@@ -841,7 +844,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", GatherNDShape)
+.set_attr<mxnet::FInferShape>("FInferShape", GatherNDShape)
 .set_attr<nnvm::FInferType>("FInferType", GatherNDType)
 .set_attr<FCompute>("FCompute<cpu>", GatherNDForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -916,7 +919,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ScatterNDShape)
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
 .set_attr<FCompute>("FCompute<cpu>", ScatterNDForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -979,7 +982,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ScatterNDShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ScatterNDShape)
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
 .set_attr<FCompute>("FCompute<cpu>", GatherNDBackward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -1026,15 +1029,15 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"lhs", "rhs", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_attrs,
-     std::vector<TShape> *out_attrs) {
+     mxnet::ShapeVector *in_attrs,
+     mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 3U);
     CHECK_EQ(out_attrs->size(), 1U);
     SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-    std::vector<TShape> tmp_in_attrs = {in_attrs->at(1), in_attrs->at(2)};
+    mxnet::ShapeVector tmp_in_attrs = {in_attrs->at(1), in_attrs->at(2)};
     if (!ScatterNDShape(attrs, &tmp_in_attrs, out_attrs)) {
       return false;
     }

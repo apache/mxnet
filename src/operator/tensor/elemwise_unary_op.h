@@ -29,11 +29,15 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <climits>
 #include "./cast_storage-inl.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../elemwise_op_common.h"
 #include "../../ndarray/ndarray_function.h"
+#if MSHADOW_USE_MKL == 1
+#include "mkl.h"
+#endif
 
 namespace mxnet {
 namespace op {
@@ -69,7 +73,7 @@ class OpBase {
                                const NDArray* clone_from = nullptr) {
     if (req != kNullOp) {
       if (clone_from) {
-        const TShape& ishape = clone_from->storage_shape();
+        const mxnet::TShape& ishape = clone_from->storage_shape();
         dest->CheckAndAllocData(ishape);
         CHECK_EQ(dest->storage_type(), clone_from->storage_type());
         for (size_t i = 0, n = clone_from->aux_shapes().size(); i < n; ++i) {
@@ -140,7 +144,7 @@ class OpBase {
                                                           const TBlob& blob) {
     const size_t dim = blob.shape_.ndim();
     if (dim) {
-      TShape shape({blob.shape_[0], 1});
+      mxnet::TShape shape({blob.shape_[0], 1});
       for (size_t i = 1; i < dim; ++i) {
         shape[1] *= blob.shape_[i];
       }
@@ -177,7 +181,7 @@ class UnaryOp : public OpBase {
     CHECK_EQ(outputs.size(), static_cast<size_t>(n_out))
       << " in operator " << attrs.name;
     static_assert(n_in > 0 && n_out > 0, "Invalid input and/or output count values");
-    const TShape& isshape = inputs[0].storage_shape();
+    const mxnet::TShape& isshape = inputs[0].storage_shape();
     if (!shape_is_none(isshape)) {
       NDArray *output = nullptr;
       for (size_t i = 0, n = inputs.size(); i < n; ++i) {
@@ -188,7 +192,7 @@ class UnaryOp : public OpBase {
         CHECK_EQ(output->shape(), inputs[i].shape());
         CHECK_EQ(output->storage_type(), input.storage_type());
         CHECK_EQ(output->aux_shapes().size(), input.aux_shapes().size());
-        std::vector<TShape> aux_shapes;
+        mxnet::ShapeVector aux_shapes;
         const size_t aux_shape_count = input.aux_shapes().size();
         aux_shapes.reserve(aux_shape_count);
         for (size_t j = 0; j < aux_shape_count; ++j) {
@@ -347,6 +351,43 @@ class UnaryOp : public OpBase {
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
+  }
+
+#if MSHADOW_USE_MKL == 1
+  static inline void MKLLog(MKL_INT size, const float* pIn, float* pOut) {
+    vsLn(size, pIn, pOut);
+  }
+
+  static inline void MKLLog(MKL_INT size, const double* pIn, double* pOut) {
+    vdLn(size, pIn, pOut);
+  }
+#endif
+
+  template<typename xpu, typename OP>
+  static void LogCompute(const nnvm::NodeAttrs& attrs,
+                         const OpContext& ctx,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs) {
+    if (req[0] == kNullOp) return;
+    // if defined MSHADOW_USE_MKL then call mkl log when req is KWriteTo, type_flag
+    // is mshadow::kFloat32 or mshadow::kFloat64 and data size less than or equal MKL_INT_MAX
+#if MSHADOW_USE_MKL == 1
+    auto type_flag = inputs[0].type_flag_;
+    const size_t MKL_INT_MAX = (sizeof(MKL_INT) == sizeof(int)) ? INT_MAX : LLONG_MAX;
+    size_t input_size = inputs[0].Size();
+    if (req[0] == kWriteTo &&
+        input_size <= MKL_INT_MAX &&
+        (type_flag == mshadow::kFloat32 || type_flag == mshadow::kFloat64)) {
+      MSHADOW_SGL_DBL_TYPE_SWITCH(type_flag, DType, {
+        MKLLog(input_size, inputs[0].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    } else {
+      Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    }
+#else
+    Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+#endif
   }
 };
 
@@ -513,7 +554,7 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
   NNVM_REGISTER_OP(__name$)                                         \
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \

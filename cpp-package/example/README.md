@@ -1,8 +1,27 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet C++ Package Examples
 
 ## Building C++ examples
 
-The examples are built while building the MXNet library and cpp-package from source . However, they can be built manually as follows
+The examples in this folder demonstrate the **training** workflow. The **inference workflow** related examples can be found in [inference](<https://github.com/apache/incubator-mxnet/blob/master/cpp-package/example/inference>) folder.
+Please build the MXNet C++ Package as explained in the [README](<https://github.com/apache/incubator-mxnet/tree/master/cpp-package#building-c-package>) File before building these examples manually.
+The examples in this folder are built while building the MXNet library and cpp-package from source. However, they can be built manually as follows
 
 From cpp-package/examples directory
 
@@ -18,7 +37,7 @@ The examples that are built to be run on GPU may not work on the non-GPU machine
 The makefile will also download the necessary data files and store in a data folder. (The download will take couple of minutes, but will be done only once on a fresh installation.)
 
 
-## Examples
+## Examples demonstrating training workflow
 
 This directory contains following examples. In order to run the examples, ensure that the path to the MXNet shared library is added to the OS specific environment variable viz. **LD\_LIBRARY\_PATH** for Linux, Mac and Ubuntu OS and **PATH** for Windows OS. For example `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:/home/ubuntu/incubator-mxnet/lib` on ubuntu using gpu.
 

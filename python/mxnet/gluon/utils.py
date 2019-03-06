@@ -222,7 +222,7 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str  # noqa
+    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
 
     def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""

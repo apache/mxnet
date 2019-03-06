@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Building and Updating MXNet Documentation
 
 The website is hosted at http://mxnet.incubator.apache.org/.
@@ -17,8 +34,12 @@ git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet/docs/build_version_doc
 ./setup_docs_ubuntu.sh
 cd ../../
-make docs USE_OPENMP=1
+make docs USE_OPENMP=1 SPHINXOPTS=-W
 ```
+
+OpenMP speeds things up and will work on Ubuntu if you used the `setup_docs_ubuntu.sh` script.
+The `-W` Sphinx option enforces "warnings as errors". This will help you debug your builds and get them through CI.
+**CI will not let a PR through if it breaks the website.** Refer to the [MXNet Developer wiki's documentation guide](https://cwiki.apache.org/confluence/display/MXNET/Documentation+Guide) for troubleshooting tips.
 
 For more information on each API's documentation dependencies, how to serve the docs, or how to build the full website with each legacy MXNet version, refer to the following links:
 

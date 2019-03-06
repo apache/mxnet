@@ -16,7 +16,9 @@
 ;;
 
 (ns cnn-text-classification.classifier
-  (:require [cnn-text-classification.data-helper :as data-helper]
+  (:require [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
+            [cnn-text-classification.data-helper :as data-helper]
             [org.apache.clojure-mxnet.eval-metric :as eval-metric]
             [org.apache.clojure-mxnet.io :as mx-io]
             [org.apache.clojure-mxnet.module :as m]
@@ -26,29 +28,49 @@
             [org.apache.clojure-mxnet.context :as context])
   (:gen-class))
 
+(def data-dir "data/")
 (def mr-dataset-path "data/mr-data") ;; the MR polarity dataset path
-(def glove-file-path "data/glove/glove.6B.50d.txt")
 (def num-filter 100)
 (def num-label 2)
 (def dropout 0.5)
 
-(defn shuffle-data [test-num {:keys [data label sentence-count sentence-size embedding-size]}]
+(when-not (.exists (io/file (str data-dir)))
+  (do (println "Retrieving data for cnn text classification...") (sh "./get_data.sh")))
+
+(defn shuffle-data [test-num {:keys [data label sentence-count sentence-size vocab-size embedding-size pretrained-embedding]}]
   (println "Shuffling the data and splitting into training and test sets")
   (println {:sentence-count sentence-count
             :sentence-size sentence-size
-            :embedding-size embedding-size})
+            :vocab-size vocab-size
+            :embedding-size embedding-size
+            :pretrained-embedding pretrained-embedding})
   (let [shuffled (shuffle (map #(vector %1 %2) data label))
         train-num (- (count shuffled) test-num)
         training (into [] (take train-num shuffled))
-        test (into [] (drop train-num shuffled))]
+        test (into [] (drop train-num shuffled))
+        ;; has to be channel x y
+        train-data-shape (if pretrained-embedding
+                           [train-num 1 sentence-size embedding-size]
+                           [train-num 1 sentence-size])
+        ;; has to be channel x y
+        test-data-shape (if pretrained-embedding
+                           [test-num 1 sentence-size embedding-size]
+                           [test-num 1 sentence-size])]
     {:training {:data  (ndarray/array (into [] (flatten (mapv first training)))
-                                      [train-num 1 sentence-size embedding-size]) ;; has to be channel x y
+                                      train-data-shape)
                 :label (ndarray/array (into [] (flatten (mapv last  training)))
                                       [train-num])}
      :test {:data  (ndarray/array (into [] (flatten (mapv first test)))
-                                  [test-num 1 sentence-size embedding-size]) ;; has to be channel x y
+                                  test-data-shape)
             :label (ndarray/array (into [] (flatten (mapv last  test)))
                                   [test-num])}}))
+
+(defn get-data-symbol [num-embed sentence-size batch-size vocab-size pretrained-embedding]
+  (if pretrained-embedding
+    (sym/variable "data")
+    (as-> (sym/variable "data") data
+      (sym/embedding "vocab_embed" {:data data :input-dim vocab-size :output-dim num-embed})
+      (sym/reshape {:data data :target-shape [batch-size 1 sentence-size num-embed]}))))
 
 (defn make-filter-layers [{:keys [input-x num-embed sentence-size] :as config}
                           filter-size]
@@ -63,9 +85,9 @@
 
 ;;; convnet with multiple filter sizes
 ;; from Convolutional Neural Networks for Sentence Classification by Yoon Kim
-(defn get-multi-filter-convnet [num-embed sentence-size batch-size]
+(defn get-multi-filter-convnet [num-embed sentence-size batch-size vocab-size pretrained-embedding]
   (let [filter-list [3 4 5]
-        input-x (sym/variable "data")
+        input-x (get-data-symbol num-embed sentence-size batch-size vocab-size pretrained-embedding)
         polled-outputs (mapv #(make-filter-layers {:input-x input-x :num-embed num-embed :sentence-size sentence-size} %) filter-list)
         total-filters (* num-filter (count filter-list))
         concat (sym/concat "concat" nil polled-outputs {:dim 1})
@@ -74,10 +96,11 @@
         fc (sym/fully-connected  "fc1" {:data hdrop :num-hidden num-label})]
     (sym/softmax-output "softmax" {:data fc})))
 
-(defn train-convnet [{:keys [devs embedding-size batch-size test-size num-epoch max-examples]}]
-  (let [glove (data-helper/load-glove glove-file-path) ;; you can also use word2vec
-        ms-dataset (data-helper/load-ms-with-embeddings mr-dataset-path embedding-size glove max-examples)
+(defn train-convnet [{:keys [devs embedding-size batch-size test-size
+                             num-epoch max-examples pretrained-embedding]}]
+  (let [ms-dataset (data-helper/load-ms-with-embeddings mr-dataset-path max-examples embedding-size {:pretrained-embedding pretrained-embedding})
         sentence-size (:sentence-size ms-dataset)
+        vocab-size (:vocab-size ms-dataset)
         shuffled (shuffle-data test-size ms-dataset)
         train-data (mx-io/ndarray-iter [(get-in shuffled [:training :data])]
                                        {:label [(get-in shuffled [:training :label])]
@@ -89,7 +112,7 @@
                                        :label-name "softmax_label"
                                        :data-batch-size batch-size
                                        :last-batch-handle "pad"})]
-    (let [mod (m/module (get-multi-filter-convnet embedding-size sentence-size batch-size) {:contexts devs})]
+    (let [mod (m/module (get-multi-filter-convnet embedding-size sentence-size batch-size vocab-size pretrained-embedding) {:contexts devs})]
       (println "Getting ready to train for " num-epoch " epochs")
       (println "===========")
       (m/fit mod {:train-data train-data :eval-data test-data :num-epoch num-epoch
@@ -103,10 +126,10 @@
   ;;; omit max-examples if you want to run all the examples in the movie review dataset
     ;; to limit mem consumption set to something like 1000 and adjust test size to 100
     (println "Running with context devices of" devs)
-    (train-convnet {:devs [(context/cpu)] :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000})
+    (train-convnet {:devs devs :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000 :pretrained-embedding :glove})
     ;; runs all the examples
     #_(train-convnet {:embedding-size 50 :batch-size 100 :test-size 1000 :num-epoch 10})))
 
 (comment
-  (train-convnet {:devs [(context/cpu)] :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000}))
+  (train-convnet {:devs devs :embedding-size 50 :batch-size 10 :test-size 100 :num-epoch 10 :max-examples 1000}))
 

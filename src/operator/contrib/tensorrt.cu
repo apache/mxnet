@@ -52,7 +52,7 @@ void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
   std::vector<void*> bindings;
   bindings.reserve(param.binding_map.size());
   for (auto& p : param.binding_map) {
-    if (p.second == tensorrt::TypeIO::Inputs) {
+    if (p.second == nnvm_to_onnx::TypeIO::Inputs) {
       bindings.emplace_back(inputs[p.first].dptr_);
     } else {
       bindings.emplace_back(outputs[p.first].dptr_);

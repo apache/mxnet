@@ -23,36 +23,25 @@
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [t6/from-scala "0.3.0"]
 
-                 ;; Jars from Nexus
-                 ;[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "1.2.1"]
-                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.2.1"]
-                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "1.2.1"]
+                 ;; To use with nightly snapshot
+                 ;[org.apache.mxnet/mxnet-full_2.11-osx-x86_64-cpu "<insert-snapshot-version>"]
+                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "<insert-snapshot-version>"]
+                 ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "<insert-snapshot-version"]
 
                  ;;; CI
-                 [org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "1.5.0-SNAPSHOT"]
+                 [org.apache.mxnet/mxnet-full_2.11 "INTERNAL"]
 
                  [org.clojure/tools.logging "0.4.0"]
                  [org.apache.logging.log4j/log4j-core "2.8.1"]
                  [org.apache.logging.log4j/log4j-api "2.8.1"]
                  [org.slf4j/slf4j-log4j12 "1.7.25" :exclusions [org.slf4j/slf4j-api]]]
   :pedantic? :skip
-  :plugins [[lein-codox "0.10.3" :exclusions [org.clojure/clojure]]
+  :plugins [[lein-codox "0.10.6" :exclusions [org.clojure/clojure]]
             [lein-cloverage "1.0.10" :exclusions [org.clojure/clojure]]
             [lein-cljfmt "0.5.7"]]
   :codox {:namespaces [#"^org\.apache\.clojure-mxnet\.(?!gen).*"]}
   :aot [dev.generator]
-  :repositories [["staging" {:url "https://repository.apache.org/content/repositories/staging"
-                              ;; If a repository contains releases only setting
-                              ;; :snapshots to false will speed up dependencies.
-                              :snapshots true
-                              ;; Disable signing releases deployed to this repo.
-                              ;; (Not recommended.)
-                              :sign-releases false
-                              ;; You can also set the policies for how to handle
-                              ;; :checksum failures to :fail, :warn, or :ignore.
-                              :checksum :fail
-                              ;; How often should this repository be checked for
-                              ;; snapshot updates? (:daily, :always, or :never)
-                              :update :always
-                              ;; You can also apply them to releases only:
-                              :releases {:checksum :fail :update :always}}]])
+  :repositories [["staging" {:url "https://repository.apache.org/content/repositories/staging"                  :snapshots true
+                             :update :always}]
+                 ["snapshots" {:url "https://repository.apache.org/content/repositories/snapshots"               :snapshots true
+                              :update :always}]])

@@ -139,6 +139,11 @@ struct MXCallbackList {
   void **contexts;
 };
 
+struct LibFeature {
+  const char* name;
+  bool enabled;
+};
+
 enum CustomOpCallbacks {
   kCustomOpDelete,
   kCustomOpForward,
@@ -208,6 +213,15 @@ MXNET_DLL const char *MXGetLastError();
 //-------------------------------------
 // Part 0: Global State setups
 //-------------------------------------
+
+/*!
+ * \brief Get list of features supported on the runtime
+ * \param libFeature pointer to array of LibFeature
+ * \param size of the array
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXLibInfoFeatures(const struct LibFeature **libFeature, size_t *size);
+
 /*!
  * \brief Seed all global random number generators in mxnet.
  * \param seed the random number seed.
@@ -464,6 +478,7 @@ MXNET_DLL int MXGetGPUMemoryInformation64(int dev, uint64_t *free_mem, uint64_t 
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXGetVersion(int *out);
+
 
 //-------------------------------------
 // Part 1: NDArray creation and deletion
@@ -1548,6 +1563,38 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
                                 int *complete);
 
 /*!
+ * \brief partially infer type of unknown input types given the known one.
+ *
+ *  Return partially inferred results if not all types could be inferred.
+ *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
+ *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_type_data the content of the CSR
+ * \param in_type_size sizeof the returning array of in_types
+ * \param in_type_data returning array of pointers to head of the input type.
+ * \param out_type_size sizeof the returning array of out_types
+ * \param out_type_data returning array of pointers to head of the input type.
+ * \param aux_type_size sizeof the returning array of aux_types
+ * \param aux_type_data returning array of pointers to head of the auxiliary type.
+ * \param complete whether infer type completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
+                                       mx_uint num_args,
+                                       const char** keys,
+                                       const int *arg_type_data,
+                                       mx_uint *in_type_size,
+                                       const int **in_type_data,
+                                       mx_uint *out_type_size,
+                                       const int **out_type_data,
+                                       mx_uint *aux_type_size,
+                                       const int **aux_type_data,
+                                       int *complete);
+
+/*!
  * \brief Convert a symbol into a quantized symbol where FP32 operators are replaced with INT8
  * \param sym_handle symbol to be converted
  * \param ret_sym_handle quantized symbol result
@@ -1555,8 +1602,8 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  * \param excluded_symbols op names to be excluded from being quantized
  * \param num_offline number of parameters that are quantized offline
  * \param offline_params array of c strings representing the names of params quantized offline
- * \param quantized_dtype the quantized destination type for input data.
- * \param calib_quantize whether calibrate quantize op with offline calibration data.
+ * \param quantized_dtype the quantized destination type for input data
+ * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could
  */
 MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_handle,
                                const mx_uint num_excluded_symbols,
@@ -1837,6 +1884,14 @@ MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
 MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
                                            ExecutorMonitorCallback callback,
                                            void* callback_handle);
+
+/*!
+ * \brief set a call back to notify the completion of operation
+ * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
+ */
+MXNET_DLL int MXExecutorSetMonitorCallbackEX(ExecutorHandle handle,
+                                             ExecutorMonitorCallback callback,
+                                             void *callback_handle, bool monitor_all);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------
