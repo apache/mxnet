@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Gluon Estimator data utilities"""
+"""Gluon Estimator data utilities
+Example modified from below link:
+https://github.com/d2l-ai/d2l-en/blob/master/chapter_natural-language-processing/sentiment-analysis-rnn.md"""
 
 import collections
 from mxnet import nd

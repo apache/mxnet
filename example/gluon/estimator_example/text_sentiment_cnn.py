@@ -16,7 +16,7 @@
 # under the License.
 
 """Gluon Text Sentiment Classification Example using CNN
-Example modified from below link:
+Example modified from below link to demostrate using fit() API:
 https://github.com/d2l-ai/d2l-en/blob/master/chapter_natural-language-processing/sentiment-analysis-cnn.md"""
 
 import argparse
