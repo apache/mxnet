@@ -346,6 +346,7 @@ class Tuple {
   ValueType* data_heap_{nullptr};
   // internal function to change the dimension
   inline void SetDim(int ndim) {
+    CHECK_GE(ndim, -1) << "ndim cannot be less than -1, received " << ndim;
     if (ndim > kStackCache &&
         ndim > num_heap_allocated_) {
       delete [] data_heap_;
