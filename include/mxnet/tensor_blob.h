@@ -198,7 +198,6 @@ class TBlob {
       << "Expected: " << type_flag_ << " v.s. given " << mshadow::DataType<DType>::kFlag;
     return mshadow::Tensor<Device, 2, DType>(static_cast<DType*>(dptr_),
                                              shape_.FlatTo2D(),
-                                             shape_[shape_.ndim() - 1],
                                              stream);
   }
   /*!
