@@ -153,7 +153,8 @@ class CachedOp {
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      bool use_naive_run = false);
   void DynamicBackward(
       const bool retain_graph,
       const OpStatePtr& op_state,
@@ -185,6 +186,10 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  bool CheckDynamicShapeExists(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      bool erase_result);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;
