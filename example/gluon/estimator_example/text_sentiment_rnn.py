@@ -65,8 +65,6 @@ if __name__ == '__main__':
                         help='number of epochs to train (default: 5)')
     parser.add_argument('--lr', type=float, default=0.01,
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--momentum', type=float, default=0.9,
-                        help='SGD momentum (default: 0.9)')
     parser.add_argument('--use-gpu', action='store_true', default=False,
                         help='whether to use GPU (default: False)')
     opt = parser.parse_args()
