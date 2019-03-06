@@ -97,8 +97,6 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mshadow/mshadow'
                 os.path.join(CURRENT_DIR, 'mxnet/include/mshadow'))
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include/nnvm'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
-                os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 
 package_name = 'mxnet'
 
@@ -157,6 +155,8 @@ if variant.endswith('MKL'):
         package_data['mxnet'].append('mxnet/libiomp5.so')
         package_data['mxnet'].append('mxnet/libmkldnn.so.0')
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), '../MKLML_LICENSE'), os.path.join(CURRENT_DIR, 'mxnet'))
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
+                    os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
     package_data['mxnet'].append('mxnet/MKLML_LICENSE')
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
