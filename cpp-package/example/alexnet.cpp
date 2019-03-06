@@ -308,7 +308,9 @@ int main(int argc, char const *argv[]) {
       logloss_train.Reset();
       logloss_train.Update(batch.label, exec->outputs[0]);
       ++iter;
-      LG << "EPOCH: " << epoch << " ITER: " << iter << " Train Accuracy: " << acu_train.Get() << " Train Loss: " << logloss_train.Get();
+      LG << "EPOCH: " << epoch << " ITER: " << iter
+         << " Train Accuracy: " << acu_train.Get()
+         << " Train Loss: " << logloss_train.Get();
     }
     LG << "EPOCH: " << epoch << " Train Accuracy: " << acu_train.Get();
 
