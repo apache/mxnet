@@ -281,7 +281,7 @@ void ThreadedEngine::DeleteOperator(OprHandle op) {
   this->PushAsync([threaded_opr](RunContext, CallbackOnComplete on_complete) {
       ThreadedOpr::Delete(threaded_opr);
       on_complete();
-    }, Context::CPU(), {}, deps, FnProperty::kAsync, 0,
+    }, Context::CPU(), {}, deps, FnProperty::kDeleteVar, 0,
     "DeleteOperator");
 }
 

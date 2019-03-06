@@ -349,7 +349,7 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeFirstItemEx<cpu>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
@@ -392,8 +392,8 @@ void ReshapeLikeRangeCanonicalize(int ndims, const char *side,
   CHECK(*cbegin >= 0) << "Invalid begin for " << side << "_begin=" << begin;
 }
 
-void GetReshapeLikeParams(const ReshapeLikeParam &param, const TShape &lshape,
-                          const TShape &rshape, int *lhs_begin, int *lhs_end,
+void GetReshapeLikeParams(const ReshapeLikeParam &param, const mxnet::TShape &lshape,
+                          const mxnet::TShape &rshape, int *lhs_begin, int *lhs_end,
                           int *rhs_begin, int *rhs_end) {
   // LHS params
   ReshapeLikeRangeCanonicalize(lshape.ndim(), "lhs", param.lhs_begin,
@@ -404,18 +404,18 @@ void GetReshapeLikeParams(const ReshapeLikeParam &param, const TShape &lshape,
 }
 
 bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
-                             std::vector<TShape> *in_attrs,
-                             std::vector<TShape> *out_attrs) {
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
   const ReshapeLikeParam &param = nnvm::get<ReshapeLikeParam>(attrs.parsed);
-  const TShape &lshape = (*in_attrs)[0];
-  const TShape &rshape = (*in_attrs)[1];
+  const mxnet::TShape &lshape = (*in_attrs)[0];
+  const mxnet::TShape &rshape = (*in_attrs)[1];
   int lhs_begin, lhs_end, rhs_begin, rhs_end;
   GetReshapeLikeParams(param, lshape, rshape, &lhs_begin, &lhs_end, &rhs_begin,
                        &rhs_end);
 
   int lhsrank = static_cast<int>(lshape.ndim());
   int orank = lhsrank + (rhs_end - rhs_begin) - (lhs_end - lhs_begin);
-  TShape oshape(orank);
+  mxnet::TShape oshape(orank);
 
   for (int i = 0; i < lhs_begin; ++i)
     oshape[i] = lshape[i];
@@ -480,8 +480,17 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
     [](const NodeAttrs& attrs) { return std::vector<uint32_t>(1, 1); })
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
-.set_attr<nnvm::FInferShape>("FInferShape", ReshapeLikeShapeCompute)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ReshapeLikeShapeCompute)
+.set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
+    CHECK_EQ(in_attrs->size(), 2) << " in operator " << attrs.name;
+    std::vector<int> checked_in_attrs = { (*in_attrs)[0] };
+    bool ret = !type_is_none((*in_attrs)[1]) &&
+               ElemwiseType<1, 1>(attrs, &checked_in_attrs, out_attrs);
+    (*in_attrs)[0] = checked_in_attrs[0];
+    return ret;
+  })
 .set_attr<nnvm::FGradient>(
     "FGradient",  [](const nnvm::NodePtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
@@ -522,13 +531,13 @@ Example::
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", ShapeComputeCPU)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_attrs,
-     std::vector<TShape> *out_attrs) {
+     mxnet::ShapeVector *in_attrs,
+     mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
-    TShape target_shape(1);
+    mxnet::TShape target_shape(1);
     target_shape[0] = in_attrs->at(0).ndim();
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, target_shape);
     return !shape_is_none(out_attrs->at(0));
@@ -574,10 +583,10 @@ Example::
 .set_num_outputs(1)
 .set_attr<FCompute>("FCompute<cpu>", SizeComputeCPU)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.set_attr<nnvm::FInferShape>("FInferShape",
+.set_attr<mxnet::FInferShape>("FInferShape",
   [](const nnvm::NodeAttrs& attrs,
-     std::vector<TShape> *in_attrs,
-     std::vector<TShape> *out_attrs) {
+     mxnet::ShapeVector *in_attrs,
+     mxnet::ShapeVector *out_attrs) {
     CHECK_EQ(in_attrs->size(), 1U);
     CHECK_EQ(out_attrs->size(), 1U);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, 1U);
@@ -609,7 +618,7 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CastParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", CastType)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){

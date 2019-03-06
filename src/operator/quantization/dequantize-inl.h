@@ -93,13 +93,13 @@ void DequantizeCompute(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool DequantizeShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   for (size_t i = 1; i < 3; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_attrs, i, TShape({1}));
+    SHAPE_ASSIGN_CHECK(*in_attrs, i, mxnet::TShape({1}));
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));

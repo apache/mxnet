@@ -40,7 +40,7 @@ Operator *CreateOp<cpu>(SequenceLastParam param, int dtype, int itype) {
 
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
-                                             std::vector<TShape> *in_shape,
+                                             mxnet::ShapeVector *in_shape,
                                              std::vector<int> *in_type) const {
   if (in_type->size() >= 2 && (*in_type)[1] != -1) {
     DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);

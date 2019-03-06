@@ -301,9 +301,9 @@ The `OperatorProperty` interface consists of:
 * **InferShape:**
 
 ```c++
-           virtual bool InferShape(std::vector<TShape> *in_shape,
-                                   std::vector<TShape> *out_shape,
-                                   std::vector<TShape> *aux_shape) const = 0;
+           virtual bool InferShape(mxnet::ShapeVector *in_shape,
+                                   mxnet::ShapeVector *out_shape,
+                                   mxnet::ShapeVector *aux_shape) const = 0;
 ```
 
 This interface has two purposes:
@@ -322,9 +322,9 @@ MXNet defines two interfaces to achieve this:
 
 ```c++
            virtual std::vector<ResourceRequest> ForwardResource(
-               const std::vector<TShape> &in_shape) const;
+               const mxnet::ShapeVector &in_shape) const;
            virtual std::vector<ResourceRequest> BackwardResource(
-               const std::vector<TShape> &in_shape) const;
+               const mxnet::ShapeVector &in_shape) const;
 ```
   The `ResourceRequest` structure (in `resource.h`) currently contains only a type flag:
 
@@ -473,7 +473,7 @@ To do so, you could define a `ConvolutionParam` structure, as follows:
 ```c++
     #include <dmlc/parameter.h>
     struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
-      TShape kernel, stride, pad;
+      mxnet::TShape kernel, stride, pad;
       uint32_t num_filter, num_group, workspace;
       bool no_bias;
     };
@@ -582,10 +582,10 @@ must be provided before any calculation occurs.
 let's check input data shape consistency and provide output shape.
 
 ```cpp
-    typedef TShape (*UnaryShapeFunction)(const TShape& src,
+    typedef mxnet::TShape (*UnaryShapeFunction)(const mxnet::TShape& src,
                                          const EnvArguments& env);
-    typedef TShape (*BinaryShapeFunction)(const TShape& lhs,
-                                          const TShape& rhs,
+    typedef mxnet::TShape (*BinaryShapeFunction)(const mxnet::TShape& lhs,
+                                          const mxnet::TShape& rhs,
                                           const EnvArguments& env);
 ```
 You can use `mshadow::TShape` to check input data shape and designate output data shape.
@@ -611,9 +611,9 @@ In our smooth l1 loss example, it's okay to use the default behavior whereby the
 Written explicitly, it is:
 
 ```cpp
-    inline TShape SmoothL1Shape_(const TShape& src,
+    inline mxnet::TShape SmoothL1Shape_(const mxnet::TShape& src,
                                  const EnvArguments& env) {
-      return TShape(src);
+      return mxnet::TShape(src);
     }
 ```
 

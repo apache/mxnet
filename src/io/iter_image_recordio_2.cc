@@ -278,12 +278,12 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     for (index_t dim = 0; dim < param_.data_shape.ndim(); ++dim) {
       shape_vec.push_back(param_.data_shape[dim]);
     }
-    TShape data_shape(shape_vec.begin(), shape_vec.end());
+    mxnet::TShape data_shape(shape_vec.begin(), shape_vec.end());
 
     shape_vec.clear();
     shape_vec.push_back(batch_param_.batch_size);
     shape_vec.push_back(param_.label_width);
-    TShape label_shape(shape_vec.begin(), shape_vec.end());
+    mxnet::TShape label_shape(shape_vec.begin(), shape_vec.end());
 
     auto ctx = Context::CPU(0);
     auto dev_id = param_.device_id;
@@ -372,6 +372,7 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
   float RGBA_MULT[4] = { 0 };
   float RGBA_BIAS[4] = { 0 };
   float RGBA_MEAN[4] = { 0 };
+  int16_t RGBA_MEAN_INT[4] = {0};
   mshadow::Tensor<cpu, 3, DType>& data = (*data_ptr);
   if (!std::is_same<DType, uint8_t>::value) {
     RGBA_MULT[0] = contrast_scaled / normalize_param_.std_r;
@@ -387,6 +388,10 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
       RGBA_MEAN[1] = normalize_param_.mean_g;
       RGBA_MEAN[2] = normalize_param_.mean_b;
       RGBA_MEAN[3] = normalize_param_.mean_a;
+      RGBA_MEAN_INT[0] = std::round(normalize_param_.mean_r);
+      RGBA_MEAN_INT[1] = std::round(normalize_param_.mean_g);
+      RGBA_MEAN_INT[2] = std::round(normalize_param_.mean_b);
+      RGBA_MEAN_INT[3] = std::round(normalize_param_.mean_a);
     }
   }
 
@@ -408,17 +413,30 @@ void ImageRecordIOParser2<DType>::ProcessImage(const cv::Mat& res,
   for (int i = 0; i < res.rows; ++i) {
     const uchar* im_data = res.ptr<uchar>(i);
     for (int j = 0; j < res.cols; ++j) {
-      for (int k = 0; k < n_channels; ++k) {
-        RGBA[k] = im_data[swap_indices[k]];
-      }
-      if (!std::is_same<DType, uint8_t>::value) {
-        // normalize/mirror here to avoid memory copies
-        // logic from iter_normalize.h, function SetOutImg
+      if (std::is_same<DType, int8_t>::value) {
+        if (meanfile_ready_) {
+          for (int k = 0; k < n_channels; ++k) {
+            RGBA[k] = cv::saturate_cast<int8_t>(im_data[swap_indices[k]] -
+                                    static_cast<int16_t>(std::round(meanimg_[k][i][j])));
+          }
+        } else {
+          for (int k = 0; k < n_channels; ++k) {
+            RGBA[k] = cv::saturate_cast<int8_t>(im_data[swap_indices[k]] - RGBA_MEAN_INT[k]);
+          }
+        }
+      } else {
         for (int k = 0; k < n_channels; ++k) {
-          if (meanfile_ready_) {
-            RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
-          } else {
-            RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
+          RGBA[k] = im_data[swap_indices[k]];
+        }
+        if (!std::is_same<DType, uint8_t>::value) {
+          // normalize/mirror here to avoid memory copies
+          // logic from iter_normalize.h, function SetOutImg
+          for (int k = 0; k < n_channels; ++k) {
+            if (meanfile_ready_) {
+              RGBA[k] = (RGBA[k] - meanimg_[k][i][j]) * RGBA_MULT[k] + RGBA_BIAS[k];
+            } else {
+              RGBA[k] = (RGBA[k] - RGBA_MEAN[k]) * RGBA_MULT[k] + RGBA_BIAS[k];
+            }
           }
         }
       }
@@ -795,5 +813,22 @@ the data type instead of ``float``.
 .set_body([]() {
     return new ImageRecordIter2<uint8_t>();
   });
+
+MXNET_REGISTER_IO_ITER(ImageRecordInt8Iter)
+.describe(R"code(Iterating on image RecordIO files
+
+This iterator is identical to ``ImageRecordIter`` except for using ``int8`` as
+the data type instead of ``float``.
+
+)code" ADD_FILELINE)
+.add_arguments(ImageRecParserParam::__FIELDS__())
+.add_arguments(ImageRecordParam::__FIELDS__())
+.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.add_arguments(ListDefaultAugParams())
+.set_body([]() {
+    return new ImageRecordIter2<int8_t>();
+  });
+
 }  // namespace io
 }  // namespace mxnet
