@@ -43,7 +43,7 @@ class _BlockScope(object):
         self._block = block
         self._counter = {}
         self._old_scope = None
-        self._name_scope = None
+        self._name_scope = threading.local()
 
     @staticmethod
     def create(prefix, params, hint):
@@ -76,15 +76,15 @@ class _BlockScope(object):
             return self
         self._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._name_scope = _name.Prefix(self._block.prefix)
-        self._name_scope.__enter__()
+        self._name_scope.value = _name.Prefix(self._block.prefix)
+        self._name_scope.value.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
         if self._block._empty_prefix:
             return
-        self._name_scope.__exit__(ptype, value, trace)
-        self._name_scope = None
+        self._name_scope.value.__exit__(ptype, value, trace)
+        self._name_scope.value = None
         _BlockScope._current.value = self._old_scope
 
 
