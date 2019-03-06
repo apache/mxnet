@@ -153,7 +153,6 @@ ifeq ($(USE_OPENCV), 1)
 $(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_PATH`, when `USE_OPENCV_INC_PATH` is not NONE)
 		endif
 		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
-		LDFLAGS += -lopencv_core -lopencv_imgproc
 		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_imgcodecs.*),)
 			LDFLAGS += -lopencv_imgcodecs
 		endif
@@ -168,9 +167,9 @@ $(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_P
 		endif
 		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
 		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
-		LDFLAGS += -lopencv_core -lopencv_imgproc
 		LDFLAGS += $(filter -lopencv_imgcodecs -lopencv_highgui, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
 	endif
+	LDFLAGS += -lopencv_imgproc -lopencv_core
 	BIN += bin/im2rec
 else
 	CFLAGS += -DMXNET_USE_OPENCV=0
