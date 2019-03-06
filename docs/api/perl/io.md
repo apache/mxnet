@@ -69,6 +69,7 @@ Then we can call `$mod->fit($nd_iter, num_epoch=>2)` to train `loss` by 2 epochs
 mx->io->NDArrayIter
 mx->io->CSVIter
 mx->io->ImageRecordIter
+mx->io->ImageRecordInt8Iter
 mx->io->ImageRecordUInt8Iter
 mx->io->MNISTIter
 mx->recordio->MXRecordIO

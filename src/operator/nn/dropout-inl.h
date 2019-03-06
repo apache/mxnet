@@ -77,7 +77,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .describe("Whether to only turn on dropout during training or to also turn on for inference.");
     DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
     .describe("Axes for variational dropout kernel.");
-    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(true))
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(false))
     .describe("Whether to turn off cudnn in dropout operator. "
               "This option is ignored if axes is specified.");
   }

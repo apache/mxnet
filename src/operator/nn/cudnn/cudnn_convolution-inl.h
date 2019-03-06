@@ -762,7 +762,7 @@ class CuDNNConvolutionOp {
       i = 0;
       while (i < nalgo
              && (fwd_algo[i].status != CUDNN_STATUS_SUCCESS
-                 || (param_.cudnn_tune.value() == conv::kLimited
+                 || (param_.cudnn_tune.value() != conv::kFastest
                      && fwd_algo[i].memory > workspace_byte))) {
         ++i;
         min_memory_needs =
@@ -799,7 +799,7 @@ class CuDNNConvolutionOp {
       i = 0;
       while (i < nalgo
              && (bwd_filter_algo[i].status != CUDNN_STATUS_SUCCESS
-                 || (param_.cudnn_tune.value() == conv::kLimited
+                 || (param_.cudnn_tune.value() != conv::kFastest
                      && bwd_filter_algo[i].memory > workspace_byte))) {
         ++i;
         min_memory_needs = (i == 0) ?
@@ -837,7 +837,7 @@ class CuDNNConvolutionOp {
       i = 0;
       while (i < nalgo
              && (bwd_data_algo[i].status != CUDNN_STATUS_SUCCESS
-                 || (param_.cudnn_tune.value() == conv::kLimited
+                 || (param_.cudnn_tune.value() != conv::kFastest
                      && bwd_data_algo[i].memory > workspace_byte))) {
         ++i;
         min_memory_needs = (i == 0) ?
@@ -938,7 +938,7 @@ class CuDNNConvolutionOp {
         #if CUDNN_MAJOR >= 7
           (!enforce_determinism || result.determinism == cudnnDeterminism_t::CUDNN_DETERMINISTIC) &&
         #endif
-          (param_.cudnn_tune.value() != conv::kLimited || result.memory <= workspace_byte) &&
+          (param_.cudnn_tune.value() == conv::kLimited || result.memory <= workspace_byte) &&
           !algo_exclusion) {
         algo->Set(result.algo, algo_is_tensor_core);
         return;

@@ -66,15 +66,37 @@ def check_qsym_dummy_forward(qsym, batch, data_shape, label_shape):
     output.wait_to_read()
   return mod.get_outputs()
 
-def check_quantize(sym, data_shape, out_type, check_conv=True):
+def check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape):
+  # save qsym to JSON file
+  qsym.save('quantized-symbol.json')
+  # save params
+  save_dict = {('arg:%s' % k): v.as_in_context(mx.current_context()) for k, v in qarg_params.items()}
+  save_dict.update({('aux:%s' % k): v.as_in_context(mx.current_context()) for k, v in qaux_params.items()})
+  mx.nd.save('quantized-0000.params', save_dict)
+  # load back with SymbolBlock
+  net = mx.gluon.SymbolBlock.imports('quantized-symbol.json', ['data'], 'quantized-0000.params')
+  net.collect_params().reset_ctx(ctx = mx.current_context())
+  net.hybridize()
+
+  data = mx.random.uniform(-1.0, 1.0, shape=data_shape)
+  net(data)
+
+def check_quantize(sym, data_shape, out_type, check_conv=True, gluon_forward=False):
   fc = mx.sym.FullyConnected(data=sym, num_hidden=10, flatten=True, name='fc')
-  sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
-  sym_sg = sym.get_backend_symbol("MKLDNN")
-  label_shape = (data_shape[0], 10)
-  mod = Module(symbol=sym)
-  mod.bind(for_training=False,
-           data_shapes=[('data', data_shape)],
-           label_shapes=[('softmax_label', label_shape)])
+  if gluon_forward == True:
+    sym = fc
+    sym_sg = fc.get_backend_symbol("MKLDNN")
+    mod = Module(symbol=sym, label_names=[])
+    mod.bind(for_training=False,
+            data_shapes=[('data', data_shape)])
+  else:
+    sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
+    sym_sg = sym.get_backend_symbol("MKLDNN")
+    label_shape = (data_shape[0], 10)
+    mod = Module(symbol=sym)
+    mod.bind(for_training=False,
+            data_shapes=[('data', data_shape)],
+            label_shapes=[('softmax_label', label_shape)])
   mod.init_params(mx.init.Normal(0.5))
   arg_params, aux_params = mod.get_params()
 
@@ -107,10 +129,13 @@ def check_quantize(sym, data_shape, out_type, check_conv=True):
   qsym = qsym.get_backend_symbol("MKLDNN_POST_QUANTIZE")
   if check_conv:
     check_qsym_calibrated(qsym, out_type)
-  quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
-  for i in range(len(ref_out)):
-    assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
-  check_qsym_dummy_forward(qsym, batch, data_shape, label_shape)
+  if gluon_forward == True:
+    check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape)
+  else:
+    check_qsym_dummy_forward(qsym, batch, data_shape, label_shape)
+    quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape, label_shape)
+    for i in range(len(ref_out)):
+      assert_almost_equal(ref_out[i].asnumpy(), quantized_out[i].asnumpy(), atol = 1)
 
 
 @with_seed()
@@ -137,6 +162,7 @@ def check_fusion(sym, data_shape, attrs_op):
   # fp32 to int8
   for out_type in ('uint8', 'int8', 'auto'):
     check_quantize(sym, data_shape, out_type)
+    check_quantize(sym, data_shape, out_type, gluon_forward=True)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None, date_shape=(4,4,10,10)):
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
@@ -478,10 +504,13 @@ def test_pos_single_concat():
     for out_type in ('uint8', 'int8', 'auto'):
       net = single_concat(data_shape, 2, 1)
       check_quantize(net, data_shape, out_type, False)
+      check_quantize(net, data_shape, out_type, False, True)
       net = single_concat(data_shape, 4, 2)
       check_quantize(net, data_shape, out_type, False)
+      check_quantize(net, data_shape, out_type, False, True)
       net = single_concat(data_shape, 4, 3)
       check_quantize(net, data_shape, out_type, False)
+      check_quantize(net, data_shape, out_type, False, True)
 
 @with_seed()
 def test_neg_conv_bn():
