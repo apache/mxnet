@@ -111,6 +111,7 @@ def test_conv_fill_shape():
     check_rnn_forward(cell, mx.nd.ones((8, 3, 5, 7)))
     assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
 
+
 @with_seed()
 def test_lstmp():
     nhid = 100
