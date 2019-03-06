@@ -108,6 +108,16 @@ inline bool shape_is_none(const mxnet::TShape& x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
 
+/*! brief check if shape is known using the NumPy compatible definition.
+ * zero-dim and zero-size tensors are valid. -1 means unknown.*/
+inline bool shape_is_known(const TShape& x) {
+  if (x.ndim() == -1) return false;
+  for (int i = 0; i < x.ndim(); ++i) {
+    if (x[i] == -1) return false;
+  }
+  return true;
+}
+
 /*! \brief check if type is none (-1) */
 inline bool type_is_none(const int& x) {
   return x == -1;
@@ -159,16 +169,16 @@ inline std::string type_string(const int& x) {
  * \return whether x and y are compatible.
  */
 inline bool shape_assign(mxnet::TShape *y, const mxnet::TShape& x) {
-  if (y->ndim() == 0) {
+  if (y->ndim() == -1) {
     *y = x;
     return true;
   } else if (y->ndim() != x.ndim()) {
-    return x.ndim() == 0;
+    return x.ndim() == -1;
   } else {
-    for (size_t i = 0; i < y->ndim(); ++i) {
-      if ((*y)[i] == 0) {
+    for (int i = 0; i < y->ndim(); ++i) {
+      if ((*y)[i] == -1) {
         (*y)[i] = x[i];
-      } else if ((*y)[i] != x[i] && x[i] != 0) {
+      } else if ((*y)[i] != x[i] && x[i] >= 0) {
         return false;
       }
     }

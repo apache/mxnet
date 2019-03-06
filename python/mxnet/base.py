@@ -26,7 +26,7 @@ import os
 import sys
 import inspect
 import platform
-import numpy as np
+import numpy as _np
 
 from . import libinfo
 
@@ -44,8 +44,8 @@ except NameError:
     long = int
 # pylint: enable=pointless-statement
 
-integer_types = (int, long, np.int32, np.int64)
-numeric_types = (float, int, long, np.generic)
+integer_types = (int, long, _np.int32, _np.int64)
+numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 
 if sys.version_info[0] > 2:
@@ -216,7 +216,7 @@ _LIB = _load_lib()
 mx_uint = ctypes.c_uint
 mx_float = ctypes.c_float
 mx_float_p = ctypes.POINTER(mx_float)
-mx_real_t = np.float32
+mx_real_t = _np.float32
 NDArrayHandle = ctypes.c_void_p
 FunctionHandle = ctypes.c_void_p
 OpHandle = ctypes.c_void_p
@@ -455,7 +455,7 @@ def ctypes2numpy_shared(cptr, shape):
     for s in shape:
         size *= s
     dbuffer = (mx_float * size).from_address(ctypes.addressof(cptr.contents))
-    return np.frombuffer(dbuffer, dtype=np.float32).reshape(shape)
+    return _np.frombuffer(dbuffer, dtype=_np.float32).reshape(shape)
 
 
 def build_param_doc(arg_names, arg_types, arg_descs, remove_dup=True):
@@ -560,7 +560,7 @@ def _as_list(obj):
         return [obj]
 
 
-_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_']
+_OP_NAME_PREFIX_LIST = ['_contrib_', '_linalg_', '_sparse_', '_image_', '_random_', '_numpy_']
 
 
 def _get_op_name_prefix(op_name):
@@ -606,6 +606,13 @@ def _init_op_module(root_namespace, module_name, make_op_func):
     # use mx.nd.contrib or mx.sym.contrib from now on
     contrib_module_name_old = "%s.contrib.%s" % (root_namespace, module_name)
     contrib_module_old = sys.modules[contrib_module_name_old]
+    # special handling of registering numpy ops
+    if module_name == 'ndarray':
+        numpy_module_name = "%s.numpy" % root_namespace
+        numpy_module = sys.modules[numpy_module_name]
+    else:
+        numpy_module_name = None
+        numpy_module = None
     submodule_dict = {}
     for op_name_prefix in _OP_NAME_PREFIX_LIST:
         submodule_dict[op_name_prefix] =\
@@ -644,6 +651,16 @@ def _init_op_module(root_namespace, module_name, make_op_func):
             function.__module__ = contrib_module_name_old
             setattr(contrib_module_old, function.__name__, function)
             contrib_module_old.__all__.append(function.__name__)
+        elif op_name_prefix == '_numpy_' and numpy_module_name is not None:
+            # only register numpy ops under mxnet.numpy in imperative mode
+            hdl = OpHandle()
+            check_call(_LIB.NNGetOpHandle(c_str(name), ctypes.byref(hdl)))
+            # TODO(reminisce): Didn't consider third level module here, e.g. mxnet.numpy.random.
+            func_name = name[len(op_name_prefix):]
+            function = make_op_func(hdl, name, func_name)
+            function.__module__ = numpy_module_name
+            setattr(numpy_module, function.__name__, function)
+            numpy_module.__all__.append(function.__name__)
 
 
 def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func):
