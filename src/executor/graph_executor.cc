@@ -1509,6 +1509,23 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    const std::vector<Context>& aux_state_ctxes,
                                    const std::vector<OpReqType>& grad_req_types) {
   auto subgraph_prop = op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
+  bool need_grad = false;
+  for (OpReqType req : grad_req_types) {
+    if (req != kNullOp) {
+      need_grad = true;
+      break;
+    }
+  }
+  if (subgraph_prop->HasAttr("inference_only") &&
+      subgraph_prop->GetAttr<bool>("inference_only") == true) {
+    if (need_grad) {
+      auto full_name = subgraph_prop->HasAttr("prop_name")
+                            ? subgraph_prop->GetAttr<std::string>("prop_name")
+                            : prop_name;
+      LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
+      return src;
+    }
+  }
   nnvm::Symbol ret = src.Copy();
   nnvm::Graph g;
   g.outputs = ret.outputs;
@@ -1562,8 +1579,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
     }
   }
   return PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
-                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes,
-                        grad_req_types);
+                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, grad_req_types);
 }
 
 // Given input ndarrays, partition the graph using the backend name equal to prop_name.

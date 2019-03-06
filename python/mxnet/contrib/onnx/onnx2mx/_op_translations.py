@@ -65,19 +65,47 @@ def sample_multinomial(attrs, inputs, proto_obj):
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
-    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_add')
+    new_attr = {}
+
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_add', inputs,
+                                                    broadcast_axis, proto_obj)
+        return op_value, new_attr, inputs
+    return 'broadcast_add', new_attr, inputs
 
 def subtract(attrs, inputs, proto_obj):
     """Subtracting two tensors"""
-    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_sub')
+    new_attr = {}
+
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_sub', inputs,
+                                                    broadcast_axis, proto_obj)
+        return op_value, new_attr, inputs
+    return 'broadcast_sub', new_attr, inputs
 
 def multiply(attrs, inputs, proto_obj):
     """Multiply two tensors"""
-    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_mul')
+    new_attr = {}
+
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
+                                                    broadcast_axis, proto_obj)
+        return op_value, new_attr, inputs
+    return 'broadcast_mul', new_attr, inputs
 
 def divide(attrs, inputs, proto_obj):
     """Divide two tensors"""
-    return translation_utils.broadcast_arithmetic_helper(attrs, inputs, proto_obj, 'broadcast_div')
+    new_attr = {}
+
+    if 'broadcast' in attrs and attrs['broadcast'] == 1:
+        broadcast_axis = attrs['axis']
+        op_value = translation_utils._fix_broadcast('broadcast_div', inputs,
+                                                    broadcast_axis, proto_obj)
+        return op_value, new_attr, inputs
+    return 'broadcast_div', new_attr, inputs
 
 def mean(attrs, inputs, proto_obj):
     """Mean of all the input tensors."""

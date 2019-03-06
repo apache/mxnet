@@ -426,11 +426,6 @@ class SoftmaxOutputProp : public OperatorProperty {
     return {{in_data[softmaxout_enum::kData], out_data[softmaxout_enum::kOut]}};
   }
 
-  std::vector<ResourceRequest> BackwardResource(
-      const mxnet::ShapeVector &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
     return NULL;
