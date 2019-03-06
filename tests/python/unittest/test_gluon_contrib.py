@@ -26,6 +26,7 @@ from mxnet.gluon.contrib.nn import (
     PixelShuffle2D, PixelShuffle3D)
 from mxnet.test_utils import almost_equal, default_context, assert_almost_equal
 from common import setup_module, with_seed, teardown
+import numpy as np
 
 
 def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
