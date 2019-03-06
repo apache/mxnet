@@ -70,15 +70,18 @@ inline void InvokeOperator(const nnvm::IndexedGraph& idx,
                            const bool retain_graph,
                            const std::vector<NDArray*> arrays,
                            Context ctx,
-                           std::vector<OpStatePtr>& states,
+                           std::vector<OpStatePtr>* p_states,
                            std::vector<NDArray*> ndinputs,
                            std::vector<NDArray*> ndoutputs,
-                           std::vector<OpReqType> &req,
-                           std::vector<uint32_t>& ref_count,
+                           std::vector<OpReqType> *p_req,
+                           std::vector<uint32_t> *p_ref_count,
                            std::function<void(const OpStatePtr &state)> invoke) {
   static const auto bwd_cached_op = Op::Get("_backward_CachedOp");
   static auto& createop = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
   static auto& is_layer_backward = Op::GetAttr<bool>("TIsLayerOpBackward");
+  std::vector<OpStatePtr>& states = *p_states;
+  std::vector<OpReqType> &req = *p_req;
+  std::vector<uint32_t> &ref_count = *p_ref_count;
 
   const nnvm::IndexedGraph::Node& node = idx[node_idx];
   if (node.source->op() == bwd_cached_op) {
@@ -149,8 +152,8 @@ void RunGraph(
         Imperative::Get()->RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, state);
       }
     };
-    InvokeOperator(idx, i, retain_graph, arrays, ctx, *p_states, ndinputs, ndoutputs,
-                   req, ref_count, invoke);
+    InvokeOperator(idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs,
+                   &req, &ref_count, invoke);
   }
 }
 
@@ -166,7 +169,6 @@ void NaiveRunGraph(
     const DispatchModeVector &dispatch_modes,
     bool recording,
     mxnet::ShapeVector *shapes) {
-  std::vector<OpStatePtr>& states = *p_states;
   for (size_t i = node_start; i < node_end; ++i) {
     const nnvm::IndexedGraph::Node& node = idx[i];
     if (node.source->op() == nullptr) {
@@ -196,8 +198,8 @@ void NaiveRunGraph(
         Imperative::Get()->RecordOp(NodeAttrs(node.source->attrs), ndinputs, ndoutputs, state);
       }
     };
-    InvokeOperator(idx, i, retain_graph, arrays, ctx, *p_states, ndinputs, ndoutputs,
-                   req, ref_count, invoke);
+    InvokeOperator(idx, i, retain_graph, arrays, ctx, p_states, ndinputs, ndoutputs,
+                   &req, &ref_count, invoke);
   }
 }
 
