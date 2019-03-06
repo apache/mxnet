@@ -525,6 +525,7 @@ def test_convolution_options():
 def test_conv_deconv_guards():
     # Test cases for convolution and deconvolution via strided fft.  Ensure that the framework
     # guards against problematic CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING in cuDNN [7.3.1,7.5)
+    # see https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_750.html#rel_750
     tol = 1e-1
     for (op, opname) in [(mx.sym.Convolution, 'conv'), (mx.sym.Deconvolution, 'deconv')]:
         dataname = opname + '_data'
