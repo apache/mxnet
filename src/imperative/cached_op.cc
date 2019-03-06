@@ -862,9 +862,9 @@ OpStatePtr CachedOp::DynamicForward(
             recording && inlining_);
   } else {
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    NaiveRunGraph(false, default_ctx, idx, arrays, &shapes, 0, idx.num_nodes(),
+    NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
                   std::move(array_reqs), std::move(ref_count), &states,
-                  dispatch_modes, recording && inlining_);
+                  dispatch_modes, recording && inlining_, &shapes);
     {
       auto state_ptr = GetCachedOpState(default_ctx);
       auto& state = state_ptr.get_state<CachedOpState>();
