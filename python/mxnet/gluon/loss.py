@@ -237,9 +237,13 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
     def hybrid_forward(self, F, pred, label, pos_weight=1, sample_weight=None):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
-            # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
-            log_weight = 1 + (pos_weight - 1) * label
-            loss = pred - pred*label + log_weight*(F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
+            if pos_weight == 1:
+                # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
+                loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
+            else:
+                # We use the stable formula: x - x * z + (1 + z * pos_weight - z) * (log(1 + exp(-abs(x))) + max(-x, 0))
+                log_weight = 1 + (pos_weight - 1) * label
+                loss = pred - pred*label + log_weight*(F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
         else:
             loss = -(F.log(pred+1e-12)*label*pos_weight + F.log(1.-pred+1e-12)*(1.-label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
