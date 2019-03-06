@@ -188,7 +188,7 @@ int main(int argc, char const *argv[]) {
   }
 #endif
 
-  const Shape data_shape = Shape(batch_size, 3, 256, 256),
+  const Shape data_shape = Shape(batch_size, 3, 224, 224),
               label_shape = Shape(batch_size);
   args_map["data"] = NDArray(data_shape, ctx);
   args_map["data_label"] = NDArray(label_shape, ctx);

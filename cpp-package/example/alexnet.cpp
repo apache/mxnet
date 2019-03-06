@@ -318,9 +318,9 @@ int main(int argc, char const *argv[]) {
     acu_val.Reset();
     val_iter.Reset();
     logloss_val.Reset();
+    iter = 0;
     while (val_iter.Next()) {
       auto batch = val_iter.GetDataBatch();
-      LG << val_iter.GetDataBatch().index.size();
       ResizeInput(batch.data, data_shape).CopyTo(&args_map["data"]);
       batch.label.CopyTo(&args_map["label"]);
       exec->Forward(false);
