@@ -22,7 +22,7 @@
  * \file la_op.cc
  * \brief CPU implementation of Operators for advanced linear algebra.
  */
- 
+
 #include "./la_op.h"
 #include "./la_op-inl.h"
 
