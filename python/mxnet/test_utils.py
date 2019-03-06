@@ -212,6 +212,7 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
     else:
         return mx.nd.array(output_arr).tostype("csr")
 
+
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
     if function is None:
