@@ -1506,8 +1506,26 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    const Context& default_ctx,
                                    const std::map<std::string, Context>& ctx_map,
                                    const std::vector<Context>& in_arg_ctxes,
-                                   const std::vector<Context>& aux_state_ctxes) {
+                                   const std::vector<Context>& aux_state_ctxes,
+                                   const std::vector<OpReqType>& grad_req_types) {
   auto subgraph_prop = op::SubgraphPropertyRegistry::Get()->CreateSubgraphProperty(prop_name);
+  bool need_grad = false;
+  for (OpReqType req : grad_req_types) {
+    if (req != kNullOp) {
+      need_grad = true;
+      break;
+    }
+  }
+  if (subgraph_prop->HasAttr("inference_only") &&
+      subgraph_prop->GetAttr<bool>("inference_only") == true) {
+    if (need_grad) {
+      auto full_name = subgraph_prop->HasAttr("prop_name")
+                            ? subgraph_prop->GetAttr<std::string>("prop_name")
+                            : prop_name;
+      LOG(INFO) << "Skip subgraph " << full_name << " as it requires `grad_req=null`.";
+      return src;
+    }
+  }
   nnvm::Symbol ret = src.Copy();
   nnvm::Graph g;
   g.outputs = ret.outputs;
@@ -1539,7 +1557,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    const Context& default_ctx,
                                    const std::map<std::string, Context>& ctx_map,
                                    const std::vector<Context>& in_arg_ctxes,
-                                   const std::vector<Context>& aux_state_ctxes) {
+                                   const std::vector<Context>& aux_state_ctxes,
+                                   const std::vector<OpReqType>& grad_req_types) {
   const std::vector<std::string> input_names = src.ListInputNames(Symbol::kAll);
   mxnet::ShapeVector arg_shapes(input_names.size(), mxnet::TShape());
   nnvm::DTypeVector arg_dtypes(input_names.size(), -1);
@@ -1559,7 +1578,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
     }
   }
   return PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes,
-                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes);
+                        default_ctx, ctx_map, in_arg_ctxes, aux_state_ctxes, grad_req_types);
 }
 
 // Given input ndarrays, partition the graph using the backend name equal to prop_name.
@@ -1569,7 +1588,8 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
                                    std::vector<NDArray> *in_args,
                                    const std::vector<NDArray> &aux_states,
                                    const Context& default_ctx,
-                                   const std::map<std::string, Context>& ctx_map) {
+                                   const std::map<std::string, Context>& ctx_map,
+                                   const std::vector<OpReqType>& grad_req_types) {
   const std::vector<std::string> input_names = src.ListInputNames(Symbol::kAll);
   const std::vector<std::string> arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
@@ -1609,7 +1629,7 @@ static nnvm::Symbol PartitionGraph(const nnvm::Symbol& src,
     in_args_map[arg_names[i]] = in_args->at(i);
   }
   auto result = PartitionGraph(src, prop_name, arg_shapes, arg_dtypes, arg_stypes, default_ctx,
-                               ctx_map, in_arg_ctxes, aux_state_ctxes);
+                               ctx_map, in_arg_ctxes, aux_state_ctxes, grad_req_types);
   // Reorder in_args into new_in_args according to partitioned symbol input sequence
   std::vector<NDArray> new_in_args(in_args->size());
   // get new symbol in_arg names
@@ -1644,7 +1664,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
   if (!exec->subgraph_property().empty()) {
     symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), arg_shape_map, arg_dtype_map,
                                   arg_stype_map, default_ctx, group2ctx, in_arg_ctxes,
-                                  aux_state_ctxes);
+                                  aux_state_ctxes, grad_req_types);
   }
   exec->Init(symbol, default_ctx, group2ctx,
              in_arg_ctxes, arg_grad_ctxes, aux_state_ctxes,
@@ -1667,7 +1687,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
   std::vector<NDArray> tmp_in_args = in_args;
   if (!exec->subgraph_property().empty()) {
     symbol = exec::PartitionGraph(symbol, exec->subgraph_property(), &tmp_in_args, aux_states,
-                                  default_ctx, group2ctx);
+                                  default_ctx, group2ctx, grad_req_type);
   }
   exec->Init(symbol, default_ctx, group2ctx,
              tmp_in_args, arg_grad_store, grad_req_type, aux_states,
