@@ -42,7 +42,7 @@ class _BlockScope(object):
     def __init__(self, block):
         self._block = block
         self._counter = {}
-        self._old_scope = None
+        self._old_scope = threading.local()
         self._name_scope = threading.local()
 
     @staticmethod
@@ -74,7 +74,7 @@ class _BlockScope(object):
     def __enter__(self):
         if self._block._empty_prefix:
             return self
-        self._old_scope = getattr(_BlockScope._current, "value", None)
+        self._old_scope.value = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
         self._name_scope.value = _name.Prefix(self._block.prefix)
         self._name_scope.value.__enter__()
@@ -85,7 +85,7 @@ class _BlockScope(object):
             return
         self._name_scope.value.__exit__(ptype, value, trace)
         self._name_scope.value = None
-        _BlockScope._current.value = self._old_scope
+        _BlockScope._current.value = self._old_scope.value
 
 
 def _flatten(args, inout_str):
