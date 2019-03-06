@@ -648,14 +648,14 @@ nnvm::Graph InferShape(nnvm::Graph&& graph,
       std::move(graph), mxnet::TShape(),
       "FInferShape", "shape_inputs", "shape_attr_key",
       "shape", "shape_num_unknown_nodes",
-      [](const mxnet::TShape& s) { return s.ndim() == 0 || s.Size() == 0; },
+      [](const mxnet::TShape& s) { return !mxnet::op::shape_is_known(s); },
       [](const mxnet::TShape& s) {
-        if (s.ndim() == 0) {  // TODO(reminisce): Usage of ndim
+        if (s.ndim() == -1) {
           return static_cast<size_t>(1);
         }
         size_t ret = 0;
         for (const auto& val : s) {
-          if (val == 0) {
+          if (val == -1) {
             ++ret;
           }
         }

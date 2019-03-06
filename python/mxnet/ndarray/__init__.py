@@ -17,7 +17,7 @@
 
 """NDArray API of MXNet."""
 
-from . import _internal, contrib, linalg, op, random, sparse, utils, image, ndarray
+from . import _internal, contrib, linalg, op, random, sparse, utils, image, ndarray, numpy
 # pylint: disable=wildcard-import, redefined-builtin
 try:
     from .gen_op import * # pylint: disable=unused-wildcard-import
