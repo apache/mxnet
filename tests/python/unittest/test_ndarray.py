@@ -152,6 +152,7 @@ def test_ndarray_elementwisesum():
     res = mx.nd.ElementWiseSum(ones, ones*2, ones*4, ones*8)
     assert same(res.asnumpy(), ones.asnumpy()*15)
 
+
 @with_seed()
 def test_ndarray_negate():
     npy = np.random.uniform(-10, 10, (2,3,4))
