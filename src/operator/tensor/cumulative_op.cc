@@ -24,7 +24,8 @@
 * \author Chaitanya Bapat
 */
 
-#include "./cumulative-_op.h"
+#include "./cumulative_op.h"
+#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
@@ -38,7 +39,7 @@ Examples::
 
 >>> x = mx.nd.array([[1,2,3], [4,5,6]])
 >>> mx.nd.cumsum(x)
-[ 7. 10. 19.]
+[  1.,   3.,   6.,  10.,  15.,  21.]
 <NDArray 3 @cpu(0)>
 
 )code" ADD_FILELINE)
@@ -50,11 +51,12 @@ Examples::
     return std::vector<std::string>{"data"};
   })
 .set_attr<nnvm::FInferShape>("FInferShape", CumSumOpShape)
-.set_attr<nnvm::FInferType>("FInferType", CumSumOpType)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FInferStorageType>("FInferStorageType", CumSumOpForwardStorageType)
 .set_attr<FCompute>("FCompute<cpu>", CumSumOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
-.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(CumsumParam::__FIELDS__());
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray");
+// .add_arguments(CumsumParam::__FIELDS__());
 
 
 }  // namespace op
