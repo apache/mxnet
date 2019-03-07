@@ -287,8 +287,13 @@ __global__ void nms_calculate_batch_start_kernel(int32_t * batch_start,
                                                  int num_batch) {
   size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
   if (tid < N) {
+#if __CUDA_ARCH__ >= 350
     const int32_t previous = tid > 0 ? __ldg(valid_batch_id + tid - 1) : -1;
     const int32_t my = __ldg(valid_batch_id + tid);
+#else
+    const int32_t previous = tid > 0 ? valid_batch_id[tid - 1] : -1;
+    const int32_t my = valid_batch_id[tid];
+#endif
     if (my > previous) {
       for (int32_t current = previous + 1; current <= my; ++current) {
         batch_start[current] = tid;
