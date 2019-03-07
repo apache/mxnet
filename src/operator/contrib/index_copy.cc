@@ -26,6 +26,99 @@
 namespace mxnet {
 namespace op {
 
+struct index_copy_fwd_cpu {
+  template<typename DType, typename IType>
+  static void Map(int i,
+                  const DType* new_tensor,
+                  const IType* idx,
+                  DType* out_tensor,
+                  int dim_size) {
+    DType* out_ptr = out_tensor + static_cast<int>(idx[i]) * dim_size;
+    const DType* new_ptr = new_tensor + i * dim_size;
+    std::memcpy(out_ptr, new_ptr, sizeof(DType) * dim_size);
+  }
+};
+
+template<>
+void IndexCopyForward<cpu>(const nnvm::NodeAttrs& attrs,
+                           const OpContext& ctx,
+                           const std::vector<TBlob>& inputs,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  const TBlob& out = outputs[0];
+  const TBlob& original_tensor = inputs[0];
+  const TBlob& idx_vector = inputs[1];
+  const TBlob& copied_tensor = inputs[2];
+  int dim_size = inputs[2].Size() / inputs[1].Size();
+  // copy original tensor to output
+  copy(s, out, original_tensor);
+  // index copy
+  MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(idx_vector.type_flag_, IType, {
+      Kernel<index_copy_fwd_cpu, cpu>::Launch(
+        s, idx_vector.Size(), copied_tensor.dptr<DType>(),
+        idx_vector.dptr<IType>(), out.dptr<DType>(), dim_size);
+    });
+  });
+}
+
+struct index_copy_bwd_cpu {
+  template<typename DType, typename IType>
+  static void Map(int i,
+                  const DType* out_tensor_grad,
+                  DType* orig_tensor_grad,
+                  DType* new_tensor_grad,
+                  const IType* idx,
+                  int dim_size,
+                  int idx_size) {
+    const DType* out_ptr = out_tensor_grad + i * dim_size;
+    DType* orig_ptr = orig_tensor_grad + i * dim_size;
+    std::memcpy(orig_ptr, out_ptr, sizeof(DType) * dim_size);
+    if (i < idx_size) {
+      const int index = idx[i];
+      DType* new_ptr = new_tensor_grad + i * dim_size;
+      orig_ptr = orig_tensor_grad + index * dim_size;
+      const DType* src_ptr = out_tensor_grad + index * dim_size;
+      std::memcpy(new_ptr, src_ptr, sizeof(DType) * dim_size);
+      std::memset(orig_ptr, 0, sizeof(DType) * dim_size);
+    }
+  }
+};
+
+template<>
+void IndexCopyBackward<cpu>(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  CHECK_EQ(inputs.size(), 4U);
+  CHECK_EQ(outputs.size(), 3U);
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  const TBlob& out_grad = inputs[0];
+  const TBlob& index = inputs[2];
+  const TBlob& in_grad_1 = outputs[0];
+  const TBlob& in_grad_2 = outputs[2];
+  int dim_size = inputs[3].Size() / inputs[2].Size();
+  int index_size = inputs[2].Size();
+  // index_copy_backward
+  MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(index.type_flag_, IType, {
+      Kernel<index_copy_bwd_cpu, cpu>::Launch(
+        s, out_grad.Size() / dim_size, out_grad.dptr<DType>(),
+        in_grad_1.dptr<DType>(), in_grad_2.dptr<DType>(),
+        index.dptr<IType>(), dim_size, index_size);
+    });
+  });
+}
+
 static bool IndexCopyType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_attrs,
                           std::vector<int> *out_attrs) {
@@ -71,6 +164,10 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"old_tensor", "index_vector", "new_tensor"};
+  })
 .add_argument("old_tensor", "NDArray-or-Symbol", "Old tensor")
 .add_argument("index_vector", "NDArray-or-Symbol", "Index vector")
 .add_argument("new_tensor", "NDArray-or-Symbol", "New tensor to be copied");
