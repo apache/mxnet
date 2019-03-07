@@ -1550,6 +1550,28 @@ def test_ndarray_is_nan():
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
+
+def test_1d_array_indexing():
+    from mxnet.base import set_numpy_comp
+
+    def check_1d_array_indexing():
+        data = mx.nd.arange(6)
+        data_np = data.asnumpy()
+        idx = 1
+        same(data[idx].asnumpy(), data_np[idx].reshape((1,)))
+        set_numpy_comp(enable=True)
+        same(data[idx].asnumpy(), data_np[idx])
+        set_numpy_comp(enable=False)
+        same(data[idx].asnumpy(), data_np[idx].reshape((1,)))
+
+    import threading
+    thread = threading.Thread(target=check_1d_array_indexing)
+    thread.start()
+    check_1d_array_indexing()
+    thread.join()
+    check_1d_array_indexing()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

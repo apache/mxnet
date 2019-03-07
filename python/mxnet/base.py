@@ -26,11 +26,12 @@ import os
 import sys
 import inspect
 import platform
+import threading
 import numpy as _np
 
 from . import libinfo
 
-__all__ = ['MXNetError']
+__all__ = ['MXNetError', 'set_numpy_comp']
 #----------------------------
 # library loading
 #----------------------------
@@ -750,3 +751,48 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
 
 ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
+
+
+_IS_NUMPY_COMP_KEY = 'is_numpy_comp'
+_thread_local = threading.local()
+
+
+def set_numpy_comp(enable):
+    """This is a thread-safe utility function for users to enable or disable NumPy-compatible
+    behaviors in MXNet. This will generally affect the behavior of the following two operations:
+
+    1. NDArray indexing. When `enable=False`, NDArray indexing always returns a tensor with
+    ndim >= 1, which is the default behavior of MXNet kept for backward compatibility.
+    When `enable=True`, NDArray indexing will return a tensor with ndim >= 0, which
+    is consistent with NumPy's indexing behavior. The result tensor with ndim = 0 is actually
+    a scalar whose shape is `()`. For example:
+    >>> from mxnet.base import set_numpy_comp
+    >>> x = mx.nd.arange(6)
+    >>> x
+    [0. 1. 2. 3. 4. 5.]
+    <NDArray 6 @cpu(0)>
+    >>> x[1]
+    [1.]
+    <NDArray 1 @cpu(0)>
+    >>> set_numpy_comp(enable=True)
+    >>> x[1]
+    1.0
+    <NDArray  @cpu(0)>
+    >>> set_numpy_comp(enable=False)
+    >>> x[1]
+    [1.]
+    <NDArray 1 @cpu(0)>
+
+    2. NDArray's convenience fluent methods. When `enable=True`, the convenience fluent methods
+    will dispatch the calls to NumPy operators if implemented in MXNet. For example, given an NDArray
+    `data`, `data.sum()` will call `mxnet.ndarray.sum(data)` when `enable=False`
+    (default behavior), and `mxnet.numpy.sum(data)` when `enable=True`.
+    """
+    setattr(_thread_local, _IS_NUMPY_COMP_KEY, enable)
+
+
+def _is_numpy_comp():
+    """This is a thread-safe utility function for checking whether NumPy-compatibility
+    has been enabled or disabled. This is implemented for developers to use. Users are
+    not expected to call this function."""
+    return getattr(_thread_local, _IS_NUMPY_COMP_KEY, False)

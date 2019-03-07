@@ -33,7 +33,7 @@ import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
-from ..base import _LIB, numeric_types, integer_types
+from ..base import _LIB, numeric_types, integer_types, _is_numpy_comp
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
 from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
 from ..base import ctypes2buffer
@@ -935,6 +935,8 @@ fixed-size items.
         >>> b[0].asnumpy()
         array([ 1.], dtype=float32)
         """
+        if self.ndim == 0:
+            raise IndexError('too many indices for array of shape = ()')
         handle = NDArrayHandle()
         if idx < 0:
             length = self.shape[0]
@@ -944,7 +946,11 @@ fixed-size items.
                                  % (idx-length, length))
         check_call(_LIB.MXNDArrayAt(
             self.handle, mx_uint(idx), ctypes.byref(handle)))
-        return NDArray(handle=handle, writable=self.writable)
+        ret = NDArray(handle=handle, writable=self.writable)
+        if self.ndim == 1 and _is_numpy_comp():
+            return ret.reshape(())
+        else:
+            return ret
 
     def reshape(self, *shape, **kwargs):
         """Returns a **view** of this array with a new shape without altering any data.

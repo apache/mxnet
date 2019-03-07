@@ -163,6 +163,26 @@ def test_symbol():
     thread.join()
     assert status[0], "Failed to execute a symbolic graph within a thread"
 
+
+def test_toggle_numpy_comp():
+    from mxnet.base import set_numpy_comp, _is_numpy_comp
+
+    def check_numpy_comp():
+        assert not _is_numpy_comp(), "NumPy compatibility should have been disabled"
+        set_numpy_comp(enable=False)
+        assert not _is_numpy_comp(), "NumPy compatibility should have been disabled"
+        set_numpy_comp(enable=True)
+        assert _is_numpy_comp(), "NumPy compatibility should have been enabled"
+        set_numpy_comp(enable=False)
+        assert not _is_numpy_comp(), "NumPy compatibility should have been disabled"
+
+    thread = threading.Thread(target=check_numpy_comp)
+    thread.start()
+    check_numpy_comp()
+    thread.join()
+    check_numpy_comp()
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
