@@ -33,6 +33,7 @@ from numpy.testing import assert_allclose
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import run_in_spawned_process
 from test_operator import *
 from test_optimizer import *
 from test_random import *
@@ -521,24 +522,6 @@ def test_convolution_options():
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 
-# Helper function to run tests in a subprocess to avoid save/restore of os.environ.
-# Also avoids issues of cached environment variable lookups in the backend.
-def _test_in_separate_process(func, env, *args):
-    try:
-        mpctx = mp.get_context('spawn')
-    except:
-        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
-              sys.version_info[0:2], file=sys.stderr, end='')
-    else:
-        seed = np.random.randint(0,1024*1024*1024)
-        for (key, value) in env.items():
-            os.environ[key] = str(value)
-        # Prepend seed as first arg
-        p = mpctx.Process(target=func, args=(seed,)+args)
-        p.start()
-        p.join()
-        assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
-
 def _conv_with_num_streams(seed):
     with random_seed(seed):
         # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
@@ -576,8 +559,10 @@ def test_convolution_multiple_streams():
 
     for num_streams in [1, 2]:
         for engine in engines:
-            _test_in_separate_process(_conv_with_num_streams,
+            print("Starting engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+            run_in_spawned_process(_conv_with_num_streams,
                 {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
+            print("Finished engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
 
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
@@ -2125,6 +2110,82 @@ def test_bilinear_sampler_versions():
                     assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
                 if req_dict['grid'] is 'write':
                     assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+def test_bulking():
+    # Return the execution time of a model with the specified limits to the bulked op segments
+    def test_bulking_helper(data_shape, num_ops, num_iterations,
+                            max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training):
+        orig_environ = os.environ.copy()
+        try:
+            # Explore different ways of setting the env vars.
+            # The framework does not cache the bulked seg size env var lookups during symbolic.
+            os.environ['MXNET_EXEC_BULK_EXEC_TRAIN'] = str(enable_bulking_in_training)
+            if max_fwd_segment_size == max_bwd_segment_size:
+                os.environ['MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN'] = str(max_fwd_segment_size)
+                os.environ.pop('MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD', None)
+                os.environ.pop('MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD', None)
+            else:
+                os.environ.pop('MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN', None)
+                os.environ['MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD'] = str(max_fwd_segment_size)
+                os.environ['MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD'] = str(max_bwd_segment_size)
+
+            ctx = default_context()
+            # build symbol
+            X = mx.sym.Variable('X')
+            sym = mx.sym.flip(X, axis=0)
+            for _ in range(num_ops-1):
+                sym = mx.sym.flip(sym, axis=0)
+            x = mx.ndarray.zeros(data_shape)
+            dx = mx.ndarray.zeros(data_shape)
+            dy = mx.ndarray.ones(data_shape)
+            exe = sym.bind(ctx=ctx, args=[x], args_grad = {'X':dx})
+
+            # time a number of forward() and backward() executions after some warm-up iterations
+            warmups = 1
+            for i in range(num_iterations+warmups):
+                if i == warmups:
+                    start = time.time()
+                exe.forward(is_train=True)
+                exe.backward(dy)
+                dx.wait_to_read()
+            time_per_iteration = (time.time() - start) / num_iterations
+        finally:
+            os.environ.clear()
+            os.environ.update(orig_environ)
+        return time_per_iteration
+
+    data_shape = (10,)
+    num_ops = 1000
+    num_iterations = 20
+
+    # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
+    test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
+    times = {}
+    times_str = ''
+    for seg_sizes in test_cases:
+        times[seg_sizes] = test_bulking_helper(data_shape, num_ops, num_iterations,
+                                               seg_sizes[0], seg_sizes[1], seg_sizes[2])
+        times_str +=\
+            '\n    runtime of (fwd,bwd,enable) op seg setting ({},{},{}) =\t{:.1f} msec'.format(
+            seg_sizes[0], seg_sizes[1], seg_sizes[2], 1000.0 * times[seg_sizes])
+
+    fastest_non_bulked_time = min(times[(0,0,True)], times[(1,1,True)], times[(15,15,False)])
+    slowest_half_bulked_time = max(times[(0,15,True)], times[(15,0,True)])
+    fastest_half_bulked_time = min(times[(0,15,True)], times[(15,0,True)])
+    fully_bulked_time = times[(15,15,True)]
+
+    print(times_str)
+    # Non-bulked times[0,0,True], times[1,1,True] and times[15,15,False] should be about the same,
+    # slower than both half-bulked times[0,15,True] and times[15,0,True]
+    assert slowest_half_bulked_time < fastest_non_bulked_time,\
+        'A half-bulked exec time is slower than the non-bulked time by {} secs! {}'\
+            .format(slowest_half_bulked_time - fastest_non_bulked_time, times_str)
+    # The fully bulked times[15,15,True] should be faster than both half-bulked runs
+    assert fully_bulked_time < fastest_half_bulked_time,\
+        'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}'\
+            .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 
 def test_context_num_gpus():

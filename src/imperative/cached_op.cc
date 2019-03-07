@@ -619,9 +619,18 @@ void CachedOp::StaticInitExec(
       SetupOpExec(g, i, state.execs[i], state.arrays, state.array_reqs);
     }
 
+    // Init bulk_size for Inference mode with bulking enabled (= entire forward graph).
     size_t bulk_size = idx.num_nodes();
     if (recording || keep_fwd) {
-      bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
+      // Training mode
+      if (!Imperative::PreferBulkExecTrain())
+        bulk_size = 0;
+      else
+        bulk_size = keep_fwd ? config_.backward_bulk_size : config_.forward_bulk_size;
+    } else {
+      // Inference mode
+      if (!Imperative::PreferBulkExecInference())
+        bulk_size = 0;
     }
 
     CreateEngineOpSeg(idx, default_ctx, start_nid, end_nid, bulk_size,

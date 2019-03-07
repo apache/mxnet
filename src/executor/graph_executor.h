@@ -213,10 +213,8 @@ class GraphExecutor : public Executor {
   void ExecuteMonInputCallback(size_t nid);
   // run the monitor callback for output of node `nid`
   void ExecuteMonOutputCallback(size_t nid);
-  // peform bulking and segmentation on an inference graph
-  void BulkInferenceOpSegs();
-  // perform bulking and segmentation on a training graph
-  void BulkTrainingOpSegs(size_t total_num_nodes);
+  // peform bulking and segmentation on the region [from_node, up_to_node) of a graph
+  void BulkOpSegs(size_t from_node, size_t up_to_node, size_t segment_num_nodes_max);
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
   // internal graph
