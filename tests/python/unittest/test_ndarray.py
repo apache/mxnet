@@ -60,6 +60,7 @@ def check_with_uniform(uf, arg_shapes, dim=None, npuf=None, rmin=-10, type_list=
         else:
             assert_almost_equal(out1, out2, atol=1e-5)
 
+
 def random_ndarray(dim):
     shape = tuple(np.random.randint(1, int(1000**(1.0/dim)), size=dim))
     data = mx.nd.array(np.random.uniform(-10, 10, shape))
