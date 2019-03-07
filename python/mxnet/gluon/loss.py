@@ -222,7 +222,7 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
           to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
-        - **pos_weight**:a weighting tensor of positive examples.Must be a vector with length
+        - **pos_weight**: a weighting tensor of positive examples.Must be a vector with length
           equal to the number of classes.For example, if pred has shape (64, 10)
           pos_weight should have shape (1, 10).
 
