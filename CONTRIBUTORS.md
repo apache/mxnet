@@ -214,8 +214,8 @@ List of Contributors
 * [Dang Trung Kien](https://github.com/kiendang)
 * [Zach Boldyga](https://github.com/zboldyga)
 * [Gordon Reid](https://github.com/gordon1992)
-
 * [Ming Yang](http://ufoym.com)
+* [Neo Chien](https://github.com/cchung100m)
 
 Label Bot
 ---------
