@@ -115,7 +115,13 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - If set to `1`, during training MXNet executes the computation graph as several subgraphs in bulk mode.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN
   - Values: Int ```(default=15)```
-  - The maximum number of nodes in the subgraph executed in bulk during training(not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the forward pass.
+* MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the backward pass.
 
 ## Control the Data Communication
 

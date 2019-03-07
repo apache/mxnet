@@ -21,13 +21,11 @@ test measure.py
 from measure import run
 import subprocess
 import logging
+
+import mxnet as mx
+
 def get_gpus():
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return ''
-    gpus = [i for i in re.split('\n') if 'GPU' in i]
-    return ','.join([str(i) for i in range(len(gpus))])
+    return ','.join([str(i) for i in range(mx.util.get_gpu_count())])
 
 def test_measure(**kwargs):
     logging.info(kwargs)

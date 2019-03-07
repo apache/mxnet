@@ -32,6 +32,7 @@
 #include "../common/utils.h"
 
 #if MXNET_USE_OPENCV
+#include "./opencv_compatibility.h"
 // Registers
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::io::ImageAugmenterReg);
