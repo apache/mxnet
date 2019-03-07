@@ -118,9 +118,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
             data_shapes=[('data', data_shape)])
   else:
     sym = mx.sym.SoftmaxOutput(data=fc, name='softmax')
-    sym.save('sym.json')
     sym_sg = sym.get_backend_symbol(sg_pass_name)
-    sym_sg.save('sym_sg.json')
     label_shape = (data_shape[0], 10)
     mod = Module(symbol=sym)
     mod.bind(for_training=False,
@@ -204,7 +202,11 @@ def check_fusion(sym, data_shape, attrs_op, name='conv', check_quantization=True
   if check_quantization:
     for out_type in out_type_list:
       check_quantize(sym, data_shape, out_type, name=name)
-      check_quantize(sym, data_shape, out_type, name=name, gluon_forward=True)
+      # TODO(ciyong), since quantized fc save its params in int8, while gluon treat the default
+      # variable from symbol file as fp32 which results in mismatch dtype of params.
+      # Skip quantized fc in gluon pass.
+      if name != 'fc':
+        check_quantize(sym, data_shape, out_type, name=name, gluon_forward=True)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None,
                      date_shape=(4,4,10,10), name='conv'):
