@@ -559,8 +559,10 @@ def test_convolution_multiple_streams():
 
     for num_streams in [1, 2]:
         for engine in engines:
+            print("Starting engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
             run_in_spawned_process(_conv_with_num_streams,
                 {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
+            print("Finished engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
 
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
