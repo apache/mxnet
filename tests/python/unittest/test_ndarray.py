@@ -1571,6 +1571,14 @@ def test_ndarray_nan_comparison():
     np_relu = np.maximum(data1.asnumpy(), 0)
     np.testing.assert_equal(nd_relu.asnumpy(), np_relu)
 
+    data1.attach_grad()
+    with mx.autograd.record():
+        y = mx.nd.relu(data1)
+    y.backward()
+    data1_grad = data1.grad.asnumpy()
+    for i in (np.isnan(data1_grad))[1][0].flatten():
+        assert i == True
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

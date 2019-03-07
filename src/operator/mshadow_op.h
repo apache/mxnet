@@ -780,7 +780,17 @@ namespace isnan_typed {
 
 MXNET_UNARY_MATH_OP_NC(relu, isnan_typed::IsNan(a) || (a > DType(0)) ? a : DType(0));
 
-MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
+/*! \brief used for computing gradient of relu operator */
+struct relu_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return a > DType(0) ? DType(1) : DType(0);
+    }
+  }
+};
 
 /*! \brief used for computing binary operator maximum */
 struct maximum : public mxnet_op::tunable {
