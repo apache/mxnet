@@ -1,19 +1,19 @@
-# Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so.
+#   http://www.apache.org/licenses/LICENSE-2.0
 #
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 
 import argparse
 import logging
@@ -150,10 +150,8 @@ def get_data_rec(rec_train, rec_train_idx, rec_val, rec_val_idx, batch_size,
     mean_rgb = [123.68, 116.779, 103.939]
 
     def batch_fn(batch, ctx):
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=ctx,
-                                          batch_axis=0)
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=ctx,
-                                           batch_axis=0)
+        data = batch.data[0].as_in_context(ctx)
+        label = batch.label[0].as_in_context(ctx)
         return data, label
 
     train_data = mx.io.ImageRecordIter(
@@ -303,10 +301,10 @@ def train_gluon():
         acc_top1 = mx.metric.Accuracy()
         acc_top5 = mx.metric.TopKAccuracy(5)
         for _, batch in enumerate(val_data):
-            data, label = batch_fn(batch, [context])
-            outputs = [net(x.astype(args.dtype, copy=False)) for x in data]
-            acc_top1.update(label, outputs)
-            acc_top5.update(label, outputs)
+            data, label = batch_fn(batch, context)
+            output = net(data.astype(args.dtype, copy=False))
+            acc_top1.update([label], [output])
+            acc_top5.update([label], [output])
 
         top1_name, top1_acc = acc_top1.get()
         top5_name, top5_acc = acc_top5.get()
@@ -336,15 +334,14 @@ def train_gluon():
 
         btic = time.time()
         for nbatch, batch in enumerate(train_data, start=1):
-            data, label = batch_fn(batch, [context])
+            data, label = batch_fn(batch, context)
             with autograd.record():
-                outputs = [net(x.astype(args.dtype, copy=False)) for x in data]
-                loss = [loss_fn(yhat, y) for yhat, y in zip(outputs, label)]
-            for l in loss:
-                l.backward()
+                output = net(data.astype(args.dtype, copy=False))
+                loss = loss_fn(output, label)
+            loss.backward()
             trainer.step(batch_size)
 
-            metric.update(label, outputs)
+            metric.update([label], [output])
             if args.log_interval and nbatch % args.log_interval == 0:
                 name, acc = metric.get()
                 logging.info('Epoch[%d] Rank[%d] Batch[%d]\t%s=%f\tlr=%f',

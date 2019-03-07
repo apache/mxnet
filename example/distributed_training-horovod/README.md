@@ -31,8 +31,13 @@ between workers does not depend on the number of workers. Therefore, it scales w
 there are a large number of workers and network bandwidth becomes bottleneck.
 
 # Install
+## Install MXNet
+```bash
+$ pip install mxnet
+```
+**Note**: There is a [known issue](https://github.com/horovod/horovod/issues/884) when running Horovod with MXNet on a Linux system with GCC version 5.X and above. We recommend users to build MXNet from source following this [guide](https://mxnet.incubator.apache.org/install/build_from_source.html) as a workaround for now.
 
-To install Horovod:
+## Install Horovod
 
 1. Install [Open MPI](https://www.open-mpi.org/) or another MPI implementation.
 
@@ -51,21 +56,15 @@ This basic installation is good for laptops and for getting to know Horovod.
 If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](https://github.com/horovod/horovod/blob/master/docs/gpus.md) page.
 If you want to use Docker, read the [Horovod in Docker](https://github.com/horovod/horovod/blob/master/docs/docker.md) page.
 
-**Note**: we recommend users to build MXNet from source when running on a Linux OS with GCC version 5.X and above. 
-The MXNet shared library distributed through MXNet pip package is currently built using GCC 4.8.4. If we build and install Horovod 
-on a Linux OS with GCC 5.X+ with MXNet pip package, we will hit segmentation fault due to std::function definition change from 
-GCC [4.X](https://github.com/gcc-mirror/gcc/blob/gcc-4_8_4-release/libstdc++-v3/include/std/functional#L2069) to 
-GCC [5.X](https://github.com/gcc-mirror/gcc/blob/gcc-5_4_0-release/libstdc++-v3/include/std/functional#L1854).
-
 # Usage
 
 To run MXNet with Horovod, make the following additions to your training script:
 
 1. Run `hvd.init()`.
 
-2. Pin a server GPU to the context using `context = mx.gpu(hvd.local_rank())`.
-    With the typical setup of one GPU per process, this can be set to *local rank*. In that case, the first process on 
-    the server will be allocated the first GPU, second process will be allocated the second GPU and so forth.
+2. Pin the context to a processor using `hvd.local_rank()`.
+    Typically, each Horovod worker is associated with one process. The local rank is a unique ID specifically
+    for all processes running Horovod job on the same node.
 
 3. Scale the learning rate by number of workers. Effective batch size in synchronous distributed training is scaled by
     the number of workers. An increase in learning rate compensates for the increased batch size.
@@ -81,7 +80,7 @@ To run MXNet with Horovod, make the following additions to your training script:
 # Example
 
 Here we provide the building blocks to train a model using MXNet with Horovod.
-The full examples are in [MINST](mxnet_mnist.py) and [ImageNet](mxnet_imagenet_resnet50.py).
+The full examples are in [MNIST](mxnet_mnist.py) and [ImageNet](mxnet_imagenet_resnet50.py).
 
 ## Gluon API
 ```python
@@ -93,7 +92,8 @@ import horovod.mxnet as hvd
 hvd.init()
 
 # Pin GPU to be used to process local rank
-context = mx.gpu(hvd.local_rank())
+context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
+
 num_workers = hvd.size()
 
 # Build model
@@ -123,15 +123,12 @@ loss_fn = ...
 for epoch in range(num_epoch):
     train_data.reset()
     for nbatch, batch in enumerate(train_data, start=1):
-        data = gluon.utils.split_and_load(batch.data[0], ctx_list=[context],
-                                          batch_axis=0)
-        label = gluon.utils.split_and_load(batch.label[0], ctx_list=[context],
-                                           batch_axis=0)
+        data = batch.data[0].as_in_context(context)
+        label = batch.label[0].as_in_context(context)
         with autograd.record():
-            outputs = [model(x.astype(dtype, copy=False)) for x in data]
-            loss = [loss_fn(yhat, y) for yhat, y in zip(outputs, label)]
-        for l in loss:
-            l.backward()
+            output = model(data.astype(dtype, copy=False))
+            loss = loss_fn(output, label)
+        loss.backward()
         trainer.step(batch_size)
 ```
 
@@ -144,7 +141,7 @@ import horovod.mxnet as hvd
 hvd.init()
 
 # Pin GPU to be used to process local rank
-context = mx.gpu(hvd.local_rank())
+context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
 num_workers = hvd.size()
 
 # Build model
@@ -179,9 +176,11 @@ model.fit(train_data,
           num_epoch=num_epoch)
 ```
 
+
 # Running Horovod
 
-The example commands below show how to run distributed training. See the [Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.md)
+The example commands below show how to run distributed training. See the 
+[Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.md)
 page for more instructions, including RoCE/InfiniBand tweaks and tips for dealing with hangs.
 
 1. To run on a machine with 4 GPUs:
