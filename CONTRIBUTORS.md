@@ -215,6 +215,7 @@ List of Contributors
 * [Zach Boldyga](https://github.com/zboldyga)
 * [Gordon Reid](https://github.com/gordon1992)
 * [Ming Yang](http://ufoym.com)
+* [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
 * [Neo Chien](https://github.com/cchung100m)
 
 Label Bot
