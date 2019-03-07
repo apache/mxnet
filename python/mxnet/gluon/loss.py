@@ -99,11 +99,11 @@ class Loss(HybridBlock):
 
 
 class L2Loss(Loss):
-    r"""Calculates the mean squared error between `label` and `pred`.
+    r"""Calculates the mean squared error between `pred` and `label`.
 
-    .. math:: L = \frac{1}{2} \sum_i \vert {label}_i - {pred}_i \vert^2.
+    .. math:: L = \frac{1}{2} \sum_i \vert {pred}_i - {label}_i \vert^2.
 
-    `label` and `pred` can have arbitrary shape as long as they have the same
+    `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -131,17 +131,17 @@ class L2Loss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.square(label - pred)
+        loss = F.square(pred - label)
         loss = _apply_weighting(F, loss, self._weight/2, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 class L1Loss(Loss):
-    r"""Calculates the mean absolute error between `label` and `pred`.
+    r"""Calculates the mean absolute error between `pred` and `label`.
 
-    .. math:: L = \sum_i \vert {label}_i - {pred}_i \vert.
+    .. math:: L = \sum_i \vert {pred}_i - {label}_i \vert.
 
-    `label` and `pred` can have arbitrary shape as long as they have the same
+    `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -169,7 +169,7 @@ class L1Loss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.abs(label - pred)
+        loss = F.abs(pred - label)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -184,18 +184,22 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
 
         prob = \frac{1}{1 + \exp(-{pred})}
 
-        L = - \sum_i {label}_i * \log({prob}_i) +
+        L = - \sum_i {label}_i * \log({prob}_i) * {pos\_weight}_i +
             (1 - {label}_i) * \log(1 - {prob}_i)
 
     If `from_sigmoid` is True, this loss computes:
 
     .. math::
 
-        L = - \sum_i {label}_i * \log({pred}_i) +
+        L = - \sum_i {label}_i * \log({pred}_i) * {pos\_weight}_i +
             (1 - {label}_i) * \log(1 - {pred}_i)
 
+    A value `pos_weight > 1` decreases the false negative count, hence increasing
+    the recall.
+    Conversely setting `pos_weight < 1` decreases the false positive count and
+    increases the precision.
 
-    `label` and `pred` can have arbitrary shape as long as they have the same
+    `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -218,6 +222,9 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
           to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
+        - **pos_weight**:a weighting tensor of positive examples.Must be a vector with length
+          equal to the number of classes.For example, if pred has shape (64, 10)
+          pos_weight should have shape (1, 10).
 
     Outputs:
         - **loss**: loss tensor with shape (batch_size,). Dimenions other than
@@ -227,13 +234,18 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         super(SigmoidBinaryCrossEntropyLoss, self).__init__(weight, batch_axis, **kwargs)
         self._from_sigmoid = from_sigmoid
 
-    def hybrid_forward(self, F, pred, label, sample_weight=None):
+    def hybrid_forward(self, F, pred, label, pos_weight=1, sample_weight=None):
         label = _reshape_like(F, label, pred)
         if not self._from_sigmoid:
-            # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
-            loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
+            if pos_weight == 1:
+                # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
+                loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
+            else:
+                # We use the stable formula: x - x * z + (1 + z * pos_weight - z) * (log(1 + exp(-abs(x))) + max(-x, 0))
+                log_weight = 1 + (pos_weight - 1) * label
+                loss = pred - pred*label + log_weight*(F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
         else:
-            loss = -(F.log(pred+1e-12)*label + F.log(1.-pred+1e-12)*(1.-label))
+            loss = -(F.log(pred+1e-12)*label*pos_weight + F.log(1.-pred+1e-12)*(1.-label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
 
@@ -344,7 +356,7 @@ class KLDivLoss(Loss):
         L = \sum_i {label}_i * \big[\log({label}_i) - log({pred}_i)\big]
 
 
-    `label` and `pred` can have arbitrary shape as long as they have the same
+    `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -481,13 +493,13 @@ class HuberLoss(Loss):
     exceeds rho but is equal to L2 loss otherwise. Also called SmoothedL1 loss.
 
     .. math::
-        L = \sum_i \begin{cases} \frac{1}{2 {rho}} ({label}_i - {pred}_i)^2 &
-                           \text{ if } |{label}_i - {pred}_i| < {rho} \\
-                           |{label}_i - {pred}_i| - \frac{{rho}}{2} &
+        L = \sum_i \begin{cases} \frac{1}{2 {rho}} ({pred}_i - {label}_i)^2 &
+                           \text{ if } |{pred}_i - {label}_i| < {rho} \\
+                           |{pred}_i - {label}_i| - \frac{{rho}}{2} &
                            \text{ otherwise }
             \end{cases}
 
-    `label` and `pred` can have arbitrary shape as long as they have the same
+    `pred` and `label` can have arbitrary shape as long as they have the same
     number of elements.
 
     Parameters
@@ -518,7 +530,7 @@ class HuberLoss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.abs(label - pred)
+        loss = F.abs(pred - label)
         loss = F.where(loss > self._rho, loss - 0.5 * self._rho,
                        (0.5/self._rho) * F.square(loss))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
@@ -532,7 +544,7 @@ class HingeLoss(Loss):
         L = \sum_i max(0, {margin} - {pred}_i \cdot {label}_i)
 
     where `pred` is the classifier prediction and `label` is the target tensor
-    containing values -1 or 1. `label` and `pred` must have the same number of
+    containing values -1 or 1. `pred` and `label` must have the same number of
     elements.
 
     Parameters
@@ -576,7 +588,7 @@ class SquaredHingeLoss(Loss):
         L = \sum_i max(0, {margin} - {pred}_i \cdot {label}_i)^2
 
     where `pred` is the classifier prediction and `label` is the target tensor
-    containing values -1 or 1. `label` and `pred` can have arbitrary shape as
+    containing values -1 or 1. `pred` and `label` can have arbitrary shape as
     long as they have the same number of elements.
 
     Parameters
@@ -621,7 +633,7 @@ class LogisticLoss(Loss):
 
     where `pred` is the classifier prediction and `label` is the target tensor
     containing values -1 or 1 (0 or 1 if `label_format` is binary).
-    `label` and `pred` can have arbitrary shape as long as they have the same number of elements.
+    `pred` and `label` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------
@@ -666,14 +678,14 @@ class LogisticLoss(Loss):
 
 class TripletLoss(Loss):
     r"""Calculates triplet loss given three input tensors and a positive margin.
-    Triplet loss measures the relative similarity between a positive
-    example, a negative example, and prediction:
+    Triplet loss measures the relative similarity between prediction, a positive
+    example and a negative example:
 
     .. math::
-        L = \sum_i \max(\Vert {pos_i}_i - {pred} \Vert_2^2 -
-                        \Vert {neg_i}_i - {pred} \Vert_2^2 + {margin}, 0)
+        L = \sum_i \max(\Vert {pred}_i - {pos_i} \Vert_2^2 -
+                        \Vert {pred}_i - {neg_i} \Vert_2^2 + {margin}, 0)
 
-    `positive`, `negative`, and 'pred' can have arbitrary shape as long as they
+    `pred`, `positive` and `negative` can have arbitrary shape as long as they
     have the same number of elements.
 
     Parameters
@@ -703,7 +715,7 @@ class TripletLoss(Loss):
     def hybrid_forward(self, F, pred, positive, negative):
         positive = _reshape_like(F, positive, pred)
         negative = _reshape_like(F, negative, pred)
-        loss = F.sum(F.square(positive-pred) - F.square(negative-pred),
+        loss = F.sum(F.square(pred-positive) - F.square(pred-negative),
                      axis=self._batch_axis, exclude=True)
         loss = F.relu(loss + self._margin)
         return _apply_weighting(F, loss, self._weight, None)
@@ -717,7 +729,7 @@ class PoissonNLLLoss(Loss):
     .. math::
         L = \text{pred} - \text{target} * \log(\text{pred}) +\log(\text{target!})
 
-    `target`, 'pred' can have arbitrary shape as long as they have the same number of elements.
+    `pred`, `target` can have arbitrary shape as long as they have the same number of elements.
 
     Parameters
     ----------

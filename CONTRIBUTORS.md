@@ -216,6 +216,7 @@ List of Contributors
 * [Gordon Reid](https://github.com/gordon1992)
 * [Ming Yang](http://ufoym.com)
 * [Neo Chien](https://github.com/cchung100m)
+* [Wujie Zhou](https://github.com/eureka7mt)
 
 Label Bot
 ---------
