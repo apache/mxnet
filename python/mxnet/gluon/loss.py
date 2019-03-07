@@ -239,22 +239,24 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
         if not self._from_sigmoid:
             if pos_weight == 1:
                 # We use the stable formula: max(x, 0) - x * z + log(1 + exp(-abs(x)))
-                loss = F.relu(pred) - pred * label + F.Activation(-F.abs(pred), act_type='softrelu')
+                loss = F.relu(pred) - pred * label + \
+                    F.Activation(-F.abs(pred), act_type='softrelu')
             else:
                 # We use the stable formula: x - x * z + (1 + z * pos_weight - z) * (log(1 + exp(-abs(x))) + max(-x, 0))
                 log_weight = 1 + (pos_weight - 1) * label
-                loss = pred - pred*label + log_weight * (
-                           F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
+                loss = pred - pred * label + log_weight * (
+                    F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
         else:
             eps = 1e-12
             if pos_weight == 1:
-                loss = -(F.log(pred + eps) * label +\
-                         F.log(1. - pred + eps) * (1. - label))
+                loss = -(F.log(pred + eps) * label
+                         + F.log(1. - pred + eps) * (1. - label))
             else:
-                loss = -(F.log(pred + eps) * label * pos_weight +\
-                         F.log(1. - pred + eps) * (1. - label))
+                loss = -(F.log(pred + eps) * label * pos_weight
+                         + F.log(1. - pred + eps) * (1. - label))
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return F.mean(loss, axis=self._batch_axis, exclude=True)
+
 
 SigmoidBCELoss = SigmoidBinaryCrossEntropyLoss
 
