@@ -21,7 +21,7 @@ excellent scaling efficiency for dense models running on a large number of nodes
 supports mainstream deep learning frameworks such as MXNet, TensorFlow, Keras, and PyTorch. 
 It is created at Uber and currently hosted by the [Linux Foundation Deep Learning](https://lfdl.io)(LF DL). 
 
-MXNet 1.4.0 is supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
+MXNet is supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
 
 ## What's New?
 Compared with the standard distributed training script in MXNet which uses parameter server to 
@@ -77,7 +77,7 @@ To run MXNet with Horovod, make the following additions to your training script:
 # Example
 
 Here we provide the building blocks to train a model using MXNet with Horovod.
-The full examples are in [MNIST](mxnet_mnist.py) and [ImageNet](mxnet_imagenet_resnet50.py).
+The full examples are in [MNIST](gluon_mnist.py) and [ImageNet](resnet50_imagenet.py).
 
 ## Gluon API
 ```python
@@ -88,7 +88,7 @@ import horovod.mxnet as hvd
 # Initialize Horovod
 hvd.init()
 
-# Pin GPU to be used to process local rank
+# Set context to current process 
 context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
 
 num_workers = hvd.size()
@@ -137,7 +137,7 @@ import horovod.mxnet as hvd
 # Initialize Horovod
 hvd.init()
 
-# Pin GPU to be used to process local rank
+# Set context to current process
 context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
 num_workers = hvd.size()
 
@@ -180,24 +180,22 @@ The example commands below show how to run distributed training. See the
 [Running Horovod](https://github.com/horovod/horovod/blob/master/docs/running.md)
 page for more instructions, including RoCE/InfiniBand tweaks and tips for dealing with hangs.
 
-1. To run on a machine with 4 GPUs:
+1. To run on a machine with 4 CPUs:
 
 ```bash
 $ mpirun -np 4 \
     -H localhost:4 \
     -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
-    -mca pml ob1 -mca btl ^openib \
     python train.py
 ```
 
-2. To run on 4 machines with 4 GPUs each:
+2. To run on 2 machines with 4 GPUs each:
 
 ```bash
-$ mpirun -np 16 \
-    -H server1:4,server2:4,server3:4,server4:4 \
+$ mpirun -np 8 \
+    -H server1:4,server2:4 \
     -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -x NCCL_DEBUG=INFO \
     -mca pml ob1 -mca btl ^openib \
     python train.py
 ```
