@@ -214,6 +214,11 @@ inline bool InitShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
+  for (unsigned int i=0 ; i < param.shape.ndim() ; ++i) {
+    if (param.shape[i] < 0U) {
+      LOG(FATAL) << "Shape cannot contain negative values " << param.shape;
+    }
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
   return true;
 }
