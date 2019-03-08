@@ -156,10 +156,39 @@ def _wrap_symbol_functions(module):
             pass
 
 def _wrap_loss_output_functions(module, ls):
-    pass
+    if module == ndarray:
+        def _wrapper(f):
+            def _scaling_wrapper(*args, **kwargs):
+                if 'grad_scale' in kwargs:
+                    kwargs['grad_scale'] = kwargs['grad_scale'] * ls.loss_scale
+                else:
+                    kwargs['grad_scale'] = ls.loss_scale
+                return f(*args, **kwargs)
+            _scaling_wrapper.__name__ = f.__name__
+            _scaling_wrapper.__module__ = f.__module__
+            _scaling_wrapper.__doc__ = f.__doc__
+            return _scaling_wrapper
+    else:
+        def _wrapper(f):
+            def _warning_wrapper(*args, **kwargs):
+                logging.warning(f.__name__ + " does not support dynamic loss scaling " +
+                                "in symbolic and hybridized execution.")
+                return f(*args, **kwargs)
+            _warning_wrapper.__name__ = f.__name__
+            _warning_wrapper.__module__ = f.__module__
+            _warning_wrapper.__doc__ = f.__doc__
+            return _warning_wrapper
+
+    for fun_name in lists.symbol.LOSS_OUTPUT_FUNCTIONS:
+        try:
+            f_to_wrap = getattr(module, fun_name)
+            setattr(module, fun_name, _wrapper(f_to_wrap))
+        except AttributeError:
+            pass
 
 _amp_initialized = False
 _amp_loss_scale_initialized = False
+_loss_scaler = None
 
 @contextlib.contextmanager
 def scale_loss(loss, optimizer_or_trainer, params=None):
@@ -173,6 +202,7 @@ def scale_loss(loss, optimizer_or_trainer, params=None):
 
 def init():
     global _amp_initialized
+    global _loss_scaler
     if not _amp_initialized:
         _amp_initialized = True
         print("AMP init!")
@@ -182,16 +212,20 @@ def init():
         _wrap_symbol_functions(ndarray)
         _wrap_symbol_functions(NDArray)
         _wrap_symbol_functions(ndarray_contrib)
+        _loss_scaler = LossScaler()
+        _wrap_loss_output_functions(ndarray, _loss_scaler)
+        _wrap_loss_output_functions(symbol, _loss_scaler)
 
 def init_trainer(optimizer_or_trainer, params=None):
     global _amp_loss_scale_initialized
     global _amp_initialized
+    global _loss_scaler
     assert _amp_initialized, "AMP not initialized, did you forget to call amp.init()?"
-    loss_scaler = LossScaler()
     if not _amp_loss_scale_initialized:
-        _wrap_loss_output_functions(ndarray, loss_scaler)
-        _wrap_loss_output_functions(symbol, loss_scaler)
         _amp_loss_scale_initialized = True
+        loss_scaler = _loss_scaler
+    else:
+        loss_scaler = LossScaler()
     #_wrap_output
     if isinstance(optimizer_or_trainer, trainer.Trainer):
         assert params == None, "optimizer_or_trainer is a trainer so params should be None."

@@ -166,3 +166,10 @@ WIDEST_TYPE_CASTS = [
     'edge_id',
     'where',
     ]
+
+LOSS_OUTPUT_FUNCTIONS = [
+    'SoftmaxOutput',
+    'LinearRegressionOutput',
+    'LogisticRegressionOutput',
+    'MAERegressionOutput',
+    ]
