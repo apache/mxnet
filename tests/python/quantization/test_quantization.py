@@ -278,7 +278,7 @@ def test_quantized_pooling():
 @with_seed()
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
-        if mx.current_context().device_type != 'gpu':
+        if is_test_for_native_cpu():
             hasMKL = False;
             for key in os.environ.keys():
                 if operator.eq(key, "BUILD_TAG"):
@@ -288,31 +288,62 @@ def test_quantized_fc():
             if hasMKL == False:
                 print('skipped testing quantized_fc on cpu since s8u8s32 is only supported by MKL BLAS library')
                 return
+        elif qdtype == 'int8' and is_test_for_mkldnn():
+            print('skipped testing test_quantized_fc for mkldnn cpu int8 since it is not supported yet')
+            return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_fc for gpu uint8 since it is not supported yet')
             return
+
+        def maxabs(a, b):
+            return mx.nd.maximum(mx.nd.abs(a), mx.nd.abs(b))
 
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
         fc_fp32 = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, no_bias=no_bias, flatten=flatten)
         arg_shapes, _, _ = fc_fp32.infer_shape(data=data_shape)
         arg_names = fc_fp32.list_arguments()
         fc_fp32_exe = fc_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        int8_range = 127.0
         if qdtype == 'uint8':
             data_low = 0.0
             data_high = 63.0
+            quantized_range = 255.0
         else:
             data_low = -63.0
             data_high = 63.0
-        fc_fp32_exe.arg_dict[arg_names[0]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
-                                                                     shape=data_shape).astype('int32')
-        fc_fp32_exe.arg_dict[arg_names[1]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
-                                                                     shape=arg_shapes[1]).astype('int32')
+            quantized_range = 127.0
+
+        data = mx.nd.random.uniform(low=data_low, high=data_high,
+                                    shape=data_shape).astype('int32')
+        weight = mx.nd.random.uniform(low=data_low, high=data_high,
+                                      shape=arg_shapes[1]).astype('int32')
+        fc_fp32_exe.arg_dict[arg_names[0]][:] = data
+        fc_fp32_exe.arg_dict[arg_names[1]][:] = weight
+
+        data_min = mx.nd.min(data).astype('float32')
+        data_max = mx.nd.max(data).astype('float32')
+        weight_min = mx.nd.min(weight).astype('float32')
+        weight_max = mx.nd.max(weight).astype('float32')
+        data_range = maxabs(data_min, data_max)
+        weight_range = maxabs(weight_min, weight_max)
+
         if not no_bias:
-            fc_fp32_exe.arg_dict[arg_names[2]][:] = mx.nd.random.uniform(low=data_low, high=data_high,
-                                                                         shape=arg_shapes[2]).astype('int32')
+            bias = mx.nd.random.uniform(low=data_low, high=data_high,
+                                        shape=arg_shapes[2]).astype('int32')
+            bias_min = mx.nd.min(bias).astype('float32')
+            bias_max = mx.nd.max(bias).astype('float32')
+            bias_range = maxabs(bias_min, bias_max)
+
+            bias_scale = int8_range / bias_range
+            data_scale = quantized_range / data_range
+            weight_scale = int8_range / weight_range
+            bias_int32_rescale = data_scale * weight_scale / bias_scale
+            new_bias = mx.nd.cast(bias, dtype='float32') * bias_int32_rescale
+            fc_fp32_exe.arg_dict[arg_names[2]][:] = new_bias.astype('int32')
+
         output = fc_fp32_exe.forward()[0]
 
-        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='int8')
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=qdtype)
         fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
                                                            no_bias=no_bias, flatten=flatten)
         qarg_names = fc_int8.list_arguments()
@@ -322,20 +353,19 @@ def test_quantized_fc():
         fc_int8_exe = fc_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
         fc_int8_exe.arg_dict[qarg_names[0]][:] = fc_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
         fc_int8_exe.arg_dict[qarg_names[1]][:] = fc_fp32_exe.arg_dict[arg_names[1]].astype('int8')
-        quantized_range = 127.0
         if no_bias:
-            fc_int8_exe.arg_dict[qarg_names[2]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[3]][:] = quantized_range
-            fc_int8_exe.arg_dict[qarg_names[4]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[5]][:] = quantized_range
+            fc_int8_exe.arg_dict[qarg_names[2]][:] = -data_range
+            fc_int8_exe.arg_dict[qarg_names[3]][:] = data_range
+            fc_int8_exe.arg_dict[qarg_names[4]][:] = -weight_range
+            fc_int8_exe.arg_dict[qarg_names[5]][:] = weight_range
         else:
-            fc_int8_exe.arg_dict[qarg_names[2]][:] = fc_fp32_exe.arg_dict[arg_names[2]].astype('int8')
-            fc_int8_exe.arg_dict[qarg_names[3]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[4]][:] = quantized_range
-            fc_int8_exe.arg_dict[qarg_names[5]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[6]][:] = quantized_range
-            fc_int8_exe.arg_dict[qarg_names[7]][:] = -quantized_range
-            fc_int8_exe.arg_dict[qarg_names[8]][:] = quantized_range
+            fc_int8_exe.arg_dict[qarg_names[2]][:] = bias.astype('int8')
+            fc_int8_exe.arg_dict[qarg_names[3]][:] = -data_range
+            fc_int8_exe.arg_dict[qarg_names[4]][:] = data_range
+            fc_int8_exe.arg_dict[qarg_names[5]][:] = -weight_range
+            fc_int8_exe.arg_dict[qarg_names[6]][:] = weight_range
+            fc_int8_exe.arg_dict[qarg_names[7]][:] = -bias_range
+            fc_int8_exe.arg_dict[qarg_names[8]][:] = bias_range
         qoutput, min_range, max_range = fc_int8_exe.forward()
 
         if no_bias:

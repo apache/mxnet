@@ -162,15 +162,6 @@ int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores,
   return j;
 }
 
-namespace mshadow_op {
-struct less_than : public mxnet_op::tunable {
-  // a is x, b is sigma
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return static_cast<DType>(a < b);
-  }
-};  // struct equal_to
-}   // namespace mshadow_op
 
 struct corner_to_center {
   template<typename DType>
@@ -274,6 +265,19 @@ void NMSApply(mshadow::Stream<cpu> *s,
       num_worker, ref, num_elem,
       width_elem, coord_start, id_index,
       threshold, force_suppress, in_format);
+  }
+}
+
+inline void NMSCalculateBatchStart(mshadow::Stream<cpu> *s,
+                                   mshadow::Tensor<cpu, 1, int32_t>* batch_start,
+                                   mshadow::Tensor<cpu, 1, int32_t>* valid_batch_id,
+                                   int num_batch) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  for (int b = 0; b < num_batch + 1; b++) {
+    slice<0>(*batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(
+        F<mshadow_op::less_than>(*valid_batch_id, ScalarExp<int32_t>(b)), 0);
   }
 }
 
@@ -435,10 +439,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
 
     // calculate batch_start: accumulated sum to denote 1st sorted_index for a given batch_index
     valid_batch_id = (valid_sorted_index / ScalarExp<int32_t>(num_elem));
-    for (int b = 0; b < num_batch + 1; b++) {
-      slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(
-        F<mshadow_op::less_than>(valid_batch_id, ScalarExp<int32_t>(b)), 0);
-    }
+    mxnet::op::NMSCalculateBatchStart(s, &batch_start, &valid_batch_id, num_batch);
 
     // pre-compute areas of candidates
     areas = 0;
