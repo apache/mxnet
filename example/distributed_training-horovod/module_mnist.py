@@ -30,15 +30,20 @@ parser.add_argument('--batch-size', type=int, default=64,
                     help='training batch size (default: 64)')
 parser.add_argument('--dtype', type=str, default='float32',
                     help='training data type (default: float32)')
-parser.add_argument('--gpus', type=str, default='0',
-                    help='number of gpus to use (default: 0)')
 parser.add_argument('--epochs', type=int, default=5,
                     help='number of training epochs (default: 5)')
 parser.add_argument('--lr', type=float, default=0.05,
                     help='learning rate (default: 0.05)')
 parser.add_argument('--momentum', type=float, default=0.5,
                     help='SGD momentum (default: 0.5)')
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='disables CUDA training (default: False)')
 args = parser.parse_args()
+
+if not args.no_cuda:
+    # Disable CUDA if there are no GPUs.
+    if not mx.test_utils.list_gpus():
+        args.no_cuda = True
 
 logging.basicConfig(level=logging.INFO)
 logging.info(args)
@@ -83,9 +88,8 @@ def get_mnist_iterator(rank):
 # Step 1: initialize Horovod
 hvd.init()
 
-# Horovod: pin GPU to local rank
-context = mx.cpu() if args.gpus is None or args.gpus == '0' \
-                   else mx.gpu(hvd.local_rank())
+# Horovod: pin context to process
+context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
 
 # Step 2: load data
 train_iter, val_iter = get_mnist_iterator(hvd.rank())
