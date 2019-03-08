@@ -34,12 +34,10 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/sort_op.h"
+#include "./bounding_box-common.h"
 
 namespace mxnet {
 namespace op {
-namespace box_common_enum {
-enum BoxType {kCorner, kCenter};
-}
 namespace box_nms_enum {
 enum BoxNMSOpInputs {kData};
 enum BoxNMSOpOutputs {kOut, kTemp};
@@ -254,83 +252,30 @@ struct compute_area {
   }
 };
 
-// compute line intersect along either height or width
 template<typename DType>
-MSHADOW_XINLINE DType Intersect(const DType *a, const DType *b, int encode) {
-  DType a1 = a[0];
-  DType a2 = a[2];
-  DType b1 = b[0];
-  DType b2 = b[2];
-  DType w;
-  if (box_common_enum::kCorner == encode) {
-    DType left = a1 > b1 ? a1 : b1;
-    DType right = a2 < b2 ? a2 : b2;
-    w = right - left;
-  } else {
-    DType aw = a2 / 2;
-    DType bw = b2 / 2;
-    DType al = a1 - aw;
-    DType ar = a1 + aw;
-    DType bl = b1 - bw;
-    DType br = b1 + bw;
-    DType left = bl > al ? bl : al;
-    DType right = br < ar ? br : ar;
-    w = right - left;
+void NMSApply(mshadow::Stream<cpu> *s,
+              int num_batch, int topk,
+              mshadow::Tensor<cpu, 1, int32_t>* sorted_index,
+              mshadow::Tensor<cpu, 1, int32_t>* batch_start,
+              mshadow::Tensor<cpu, 3, DType>* buffer,
+              mshadow::Tensor<cpu, 1, DType>* areas,
+              int num_elem, int width_elem,
+              int coord_start, int id_index,
+              float threshold, bool force_suppress,
+              int in_format) {
+  using namespace mxnet_op;
+  // go through each box as reference, suppress if overlap > threshold
+  // sorted_index with -1 is marked as suppressed
+  for (int ref = 0; ref < topk; ++ref) {
+    int num_worker = topk - ref - 1;
+    if (num_worker < 1) continue;
+    Kernel<nms_impl, cpu>::Launch(s, num_batch * num_worker,
+      sorted_index->dptr_, batch_start->dptr_, buffer->dptr_, areas->dptr_,
+      num_worker, ref, num_elem,
+      width_elem, coord_start, id_index,
+      threshold, force_suppress, in_format);
   }
-  return w > 0 ? w : DType(0);
 }
-
-/*!
-   * \brief Implementation of the non-maximum suppression operation
-   *
-   * \param i the launched thread index
-   * \param index sorted index in descending order
-   * \param batch_start map (b, k) to compact index by indices[batch_start[b] + k]
-   * \param input the input of nms op
-   * \param areas pre-computed box areas
-   * \param k nms topk number
-   * \param ref compare reference position
-   * \param num number of input boxes in each batch
-   * \param stride input stride, usually 6 (id-score-x1-y1-x2-y2)
-   * \param offset_box box offset, usually 2
-   * \param thresh nms threshold
-   * \param force force suppress regardless of class id
-   * \param offset_id class id offset, used when force == false, usually 0
-   * \param encode box encoding type, corner(0) or center(1)
-   * \param DType the data type
-   */
-struct nms_impl {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int32_t *index, const int32_t *batch_start,
-                                  const DType *input, const DType *areas,
-                                  int k, int ref, int num,
-                                  int stride, int offset_box, int offset_id,
-                                  float thresh, bool force, int encode) {
-    int b = i / k;  // batch
-    int pos = i % k + ref + 1;  // position
-    ref = static_cast<int>(batch_start[b]) + ref;
-    pos = static_cast<int>(batch_start[b]) + pos;
-    if (ref >= static_cast<int>(batch_start[b + 1])) return;
-    if (pos >= static_cast<int>(batch_start[b + 1])) return;
-    if (index[ref] < 0) return;  // reference has been suppressed
-    if (index[pos] < 0) return;  // self been suppressed
-    int ref_offset = static_cast<int>(index[ref]) * stride + offset_box;
-    int pos_offset = static_cast<int>(index[pos]) * stride + offset_box;
-    if (!force && offset_id >=0) {
-      int ref_id = static_cast<int>(input[ref_offset - offset_box + offset_id]);
-      int pos_id = static_cast<int>(input[pos_offset - offset_box + offset_id]);
-      if (ref_id != pos_id) return;  // different class
-    }
-    DType intersect = Intersect(input + ref_offset, input + pos_offset, encode);
-    intersect *= Intersect(input + ref_offset + 1, input + pos_offset + 1, encode);
-    int ref_area_offset = static_cast<int>(index[ref]);
-    int pos_area_offset = static_cast<int>(index[pos]);
-    DType iou = intersect / (areas[ref_area_offset] + areas[pos_area_offset] - intersect);
-    if (iou > thresh) {
-      index[pos] = -1;
-    }
-  }
-};
 
 /*!
    * \brief Assign output of nms by indexing input
@@ -502,17 +447,11 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
      topk, num_elem, width_elem, param.in_format);
 
     // apply nms
-    // go through each box as reference, suppress if overlap > threshold
-    // sorted_index with -1 is marked as suppressed
-    for (int ref = 0; ref < topk; ++ref) {
-      int num_worker = topk - ref - 1;
-      if (num_worker < 1) continue;
-      Kernel<nms_impl, xpu>::Launch(s, num_batch * num_worker,
-        sorted_index.dptr_, batch_start.dptr_, buffer.dptr_, areas.dptr_,
-        num_worker, ref, num_elem,
-        width_elem, coord_start, id_index,
-        param.overlap_thresh, param.force_suppress, param.in_format);
-    }
+    mxnet::op::NMSApply(s, num_batch, topk, &sorted_index,
+                        &batch_start, &buffer, &areas,
+                        num_elem, width_elem, coord_start,
+                        id_index, param.overlap_thresh,
+                        param.force_suppress, param.in_format);
 
     // store the results to output, keep a record for backward
     record = -1;

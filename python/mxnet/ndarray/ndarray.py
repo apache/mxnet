@@ -2544,7 +2544,7 @@ def moveaxis(tensor, source, destination):
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
     Values are generated within the half-open interval [`start`, `stop`). In other
@@ -2588,10 +2588,13 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dt
     >>> mx.nd.arange(2, 6, step=2, repeat=3, dtype='int32').asnumpy()
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
+    if infer_range is not None:
+        warnings.warn('`infer_range` argument has been deprecated',
+                      DeprecationWarning)
     if ctx is None:
         ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             infer_range=infer_range, dtype=dtype, ctx=str(ctx))
+                             infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 

@@ -45,11 +45,11 @@ MXNet's newest and most popular API is Gluon. Gluon is built into the Python bin
     - [Python (includes Gluon)](../api/python/index.html)
     - [C++](../api/c++/index.html)
     - [Clojure](../api/clojure/index.html)
+    - [Java](../api/java/index.html)
     - [Julia](../api/julia/index.html)
     - [Perl](../api/perl/index.html)
     - [R](../api/r/index.html)
     - [Scala](../api/scala/index.html)
-    - [Java](../api/java/index.html)
 
 <hr>
 

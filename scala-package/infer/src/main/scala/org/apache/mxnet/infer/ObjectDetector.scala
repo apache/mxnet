@@ -20,12 +20,13 @@ package org.apache.mxnet.infer
 // scalastyle:off
 import java.awt.image.BufferedImage
 
+import org.apache.mxnet.Shape
+
 import scala.collection.parallel.mutable.ParArray
 // scalastyle:on
 import org.apache.mxnet.NDArray
 import org.apache.mxnet.DataDesc
 import org.apache.mxnet.Context
-import scala.collection.mutable.ListBuffer
 
 /**
   * The ObjectDetector class helps to run ObjectDetection tasks where the goal
@@ -174,7 +175,25 @@ class ObjectDetector(modelPathPrefix: String,
                          contexts: Array[Context] = Context.cpu(),
                          epoch: Option[Int] = Some(0)):
   ImageClassifier = {
-    new ImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
-  }
+    val imageClassifier: ImageClassifier =
+      new ImageClassifier(modelPathPrefix, inputDescriptors, contexts, epoch)
 
+    val shapes: IndexedSeq[(String, Shape)] = imageClassifier.outputShapes
+    if (shapes.length != inputDescriptors.length) {
+      throw new IllegalStateException(s"Invalid output shapes, expected:" +
+        s" $inputDescriptors.length, actual: $shapes.length.")
+    }
+    shapes.map(_._2).foreach(shape => {
+      if (shape.length < 3) {
+        throw new IllegalArgumentException("Invalid output shapes, the model doesn't"
+          + " support object detection.")
+      }
+      if (shape.get(2) < 6) {
+        throw new IllegalArgumentException("Invalid output shapes, the model doesn't"
+          + " support object detection with bounding box.")
+      }
+    })
+
+    imageClassifier
+  }
 }
