@@ -4894,11 +4894,11 @@ def test_quantization_op():
     min0 = mx.nd.array([0.0])
     max0 = mx.nd.array([1.0])
     a  = mx.nd.array([[0.1392, 0.5928], [0.6027, 0.8579]])
-    qa, min1, max1 = mx.nd.contrib.quantize(a, min0, max0, out_type='uint8')
+    qa, min1, max1 = mx.nd.contrib.quantize(a, min0, max0, out_type='int8')
     a_ = mx.nd.contrib.dequantize(qa, min1, max1, out_type='float32')
 
-    qa_real = mx.nd.array([[35, 151], [154, 219]])
-    a_real  = mx.nd.array([[0.13725491, 0.59215689], [0.60392159, 0.8588236]])
+    qa_real = mx.nd.array([[18, 75], [77, 109]])
+    a_real  = mx.nd.array([[0.14173228, 0.5905512], [0.6062992, 0.8582677]])
 
     assert same(qa.asnumpy(), qa_real.asnumpy())
     assert same(a_.asnumpy(),  a_real.asnumpy())

@@ -137,6 +137,10 @@ void QuantizeV2Compute(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
   auto out_type = GetOutputType(param);
+  if (out_type == mshadow::kUint8 && std::is_same<xpu, gpu>::value) {
+    LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
+                  "please switch to the context of CPU or int8 data type for GPU.";
+  }
 
   if (inputs[0].type_flag_ == mshadow::kUint8 || inputs[0].type_flag_ == mshadow::kInt8) {
     if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {

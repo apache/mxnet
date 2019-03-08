@@ -34,6 +34,9 @@ NNVM_REGISTER_OP(_contrib_quantized_flatten)
 .set_attr<mxnet::FInferShape>("FInferShape", QuantizedFlattenShape)
 .set_attr<nnvm::FInferType>("FInferType", QuantizedFlattenType)
 .set_attr<FCompute>("FCompute<cpu>", QuantizedFlattenCompute<cpu>)
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "min_data", "max_data"};

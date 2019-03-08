@@ -112,6 +112,16 @@ struct nms_impl {
   }
 };
 
+namespace mshadow_op {
+struct less_than : public mxnet_op::tunable {
+  // a is x, b is sigma
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return static_cast<DType>(a < b);
+  }
+};  // struct equal_to
+}   // namespace mshadow_op
+
 }  // namespace op
 }  // namespace mxnet
 

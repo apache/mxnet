@@ -1005,7 +1005,20 @@ void RunGraph(const bool retain_graph,
               std::vector<uint32_t>&& ref_count,
               std::vector<OpStatePtr> *p_states,
               const DispatchModeVector &dispatch_modes,
-              bool recording);
+              bool recording,
+              mxnet::ShapeVector *shapes = nullptr);
+
+void NaiveRunGraph(const bool retain_graph,
+                   const Context& default_ctx,
+                   const nnvm::IndexedGraph& idx,
+                   const std::vector<NDArray*> arrays,
+                   size_t node_start, size_t node_end,
+                   std::vector<OpReqType>&& array_reqs,
+                   std::vector<uint32_t>&& ref_count,
+                   std::vector<OpStatePtr> *p_states,
+                   const DispatchModeVector &dispatch_modes,
+                   bool recording,
+                   mxnet::ShapeVector *shapes);
 
 }  // namespace imperative
 }  // namespace mxnet
