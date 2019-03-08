@@ -66,7 +66,6 @@ parser.add_argument('--save-period', type=int, default=10,
 
 def save_model():
     """Save cnn model
-
     Returns
     ----------
     callback: A callback function that can be passed as epoch_end_callback to fit
@@ -78,11 +77,9 @@ def save_model():
 
 def highway(data):
     """Construct highway net
-
     Parameters
     ----------
     data:
-
     Returns
     ----------
     Highway Networks
@@ -104,7 +101,6 @@ def highway(data):
 
 def data_iter(batch_size, num_embed, pre_trained_word2vec=False):
     """Construct data iter
-
     Parameters
     ----------
     batch_size: int
@@ -166,7 +162,6 @@ def sym_gen(batch_size, sentences_size, num_embed, vocabulary_size,
             num_label=2, filter_list=None, num_filter=100,
             dropout=0.0, pre_trained_word2vec=False):
     """Generate network symbol
-
     Parameters
     ----------
     batch_size: int
@@ -178,7 +173,7 @@ def sym_gen(batch_size, sentences_size, num_embed, vocabulary_size,
     num_filter: int
     dropout: int
     pre_trained_word2vec: boolean
-                        identify the pre-trained layers or not
+                          identify the pre-trained layers or not
     Returns
     ----------
     sm: symbol
@@ -236,7 +231,6 @@ def sym_gen(batch_size, sentences_size, num_embed, vocabulary_size,
 
 def train(symbol_data, train_iterator, valid_iterator, data_column_names, target_names):
     """Train cnn model
-
     Parameters
     ----------
     symbol_data: symbol
@@ -291,7 +285,6 @@ class CustomInit(Initializer):
     """https://mxnet.incubator.apache.org/api/python/optimization.html#mxnet.initializer.register
     Create and register a custom initializer that
     Initialize the weight and bias with custom requirements
-
     """
     weightMethods = ["normal", "uniform", "orthogonal", "xavier"]
     biasMethods = ["costant"]

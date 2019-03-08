@@ -855,7 +855,7 @@ class AvgPool1D(_Pooling):
     Parameters
     ----------
     pool_size: int
-        Size of the max pooling windows.
+        Size of the average pooling windows.
     strides: int, or None
         Factor by which to downscale. E.g. 2 will halve the input size.
         If `None`, it will default to `pool_size`.
@@ -903,7 +903,7 @@ class AvgPool2D(_Pooling):
     Parameters
     ----------
     pool_size: int or list/tuple of 2 ints,
-        Size of the max pooling windows.
+        Size of the average pooling windows.
     strides: int, list/tuple of 2 ints, or None.
         Factor by which to downscale. E.g. 2 will halve the input size.
         If `None`, it will default to `pool_size`.
@@ -954,7 +954,7 @@ class AvgPool3D(_Pooling):
     Parameters
     ----------
     pool_size: int or list/tuple of 3 ints,
-        Size of the max pooling windows.
+        Size of the average pooling windows.
     strides: int, list/tuple of 3 ints, or None.
         Factor by which to downscale. E.g. 2 will halve the input size.
         If `None`, it will default to `pool_size`.

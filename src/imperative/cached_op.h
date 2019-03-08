@@ -53,10 +53,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
     .set_default(2)
     .describe("Maximum number of operators that can be inlined.");
     DMLC_DECLARE_FIELD(forward_bulk_size)
-    .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
+    .set_default(Imperative::BulkExecMaxNodeTrainFwd())
     .describe("Segment size of bulk execution during forward pass.");
     DMLC_DECLARE_FIELD(backward_bulk_size)
-    .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
+    .set_default(Imperative::BulkExecMaxNodeTrainBwd())
     .describe("Segment size of bulk execution during backward pass.");
     DMLC_DECLARE_FIELD(data_indices)
     .set_default(nnvm::Tuple<uint32_t>())
@@ -153,7 +153,8 @@ class CachedOp {
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      bool use_naive_run = false);
   void DynamicBackward(
       const bool retain_graph,
       const OpStatePtr& op_state,
@@ -185,6 +186,10 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  bool CheckDynamicShapeExists(
+      const Context& default_ctx,
+      const std::vector<NDArray*>& inputs,
+      bool erase_result);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;

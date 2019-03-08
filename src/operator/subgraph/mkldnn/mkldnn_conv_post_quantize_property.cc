@@ -107,7 +107,11 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
     }
   }
   static SubgraphPropertyPtr Create() {
-    return std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
+    auto property = std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
+    property->SetAttr<std::string>("property_name",
+                                   "MKLDNN Convolution post-quantization optimization pass");
+    property->SetAttr<bool>("inference_only", true);
+    return property;
   }
   nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
