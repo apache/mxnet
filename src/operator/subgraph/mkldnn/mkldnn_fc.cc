@@ -116,11 +116,6 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   NDArray data = in_data[fullc::kData];
   NDArray weight = in_data[fullc::kWeight];
   NDArray output = out_data[fullc::kOut];
-  const mxnet::TShape &ishape = data.shape();
-  if (mkldnn_param.quantized && ishape.ndim() != 2) {
-    CHECK(default_param.flatten)
-      << "QuantizedFullyConnected only supports flatten=true when ishape.ndim() != 2 for now.";
-  }
 
   mkldnn::memory::desc out_md = GetMemDesc(output);
   MKLDNNFCFlattenData(default_param, out_data[fullc::kOut], &data, &out_md);
