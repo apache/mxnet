@@ -50,11 +50,17 @@ namespace op {
 struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
   int height;
   int width;
+  dmlc::optional<float> scale_height;
+  dmlc::optional<float> scale_width;
   DMLC_DECLARE_PARAMETER(BilinearSampleParam) {
-    DMLC_DECLARE_FIELD(height).set_range(1, 10000)
-    .describe("output height (required)");
-    DMLC_DECLARE_FIELD(width).set_range(1, 10000)
-    .describe("output width (required)");
+    DMLC_DECLARE_FIELD(height).set_default(1).set_range(1, 10000)
+    .describe("output height (required, but ignored if scale_height is defined)");
+    DMLC_DECLARE_FIELD(width).set_default(1).set_range(1, 10000)
+    .describe("output width (required, but ignored if scale_width is defined)");
+    DMLC_DECLARE_FIELD(scale_height).set_default(dmlc::optional<float>())
+    .describe("sampling scale of the height (optional, ignores height if defined)");
+    DMLC_DECLARE_FIELD(scale_width).set_default(dmlc::optional<float>())
+    .describe("sampling scale of the scale_width (optional, ignores width if defined)");
   }
 };
 
@@ -121,16 +127,26 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
 
 
 static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
-                                       std::vector<TShape> *in_shape,
-                                       std::vector<TShape> *out_shape) {
+                                       mxnet::ShapeVector *in_shape,
+                                       mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
   const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
-  TShape dshape(in_shape->at(0));
+  mxnet::TShape dshape(in_shape->at(0));
   if (dshape.ndim() == 0) return false;
-  dshape[2] = param.height;
-  dshape[3] = param.width;
+  if (param.scale_height.has_value()) {
+    dshape[2] = static_cast<int>(param.scale_height.value() * in_shape->at(0)[2]);
+  } else {
+    dshape[2] = param.height;
+  }
+
+  if (param.scale_height.has_value()) {
+    dshape[3] = static_cast<int>(param.scale_width.value() * in_shape->at(0)[3]);
+  } else {
+    dshape[3] = param.width;
+  }
+
   out_shape->clear();
   out_shape->push_back(dshape);
   return true;

@@ -31,6 +31,8 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(SGDParam);
 DMLC_REGISTER_PARAMETER(SGDMomParam);
+DMLC_REGISTER_PARAMETER(MultiSGDParam);
+DMLC_REGISTER_PARAMETER(MultiSGDMomParam);
 DMLC_REGISTER_PARAMETER(FTMLParam);
 DMLC_REGISTER_PARAMETER(AdamParam);
 DMLC_REGISTER_PARAMETER(RMSPropParam);
@@ -52,13 +54,13 @@ It updates the weights using::
 
  weight = weight - learning_rate * sign(gradient)
 
-.. note:: 
+.. note::
    - sparse ndarray not supported for this optimizer yet.
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SignSGDParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FCompute>("FCompute<cpu>", SignSGDUpdate<cpu>)
 .add_argument("weight", "NDArray-or-Symbol", "Weight")
@@ -81,13 +83,13 @@ It updates the weights using::
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
-.. note:: 
+.. note::
    - sparse ndarray not supported for this optimizer yet.
 )code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SignumParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -313,10 +315,197 @@ inline bool SGDStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
+NNVM_REGISTER_OP(multi_sgd_update)
+.describe(R"code(Update function for Stochastic Gradient Descent (SDG) optimizer.
+
+It updates the weights using::
+
+ weight = weight - learning_rate * (gradient + wd * weight)
+
+)code" ADD_FILELINE)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights * 2);
+  })
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights);
+  })
+.set_attr_parser(ParamParser<MultiSGDParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiSGDShape<MultiSGDParam, 2>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, -1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    uint32_t num_args = dmlc::get<MultiSGDParam>(attrs.parsed).num_weights;
+    std::vector<std::string> ret;
+    for (uint32_t i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("weight_") + std::to_string(i));
+      ret.push_back(std::string("grad_") + std::to_string(i));
+    }
+    return ret;
+  })
+.set_attr<FCompute>("FCompute<cpu>", MultiSGDUpdate<cpu, type_identity, 2>)
+.add_argument("data", "NDArray-or-Symbol[]", "Weights")
+.add_arguments(MultiSGDParam::__FIELDS__());
+
+NNVM_REGISTER_OP(multi_sgd_mom_update)
+.describe(R"code(Momentum update function for Stochastic Gradient Descent (SGD) optimizer.
+
+Momentum update has better convergence rates on neural networks. Mathematically it looks
+like below:
+
+.. math::
+
+  v_1 = \alpha * \nabla J(W_0)\\
+  v_t = \gamma v_{t-1} - \alpha * \nabla J(W_{t-1})\\
+  W_t = W_{t-1} + v_t
+
+It updates the weights using::
+
+  v = momentum * v - learning_rate * gradient
+  weight += v
+
+Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
+
+)code" ADD_FILELINE)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights * 3);
+  })
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights);
+  })
+.set_attr_parser(ParamParser<MultiSGDMomParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiSGDShape<MultiSGDMomParam, 3>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, -1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    uint32_t num_args = dmlc::get<MultiSGDParam>(attrs.parsed).num_weights;
+    std::vector<std::string> ret;
+    for (uint32_t i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("weight_") + std::to_string(i));
+      ret.push_back(std::string("grad_") + std::to_string(i));
+      ret.push_back(std::string("mom_") + std::to_string(i));
+    }
+    return ret;
+  })
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    std::vector<uint32_t> ret;
+    const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    for (int i = 0; i < param.num_weights; ++i) {
+      ret.push_back(i * 3 + 2);
+    }
+    return ret;
+  })
+.set_attr<FCompute>("FCompute<cpu>", MultiSGDMomUpdate<cpu, type_identity, 3>)
+.add_argument("data", "NDArray-or-Symbol[]", "Weights, gradients and momentum")
+.add_arguments(MultiSGDMomParam::__FIELDS__());
+
+NNVM_REGISTER_OP(multi_mp_sgd_update)
+.describe(R"code(Update function for multi-precision Stochastic Gradient Descent (SDG) optimizer.
+
+It updates the weights using::
+
+ weight = weight - learning_rate * (gradient + wd * weight)
+
+)code" ADD_FILELINE)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights * 3);
+  })
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights);
+  })
+.set_attr_parser(ParamParser<MultiSGDParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiSGDShape<MultiSGDParam, 3>)
+.set_attr<nnvm::FInferType>("FInferType", MP_MultiSGD_InferType<MultiSGDParam, 3, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    uint32_t num_args = dmlc::get<MultiSGDParam>(attrs.parsed).num_weights;
+    std::vector<std::string> ret;
+    for (uint32_t i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("weight_") + std::to_string(i));
+      ret.push_back(std::string("grad_") + std::to_string(i));
+      ret.push_back(std::string("weight32_") + std::to_string(i));
+    }
+    return ret;
+  })
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    std::vector<uint32_t> ret;
+    const MultiSGDParam& param = dmlc::get<MultiSGDParam>(attrs.parsed);
+    for (int i = 0; i < param.num_weights; ++i) {
+      ret.push_back(i * 3 + 2);
+    }
+    return ret;
+  })
+.set_attr<FCompute>("FCompute<cpu>", MultiSGDUpdate<cpu, single_precision, 3>)
+.add_argument("data", "NDArray-or-Symbol[]", "Weights")
+.add_arguments(MultiSGDParam::__FIELDS__());
+
+NNVM_REGISTER_OP(multi_mp_sgd_mom_update)
+.describe(R"code(Momentum update function for multi-precision Stochastic Gradient Descent (SGD) optimizer.
+
+Momentum update has better convergence rates on neural networks. Mathematically it looks
+like below:
+
+.. math::
+
+  v_1 = \alpha * \nabla J(W_0)\\
+  v_t = \gamma v_{t-1} - \alpha * \nabla J(W_{t-1})\\
+  W_t = W_{t-1} + v_t
+
+It updates the weights using::
+
+  v = momentum * v - learning_rate * gradient
+  weight += v
+
+Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
+
+)code" ADD_FILELINE)
+.set_num_inputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights * 4);
+  })
+.set_num_outputs([](const nnvm::NodeAttrs& attrs) {
+    const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    return static_cast<uint32_t>(param.num_weights);
+  })
+.set_attr_parser(ParamParser<MultiSGDMomParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiSGDShape<MultiSGDMomParam, 4>)
+.set_attr<nnvm::FInferType>("FInferType", MP_MultiSGD_InferType<MultiSGDMomParam, 4, 2>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    uint32_t num_args = dmlc::get<MultiSGDMomParam>(attrs.parsed).num_weights;
+    std::vector<std::string> ret;
+    for (uint32_t i = 0; i < num_args; ++i) {
+      ret.push_back(std::string("weight_") + std::to_string(i));
+      ret.push_back(std::string("grad_") + std::to_string(i));
+      ret.push_back(std::string("mom_") + std::to_string(i));
+      ret.push_back(std::string("weight32_") + std::to_string(i));
+    }
+    return ret;
+  })
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    std::vector<uint32_t> ret;
+    const MultiSGDMomParam& param = dmlc::get<MultiSGDMomParam>(attrs.parsed);
+    for (int i = 0; i < param.num_weights; ++i) {
+      ret.push_back(i * 4 + 2);
+      ret.push_back(i * 4 + 3);
+    }
+    return ret;
+  })
+.set_attr<FCompute>("FCompute<cpu>", MultiSGDMomUpdate<cpu, single_precision, 4>)
+.add_argument("data", "NDArray-or-Symbol[]", "Weights")
+.add_arguments(MultiSGDMomParam::__FIELDS__());
 
 NNVM_REGISTER_OP(sgd_update)
 MXNET_ADD_SPARSE_OP_ALIAS(sgd_update)
-.describe(R"code(Update function for Stochastic Gradient Descent (SDG) optimizer.
+.describe(R"code(Update function for Stochastic Gradient Descent (SGD) optimizer.
 
 It updates the weights using::
 
@@ -332,7 +521,7 @@ only the row slices whose indices appear in grad.indices are updated::
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", SGDStorageType)
 .set_attr<FCompute>("FCompute<cpu>", SGDUpdate<cpu>)
@@ -373,7 +562,7 @@ only the row slices whose indices appear in grad.indices are updated (for both w
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDMomParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", StdOptStorageType<1, SGDMomParam>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
@@ -400,7 +589,7 @@ NNVM_REGISTER_OP(mp_sgd_update)
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 3>)
 .set_attr<FCompute>("FCompute<cpu>", MP_SGDUpdate<cpu>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
@@ -417,7 +606,7 @@ NNVM_REGISTER_OP(mp_sgd_mom_update)
 .set_num_inputs(4)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<SGDMomParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
 .set_attr<nnvm::FInferType>("FInferType", MP_SGD_InferType<2, 1, 4>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -448,7 +637,7 @@ available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
 .set_num_inputs(5)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<FTMLParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<5, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -496,7 +685,7 @@ only the row slices whose indices appear in grad.indices are updated (for w, m a
 .set_num_inputs(4)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdamParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
@@ -554,7 +743,7 @@ Hinton suggests the momentum term :math:`\gamma` to be 0.9 and the learning rate
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RMSPropParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs &attrs) {
@@ -593,7 +782,7 @@ to be 0.9 and the learning rate :math:`\eta` to be 0.0001.
 .set_num_inputs(5)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<RMSPropAlexParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<5, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<5, 1>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -633,7 +822,7 @@ only the row slices whose indices appear in grad.indices are updated (for w, z a
 .set_num_inputs(4)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<FtrlParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<4, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<4, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<4, 1, false, true, false>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
@@ -666,7 +855,7 @@ Note that non-zero values for the weight decay option are not supported.
 .set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdagradParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", AdagradStorageType)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",

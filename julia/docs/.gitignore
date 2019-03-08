@@ -1,0 +1,6 @@
+Manifest.toml
+
+_build
+build/
+site/
+venv/

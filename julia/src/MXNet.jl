@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-__precompile__()
-
 module MXNet
 
 using Reexport
@@ -26,16 +24,20 @@ using Reexport
 export mx
 module mx
 
-import Base.Iterators: filter
+using Base.Broadcast: Broadcasted, DefaultArrayStyle
+using Libdl
+using LinearAlgebra
+using Markdown
+using Printf
+using Statistics
+using Random
 
 using Formatting
 using MacroTools
-using TakingBroadcastSeriously: @unfuse
-import TakingBroadcastSeriously: broadcast_
 
 # Functions from base that we can safely extend and that are defined by libmxnet.
-import Base: round, ceil, floor, cos, sin, abs, sign, exp, sqrt, exp, log, norm,
-             transpose
+import Base.Broadcast: broadcasted
+import Base.Iterators: filter
 
 ###############################################################################
 #  exports
@@ -51,7 +53,6 @@ export NDArray,
        clip,
        clip!,
        context,
-       empty,
        expand_dims,
        @inplace,
        # activation funcs
@@ -140,15 +141,17 @@ include("base.jl")
 
 include("context.jl")
 include("util.jl")
-include("broadcast.jl")
 
 include("ndarray.jl")
+
 include("random.jl")
 include("autograd.jl")
 
 include("name.jl")
 include("symbolic-node.jl")
 include("executor.jl")
+
+include("broadcast.jl")
 
 include("metric.jl")
 include("optimizer.jl")

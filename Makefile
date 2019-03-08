@@ -129,7 +129,7 @@ ifdef CAFFE_PATH
 endif
 
 ifndef LINT_LANG
-	LINT_LANG="all"
+	LINT_LANG = "all"
 endif
 
 ifeq ($(USE_MKLDNN), 1)
@@ -146,11 +146,33 @@ endif
 
 # setup opencv
 ifeq ($(USE_OPENCV), 1)
-	CFLAGS += -DMXNET_USE_OPENCV=1 $(shell pkg-config --cflags opencv)
-	LDFLAGS += $(filter-out -lopencv_ts, $(shell pkg-config --libs opencv))
+	CFLAGS += -DMXNET_USE_OPENCV=1
+	ifneq ($(USE_OPENCV_INC_PATH), NONE)
+		CFLAGS += -I$(USE_OPENCV_INC_PATH)/include
+		ifeq ($(USE_OPENCV_LIB_PATH), NONE)
+$(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_PATH`, when `USE_OPENCV_INC_PATH` is not NONE)
+		endif
+		LDFLAGS += -L$(USE_OPENCV_LIB_PATH)
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_imgcodecs.*),)
+			LDFLAGS += -lopencv_imgcodecs
+		endif
+		ifneq ($(wildcard $(USE_OPENCV_LIB_PATH)/libopencv_highgui.*),)
+			LDFLAGS += -lopencv_highgui
+		endif
+	else
+		ifeq ("$(shell pkg-config --exists opencv4; echo $$?)", "0")
+			OPENCV_LIB = opencv4
+		else
+			OPENCV_LIB = opencv
+		endif
+		CFLAGS += $(shell pkg-config --cflags $(OPENCV_LIB))
+		LDFLAGS += $(shell pkg-config --libs-only-L $(OPENCV_LIB))
+		LDFLAGS += $(filter -lopencv_imgcodecs -lopencv_highgui, $(shell pkg-config --libs-only-l $(OPENCV_LIB)))
+	endif
+	LDFLAGS += -lopencv_imgproc -lopencv_core
 	BIN += bin/im2rec
 else
-	CFLAGS+= -DMXNET_USE_OPENCV=0
+	CFLAGS += -DMXNET_USE_OPENCV=0
 endif
 
 ifeq ($(USE_OPENMP), 1)
@@ -210,6 +232,16 @@ endif
 ifeq ($(USE_CUDNN), 1)
 	CFLAGS += -DMSHADOW_USE_CUDNN=1
 	LDFLAGS += -lcudnn
+endif
+
+ifeq ($(use_blas), open)
+	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
+else ifeq ($(use_blas), atlas)
+	CFLAGS += -DMXNET_USE_BLAS_ATLAS=1
+else ifeq ($(use_blas), mkl)
+	CFLAGS += -DMXNET_USE_BLAS_MKL=1
+else ifeq ($(use_blas), apple)
+	CFLAGS += -DMXNET_USE_BLAS_APPLE=1
 endif
 
 # whether to use F16C instruction set extension for fast fp16 compute on CPU
@@ -479,7 +511,7 @@ build/plugin/%_gpu.o: plugin/%.cu
 	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
-build/plugin/%.o: plugin/%.cc
+build/plugin/%.o: plugin/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
 
@@ -589,21 +621,24 @@ rpkg:
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
+
+	if [ -e "lib/libmkldnn.so.0" ]; then \
+		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
+		cp -rf lib/libiomp5.so R-package/inst/libs; \
+		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	fi
+
 	mkdir -p R-package/inst/include
-	cp -rf include/* R-package/inst/include
-	rm R-package/inst/include/dmlc
-	rm R-package/inst/include/nnvm
-	cp -rf 3rdparty/dmlc-core/include/* R-package/inst/include/
-	cp -rf 3rdparty/tvm/nnvm/include/* R-package/inst/include
+	cp -rl include/* R-package/inst/include
 	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
-	Rscript -e "if(!require(devtools)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
+	Rscript -e "if(!require(roxygen2)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
 	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
 	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
 	echo "import(Rcpp)" >> R-package/NAMESPACE
 	R CMD INSTALL R-package
 	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
 	rm R-package/NAMESPACE
-	Rscript -e "devtools::document('R-package'); warnings()"
+	Rscript -e "devtools::document('R-package');warnings()"
 	R CMD INSTALL R-package
 
 rpkgtest:
@@ -635,6 +670,7 @@ rclean:
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
@@ -644,6 +680,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -

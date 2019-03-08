@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import unittest
+import os
 import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
@@ -98,6 +99,9 @@ def test_trainer():
 
 @with_seed()
 def test_trainer_save_load():
+    previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
+    os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
+
     x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
@@ -112,6 +116,7 @@ def test_trainer_save_load():
     x.lr_mult = 2.0
     # check if parameter dict is correctly associated with optimizer after load_state
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
+    os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
 @with_seed()
 def test_trainer_sparse_save_load():
@@ -236,10 +241,11 @@ def test_trainer_sparse_kv():
             assert isinstance(err, expected)
 
     kvs = ['local', 'device']
+    global_update_on_kvstore = bool(int(os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")))
     for kv in kvs:
         check_trainer_sparse_kv(kv, 'default', 'default', True, True)
         check_trainer_sparse_kv(kv, 'default', 'default', False, False)
-        check_trainer_sparse_kv(kv, 'default', 'default', None, True)
+        check_trainer_sparse_kv(kv, 'default', 'default', None, global_update_on_kvstore)
         check_trainer_sparse_kv(kv, 'default', 'row_sparse', None, False)
         check_trainer_sparse_kv(kv, 'default', 'row_sparse', True, True)
         check_trainer_sparse_kv(kv, 'default', 'row_sparse', False, False)

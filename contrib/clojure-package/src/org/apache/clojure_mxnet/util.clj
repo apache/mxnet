@@ -239,3 +239,9 @@
            (apply $/immutable-list))
       ;; pass-through
       map-or-tuple-seq)))
+
+(defmacro forms->scala-fn
+  "Creates a scala fn of zero args from forms"
+  [& forms]
+  `($/fn []
+     (do ~@forms)))

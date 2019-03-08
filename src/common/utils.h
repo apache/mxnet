@@ -118,10 +118,10 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
   using namespace op::mxnet_op;
   CHECK_EQ(input.storage_type(), kCSRStorage)
           << "CheckFormatCSRImpl is for CSRNDArray";
-  const TShape shape = input.shape();
-  const TShape idx_shape = input.aux_shape(csr::kIdx);
-  const TShape indptr_shape = input.aux_shape(csr::kIndPtr);
-  const TShape storage_shape = input.storage_shape();
+  const mxnet::TShape shape = input.shape();
+  const mxnet::TShape idx_shape = input.aux_shape(csr::kIdx);
+  const mxnet::TShape indptr_shape = input.aux_shape(csr::kIndPtr);
+  const mxnet::TShape storage_shape = input.storage_shape();
   if ((shape.ndim() != 2) ||
       (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
       (indptr_shape[0] != shape[0] + 1) ||
@@ -172,7 +172,7 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
   using namespace op::mxnet_op;
   CHECK_EQ(input.storage_type(), kRowSparseStorage)
           << "CheckFormatRSPImpl is for RSPNDArray";
-  const TShape idx_shape = input.aux_shape(rowsparse::kIdx);
+  const mxnet::TShape idx_shape = input.aux_shape(rowsparse::kIdx);
   if (idx_shape[0] != input.storage_shape()[0]) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
       DType* err = err_cpu.dptr<DType>();
@@ -689,7 +689,7 @@ MSHADOW_XINLINE int ilog2ui(unsigned int a) {
 /*!
  * \brief Return an NDArray of all zeros.
  */
-inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
+inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
                          const Context &ctx, const int dtype) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
@@ -704,7 +704,7 @@ inline NDArray InitZeros(const NDArrayStorageType stype, const TShape &shape,
 /*!
  * \brief Helper to add a NDArray of zeros to a std::vector.
  */
-inline void EmplaceBackZeros(const NDArrayStorageType stype, const TShape &shape,
+inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
                              const Context &ctx, const int dtype,
                              std::vector<NDArray> *vec) {
   // NDArray with default storage

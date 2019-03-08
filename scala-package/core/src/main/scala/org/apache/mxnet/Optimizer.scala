@@ -52,15 +52,13 @@ object Optimizer {
           val out = new ObjectOutputStream(bos)
           out.writeInt(states.size)
           states.foreach { case (k, v) =>
-            if (v != null) {
-              out.writeInt(k)
-              val stateBytes = optimizer.serializeState(v)
-              if (stateBytes == null) {
-                out.writeInt(0)
-              } else {
-                out.writeInt(stateBytes.length)
-                out.write(stateBytes)
-              }
+            out.writeInt(k)
+            val stateBytes = optimizer.serializeState(v)
+            if (stateBytes == null) {
+              out.writeInt(0)
+            } else {
+              out.writeInt(stateBytes.length)
+              out.write(stateBytes)
             }
           }
           out.flush()

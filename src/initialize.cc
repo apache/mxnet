@@ -44,7 +44,11 @@ class LibraryInitializer {
   LibraryInitializer() {
     dmlc::InitLogging("mxnet");
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
-    signal(SIGSEGV, SegfaultLogger);
+    struct sigaction sa;
+    sigaction(SIGSEGV, NULL, &sa);
+    if (sa.sa_handler == NULL) {
+        signal(SIGSEGV, SegfaultLogger);
+    }
 #endif
 
 // disable openmp for multithreaded workers

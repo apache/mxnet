@@ -219,6 +219,68 @@ def convert_convolution(node, **kwargs):
     return [conv_node]
 
 
+@mx_op.register("Deconvolution")
+def convert_deconvolution(node, **kwargs):
+    """Map MXNet's deconvolution operator attributes to onnx's ConvTranspose operator
+    and return the created node.
+    """
+    name, inputs, attrs = get_inputs(node, kwargs)
+
+    kernel_dims = list(parse_helper(attrs, "kernel"))
+    stride_dims = list(parse_helper(attrs, "stride", [1, 1]))
+    pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
+    num_group = int(attrs.get("num_group", 1))
+    dilations = list(parse_helper(attrs, "dilate", [1, 1]))
+    adj_dims = list(parse_helper(attrs, "adj", [0, 0]))
+
+    pad_dims = pad_dims + pad_dims
+
+    deconv_node = onnx.helper.make_node(
+        "ConvTranspose",
+        inputs=inputs,
+        outputs=[name],
+        kernel_shape=kernel_dims,
+        strides=stride_dims,
+        dilations=dilations,
+        output_padding=adj_dims,
+        pads=pad_dims,
+        group=num_group,
+        name=name
+    )
+
+    return [deconv_node]
+
+
+@mx_op.register("Crop")
+def convert_crop(node, **kwargs):
+    """Map MXNet's crop operator attributes to onnx's Crop operator
+    and return the created node.
+    """
+    name, inputs, attrs = get_inputs(node, kwargs)
+    num_inputs = len(inputs)
+
+    y, x = list(parse_helper(attrs, "offset", [0, 0]))
+    h, w = list(parse_helper(attrs, "h_w", [0, 0]))
+    if num_inputs > 1:
+        h, w = kwargs["out_shape"][-2:]
+    border = [x, y, x + w, y + h]
+
+    crop_node = onnx.helper.make_node(
+        "Crop",
+        inputs=[inputs[0]],
+        outputs=[name],
+        border=border,
+        scale=[1, 1],
+        name=name
+    )
+
+    logging.warning(
+        "Using an experimental ONNX operator: Crop. " \
+        "Its definition can change.")
+
+    return [crop_node]
+
+
 @mx_op.register("FullyConnected")
 def convert_fully_connected(node, **kwargs):
     """Map MXNet's FullyConnected operator attributes to onnx's Gemm operator
@@ -583,8 +645,8 @@ def convert_pooling(node, **kwargs):
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     kernel = eval(attrs["kernel"])
-    pool_type = attrs["pool_type"]
-    stride = eval(attrs["stride"]) if attrs.get("stride") else None
+    pool_type = attrs["pool_type"] if attrs.get("pool_type") else "max"
+    stride = eval(attrs["stride"]) if attrs.get("stride") else (1, 1)
     global_pool = get_boolean_attribute_value(attrs, "global_pool")
     p_value = attrs.get('p_value', 'None')
 
@@ -1475,12 +1537,14 @@ def convert_slice_channel(node, **kwargs):
         )
         return [node]
     elif squeeze_axis == 0 and num_outputs > 1:
+        in_shape = kwargs.get('in_shape')[0]
+        split = in_shape[axis] // num_outputs
         node = onnx.helper.make_node(
             "Split",
             input_nodes,
-            [name],
+            [name+'_output'+str(i) for i in range(num_outputs)],
             axis=axis,
-            split=[num_outputs],
+            split=[split for _ in range(num_outputs)],
             name=name,
         )
         return [node]
@@ -1907,3 +1971,79 @@ def convert_roipooling(node, **kwargs):
         name=name
     )
     return [node]
+
+
+@mx_op.register("tile")
+def convert_tile(node, **kwargs):
+    """Map MXNet's Tile operator attributes to onnx's Tile
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    reps_list = convert_string_to_list(attrs["reps"])
+
+    initializer = kwargs["initializer"]
+    reps_shape_np = np.array(reps_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[reps_shape_np.dtype]
+    dims = np.shape(reps_shape_np)
+
+    output_shape_name = "reps_attr_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=reps_list,
+            raw=False,
+        )
+    )
+
+    input_nodes.append(output_shape_name)
+    tile_node = onnx.helper.make_node(
+        "Tile",
+        input_nodes,
+        [name],
+        name=name
+    )
+
+    return [tensor_node, tile_node]
+
+
+@mx_op.register("broadcast_to")
+def convert_broadcast_to(node, **kwargs):
+    """Map MXNet's broadcast_to operator attributes to onnx's Expand
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    shape_list = convert_string_to_list(attrs["shape"])
+
+    initializer = kwargs["initializer"]
+    output_shape_np = np.array(shape_list, dtype='int64')
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[output_shape_np.dtype]
+    dims = np.shape(output_shape_np)
+
+    output_shape_name = "expand_attr_tensor" + str(kwargs["idx"])
+    tensor_node = onnx.helper.make_tensor_value_info(output_shape_name, data_type, dims)
+
+    initializer.append(
+        onnx.helper.make_tensor(
+            name=output_shape_name,
+            data_type=data_type,
+            dims=dims,
+            vals=shape_list,
+            raw=False,
+        )
+    )
+
+    input_nodes.append(output_shape_name)
+    expand_node = onnx.helper.make_node(
+        "Expand",
+        input_nodes,
+        [name],
+        name=name
+    )
+
+    return [tensor_node, expand_node]

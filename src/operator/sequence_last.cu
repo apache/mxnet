@@ -28,10 +28,13 @@
 
 namespace mxnet {
 namespace op {
-template <> Operator *CreateOp<gpu>(SequenceLastParam param, int dtype) {
+template <> Operator *CreateOp<gpu>(SequenceLastParam param, int dtype, int itype) {
   Operator *op = NULL;
-  MSHADOW_TYPE_SWITCH(dtype, DType,
-                           { op = new SequenceLastOp<gpu, DType>(param); })
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+      MSHADOW_TYPE_SWITCH(itype, IType, {
+          op = new SequenceLastOp<gpu, DType, IType>(param);
+        });
+    });
   return op;
 }
 

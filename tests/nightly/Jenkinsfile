@@ -121,6 +121,14 @@ core_logic: {
         }
       }
     },
+    'Scala Demo: CPU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/scala-demo') {
+          utils.init_git()
+          utils.docker_run('ubuntu_nightly_cpu', 'nightly_scala_demo_test_cpu', false)
+        }
+      }
+    },
     'MXNetJS: CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/nt-mxnetjs') {

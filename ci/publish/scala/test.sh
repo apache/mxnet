@@ -24,5 +24,10 @@ fi
 
 # Test
 cd scala-package/packageTest
-# make testlocal CI=1
-make testsnapshot UNIT=1 CI=1
+
+if [[ $mxnet_variant == cu* ]]; then
+    export SCALA_TEST_ON_GPU=1
+    make testlocal USE_CUDA=1 CI=1
+else
+    make testlocal CI=1
+fi

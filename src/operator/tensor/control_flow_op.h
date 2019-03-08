@@ -170,13 +170,13 @@ struct where_batch_backward {
 };
 
 inline bool WhereOpShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape>* in_attrs,
-                         std::vector<TShape>* out_attrs) {
+                         mxnet::ShapeVector* in_attrs,
+                         mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 3U)
     << "where operator takes 3 arguments (" << in_attrs->size() << " given)";
   CHECK_EQ(out_attrs->size(), 1U);
 
-  TShape tshape((*in_attrs)[1]);
+  mxnet::TShape tshape((*in_attrs)[1]);
   if (!shape_assign(&tshape, (*in_attrs)[2])) return false;
   if (!shape_assign(&tshape, (*out_attrs)[0])) return false;
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, tshape);

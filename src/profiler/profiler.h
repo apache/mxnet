@@ -1081,8 +1081,8 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Operator attributes
    */
   struct Attributes {
-    std::vector<nnvm::TShape> inputs_;
-    std::vector<nnvm::TShape> outputs_;
+    std::vector<mxnet::TShape> inputs_;
+    std::vector<mxnet::TShape> outputs_;
     std::unordered_map<std::string, std::string> attr_;
     std::string to_string() const {
       std::stringstream ss;

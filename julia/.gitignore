@@ -7,7 +7,5 @@ data
 deps/src
 deps/usr
 deps/deps.jl
-docs/_build
-docs/build/
-docs/site/
 .vscode
+/Manifest.toml

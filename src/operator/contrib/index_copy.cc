@@ -67,7 +67,7 @@ Examples::
 )code" ADD_FILELINE)
 .set_num_inputs(3)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", IndexCopyShape)
+.set_attr<mxnet::FInferShape>("FInferShape", IndexCopyShape)
 .set_attr<nnvm::FInferType>("FInferType", IndexCopyType)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_contrib_backward_index_copy"})
 .set_attr<FCompute>("FCompute<cpu>", IndexCopyForward<cpu>)

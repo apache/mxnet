@@ -76,6 +76,12 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                           const NDArray &in_data, const OpReqType &req,
                           const NDArray &out_data);
 
+/* For softmax_output */
+void MKLDNNSoftmaxOutputForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
+                                const std::vector<NDArray> &in_data,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<NDArray> &out_data);
+
 /* For sum */
 void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
                       const std::vector<NDArray> &inputs, const OpReqType &req,
@@ -83,8 +89,8 @@ void MKLDNNSumForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
 
 /* For copy */
 void MKLDNNCopy(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-    const NDArray &in_data, const OpReqType &req,
-    const NDArray &out_data);
+                const NDArray &in_data, const OpReqType &req,
+                const NDArray &out_data);
 
 /* For concat */
 void MKLDNNConcatForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,

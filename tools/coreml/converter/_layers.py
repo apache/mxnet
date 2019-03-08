@@ -220,6 +220,49 @@ def convert_activation(net, node, module, builder):
                            output_name = output_name)
 
 
+def convert_leakyrelu(net, node, module, builder):
+    """Convert a leakyrelu layer from mxnet to coreml.
+
+    Parameters
+    ----------
+    network: net
+        A mxnet network object.
+
+    layer: node
+        Node to convert.
+
+    module: module
+        An module for MXNet
+
+    builder: NeuralNetworkBuilder
+        A neural network builder object.
+    """
+
+    input_name, output_name = _get_input_output_name(net, node)
+    name = node['name']
+    inputs = node['inputs']
+    args, _ = module.get_params()
+    mx_non_linearity = _get_attrs(node)['act_type']
+    if mx_non_linearity == 'elu':
+        non_linearity = 'ELU'
+        slope = _get_attrs(node)['slope'] if 'slope' in _get_attrs(node) else 0.25
+        params = slope
+    elif mx_non_linearity == 'leaky':
+        non_linearity = 'LEAKYRELU'
+        slope = _get_attrs(node)['slope'] if 'slope' in _get_attrs(node) else 0.25
+        params = [slope]
+    elif mx_non_linearity == 'prelu':
+        non_linearity = 'PRELU'
+        params = args[_get_node_name(net, inputs[1][0])].asnumpy()
+    else:
+        raise TypeError('Unknown activation type %s' % mx_non_linearity)
+    builder.add_activation(name = name,
+                           non_linearity = non_linearity,
+                           input_name = input_name,
+                           output_name = output_name,
+                           params = params)
+
+
 def convert_elementwise_add(net, node, module, builder):
     """Convert an elementwise add layer from mxnet to coreml.
 
@@ -335,6 +378,7 @@ def convert_convolution(net, node, module, builder):
     border_mode = "valid"
 
     n_filters = int(param['num_filter'])
+    n_groups = int(param['num_group']) if 'num_group' in param else 1
 
     W = args[_get_node_name(net, inputs[1][0])].asnumpy()
     if has_bias:
@@ -361,7 +405,7 @@ def convert_convolution(net, node, module, builder):
         stride_height=stride_height,
         stride_width=stride_width,
         border_mode=border_mode,
-        groups=1,
+        groups=n_groups,
         W=W,
         b=Wb,
         has_bias=has_bias,
@@ -472,11 +516,14 @@ def convert_batchnorm(net, node, module, builder):
     inputs = node['inputs']
 
 
-    eps = 1e-3 # Default value of eps for MXNet.
-    use_global_stats = False # Default value of use_global_stats for MXNet.
+    eps = 1e-3  # Default value of eps for MXNet.
+    use_global_stats = False  # Default value of use_global_stats for MXNet.
+    fix_gamma = True  # Default value of fix_gamma for MXNet.
     attrs = _get_attrs(node)
     if 'eps' in attrs:
         eps = literal_eval(attrs['eps'])
+    if 'fix_gamma' in attrs:
+        fix_gamma = literal_eval(attrs['fix_gamma'])
 
     args, aux = module.get_params()
     gamma = args[_get_node_name(net, inputs[1][0])].asnumpy()
@@ -484,6 +531,8 @@ def convert_batchnorm(net, node, module, builder):
     mean = aux[_get_node_name(net, inputs[3][0])].asnumpy()
     variance = aux[_get_node_name(net, inputs[4][0])].asnumpy()
     nb_channels = gamma.shape[0]
+    if fix_gamma:
+        gamma.fill(1.)
     builder.add_batchnorm(
         name=name,
         channels=nb_channels,

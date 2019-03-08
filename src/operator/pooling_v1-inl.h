@@ -48,14 +48,14 @@ enum PoolingV1OpPadConventionType {kValid, kFull};
 }  // namespace pool_v1_enum
 
 struct PoolingV1Param : public dmlc::Parameter<PoolingV1Param> {
-  TShape kernel;
-  TShape stride;
-  TShape pad;
+  mxnet::TShape kernel;
+  mxnet::TShape stride;
+  mxnet::TShape pad;
   int pool_type;
   int pooling_convention;
   bool global_pool;
   DMLC_DECLARE_PARAMETER(PoolingV1Param) {
-    DMLC_DECLARE_FIELD(kernel).set_default(TShape())
+    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape())
     .enforce_nonzero()
     .describe("pooling kernel size: (y, x) or (d, y, x)");
 
@@ -73,11 +73,11 @@ struct PoolingV1Param : public dmlc::Parameter<PoolingV1Param> {
     .add_enum("valid", pool_v1_enum::kValid)
     .describe("Pooling convention to be applied.");
 
-    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
     .enforce_nonzero()
     .describe("stride: for pooling (y, x) or (d, y, x)");
 
-    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
     .describe("pad for pooling: (y, x) or (d, y, x)");
   }
 };
@@ -104,8 +104,8 @@ class PoolingV1Op : public Operator {
     }
 
     // reset padding size for global pooling
-    TShape padding = param_.pad;
-    // TShape kernel = param_.kernel;
+    mxnet::TShape padding = param_.pad;
+    // mxnet::TShape kernel = param_.kernel;
     if (param_.global_pool) {
       padding[0] = padding[1] = 0;
       // kernel[0] = kernel[1] = 0;
@@ -159,7 +159,7 @@ class PoolingV1Op : public Operator {
     }
 
     // reset padding size for global pooling
-    TShape padding = param_.pad;
+    mxnet::TShape padding = param_.pad;
     if (param_.global_pool) {
       padding[0] = padding[1] = 0;
     }
@@ -237,16 +237,16 @@ class PoolingV1Prop : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1U);
-    const TShape &dshape = (*in_shape)[0];
+    const mxnet::TShape &dshape = (*in_shape)[0];
     CHECK_GE(dshape.ndim(), 4U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
     CHECK_LE(dshape.ndim(), 5U) << "Pooling: Input data should be 4D in (batch, channel, y, x) "
                                << "Or 5D in (batch, channel, d, y, x)";
-    TShape oshape = dshape;
+    mxnet::TShape oshape = dshape;
     if (dshape.ndim() ==  0) return false;
     if (param_.global_pool) {
       if (dshape.ndim() == 4) {
@@ -364,7 +364,7 @@ class PoolingV1Prop : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

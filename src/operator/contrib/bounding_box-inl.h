@@ -26,7 +26,6 @@
 #define MXNET_OPERATOR_CONTRIB_BOUNDING_BOX_INL_H_
 #include <mxnet/operator_util.h>
 #include <dmlc/optional.h>
-#include <nnvm/tuple.h>
 #include <vector>
 #include <utility>
 #include <string>
@@ -35,12 +34,10 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/sort_op.h"
+#include "./bounding_box-common.h"
 
 namespace mxnet {
 namespace op {
-namespace box_common_enum {
-enum BoxType {kCorner, kCenter};
-}
 namespace box_nms_enum {
 enum BoxNMSOpInputs {kData};
 enum BoxNMSOpOutputs {kOut, kTemp};
@@ -89,8 +86,8 @@ struct BoxNMSParam : public dmlc::Parameter<BoxNMSParam> {
 };  // BoxNMSParam
 
 inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
   const BoxNMSParam& param = nnvm::get<BoxNMSParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
@@ -98,7 +95,7 @@ inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  TShape& ishape = (*in_attrs)[0];
+  mxnet::TShape& ishape = (*in_attrs)[0];
   int indim = ishape.ndim();
   CHECK(indim >= 2)
     << "input must have dim >= 2"
@@ -137,7 +134,7 @@ inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
     CHECK_NE(id_index, score_index)
       << "id_index: " << id_index << " conflict with score_index: " << score_index;
   }
-  TShape oshape = ishape;
+  mxnet::TShape oshape = ishape;
   oshape[indim - 1] = 1;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, ishape);  // out_shape[0] == in_shape
   SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);  // out_shape[1]
@@ -165,15 +162,6 @@ int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores,
   return j;
 }
 
-namespace mshadow_op {
-struct less_than : public mxnet_op::tunable {
-  // a is x, b is sigma
-  template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return static_cast<DType>(a < b);
-  }
-};  // struct equal_to
-}   // namespace mshadow_op
 
 struct corner_to_center {
   template<typename DType>
@@ -255,83 +243,43 @@ struct compute_area {
   }
 };
 
-// compute line intersect along either height or width
 template<typename DType>
-MSHADOW_XINLINE DType Intersect(const DType *a, const DType *b, int encode) {
-  DType a1 = a[0];
-  DType a2 = a[2];
-  DType b1 = b[0];
-  DType b2 = b[2];
-  DType w;
-  if (box_common_enum::kCorner == encode) {
-    DType left = a1 > b1 ? a1 : b1;
-    DType right = a2 < b2 ? a2 : b2;
-    w = right - left;
-  } else {
-    DType aw = a2 / 2;
-    DType bw = b2 / 2;
-    DType al = a1 - aw;
-    DType ar = a1 + aw;
-    DType bl = b1 - bw;
-    DType br = b1 + bw;
-    DType left = bl > al ? bl : al;
-    DType right = br < ar ? br : ar;
-    w = right - left;
+void NMSApply(mshadow::Stream<cpu> *s,
+              int num_batch, int topk,
+              mshadow::Tensor<cpu, 1, int32_t>* sorted_index,
+              mshadow::Tensor<cpu, 1, int32_t>* batch_start,
+              mshadow::Tensor<cpu, 3, DType>* buffer,
+              mshadow::Tensor<cpu, 1, DType>* areas,
+              int num_elem, int width_elem,
+              int coord_start, int id_index,
+              float threshold, bool force_suppress,
+              int in_format) {
+  using namespace mxnet_op;
+  // go through each box as reference, suppress if overlap > threshold
+  // sorted_index with -1 is marked as suppressed
+  for (int ref = 0; ref < topk; ++ref) {
+    int num_worker = topk - ref - 1;
+    if (num_worker < 1) continue;
+    Kernel<nms_impl, cpu>::Launch(s, num_batch * num_worker,
+      sorted_index->dptr_, batch_start->dptr_, buffer->dptr_, areas->dptr_,
+      num_worker, ref, num_elem,
+      width_elem, coord_start, id_index,
+      threshold, force_suppress, in_format);
   }
-  return w > 0 ? w : DType(0);
 }
 
-/*!
-   * \brief Implementation of the non-maximum suppression operation
-   *
-   * \param i the launched thread index
-   * \param index sorted index in descending order
-   * \param batch_start map (b, k) to compact index by indices[batch_start[b] + k]
-   * \param input the input of nms op
-   * \param areas pre-computed box areas
-   * \param k nms topk number
-   * \param ref compare reference position
-   * \param num number of input boxes in each batch
-   * \param stride input stride, usually 6 (id-score-x1-y1-x2-y2)
-   * \param offset_box box offset, usually 2
-   * \param thresh nms threshold
-   * \param force force suppress regardless of class id
-   * \param offset_id class id offset, used when force == false, usually 0
-   * \param encode box encoding type, corner(0) or center(1)
-   * \param DType the data type
-   */
-struct nms_impl {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int32_t *index, const int32_t *batch_start,
-                                  const DType *input, const DType *areas,
-                                  int k, int ref, int num,
-                                  int stride, int offset_box, int offset_id,
-                                  float thresh, bool force, int encode) {
-    int b = i / k;  // batch
-    int pos = i % k + ref + 1;  // position
-    ref = static_cast<int>(batch_start[b]) + ref;
-    pos = static_cast<int>(batch_start[b]) + pos;
-    if (ref >= static_cast<int>(batch_start[b + 1])) return;
-    if (pos >= static_cast<int>(batch_start[b + 1])) return;
-    if (index[ref] < 0) return;  // reference has been suppressed
-    if (index[pos] < 0) return;  // self been suppressed
-    int ref_offset = static_cast<int>(index[ref]) * stride + offset_box;
-    int pos_offset = static_cast<int>(index[pos]) * stride + offset_box;
-    if (!force && offset_id >=0) {
-      int ref_id = static_cast<int>(input[ref_offset - offset_box + offset_id]);
-      int pos_id = static_cast<int>(input[pos_offset - offset_box + offset_id]);
-      if (ref_id != pos_id) return;  // different class
-    }
-    DType intersect = Intersect(input + ref_offset, input + pos_offset, encode);
-    intersect *= Intersect(input + ref_offset + 1, input + pos_offset + 1, encode);
-    int ref_area_offset = static_cast<int>(index[ref]);
-    int pos_area_offset = static_cast<int>(index[pos]);
-    DType iou = intersect / (areas[ref_area_offset] + areas[pos_area_offset] - intersect);
-    if (iou > thresh) {
-      index[pos] = -1;
-    }
+inline void NMSCalculateBatchStart(mshadow::Stream<cpu> *s,
+                                   mshadow::Tensor<cpu, 1, int32_t>* batch_start,
+                                   mshadow::Tensor<cpu, 1, int32_t>* valid_batch_id,
+                                   int num_batch) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  for (int b = 0; b < num_batch + 1; b++) {
+    slice<0>(*batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(
+        F<mshadow_op::less_than>(*valid_batch_id, ScalarExp<int32_t>(b)), 0);
   }
-};
+}
 
 /*!
    * \brief Assign output of nms by indexing input
@@ -398,7 +346,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U) << "BoxNMS output: [output, temp]";
   const BoxNMSParam& param = nnvm::get<BoxNMSParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape in_shape = inputs[box_nms_enum::kData].shape_;
+  mxnet::TShape in_shape = inputs[box_nms_enum::kData].shape_;
   int indim = in_shape.ndim();
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
@@ -491,10 +439,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
 
     // calculate batch_start: accumulated sum to denote 1st sorted_index for a given batch_index
     valid_batch_id = (valid_sorted_index / ScalarExp<int32_t>(num_elem));
-    for (int b = 0; b < num_batch + 1; b++) {
-      slice<0>(batch_start, b, b + 1) = reduce_keepdim<red::sum, false>(
-        F<mshadow_op::less_than>(valid_batch_id, ScalarExp<int32_t>(b)), 0);
-    }
+    mxnet::op::NMSCalculateBatchStart(s, &batch_start, &valid_batch_id, num_batch);
 
     // pre-compute areas of candidates
     areas = 0;
@@ -503,17 +448,11 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
      topk, num_elem, width_elem, param.in_format);
 
     // apply nms
-    // go through each box as reference, suppress if overlap > threshold
-    // sorted_index with -1 is marked as suppressed
-    for (int ref = 0; ref < topk; ++ref) {
-      int num_worker = topk - ref - 1;
-      if (num_worker < 1) continue;
-      Kernel<nms_impl, xpu>::Launch(s, num_batch * num_worker,
-        sorted_index.dptr_, batch_start.dptr_, buffer.dptr_, areas.dptr_,
-        num_worker, ref, num_elem,
-        width_elem, coord_start, id_index,
-        param.overlap_thresh, param.force_suppress, param.in_format);
-    }
+    mxnet::op::NMSApply(s, num_batch, topk, &sorted_index,
+                        &batch_start, &buffer, &areas,
+                        num_elem, width_elem, coord_start,
+                        id_index, param.overlap_thresh,
+                        param.force_suppress, param.in_format);
 
     // store the results to output, keep a record for backward
     record = -1;
@@ -547,7 +486,7 @@ void BoxNMSBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 4U);
   CHECK_EQ(outputs.size(), 1U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape in_shape = outputs[box_nms_enum::kData].shape_;
+  mxnet::TShape in_shape = outputs[box_nms_enum::kData].shape_;
   int indim = in_shape.ndim();
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
@@ -579,12 +518,12 @@ struct BoxOverlapParam : public dmlc::Parameter<BoxOverlapParam> {
 };  // BoxOverlapParam
 
 inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
 
   CHECK_GE(lshape.ndim(), 2)
     << "lhs must have dim >= 2 "
@@ -602,7 +541,7 @@ inline bool BoxOverlapShape(const nnvm::NodeAttrs& attrs,
     << rdim << " provided";
 
   // assign output shape
-  TShape oshape(lshape.ndim() + rshape.ndim() - 2);
+  mxnet::TShape oshape(lshape.ndim() + rshape.ndim() - 2);
   int idx = 0;
   for (index_t i = 0; i < lshape.ndim() - 1; ++i) {
     oshape[idx++] = lshape[i];
@@ -648,8 +587,8 @@ void BoxOverlapForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   const BoxOverlapParam& param = nnvm::get<BoxOverlapParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape lshape = inputs[0].shape_;
-  TShape rshape = inputs[1].shape_;
+  mxnet::TShape lshape = inputs[0].shape_;
+  mxnet::TShape rshape = inputs[1].shape_;
   int lsize = lshape.ProdShape(0, lshape.ndim() - 1);
   int rsize = rshape.ProdShape(0, rshape.ndim() - 1);
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -703,19 +642,19 @@ struct BipartiteMatchingParam : public dmlc::Parameter<BipartiteMatchingParam> {
 };  // BipartiteMatchingParam
 
 inline bool MatchingShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   // const BipartiteMatchingParam& param = nnvm::get<BipartiteMatchingParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
-  TShape& dshape = (*in_attrs)[0];
+  mxnet::TShape& dshape = (*in_attrs)[0];
 
   CHECK_GE(dshape.ndim(), 2)
     << "score matrix must have dim >= 2 "
     << dshape.ndim() << " provided";
 
   // assign output shape
-  TShape oshape(dshape.ndim() - 1);
+  mxnet::TShape oshape(dshape.ndim() - 1);
   for (index_t i = 0; i < dshape.ndim() - 1; ++i) {
     oshape[i] = dshape[i];
   }
@@ -772,7 +711,7 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 2U);
   const BipartiteMatchingParam& param = nnvm::get<BipartiteMatchingParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  TShape dshape = inputs[0].shape_;
+  mxnet::TShape dshape = inputs[0].shape_;
   int row = dshape[dshape.ndim() - 2];
   int col = dshape[dshape.ndim() - 1];
   int batch_size = dshape.Size() / row / col;

@@ -75,6 +75,10 @@ USE_CUDNN = 0
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 # use openmp for parallelization
 # apple-clang by default does not have openmp built-in
