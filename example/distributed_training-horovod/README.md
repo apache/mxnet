@@ -15,20 +15,20 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# MXNet + Horovod
+# Distributed Training using MXNet with Horovod 
 [Horovod](https://github.com/horovod/horovod) is a distributed training framework that demonstrates 
 excellent scaling efficiency for dense models running on a large number of nodes. It currently 
 supports mainstream deep learning frameworks such as MXNet, TensorFlow, Keras, and PyTorch. 
 It is created at Uber and currently hosted by the [Linux Foundation Deep Learning](https://lfdl.io)(LF DL). 
 
-MXNet is recently supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
+MXNet 1.4.0 is supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pyspark-apache-mxnet-support/).
 
 ## What's New?
 Compared with the standard distributed training script in MXNet which uses parameter server to 
 distribute and aggregate parameters, Horovod uses ring allreduce algorithm to communicate parameters 
 between workers. There is no dedicated server and the communication data size 
 between workers does not depend on the number of workers. Therefore, it scales well in the case where 
-there are a large number of workers and network bandwidth becomes bottleneck.
+there are a large number of workers and network bandwidth is the bottleneck.
 
 # Install
 ## Install MXNet
@@ -38,16 +38,6 @@ $ pip install mxnet
 **Note**: There is a [known issue](https://github.com/horovod/horovod/issues/884) when running Horovod with MXNet on a Linux system with GCC version 5.X and above. We recommend users to build MXNet from source following this [guide](https://mxnet.incubator.apache.org/install/build_from_source.html) as a workaround for now.
 
 ## Install Horovod
-
-1. Install [Open MPI](https://www.open-mpi.org/) or another MPI implementation.
-
-Steps to install Open MPI are listed [here](https://www.open-mpi.org/faq/?category=building#easy-build).
-
-**Note**: Open MPI 3.1.3 has an issue that may cause hangs.  It is recommended
-to downgrade to Open MPI 3.1.2 or upgrade to Open MPI 4.0.0.
-
-2. Install the `horovod` pip package.
-
 ```bash
 $ pip install horovod
 ```
@@ -55,6 +45,13 @@ $ pip install horovod
 This basic installation is good for laptops and for getting to know Horovod.
 If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](https://github.com/horovod/horovod/blob/master/docs/gpus.md) page.
 If you want to use Docker, read the [Horovod in Docker](https://github.com/horovod/horovod/blob/master/docs/docker.md) page.
+
+## Install Open MPI
+MPI is required to run distributed training with Horovod. Install [Open MPI](https://www.open-mpi.org/) or another MPI implementation.
+Steps to install Open MPI are listed [here](https://www.open-mpi.org/faq/?category=building#easy-build).
+
+**Note**: Open MPI 3.1.3 has an issue that may cause hangs.  It is recommended
+to downgrade to Open MPI 3.1.2 or upgrade to Open MPI 4.0.0.
 
 # Usage
 
