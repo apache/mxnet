@@ -250,13 +250,11 @@ class SigmoidBinaryCrossEntropyLoss(Loss):
                 loss = F.relu(pred) - pred * label + \
                     F.Activation(-F.abs(pred), act_type='softrelu')
             else:
-                # We use the stable formula: x - x * z + \
-                #     (1 + z * pos_weight - z) * (log(1 + exp(-abs(x))) + max(-x, 0))
+                # We use the stable formula: x - x * z + (1 + z * pos_weight - z) * \
+                #    (log(1 + exp(-abs(x))) + max(-x, 0))
                 log_weight = 1 + F.broadcast_mul(pos_weight - 1, label)
-                loss = pred - pred * label + \
-                      F.broadcast_mul(log_weight,
-                                      F.Activation(-F.abs(pred), act_type='softrelu') + \
-                                          F.relu(-pred))
+                loss = pred - pred * label + log_weight * \
+                       (F.Activation(-F.abs(pred), act_type='softrelu') + F.relu(-pred))
         else:
             eps = 1e-12
             if pos_weight is None:
