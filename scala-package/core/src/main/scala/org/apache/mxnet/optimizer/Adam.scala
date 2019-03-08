@@ -17,6 +17,7 @@
 
 package org.apache.mxnet.optimizer
 
+import org.apache.mxnet.NDArrayConversions._
 import org.apache.mxnet.util.SerializerUtils
 import org.apache.mxnet.{LRScheduler, NDArray, Optimizer, ResourceScope}
 
