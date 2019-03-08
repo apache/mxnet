@@ -34,7 +34,7 @@ from ..base import _LIB, check_call
 from ..base import SymbolHandle, _as_list
 from ..attribute import AttrScope
 
-__all__ = ["rand_zipfian", "foreach", "while_loop", "cond"]
+__all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "hardmax"]
 
 def rand_zipfian(true_classes, num_sampled, range_max):
     """Draw random samples from an approximately log-uniform or Zipfian distribution.
@@ -749,3 +749,27 @@ def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, be
                                              beta1=beta1, beta2=beta2, epsilon=epsilon,
                                              wd=wd, clip_gradient=clip_gradient, out=out,
                                              name=name, **kwargs)
+
+def hardmax(data):
+    """Returns batched one-hot vectors.
+
+    The depth index containing the `1` is that of the maximum logit value.
+
+
+    Parameters
+    ----------
+    input : NDArray
+        An N-D NDArray.
+
+    Returns
+    -------
+    output: NDArray
+        The output NDarray, is a batched one-hot tensor.
+
+
+    Examples
+    --------
+    >>> data = mx.sym.var('data')
+    >>> output = mx.sym.contrib.hardmax(data)
+    """
+    return symbol._internal._hardmax(data)
