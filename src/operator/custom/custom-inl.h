@@ -139,7 +139,8 @@ class CustomOperator {
       destructing_ = true;
       cv_.notify_all();
     }
-    worker_.join();
+    for (auto &worker : workers_)
+      worker.join();
   }
 
   static CustomOperator* Get();
@@ -150,27 +151,30 @@ class CustomOperator {
     naive_engine_ = true;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
-      worker_ = std::thread(
-        [&]() {
-          std::unique_lock<std::mutex> lock(mutex_);
-          while (!q_.empty() || !destructing_) {
-            cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
-            while (!q_.empty()) {
-              auto fn = q_.front();
-              lock.unlock();
-              fn();
-              lock.lock();
-              q_.pop();
+      const int num_threads = dmlc::GetEnv("MXNET_CUSTOM_OP_NUM_THREADS", 4);
+      for (int i = 0; i < num_threads; ++i) {
+        workers_.emplace_back(std::thread(
+          [&]() {
+            std::unique_lock<std::mutex> lock(mutex_);
+            while (!q_.empty() || !destructing_) {
+              cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
+              while (!q_.empty()) {
+                auto fn = q_.front();
+                q_.pop();
+                lock.unlock();
+                fn();
+                lock.lock();
+              }
             }
-          }
-        });
+        }));
+      }
     }
   }
   std::mutex mutex_;
   std::map<std::string, CustomOpPropCreator> registry_;
   // async worker
   std::condition_variable cv_;
-  std::thread worker_;
+  std::vector<std::thread> workers_;
   std::queue<std::function<void(void)> > q_;
   bool naive_engine_;
   bool destructing_;
