@@ -31,6 +31,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/c_api.h>
 #include <mxnet/imperative.h>
+#include <algorithm>
 #include <map>
 #include <vector>
 #include <string>
@@ -154,7 +155,6 @@ class CustomOperator {
     naive_engine_ = true;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
-      SetNumThreads(1);
     }
   }
   void ThreadTarget() {
