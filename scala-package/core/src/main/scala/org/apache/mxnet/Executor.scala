@@ -45,18 +45,20 @@ object Executor {
  * @see Symbol.bind : to create executor
  */
 class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
-                              private[mxnet] val symbol: Symbol) extends NativeResource {
-  private[mxnet] var argArrays: Array[NDArray] = null
-  private[mxnet] var gradArrays: Array[NDArray] = null
-  private[mxnet] var auxArrays: Array[NDArray] = null
+                              private[mxnet] val symbol: Symbol,
+                              private[mxnet] var argArrays: Array[NDArray] = null,
+                              private[mxnet] var gradArrays: Array[NDArray] = null,
+                              private[mxnet] var auxArrays: Array[NDArray] = null,
+                              private var _ctx: Context = null,
+                              private var _gradsReq: Iterable[_] = null,
+                              private var _group2ctx: Map[String, Context] = null
+                             ) extends NativeResource {
+
   val outputs: Array[NDArray] = getOutputs
   protected var _argDict: Map[String, NDArray] = null
   protected var _gradDict: Map[String, NDArray] = null
   protected var _auxDict: Map[String, NDArray] = null
   protected var monitorCallback: MXMonitorCallback = null
-  private[mxnet] var _ctx: Context = null
-  private[mxnet] var _gradsReq: Iterable[_] = null
-  private[mxnet] var _group2ctx: Map[String, Context] = null
   private val logger: Logger = LoggerFactory.getLogger(classOf[Executor])
 
   override def nativeAddress: CPtrAddress = handle
@@ -64,10 +66,30 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   // cannot determine the off-heap size of this object
   override val bytesAllocated: Long = 0
   override val ref: NativeResourceRef = super.register()
+
+  private[mxnet] def updateDepResourceScope(): Unit = {
+    if (argArrays != null) {argArrays.foreach(a => a.moveToScopeOf(this))}
+    if (gradArrays != null) {gradArrays.foreach(
+      // Symbol will sometimes fill this with nulls so we've got to check the elements too
+      a => if (a != null) {a.moveToScopeOf(this)})
+    }
+    if (auxArrays != null) {auxArrays.foreach(a => a.moveToScopeOf(this))}
+    outputs.foreach(o => o.moveToScopeOf(this))
+  }
+
   override def dispose(): Unit = {
     if (!super.isDisposed) {
       super.dispose()
       outputs.foreach(o => o.dispose())
+      if (argArrays != null) {argArrays.foreach(a => a.dispose())}
+      if (gradArrays != null) {gradArrays.foreach(
+        // Symbol will sometimes fill this with nulls so we've got to check the elements too
+        a => if (a != null) {a.dispose()})
+      }
+      if (auxArrays != null) {auxArrays.foreach(a => a.dispose())}
+      if (_argDict != null) {_argDict.foreach(a => a._2.dispose())}
+      if (_gradDict != null) {_gradDict.foreach(a => a._2.dispose())}
+      if (_auxDict != null) {_auxDict.foreach(a => a._2.dispose())}
     }
   }
 
@@ -145,6 +167,7 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                   "If this is intended, set partialShaping = true to suppress this warning.")
       }
     }
+
     if (this._gradsReq.isInstanceOf[Seq[_]]) {
       this.symbol.bind(this._ctx,
                           newArgDict,

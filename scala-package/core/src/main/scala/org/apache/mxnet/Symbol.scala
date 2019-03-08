@@ -803,18 +803,19 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
                                    auxArgsHandle,
                                    sharedHandle,
                                    execHandle))
-    val executor = new Executor(execHandle.value, this.clone())
-    executor.argArrays = argsNDArray
-    executor.gradArrays = argsGradNDArray
-    executor.auxArrays = auxStatesNDArray
-    executor._ctx = new Context(ctx.deviceType, ctx.deviceId)
-    executor._gradsReq = gradsReq
-    executor._group2ctx =
+
+    val executorGroup2ctx =
       if (group2ctx == null) null
       else group2ctx.map { case (key, value) =>
         key -> new Context(value.deviceType, value.deviceId)
       }
-    executor
+
+    val newSymbol = this.clone()
+    newSymbol.moveToScopeOf(this)
+    new Executor(execHandle.value, newSymbol, argsNDArray, argsGradNDArray,
+                                auxStatesNDArray, new Context(ctx.deviceType, ctx.deviceId),
+                                gradsReq, executorGroup2ctx)
+
   }
 
   /**

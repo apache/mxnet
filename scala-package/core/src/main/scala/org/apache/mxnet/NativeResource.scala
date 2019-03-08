@@ -109,6 +109,18 @@ private[mxnet] trait NativeResource
     }
   }
 
+  /**
+    * This method will move the NativeResource from it's current scope and add it to the
+    * scope of another NativeResource. Useful for when a new resource is made internally and needs
+    * to be coupled to an existing resource.
+    * @param nativeResource the native resource which has the desired destination resourceScope
+    */
+  private [mxnet] def moveToScopeOf(nativeResource: NativeResource): Unit = {
+    if (scope.isDefined) scope.get.remove(this)
+    scope = nativeResource.scope
+    if (scope.isDefined) scope.get.add(this)
+  }
+
   /*
   this is used by the WarnIfNotDisposed finalizer,
   the object could be disposed by the GC without the need for explicit disposal
