@@ -129,6 +129,9 @@ class CustomOperator {
           ctx.run_ctx.ctx, vars, vars2, FnProperty::kNormal, 0,
           "CustomOperator");
     });
+    // increase num_threads if there is not enough threads to execute custom operator
+    if (q_.size() > num_free_threads)
+      CreateThreads(q_.size() - num_free_threads);
     cv_.notify_all();
   }
 
@@ -146,35 +149,45 @@ class CustomOperator {
   static CustomOperator* Get();
 
  private:
-  CustomOperator() {
+  CustomOperator() : num_free_threads(0) {
     destructing_ = false;
     naive_engine_ = true;
     if (std::string("NaiveEngine") != dmlc::GetEnv("MXNET_ENGINE_TYPE", std::string())) {
       naive_engine_ = false;
-      const int num_threads = dmlc::GetEnv("MXNET_CUSTOM_OP_NUM_THREADS", 4);
-      for (int i = 0; i < num_threads; ++i) {
-        workers_.emplace_back(std::thread(
-          [&]() {
-            std::unique_lock<std::mutex> lock(mutex_);
-            while (!q_.empty() || !destructing_) {
-              cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
-              while (!q_.empty()) {
-                auto fn = q_.front();
-                q_.pop();
-                lock.unlock();
-                fn();
-                lock.lock();
-              }
-            }
-        }));
+      SetNumThreads(1);
+    }
+  }
+  void ThreadTarget() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (!q_.empty() || !destructing_) {
+      cv_.wait(lock, [&] {return !q_.empty() || destructing_;});
+      while (!q_.empty()) {
+        --num_free_threads;
+        auto fn = q_.front();
+        q_.pop();
+        lock.unlock();
+        fn();
+        ++num_free_threads;
+        lock.lock();
       }
     }
+  }
+  void SetNumThreads(int num_threads) {
+    num_threads = std::min(dmlc::GetEnv("MXNET_CUSTOM_OP_NUM_THREADS", 16), num_threads);
+    for (int i = workers_.size(); i < num_threads; ++i) {
+      workers_.emplace_back(std::thread([this]{this->ThreadTarget();}));
+      ++num_free_threads;
+    }
+  }
+  void CreateThreads(int num_new_threads) {
+    SetNumThreads(workers_.size() + num_new_threads);
   }
   std::mutex mutex_;
   std::map<std::string, CustomOpPropCreator> registry_;
   // async worker
   std::condition_variable cv_;
   std::vector<std::thread> workers_;
+  std::atomic<uint32_t> num_free_threads;
   std::queue<std::function<void(void)> > q_;
   bool naive_engine_;
   bool destructing_;
