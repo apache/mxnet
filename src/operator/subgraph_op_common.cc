@@ -119,8 +119,8 @@ bool InferSubgraphStorage(const nnvm::Symbol &subgraph,
 }
 
 bool InferSubgraphShape(const nnvm::Symbol &subgraph,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) {
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape) {
   nnvm::Graph g;
   g.outputs = subgraph.outputs;
   const auto& idx = g.indexed_graph();
@@ -128,7 +128,7 @@ bool InferSubgraphShape(const nnvm::Symbol &subgraph,
   CHECK_EQ(idx.outputs().size(), out_shape->size());
 
   // Put the input and output shapes to the shape vector.
-  nnvm::ShapeVector shapes(idx.num_node_entries());
+  mxnet::ShapeVector shapes(idx.num_node_entries());
   const auto &input_nids = idx.input_nodes();
   CHECK_EQ(input_nids.size(), in_shape->size());
   for (size_t i = 0; i < in_shape->size(); i++) {
@@ -145,7 +145,7 @@ bool InferSubgraphShape(const nnvm::Symbol &subgraph,
   g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
   g = exec::InferShape(std::move(g));
 
-  const auto& shapes1 = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& shapes1 = g.GetAttr<mxnet::ShapeVector>("shape");
   // Inferring the shape in the subgraph may infer the shape of the inputs.
   // We need to copy the inferred input shapes back.
   CHECK_EQ(input_nids.size(), in_shape->size());
@@ -177,7 +177,7 @@ bool as_bool_scalar(const NDArray &a) {
   return false;
 }
 
-bool is_shape_udf(const TShape &x) {
+bool is_shape_udf(const mxnet::TShape &x) {
   return x.ndim() == 0 || x.Size() == 0;
 }
 

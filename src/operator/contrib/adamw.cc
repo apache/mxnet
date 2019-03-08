@@ -78,7 +78,7 @@ the update is skipped.
 .set_num_inputs(6)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdamWParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", MPUpdateInferShape<2, 1, 6>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPUpdateInferShape<2, 1, 6>)
 .set_attr<nnvm::FInferType>("FInferType", MPUpdateInferType<2, 1, 6>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
@@ -121,7 +121,7 @@ the update is skipped.
 .set_num_inputs(5)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<AdamWParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", MPUpdateInferShape<4, 1, 5>)
+.set_attr<mxnet::FInferShape>("FInferShape", MPUpdateInferShape<4, 1, 5>)
 .set_attr<nnvm::FInferType>("FInferType", MPUpdateInferType<4, 1, 5>)
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {

@@ -91,7 +91,7 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   CHECK_NE(req[0], kAddTo) << "Shuffle does not support AddTo";
-  const TShape& input_shape = inputs[0].shape_;
+  const mxnet::TShape& input_shape = inputs[0].shape_;
   const index_t size = inputs[0].Size();
   const index_t first_axis_len = input_shape[0];
   Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -125,7 +125,7 @@ but the order of the elements in each row does not change.
 )code")
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {

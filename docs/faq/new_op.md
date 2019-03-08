@@ -258,7 +258,7 @@ can add argument descriptions in bulk with `.add_arguments(ActivationParam::__FI
 
 #### FInferShape or TIsBackward (for Backward Only Ops)
 
-Normally operators need to have `FInferShape` with prototype `bool(const nnvm::NodeAttrs& attrs, std::vector<TShape> *in_attrs, std::vector<TShape> *out_attrs)`. `FInferShape` fills unknown shapes (`shape.ndim() == 0`) in in_attrs/out_attrs based on known shapes in in_attrs/out_attrs. Use `ElemwiseShape<n_in, n_out>` for simple operators with uniform shapes.
+Normally operators need to have `FInferShape` with prototype `bool(const nnvm::NodeAttrs& attrs, mxnet::ShapeVector *in_attrs, mxnet::ShapeVector *out_attrs)`. `FInferShape` fills unknown shapes (`shape.ndim() == 0`) in in_attrs/out_attrs based on known shapes in in_attrs/out_attrs. Use `ElemwiseShape<n_in, n_out>` for simple operators with uniform shapes.
 
 Operators that are only used for a backward pass can instead register `.set_attr<nnvm::TIsBackward>("TIsBackward", true)`
 and their shapes with be copied from the corresponding forward operators.

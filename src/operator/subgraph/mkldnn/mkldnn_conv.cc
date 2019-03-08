@@ -480,7 +480,7 @@ static std::vector<std::string> SgMKLDNNConvListOutputNames(
 
 static OpStatePtr CreateSgMKLDNNConvState(const nnvm::NodeAttrs &attrs,
                                           Context ctx,
-                                          const std::vector<TShape> &in_shapes,
+                                          const mxnet::ShapeVector &in_shapes,
                                           const std::vector<int> &in_types) {
   return OpStatePtr::Create<SgMKLDNNConvOperator>(attrs);
 }
@@ -510,15 +510,15 @@ static void FilterMinMaxIndice(const MKLDNNConvParam &mkldnn_param,
 }
 
 static bool SgMKLDNNConvInferShape(const nnvm::NodeAttrs &attrs,
-                                   std::vector<TShape> *in_shapes,
-                                   std::vector<TShape> *out_shapes) {
+                                   mxnet::ShapeVector *in_shapes,
+                                   mxnet::ShapeVector *out_shapes) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   if (param.full_conv_param.mkldnn_param.quantized) {
     std::unordered_set<size_t> minmax_indice;
-    std::vector<TShape> base_in_shapes;
-    std::vector<TShape> base_out_shapes;
+    mxnet::ShapeVector base_in_shapes;
+    mxnet::ShapeVector base_out_shapes;
 
-    FilterMinMaxIndice<TShape>(param.full_conv_param.mkldnn_param, in_shapes,
+    FilterMinMaxIndice<mxnet::TShape>(param.full_conv_param.mkldnn_param, in_shapes,
                                out_shapes, &base_in_shapes, &base_out_shapes,
                                &minmax_indice);
     bool result =
@@ -684,11 +684,14 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 .set_attr<nnvm::FListInputNames>("FListInputNames", SgMKLDNNConvListInputNames)
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", SgMKLDNNConvListOutputNames)
 .set_attr<FCreateOpState>("FCreateOpState", CreateSgMKLDNNConvState)
-.set_attr<nnvm::FInferShape>("FInferShape", SgMKLDNNConvInferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SgMKLDNNConvInferShape)
 .set_attr<nnvm::FInferType>("FInferType", SgMKLDNNConvInferType)
 .set_attr<FInferStorageType>("FInferStorageType", SgMKLDNNConvOpStorageType)
 .set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", SgMKLDNNConvOpForward)
 .set_attr<bool>("TIsMKLDNN", true)
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })

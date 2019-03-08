@@ -35,8 +35,8 @@ namespace op {
 MKLDNNSliceFwd::MKLDNNSliceFwd(const SliceParam &param,
                                const NDArray &in,
                                const NDArray &out) {
-  const TShape ishape = in.shape();
-  const TShape oshape = out.shape();
+  const mxnet::TShape ishape = in.shape();
+  const mxnet::TShape oshape = out.shape();
   uint32_t N = ishape.ndim();
   mkldnn::memory::dims dims(N);
   mkldnn::memory::dims offsets(N);

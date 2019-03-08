@@ -65,6 +65,30 @@ def get_iterator_uint8(kv):
 
     return (train, val)
 
+def get_iterator_int8(kv):
+    data_shape = (3, 28, 28)
+
+    train = mx.io.ImageRecordInt8Iter(
+        path_imgrec = "data/cifar/train.rec",
+        data_shape  = data_shape,
+        batch_size  = batch_size,
+        rand_crop   = True,
+        rand_mirror = True,
+        num_parts   = kv.num_workers,
+        part_index  = kv.rank)
+    train = mx.io.PrefetchingIter(train)
+
+    val = mx.io.ImageRecordInt8Iter(
+        path_imgrec = "data/cifar/test.rec",
+        rand_crop   = False,
+        rand_mirror = False,
+        data_shape  = data_shape,
+        batch_size  = batch_size,
+        num_parts   = kv.num_workers,
+        part_index  = kv.rank)
+
+    return (train, val)
+
 def get_iterator_float32(kv):
     data_shape = (3, 28, 28)
 
@@ -187,6 +211,11 @@ def test_cifar10():
 
     # test uint8 input
     (train, val) = get_iterator_uint8(kv)
+    run_cifar10(train, val, use_module=False)
+    run_cifar10(train, val, use_module=True)
+
+    # test int8 input
+    (train, val) = get_iterator_int8(kv)
     run_cifar10(train, val, use_module=False)
     run_cifar10(train, val, use_module=True)
 

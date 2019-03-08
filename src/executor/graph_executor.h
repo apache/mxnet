@@ -94,7 +94,7 @@ class GraphExecutor : public Executor {
             const std::vector<Context>& in_arg_ctxes,
             const std::vector<Context>& arg_grad_ctxes,
             const std::vector<Context>& aux_state_ctxes,
-            const std::unordered_map<std::string, TShape>& arg_shape_map,
+            const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
             const std::unordered_map<std::string, int>& arg_dtype_map,
             const std::unordered_map<std::string, int>& arg_stype_map,
             const std::vector<OpReqType>& grad_req_types,
@@ -111,7 +111,7 @@ class GraphExecutor : public Executor {
                     const bool allow_up_sizing,
                     const Context& default_ctx,
                     const std::map<std::string, Context>& ctx_map,
-                    const std::unordered_map<std::string, TShape>&
+                    const std::unordered_map<std::string, mxnet::TShape>&
                       provided_arg_shapes,
                     std::vector<NDArray>* in_args,
                     std::vector<NDArray>* arg_grads,
@@ -153,7 +153,7 @@ class GraphExecutor : public Executor {
   };
   // Initialize in_args, arg_grads, and aux_states
   void InitArguments(const nnvm::IndexedGraph& idx,
-                     const nnvm::ShapeVector& inferred_shapes,
+                     const mxnet::ShapeVector& inferred_shapes,
                      const nnvm::DTypeVector& inferred_dtypes,
                      const StorageTypeVector& inferred_stypes,
                      const std::vector<Context>& in_arg_ctxes,
@@ -166,7 +166,7 @@ class GraphExecutor : public Executor {
   // Initialize in_args, arg_grads and aux_states with
   // shared_buffer and shared_exec
   virtual void InitArguments(const nnvm::IndexedGraph& idx,
-                             const nnvm::ShapeVector& inferred_shapes,
+                             const mxnet::ShapeVector& inferred_shapes,
                              const nnvm::DTypeVector& inferred_dtypes,
                              const StorageTypeVector& inferred_stypes,
                              const std::vector<Context>& in_arg_ctxes,
@@ -213,10 +213,8 @@ class GraphExecutor : public Executor {
   void ExecuteMonInputCallback(size_t nid);
   // run the monitor callback for output of node `nid`
   void ExecuteMonOutputCallback(size_t nid);
-  // peform bulking and segmentation on an inference graph
-  void BulkInferenceOpSegs();
-  // perform bulking and segmentation on a training graph
-  void BulkTrainingOpSegs(size_t total_num_nodes);
+  // peform bulking and segmentation on the region [from_node, up_to_node) of a graph
+  void BulkOpSegs(size_t from_node, size_t up_to_node, size_t segment_num_nodes_max);
   // indicate whether there is a backward graph for gradients.
   bool need_grad_;
   // internal graph

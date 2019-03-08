@@ -61,7 +61,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"condition", "x", "y"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
 .set_attr<FInferStorageType>("FInferStorageType", WhereOpForwardStorageType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)

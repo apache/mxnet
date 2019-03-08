@@ -28,6 +28,10 @@
       <excludes>
         <exclude>org.scala-lang:*</exclude>
         <exclude>org.scala-lang.modules:*</exclude>
+        <exclude>commons-io:commons-io</exclude>
+        <exclude>commons-codec:commons-codec</exclude>
+        <exclude>org.slf4j:slf4j-api</exclude>
+        <exclude>args4j:args4j</exclude>
       </excludes>
       <outputDirectory>/</outputDirectory>
       <useProjectArtifact>true</useProjectArtifact>

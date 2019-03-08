@@ -79,23 +79,23 @@ static bool SoftmaxOutputType(const nnvm::NodeAttrs& attrs,
 }
 
 static bool SoftmaxOutputShape(const nnvm::NodeAttrs& attrs,
-                               std::vector<TShape> *in_shape,
-                               std::vector<TShape> *out_shape) {
+                               mxnet::ShapeVector *in_shape,
+                               mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const SoftmaxOutputParam& param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
-  const TShape &dshape = in_shape->at(0);
+  const mxnet::TShape &dshape = in_shape->at(0);
   if (dshape.ndim() == 0) return false;
 
   // label.shape == data.shape: use probability as label
   if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
     if (param.multi_output) {
-      TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
-      TShape lshape2(dshape.ndim() - 1);
+      mxnet::TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
+      mxnet::TShape lshape2(dshape.ndim() - 1);
       lshape2[0] = dshape[0];
       for (index_t i = 2; i < dshape.ndim(); ++i)
         lshape2[i-1] = dshape[i];
-      TShape lshape3 = dshape;
+      mxnet::TShape lshape3 = dshape;
       lshape3[1] = 1;
       if (in_shape->at(softmaxout_enum::kLabel).ndim() == 0) {
         in_shape->at(softmaxout_enum::kLabel) = lshape1;
@@ -109,7 +109,7 @@ static bool SoftmaxOutputShape(const nnvm::NodeAttrs& attrs,
         throw InferShapeError(os.str(), softmaxout_enum::kLabel);
       }
     } else {
-      TShape label_shape(dshape.ndim() - 1);
+      mxnet::TShape label_shape(dshape.ndim() - 1);
       for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
         label_shape[i] = dshape[i];
       SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
@@ -242,7 +242,7 @@ NNVM_REGISTER_OP(SoftmaxOutput)
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", SoftmaxOutputShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SoftmaxOutputShape)
 .set_attr<nnvm::FInferType>("FInferType", SoftmaxOutputType)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxOutputCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", SoftmaxOutputGrad{"_backward_SoftmaxOutput"})
@@ -261,6 +261,9 @@ NNVM_REGISTER_OP(_backward_SoftmaxOutput)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
   return std::vector<std::pair<int, int> >{{0, 0}};
+})
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n){
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr_parser(ParamParser<SoftmaxOutputParam>)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxOutputGradCompute<cpu>);

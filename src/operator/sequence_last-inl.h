@@ -246,15 +246,15 @@ class SequenceLastProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
     CHECK((param_.axis == 0) || (param_.axis == 1))
         << "Current implementation expects axis to be 0 or 1.";
 
-    const TShape &dshape = (*in_shape)[seq_last::kData];
+    const mxnet::TShape &dshape = (*in_shape)[seq_last::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
@@ -263,11 +263,11 @@ class SequenceLastProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength, Shape1(sbatch));
 
     // calculate output size
-    TShape shape_o(dshape.ndim() - 1);
+    mxnet::TShape shape_o(dshape.ndim() - 1);
     shape_o[0] = sbatch;
     for (index_t i = 1; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
 
-    const TShape &oshape = shape_o;
+    const mxnet::TShape &oshape = shape_o;
     out_shape->clear();
     out_shape->push_back(oshape);
     return true;
@@ -297,12 +297,12 @@ class SequenceLastProp : public OperatorProperty {
   std::string TypeString() const override { return "SequenceLast"; }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -320,7 +320,7 @@ class SequenceLastProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:
