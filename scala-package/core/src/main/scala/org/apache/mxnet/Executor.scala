@@ -167,7 +167,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
                   "If this is intended, set partialShaping = true to suppress this warning.")
       }
     }
-
     if (this._gradsReq.isInstanceOf[Seq[_]]) {
       this.symbol.bind(this._ctx,
                           newArgDict,

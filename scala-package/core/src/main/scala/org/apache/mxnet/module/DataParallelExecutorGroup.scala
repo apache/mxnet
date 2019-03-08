@@ -299,7 +299,6 @@ class DataParallelExecutorGroup private[module](
 
   private var batchSize: Int = -1
   private var slices: Array[(Int, Int)] = null
-  // private var _defaultExecs: Array[Executor] = null
   private var execs: Array[Executor] = null
   private var dataArrays: Seq[Array[((Int, Int), NDArray)]] = null
   private var labelArrays: Option[Seq[Array[((Int, Int), NDArray)]]] = None
@@ -438,9 +437,6 @@ class DataParallelExecutorGroup private[module](
    */
   def reshape(dataShapes: IndexedSeq[DataDesc], labelShapes: Option[IndexedSeq[DataDesc]]): Unit = {
     if (!(dataShapes == this.dataShapes && labelShapes == this.labelShapes)) {
-      // if (this._defaultExecs == null) {
-      //   this._defaultExecs = this.execs.map(x => x)
-      // }
       this.bindExec(dataShapes, labelShapes, None, reshape = true)
     }
   }
