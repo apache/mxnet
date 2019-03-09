@@ -280,6 +280,50 @@ void NMSApply(mshadow::Stream<gpu> *s,
   }
 }
 
+__launch_bounds__(512)
+__global__ void nms_calculate_batch_start_kernel(int32_t * batch_start,
+                                                 int32_t * valid_batch_id,
+                                                 size_t N,
+                                                 int num_batch) {
+  size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < N) {
+#if __CUDA_ARCH__ >= 350
+    const int32_t previous = tid > 0 ? __ldg(valid_batch_id + tid - 1) : -1;
+    const int32_t my = __ldg(valid_batch_id + tid);
+#else
+    const int32_t previous = tid > 0 ? valid_batch_id[tid - 1] : -1;
+    const int32_t my = valid_batch_id[tid];
+#endif
+    if (my > previous) {
+      for (int32_t current = previous + 1; current <= my; ++current) {
+        batch_start[current] = tid;
+      }
+    }
+    if (tid == N - 1) {
+      for (int32_t current = my + 1; current <= num_batch; ++current) {
+        batch_start[current] = tid + 1;
+      }
+    }
+  }
+}
+
+inline void NMSCalculateBatchStart(mshadow::Stream<gpu> *s,
+                                   mshadow::Tensor<gpu, 1, int32_t>* batch_start,
+                                   mshadow::Tensor<gpu, 1, int32_t>* valid_batch_id,
+                                   int num_batch) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  auto stream = mshadow::Stream<gpu>::GetStream(s);
+  constexpr int block_size = 512;
+  const int num_elements = valid_batch_id->size(0);
+  const int blocks = (num_elements + block_size - 1) / block_size;
+  nms_calculate_batch_start_kernel<<<blocks, block_size, 0, stream>>>(batch_start->dptr_,
+                                                                      valid_batch_id->dptr_,
+                                                                      num_elements,
+                                                                      num_batch);
+}
+
 }  // namespace op
 }  // namespace mxnet
 
