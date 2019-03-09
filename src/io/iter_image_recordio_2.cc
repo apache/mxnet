@@ -326,7 +326,7 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
         n_to_out = 0;
       }
     } else {
-      int n_to_copy = std::min(n_parsed_, batch_param_.batch_size - current_size);
+      int n_to_copy = (std::min<int>)(n_parsed_, batch_param_.batch_size - current_size);
       n_parsed_ -= n_to_copy;
       // Copy
       #pragma omp parallel for num_threads(param_.preprocess_threads)

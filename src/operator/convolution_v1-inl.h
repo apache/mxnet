@@ -335,8 +335,8 @@ class ConvolutionV1Op : public Operator {
                                      oshape[2] * oshape[3]);
     // param_.workspace is in elements of sizeof(DType)
     // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
-    nstep_ = std::max(
-        std::min(
+    nstep_ = (std::max<index_t>)(
+        (std::min<index_t>)(
             static_cast<index_t>(
                 param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
             ishape[0]),

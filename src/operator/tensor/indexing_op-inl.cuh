@@ -211,14 +211,14 @@ inline void AddTakeGradLargeBatchKernelLaunch(mshadow::Tensor<gpu, 2, DType> dst
                                               int* num_runs_ptr,
                                               const mshadow::index_t num_rows) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
-  const int num_unique_est = min(num_rows, src.size(0));
+  const int num_unique_est = (std::min<int>)(num_rows, src.size(0));
   const int max_nthread = 128;
-  const int num_y = max(src.size(0)/num_unique_est, 1);
+  const int num_y = (std::max<int>)(src.size(0)/num_unique_est, 1);
   const int block_dim_x = kWarpSize;
   const int block_dim_y = min(num_y, max_nthread/block_dim_x);
-  const int SZ = min((src.size(1) + block_dim_x - 1) / block_dim_x, 4);
+  const int SZ = (std::min<int>)((src.size(1) + block_dim_x - 1) / block_dim_x, 4);
   const int grid_dim_x = (src.size(1) + block_dim_x * SZ - 1) / (block_dim_x * SZ);
-  const int grid_dim_y = min(num_unique_est, mshadow::cuda::kBaseGridNum);
+  const int grid_dim_y = (std::min<int>)(num_unique_est, mshadow::cuda::kBaseGridNum);
   dim3 dimBlock(block_dim_x, block_dim_y);
   dim3 dimGrid(grid_dim_x, grid_dim_y);
   // Maximum shared memory usage: 128*4*sizeof(DType), which is 4K for 64bit DType elements

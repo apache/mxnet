@@ -396,7 +396,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
                     &inputs, &dict, &n);
   std::vector<nnvm::NodeEntry> ret;
   for (index_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(nnvm::NodeEntry{p, static_cast<uint32_t>(i), 0});
   }
   return ret;
 }
@@ -446,7 +446,7 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
   p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
   std::vector<nnvm::NodeEntry> ret;
   for (index_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(nnvm::NodeEntry{p, i, 0});
+    ret.emplace_back(nnvm::NodeEntry{p, static_cast<uint32_t>(i), 0});
   }
   return ret;
 }
