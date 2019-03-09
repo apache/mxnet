@@ -218,15 +218,25 @@
     (throw (ex-info error-msg
                     (s/explain-data spec value)))))
 
-(s/def ::non-empty-seq sequential?)
+(s/def ::non-empty-seq (s/and sequential? not-empty))
 (defn to-array-nd
   "Converts any N-D sequential structure to an array
    with the same dimensions."
-  [s]
-  (validate! ::non-empty-seq s "Invalid N-D sequence")
-  (if (sequential? (first s))
-    (to-array (mapv to-array-nd s))
-    (to-array s)))
+  [nd-seq]
+  (validate! ::non-empty-seq nd-seq "Invalid N-D sequence")
+  (if (sequential? (first nd-seq))
+    (to-array (mapv to-array-nd nd-seq))
+    (to-array nd-seq)))
+
+(defn nd-seq-shape
+  "Computes the shape of a n-dimensional sequential structure"
+  [nd-seq]
+  (validate! ::non-empty-seq nd-seq "Invalid N-D sequence")
+  (loop [s nd-seq
+         shape [(count s)]]
+    (if (sequential? (first s))
+      (recur (first s) (conj shape (count (first s))))
+      shape)))
 
 (defn map->scala-tuple-seq
   "* Convert a map to a scala-Seq of scala-Tubple.

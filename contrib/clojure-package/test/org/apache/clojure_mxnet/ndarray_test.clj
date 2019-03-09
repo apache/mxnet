@@ -148,8 +148,8 @@
 
 (deftest test->ndarray
   (let [nda1 (ndarray/->ndarray [5.0 -4.0])
-        nda2 (ndarray/->ndarray [[1.0 2.0 3.0]
-                                 [4.0 5.0 6.0]])
+        nda2 (ndarray/->ndarray [[1 2 3]
+                                 [4 5 6]])
         nda3 (ndarray/->ndarray [[[7.0] [8.0]]])]
     (is (= [5.0 -4.0] (->vec nda1)))
     (is (= [2] (mx-shape/->vec (shape nda1))))

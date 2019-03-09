@@ -164,12 +164,12 @@
                    (util/tuple->vec)))))
 
 (deftest test-to-array-nd
-  (let [a1 (util/to-array-nd '())
+  (let [a1 (util/to-array-nd '(1))
         a2 (util/to-array-nd [1.0 2.0])
         a3 (util/to-array-nd [[3.0] [4.0]])
         a4 (util/to-array-nd [[[5 -5]]])]
-    (is (= 0 (alength a1)))
-    (is (= [] (->> a1 vec)))
+    (is (= 1 (alength a1)))
+    (is (= [1] (->> a1 vec)))
     (is (= 2 (alength a2)))
     (is (= 2.0 (aget a2 1)))
     (is (= [1.0 2.0] (->> a2 vec)))
@@ -182,6 +182,13 @@
     (is (= 2 (alength (aget a4 0 0))))
     (is (= 5 (aget a4 0 0 0)))
     (is (= [[[5 -5]]] (->> a4 vec (mapv vec) (mapv #(mapv vec %)))))))
+
+(deftest test-nd-seq-shape
+  (is (= [1] (util/nd-seq-shape '(5))))
+  (is (= [2] (util/nd-seq-shape [1.0 2.0])))
+  (is (= [3] (util/nd-seq-shape [1 1 1])))
+  (is (= [2 1] (util/nd-seq-shape [[3.0] [4.0]])))
+  (is (= [1 3 2] (util/nd-seq-shape [[[5 -5] [5 -5] [5 -5]]]))))
 
 (deftest test-coerce-return
   (is (= [] (util/coerce-return (ArrayBuffer.))))
