@@ -112,13 +112,24 @@ private[mxnet] trait NativeResource
   /**
     * This method will move the NativeResource from it's current scope and add it to the
     * scope of another NativeResource. Useful for when a new resource is made internally and needs
-    * to be coupled to an existing resource.
+    * to be coupled to an existing resource. Only moves scopes down, never up since that could cause
+    * resources to be cleared sooner than they should be.
     * @param nativeResource the native resource which has the desired destination resourceScope
     */
   private [mxnet] def moveToScopeOf(nativeResource: NativeResource): Unit = {
-    if (scope.isDefined) scope.get.remove(this)
-    scope = nativeResource.scope
-    if (scope.isDefined) scope.get.add(this)
+    if (scope.isDefined && nativeResource.scope.isDefined) {
+      val curScope = scope.get
+      val newScope = nativeResource.scope.get
+      if (ResourceScope.getIndexOfScope(curScope) > ResourceScope.getIndexOfScope(newScope)) {
+        curScope.remove(this)
+        scope = nativeResource.scope
+        newScope.add(this)
+      }
+    } else if (scope.isDefined) {
+      val curScope = scope.get
+      curScope.remove(this)
+      scope = nativeResource.scope
+    }
   }
 
   /*

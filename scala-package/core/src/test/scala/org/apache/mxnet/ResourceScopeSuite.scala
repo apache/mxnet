@@ -109,22 +109,23 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
     var b: TestNativeResource = null
     var c: TestNativeResource = null
     var d: TestNativeResource = null
-
+    var notinAScope: TestNativeResource = new TestNativeResource()
     ResourceScope.using() {
       a = new TestNativeResource()
       ResourceScope.using() {
         b = new TestNativeResource()
-        b.moveToScopeOf(a)
+        b.moveToScopeOf(notinAScope)
         ResourceScope.using() {
           c = new TestNativeResource()
           ResourceScope.using() {
             d = new TestNativeResource()
+            // Should fail to move c since d is in a higher scope
             c.moveToScopeOf(d)
             d.moveToScopeOf(a)
             assert(c.isDisposed == false)
             assert(d.isDisposed == false)
           }
-          assert(c.isDisposed == true)
+          assert(c.isDisposed == false)
           assert(d.isDisposed == false)
         }
         assert(b.isDisposed == false)
@@ -137,7 +138,7 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
       assert(d.isDisposed == false)
     }
     assert(a.isDisposed == true)
-    assert(b.isDisposed == true)
+    assert(b.isDisposed == false)
     assert(c.isDisposed == true)
     assert(d.isDisposed == true)
   }

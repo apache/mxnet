@@ -182,6 +182,11 @@ object ResourceScope {
     threadLocalScopes.get() -= r
   }
 
+  private[mxnet] def getIndexOfScope(resourceScope: ResourceScope): Int = {
+    val scopes = threadLocalScopes.get()
+    scopes.indexOf(resourceScope)
+  }
+
   /**
     * Get the latest Scope in the stack
     * @return
