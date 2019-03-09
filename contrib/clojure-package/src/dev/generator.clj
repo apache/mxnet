@@ -17,11 +17,14 @@
 
 (ns dev.generator
   (:require [t6.from-scala.core :as scala]
+            [t6.from-scala.core :refer [$ $$] :as $]
             [clojure.reflect :as r]
-            [org.apache.clojure-mxnet.util :as util]
-            [clojure.pprint])
+            [clojure.pprint]
+            [org.apache.clojure-mxnet.util :as util])
   (:import (org.apache.mxnet NDArray NDArrayAPI
-                             Symbol SymbolAPI))
+                             Symbol SymbolAPI
+                             Base)
+           (scala.collection.mutable ListBuffer))
   (:gen-class))
 
 
@@ -570,6 +573,44 @@
 
 
 (comment
+  (def libinfo (Base/_LIB))
+
+  (def mylist ($ ListBuffer/empty))
+  (do (.mxListAllOpNames libinfo mylist))
+  (take 5 (util/buffer->vec mylist))
+
+  (import '(org.apache.mxnet Base$RefInt
+                             Base$RefLong
+                             Base$RefFloat
+                             Base$RefString))
+
+  (def myref (new Base$RefLong 0))
+  (do (.nnGetOpHandle libinfo "Convolution" myref))
+  (.value myref)
+
+  (def name (new Base$RefString nil))
+  (def desc (new Base$RefString nil))
+  (def key-var-num-args (new Base$RefString nil))
+  (def num-args (new Base$RefInt 0))
+  (def arg-names ($ ListBuffer/empty))
+  (def arg-types ($ ListBuffer/empty))
+  (def arg-descs ($ ListBuffer/empty))
+
+  (do (.mxSymbolGetAtomicSymbolInfo libinfo
+                                    (.value myref)
+                                    name
+                                    desc
+                                    num-args
+                                    arg-names
+                                    arg-types
+                                    arg-descs
+                                    key-var-num-args))
+  (.value name)
+  (.value desc)
+  (.value num-args)
+  (util/buffer->vec arg-names)
+  (util/buffer->vec arg-types)
+  (util/buffer->vec arg-descs)
 
   ;; This generates a file with the bulk of the nd-array functions
   (generate-ndarray-file)
