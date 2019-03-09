@@ -570,22 +570,6 @@ struct ReshapeLikeParam : public dmlc::Parameter<ReshapeLikeParam> {
     })                                                              \
   .add_argument("data", "NDArray-or-Symbol", "The input array.")
 
-/*! \bried MKL Unary compute. 
- *  With this macro means mxnet compile with MKL to accelerate math function with mkl. 
- *  Will Register FCompute with UnaryOp::MKL_Compute() to compelet the math function. 
- */
-#define MXNET_MKL_OPERATOR_REGISTER_UNARY(__name$)                  \
-  NNVM_REGISTER_OP(__name$)                                         \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
-  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "The input array.")
-
 #if MSHADOW_USE_MKL == 1
   /*! \bried MKL Unary compute.
    *  *  With this macro means mxnet compile with MKL to accelerate math function with mkl.
