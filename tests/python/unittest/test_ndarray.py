@@ -165,6 +165,7 @@ def test_ndarray_negate():
     # we compute (-arr)
     assert_almost_equal(npy, arr.asnumpy())
 
+
 @with_seed()
 def test_ndarray_reshape():
     tensor = (mx.nd.arange(30) + 1).reshape(2, 3, 5)
