@@ -2201,7 +2201,7 @@ def test_context_num_gpus():
     assert mx.context.num_gpus() > 0
 
 def math_log(shape, dtype, check_value):
-    np_x = np.random.rand(shape[0], shape[1])
+    np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
     mx.nd.waitall()
     y = mx.nd.log(data=x)
@@ -2214,7 +2214,7 @@ def math_log(shape, dtype, check_value):
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
 def math_erf(shape, dtype, check_value):
-    np_x = np.random.rand(shape[0], shape[1])
+    np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
     mx.nd.waitall()
     y = mx.nd.erf(data=x)
@@ -2227,7 +2227,7 @@ def math_erf(shape, dtype, check_value):
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
 def math_square(shape, dtype, check_value):
-    np_x = np.random.rand(shape[0], shape[1])
+    np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
     mx.nd.waitall()
     y = mx.nd.square(data=x)
@@ -2253,12 +2253,9 @@ def run_math(op, shape, dtype="float32", check_value=True):
 def test_math():
     ops = ['log', 'erf', 'square']
     check_value= True
-    lshape = 1000
-    rshapes = [1, 10, 100, 1000, 10000]
+    shape_lst = [[1000], [100,1000], [10,100,100], [10,100,100,100]] 
     dtypes = ["float32", "float64"]
-    for rshape in rshapes:
-        shape = (lshape, rshape)
-        print("shape:(%d, %d), " % (lshape, rshape), end="")
+    for shape in shape_lst:
         for dtype in dtypes:
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
