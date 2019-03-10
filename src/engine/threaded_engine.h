@@ -30,6 +30,7 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
+#include <mxnet/storage.h>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -38,7 +39,6 @@
 #include <mutex>
 #include <string>
 #include <thread>
-#include <mxnet/storage.h>
 #include "./engine_impl.h"
 #include "../profiler/profiler.h"
 #include "./openmp.h"
