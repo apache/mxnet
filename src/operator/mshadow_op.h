@@ -127,10 +127,6 @@ MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
 MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 
-MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
-
-MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
-
 MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
                          (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
 
@@ -316,12 +312,6 @@ MXNET_BINARY_MATH_OP(power_rgrad, math::pow(a, b) * math::log(a));
 MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
-
-/*! \brief used for generate element of maximum */
-MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
-
-/*! \brief used for generate element of minimum */
-MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
 
 MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
 
@@ -787,6 +777,44 @@ namespace isnan_typed {
     return (val.half_ & 0x7fff) > 0x7c00;
   }
 };  // namespace isnan_typed
+
+MXNET_UNARY_MATH_OP_NC(relu, isnan_typed::IsNan(a) || (a > DType(0)) ? a : DType(0));
+
+/*! \brief used for computing gradient of relu operator */
+struct relu_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return a > DType(0) ? DType(1) : DType(0);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator maximum */
+struct maximum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return (a > b ? a : b);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator minimum */
+struct minimum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (isnan_typed::IsNan(a)) {
+      return a;
+    } else {
+      return DType(a < b ? a : b);
+    }
+  }
+};
 
 /*! \brief sum reducer that ignores NaN values in the input */
 struct nansum {
