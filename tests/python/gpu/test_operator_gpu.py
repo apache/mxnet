@@ -547,18 +547,8 @@ def _conv_with_num_streams(seed):
 
 @with_seed()
 def test_convolution_multiple_streams():
-    engines = ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
-
-    if os.getenv('MXNET_ENGINE_TYPE') is not None:
-        engines = [os.getenv('MXNET_ENGINE_TYPE'),]
-        print("Only running against '%s'" % engines[0], file=sys.stderr, end='')
-    # Remove this else clause when the ThreadedEngine can handle this test
-    else:
-        engines.remove('ThreadedEngine')
-        print("SKIP: 'ThreadedEngine', only running against %s" % engines, file=sys.stderr, end='')
-
     for num_streams in [1, 2]:
-        for engine in engines:
+        for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
             print("Starting engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
             run_in_spawned_process(_conv_with_num_streams,
                 {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
