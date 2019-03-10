@@ -473,3 +473,15 @@
     (is (= [2 2] (ndarray/->int-vec nda)))
     (is (= [2.0 2.0] (ndarray/->double-vec nda)))
     (is (= [(byte 2) (byte 2)] (ndarray/->byte-vec nda)))))
+
+(deftest test->nd-vec
+  (is (= [[[1.0]]]
+         (ndarray/->nd-vec (ndarray/array [1] [1 1 1]))))
+  (is (= [[[1.0]] [[2.0]] [[3.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3] [3 1 1]))))
+  (is (= [[[1.0 2.0]] [[3.0 4.0]] [[5.0 6.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3 4 5 6] [3 1 2]))))
+  (is (= [[[1.0] [2.0]] [[3.0] [4.0]] [[5.0] [6.0]]]
+         (ndarray/->nd-vec (ndarray/array [1 2 3 4 5 6] [3 2 1]))))
+  (is (thrown-with-msg? Exception #"Invalid input array"
+                         (ndarray/->nd-vec [1 2 3 4 5]))))
