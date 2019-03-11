@@ -38,26 +38,20 @@ namespace mxnet {
 namespace op {
 
 template<typename DType>
-struct valid_score {
-  DType thresh;
-  explicit valid_score(DType _thresh) : thresh(_thresh) {}
+struct valid_value {
   __host__ __device__ bool operator()(const DType x) {
-    return x > thresh;
+    return static_cast<bool>(x);
   }
 };
 
-template<typename DType>
-int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores,
-                 mshadow::Tensor<gpu, 1, int32_t> out_sorted_index,
-                 mshadow::Tensor<gpu, 1, DType> scores,
-                 mshadow::Tensor<gpu, 1, int32_t> sorted_index,
-                 float valid_thresh) {
-  valid_score<DType> pred(static_cast<DType>(valid_thresh));
-  DType * end_scores = thrust::copy_if(thrust::device, scores.dptr_, scores.dptr_ + scores.MSize(),
-                                       out_scores.dptr_, pred);
-  thrust::copy_if(thrust::device, sorted_index.dptr_, sorted_index.dptr_ + sorted_index.MSize(),
-                  scores.dptr_, out_sorted_index.dptr_, pred);
-  return end_scores - out_scores.dptr_;
+template<typename DType, typename FType>
+int CopyIf(mshadow::Tensor<gpu, 1, DType> out,
+           mshadow::Tensor<gpu, 1, DType> value,
+           mshadow::Tensor<gpu, 1, FType> flag) {
+  valid_value<FType> pred;
+  DType *end_out = thrust::copy_if(thrust::device, value.dptr_, value.dptr_ + value.MSize(),
+                                   flag.dptr_, out.dptr_, pred);
+  return end_out - out.dptr_;
 }
 
 // compute line intersect along either height or width
@@ -278,6 +272,50 @@ void NMSApply(mshadow::Stream<gpu> *s,
       }
     }
   }
+}
+
+__launch_bounds__(512)
+__global__ void nms_calculate_batch_start_kernel(int32_t * batch_start,
+                                                 int32_t * valid_batch_id,
+                                                 size_t N,
+                                                 int num_batch) {
+  size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+  if (tid < N) {
+#if __CUDA_ARCH__ >= 350
+    const int32_t previous = tid > 0 ? __ldg(valid_batch_id + tid - 1) : -1;
+    const int32_t my = __ldg(valid_batch_id + tid);
+#else
+    const int32_t previous = tid > 0 ? valid_batch_id[tid - 1] : -1;
+    const int32_t my = valid_batch_id[tid];
+#endif
+    if (my > previous) {
+      for (int32_t current = previous + 1; current <= my; ++current) {
+        batch_start[current] = tid;
+      }
+    }
+    if (tid == N - 1) {
+      for (int32_t current = my + 1; current <= num_batch; ++current) {
+        batch_start[current] = tid + 1;
+      }
+    }
+  }
+}
+
+inline void NMSCalculateBatchStart(mshadow::Stream<gpu> *s,
+                                   mshadow::Tensor<gpu, 1, int32_t>* batch_start,
+                                   mshadow::Tensor<gpu, 1, int32_t>* valid_batch_id,
+                                   int num_batch) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  auto stream = mshadow::Stream<gpu>::GetStream(s);
+  constexpr int block_size = 512;
+  const int num_elements = valid_batch_id->size(0);
+  const int blocks = (num_elements + block_size - 1) / block_size;
+  nms_calculate_batch_start_kernel<<<blocks, block_size, 0, stream>>>(batch_start->dptr_,
+                                                                      valid_batch_id->dptr_,
+                                                                      num_elements,
+                                                                      num_batch);
 }
 
 }  // namespace op
