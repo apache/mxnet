@@ -38,8 +38,9 @@ NNVM_REGISTER_OP(_contrib_box_nms)
 .describe(R"code(Apply non-maximum suppression to input.
 
 The output will be sorted in descending order according to `score`. Boxes with
-overlaps larger than `overlap_thresh` and smaller scores will be removed and
-filled with -1, the corresponding position will be recorded for backward propogation.
+overlaps larger than `overlap_thresh`, smaller scores and background boxes
+will be removed and filled with -1, the corresponding position will be recorded
+for backward propogation.
 
 During back-propagation, the gradient will be copied to the original
 position according to the input index. For positions that have been suppressed,
@@ -59,6 +60,9 @@ additional elements are allowed.
 
 - `id_index`: optional, use -1 to ignore, useful if `force_suppress=False`, which means
   we will skip highly overlapped boxes if one is `apple` while the other is `car`.
+
+- `background_id`: optional, default=-1, class id for background boxes, useful
+  when `id_index >= 0` which means boxes with background id will be filtered before nms.
 
 - `coord_start`: required, default=2, the starting index of the 4 coordinates.
   Two formats are supported:

@@ -110,11 +110,12 @@ struct unravel_index {
                                   DType *unravelled, DType *ravelled) {
     index_t idx(ravelled[i]);
     #pragma unroll
-    for (int j = ndim; j--; ) {
+    for (int j = ndim-1; j > 0; --j) {
       index_t tmp = idx / shape[j];
       unravelled[i+j*N] = idx - tmp*shape[j];
       idx = tmp;
     }
+    unravelled[i] = idx;
   }
 };
 
