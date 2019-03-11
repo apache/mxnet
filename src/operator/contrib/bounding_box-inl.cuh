@@ -38,26 +38,20 @@ namespace mxnet {
 namespace op {
 
 template<typename DType>
-struct valid_score {
-  DType thresh;
-  explicit valid_score(DType _thresh) : thresh(_thresh) {}
+struct valid_value {
   __host__ __device__ bool operator()(const DType x) {
-    return x > thresh;
+    return static_cast<bool>(x);
   }
 };
 
-template<typename DType>
-int FilterScores(mshadow::Tensor<gpu, 1, DType> out_scores,
-                 mshadow::Tensor<gpu, 1, int32_t> out_sorted_index,
-                 mshadow::Tensor<gpu, 1, DType> scores,
-                 mshadow::Tensor<gpu, 1, int32_t> sorted_index,
-                 float valid_thresh) {
-  valid_score<DType> pred(static_cast<DType>(valid_thresh));
-  DType * end_scores = thrust::copy_if(thrust::device, scores.dptr_, scores.dptr_ + scores.MSize(),
-                                       out_scores.dptr_, pred);
-  thrust::copy_if(thrust::device, sorted_index.dptr_, sorted_index.dptr_ + sorted_index.MSize(),
-                  scores.dptr_, out_sorted_index.dptr_, pred);
-  return end_scores - out_scores.dptr_;
+template<typename DType, typename FType>
+int CopyIf(mshadow::Tensor<gpu, 1, DType> out,
+           mshadow::Tensor<gpu, 1, DType> value,
+           mshadow::Tensor<gpu, 1, FType> flag) {
+  valid_value<FType> pred;
+  DType *end_out = thrust::copy_if(thrust::device, value.dptr_, value.dptr_ + value.MSize(),
+                                   flag.dptr_, out.dptr_, pred);
+  return end_out - out.dptr_;
 }
 
 // compute line intersect along either height or width
