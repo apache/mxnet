@@ -77,17 +77,12 @@ struct index_copy_bwd_cpu {
                   const IType* idx,
                   int dim_size,
                   int idx_size) {
-    const DType* out_ptr = out_tensor_grad + i * dim_size;
-    DType* orig_ptr = orig_tensor_grad + i * dim_size;
-    std::memcpy(orig_ptr, out_ptr, sizeof(DType) * dim_size);
-    if (i < idx_size) {
-      const int index = idx[i];
-      DType* new_ptr = new_tensor_grad + i * dim_size;
-      orig_ptr = orig_tensor_grad + index * dim_size;
-      const DType* src_ptr = out_tensor_grad + index * dim_size;
-      std::memcpy(new_ptr, src_ptr, sizeof(DType) * dim_size);
-      std::memset(orig_ptr, 0, sizeof(DType) * dim_size);
-    }
+    const int index = idx[i];
+    DType* new_ptr = new_tensor_grad + i * dim_size;
+    DType* orig_ptr = orig_tensor_grad + index * dim_size;
+    const DType* src_ptr = out_tensor_grad + index * dim_size;
+    std::memcpy(new_ptr, src_ptr, sizeof(DType) * dim_size);
+    std::memset(orig_ptr, 0, sizeof(DType) * dim_size);
   }
 };
 
@@ -108,11 +103,12 @@ void IndexCopyBackward<cpu>(const nnvm::NodeAttrs& attrs,
   const TBlob& in_grad_2 = outputs[2];
   int dim_size = inputs[3].Size() / inputs[2].Size();
   int index_size = inputs[2].Size();
+  copy(s, in_grad_1, out_grad);
   // index_copy_backward
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(index.type_flag_, IType, {
       Kernel<index_copy_bwd_cpu, cpu>::Launch(
-        s, out_grad.Size() / dim_size, out_grad.dptr<DType>(),
+        s, index_size, out_grad.dptr<DType>(),
         in_grad_1.dptr<DType>(), in_grad_2.dptr<DType>(),
         index.dptr<IType>(), dim_size, index_size);
     });

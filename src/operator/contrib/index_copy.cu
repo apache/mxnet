@@ -76,12 +76,9 @@ struct index_copy_bwd_gpu {
                                   const IType* idx,
                                   int dim_size,
                                   int idx_size) {
-    orig_grad[i] = out_grad[i];
-    if (i / dim_size < idx_size) {
-      int index = idx[i / dim_size];
-      new_grad[i] = orig_grad[index * dim_size + i % dim_size];
-      orig_grad[index * dim_size + i % dim_size] = 0;
-    }
+    int index = idx[i / dim_size];
+    new_grad[i] = orig_grad[index * dim_size + i % dim_size];
+    orig_grad[index * dim_size + i % dim_size] = 0;
   }
 };
 
@@ -102,11 +99,12 @@ void IndexCopyBackward<gpu>(const nnvm::NodeAttrs& attrs,
   const TBlob& in_grad_2 = outputs[2];
   int dim_size = inputs[3].Size() / inputs[2].Size();
   int index_size = inputs[2].Size();
+  copy(s, in_grad_1, out_grad);
   // index_copy_backward
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(index.type_flag_, IType, {
       Kernel<index_copy_bwd_gpu, gpu>::Launch(
-        s, out_grad.Size(), out_grad.dptr<DType>(),
+        s, in_grad_2.Size(), out_grad.dptr<DType>(),
         in_grad_1.dptr<DType>(), in_grad_2.dptr<DType>(),
         index.dptr<IType>(), dim_size, index_size);
     });
