@@ -429,8 +429,8 @@ def test_rnn_cells_export_import():
 
 def check_rnn_layer_forward(layer, inputs, states=None, run_only=False, ctx=mx.cpu()):
     layer.collect_params().initialize(ctx=ctx)
-    inputs.attach_grad()
     inputs = inputs.as_in_context(ctx)
+    inputs.attach_grad()
     if states is not None:
         if isinstance(states, (list, tuple)):
             states = [s.as_in_context(ctx) for s in states]
