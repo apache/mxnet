@@ -379,9 +379,7 @@ def test_quantized_fc():
     for qdtype in ['int8', 'uint8']:
         if is_test_for_mkldnn():
             check_quantized_fc((32, 512, 2), 100, True, qdtype, flatten=False)
-            check_quantized_fc((32, 111, 2), 100, True, qdtype, flatten=False)
             check_quantized_fc((32, 512, 2, 2), 100, True, qdtype, flatten=False)
-            check_quantized_fc((32, 111, 2, 2), 100, True, qdtype, flatten=False)
         check_quantized_fc((32, 512, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 111, 2, 2), 100, True, qdtype)
         check_quantized_fc((32, 512, 2, 2), 100, False, qdtype)
