@@ -2103,6 +2103,7 @@ def test_bilinear_sampler_versions():
 
 
 @with_seed()
+@unittest.skip("test fails on windows gpu. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14368")
 def test_bulking():
     # Return the execution time of a model with the specified limits to the bulked op segments
     def test_bulking_helper(data_shape, num_ops, num_iterations,
