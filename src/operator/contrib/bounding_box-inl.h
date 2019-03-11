@@ -51,6 +51,7 @@ struct BoxNMSParam : public dmlc::Parameter<BoxNMSParam> {
   int coord_start;
   int score_index;
   int id_index;
+  int background_id;
   bool force_suppress;
   int in_format;
   int out_format;
@@ -67,6 +68,8 @@ struct BoxNMSParam : public dmlc::Parameter<BoxNMSParam> {
     .describe("Index of the scores/confidence of boxes.");
     DMLC_DECLARE_FIELD(id_index).set_default(-1)
     .describe("Optional, index of the class categories, -1 to disable.");
+    DMLC_DECLARE_FIELD(background_id).set_default(-1)
+    .describe("Optional, id of the background class which will be ignored in nms.");
     DMLC_DECLARE_FIELD(force_suppress).set_default(false)
     .describe("Optional, if set false and id_index is provided, nms will only apply"
     " to boxes belongs to the same category");
@@ -103,7 +106,7 @@ inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
     << ishape << " provided";
   int width_elem = ishape[indim - 1];
   int expected = 5;
-  if (param.id_index > 0) {
+  if (param.id_index >= 0) {
     expected += 1;
   }
   CHECK_GE(width_elem, expected)
@@ -145,23 +148,19 @@ inline uint32_t BoxNMSNumVisibleOutputs(const NodeAttrs& attrs) {
   return static_cast<uint32_t>(1);
 }
 
-template<typename DType>
-int FilterScores(mshadow::Tensor<cpu, 1, DType> out_scores,
-                 mshadow::Tensor<cpu, 1, int32_t> out_sorted_index,
-                 mshadow::Tensor<cpu, 1, DType> scores,
-                 mshadow::Tensor<cpu, 1, int32_t> sorted_index,
-                 float valid_thresh) {
+template<typename DType, typename FType>
+int CopyIf(mshadow::Tensor<cpu, 1, DType> out,
+           mshadow::Tensor<cpu, 1, DType> value,
+           mshadow::Tensor<cpu, 1, FType> flag) {
   index_t j = 0;
-  for (index_t i = 0; i < scores.size(0); i++) {
-    if (scores[i] > valid_thresh) {
-      out_scores[j] = scores[i];
-      out_sorted_index[j] = sorted_index[i];
+  for (index_t i = 0; i < flag.size(0); i++) {
+    if (static_cast<bool>(flag[i])) {
+      out[j] = value[i];
       j++;
     }
   }
   return j;
 }
-
 
 struct corner_to_center {
   template<typename DType>
@@ -351,6 +350,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
   int num_batch = indim <= 2? 1 : in_shape.ProdShape(0, indim - 2);
   int num_elem = in_shape[indim - 2];
   int width_elem = in_shape[indim - 1];
+  bool class_exist = param.id_index >= 0;
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 3, DType> data = inputs[box_nms_enum::kData]
      .get_with_shape<xpu, 3, DType>(Shape3(num_batch, num_elem, width_elem), s);
@@ -366,7 +366,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
 
     // index
     index_t int32_size = sort_index_shape.Size() * 3 + batch_start_shape.Size();
-    index_t dtype_size = sort_index_shape.Size() * 2;
+    index_t dtype_size = sort_index_shape.Size() * 3;
     if (req[0] == kWriteInplace) {
       dtype_size += buffer_shape.Size();
     }
@@ -385,6 +385,7 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DType> scores(workspace.dptr_ + int32_offset,
       sort_index_shape, s);
     Tensor<xpu, 1, DType> areas(scores.dptr_ + scores.MSize(), sort_index_shape, s);
+    Tensor<xpu, 1, DType> classes(areas.dptr_ + areas.MSize(), sort_index_shape, s);
     Tensor<xpu, 3, DType> buffer = data;
     if (req[0] == kWriteInplace) {
       // make copy
@@ -405,16 +406,30 @@ void BoxNMSForward(const nnvm::NodeAttrs& attrs,
       return;
     }
 
-    // use batch_id and areas as temporary storage
+    // use classes, areas and scores as temporary storage
     Tensor<xpu, 1, DType> all_scores = areas;
-    // Tensor<xpu, 1, DType> all_sorted_index = areas;
     all_scores = reshape(slice<2>(buffer, score_index, score_index + 1), all_scores.shape_);
     all_sorted_index = range<int32_t>(0, num_batch * num_elem);
+    Tensor<xpu, 1, DType> all_classes = classes;
+    if (class_exist) {
+      all_classes = reshape(slice<2>(buffer, id_index, id_index + 1), classes.shape_);
+    }
 
     // filter scores but keep original sorted_index value
     // move valid score and index to the front, return valid size
-    int num_valid = mxnet::op::FilterScores(scores, sorted_index, all_scores, all_sorted_index,
-                                            param.valid_thresh);
+    Tensor<xpu, 1, DType> valid_box = scores;
+    if (class_exist) {
+      valid_box = F<mshadow_op::bool_and>(
+        F<mshadow_op::greater_than>(all_scores, ScalarExp<DType>(param.valid_thresh)),
+        F<mshadow_op::not_equal>(all_classes, ScalarExp<DType>(param.background_id)));
+    } else {
+      valid_box = F<mshadow_op::greater_than>(all_scores, ScalarExp<DType>(param.valid_thresh));
+    }
+    classes = F<mshadow_op::identity>(valid_box);
+    valid_box = classes;
+    int num_valid = mxnet::op::CopyIf(scores, all_scores, valid_box);
+    mxnet::op::CopyIf(sorted_index, all_sorted_index, valid_box);
+
     // if everything is filtered, output -1
     if (num_valid == 0) {
       record = -1;

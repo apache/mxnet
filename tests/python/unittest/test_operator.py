@@ -7106,6 +7106,13 @@ def test_ravel():
       check_symbolic_forward(b, location={'a': data}, expected=[ravel_npy])
       c = mx.sym.unravel_index(a, shape=shape)
       check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
+      # Test with leading dimension set to -1.
+      shape2 = shape
+      shape2 = (-1,)+shape[1:]
+      b = mx.sym.ravel_multi_index(a, shape=shape2)
+      check_symbolic_forward(b, location={'a': data}, expected=[ravel_npy])
+      c = mx.sym.unravel_index(a, shape=shape2)
+      check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
 
 def test_context_num_gpus():
     try:
