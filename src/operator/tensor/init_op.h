@@ -44,12 +44,12 @@ namespace mxnet {
 namespace op {
 
 struct InitOpParam : public dmlc::Parameter<InitOpParam> {
-  TShape shape;
+  mxnet::TShape shape;
   std::string ctx;
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -62,12 +62,12 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
 };
 
 struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam> {
-  TShape shape;
+  mxnet::TShape shape;
   std::string ctx;
   int dtype;
   DMLC_DECLARE_PARAMETER(InitOpWithoutDTypeParam) {
     DMLC_DECLARE_FIELD(shape)
-    .set_default(TShape())
+    .set_default(mxnet::TShape())
     .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
     .set_default("")
@@ -115,8 +115,8 @@ struct EyeParam : public dmlc::Parameter<EyeParam> {
 
 template<typename ParamType>
 inline bool InitEyeShape(const nnvm::NodeAttrs& attrs,
-                         std::vector<TShape> *in_attrs,
-                         std::vector<TShape> *out_attrs) {
+                         mxnet::ShapeVector *in_attrs,
+                         mxnet::ShapeVector *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -175,13 +175,13 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
 
 /*! \brief Initialize and fill output with an arbitrary value */
 struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
-  TShape shape;
+  mxnet::TShape shape;
   std::string ctx;
   int dtype;
   double value;
   DMLC_DECLARE_PARAMETER(InitOpWithScalarParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(TShape())
+      .set_default(mxnet::TShape())
       .describe("The shape of the output");
     DMLC_DECLARE_FIELD(ctx)
       .set_default("")
@@ -208,12 +208,17 @@ inline void RangeParamParser(nnvm::NodeAttrs* attrs) {
 
 template<typename ParamType>
 inline bool InitShape(const nnvm::NodeAttrs& attrs,
-                      std::vector<TShape> *in_attrs,
-                      std::vector<TShape> *out_attrs) {
+                      mxnet::ShapeVector *in_attrs,
+                      mxnet::ShapeVector *out_attrs) {
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
   if ((*out_attrs)[0].ndim() != 0 && param.shape.ndim() == 0) return true;
+  for (unsigned int i=0 ; i < param.shape.ndim() ; ++i) {
+    if (param.shape[i] < 0U) {
+      LOG(FATAL) << "Shape cannot contain negative values " << param.shape;
+    }
+  }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
   return true;
 }
@@ -370,7 +375,7 @@ void FillZerosRspImpl(mshadow::Stream<xpu> *, const NDArray& dst) {
   CHECK_EQ(dst.storage_type(), kRowSparseStorage) << "dst should be an RSP NDArray";
   if (dst.storage_initialized()) {
     // reset the shapes if it's not zeros (set_aux_shape() will set storage_shape to zero as well)
-    dst.set_aux_shape(rowsparse::kIdx, TShape(mshadow::Shape1(0)));
+    dst.set_aux_shape(rowsparse::kIdx, mxnet::TShape(mshadow::Shape1(0)));
   }
 }
 
@@ -485,8 +490,8 @@ void RangeCompute(const nnvm::NodeAttrs& attrs,
 
 
 inline bool RangeShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
+                       mxnet::ShapeVector *in_attrs,
+                       mxnet::ShapeVector *out_attrs) {
   const RangeParam& param = nnvm::get<RangeParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
@@ -508,7 +513,7 @@ inline bool RangeShape(const nnvm::NodeAttrs& attrs,
   }
   const double out_size = std::ceil((param.stop.value() - param.start) / param.step)
                           * param.repeat;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({static_cast<nnvm::dim_t>(out_size)}));
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({static_cast<nnvm::dim_t>(out_size)}));
   return true;
 }
 

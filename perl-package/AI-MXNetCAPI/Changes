@@ -1,5 +1,8 @@
 Revision history for Perl extension AI::MXNetCAPI
 
+1.4     Mon Feb 18 11:54:07 PST 2019
+        - Support for 64bit integers
+
 1.33    Thu Oct  4 13:25:56 PDT 2018
         - Gluon: Better sparse support for KVStore.
         - Gpu memory info via mxnet api call.

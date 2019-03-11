@@ -45,10 +45,10 @@ For distributed training, `KVStore` also supports a number of types:
 """
 mutable struct KVStore
   handle    :: MX_KVStoreHandle
-  updater_c :: Ptr{Void}
+  updater_c :: Ptr{Cvoid}
   updater   :: Function
 
-  KVStore(hdr::MX_KVStoreHandle) = new(hdr, Ptr{Void}(0))
+  KVStore(hdr::MX_KVStoreHandle) = new(hdr, Ptr{Cvoid}(0))
 end
 
 function KVStore(kv_type::Symbol = :local)
@@ -128,7 +128,7 @@ One can use ``barrier()`` to sync all workers.
 julia> kv = KVStore(:local)
 mx.KVStore @ local
 
-julia> x = mx.empty(2, 3);
+julia> x = NDArray(undef, 2, 3);
 
 julia> init!(kv, 3, x)
 
@@ -161,11 +161,11 @@ julia> x
 ```jldoctest
 julia> keys = [4, 5];
 
-julia> init!(kv, keys, [empty(2, 3), empty(2, 3)])
+julia> init!(kv, keys, [NDArray(undef, 2, 3), NDArray(undef, 2, 3)])
 
 julia> push!(kv, keys, [x, x])
 
-julia> y, z = empty(2, 3), empty(2, 3);
+julia> y, z = NDArray(undef, 2, 3), NDArray(undef, 2, 3);
 
 julia> pull!(kv, keys, [y, z])
 ```
@@ -251,7 +251,7 @@ barrier(kv::KVStore) = @mxcall(:MXKVStoreBarrier, (MX_handle,), kv)
 # extra handle parameter of the API to pass the updater object around. Fix this when someday
 # full closure cfunction is supported in Julia.
 function _kvstore_update_wrapper(key::Cint, nd_recv::MX_handle, nd_local::MX_handle,
-                                 updater::Ptr{Void})
+                                 updater::Ptr{Cvoid})
   updater_func = unsafe_pointer_to_objref(updater)
   updater_func(Int(key), NDArray(MX_NDArrayHandle(nd_recv)),
                NDArray(MX_NDArrayHandle(nd_local)))
@@ -279,7 +279,7 @@ julia> init!(kv, 42, mx.ones(2, 3))
 
 julia> push!(kv, 42, mx.ones(2, 3))
 
-julia> x = empty(2, 3);
+julia> x = NDArray(undef, 2, 3);
 
 julia> pull!(kv, 42, x)
 
@@ -291,9 +291,9 @@ julia> x
 """
 function setupdater!(kv::KVStore, updater)
   kv.updater = updater # keep a reference to the julia object so that updater_c is kept valid
-  kv.updater_c = cfunction(_kvstore_update_wrapper, Void,
-                           (Cint, MX_handle, MX_handle, Ptr{Void}))
-  @mxcall(:MXKVStoreSetUpdater, (MX_handle, Ptr{Void}, Any),
+  kv.updater_c = @cfunction(_kvstore_update_wrapper, Cvoid,
+                            (Cint,MX_handle,MX_handle,Ptr{Cvoid}))
+  @mxcall(:MXKVStoreSetUpdater, (MX_handle, Ptr{Cvoid}, Any),
           kv, kv.updater_c, updater)
 end
 
@@ -336,7 +336,7 @@ julia> W
 ```
 """
 function setoptimizer!(kv::KVStore, opt::AbstractOptimizer)
-  if ismatch(r"dist", string(get_type(kv))) && _isworker()
+  if occursin(r"dist", string(get_type(kv))) && _isworker()
     # TODO
     error("not implemented")
   else

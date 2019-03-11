@@ -92,22 +92,24 @@ def get_dockerfiles_path():
 
 def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
     """Get a list of architectures given our dockerfiles"""
-    dockerfiles = glob.glob(os.path.join(path, "Dockerfile.build.*"))
+    dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
     dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
-    files = list(map(lambda x: re.sub(r"Dockerfile.build.(.*)", r"\1", x), dockerfiles))
+    files = list(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
+    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
-    return "{0}/build.{1}".format(registry, platform)
+    return "{0}/{1}".format(registry, platform)
 
 
 def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
-    return os.path.join(path, "Dockerfile.build.{0}".format(platform))
+    platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
+    return os.path.join(path, "Dockerfile.{0}".format(platform))
 
 
 def get_docker_binary(use_nvidia_docker: bool) -> str:
@@ -215,20 +217,21 @@ def container_run(platform: str,
                   local_ccache_dir: str,
                   command: List[str],
                   cleanup: Cleanup,
+                  environment: Dict[str, str],
                   dry_run: bool = False) -> int:
     """Run command in a container"""
     container_wait_s = 600
     #
     # Environment setup
     #
-    environment = {
+    environment.update({
         'CCACHE_MAXSIZE': '500G',
         'CCACHE_TEMPDIR': '/tmp/ccache',  # temp dir should be local and not shared
         'CCACHE_DIR': '/work/ccache',  # this path is inside the container as /work/ccache is
                                        # mounted
         'CCACHE_LOGFILE': '/tmp/ccache.log',  # a container-scoped log, useful for ccache
                                               # verification.
-    }
+    })
     # These variables are passed to the container to the process tree killer can find runaway
     # process inside the container
     # https://wiki.jenkins.io/display/JENKINS/ProcessTreeKiller
@@ -446,6 +449,10 @@ def main() -> int:
     parser.add_argument("--no-cache", action="store_true",
                         help="passes --no-cache to docker build")
 
+    parser.add_argument("-e", "--environment", nargs="*", default=[],
+                        help="Environment variables for the docker container. "
+                        "Specify with a list containing either names or name=value")
+
     parser.add_argument("command",
                         help="command to run in the container",
                         nargs='*', action='append', type=str)
@@ -474,6 +481,9 @@ def main() -> int:
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
 
+    environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
+                        for e in args.environment])
+
     if args.list:
         print(list_platforms())
     elif args.platform:
@@ -493,13 +503,13 @@ def main() -> int:
             ret = container_run(
                 platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, cleanup=cleanup)
+                local_ccache_dir=args.ccache_dir, cleanup=cleanup, environment=environment)
         elif args.print_docker_run:
             command = []
             ret = container_run(
                 platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, dry_run=True, cleanup=cleanup)
+                local_ccache_dir=args.ccache_dir, dry_run=True, cleanup=cleanup, environment=environment)
         else:
             # With no commands, execute a build function for the target platform
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
@@ -507,7 +517,7 @@ def main() -> int:
             ret = container_run(
                 platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, cleanup=cleanup)
+                local_ccache_dir=args.ccache_dir, cleanup=cleanup, environment=environment)
 
         if ret != 0:
             logging.critical("Execution of %s failed with status: %d", command, ret)
@@ -515,6 +525,7 @@ def main() -> int:
 
     elif args.all:
         platforms = get_platforms()
+        platforms = [platform for platform in platforms if 'build.' in platform]
         logging.info("Building for all architectures: %s", platforms)
         logging.info("Artifacts will be produced in the build/ directory.")
         for platform in platforms:
@@ -535,7 +546,7 @@ def main() -> int:
             container_run(
                 platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, cleanup=cleanup)
+                local_ccache_dir=args.ccache_dir, cleanup=cleanup, environment=environment)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
 

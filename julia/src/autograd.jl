@@ -43,7 +43,7 @@ function _set_recording(state::Bool)::Bool
   prev[]
 end
 
-_set_recording(::Void) = nothing
+_set_recording(::Cvoid) = nothing
 
 """
 Set status to training/predicting.
@@ -63,7 +63,7 @@ function _set_training(train_mode::Bool)::Bool
   prev[]
 end
 
-_set_training(::Void) = nothing
+_set_training(::Cvoid) = nothing
 
 ###############################################################################
 #  Public API
@@ -91,7 +91,7 @@ function is_training()::Bool
   state[]
 end
 
-@inline function _record(f, is_record::Union{Void,Bool}, train_mode::Union{Void,Bool})
+@inline function _record(f, is_record::Union{Cvoid,Bool}, train_mode::Union{Cvoid,Bool})
   # Port from Python's `_RecordingStateScope` context manager
   # __enter__
   prev_is_record = _set_recording(is_record)
@@ -211,12 +211,12 @@ Compute the gradients of heads w.r.t previously marked variables.
 
 - `head::NDArray`: output NDArray
 
-- `head_grad::NDArray` or `Void`: gradient coefficient with respect to head.
+- `head_grad::NDArray` or `Cvoid`: gradient coefficient with respect to head.
 
 - `heads::Vector{NDArray}`: a list of output NDArray
 
 - `head_grads::Vector`: a list of gradient coefficient with respect ot heads.
-  the element should be `NDArray` or `Void`
+  the element should be `NDArray` or `Cvoid`
 
 - `retain_graph::Bool`: whether to keep the graph after backward. e.g:
   If you want to differentiate the same graph twice,
@@ -227,10 +227,10 @@ Compute the gradients of heads w.r.t previously marked variables.
 backward!(head::NDArray, head_grad::NDArray; kws...) =
   backward!([head], [head_grad]; kws...)
 
-backward!(head::NDArray, head_grad::Void = nothing; kws...) =
+backward!(head::NDArray, head_grad::Cvoid = nothing; kws...) =
   backward!([head], head_grad; kws...)
 
-function backward!(heads::VecOfNDArray, head_grad::Void;
+function backward!(heads::VecOfNDArray, head_grad::Cvoid;
                    retain_graph::Bool = false, train_mode::Bool = true)
   @mxcall(
     :MXAutogradBackwardEx,
@@ -262,10 +262,10 @@ function backward!(heads::VecOfNDArray, head_grads::Vector;
   ograd_handles  = map(head_grads) do x
     if x isa NDArray
       x.handle
-    elseif x isa Void
+    elseif x ≡ nothing  # faster than `x isa Cvoid` in Julia 0.7
       MX_handle(C_NULL)
     else
-      throw(ArgumentError("element of head_grads should be NDArray or Void"))
+      throw(ArgumentError("element of head_grads should be NDArray or Cvoid"))
     end
   end
   @assert length(output_handles) == length(ograd_handles)

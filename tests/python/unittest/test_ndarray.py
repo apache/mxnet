@@ -1056,7 +1056,7 @@ def test_output():
 @with_seed()
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
-                    'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split',
+                    'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split', 'split_v2',
                     'broadcast_axes', 'pad', 'swapaxes', 'slice', 'slice_axis', 'slice_like',
                     'take', 'one_hot', 'pick', 'sort', 'topk', 'argsort', 'argmax', 'argmin',
                     'clip', 'abs', 'sign', 'sin', 'cos', 'tan', 'arcsin', 'arccos', 'arctan',
@@ -1093,6 +1093,8 @@ def test_ndarray_fluent():
     check_fluent_regular('repeat', {'repeats': 3})
     check_fluent_regular('transpose', {'axes': (1,0,2)})
     check_fluent_regular('split', {'axis': 2, 'num_outputs': 3}, shape=(5, 17, 6))
+    check_fluent_regular('split_v2', {'axis': 2, 'indices_or_sections': 3}, shape=(5, 17, 6))
+    check_fluent_regular('split_v2', {'axis': 2, 'indices_or_sections': (1, 3, 5)}, shape=(5, 17, 6))
     check_fluent_regular('slice', {'begin': (2, 5, 1), 'end': (4, 7, 6)}, shape=(5, 17, 6))
     check_fluent_regular('slice_axis', {'axis': 1, 'begin': 5, 'end': 7})
     check_fluent_regular('slice_like', {'axes': (0, -2), 'shape_like': mx.nd.zeros((3, 3))})
@@ -1547,6 +1549,35 @@ def test_ndarray_is_nan():
     expected_output = np.isnan(data.asnumpy())
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
+
+@with_seed()
+def test_ndarray_nan_comparison():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data1 = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data2 = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data1[1][0] = np.NaN
+    data2[0][0] = np.NaN
+
+    nd_max = mx.nd.maximum(data1, data2)
+    np_max = np.maximum(data1.asnumpy(), data2.asnumpy())
+    np.testing.assert_equal(nd_max.asnumpy(), np_max)
+
+    nd_min = mx.nd.minimum(data1, data2)
+    np_min = np.minimum(data1.asnumpy(), data2.asnumpy())
+    np.testing.assert_equal(nd_min.asnumpy(), np_min)
+
+    nd_relu = mx.nd.relu(data1)
+    np_relu = np.maximum(data1.asnumpy(), 0)
+    np.testing.assert_equal(nd_relu.asnumpy(), np_relu)
+
+    data1.attach_grad()
+    with mx.autograd.record():
+        y = mx.nd.relu(data1)
+    y.backward()
+    data1_grad = data1.grad.asnumpy()
+    for i in (np.isnan(data1_grad))[1][0].flatten():
+        assert i == True
 
 if __name__ == '__main__':
     import nose

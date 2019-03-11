@@ -135,7 +135,7 @@ class TestDockerCache(unittest.TestCase):
                 """
         platform = 'test_full_cache'
         docker_tag = build_util.get_docker_tag(platform=platform, registry=DOCKER_REGISTRY_PATH)
-        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.build.' + platform)
+        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.' + platform)
         try:
             with open(dockerfile_path, 'w') as dockerfile_handle:
                 dockerfile_handle.write(dockerfile_content)
@@ -196,7 +196,7 @@ class TestDockerCache(unittest.TestCase):
                 """
         platform = 'test_partial_cache'
         docker_tag = build_util.get_docker_tag(platform=platform, registry=DOCKER_REGISTRY_PATH)
-        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.build.' + platform)
+        dockerfile_path = os.path.join(DOCKERFILE_DIR, 'Dockerfile.' + platform)
         try:
             # Write initial Dockerfile
             with open(dockerfile_path, 'w') as dockerfile_handle:

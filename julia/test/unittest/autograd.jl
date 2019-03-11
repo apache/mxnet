@@ -17,9 +17,8 @@
 
 module TestAutoGrad
 
-using Base.Test
-
 using MXNet
+using Test
 
 
 function checkgradient(f, x, y, ∇)
@@ -33,12 +32,12 @@ end  # function checkgradient
 
 
 function test_getgrad()
-  info("AutoGrad::getgrad")
+  @info("AutoGrad::getgrad")
 
-  info("AutoGrad::getgrad::unattached")
+  @info("AutoGrad::getgrad::unattached")
   @test nothing == mx.getgrad(mx.zeros(10))
 
-  info("AutoGrad::getgrad::attached")
+  @info("AutoGrad::getgrad::attached")
   x = mx.NDArray([1 2; 3 4])
   grad = mx.attach_grad!(x)
   @test eltype(grad) ≡ Int
@@ -50,7 +49,7 @@ end
 
 
 function test_mark_variables!()
-  info("AutoGrad::mark_variables!")
+  @info("AutoGrad::mark_variables!")
   x = mx.zeros(4)
   ẋ = mx.zeros(4)
   y = mx.zeros(4)
@@ -62,13 +61,13 @@ function test_mark_variables!()
   @test copy(mx.getgrad(x)) == [42, 42, 42, 42]
   @test copy(mx.getgrad(y)) == [24, 24, 24, 24]
 
-  info("AutoGrad::mark_variables!::invalid grad_reqs")
+  @info("AutoGrad::mark_variables!::invalid grad_reqs")
   x = mx.zeros(4)
   y = mx.zeros(4)
   @test_throws ArgumentError mx.mark_variables!(x, y, :magic)
   @test_throws ArgumentError mx.mark_variables!([x], [y], [:magic])
 
-  info("AutoGrad::mark_variables!::args length mismatch")
+  @info("AutoGrad::mark_variables!::args length mismatch")
   x = mx.zeros(4)
   y = mx.zeros(4)
   z = mx.zeros(4)
@@ -79,7 +78,7 @@ end
 
 function test_record()
   let x = mx.NDArray([1 2; 3 4])
-    info("AutoGrad::record::backward!")
+    @info("AutoGrad::record::backward!")
 
     y = [1 4; 9 16]
     ∇ = [2 4; 6 8]  # gradient is 2x
@@ -89,7 +88,7 @@ function test_record()
   end
 
   let x = mx.NDArray([1 2; 3 4])
-    info("AutoGrad::record::symbol")
+    @info("AutoGrad::record::symbol")
 
     mx.attach_grad!(x)
     y = mx.record() do
@@ -102,7 +101,7 @@ function test_record()
   end
 
   let x = mx.NDArray([1 2; 3 4])
-    info("AutoGrad::record::backward!(retain_graph=true)")
+    @info("AutoGrad::record::backward!(retain_graph=true)")
 
     mx.attach_grad!(x)
     y = mx.record() do
@@ -125,7 +124,7 @@ end  # function test_record
 
 
 function test_is_recording()
-  info("AutoGrad::is_recording")
+  @info("AutoGrad::is_recording")
   mx.record() do
     @test mx.is_recording()
   end
@@ -133,7 +132,7 @@ end  # function test_is_recording
 
 
 function test_is_training()
-  info("AutoGrad::is_training")
+  @info("AutoGrad::is_training")
   mx.record() do
     @test mx.is_training()
   end
@@ -145,7 +144,7 @@ end  # function test_is_training
 
 
 function test_pause()
-  info("AutoGrad::pause")
+  @info("AutoGrad::pause")
   let x = mx.NDArray([1 2; 3 4])
     ∇ = mx.attach_grad!(x)
     y = mx.record() do
@@ -166,7 +165,7 @@ end  # function test_pause
 
 
 function test_train_mode()
-  info("AutoGrad::train_mode")
+  @info("AutoGrad::train_mode")
   let x = mx.NDArray(Float32[1 2; 3 4])
     y = mx.train_mode() do
       mx.Dropout(x, p = 1)
@@ -178,7 +177,7 @@ end  # function test_train_mode
 
 
 function test_predict_mode()
-  info("AutoGrad::predict_mode")
+  @info("AutoGrad::predict_mode")
   let x = mx.NDArray(Float32[1 2; 3 4])
     y = mx.predict_mode() do
       mx.Dropout(x, p = 1)
@@ -190,7 +189,7 @@ end  # function test_train_mode
 
 
 function test_backward!()
-  info("AutoGrad::backward!::with head_grad")
+  @info("AutoGrad::backward!::with head_grad")
   let x = mx.NDArray(Float32[1 2; 3 4]), A = Float32[.2 .4; 0 .1]
     ∇ = mx.attach_grad!(x)
     y = mx.record() do
@@ -200,7 +199,7 @@ function test_backward!()
     @test copy(∇) ≈ [2 4; 6 8] .* A
   end
 
-  info("AutoGrad::backward!::with head_grads")
+  @info("AutoGrad::backward!::with head_grads")
   let x = mx.NDArray(Float32[1 2; 3 4])
     ∇ = mx.attach_grad!(x)
     mx.record() do
@@ -216,7 +215,7 @@ function test_backward!()
     @test copy(∇) ≈ ans
   end
 
-  info("AutoGrad::backward!::ArgumentError")
+  @info("AutoGrad::backward!::ArgumentError")
   let x = mx.NDArray([42])
     @test_throws ArgumentError mx.backward!([x], [24])
   end
@@ -224,7 +223,7 @@ end  # function test_backward!
 
 
 function test_symbol()
-  info("AutoGrad::symbol")
+  @info("AutoGrad::symbol")
 
   let x = mx.zeros(4)
     mx.attach_grad!(x)
@@ -234,9 +233,9 @@ end
 
 
 function test_add()
-  info("AutoGrad::add")
+  @info("AutoGrad::add")
 
-  info("AutoGrad::add::x")
+  @info("AutoGrad::add::x")
   let x = mx.NDArray([1 2; 3 4])
     y = [1 2; 3 4]
     ∇ = [1 1; 1 1]  # gradient is 1
@@ -245,7 +244,7 @@ function test_add()
     end
   end
 
-  info("AutoGrad::add::+x")
+  @info("AutoGrad::add::+x")
   let x = mx.NDArray([1 2; 3 4])
     y = [1 2; 3 4]
     ∇ = [1 1; 1 1]  # gradient is 1
@@ -254,7 +253,7 @@ function test_add()
     end
   end
 
-  info("AutoGrad::add::x .+ 42")
+  @info("AutoGrad::add::x .+ 42")
   let x = mx.NDArray([1 2; 3 4])
     y = [43 44; 45 46]
     ∇ = [1 1; 1 1]  # gradient is 1
@@ -263,7 +262,7 @@ function test_add()
     end
   end
 
-  info("AutoGrad::add::42 .+ x")
+  @info("AutoGrad::add::42 .+ x")
   let x = mx.NDArray([1 2; 3 4])
     y = [43 44; 45 46]
     ∇ = [1 1; 1 1]
@@ -272,14 +271,14 @@ function test_add()
     end
   end
 
-  # TODO: info("AutoGrad::add::x .+ y")
+  # TODO: @info("AutoGrad::add::x .+ y")
 end  # function test_add
 
 
 function test_sub()
-  info("AutoGrad::sub")
+  @info("AutoGrad::sub")
 
-  info("AutoGrad::sub::-x")
+  @info("AutoGrad::sub::-x")
   let x = mx.NDArray([1 2; 3 4])
     y = [-1 -2; -3 -4]
     ∇ = [-1 -1; -1 -1]  # gradient is -1
@@ -288,7 +287,7 @@ function test_sub()
     end
   end
 
-  info("AutoGrad::sub::x .- 42")
+  @info("AutoGrad::sub::x .- 42")
   let x = mx.NDArray([1 2; 3 4])
     y = [-41 -40; -39 -38]
     ∇ = [1 1; 1 1]
@@ -297,7 +296,7 @@ function test_sub()
     end
   end
 
-  info("AutoGrad::sub::42 .- x")
+  @info("AutoGrad::sub::42 .- x")
   let x = mx.NDArray([1 2; 3 4])
     y = [41 40; 39 38]
     ∇ = -[1 1; 1 1]
@@ -306,14 +305,14 @@ function test_sub()
     end
   end
 
-  # TODO: info("AutoGrad::add::x .- y")
+  # TODO: @info("AutoGrad::sub::x .- y")
 end  # function test_sub
 
 
 function test_mul()
-  info("AutoGrad::mul")
+  @info("AutoGrad::mul")
 
-  info("AutoGrad::mul::2x .* x")
+  @info("AutoGrad::mul::2x .* x")
   let x = mx.NDArray([1 2; 3 4])
     y = [2 8; 18 32]
     ∇ = [4 8; 12 16]  # 4x
@@ -322,7 +321,7 @@ function test_mul()
     end
   end
 
-  info("AutoGrad::mul::x * 2 .* x")
+  @info("AutoGrad::mul::x * 2 .* x")
   let x = mx.NDArray([1 2; 3 4])
     y = [2 8; 18 32]
     ∇ = [4 8; 12 16]  # 4x
@@ -334,9 +333,9 @@ end
 
 
 function test_div()
-  info("AutoGrad::div")
+  @info("AutoGrad::div")
 
-  info("AutoGrad::div::x ./ 2")
+  @info("AutoGrad::div::x ./ 2")
   let x = mx.NDArray(Float32[1 2; 3 4])
     y = Float32[.5 1; 1.5 2]
     ∇ = [.5 .5; .5 .5]
@@ -345,7 +344,7 @@ function test_div()
     end
   end
 
-  info("AutoGrad::rdiv::2 ./ x")
+  @info("AutoGrad::rdiv::2 ./ x")
   let A = Float32[1 2; 3 4], x = mx.NDArray(A)
     y = 2 ./ A
     ∇ = @. -2 / A^2  # -2 / x²
@@ -357,9 +356,9 @@ end  # function test_div
 
 
 function test_power()
-  info("AutoGrad::power")
+  @info("AutoGrad::power")
 
-  info("AutoGrad::power::x.^3")
+  @info("AutoGrad::power::x.^3")
   let A = Float32[1 2; 3 4]
     x = mx.NDArray(A)
     y = A.^3
@@ -369,7 +368,7 @@ function test_power()
     end
   end
 
-  info("AutoGrad::power::x.^.5")
+  @info("AutoGrad::power::x.^.5")
   let A = Float32[1 2; 3 4]
     x = mx.NDArray(A)
     y = A.^.5

@@ -19,16 +19,12 @@
 
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-OS=$(uname)
-if [ "$OS" = "Darwin" ]; then
-  CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
-else
-  CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
-fi
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
+
 # which gpu card to use, -1 means cpu
 GPU=$1
 # you can get the training data file using the following command
-# wget http://data.mxnet.io/data/char_lstm.zip
+# curl -O http://data.mxnet.io/data/char_lstm.zip
 # unzip -o char_lstm.zip
 # for example ./datas/obama.txt
 DATA_PATH=$2

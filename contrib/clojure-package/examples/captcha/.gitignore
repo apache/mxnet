@@ -1,0 +1,3 @@
+/.lein-*
+/.nrepl-port
+images/*

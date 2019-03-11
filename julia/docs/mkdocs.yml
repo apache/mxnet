@@ -41,7 +41,7 @@ markdown_extensions:
 
 docs_dir: 'build'
 
-pages:
+nav:
   - Home: index.md
   - Tutorial:
     - Digit Recognition on MNIST: tutorial/mnist.md
