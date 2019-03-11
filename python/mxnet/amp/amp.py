@@ -19,11 +19,10 @@
 """Functions for enabling AMP (automatic mixed precision)."""
 __all__ = ['init', 'init_trainer', 'scale_loss']
 
+from types import MethodType
 import logging
 import contextlib
 import numpy as np
-from types import MethodType
-from functools import partial
 
 from .. import symbol
 from ..symbol import Symbol
@@ -34,7 +33,7 @@ from ..ndarray import contrib as ndarray_contrib
 from . import lists
 from ..gluon import trainer
 from .. import optimizer as opt
-from .loss_scaler import *
+from .loss_scaler import LossScaler
 
 def _cast_symbol_NDArray(s, dtype):
     if isinstance(s, Symbol):
@@ -171,8 +170,8 @@ def _wrap_loss_output_functions(module, ls):
     else:
         def _wrapper(f):
             def _warning_wrapper(*args, **kwargs):
-                logging.warning(f.__name__ + " does not support dynamic loss scaling " +
-                                "in symbolic and hybridized execution.")
+                logging.warning("%s does not support dynamic loss scaling "
+                                "in symbolic and hybridized execution.", f.__name__)
                 return f(*args, **kwargs)
             _warning_wrapper.__name__ = f.__name__
             _warning_wrapper.__module__ = f.__module__
@@ -191,7 +190,7 @@ _amp_loss_scale_initialized = False
 _loss_scaler = None
 
 @contextlib.contextmanager
-def scale_loss(loss, optimizer_or_trainer, params=None):
+def scale_loss(loss, optimizer_or_trainer):
     assert optimizer_or_trainer._amp_loss_scaler is not None, \
         'Loss scaler is not initialized, did you forget to call amp.init_trainer()?'
     optimizer_or_trainer._scale = 1. / optimizer_or_trainer._amp_loss_scaler.loss_scale
@@ -201,6 +200,10 @@ def scale_loss(loss, optimizer_or_trainer, params=None):
         yield optimizer_or_trainer._amp_loss_scaler.loss_scale * loss
 
 def init():
+    """Initialize AMP (automatic mixed precision).
+
+    This needs to be done before model creation.
+    """
     global _amp_initialized
     global _loss_scaler
     if not _amp_initialized:
@@ -216,7 +219,14 @@ def init():
         _wrap_loss_output_functions(ndarray, _loss_scaler)
         _wrap_loss_output_functions(symbol, _loss_scaler)
 
-def init_trainer(optimizer_or_trainer, params=None):
+def init_trainer(optimizer_or_trainer):
+    """Initialize trainer or optimizer to work with AMP dynamic loss scaling.
+
+    Parameters
+    ----------
+    optimizer_or_trainer : Optimizer or Trainer
+        MXNet Optimizer or Gluon trainer to initialize with AMP
+    """
     global _amp_loss_scale_initialized
     global _amp_initialized
     global _loss_scaler
@@ -228,10 +238,10 @@ def init_trainer(optimizer_or_trainer, params=None):
         loss_scaler = LossScaler()
     #_wrap_output
     if isinstance(optimizer_or_trainer, trainer.Trainer):
-        assert params == None, "optimizer_or_trainer is a trainer so params should be None."
         optimizer_or_trainer._amp_loss_scaler = loss_scaler
         skip_update = optimizer_or_trainer._amp_loss_scaler.wait_and_update
-        optimizer_or_trainer._optimizer.old_update_multi_precision = optimizer_or_trainer._optimizer.update_multi_precision
+        optimizer_or_trainer._optimizer.old_update_multi_precision = \
+                optimizer_or_trainer._optimizer.update_multi_precision
         def new_update_multi_precision(self, index, weight, grad, state):
             if not skip_update():
                 self.old_update_multi_precision(index, weight, grad, state)
@@ -245,14 +255,8 @@ def init_trainer(optimizer_or_trainer, params=None):
         optimizer_or_trainer._update = MethodType(new_update, optimizer_or_trainer)
 
     elif isinstance(optimizer_or_trainer, opt.Optimizer):
-        assert params == None, "optimizer_or_trainer is an optimizer so params should be None."
-        raise TypeError("AMP is currently only compatible with Gluon Trainer")  # TODO(ptredak): make it work with the optimizer
-    # TODO(cfujitsang): but not important because unlikely to be used
-    #elif hasattr(optimizer_or_trainer, '__call__'):
-    #    assert isinstance(params, dict), "optimizer_or_trainer is a function "
-    #                                     "so params should be defined."
-    #    raise NotImplementedError()
+        # TODO(ptredak): make it work with the optimizer
+        raise TypeError("AMP is currently only compatible with Gluon Trainer")
     else:
-        raise TypeError("optimizer_or_trainer should be a Gluon Trainer, "
-                        "an optimizer or a function, instead is %s" %
-                        type(optimizer_or_trainer))
+        raise TypeError("optimizer_or_trainer should be a Gluon Trainer or "
+                        "an optimizer, instead is %s" % type(optimizer_or_trainer))
