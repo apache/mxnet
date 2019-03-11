@@ -364,6 +364,7 @@ def test_buffer_load():
                 # test garbage values
                 assertRaises(mx.base.MXNetError,  mx.nd.load_frombuffer, buf_single_ndarray[:-10])
 
+
 @with_seed()
 def test_ndarray_slice():
     shape = (10,)
