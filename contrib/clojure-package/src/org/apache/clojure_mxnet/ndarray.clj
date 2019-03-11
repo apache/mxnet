@@ -94,6 +94,27 @@
   ([start stop]
    (arange start stop {})))
 
+(defn ->ndarray
+  "Creates a new NDArray based on the given n-dimenstional vector
+   of numbers.
+    `nd-vec`: n-dimensional vector with numbers.
+    `opts-map` {
+       `ctx`: Context of the output ndarray, will use default context if unspecified.
+    }
+    returns: `ndarray` with the given values and matching the shape of the input vector.
+   Ex:
+    (->ndarray [5.0 -4.0])
+    (->ndarray [5 -4] {:ctx (context/cpu)})
+    (->ndarray [[1 2 3] [4 5 6]])
+    (->ndarray [[[1.0] [2.0]]]"
+  ([nd-vec {:keys [ctx]
+            :or {ctx (mx-context/default-context)}
+            :as opts}]
+   (array (vec (clojure.core/flatten nd-vec))
+          (util/nd-seq-shape nd-vec)
+          {:ctx ctx}))
+  ([nd-vec] (->ndarray nd-vec {})))
+
 (defn slice
   "Return a sliced NDArray that shares memory with current one."
   ([ndarray i]
