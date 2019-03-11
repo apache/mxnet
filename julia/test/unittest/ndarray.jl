@@ -885,24 +885,24 @@ function test_saveload()
   rm(fname)
 end
 
-function test_clip()
+function test_clamp()
   dims = rand_dims()
-  @info("NDArray::clip::dims = $dims")
+  @info("NDArray::clamp::dims = $dims")
 
   j_array, nd_array = rand_tensors(dims)
   clip_up   = maximum(abs.(j_array)) / 2
   clip_down = 0
-  clipped   = clip(nd_array, clip_down, clip_up)
+  clipped   = clamp(nd_array, clip_down, clip_up)
 
   # make sure the original array is not modified
   @test copy(nd_array) ≈ j_array
 
   @test all(clip_down .<= copy(clipped) .<= clip_up)
 
-  @info("NDArray::clip!")
+  @info("NDArray::clamp!")
   let
     x = NDArray(1.0:20)
-    clip!(x, 5, 15)
+    clamp!(x, 5, 15)
     @test all(5 .<= copy(x) .<= 15)
   end
 end
@@ -1571,7 +1571,7 @@ end
   test_mod()
   test_gd()
   test_saveload()
-  test_clip()
+  test_clamp()
   test_power()
   test_sqrt()
   test_eltype()

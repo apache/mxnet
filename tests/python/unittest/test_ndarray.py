@@ -1550,6 +1550,35 @@ def test_ndarray_is_nan():
     np.testing.assert_equal(output.asnumpy(), expected_output.astype(int))
     # astype since numpy functions default return type is boolean array instead of int
 
+@with_seed()
+def test_ndarray_nan_comparison():
+    random_dimensions = np.random.randint(2, 5)
+    random_shape = [np.random.randint(2, 5) for i in range(random_dimensions)]
+    data1 = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data2 = mxnet.test_utils.rand_ndarray(random_shape,'default')
+    data1[1][0] = np.NaN
+    data2[0][0] = np.NaN
+
+    nd_max = mx.nd.maximum(data1, data2)
+    np_max = np.maximum(data1.asnumpy(), data2.asnumpy())
+    np.testing.assert_equal(nd_max.asnumpy(), np_max)
+
+    nd_min = mx.nd.minimum(data1, data2)
+    np_min = np.minimum(data1.asnumpy(), data2.asnumpy())
+    np.testing.assert_equal(nd_min.asnumpy(), np_min)
+
+    nd_relu = mx.nd.relu(data1)
+    np_relu = np.maximum(data1.asnumpy(), 0)
+    np.testing.assert_equal(nd_relu.asnumpy(), np_relu)
+
+    data1.attach_grad()
+    with mx.autograd.record():
+        y = mx.nd.relu(data1)
+    y.backward()
+    data1_grad = data1.grad.asnumpy()
+    for i in (np.isnan(data1_grad))[1][0].flatten():
+        assert i == True
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
