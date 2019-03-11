@@ -35,12 +35,12 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
     custom_steps.compile_windows_cpu()
-  ]) 
+  ])
 
   utils.parallel_stage('Tests', [
     custom_steps.test_windows_python2_cpu(),
     custom_steps.test_windows_python3_cpu()
-  ]) 
+  ])
 }
 ,
 failure_handler: {
