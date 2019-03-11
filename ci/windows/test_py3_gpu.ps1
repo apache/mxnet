@@ -23,11 +23,13 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
 C:\Python37\Scripts\pip install -r tests\requirements.txt
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
-if (! $?) { Throw ("Error running unittest") }
-C:\Python37\python.exe -m nose -v -s --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
+#C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
+#if (! $?) { Throw ("Error running unittest") }
+C:\Python37\python.exe -m nose -v -s --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py:test_bulking
 if (! $?) { Throw ("Error running tests") }
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
+C:\Python37\python.exe -m nose -v -s --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_gluon.xml tests\python\gpu\test_gluon_gpu.py:test_bulking
 if (! $?) { Throw ("Error running tests") }
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
-if (! $?) { Throw ("Error running tests") }
+#C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
+#if (! $?) { Throw ("Error running tests") }
+#C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
+#if (! $?) { Throw ("Error running tests") }
