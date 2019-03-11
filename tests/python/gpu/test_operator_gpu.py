@@ -2203,40 +2203,28 @@ def test_context_num_gpus():
 def math_log(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
-    mx.nd.waitall()
     y = mx.nd.log(data=x)
-    y.wait_to_read()
     if check_value:
         x_ = x.as_in_context(mx.cpu())
-        mx.nd.waitall()
         y_ = mx.nd.log(data=x_)
-        y_.wait_to_read()
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
 def math_erf(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
-    mx.nd.waitall()
     y = mx.nd.erf(data=x)
-    y.wait_to_read()
     if check_value:
         x_ = x.as_in_context(mx.cpu())
-        mx.nd.waitall()
         y_ = mx.nd.erf(data=x_)
-        y_.wait_to_read()
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
 def math_square(shape, dtype, check_value):
     np_x = np.random.rand(*tuple(shape))
     x = mx.nd.array(np_x, dtype=dtype)
-    mx.nd.waitall()
     y = mx.nd.square(data=x)
-    y.wait_to_read()
     if check_value:
         x_ = x.as_in_context(mx.cpu())
-        mx.nd.waitall()
         y_ = mx.nd.square(data=x_)
-        y_.wait_to_read()
         assert_almost_equal(y.asnumpy(), y_.asnumpy())
 
 def run_math(op, shape, dtype="float32", check_value=True):
