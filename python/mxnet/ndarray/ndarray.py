@@ -664,7 +664,11 @@ fixed-size items.
         idcs = [idx for idx in idcs if idx is not None]
         idcs = [idx if isinstance(idx, py_slice) else _int_to_slice(idx)
                 for idx in idcs]
-        sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
+
+        if keep_none:
+            sss_list = [(slc.start, slc.stop, slc.step) for slc, n in zip(idcs, shape)]
+        else:
+            sss_list = [slc.indices(n) for slc, n in zip(idcs, shape)]
         return tuple(zip(*sss_list))
 
     @staticmethod
@@ -895,6 +899,9 @@ fixed-size items.
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
             sliced = NDArray(handle=handle, writable=self.writable).reshape(sliced_shape)
         else:
+            begin, end, step = self._basic_indexing_key_to_begin_end_step(
+                slc_key, self.shape, keep_none=True
+            )
             sliced = op.slice(self, begin, end, step)
 
         # Reshape to final shape due to integer and `None` entries in `key`.
@@ -2561,8 +2568,20 @@ fixed-size items.
 
 
 def _indexing_key_expand_implicit_axes(key, shape):
-    """Make implicit axes explicit by adding ``slice(None)``."""
+    """Make implicit axes explicit by adding ``slice(None)``.
 
+    Examples
+    --------
+    >>> shape = (3, 4, 5)
+    >>> _indexing_key_expand_implicit_axes(np.s_[2, 1, 1], shape)
+    (2, 1, 1)
+    >>> _indexing_key_expand_implicit_axes(np.s_[0], shape)
+    (0, slice(None, None, None), slice(None, None, None))
+    >>> _indexing_key_expand_implicit_axes(np.s_[0, ...], shape)  # equivalent
+    (0, slice(None, None, None), slice(None, None, None))
+    >>> _indexing_key_expand_implicit_axes(np.s_[:2, None, 0, ...], shape)
+    (slice(None, 2, None), None, 0, slice(None, None, None))
+    """
     if not isinstance(key, tuple):
         key = (key,)
 
