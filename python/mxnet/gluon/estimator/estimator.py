@@ -150,7 +150,6 @@ class Estimator(object):
         return data, label
 
     def fit(self, train_data,
-            val_data=None,
             epochs=1,
             batch_size=None,
             event_handlers=None,
