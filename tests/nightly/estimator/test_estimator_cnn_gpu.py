@@ -15,11 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This example is inspired from
-# https://d2l.ai/chapter_convolutional-neural-networks/index.html
-# Model definitions are from Gluon Model Zoo
-# https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html
-
+# Test gluon estimator on GPU using ResNet18
 
 import os
 import sys
@@ -54,7 +50,10 @@ def load_data_mnist(batch_size, resize=None, num_workers=None,
         num_workers=num_workers)
     return train_iter, test_iter
 
-def test_image_classification():
+def test_estimator():
+    '''
+    Test estimator by training resnet18_v1 for 5 epochs on MNIST and verify accuracy
+    '''
     model_name = 'resnet18_v1'
     batch_size = 128
     num_epochs = 5
@@ -94,4 +93,4 @@ def test_image_classification():
     assert est.train_stats['train_'+acc.name][num_epochs-1] > 0.75
 
 if __name__ == '__main__':
-    test_image_classification()
+    test_estimator()

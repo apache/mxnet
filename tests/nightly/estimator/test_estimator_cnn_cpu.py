@@ -15,10 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This example is inspired from
-# https://d2l.ai/chapter_convolutional-neural-networks/index.html
-# Model definitions are from Gluon Model Zoo
-# https://mxnet.incubator.apache.org/api/python/gluon/model_zoo.html
+# Test gluon estimator on CPU using CNN models
 
 import numpy as np
 import mxnet as mx
@@ -55,7 +52,10 @@ def FCN(num_classes=21, ctx=None):
             gluon.nn.Conv2DTranspose(num_classes, kernel_size=64, padding=16, strides=32))
     return net
 
-def test_image_classification():
+def test_estimator():
+    '''
+    Test estimator by doing one pass over each model with synthetic data
+    '''
     models = ['resnet18_v1',
               'alexnet',
               'FCN'
@@ -69,13 +69,15 @@ def test_image_classification():
         if model_name is 'FCN':
             num_classes = 21
             net = FCN(num_classes=num_classes, ctx=context)
-            dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 3, 320, 480)), mx.nd.zeros(shape=(batch_size, 320, 480)))
+            dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 3, 320, 480)),
+                                                      mx.nd.zeros(shape=(batch_size, 320, 480)))
             loss = gluon.loss.SoftmaxCrossEntropyLoss(axis=1)
             net[-1].initialize(init.Constant(bilinear_kernel(num_classes, num_classes, 64)), ctx=context)
             net[-2].initialize(init=init.Xavier(), ctx=context)
         else:
             net = vision.get_model(model_name, classes=10)
-            dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 1, 224, 224)), mx.nd.zeros(batch_size))
+            dataset = gluon.data.dataset.ArrayDataset(mx.nd.random.uniform(shape=(batch_size, 1, 224, 224)),
+                                                      mx.nd.zeros(batch_size))
             loss = gluon.loss.SoftmaxCrossEntropyLoss()
             net.initialize(mx.init.MSRAPrelu(), ctx=context)
 
@@ -101,4 +103,4 @@ def test_image_classification():
                 event_handlers=[logging_handler])
 
 if __name__ == '__main__':
-    test_image_classification()
+    test_estimator()
