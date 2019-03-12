@@ -176,7 +176,11 @@ class ThreadedVar final
   static std::atomic<std::size_t> counter;
   ~ThreadedVar() { LOG(INFO) << __func__ << " " << --counter; }
 #endif  // ENGINE_DEBUG
-  /*! \brief exception_ptr associated with the ThreadedVar */
+  /*!
+   * \brief exception_ptr associated with the ThreadedOpr
+   * cannot modify state of exception object since dereferencing
+   * exception_ptr is undefined behavior. Using shared_ptr to hold
+   * exception_ptr and overcome this limitation*/
   std::shared_ptr<std::exception_ptr> var_exception;
 
  private:
@@ -253,7 +257,11 @@ struct ThreadedOpr final : public Opr,
   }
   // define possible debug information
   DEFINE_ENGINE_DEBUG_INFO(ThreadedOpr);
-  /*! \brief exception_ptr associated with the ThreadedOpr */
+  /*!
+   * \brief exception_ptr associated with the ThreadedOpr
+   * cannot modify state of exception object since dereferencing
+   * exception_ptr is undefined behavior. Using shared_ptr to hold
+   * exception_ptr and overcome this limitation*/
   std::shared_ptr<std::exception_ptr> opr_exception;
 };  // struct ThreadedOpr
 
@@ -429,6 +437,9 @@ class ThreadedEngine : public Engine {
   };
   /*! thread local store for bulk */
   typedef dmlc::ThreadLocalStore<BulkStatus> BulkStatusStore;
+  /*! shared_ptr to exception_ptr, used for exception handling */
+  typedef std::shared_ptr<std::exception_ptr> ExceptionRef;
+
   /*!
    * \brief check if thee is duplication in const_vars and mutable_vars.
    * \param const_vars the variables to read from.
@@ -457,6 +468,12 @@ class ThreadedEngine : public Engine {
     for (auto&& i : threaded_opr->const_vars) {
       if (i->var_exception && *i->var_exception) {
         threaded_opr->opr_exception = i->var_exception;
+        auto it = std::find(global_exception_refs_.begin(),
+                            global_exception_refs_.end(),
+                            threaded_opr->opr_exception);
+        if (it == global_exception_refs_.end()) {
+            global_exception_refs_.push_back(threaded_opr->opr_exception);
+        }
         break;
       }
     }
@@ -464,6 +481,12 @@ class ThreadedEngine : public Engine {
       for (auto&& i : threaded_opr->mutable_vars) {
         if (i->var_exception && *i->var_exception) {
           threaded_opr->opr_exception = i->var_exception;
+          auto it = std::find(global_exception_refs_.begin(),
+                              global_exception_refs_.end(),
+                              threaded_opr->opr_exception);
+          if (it == global_exception_refs_.end()) {
+            global_exception_refs_.push_back(threaded_opr->opr_exception);
+          }
           break;
         }
       }
@@ -539,6 +562,8 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
+  /*! \brief global exception refs, which are rethrown when WaitForAll is called*/
+  std::vector<ExceptionRef> global_exception_refs_;
 
   /*!
    * \brief Holding a shared_ptr to the object pool to prevent it from being destructed too early

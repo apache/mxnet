@@ -415,6 +415,25 @@ void ThreadedEngine::WaitForAll() {
   finished_cv_.wait(lock, [this]() {
       return pending_.load() == 0 || kill_.load();
     });
+  std::exception_ptr tmp;
+  if (!global_exception_refs_.empty()) {
+    // iterate through all exception refs
+    for (auto itr = global_exception_refs_.begin();
+         itr != global_exception_refs_.end(); ++itr) {
+      const std::shared_ptr<std::exception_ptr>& ptr = *itr;
+      // the first exception will be saved to be rethrown later
+      if (*ptr != nullptr && !tmp) {
+        tmp = *ptr;
+      }
+      // clear exceptions, WaitToRead following WaitForAll shouldn't throw
+      *ptr = nullptr;
+    }
+    // A waitall following a waitall shouldn't throw any exceptions
+    global_exception_refs_.clear();
+    if (tmp != nullptr) {
+      std::rethrow_exception(tmp);
+    }
+  }
 }
 
 inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
@@ -428,6 +447,14 @@ inline void ThreadedEngine::OnComplete(ThreadedOpr* threaded_opr) {
   for (auto&& i : threaded_opr->mutable_vars) {
     if (threaded_opr->opr_exception && *threaded_opr->opr_exception) {
       i->var_exception = threaded_opr->opr_exception;
+      // add current operator exceptions to global exceptions if not already
+      // added
+      auto it = std::find(global_exception_refs_.begin(),
+                          global_exception_refs_.end(),
+                          threaded_opr->opr_exception);
+      if (it == global_exception_refs_.end()) {
+        global_exception_refs_.push_back(threaded_opr->opr_exception);
+      }
     }
     const bool debug_info = (engine_info_ && debug_wait_var_ == i);
     if (debug_info) {
