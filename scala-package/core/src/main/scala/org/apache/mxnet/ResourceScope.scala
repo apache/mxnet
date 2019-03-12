@@ -145,10 +145,12 @@ object ResourceScope {
         null.asInstanceOf[A] // we'll throw in finally
     } finally {
       var toThrow: Throwable = retThrowable
-      if (retThrowable eq null) curScope.close()
+      if (retThrowable eq null) {
+        if (scope == null) curScope.close()
+      }
       else {
         try {
-          curScope.close
+          if (scope == null) curScope.close
         } catch {
           case closeThrowable: Throwable =>
             if (NonFatal(retThrowable) && !NonFatal(closeThrowable)) toThrow = closeThrowable
@@ -180,11 +182,6 @@ object ResourceScope {
     */
   private[mxnet] def removeFromThreadLocal(r: ResourceScope): Unit = {
     threadLocalScopes.get() -= r
-  }
-
-  private[mxnet] def getIndexOfScope(resourceScope: ResourceScope): Int = {
-    val scopes = threadLocalScopes.get()
-    scopes.indexOf(resourceScope)
   }
 
   /**

@@ -372,11 +372,11 @@ class DataParallelExecutorGroup private[module](
         val labelShapesSliced = labelShapes.map(slicedShape(_, i, labelLayouts))
         val inputShapes
           = dataShapesSliced.toMap ++ labelShapesSliced.getOrElse(Map.empty[String, Shape])
-        val tmpExec = execs(i).reshape(allowUpSizing = true, kwargs = inputShapes)
-        tmpExec.moveToScopeOf(execs(i))
-        tmpExec.updateDepResourceScope()
-        execs(i).dispose()
-        execs(i) = tmpExec
+        ResourceScope.using(execs(i).scope.get) {
+          val tmpExec = execs(i).reshape(allowUpSizing = true, kwargs = inputShapes)
+          execs(i).dispose()
+          execs(i) = tmpExec
+        }
       }
     } else {
       execs = (0 until contexts.length).map(i =>

@@ -71,16 +71,6 @@ class Executor private[mxnet](private[mxnet] val handle: ExecutorHandle,
   override val bytesAllocated: Long = 0
   override val ref: NativeResourceRef = super.register()
 
-  private[mxnet] def updateDepResourceScope(): Unit = {
-    if (argArrays != null) {argArrays.foreach(a => a.moveToScopeOf(this))}
-    if (gradArrays != null) {gradArrays.foreach(
-      // Symbol will sometimes fill this with nulls so we've got to check the elements too
-      a => if (a != null) {a.moveToScopeOf(this)})
-    }
-    if (auxArrays != null) {auxArrays.foreach(a => a.moveToScopeOf(this))}
-    outputs.foreach(o => o.moveToScopeOf(this))
-  }
-
   override def dispose(): Unit = {
     if (!super.isDisposed) {
       super.dispose()

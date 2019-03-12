@@ -810,8 +810,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
         key -> new Context(value.deviceType, value.deviceId)
       }
 
-    val newSymbol = this.clone()
-    newSymbol.moveToScopeOf(this)
+    var newSymbol: Symbol = null
+    ResourceScope.using(this.scope.get) {
+      newSymbol = this.clone()
+    }
+
     new Executor(execHandle.value, newSymbol, argsNDArray, argsGradNDArray,
                                 auxStatesNDArray, new Context(ctx.deviceType, ctx.deviceId),
                                 gradsReq, executorGroup2ctx)

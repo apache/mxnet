@@ -108,39 +108,24 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
     var a: TestNativeResource = null
     var b: TestNativeResource = null
     var c: TestNativeResource = null
-    var d: TestNativeResource = null
-    var notinAScope: TestNativeResource = new TestNativeResource()
+
     ResourceScope.using() {
       a = new TestNativeResource()
       ResourceScope.using() {
         b = new TestNativeResource()
-        b.moveToScopeOf(notinAScope)
-        ResourceScope.using() {
+        ResourceScope.using(a.scope.get) {
           c = new TestNativeResource()
-          ResourceScope.using() {
-            d = new TestNativeResource()
-            // Should fail to move c since d is in a higher scope
-            c.moveToScopeOf(d)
-            d.moveToScopeOf(a)
-            assert(c.isDisposed == false)
-            assert(d.isDisposed == false)
-          }
-          assert(c.isDisposed == false)
-          assert(d.isDisposed == false)
         }
         assert(b.isDisposed == false)
-        assert(c.isDisposed == true)
-        assert(d.isDisposed == false)
+        assert(c.isDisposed == false)
       }
       assert(a.isDisposed == false)
-      assert(b.isDisposed == false)
-      assert(c.isDisposed == true)
-      assert(d.isDisposed == false)
+      assert(b.isDisposed == true)
+      assert(c.isDisposed == false)
     }
     assert(a.isDisposed == true)
-    assert(b.isDisposed == false)
+    assert(b.isDisposed == true)
     assert(c.isDisposed == true)
-    assert(d.isDisposed == true)
   }
 
   test(testName = "test NativeResources in returned Lists are not disposed") {
