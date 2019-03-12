@@ -181,7 +181,7 @@ class ThreadedVar final
    * \brief exception_ptr associated with the ThreadedOpr
    * cannot modify state of exception object since dereferencing
    * exception_ptr is undefined behavior. Using shared_ptr to hold
-   * exception_ptr and overcome this limitation*/
+   * exception_ptr and overcome this limitation */
   std::shared_ptr<std::exception_ptr> var_exception;
 
  private:
@@ -262,7 +262,7 @@ struct ThreadedOpr final : public Opr,
    * \brief exception_ptr associated with the ThreadedOpr
    * cannot modify state of exception object since dereferencing
    * exception_ptr is undefined behavior. Using shared_ptr to hold
-   * exception_ptr and overcome this limitation*/
+   * exception_ptr and overcome this limitation */
   std::shared_ptr<std::exception_ptr> opr_exception;
 };  // struct ThreadedOpr
 
@@ -565,7 +565,7 @@ class ThreadedEngine : public Engine {
    */
   std::mutex finished_m_;
   std::condition_variable finished_cv_;
-  /*! \brief global exception refs, which are rethrown when WaitForAll is called*/
+  /*! \brief global exception refs, which are rethrown when WaitForAll is called */
   std::vector<ExceptionRef> global_exception_refs_;
 
   /*!
