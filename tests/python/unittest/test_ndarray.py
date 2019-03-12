@@ -950,6 +950,7 @@ def test_order():
                      k=dat_size*dat_size*dat_size*dat_size, is_ascend=False)
         assert_almost_equal(nd_ret_sort, gt)
 
+
 @with_seed()
 def test_ndarray_equal():
     x = mx.nd.zeros((2, 3))
