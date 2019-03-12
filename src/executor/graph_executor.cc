@@ -1201,10 +1201,6 @@ void GraphExecutor::InitOpSegs() {
 
   bool is_training = num_forward_nodes_ != total_num_nodes;
 
-  LOG(INFO) << "Fwd=" << Imperative::BulkExecMaxNodeTrainFwd() <<
-               " Bwd=" << Imperative::BulkExecMaxNodeTrainBwd() <<
-               " Bulk=" << Imperative::PreferBulkExecTrain();
-
   if (prefer_bulk_exec_train && is_training) {
     // Bulk the forward portion of the graph per the bulk segment max size for forward training
     this->BulkOpSegs(0, num_forward_nodes_, Imperative::BulkExecMaxNodeTrainFwd());
