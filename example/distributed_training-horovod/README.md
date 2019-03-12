@@ -46,7 +46,7 @@ This basic installation is good for laptops and for getting to know Horovod.
 If you're installing Horovod on a server with GPUs, read the [Horovod on GPU](https://github.com/horovod/horovod/blob/master/docs/gpus.md) page.
 If you want to use Docker, read the [Horovod in Docker](https://github.com/horovod/horovod/blob/master/docs/docker.md) page.
 
-## Install Open MPI
+## Install MPI
 MPI is required to run distributed training with Horovod. Install [Open MPI](https://www.open-mpi.org/) or another MPI implementation.
 Steps to install Open MPI are listed [here](https://www.open-mpi.org/faq/?category=building#easy-build).
 
