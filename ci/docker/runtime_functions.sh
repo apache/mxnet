@@ -1296,6 +1296,16 @@ nightly_scala_demo_test_cpu() {
     bash bin/run_im.sh
 }
 
+nightly_estimator_cnn_gpu() {
+    set -ex
+    python /tests/nightly/estimator/test_estimator_cnn_gpu.py
+}
+
+nightly_estimator_cnn_cpu() {
+    set -ex
+    python /tests/nightly/estimator/test_estimator_cnn_cpu.py
+}
+
 # Deploy
 
 deploy_docs() {
