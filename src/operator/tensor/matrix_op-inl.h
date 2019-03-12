@@ -697,6 +697,9 @@ inline void GetIndexRange(const mxnet::TShape& dshape,
       }
       CHECK_LE(e, len) << "slicing with end[" << i << "]="
                        << e << " exceeds limit of " << len;
+
+      CHECK_NE(b, e) << "slicing with begin[" << i << "]=end[" << i << "]="
+                     << e << " results in an empty tensor";
     } else {
       b = 0;
       e = 0;
