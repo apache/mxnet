@@ -132,7 +132,6 @@ def test_requantize_int32_to_int8():
 
 
 @with_seed()
-@unittest.skip("skipped temporarily for validation")
 def test_quantized_conv():
     def check_quantized_conv(data_shape, kernel, num_filter, pad, stride, no_bias, qdtype):
         if is_test_for_native_cpu():
