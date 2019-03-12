@@ -1298,12 +1298,16 @@ nightly_scala_demo_test_cpu() {
 
 nightly_estimator_cnn_gpu() {
     set -ex
-    python /tests/nightly/estimator/test_estimator_cnn_gpu.py
+    cd /work/mxnet/tests/nightly/estimator
+    export PYTHONPATH=/work/mxnet/python/
+    python tests/nightly/estimator/test_estimator_cnn_gpu.py
 }
 
 nightly_estimator_cnn_cpu() {
     set -ex
-    python /tests/nightly/estimator/test_estimator_cnn_cpu.py
+    cd /work/mxnet/tests/nightly/estimator
+    export PYTHONPATH=/work/mxnet/python/
+    python test_estimator_cnn_cpu.py
 }
 
 # Deploy
