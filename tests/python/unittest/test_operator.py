@@ -6961,7 +6961,12 @@ def test_op_output_names_monitor():
 
         op_exe = op_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         op_exe.set_monitor_callback(get_output_names_callback, monitor_all=False)
-        op_exe.forward()
+        try:
+            op_exe.forward()
+            mx.nd.waitall()
+        except mx.base.MXNetError:
+            # skip errors since test is to check output names
+            pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
 
