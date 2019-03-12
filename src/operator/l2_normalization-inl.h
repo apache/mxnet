@@ -85,7 +85,7 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), 2U);
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    TShape orig_shape = in_data[l2_normalization::kData].shape_;
+    mxnet::TShape orig_shape = in_data[l2_normalization::kData].shape_;
     if (param_.mode == l2_normalization::kInstance) {
       Shape<2> dshape = Shape2(orig_shape[0],
         orig_shape.ProdShape(1, orig_shape.ndim()));
@@ -156,7 +156,7 @@ class L2NormalizationOp : public Operator {
     CHECK_EQ(req.size(), 1U);
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    TShape orig_shape = out_data[l2_normalization::kOut].shape_;
+    mxnet::TShape orig_shape = out_data[l2_normalization::kOut].shape_;
     if (param_.mode == l2_normalization::kInstance) {
       Shape<2> dshape = Shape2(orig_shape[0],
         orig_shape.ProdShape(1, orig_shape.ndim()));
@@ -260,12 +260,12 @@ class L2NormalizationProp : public OperatorProperty {
     return dtype != -1;
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1U) << "L2Normalization layer only accepts data as input";
-    const TShape &dshape = (*in_shape)[l2_normalization::kData];
+    const mxnet::TShape &dshape = (*in_shape)[l2_normalization::kData];
     // require data to be known
     if ((*in_shape)[l2_normalization::kData].ndim() == 0) return false;
     out_shape->clear();
@@ -274,7 +274,7 @@ class L2NormalizationProp : public OperatorProperty {
       out_shape->push_back(Shape1(dshape[0]));
     } else if (param_.mode == l2_normalization::kChannel) {
       CHECK_GE(dshape.ndim(), 3U) << "At lease 3 dimensions required in channel mode";
-      TShape norm_shape = dshape;
+      mxnet::TShape norm_shape = dshape;
       norm_shape[1] = 1;
       out_shape->push_back(norm_shape);
     } else if (param_.mode == l2_normalization::kSpatial) {
@@ -315,7 +315,7 @@ class L2NormalizationProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -324,7 +324,7 @@ class L2NormalizationProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

@@ -27,16 +27,26 @@ from .base import _LIB, check_call
 
 class Feature(ctypes.Structure):
     """
-    Compile time feature description
+    Compile time feature description, member fields: `name` and `enabled`.
     """
     _fields_ = [
         ("_name", ctypes.c_char_p),
-        ("enabled", ctypes.c_bool)
+        ("_enabled", ctypes.c_bool)
     ]
 
     @property
     def name(self):
+        """
+        Feature name.
+        """
         return self._name.decode()
+
+    @property
+    def enabled(self):
+        """
+        True if MXNet was compiled with the given compile-time feature.
+        """
+        return self._enabled
 
     def __repr__(self):
         if self.enabled:
@@ -50,7 +60,8 @@ def feature_list():
 
     Returns
     -------
-    :return: list of class LibFeature indicating which features are available and enabled
+    list
+        List of :class:`.Feature` objects
     """
     lib_features_c_array = ctypes.POINTER(Feature)()
     lib_features_size = ctypes.c_size_t()
@@ -74,11 +85,13 @@ class Features(collections.OrderedDict):
 
         Parameters
         ----------
-        :param x: str The name of a valid feature as string for example 'CUDA'
+        feature_name: str
+            The name of a valid feature as string for example 'CUDA'
 
         Returns
         -------
-        :return: bool True if it's enabled, False if it's disabled, RuntimeError if the feature is not known
+        Boolean
+            True if it's enabled, False if it's disabled, RuntimeError if the feature is not known
         """
         feature_name = feature_name.upper()
         if feature_name not in self:

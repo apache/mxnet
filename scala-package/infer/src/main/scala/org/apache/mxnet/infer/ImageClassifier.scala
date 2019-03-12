@@ -66,6 +66,8 @@ class ImageClassifier(modelPathPrefix: String,
   protected[infer] val height = inputShape(inputLayout.indexOf('H'))
   protected[infer] val width = inputShape(inputLayout.indexOf('W'))
 
+  def outputShapes: IndexedSeq[(String, Shape)] = predictor.outputShapes
+
   /**
     * To classify the image according to the provided model
     *

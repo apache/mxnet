@@ -206,7 +206,7 @@ class OpStatePtr {
  */
 using FCreateOpState = std::function<OpStatePtr (const NodeAttrs& attrs,
                                                  Context ctx,
-                                                 const std::vector<TShape>& in_shape,
+                                                 const mxnet::ShapeVector& in_shape,
                                                  const std::vector<int>& in_type)>;
 /*!
  * \brief Execution mode of this operator.

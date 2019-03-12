@@ -30,6 +30,7 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
+#include <mxnet/storage.h>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -306,6 +307,8 @@ class ThreadedEngine : public Engine {
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
+    storage_ref_ = Storage::_GetSharedRef();
+
     // Get a ref to the profiler so that it doesn't get killed before us
     profiler::Profiler::Get(&profiler_);
   }
@@ -352,7 +355,8 @@ class ThreadedEngine : public Engine {
       LOG(INFO) << "ExecuteOprBlock " << opr_block
                 << "shutdown_phase=" << shutdown_phase_;
     }
-    if (!shutdown_phase_) {
+    // still run cleanup in shutdown_phase
+    if (!shutdown_phase_ || threaded_opr->prop == FnProperty::kDeleteVar) {
       try {
         OnStart(threaded_opr);
         if (debug_info) {
@@ -547,6 +551,12 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+
+  /*!
+   * \brief Async destruction of some objects is relied on storage,
+   *  prevent it from being destructed too early
+   */
+  std::shared_ptr<Storage> storage_ref_;
 
 #if MXNET_USE_CUDA
   /*! \brief Number of GPU devices available */

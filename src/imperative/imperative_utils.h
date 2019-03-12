@@ -100,18 +100,18 @@ inline void SetShapeType(const Context& ctx,
                          const std::vector<NDArray*>& inputs,
                          const std::vector<NDArray*>& outputs,
                          DispatchMode* dispatch_mode) {
-  static auto& infershape = nnvm::Op::GetAttr<nnvm::FInferShape>("FInferShape");
+  static auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
   static auto& infertype = nnvm::Op::GetAttr<nnvm::FInferType>("FInferType");
   static auto& inferstorage = nnvm::Op::GetAttr<FInferStorageType>("FInferStorageType");
   MXAPIThreadLocalEntry *ret = MXAPIThreadLocalStore::Get();
   // infer shape
-  std::vector<TShape>& in_shapes  = ret->arg_shapes;
+  mxnet::ShapeVector& in_shapes  = ret->arg_shapes;
   in_shapes.clear();
   in_shapes.reserve(inputs.size());
   for (auto& i : inputs) {
     in_shapes.push_back(i->shape());
   }
-  std::vector<TShape>& out_shapes = ret->out_shapes;
+  mxnet::ShapeVector& out_shapes = ret->out_shapes;
   out_shapes.clear();
   out_shapes.reserve(outputs.size());
   for (auto& i : outputs) {
@@ -563,7 +563,7 @@ inline void PushOperator(const OpStatePtr& state,
   }
 }
 
-inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
+inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
                                bool use_inputs,
                                std::pair<uint32_t, uint32_t> node_range = {0, 0},
                                std::pair<uint32_t, uint32_t> entry_range = {0, 0},
@@ -575,9 +575,9 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, nnvm::ShapeVector&& shapes,
   nnvm::Graph& g = *p_g;
   if (use_inputs) {
     if (g.attrs.count("shape_inputs") &&
-        g.GetAttr<ShapeVector>("shape_inputs") == shapes) return true;
+        g.GetAttr<mxnet::ShapeVector>("shape_inputs") == shapes) return true;
   } else if (g.attrs.count("shape")) {
-    const auto& prev_shapes = g.GetAttr<ShapeVector>("shape");
+    const auto& prev_shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     CHECK_EQ(prev_shapes.size(), shapes.size());
     bool match = true;
     for (size_t i = 0; i < shapes.size(); ++i) {
@@ -773,11 +773,11 @@ inline MemoryPlanVector PlanMemory(
   }
   g.attrs["ref_count"] = std::make_shared<dmlc::any>(ref_count);
   g.attrs["storage"] = std::make_shared<dmlc::any>(std::move(storage));
-  g = nnvm::ApplyPass(g, "PlanMemory");
+  g = nnvm::ApplyPass(g, "MXPlanMemory");
   if (detect_inplace_addto) g = exec::DetectInplaceAddTo(g);
 
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& storage_inplace = g.GetAttr<std::vector<int> >("storage_inplace_index");
   const auto& storage_ids = g.GetAttr<StorageVector>("storage_id");
   uint32_t entry_start = entry_range.first;
@@ -818,7 +818,7 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     std::multimap<size_t, NDArray>&& pool = std::multimap<size_t, NDArray>()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto& shapes = g.GetAttr<ShapeVector>("shape");
+  const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
 
   std::multimap<size_t, NDArray> new_pool;
@@ -840,7 +840,7 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
         new_pool.insert(*iter);
         pool.erase(iter);
       } else {
-        NDArray buff(TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
+        NDArray buff(mxnet::TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
                      default_ctx, true, mshadow::kUint8);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
         new_pool.insert({mem_plan[i].size, buff});
@@ -1005,7 +1005,20 @@ void RunGraph(const bool retain_graph,
               std::vector<uint32_t>&& ref_count,
               std::vector<OpStatePtr> *p_states,
               const DispatchModeVector &dispatch_modes,
-              bool recording);
+              bool recording,
+              mxnet::ShapeVector *shapes = nullptr);
+
+void NaiveRunGraph(const bool retain_graph,
+                   const Context& default_ctx,
+                   const nnvm::IndexedGraph& idx,
+                   const std::vector<NDArray*> arrays,
+                   size_t node_start, size_t node_end,
+                   std::vector<OpReqType>&& array_reqs,
+                   std::vector<uint32_t>&& ref_count,
+                   std::vector<OpStatePtr> *p_states,
+                   const DispatchModeVector &dispatch_modes,
+                   bool recording,
+                   mxnet::ShapeVector *shapes);
 
 }  // namespace imperative
 }  // namespace mxnet

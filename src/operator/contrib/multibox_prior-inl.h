@@ -29,7 +29,6 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
-#include <nnvm/tuple.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -169,19 +168,19 @@ class MultiBoxPriorProp: public OperatorProperty {
     return {"data"};
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) << "Inputs: [data]" << in_shape->size();
-    TShape dshape = in_shape->at(mboxprior_enum::kData);
+    mxnet::TShape dshape = in_shape->at(mboxprior_enum::kData);
     CHECK_GE(dshape.ndim(), 4) << "Input data should be 4D: batch-channel-y-x";
     int in_height = dshape[2];
     CHECK_GT(in_height, 0) << "Input height should > 0";
     int in_width = dshape[3];
     CHECK_GT(in_width, 0) << "Input width should > 0";
     // since input sizes are same in each batch, we could share MultiBoxPrior
-    TShape oshape = TShape(3);
+    mxnet::TShape oshape = mxnet::TShape(3);
     int num_sizes = param_.sizes.ndim();
     int num_ratios = param_.ratios.ndim();
     oshape[0] = 1;
@@ -208,7 +207,7 @@ class MultiBoxPriorProp: public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

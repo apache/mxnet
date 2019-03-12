@@ -36,12 +36,12 @@ namespace mxnet {
 namespace op {
 
 struct SampleMultinomialParam : public dmlc::Parameter<SampleMultinomialParam> {
-  TShape shape;
+  mxnet::TShape shape;
   bool get_prob;
   int dtype;
   DMLC_DECLARE_PARAMETER(SampleMultinomialParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(TShape())
+      .set_default(mxnet::TShape())
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(get_prob)
     .set_default(false)
@@ -61,13 +61,13 @@ struct SampleMultinomialParam : public dmlc::Parameter<SampleMultinomialParam> {
 
 
 inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
-                                     std::vector<TShape>* in_attrs,
-                                     std::vector<TShape>* out_attrs) {
+                                     mxnet::ShapeVector* in_attrs,
+                                     mxnet::ShapeVector* out_attrs) {
   const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(attrs.parsed);
 
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), param.get_prob ? 2U : 1U);
-  const TShape& ishape = (*in_attrs)[0];
+  const mxnet::TShape& ishape = (*in_attrs)[0];
   if (!ishape.ndim()) return false;
 
   MSHADOW_TYPE_SWITCH(param.dtype, DType, {
@@ -80,13 +80,13 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
       if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, param.shape);
     } else {
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(1));
-      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape(1));
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1));
+      if (param.get_prob) SHAPE_ASSIGN_CHECK(*out_attrs, 1, mxnet::TShape(1));
     }
     return true;
   }
 
-  TShape oshape(ishape.ndim() - 1 + param.shape.ndim());
+  mxnet::TShape oshape(ishape.ndim() - 1 + param.shape.ndim());
   for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
     oshape[i] = ishape[i];
   }
