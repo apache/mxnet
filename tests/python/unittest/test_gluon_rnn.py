@@ -536,7 +536,6 @@ def run_rnn_layers(dtype, dtype2, ctx=mx.cpu()):
         out.backward()
         out = out.asnumpy()
 
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
 
@@ -626,8 +625,6 @@ def test_cell_fill_shape():
     check_rnn_forward(cell, mx.nd.ones((2, 3, 7)))
     assert cell.i2h_weight.shape[1] == 7, cell.i2h_weight.shape[1]
 
-
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_layer_fill_shape():
     layer = gluon.rnn.LSTM(10)
     layer.hybridize()
