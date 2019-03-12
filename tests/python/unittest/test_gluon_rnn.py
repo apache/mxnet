@@ -639,6 +639,7 @@ def test_layer_fill_shape():
 def test_bidirectional_unroll_valid_length():
     # Test BidirectionalCell.
     # In 1.3.1 version, after hybridize( ), BidirectionalCell would failed when pass valid_length to unroll( ).
+    
     class BiLSTM(gluon.nn.HybridBlock):
         def __init__(self, rnn_size, time_step, **kwargs):
             super(BiLSTM, self).__init__(**kwargs)
