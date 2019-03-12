@@ -22,8 +22,8 @@ FROM ubuntu:16.04
 ARG version
 
 RUN apt-get update && \
-    apt-get install -y wget python-dev gcc && \
+    apt-get install -y wget python3-dev gcc && \
     wget https://bootstrap.pypa.io/get-pip.py && \
-    python get-pip.py
+    python3 get-pip.py
 
-RUN pip install mxnet==$version
+RUN pip3 install mxnet==$version
