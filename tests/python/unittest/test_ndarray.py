@@ -396,6 +396,7 @@ def test_ndarray_slice():
         assert same(A[:, i].asnumpy(), A2[:, i])
         assert same(A[i, :].asnumpy(), A2[i, :])
 
+
 @with_seed()
 def test_ndarray_crop():
     # get crop
