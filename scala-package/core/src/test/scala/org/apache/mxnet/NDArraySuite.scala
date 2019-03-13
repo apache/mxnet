@@ -334,7 +334,8 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
     assert(res.toArray === Array(11f))
   }
 
-  test("arange") {
+  // Skipping flaky test: https://github.com/apache/incubator-mxnet/issues/14402
+  ignore("arange") {
     for (i <- 0 until 5) {
       val start = scala.util.Random.nextFloat() * 5
       val stop = start + scala.util.Random.nextFloat() * 100
