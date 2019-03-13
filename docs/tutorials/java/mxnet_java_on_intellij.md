@@ -111,7 +111,7 @@ The project's `pom.xml` will be open for editing.
   <version>1.4.0</version>
 </dependency>
 ```
-The official Java Packages are released with the release of MXNet 1.4 and are now available on the [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
+The official Java Packages have been released as part of MXNet 1.4 and are available on the [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 
 Note :
 - Change the osx-x86_64 to linux-x86_64 if your platform is linux.
