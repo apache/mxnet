@@ -43,19 +43,19 @@ void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   if (param.kernel.ndim() > 0)
     param.layout = param.GetLayout(param.kernel.ndim() + 2);
   if (param.kernel.ndim() == 1) {
-    if (param.stride.ndim() == 0) param.stride = Shape1(1);
-    if (param.pad.ndim() == 0) param.pad = Shape1(0);
+    if (param.stride.ndim() == -1) param.stride = Shape1(1);
+    if (param.pad.ndim() == -1) param.pad = Shape1(0);
   } else if (param.kernel.ndim() == 2) {
-    if (param.stride.ndim() == 0) param.stride = Shape2(1, 1);
-    if (param.pad.ndim() == 0) param.pad = Shape2(0, 0);
+    if (param.stride.ndim() == -1) param.stride = Shape2(1, 1);
+    if (param.pad.ndim() == -1) param.pad = Shape2(0, 0);
   } else {
       // ignore kernel size only if global_pool not assigned false
       if (param.global_pool == false) {
         CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
             << "D pooling not supported";
       }
-    if (param.stride.ndim() == 0) param.stride = Shape3(1, 1, 1);
-    if (param.pad.ndim() == 0) param.pad = Shape3(0, 0, 0);
+    if (param.stride.ndim() == -1) param.stride = Shape3(1, 1, 1);
+    if (param.pad.ndim() == -1) param.pad = Shape3(0, 0, 0);
   }
   attrs->parsed = std::move(param);
 }
@@ -114,11 +114,11 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << "Pooling: Input data should be  3D in (batch, channel, x)"
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
-  if (dshape.ndim() == 0) return false;
+  if (!shape_is_known(dshape)) return false;
   int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
     mxnet::TShape oshape = dshape;
-    size_t c_index = 0;
+    int c_index = 0;
     switch (layout) {
       case mshadow::kNCW:
       case mshadow::kNCHW:
@@ -133,7 +133,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       default:
         LOG(FATAL) << "Unsupported tensor layout " << param.layout.value();
     }
-    for (size_t i{1}; i < dshape.ndim(); i++)
+    for (int i = 1; i < dshape.ndim(); i++)
       if (i != c_index)
         oshape[i] = 1;
     out_shape->clear();
@@ -142,7 +142,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
         out_shape->push_back(oshape);   // for workspace
 #endif
-  } else if (param.kernel.ndim() == 0) {
+  } else if (param.kernel.ndim() <= 0) {
     return false;
   } else if (param.kernel.ndim() == 1) {
     CHECK_EQ(dshape.ndim(), 3U) <<

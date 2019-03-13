@@ -35,7 +35,7 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
                            mxnet::ShapeVector *out_shape) {
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), 3U);
-  if (shape_is_none(in_shape->at(0))) return false;
+  if (!shape_is_known(in_shape->at(0))) return false;
   const mxnet::TShape &dshape = (*in_shape)[0];
   CHECK_EQ(dshape.ndim(), 4U)
       << "quantized_pooling: Input data should be 4D in "

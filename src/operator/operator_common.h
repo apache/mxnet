@@ -103,11 +103,6 @@ struct InferStorageTypeError : public dmlc::Error {
     : dmlc::Error(msg_), msg(msg_), index(index) {}
 };
 
-/*! \brief check if shape is empty or contains unknown (0) dim. */
-inline bool shape_is_none(const mxnet::TShape& x) {
-  return x.ndim() == 0 || x.Size() == 0;
-}
-
 /*! brief check if shape is known using the NumPy compatible definition.
  * zero-dim and zero-size tensors are valid. -1 means unknown.*/
 inline bool shape_is_known(const TShape& x) {
@@ -116,6 +111,12 @@ inline bool shape_is_known(const TShape& x) {
     if (x[i] == -1) return false;
   }
   return true;
+}
+
+/*! \brief check if shape is empty or contains unknown (0) dim.
+ * DEPRECATED. */
+inline bool shape_is_none(const mxnet::TShape& x) {
+  return !shape_is_known(x);
 }
 
 /*! \brief check if type is none (-1) */
@@ -573,7 +574,7 @@ class OpSignature {
   }
 
   void AddSign(const mxnet::TShape &shape) {
-    for (size_t i = 0; i < shape.ndim(); i++) {
+    for (int i = 0; i < shape.ndim(); i++) {
       hash = hash * 2 + shape[i];
       eles.push_back(shape[i]);
     }

@@ -48,17 +48,17 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& rhs = (*in_attrs)[1];
 
   // avoid pre-mature shape inference.
-  if (lhs.ndim() == 0 || rhs.ndim() == 0) return false;
+  if (lhs.ndim() == -1 || rhs.ndim() == -1) return false;
 
   if (lhs == rhs) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, lhs);
     return true;
   }
   mxnet::TShape out(std::max(lhs.ndim(), rhs.ndim()));
-  index_t bl = out.ndim() - lhs.ndim();
-  index_t br = out.ndim() - rhs.ndim();
-  for (index_t i = 0; i < out.ndim(); ++i) {
-    index_t l = 1, r = 1;
+  int bl = out.ndim() - lhs.ndim();
+  int br = out.ndim() - rhs.ndim();
+  for (int i = 0; i < out.ndim(); ++i) {
+    int l = 1, r = 1;
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (l != r) {
@@ -74,7 +74,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
     }
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
-  return true;
+  return shape_is_known(lhs) && shape_is_known(rhs);
 }
 
 inline bool BinaryBroadcastMulStorageType(const nnvm::NodeAttrs& attrs,
@@ -150,11 +150,11 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   *new_lshape = mxnet::TShape(odim);
   *new_rshape = mxnet::TShape(odim);
   *new_oshape = mxnet::TShape(odim);
-  index_t bl = oshape.ndim() - lshape.ndim();
-  index_t br = oshape.ndim() - rshape.ndim();
-  index_t j = 0, lprod = 1, rprod = 1, oprod = 1;
-  for (index_t i = 0; i < oshape.ndim(); ++i) {
-    index_t l = 1, r = 1, o = oshape[i];
+  int bl = oshape.ndim() - lshape.ndim();
+  int br = oshape.ndim() - rshape.ndim();
+  int j = 0, lprod = 1, rprod = 1, oprod = 1;
+  for (int i = 0; i < oshape.ndim(); ++i) {
+    int l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
     if (i >= br) r = rshape[i-br];
     if ((lprod != rprod || l != r) &&

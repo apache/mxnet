@@ -54,7 +54,7 @@ static bool DeconvolutionShape(const nnvm::NodeAttrs& attrs,
   }
   out_shape->resize(1, mxnet::TShape());
   const mxnet::TShape &dshape = (*in_shape)[deconv::kData];
-  if (dshape.ndim() ==  0) return false;
+  if (!shape_is_known(dshape)) return false;
 
   if (param_.kernel.ndim() == 1) {
     // 1d conv

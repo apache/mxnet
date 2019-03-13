@@ -68,7 +68,7 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), param.get_prob ? 2U : 1U);
   const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!ishape.ndim()) return false;
+  if (!shape_is_known(ishape)) return false;
 
   MSHADOW_TYPE_SWITCH(param.dtype, DType, {
     CHECK_LE(ishape[ishape.ndim() - 1], mxnet::common::MaxIntegerValue<DType>())
@@ -87,10 +87,10 @@ inline bool SampleMultinomialOpShape(const nnvm::NodeAttrs& attrs,
   }
 
   mxnet::TShape oshape(ishape.ndim() - 1 + param.shape.ndim());
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
     oshape[i] = ishape[i];
   }
-  for (size_t i = 0; i < param.shape.ndim(); ++i) {
+  for (int i = 0; i < param.shape.ndim(); ++i) {
     oshape[i + ishape.ndim() - 1] = param.shape[i];
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);

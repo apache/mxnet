@@ -145,14 +145,14 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector *out_attrs) {
   using namespace mshadow;
   const mxnet::TShape &dshape = (*in_attrs)[embedding::kData];
-  if (dshape.ndim() ==  0) return false;
+  if (!shape_is_known(dshape)) return false;
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*in_attrs, embedding::kWeight, Shape2(param.input_dim,
                                                            param.output_dim));
   out_attrs->clear();
 
   mxnet::TShape oshape(dshape.ndim()+1);
-  for (size_t i = 0; i < dshape.ndim(); ++i) {
+  for (int i = 0; i < dshape.ndim(); ++i) {
     oshape[i] = dshape[i];
   }
   oshape[dshape.ndim()] = param.output_dim;
@@ -682,7 +682,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   const mxnet::TShape &arrshape = (*in_attrs)[take_::kArr];
   const mxnet::TShape &idxshape = (*in_attrs)[take_::kIdx];
-  if (idxshape.ndim() == 0U || idxshape.Size() == 0U) return false;
+  if (!shape_is_known(idxshape)) return false;
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
   if (param.mode == take_::kRaise) {
     LOG(FATAL) << "Raise is not supported for the time being...";
@@ -1272,7 +1272,7 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0]);
 
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
+  for (int i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
   for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
     oshape[ishape.ndim()-1+i] = dshape[ishape[0] + i];
   }
@@ -1370,7 +1370,7 @@ inline bool ScatterNDShape(const nnvm::NodeAttrs& attrs,
 
   bool valid = dshape.ndim() == ishape.ndim() - 1 + oshape.ndim() - ishape[0];
 
-  for (size_t i = 0; i < ishape.ndim() - 1; ++i) {
+  for (int i = 0; i < ishape.ndim() - 1; ++i) {
     valid = valid && dshape[i] == ishape[i+1];
   }
   for (int i = 0; i < oshape.ndim() - ishape[0]; ++i) {

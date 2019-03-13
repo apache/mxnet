@@ -96,7 +96,7 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
   // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
   out_shape->resize(1, mxnet::TShape());
   const mxnet::TShape &dshp = (*in_shape)[conv::kData];
-  if (dshp.ndim() ==  0) return false;
+  if (!shape_is_known(dshp)) return false;
 
   if (param_.kernel.ndim() == 1) {
     // 1d conv
@@ -341,20 +341,20 @@ void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
 
   if (param_.kernel.ndim() == 1) {
     param_.layout = param_.layout? param_.layout.value() : mshadow::kNCW;
-    if (param_.stride.ndim() == 0) param_.stride = Shape1(1);
-    if (param_.dilate.ndim() == 0) param_.dilate = Shape1(1);
-    if (param_.pad.ndim() == 0) param_.pad = Shape1(0);
+    if (param_.stride.ndim() == -1) param_.stride = Shape1(1);
+    if (param_.dilate.ndim() == -1) param_.dilate = Shape1(1);
+    if (param_.pad.ndim() == -1) param_.pad = Shape1(0);
   } else if (param_.kernel.ndim() == 2) {
     param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-    if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-    if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
-    if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+    if (param_.stride.ndim() == -1) param_.stride = Shape2(1, 1);
+    if (param_.dilate.ndim() == -1) param_.dilate = Shape2(1, 1);
+    if (param_.pad.ndim() == -1) param_.pad = Shape2(0, 0);
   } else {
     CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
     param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
-    if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
-    if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
-    if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
+    if (param_.stride.ndim() == -1) param_.stride = Shape3(1, 1, 1);
+    if (param_.dilate.ndim() == -1) param_.dilate = Shape3(1, 1, 1);
+    if (param_.pad.ndim() == -1) param_.pad = Shape3(0, 0, 0);
   }
   CHECK_EQ(param_.kernel.ndim(), param_.stride.ndim())
     << "Stride must have the same number of dimensions with kernel_size,"

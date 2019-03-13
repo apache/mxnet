@@ -271,7 +271,7 @@ class Tuple {
       if (!isspace(ch)) {
         is.setstate(std::ios::failbit);
         return is;
-    }
+      }
     }
     // Handle empty tuple
     while (isspace(is.peek())) {
@@ -669,7 +669,7 @@ struct hash<mxnet::Tuple<T> > {
   size_t operator()(const mxnet::Tuple<T>& val) const {
     std::hash<uint32_t> hash_uint;
     size_t res = hash_uint(val.ndim());
-    for (uint32_t i = 0; i < val.ndim(); ++i) {
+    for (int i = 0; i < val.ndim(); ++i) {
       res = dmlc::HashCombine(res, val[i]);
     }
     return res;

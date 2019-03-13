@@ -413,7 +413,7 @@ bool ReshapeLikeShapeCompute(const nnvm::NodeAttrs &attrs,
   GetReshapeLikeParams(param, lshape, rshape, &lhs_begin, &lhs_end, &rhs_begin,
                        &rhs_end);
 
-  int lhsrank = static_cast<int>(lshape.ndim());
+  int lhsrank = lshape.ndim();
   int orank = lhsrank + (rhs_end - rhs_begin) - (lhs_end - lhs_begin);
   mxnet::TShape oshape(orank);
 

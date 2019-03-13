@@ -377,15 +377,15 @@ class ConvolutionV1Prop : public OperatorProperty {
     param_.Init(kwargs);
     if (param_.kernel.ndim() == 2) {
       param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+      if (param_.stride.ndim() == -1) param_.stride = Shape2(1, 1);
+      if (param_.dilate.ndim() == -1) param_.dilate = Shape2(1, 1);
+      if (param_.pad.ndim() == -1) param_.pad = Shape2(0, 0);
     } else {
       CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
       param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
+      if (param_.stride.ndim() == -1) param_.stride = Shape3(1, 1, 1);
+      if (param_.dilate.ndim() == -1) param_.dilate = Shape3(1, 1, 1);
+      if (param_.pad.ndim() == -1) param_.pad = Shape3(0, 0, 0);
     }
   }
 
@@ -405,7 +405,7 @@ class ConvolutionV1Prop : public OperatorProperty {
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
     out_shape->resize(1, mxnet::TShape());
     const mxnet::TShape &dshp = (*in_shape)[conv_v1::kData];
-    if (dshp.ndim() ==  0) return false;
+    if (!shape_is_known(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv_v1
       CHECK_EQ(dshp.ndim(), 4U) \

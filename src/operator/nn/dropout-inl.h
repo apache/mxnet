@@ -340,7 +340,7 @@ class DropoutOp {
       const TBlob &mask = out_data[dropout::kMask];
       if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
-        if (this->axes_.ndim() == 0) {
+        if (this->axes_.ndim() == -1) {
 #if MXNET_USE_MKL_DROPOUT
           if (MKLAvailable()) {
             MKLForward(ctx, in_data, out_data);
@@ -416,7 +416,7 @@ class DropoutOp {
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
-      if (this->axes_.ndim() == 0) {
+      if (this->axes_.ndim() == -1) {
 #if MXNET_USE_MKL_DROPOUT
         if (MKLAvailable()) {
           MKLBackward(ctx, in_grad, out_data, out_grad);
