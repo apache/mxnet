@@ -530,6 +530,7 @@ def test_reduce():
                              keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
                       mx.nd.argmin, False)
 
+
 @with_seed()
 def test_broadcast():
     sample_num = 1000
