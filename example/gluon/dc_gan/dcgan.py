@@ -14,23 +14,23 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""Generate MXNet implementation of Deep Convolutional Generative Adversarial Networks"""
 
-import matplotlib as mpl
-mpl.use('Agg')
-from matplotlib import pyplot as plt
-
+import logging
+from datetime import datetime
 import argparse
+import os
+import time
+import numpy as np
+from matplotlib import pyplot as plt
+import matplotlib as mpl
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import autograd
-import numpy as np
-import logging
-from datetime import datetime
-import os
-import time
-
 from inception_score import get_inception_score
+
+mpl.use('Agg')
 
 
 def fill_buf(buf, i, img, shape):
@@ -47,7 +47,6 @@ def fill_buf(buf, i, img, shape):
     sx = (i%m)*shape[0]
     sy = (i//m)*shape[1]
     buf[sy:sy+shape[1], sx:sx+shape[0], :] = img
-    return None
 
 
 def visual(title, X, name):
@@ -116,6 +115,7 @@ if not os.path.exists(outf):
 
 
 def transformer(data, label):
+    """Get the translation of images"""
     # resize to 64x64
     data = mx.image.imresize(data, 64, 64)
     # transpose from (64, 64, 3) to (3, 64, 64)
@@ -163,6 +163,7 @@ def get_dataset(dataset_name):
 
 
 def get_netG():
+    """Get net G"""
     # build the generator
     netG = nn.Sequential()
     with netG.name_scope():
@@ -191,6 +192,7 @@ def get_netG():
 
 
 def get_netD():
+    """Get the netD"""
     # build the discriminator
     netD = nn.Sequential()
     with netD.name_scope():
@@ -217,6 +219,7 @@ def get_netD():
 
 
 def get_configurations(netG, netD):
+    """Get configurations for net"""
     # loss
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
@@ -244,6 +247,7 @@ def ins_save(inception_score):
 
 # main function
 def main():
+    """Entry point to dcgan"""
     print("|------- new changes!!!!!!!!!")
     # to get the dataset and net configuration
     train_data, val_data = get_dataset(dataset)
@@ -311,7 +315,7 @@ def main():
 
             name, acc = metric.get()
             logging.info('discriminator loss = %f, generator loss = %f, binary training acc = %f at iter %d epoch %d'
-                         % (mx.nd.mean(errD).asscalar(), mx.nd.mean(errG).asscalar(), acc, iter, epoch))
+                         , mx.nd.mean(errD).asscalar(), mx.nd.mean(errG).asscalar(), acc, iter, epoch)
             if iter % niter == 0:
                 visual('gout', fake.asnumpy(), name=os.path.join(outf, 'fake_img_iter_%d.png' % iter))
                 visual('data', data.asnumpy(), name=os.path.join(outf, 'real_img_iter_%d.png' % iter))
@@ -327,13 +331,13 @@ def main():
 
         name, acc = metric.get()
         metric.reset()
-        logging.info('\nbinary training acc at epoch %d: %s=%f' % (epoch, name, acc))
-        logging.info('time: %f' % (time.time() - tic))
+        logging.info('\nbinary training acc at epoch %d: %s=%f', epoch, name, acc)
+        logging.info('time: %f', time.time() - tic)
 
         # save check_point
         if check_point:
-            netG.save_parameters(os.path.join(outf,'generator_epoch_%d.params' %epoch))
-            netD.save_parameters(os.path.join(outf,'discriminator_epoch_%d.params' % epoch))
+            netG.save_parameters(os.path.join(outf, 'generator_epoch_%d.params' %epoch))
+            netD.save_parameters(os.path.join(outf, 'discriminator_epoch_%d.params' % epoch))
 
     # save parameter
     netG.save_parameters(os.path.join(outf, 'generator.params'))

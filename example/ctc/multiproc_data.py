@@ -14,10 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-"""
-Contains a class for handling multi-process data generation
-"""
+"""Contains a class for handling multi-process data generation"""
 
 from __future__ import print_function
 from ctypes import c_bool
