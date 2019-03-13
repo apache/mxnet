@@ -1300,7 +1300,7 @@ nightly_estimator_cnn_gpu() {
     set -ex
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
-    python tests/nightly/estimator/test_estimator_cnn_gpu.py
+    python test_estimator_cnn_gpu.py
 }
 
 nightly_estimator_cnn_cpu() {

@@ -83,12 +83,10 @@ def test_estimator():
                               trainers=trainer,
                               context=context)
     # Call fit() to begin training
-    logging_handler = event_handler.LoggingHandler(est, model_name+'_log', model_name+'_log')
     est.fit(train_data=train_data,
             # val_data=test_data,
             epochs=num_epochs,
-            batch_size=batch_size,
-            event_handlers=[logging_handler])
+            batch_size=batch_size)
 
     assert est.train_stats['train_'+acc.name][num_epochs-1] > 0.75
 
