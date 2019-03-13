@@ -208,13 +208,15 @@ if __name__ == '__main__':
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
         rgb_std = '1,1,1'
-        excluded_sym_names += ['flatten0']
+        # TODO, fc1 will be enabled after MKL-DNN 0.18
+        excluded_sym_names += ['flatten0', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '1,1,1'
-        excluded_sym_names += ['flatten']
+        # TODO, fc1 will be enabled after MKL-DNN 0.18
+        excluded_sym_names += ['flatten', 'fc1']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
     elif args.model in ['resnet50_v1', 'resnet101_v1']:
@@ -231,7 +233,9 @@ if __name__ == '__main__':
     elif args.model == 'mobilenet1.0':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
+        # TODO, mobilenet0_dense0_fwd will be enabled after MKL-DNN 0.18
         excluded_sym_names += ['mobilenet0_flatten0_flatten0',
+                               'mobilenet0_dense0_fwd',
                                'mobilenet0_pool0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['mobilenet0_conv0_fwd']
