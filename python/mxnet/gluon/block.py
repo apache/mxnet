@@ -483,7 +483,7 @@ class Block(object):
         return self
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
-                   force_reinit=False):
+                   force_reinit=False, post_init_callback=None):
         """Initializes :py:class:`Parameter` s of this :py:class:`Block` and its children.
         Equivalent to ``block.collect_params().initialize(...)``
 
@@ -498,8 +498,12 @@ class Block(object):
             Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        post_init_callback: function or list of function
+            These will be called after initialization is done on each parameter, with the
+            initialized parameter. Each function will be only called once.
         """
-        self.collect_params().initialize(init, ctx, verbose, force_reinit)
+        self.collect_params().initialize(init, ctx, verbose, force_reinit,
+                                         post_init_callback)
 
     def hybridize(self, active=True, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on

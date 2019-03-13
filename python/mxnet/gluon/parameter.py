@@ -26,7 +26,7 @@ from collections import OrderedDict
 import warnings
 import numpy as np
 
-from ..base import mx_real_t, MXNetError
+from ..base import _as_list, mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context
 from ..context import Context, cpu
 from .. import autograd
@@ -85,6 +85,9 @@ class Parameter(object):
         The storage type of the parameter.
     grad_stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
         The storage type of the parameter's gradient.
+    post_init_callback: function or list of function
+        These will be called after initialization is done on the parameter, with the
+        initialized parameter. Each function will be only called once.
 
     Attributes
     ----------
@@ -101,7 +104,8 @@ class Parameter(object):
     """
     def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
-                 differentiable=True, stype='default', grad_stype='default'):
+                 differentiable=True, stype='default', grad_stype='default',
+                 post_init_callback=None):
         self._var = None
         self._data = None
         self._grad = None
@@ -129,6 +133,10 @@ class Parameter(object):
             "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
         self._grad_stype = grad_stype
         self._stype = stype
+        if post_init_callback is None:
+            self._post_init_callback = []
+        else:
+            self._post_init_callback = _as_list(post_init_callback)
 
 
     def __repr__(self):
@@ -297,6 +305,10 @@ class Parameter(object):
         self._data = [data.copyto(ctx) for ctx in self._ctx_list]
         self._init_grad()
 
+        for callback in self._post_init_callback:
+            callback(self)
+        self._post_init_callback = []
+
     def _init_grad(self):
         """Initialize grad buffers."""
         if self.grad_req == 'null':
@@ -323,7 +335,7 @@ class Parameter(object):
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
-                   force_reinit=False):
+                   force_reinit=False, post_init_callback=None):
         """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
         Parameters
@@ -344,6 +356,9 @@ class Parameter(object):
             and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        post_init_callback: function or list of function
+            These will be called after initialization is done on the parameter, with the
+            initialized parameter. Each function will be only called once.
 
         Examples
         --------
@@ -380,6 +395,9 @@ class Parameter(object):
             ctx = [ctx]
         if init is None:
             init = default_init if self.init is None else self.init
+        if post_init_callback is not None:
+            post_init_callback = _as_list(post_init_callback)
+            self._post_init_callback.extend(post_init_callback)
         if not self.shape or np.prod(self.shape) <= 0:
             if self._allow_deferred_init:
                 self._deferred_init = (init, ctx, default_init, None)
@@ -791,7 +809,7 @@ class ParameterDict(object):
             self._params[k] = v
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
-                   force_reinit=False):
+                   force_reinit=False, post_init_callback=None):
         """Initializes all Parameters managed by this dictionary to be used for :py:class:`NDArray`
         API. It has no effect when using :py:class:`Symbol` API.
 
@@ -806,11 +824,15 @@ class ParameterDict(object):
             Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        post_init_callback: function or list of function
+            These will be called after initialization is done on each parameter, with the
+            initialized parameter. Each function will be only called once.
         """
         if verbose:
             init.set_verbosity(verbose=verbose)
         for _, v in self.items():
-            v.initialize(None, ctx, init, force_reinit=force_reinit)
+            v.initialize(None, ctx, init, force_reinit=force_reinit,
+                         post_init_callback=post_init_callback)
 
     def zero_grad(self):
         """Sets all Parameters' gradient buffer to 0."""
