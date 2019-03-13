@@ -355,7 +355,7 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
       val result3 = 0f to stop by 1f
       val range3 = NDArray.arange(stop)
       assert(CheckUtils.reldiff(result3.toArray, range3.toArray) <= 1e-4f)
-      
+
       val stop4 = Math.abs(stop)
       val step4 = stop4 + Math.abs(scala.util.Random.nextFloat())
       val result4 = (0.0 until stop4.toDouble by step4.toDouble)
