@@ -25,8 +25,8 @@ MXNet is supported in Horovod 0.16.0 [release](https://eng.uber.com/horovod-pysp
 
 ## What's New?
 Compared with the standard distributed training script in MXNet which uses parameter server to 
-distribute and aggregate parameters, Horovod uses ring allreduce algorithm to communicate parameters 
-between workers. There is no dedicated server and the communication data size 
+distribute and aggregate parameters, Horovod uses ring allreduce and/or tree-based allreduce algorithm 
+to communicate parameters between workers. There is no dedicated server and the communication data size 
 between workers does not depend on the number of workers. Therefore, it scales well in the case where 
 there are a large number of workers and network bandwidth is the bottleneck.
 
