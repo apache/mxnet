@@ -347,9 +347,9 @@ class DeformableConvolutionProp : public OperatorProperty {
     param_.Init(kwargs);
     if (param_.kernel.ndim() == 2) {
       param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+      if (mxnet::op::shape_is_none(param_.stride)) param_.stride = Shape2(1, 1);
+      if (mxnet::op::shape_is_none(param_.dilate)) param_.dilate = Shape2(1, 1);
+      if (mxnet::op::shape_is_none(param_.pad)) param_.pad = Shape2(0, 0);
     } else {
       LOG(FATAL) << "not implemented";
     }
@@ -371,7 +371,7 @@ class DeformableConvolutionProp : public OperatorProperty {
     out_shape->resize(1, mxnet::TShape());
     const mxnet::TShape &dshp = (*in_shape)[conv::kData];
     const mxnet::TShape &oshp = (*in_shape)[conv::kOffset];
-    if (dshp.ndim() == 0) return false;
+    if (mxnet::op::shape_is_none(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv
       CHECK_EQ(dshp.ndim(), 4U) \

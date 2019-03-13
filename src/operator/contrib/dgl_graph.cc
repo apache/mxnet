@@ -263,10 +263,11 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
   // We use the last element to store the actual
   // number of vertices in the subgraph.
   out_shape[0] = params.max_num_vertices + 1;
+  // TODO(@reminisce): is there anything like `size_is_none`, or using Size() is just fine?
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i, out_shape);
     success = success &&
-              out_attrs->at(i).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i)) &&
               out_attrs->at(i).Size() != 0U;
   }
   // sub_csr
@@ -276,7 +277,7 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + num_subgraphs, out_csr_shape);
     success = success &&
-              out_attrs->at(i + num_subgraphs).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i + num_subgraphs)) &&
               out_attrs->at(i + num_subgraphs).Size() != 0U;
   }
   // sub_layer
@@ -285,7 +286,7 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_layer_shape);
     success = success &&
-              out_attrs->at(i + 2*num_subgraphs).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i + 2*num_subgraphs)) &&
               out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
   }
 
@@ -324,7 +325,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i, out_shape);
     success = success &&
-              out_attrs->at(i).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i)) &&
               out_attrs->at(i).Size() != 0U;
   }
   // sub_csr
@@ -334,7 +335,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + num_subgraphs, out_csr_shape);
     success = success &&
-              out_attrs->at(i + num_subgraphs).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i + num_subgraphs)) &&
               out_attrs->at(i + num_subgraphs).Size() != 0U;
   }
   // sub_probability
@@ -343,7 +344,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_prob_shape);
     success = success &&
-              out_attrs->at(i + 2*num_subgraphs).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i + 2 * num_subgraphs)) &&
               out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
   }
   // sub_layer
@@ -352,7 +353,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 3*num_subgraphs, out_prob_shape);
     success = success &&
-              out_attrs->at(i + 3*num_subgraphs).ndim() != 0U &&
+              !mxnet::op::shape_is_none(out_attrs->at(i + 3 * num_subgraphs)) &&
               out_attrs->at(i + 3*num_subgraphs).Size() != 0U;
   }
 
@@ -1199,7 +1200,7 @@ inline bool EdgeIDShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 2, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0)) && out_attrs->at(0).Size() != 0U;
 }
 
 inline bool EdgeIDType(const nnvm::NodeAttrs& attrs,
@@ -1357,7 +1358,7 @@ inline bool DGLAdjacencyShape(const nnvm::NodeAttrs& attrs,
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0)) && out_attrs->at(0).Size() != 0U;
 }
 
 inline bool DGLAdjacencyType(const nnvm::NodeAttrs& attrs,

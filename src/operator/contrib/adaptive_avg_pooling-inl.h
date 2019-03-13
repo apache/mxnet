@@ -125,10 +125,13 @@ static bool AdaptiveAvgPoolOpInferShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_shape->size(), 1U) << "Output:[data]";
   const AdaptiveAvgPoolParam& param = nnvm::get<AdaptiveAvgPoolParam>(attrs.parsed);
   mxnet::TShape dshape(in_shape->at(0));
-  if (dshape.ndim() == 0) return false;
-  if (param.output_size.ndim() == 0) {
+  if (mxnet::op::shape_is_none(dshape)) return false;
+  if (mxnet::op::shape_is_none(param.output_size)) {
     dshape[2] = 1;
     dshape[3] = 1;
+  } else if (param.output_size.ndim() == 0) {
+    dshape[2] = param.output_size[0];
+    dshape[3] = param.output_size[0];
   } else if (param.output_size.ndim() == 1) {
     dshape[2] = param.output_size[0];
     dshape[3] = param.output_size[0];
