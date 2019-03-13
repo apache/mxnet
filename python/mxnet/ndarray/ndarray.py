@@ -959,33 +959,30 @@ fixed-size items.
         The return value is a tuple containing the arrays with broadcast shapes.
         """
         block_shape = _broadcast_shapes([arrays[ax] for ax in block_axes])
-        block_ndim = len(block_shape)
+        ndim_blk = len(block_shape)
+        ndim_blk_delta = ndim_blk - len(block_axes)
+        ndim_lead = block_axes[0]
+        ndim_trail = len(arrays) - (block_axes[-1] + 1)
+
         bcast_shape = (
-            tuple(arrays[ax].shape[0] for ax in range(block_axes[0])) +
+            tuple(arrays[ax].shape[0] for ax in range(ndim_lead)) +
             block_shape +
             tuple(arrays[ax].shape[0] for ax in range(block_axes[-1] + 1, len(arrays)))
         )
-        bcast_ndim = len(bcast_shape)
-        bcast_arrays = []
-        ndim_done = 0
-        block_started = block_done = False
-        for ax, idx in enumerate(arrays):
-            # TODO: finish
-            shp = (1,) * (ndim_done + block_ndim - idx.ndim) + idx.shape + (1,) * (bcast_ndim - ndim_done - idx.ndim)
-            bcast_arrays.append(idx.reshape(shp).broadcast_to(bcast_shape))
 
-            if ax in block_axes and not block_started:
-                # Keep `ndim_done` constant to use the same shape for broadcasting
-                # in the block.
-                block_started = True
-            elif block_started and not block_done and ax + 1 not in block_axes:
-                # Done with the block, increment `ndim_done` with the block ndim.
-                block_done = True
-                ndim_done += block_ndim
-            elif ax not in block_axes:
-                # Outside the block, arrays are assumed to have 1 dimension,
-                # so `ndim_done` is incremented by 1 after each.
-                ndim_done += 1
+        bcast_arrays = [None] * len(arrays)
+        for ax in block_axes:
+            arr = arrays[ax].broadcast_to(block_shape)
+            shp = (1,) * ndim_lead + block_shape + (1,) * ndim_trail
+            bcast_arrays[ax] = arr.reshape(shp).broadcast_to(bcast_shape)
+
+        for ax in set(range(len(arrays))) - set(block_axes):
+            shp = [1] * len(bcast_shape)
+            if ax < ndim_lead:
+                shp[ax] = arrays[ax].shape[0]
+            else:
+                shp[ax + ndim_blk_delta] = arrays[ax].shape[0]
+            bcast_arrays[ax] = arrays[ax].reshape(shp).broadcast_to(bcast_shape)
 
         return tuple(bcast_arrays)
 
