@@ -49,6 +49,8 @@ void IndexCopyForward<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
+  CHECK(req[0] != kAddTo);
+  if (req[0] == kNullOp) return;
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   const TBlob& out = outputs[0];
   const TBlob& original_tensor = inputs[0];
@@ -67,6 +69,7 @@ void IndexCopyForward<gpu>(const nnvm::NodeAttrs& attrs,
   });
 }
 
+template<int orig_req, int new_req>
 struct index_copy_bwd_gpu {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(int i,
@@ -77,8 +80,14 @@ struct index_copy_bwd_gpu {
                                   int dim_size,
                                   int idx_size) {
     int index = idx[i / dim_size];
-    new_grad[i] = orig_grad[index * dim_size + i % dim_size];
-    orig_grad[index * dim_size + i % dim_size] = 0;
+    KERNEL_ASSIGN(new_grad[i], new_req, out_grad[index * dim_size + i % dim_size]);
+    if (orig_req == kAddTo) {
+      orig_grad[index * dim_size + i % dim_size] -= new_grad[i];
+    } else if (orig_req == kNullOp) {
+      return;
+    } else {
+      orig_grad[index * dim_size + i % dim_size] = 0;
+    }
   }
 };
 
@@ -99,14 +108,29 @@ void IndexCopyBackward<gpu>(const nnvm::NodeAttrs& attrs,
   const TBlob& in_grad_2 = outputs[2];
   int dim_size = inputs[3].Size() / inputs[2].Size();
   int index_size = inputs[2].Size();
-  copy(s, in_grad_1, out_grad);
   // index_copy_backward
   MSHADOW_TYPE_SWITCH(out_grad.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(index.type_flag_, IType, {
-      Kernel<index_copy_bwd_gpu, gpu>::Launch(
-        s, in_grad_2.Size(), out_grad.dptr<DType>(),
-        in_grad_1.dptr<DType>(), in_grad_2.dptr<DType>(),
-        index.dptr<IType>(), dim_size, index_size);
+      MXNET_REQ_TYPE_SWITCH(req[0], orig_req, {
+        MXNET_REQ_TYPE_SWITCH(req[2], new_req, {
+          switch (orig_req) {
+            case kNullOp:
+              break;
+            case kWriteTo:
+            case kWriteInplace:
+              copy(s, in_grad_1, out_grad);
+              break;
+            case kAddTo:
+              Kernel<op_with_req<op::mshadow_op::plus, kWriteInplace>, gpu>::Launch(
+                s, out_grad.Size(), in_grad_1.dptr<DType>(),
+                out_grad.dptr<DType>(), in_grad_1.dptr<DType>());
+          }
+          Kernel<index_copy_bwd_gpu<orig_req, new_req>, gpu>::Launch(
+            s, in_grad_2.Size(), out_grad.dptr<DType>(),
+            in_grad_1.dptr<DType>(), in_grad_2.dptr<DType>(),
+            index.dptr<IType>(), dim_size, index_size);
+        });
+      });
     });
   });
 }
