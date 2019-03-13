@@ -522,6 +522,32 @@ def test_convolution_options():
     check_consistency_NxM([sym, sym_no_cudnn], ctx_list)
 
 
+@with_seed()
+def test_conv_deconv_guards():
+    # Test cases for convolution and deconvolution via strided fft.  Ensure that the framework
+    # guards against problematic CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING in cuDNN [7.3.1,7.5)
+    # see https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_750.html#rel_750
+    tol = 1e-1
+    for (op, opname) in [(mx.sym.Convolution, 'conv'), (mx.sym.Deconvolution, 'deconv')]:
+        dataname = opname + '_data'
+        ctx = {'ctx': mx.gpu(0), dataname: (32, 32, 64, 64), 'type_dict': {dataname: np.float32}}
+        test_cases = [
+            {'num_filter':32, 'kernel':(6,6), 'pad':(0,0), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(6,6), 'pad':(1,1), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(6,7), 'pad':(0,1), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(7,6), 'pad':(1,0), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(7,7), 'pad':(0,0), 'stride':(2,2), 'name': opname},
+            {'num_filter':32, 'kernel':(7,7), 'pad':(1,1), 'stride':(2,2), 'name': opname}]
+        for test_case_args in test_cases:
+            try:
+                sym = op(**test_case_args)
+                sym_no_cudnn = op(cudnn_off=True, **test_case_args)
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=tol)
+            except:
+                print('Test failure of mx.sym.{} with args: {}'.format(op.__name__, test_case_args))
+                raise
+
+
 def _conv_with_num_streams(seed):
     with random_seed(seed):
         # Try to expose timing-dependent improper workspace sharing by parallel dgrad and wgrad
