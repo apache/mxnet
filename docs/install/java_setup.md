@@ -81,7 +81,7 @@ MXNet-Java can be easily included in your Maven managed project. The Java packag
 </dependency>
 ```
 
-The official Java Packages are released with the release of MXNet 1.4 and are now available on the [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
+The official Java Packages have been released as part of MXNet 1.4 and are available on the [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 <hr>
 
 ### Eclipse IDE Support
