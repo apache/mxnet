@@ -1349,7 +1349,11 @@ def test_ndarray_indexing():
 
         np_indexed_array = np_array[np_index]
         mx_array = mx.nd.array(np_array, dtype=np_array.dtype)
-        mx_indexed_array = mx_array[index]
+        try:
+            mx_indexed_array = mx_array[index]
+        except Exception as e:
+            print('Failed with index=%s' % str(index))
+            raise e
         if is_scalar:
             mx_indexed_array = mx_indexed_array.asscalar()
         else:
