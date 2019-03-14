@@ -351,10 +351,10 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
             label = "Pooling\n{pooltype}, {kernel}/{stride}".format(pooltype=node["attrs"]["pool_type"],
-                                             kernel="x".join(_str2tuple(node["attrs"]["kernel"]))
-                                             if "kernel" in node["attrs"] else "[]",
-                                             stride="x".join(_str2tuple(node["attrs"]["stride"]))
-                                             if "stride" in node["attrs"] else "1")
+                                                                    kernel="x".join(_str2tuple(node["attrs"]["kernel"]))
+                                                                    if "kernel" in node["attrs"] else "[]",
+                                                                    stride="x".join(_str2tuple(node["attrs"]["stride"]))
+                                                                    if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
         elif op in ("Concat", "Flatten", "Reshape"):
             attr["fillcolor"] = cm[5]
