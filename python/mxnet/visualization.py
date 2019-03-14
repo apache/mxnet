@@ -205,7 +205,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             print('=' * line_length)
         else:
             print('_' * line_length)
-    print('Total params: %s' % total_params)
+    print("Total params: {params}".format(params=total_params))
     print('_' * line_length)
 
 def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
@@ -328,30 +328,32 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             label = node["name"]
             attr["fillcolor"] = cm[0]
         elif op == "Convolution":
-            label = r"Convolution\n%s/%s, %s" % ("x".join(_str2tuple(node["attrs"]["kernel"])),
-                                                 "x".join(_str2tuple(node["attrs"]["stride"]))
-                                                 if "stride" in node["attrs"] else "1",
-                                                 node["attrs"]["num_filter"])
+            label = "Convolution\n{kernel}/{stride}, {filter}".format(
+                kernel="x".join(_str2tuple(node["attrs"]["kernel"])),
+                stride="x".join(_str2tuple(node["attrs"]["stride"]))
+                if "stride" in node["attrs"] else "1",
+                filter=node["attrs"]["num_filter"]
+            )
             attr["fillcolor"] = cm[1]
         elif op == "FullyConnected":
-            label = r"FullyConnected\n%s" % node["attrs"]["num_hidden"]
+            label = "FullyConnected\n{hidden}".format(hidden=node["attrs"]["num_hidden"])
             attr["fillcolor"] = cm[1]
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
         elif op == 'Activation':
             act_type = node["attrs"]["act_type"]
-            label = '{operator}\n{activation}'.format(operator=op, activation=act_type)
+            label = 'Activation\n{activation}'.format(activation=act_type)
             attr["fillcolor"] = cm[2]
         elif op == 'LeakyReLU':
             attrs = node.get("attrs")
             act_type = attrs.get("act_type", "Leaky") if attrs else "Leaky"
-            label = '{operator}\n{activation}'.format(operator=op, activation=act_type)
+            label = 'LeakyReLU\n{activation}'.format(activation=act_type)
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
-            label = r"Pooling\n%s, %s/%s" % (node["attrs"]["pool_type"],
-                                             "x".join(_str2tuple(node["attrs"]["kernel"]))
+            label = "Pooling\n{pooltype}, {kernel}/{stride}".format(pooltype=node["attrs"]["pool_type"],
+                                             kernel="x".join(_str2tuple(node["attrs"]["kernel"]))
                                              if "kernel" in node["attrs"] else "[]",
-                                             "x".join(_str2tuple(node["attrs"]["stride"]))
+                                             stride="x".join(_str2tuple(node["attrs"]["stride"]))
                                              if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
         elif op in ("Concat", "Flatten", "Reshape"):
