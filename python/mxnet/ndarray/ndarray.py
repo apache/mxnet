@@ -2097,7 +2097,7 @@ fixed-size items.
         if copy_grad:
             grad = self.grad
             if grad is not None:
-                setattr(self, '_grad', grad.copyto(other, copy_grad=False))
+                setattr(data, '_old_grad', grad.copyto(other, copy_grad=False))
         return data
 
     def copy(self):
@@ -2186,7 +2186,7 @@ fixed-size items.
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayGetGrad(self.handle, ctypes.byref(hdl)))
         if hdl.value is None:
-            return getattr(self, '_grad', None)
+            return getattr(self, '_old_grad', None)
         return _ndarray_cls(hdl)
 
     def detach(self):
