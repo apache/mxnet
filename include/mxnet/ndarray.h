@@ -860,10 +860,12 @@ class NDArray {
         : static_data(false), delay_alloc(true), ctx(ctx_),
           storage_ref_(Storage::_GetSharedRef()) {
       storage_shape = shape;
+      if (shape_is_known(storage_shape)) {
+        shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
+      }
       var = Engine::Get()->NewVariable();
       shandle.ctx = ctx_;
       if (!delay_alloc_) {
-        shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
         this->CheckAndAlloc();
       }
     }

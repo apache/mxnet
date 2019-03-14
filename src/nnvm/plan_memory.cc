@@ -76,7 +76,7 @@ class GraphAllocator {
 
   // request a free storage
   StorageID Request(int dev_id, int dtype, mxnet::TShape shape, uint32_t node_id) {
-    if (!mxnet::op::shape_is_known(shape)) return kBadStorageID;
+    if (!mxnet::shape_is_known(shape)) return kBadStorageID;
     // search memory block in [size / match_range_, size * match_range_)
     // TODO(tqchen) add size of the dtype, assume 4 bytes for now
     size_t size = shape.Size() * 4;

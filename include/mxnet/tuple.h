@@ -608,6 +608,16 @@ class TShape : public Tuple<dim_t> {
 #endif
 };
 
+/*! brief check if shape is known using the NumPy compatible definition.
+ * zero-dim and zero-size tensors are valid. -1 means unknown.*/
+inline bool shape_is_known(const TShape& x) {
+  if (x.ndim() == -1) return false;
+  for (int i = 0; i < x.ndim(); ++i) {
+    if (x[i] == -1) return false;
+  }
+  return true;
+}
+
 /*! \brief helper function to cast type of container elements */
 template<typename SrcIter, typename DstIter>
 inline DstIter ShapeTypeCast(const SrcIter begin,
