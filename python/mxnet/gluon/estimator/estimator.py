@@ -64,7 +64,7 @@ class Estimator(object):
             self.loss = [loss]
         else:
             self.loss = loss or []
-            for loss in self.loss:
+            for l in self.loss:
                 if not isinstance(loss, gluon.loss.Loss):
                     raise ValueError("loss must be a Loss or a list of Loss, refer to gluon.loss.Loss")
 
