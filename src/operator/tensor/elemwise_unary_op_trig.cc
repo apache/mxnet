@@ -99,7 +99,17 @@ The storage type of ``tan`` output depends upon the input storage type:
    - tan(csr) = csr
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{ "_backward_tan" });
+.set_attr<nnvm::FGradient>("FGradient",
+ [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto one = MakeNode("ones_like", n->attrs.name + "_mid_backward", {n->inputs[0]}, nullptr, &n);
+    std::unordered_map<std::string, std::string> x_2_attrs = {{"scalar", "2.0"}};
+    auto x_2 = MakeNode("__pow_scalar__", n->attrs.name + "_mid_backward", {n->inputs[0]}, &x_2_attrs, &n);
+    auto one_plus_x_2 = MakeNode("elemwise_add", n->attrs.name + "_mid_backward", {{one,0,0}, {x_2,0,0}}, nullptr, &n);
+    auto out_grad = MakeNode("elemwise_mul", n->attrs.name + "_backward", {ograds[0], {one_plus_x_2, 0,0}}, nullptr, &n);
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(nnvm::NodeEntry{out_grad, 0, 0});
+    return ret;
+ });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshadow_op::tan_grad>);
 
