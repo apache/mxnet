@@ -2666,7 +2666,7 @@ def _get_indexing_dispatch_code(key):
         elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
             raise ValueError(
                 'NDArray does not support slicing with key {} of type {}.'
-                ''.format(idx), type(idx)
+                ''.format(idx, type(idx))
             )
 
     return _NDARRAY_BASIC_INDEXING
