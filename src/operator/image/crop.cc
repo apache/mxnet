@@ -66,7 +66,7 @@ Example:
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<CropParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", CropShape)
+.set_attr<mxnet::FInferShape>("FInferShape", CropShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", CropOpForward)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_image_crop" })
@@ -75,6 +75,8 @@ Example:
 
 NNVM_REGISTER_OP(_backward_image_crop)
 .set_attr_parser(ParamParser<CropParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", CropOpBackward);
 
