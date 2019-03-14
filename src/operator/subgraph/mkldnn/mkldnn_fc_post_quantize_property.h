@@ -28,10 +28,11 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
-#include "../common.h"
-#include "../subgraph_property.h"
+#include <vector>
 #include "../../nn/fully_connected-inl.h"
 #include "../../quantization/requantize-inl.h"
+#include "../common.h"
+#include "../subgraph_property.h"
 
 namespace mxnet {
 namespace op {

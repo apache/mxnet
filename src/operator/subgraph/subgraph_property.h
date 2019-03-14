@@ -152,6 +152,7 @@ class SubgraphProperty {
     auto it = attrs_.find(name);
     return it != attrs_.end();
   }
+
  protected:
   std::unordered_map<std::string, std::shared_ptr<nnvm::any>> attrs_;
 };

@@ -28,6 +28,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_FC_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <vector>
 #include "../common.h"
 #include "../subgraph_property.h"
 
