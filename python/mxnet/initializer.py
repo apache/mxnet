@@ -159,6 +159,12 @@ class Initializer(object):
             elif desc.endswith('max'):
                 self._init_one(desc, arr)
                 self._verbose_print(desc, 'max', arr)
+            elif desc.endswith('weight_quantize'):
+                self._init_quantized_weight(desc, arr)
+                self._verbose_print(desc, 'weight_quantize', arr)
+            elif desc.endswith('bias_quantize'):
+                self._init_quantized_bias(desc, arr)
+                self._verbose_print(desc, 'bias_quantize', arr)
             else:
                 self._init_default(desc, arr)
 
@@ -235,6 +241,9 @@ class Initializer(object):
     def _init_bias(self, _, arr):
         arr[:] = 0.0
 
+    def _init_quantized_bias(self, _, arr):
+        arr[:] = 0
+
     def _init_gamma(self, _, arr):
         arr[:] = 1.0
 
@@ -244,6 +253,10 @@ class Initializer(object):
     def _init_weight(self, name, arr):
         """Abstract method to Initialize weight."""
         raise NotImplementedError("Must override it")
+
+    def _init_quantized_weight(self, _, arr):
+        _arr = random.randint(-127, 127, dtype='int32').asnumpy()
+        arr[:] = np.int8(_arr)
 
     def _init_default(self, name, _):
         raise ValueError(

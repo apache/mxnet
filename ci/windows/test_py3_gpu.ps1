@@ -22,12 +22,12 @@ $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
-c:\Anaconda3\envs\py3\Scripts\pip install -r tests\requirements.txt
-c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
+C:\Python37\Scripts\pip install -r tests\requirements.txt
+C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
 if (! $?) { Throw ("Error running unittest") }
-c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
+C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
 if (! $?) { Throw ("Error running tests") }
-c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
+C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
 if (! $?) { Throw ("Error running tests") }
-c:\Anaconda3\envs\py3\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
+C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
 if (! $?) { Throw ("Error running tests") }

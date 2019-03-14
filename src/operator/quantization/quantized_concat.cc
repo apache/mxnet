@@ -127,6 +127,9 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 .set_attr<nnvm::FListOutputNames>("FListOutputNames", [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"output", "min_output", "max_output"};
 })
+// TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
+// will be reverted after the improvement of CachedOP is done.
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<nnvm::FInferType>("FInferType", ConcatType)
 .set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
 .set_attr<std::string>("key_var_num_args", "num_args")

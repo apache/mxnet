@@ -16,8 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_CONV_PROPERTY_H_
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_CONV_PROPERTY_H_
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_POST_QUANTIZE_PROPERTY_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_POST_QUANTIZE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
 #include <string>
@@ -111,7 +111,7 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
   }
   static SubgraphPropertyPtr Create() {
     auto property = std::make_shared<SgMKLDNNConvPostQuantizeProperty>();
-    property->SetAttr<std::string>("prop_name",
+    property->SetAttr<std::string>("property_name",
                                    "MKLDNN Convolution post-quantization optimization pass");
     property->SetAttr<bool>("inference_only", true);
     return property;
@@ -166,4 +166,4 @@ class SgMKLDNNConvPostQuantizeProperty : public SubgraphProperty {
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_CONV_PROPERTY_H_
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_CONV_POST_QUANTIZE_PROPERTY_H_
