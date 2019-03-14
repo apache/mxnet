@@ -222,13 +222,16 @@ class BaseSparseNDArray(NDArray):
         self.copyto(res)
         return res
 
-    def copyto(self, other):
+    def copyto(self, other, copy_grad=True):
         """Copies the value of this array to another array.
 
         Parameters
         ----------
         other : NDArray or CSRNDArray or RowSparseNDArray or Context
             The destination array or context.
+
+        copy_grad : bool
+            Default `True`. Whether to copy the gradient if it exists.
 
         Returns
         -------
@@ -240,14 +243,18 @@ class BaseSparseNDArray(NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
                 return False
-            return _internal._copyto(self, out=other)
+            data = _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = _ndarray_cls(_new_alloc_handle(self.stype, self.shape, other,
                                                   True, self.dtype, self._aux_types))
-            return _internal._copyto(self, out=hret)
+            data = _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
-        # pylint: enable= no-member, protected-access
+        if copy_grad:
+            grad = self.grad
+            if grad is not None:
+                setattr(data, '_old_grad', grad.copyto(other, copy_grad=False))
+        return data
 
     def check_format(self, full_check=True):
         """Check whether the NDArray format is valid.
@@ -504,7 +511,7 @@ class CSRNDArray(BaseSparseNDArray):
         return op.cast_storage(self, stype=stype)
         # pylint: enable= no-member, protected-access
 
-    def copyto(self, other):
+    def copyto(self, other, copy_grad=True):
         """Copies the value of this array to another array.
 
         If ``other`` is a ``NDArray`` or ``CSRNDArray`` object, then ``other.shape`` and
@@ -518,6 +525,8 @@ class CSRNDArray(BaseSparseNDArray):
         ----------
         other : NDArray or CSRNDArray or Context
             The destination array or context.
+        copy_grad : bool
+            Default `True`. Whether to copy the gradient if it exists.
 
         Returns
         -------
@@ -526,15 +535,20 @@ class CSRNDArray(BaseSparseNDArray):
             value and ``other`` will point to the same ``NDArray`` or ``CSRNDArray``.
         """
         if isinstance(other, Context):
-            return super(CSRNDArray, self).copyto(other)
+            data = super(CSRNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
             if stype in ('default', 'csr'):
-                return super(CSRNDArray, self).copyto(other)
+                data = super(CSRNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
+        if copy_grad:
+            grad = self.grad
+            if grad is not None:
+                setattr(data, '_old_grad', grad.copyto(other, copy_grad=False))
+        return data
 
     def asscipy(self):
         """Returns a ``scipy.sparse.csr.csr_matrix`` object with value copied from this array
@@ -751,7 +765,7 @@ class RowSparseNDArray(BaseSparseNDArray):
         return op.cast_storage(self, stype=stype)
         # pylint: enable= no-member, protected-access
 
-    def copyto(self, other):
+    def copyto(self, other, copy_grad=True):
         """Copies the value of this array to another array.
 
         If ``other`` is a ``NDArray`` or ``RowSparseNDArray`` object, then ``other.shape``
@@ -765,6 +779,8 @@ class RowSparseNDArray(BaseSparseNDArray):
         ----------
         other : NDArray or RowSparseNDArray or Context
             The destination array or context.
+        copy_grad : bool
+            Default `True`. Whether to copy the gradient if it exists.
 
         Returns
         -------
@@ -773,15 +789,19 @@ class RowSparseNDArray(BaseSparseNDArray):
             return value and ``other`` will point to the same ``NDArray`` or ``RowSparseNDArray``.
         """
         if isinstance(other, Context):
-            return super(RowSparseNDArray, self).copyto(other)
+            data = super(RowSparseNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
             if stype in ('default', 'row_sparse'):
-                return super(RowSparseNDArray, self).copyto(other)
+                data = super(RowSparseNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
+        if copy_grad:
+            grad = self.grad
+            if grad is not None:
+                setattr(data, '_old_grad', grad.copyto(other, copy_grad=False))
 
     def retain(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`retain`.

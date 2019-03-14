@@ -1611,7 +1611,11 @@ def test_as_in_context():
             copy_grad = attr.get('copy_grad', True)
             assert_almost_equal(data.asnumpy(), rtn_data.asnumpy(),
                                 rtol=0, atol=0)
-            if copy_grad or ori_ctx == target_ctx:
+            if ori_ctx == target_ctx:
+                assert rtn_data is data
+                continue
+            if copy_grad:
+                assert rtn_data is not data
                 assert rtn_data.grad.context == target_ctx
                 assert_almost_equal(data.grad.asnumpy(),
                                     rtn_data.grad.asnumpy(),
