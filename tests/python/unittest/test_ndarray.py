@@ -1579,6 +1579,55 @@ def test_ndarray_nan_comparison():
     for i in (np.isnan(data1_grad))[1][0].flatten():
         assert i == True
 
+
+@with_seed()
+def test_as_in_context():
+    shape = (5, 5)
+    cur_ctx = default_context()
+    ctx_pairs = [(mx.cpu(), mx.cpu()),
+                 (mx.cpu(), cur_ctx),
+                 (cur_ctx, mx.cpu()),
+                 (cur_ctx, cur_ctx)]
+    for ori_ctx, target_ctx in ctx_pairs:
+        data = mx.nd.random.uniform(0, 1, shape=shape, ctx=ori_ctx)
+        data2 = mx.nd.random.uniform(0, 1, shape=shape, ctx=ori_ctx)
+        data.attach_grad()
+        assert data.context == ori_ctx
+        assert data2.context == ori_ctx
+
+        with mx.autograd.record():
+            loss = data * data2
+            loss.backward()
+        # check gradient
+        assert_almost_equal(data.grad.asnumpy(),
+                            data2.asnumpy(),
+                            rtol=0, atol=0)
+
+        attrs = [{}, {'copy_grad': True}, {'copy_grad': False}]
+        for attr in attrs:
+            rtn_data = data.as_in_context(target_ctx, **attr)
+            assert rtn_data.context == target_ctx
+            copy_grad = attr.get('copy_grad', True)
+            assert_almost_equal(data.asnumpy(), rtn_data.asnumpy(),
+                                rtol=0, atol=0)
+            if copy_grad or ori_ctx == target_ctx:
+                assert_almost_equal(data.grad.asnumpy(),
+                                    rtn_data.grad.asnumpy(),
+                                    rtol=0, atol=0)
+                rtn_data.attach_grad()
+                data3 = mx.nd.random.uniform(0, 1, shape=shape, ctx=target_ctx)
+                with mx.autograd.record():
+                    loss = rtn_data * data3
+                    loss.backward()
+
+                # check gradient
+                assert_almost_equal(rtn_data.grad.asnumpy(),
+                                    data3.asnumpy(),
+                                    rtol=0, atol=0)
+            else:
+                assert rtn_data.grad is None
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

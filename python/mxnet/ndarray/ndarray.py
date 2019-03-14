@@ -2047,7 +2047,7 @@ fixed-size items.
         self.copyto(res)
         return res
 
-    def copyto(self, other):
+    def copyto(self, other, copy_grad=True):
         """Copies the value of this array to another array.
 
         If ``other`` is a ``NDArray`` object, then ``other.shape`` and
@@ -2061,6 +2061,8 @@ fixed-size items.
         ----------
         other : NDArray or Context
             The destination array or context.
+        copy_grad : bool
+            Default `True`. Whether to copy the gradient if it exists.
 
         Returns
         -------
@@ -2086,12 +2088,17 @@ fixed-size items.
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
                 return False
-            return _internal._copyto(self, out=other)
+            data = _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = NDArray(_new_alloc_handle(self.shape, other, True, self.dtype))
-            return _internal._copyto(self, out=hret)
+            data = _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
+        if copy_grad:
+            grad = self.grad
+            if grad is not None:
+                setattr(self, '_grad', grad.copyto(other, copy_grad=False))
+        return data
 
     def copy(self):
         """Makes a copy of this ``NDArray``, keeping the same context.
@@ -2111,7 +2118,7 @@ fixed-size items.
         """
         return self.copyto(self.context)
 
-    def as_in_context(self, context):
+    def as_in_context(self, context, copy_grad=True):
         """Returns an array on the target device with the same value as this array.
 
         If the target context is the same as ``self.context``, then ``self`` is
@@ -2121,6 +2128,11 @@ fixed-size items.
         ----------
         context : Context
             The target context.
+        copy_grad : bool
+            Default `True`. Be default, as_in_context always returns a ndarray
+            with its gradient. If this is set to `False`, and the target
+            context is different from ``self.context``, the ndarray is
+            returned without its gradient.
 
         Returns
         -------
@@ -2140,7 +2152,7 @@ fixed-size items.
         """
         if self.context == context:
             return self
-        return self.copyto(context)
+        return self.copyto(context, copy_grad=copy_grad)
 
     def attach_grad(self, grad_req='write', stype=None):
         """Attach a gradient buffer to this NDArray, so that `backward`
@@ -2174,7 +2186,7 @@ fixed-size items.
         hdl = NDArrayHandle()
         check_call(_LIB.MXNDArrayGetGrad(self.handle, ctypes.byref(hdl)))
         if hdl.value is None:
-            return None
+            return getattr(self, '_grad', None)
         return _ndarray_cls(hdl)
 
     def detach(self):
