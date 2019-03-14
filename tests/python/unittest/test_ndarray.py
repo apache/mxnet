@@ -1599,6 +1599,7 @@ def test_as_in_context():
             loss = data * data2
             loss.backward()
         # check gradient
+        assert data.grad.context == ori_ctx
         assert_almost_equal(data.grad.asnumpy(),
                             data2.asnumpy(),
                             rtol=0, atol=0)
@@ -1611,6 +1612,7 @@ def test_as_in_context():
             assert_almost_equal(data.asnumpy(), rtn_data.asnumpy(),
                                 rtol=0, atol=0)
             if copy_grad or ori_ctx == target_ctx:
+                assert rtn_data.grad.context == target_ctx
                 assert_almost_equal(data.grad.asnumpy(),
                                     rtn_data.grad.asnumpy(),
                                     rtol=0, atol=0)
