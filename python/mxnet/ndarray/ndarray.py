@@ -401,12 +401,7 @@ fixed-size items.
         This functions supports advanced indexing as defined in `the NumPy
         advanced indexing documentation
         <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
-        with some restrictions:
-
-        - If ``key`` is of type ``list``, only a list of integers, e.g.
-          ``key=[1, 2]``, is supported. Nested lists like ``key=[[1, 2]]`` are
-          not supported.
-        - Boolean array indexing is not supported.
+        with the restriction that boolean array indexing is not supported.
 
         Parameters
         ----------
@@ -449,7 +444,6 @@ fixed-size items.
         """
         key = _indexing_key_expand_implicit_axes(key, self.shape)
         slc_key = tuple(idx for idx in key if idx is not None)
-        indexing_dispatch_code = _get_indexing_dispatch_code(slc_key)
 
         if len(slc_key) < self.ndim:
             raise RuntimeError(
@@ -488,12 +482,7 @@ fixed-size items.
         This functions supports advanced indexing as defined in `the NumPy
         advanced indexing documentation
         <https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html#advanced-indexing>`_,
-        with some restrictions:
-
-        - If ``key`` is of type ``list``, only a list of integers, e.g.
-          ``key=[1, 2]``, is supported. Nested lists like ``key=[[1, 2]]`` are
-          not supported.
-        - Boolean array indexing is not supported.
+        with the restriction that boolean array indexing is not supported.
 
         Parameters
         ----------
@@ -2628,13 +2617,14 @@ def _int_to_slice(idx):
 def _shape_for_bcast(shape, target_ndim, new_axes):
     """Return shape with added axes for broadcasting in ``target_ndim`` dimensions.
 
-    The returned shape has fixed ``1`` entries in locations indexed by ``new_axes``,
-    and the rest is filled from the back with ``shape`` while possible, after
-    that with ``1``.
+    If ``shape`` is shorter than ``target_ndim``, fixed ``1`` entries are inserted
+    into the returned shape, in locations indexed by ``new_axes``. The rest is
+    filled from the back with ``shape`` while possible.
     """
     new_shape = [None] * target_ndim
-    for new_ax in new_axes:
-        new_shape[new_ax] = 1
+    if len(shape) < target_ndim:
+        for new_ax in new_axes:
+            new_shape[new_ax] = 1
 
     # Replace `None` from the right with `shape` entries from the right as
     # long as possible, thereafter with 1.
@@ -2670,15 +2660,6 @@ def _get_indexing_dispatch_code(key):
     assert isinstance(key, tuple)
 
     for idx in key:
-        if isinstance(idx, list):
-            for i in idx:
-                if not isinstance(i, integer_types):
-                    raise TypeError(
-                        'Indexing NDArray only supports a list of integers as index '
-                        'when key is of list type, got entry {} of type {}.'
-                        ''.format(i, type(i))
-                    )
-
         if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
             return _NDARRAY_ADVANCED_INDEXING
 
