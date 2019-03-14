@@ -14,7 +14,10 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Generate MXNet implementation of CapsNet"""
+"""Generate MXNet implementation of CapsNet
+Reference 1: https://www.cs.toronto.edu/~fritz/absps/transauto6.pdf
+Reference 2: https://arxiv.org/pdf/1710.09829.pdf
+"""
 import os
 import re
 import gzip
@@ -190,7 +193,7 @@ class SimpleLRScheduler(mx.lr_scheduler.LRScheduler):
 
 
 def do_training(num_epoch, optimizer, kvstore, learning_rate, model_prefix, decay):
-    """Run training to CapsNet"""
+    """Perform CapsNet training"""
     summary_writer = SummaryWriter(args.tblog_dir)
     lr_scheduler = SimpleLRScheduler(learning_rate)
     optimizer_params = {'lr_scheduler': lr_scheduler}
