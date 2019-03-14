@@ -184,7 +184,7 @@ int main(int argc, char const *argv[]) {
 #if !MXNET_USE_CPU
   if (num_gpu > 0) {
     ctx = Context::gpu();
-    batch_size = 50;
+    batch_size = 32;
   }
 #endif
 
