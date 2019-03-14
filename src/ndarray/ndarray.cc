@@ -134,8 +134,9 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
       << "data is expected to be allocated after aux_data";
   auto dbytes = shape.Size() * mshadow::mshadow_sizeof(dtype);
   if (shandle.size < dbytes) {
-    // free storage and alloc again
+    // free storage
     Storage::Get()->Free(shandle);
+    // init storage
     shandle = Storage::Get()->Alloc(dbytes, ctx);
 #if MXNET_USE_MKLDNN == 1
     mkl_mem_ = nullptr;
