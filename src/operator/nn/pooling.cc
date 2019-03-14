@@ -43,19 +43,19 @@ void PoolingParamParser(nnvm::NodeAttrs *attrs) {
   if (param.kernel.ndim() > 0)
     param.layout = param.GetLayout(param.kernel.ndim() + 2);
   if (param.kernel.ndim() == 1) {
-    if (param.stride.ndim() == -1) param.stride = Shape1(1);
-    if (param.pad.ndim() == -1) param.pad = Shape1(0);
+    if (param.stride.ndim() == 0) param.stride = Shape1(1);
+    if (param.pad.ndim() == 0) param.pad = Shape1(0);
   } else if (param.kernel.ndim() == 2) {
-    if (param.stride.ndim() == -1) param.stride = Shape2(1, 1);
-    if (param.pad.ndim() == -1) param.pad = Shape2(0, 0);
+    if (param.stride.ndim() == 0) param.stride = Shape2(1, 1);
+    if (param.pad.ndim() == 0) param.pad = Shape2(0, 0);
   } else {
       // ignore kernel size only if global_pool not assigned false
       if (param.global_pool == false) {
         CHECK_EQ(param.kernel.ndim(), 3U) << param.kernel.ndim()
             << "D pooling not supported";
       }
-    if (param.stride.ndim() == -1) param.stride = Shape3(1, 1, 1);
-    if (param.pad.ndim() == -1) param.pad = Shape3(0, 0, 0);
+    if (param.stride.ndim() == 0) param.stride = Shape3(1, 1, 1);
+    if (param.pad.ndim() == 0) param.pad = Shape3(0, 0, 0);
   }
   attrs->parsed = std::move(param);
 }
@@ -142,7 +142,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
     if (MKLDNNRequireWorkspace(param) && SupportMKLDNNPooling(param))
         out_shape->push_back(oshape);   // for workspace
 #endif
-  } else if (param.kernel.ndim() <= 0) {
+  } else if (param.kernel.ndim() == 0) {
     return false;
   } else if (param.kernel.ndim() == 1) {
     CHECK_EQ(dshape.ndim(), 3U) <<

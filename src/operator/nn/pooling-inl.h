@@ -55,7 +55,7 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
   dmlc::optional<bool> count_include_pad;
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(PoolingParam) {
-    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape())  // add default value here
+    DMLC_DECLARE_FIELD(kernel).set_default(mxnet::TShape(0))  // add default value here
     .enforce_nonzero()
     .describe("Pooling kernel size: (y, x) or (d, y, x)");
 
@@ -78,11 +78,11 @@ struct PoolingParam : public dmlc::Parameter<PoolingParam> {
     .add_enum("same", pool_enum::kSame)
     .describe("Pooling convention to be applied.");
 
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0))
     .enforce_nonzero()
     .describe("Stride: for pooling (y, x) or (d, y, x). Defaults to 1 for each dimension.");
 
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0))
     .describe("Pad for pooling: (y, x) or (d, y, x). Defaults to no padding.");
 
     DMLC_DECLARE_FIELD(p_value).set_default(dmlc::optional<int>())

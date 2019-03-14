@@ -69,11 +69,11 @@ struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (w,), (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0))
     .describe("Convolution stride: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0))
     .describe("Convolution dilate: (w,), (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0))
     .describe("Zero pad for convolution: (w,), (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("Convolution filter(channel) number");

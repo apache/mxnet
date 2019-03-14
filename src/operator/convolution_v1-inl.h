@@ -64,11 +64,11 @@ struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionV1Param) {
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0))
     .describe("convolution stride: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0))
     .describe("convolution dilate: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0))
     .describe("pad for convolution: (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
@@ -377,15 +377,15 @@ class ConvolutionV1Prop : public OperatorProperty {
     param_.Init(kwargs);
     if (param_.kernel.ndim() == 2) {
       param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-      if (param_.stride.ndim() == -1) param_.stride = Shape2(1, 1);
-      if (param_.dilate.ndim() == -1) param_.dilate = Shape2(1, 1);
-      if (param_.pad.ndim() == -1) param_.pad = Shape2(0, 0);
+      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
+      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
     } else {
       CHECK_EQ(param_.kernel.ndim(), 3U) << param_.kernel.ndim() << "D convolution not supported";
       param_.layout = param_.layout ? param_.layout.value(): mshadow::kNCDHW;
-      if (param_.stride.ndim() == -1) param_.stride = Shape3(1, 1, 1);
-      if (param_.dilate.ndim() == -1) param_.dilate = Shape3(1, 1, 1);
-      if (param_.pad.ndim() == -1) param_.pad = Shape3(0, 0, 0);
+      if (param_.stride.ndim() == 0) param_.stride = Shape3(1, 1, 1);
+      if (param_.dilate.ndim() == 0) param_.dilate = Shape3(1, 1, 1);
+      if (param_.pad.ndim() == 0) param_.pad = Shape3(0, 0, 0);
     }
   }
 

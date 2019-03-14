@@ -75,7 +75,7 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .add_enum("always", dropout::kAlways)
     .set_default(dropout::kTraining)
     .describe("Whether to only turn on dropout during training or to also turn on for inference.");
-    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0))
     .describe("Axes for variational dropout kernel.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(false))
     .describe("Whether to turn off cudnn in dropout operator. "
@@ -340,7 +340,7 @@ class DropoutOp {
       const TBlob &mask = out_data[dropout::kMask];
       if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
-        if (this->axes_.ndim() == -1) {
+        if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT
           if (MKLAvailable()) {
             MKLForward(ctx, in_data, out_data);
@@ -416,7 +416,7 @@ class DropoutOp {
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
-      if (this->axes_.ndim() == -1) {
+      if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT
         if (MKLAvailable()) {
           MKLBackward(ctx, in_grad, out_data, out_grad);
