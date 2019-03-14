@@ -157,6 +157,10 @@ def waitall():
     """Wait for all async operations to finish in MXNet.
 
     This function is used for benchmarking only.
+
+    .. note::
+
+       If your mxnet code throws an exception, then waitall can cause performance impact.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
