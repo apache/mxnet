@@ -49,6 +49,52 @@ def test_parameter():
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
+def test_parameter_callback():
+    def param_init_shape_callback(param):
+        callback_results['shape'] = param.data().shape
+
+    def param_init_context_callback(param):
+        callback_results['context'] = param.data().context
+
+    def param_deferred_init_callback(param):
+        param_data.append(param.data())
+
+    # Test callback in Parameter creation
+    callback_results = {}
+    p1 = gluon.Parameter('weight', shape=(10, 10),
+                         post_init_callback=param_init_shape_callback)
+    p1.initialize(init='xavier')
+    assert callback_results.get('shape', None) == (10, 10)
+
+    # Test callback in calling initialize
+    callback_results = {}
+    p2 = gluon.Parameter('weight', shape=(10, 10))
+    p2.initialize(init='xavier', post_init_callback=param_init_shape_callback)
+    assert callback_results.get('shape', None) == (10, 10)
+
+    # Test multiple callbacks
+    callback_results = {}
+    p3 = gluon.Parameter('weight', shape=(10, 10),
+                         post_init_callback=param_init_shape_callback)
+    p3.initialize(init='xavier', ctx=mx.cpu(0),
+                  post_init_callback=param_init_context_callback)
+    assert callback_results.get('shape', None) == (10, 10)
+    assert callback_results.get('context', None) == mx.cpu(0)
+
+    # Test callback for deferred initialization
+    param_data = []
+    layer = nn.Conv2D(10, 2)
+    layer.collect_params().initialize(
+        post_init_callback=param_deferred_init_callback)
+
+    num_params = len(layer.collect_params().items())
+    assert len(param_data) > 0 and len(param_data) < num_params
+
+    x = mx.nd.ones((5, 4, 10, 10))
+    layer(x)
+    assert len(param_data) == num_params
+
+@with_seed()
 @raises(AssertionError)
 def test_invalid_parameter_stype():
     p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
