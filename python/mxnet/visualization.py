@@ -343,7 +343,8 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
             label = r"Pooling\n%s, %s/%s" % (node["attrs"]["pool_type"],
-                                             "x".join(_str2tuple(node["attrs"]["kernel"])),
+                                             "x".join(_str2tuple(node["attrs"]["kernel"]))
+                                             if "kernel" in node["attrs"] else "[]",
                                              "x".join(_str2tuple(node["attrs"]["stride"]))
                                              if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
