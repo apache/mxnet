@@ -1026,7 +1026,7 @@ class SymbolBlock(HybridBlock):
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
-        modstr = '\n'.join(['{block}'.format(block=self.__dict__['_cached_graph'][-1])])
+        modstr = '\n'.join(['{block}'.format(block=self._cached_graph[-1])])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
