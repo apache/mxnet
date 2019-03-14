@@ -339,7 +339,12 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         elif op == "BatchNorm":
             attr["fillcolor"] = cm[3]
         elif op in ('Activation', 'LeakyReLU'):
-            label = r"%s\n%s" % (op, node["attrs"]["act_type"])
+            if op == "LeakyReLU":
+                attrs = node.get("attrs")
+                act_type = attrs.get("act_type", "Leaky") if attrs else "Leaky"
+            else:
+                act_type = node["attrs"]["act_type"]
+            label = r"%s\n%s" % (op, str(act_type))
             attr["fillcolor"] = cm[2]
         elif op == "Pooling":
             label = r"Pooling\n%s, %s/%s" % (node["attrs"]["pool_type"],
