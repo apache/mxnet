@@ -64,10 +64,17 @@ class Estimator(object):
             self.loss = [loss]
         else:
             self.loss = loss or []
+            for loss in self.loss:
+                if not isinstance(loss, gluon.loss.Loss):
+                    raise ValueError("loss must be a Loss or a list of Loss, refer to gluon.loss.Loss")
+
         if isinstance(metrics, EvalMetric):
             self.metrics = [metrics]
         else:
             self.metrics = metrics or []
+            for metric in self.metrics:
+                if not isinstance(metric, EvalMetric):
+                    raise ValueError("metrics must be a Metric or a list of Metric, refer to mxnet.metric.EvalMetric")
 
         self.initializer = initializer
         # store training statistics
@@ -98,7 +105,7 @@ class Estimator(object):
                 if num_gpus() > 1:
                     warnings.warn("You have multiple GPUs, gpu(0) will be used by default."
                                   "To utilize all your GPUs, specify context as a list of gpus, "
-                                  "e.g. context=[mx.gpu(0), mx.gpu(2)] ")
+                                  "e.g. context=[mx.gpu(0), mx.gpu(1)] ")
                 self.context = [gpu(0)]
             else:
                 self.context = [cpu()]
