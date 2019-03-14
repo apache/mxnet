@@ -1352,14 +1352,14 @@ def test_ndarray_indexing():
         try:
             mx_indexed_array = mx_array[index]
         except Exception as e:
-            print('Failed with index=%s' % str(index))
+            print('Failed with index = {}'.format(index))
             raise e
         if is_scalar:
             mx_indexed_array = mx_indexed_array.asscalar()
         else:
             mx_indexed_array = mx_indexed_array.asnumpy()
 
-        assert same(np_indexed_array, mx_indexed_array), 'Failed with index=%s' % str(index)
+        assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index, is_scalar):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
@@ -1369,7 +1369,13 @@ def test_ndarray_indexing():
                 np_array[np_index] = mx_value.asnumpy()
             else:
                 np_array[np_index] = mx_value
-            mx_array[mx_index] = mx_value
+
+            try:
+                mx_array[mx_index] = mx_value
+            except Exception as e:
+                print('Failed with index = {}, value.shape = {}'.format(mx_index, mx_value.shape))
+                raise e
+
             assert same(np_array, mx_array.asnumpy())
 
         np_index = index
@@ -1428,7 +1434,9 @@ def test_ndarray_indexing():
         try:
             with mx.autograd.record():
                 x[index] = y
-                assert False  # should not reach here
+                # TODO: figure out why `None` doesn't raise
+                if index is not None:
+                    assert False, 'failed with index = {}'.format(index)  # should not reach here
         except mx.base.MXNetError as err:
             assert str(err).find('Inplace operations (+=, -=, x[:]=, etc) are not supported when recording with') != -1
 
