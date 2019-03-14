@@ -420,7 +420,7 @@ void ThreadedEngine::WaitForAll() {
     // iterate through all exception refs
     for (auto itr = global_exception_refs_.begin();
          itr != global_exception_refs_.end(); ++itr) {
-      const std::shared_ptr<std::exception_ptr>& ptr = *itr;
+      const ExceptionRef& ptr = *itr;
       // the first exception will be saved to be rethrown later
       if (*ptr != nullptr && !tmp) {
         tmp = *ptr;

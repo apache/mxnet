@@ -60,6 +60,9 @@ namespace engine {
 // Forward declarations
 struct ThreadedOpr;
 
+/*! shared_ptr to exception_ptr, used for exception handling */
+typedef std::shared_ptr<std::exception_ptr> ExceptionRef;
+
 /*!
  * \brief Operation block in the scheduler.
  *  Each OprBlock corresponds to an operation pushed to the engine.
@@ -182,7 +185,7 @@ class ThreadedVar final
    * cannot modify state of exception object since dereferencing
    * exception_ptr is undefined behavior. Using shared_ptr to hold
    * exception_ptr and overcome this limitation */
-  std::shared_ptr<std::exception_ptr> var_exception;
+  ExceptionRef var_exception;
 
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
@@ -263,7 +266,7 @@ struct ThreadedOpr final : public Opr,
    * cannot modify state of exception object since dereferencing
    * exception_ptr is undefined behavior. Using shared_ptr to hold
    * exception_ptr and overcome this limitation */
-  std::shared_ptr<std::exception_ptr> opr_exception;
+  ExceptionRef opr_exception;
 };  // struct ThreadedOpr
 
 /*!
@@ -440,8 +443,6 @@ class ThreadedEngine : public Engine {
   };
   /*! thread local store for bulk */
   typedef dmlc::ThreadLocalStore<BulkStatus> BulkStatusStore;
-  /*! shared_ptr to exception_ptr, used for exception handling */
-  typedef std::shared_ptr<std::exception_ptr> ExceptionRef;
 
   /*!
    * \brief check if thee is duplication in const_vars and mutable_vars.
