@@ -68,10 +68,15 @@ Example:
 .set_attr_parser(ParamParser<CropParam>)
 .set_attr<nnvm::FInferShape>("FInferShape", CropShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", Crop)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.set_attr<FCompute>("FCompute<cpu>", CropOpForward)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_image_crop" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(CropParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_image_crop)
+.set_attr_parser(ParamParser<CropParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", CropOpBackward);
 
 }  // namespace image
 }  // namespace op

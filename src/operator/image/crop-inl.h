@@ -56,7 +56,7 @@ struct CropParam : public dmlc::Parameter<CropParam> {
     DMLC_DECLARE_FIELD(width)
     .describe("Width of the cropping area.");
     DMLC_DECLARE_FIELD(height)
-    .describe("Top boundary of the cropping area");
+    .describe("Height of the cropping area.");
   }
 };
 
@@ -73,6 +73,10 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
 
   CHECK((param.height > 0) && (param.width > 0))
       << "Input height and width must be greater than 0";
+  CHECK(param.x + param.width <= ishape[ishape.ndim() - 2])
+        << " x + width should not be greater than input width";
+  CHECK(param.y + param.height <= ishape[ishape.ndim() - 3])
+        << " y + height should not be greater than input height";
   if (ishape.ndim() == 3) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({param.height, param.width, ishape[C]}));
   } else {
@@ -94,10 +98,6 @@ inline void CropImpl(int x,
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
-    CHECK(x + width <= data.shape_[ndim - 2])
-        << " x + width should not be greater than input width";
-    CHECK(y + height <= data.shape_[ndim - 3])
-        << " y + height should not be greater than input height";
     Stream<cpu>* s = ctx.get_stream<cpu>();
     common::StaticArray<index_t, ndim> begin = {0}, step = {1};
     if (ndim == 3) {
@@ -108,29 +108,72 @@ inline void CropImpl(int x,
       begin[2] = x;
     }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
-      Tensor<cpu, ndim, DType> input_tensor = data.get<cpu, ndim, DType>(s);
-      Tensor<cpu, ndim, DType> output_tensor = out.get<cpu, ndim, DType>(s);
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         size_t num_threads = out.shape_.FlatTo2D()[0];
         mxnet_op::Kernel<slice_forward<ndim, Req, cpu>, cpu>::Launch(s, num_threads,
-          output_tensor.dptr_, input_tensor.dptr_,
-          input_tensor.shape_, output_tensor.shape_, begin, step);
+          out.dptr<DType>(), data.dptr<DType>(),
+          data.shape_.get<ndim>(), out.shape_.get<ndim>(), begin, step);
       })
     })
   })
 }
 
-inline void Crop(const nnvm::NodeAttrs &attrs,
+inline void CropBackwardImpl(int x,
+                      int y,
+                      int width,
+                      int height,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<TBlob> &outputs,
+                      const OpContext &ctx,
+                      const std::vector<OpReqType> &req) {
+  using namespace mshadow;
+  if (req[0] == kNullOp) return;
+  const TBlob& output_grad = inputs[0];
+  const TBlob& input_grad = outputs[0];
+  Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (req[0] == kWriteTo) {
+    Fill(s, input_grad, req[0], 0);
+  } else if (req[0] == kWriteInplace) {
+    LOG(FATAL) << "_backward_image_crop does not support kWriteInplace";
+  }
+  MXNET_NDIM_SWITCH(output_grad.ndim(), ndim, {
+    common::StaticArray<index_t, ndim> begin = {0}, step = {1};
+    if (ndim == 3) {
+      begin[0] = y;
+      begin[1] = x;
+    } else {
+      begin[1] = y;
+      begin[2] = x;
+    }
+    MSHADOW_TYPE_SWITCH(input_grad.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        size_t num_threads = output_grad.shape_.FlatTo2D()[0];
+        mxnet_op::Kernel<slice_assign<ndim, Req, cpu>, cpu>::Launch(s, num_threads,
+          input_grad.dptr<DType>(), output_grad.dptr<DType>(),
+          output_grad.shape_.get<ndim>(), input_grad.shape_.get<ndim>(), begin, step);
+      })
+    })
+  })
+}
+
+inline void CropOpForward(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
                    const std::vector<TBlob> &outputs) {
   CHECK_EQ(outputs.size(), 1U);
   const CropParam& param = nnvm::get<CropParam>(attrs.parsed);
-  CHECK((param.height > 0) && (param.width > 0))
-      << "Input height and width must be greater than 0";
-
   CropImpl(param.x, param.y, param.width, param.height, inputs, outputs, ctx, req);
+}
+
+inline void CropOpBackward(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  CHECK_EQ(outputs.size(), 1U);
+  const CropParam& param = nnvm::get<CropParam>(attrs.parsed);
+  CropBackwardImpl(param.x, param.y, param.width, param.height, inputs, outputs, ctx, req);
 }
 }  // namespace image
 }  // namespace op

@@ -228,14 +228,14 @@ class RandomResizedCrop(Block):
         return image.random_size_crop(x, *self._args)[0]
 
 
-class Crop(HybridBlock):
+class CropResize(HybridBlock):
     """Crop the input image with and optionally resize it.
     Makes a crop of the original image then optionally resize it to the specified size.
     Parameters
     ----------
-    x0 : int
+    x : int
         Left boundary of the cropping area
-    y0 : int
+    y : int
         Top boundary of the cropping area
     w : int
         Width of the cropping area
@@ -261,18 +261,18 @@ class Crop(HybridBlock):
     >>> transformer(image)
     <NDArray 3x50x50 @cpu(0)>
     """
-    def __init__(self, x0, y0, width, height, size=None, interpolation=None):
-        super(Crop, self).__init__()
-        self._x0 = x0
-        self._y0 = y0
+    def __init__(self, x, y, width, height, size=None, interpolation=None):
+        super(CropResize, self).__init__()
+        self._x = x
+        self._y = y
         self._width = width
         self._height = height
         self._size = size
         self._interpolation = interpolation
 
     def hybrid_forward(self, F, x):
-        out = F.image.crop(x, self._x0, self._y0, self._width, self._height)
-        if self._size is not None:
+        out = F.image.crop(x, self._x, self._y, self._width, self._height)
+        if self._size:
             out = F.image.resize(out, self._size, False, self._interpolation)
         return out
 
