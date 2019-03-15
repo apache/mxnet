@@ -49,10 +49,10 @@ def test_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    mx.test_utils.assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]))
+    assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]))
 
     L = loss(output, label, weighting).asnumpy()
-    mx.test_utils.assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
+    assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
 
 
 def get_net(num_hidden, flatten=True):
@@ -126,8 +126,8 @@ def test_logistic_loss_equal_bce():
     loss_bce = gluon.loss.SigmoidBCELoss(from_sigmoid=False)
     data = mx.random.uniform(-10, 10, shape=(N, 1))
     label = mx.nd.round(mx.random.uniform(0, 1, shape=(N, 1)))
-    assert_almost_equal(loss_binary(data, label).asnumpy(), loss_bce(data, label).asnumpy(), atol=1e-6)
-    assert_almost_equal(loss_signed(data, 2 * label - 1).asnumpy(), loss_bce(data, label).asnumpy(), atol=1e-6)
+    assert_almost_equal(loss_binary(data, label), loss_bce(data, label), atol=1e-6)
+    assert_almost_equal(loss_signed(data, 2 * label - 1), loss_bce(data, label), atol=1e-6)
 
 @with_seed()
 def test_kl_loss():
@@ -186,27 +186,27 @@ def test_l1_loss():
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC')
     l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss(layout='TNC', label_layout='TN')
     l = loss(mx.nd.ones((20,2,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]).T)
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[2,1,2,2],[3,2,2,2]]), None, mx.nd.array([2,3]))
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,-1,-1],[3,2,2,-1]]), mx.nd.array([20,20]))
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
 
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,25,4)), mx.nd.array([[2,1,3,3],[3,2,2,3]]), mx.nd.array([20,20]), mx.nd.array([2,3]))
-    mx.test_utils.assert_almost_equal(l.asnumpy(), np.array([18.82820702, 16.50581741]))
+    assert_almost_equal(l, np.array([18.82820702, 16.50581741]))
 
 
 @with_seed()
@@ -367,12 +367,14 @@ def test_cosine_loss():
     assert_almost_equal(loss.asnumpy(), numpy_loss.asnumpy(), rtol=1e-3, atol=1e-5)
 
 def test_poisson_nllloss():
-    pred = mx.nd.random.normal(shape=(3, 4))
+    shape=(3, 4)
+    not_axis0 = tuple(range(1, len(shape)))
+    pred = mx.nd.random.normal(shape=shape)
     min_pred = mx.nd.min(pred)
     #This is necessary to ensure only positive random values are generated for prediction,
     # to avoid ivalid log calculation
     pred[:] = pred + mx.nd.abs(min_pred)
-    target = mx.nd.random.normal(shape=(3, 4))
+    target = mx.nd.random.normal(shape=shape)
     min_target = mx.nd.min(target)
     #This is necessary to ensure only positive random values are generated for prediction,
     # to avoid ivalid log calculation
@@ -396,8 +398,9 @@ def test_poisson_nllloss():
         assert_almost_equal(np_loss_no_logits, loss_no_logits.asscalar())
 
     #3) Testing for Sterling approximation
-    np_pred = np.random.uniform(1, 5, (2, 3))
-    np_target = np.random.uniform(1, 5, (2, 3))
+    shape=(2, 3)
+    np_pred = np.random.uniform(1, 5, shape)
+    np_target = np.random.uniform(1, 5, shape)
     np_compute_full = np.mean((np_pred - np_target * np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
      np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)))
     Loss_compute_full = gluon.loss.PoissonNLLLoss(from_logits=False, compute_full=True)
