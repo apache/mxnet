@@ -320,7 +320,7 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
     if (!shape_is_known(g_out_shape))
       continue;
 
-    auto out = mxnet::TShape(g_out_shape.ndim() + 1);
+    auto out = mxnet::TShape(g_out_shape.ndim() + 1, -1);
     out[0] = len;
     for (int i = 1; i < out.ndim(); i++)
       out[i] = g_out_shape[i - 1];
@@ -340,11 +340,11 @@ static bool ForeachShape(const nnvm::NodeAttrs& attrs,
       continue;
 
     if (data_1d[i]) {
-      mxnet::TShape s(1);
+      mxnet::TShape s(1, -1);
       s[0] = len;
       SHAPE_ASSIGN_CHECK(*in_shape, i, s);
     } else {
-      auto in = mxnet::TShape(shape.ndim() + 1);
+      auto in = mxnet::TShape(shape.ndim() + 1, -1);
       in[0] = len;
       for (int i = 1; i < in.ndim(); i++)
         in[i] = shape[i - 1];
@@ -799,7 +799,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
         // when the shape is not fully inferred
         continue;
       }
-      auto out = mxnet::TShape(g_out_shape.ndim() + 1);
+      auto out = mxnet::TShape(g_out_shape.ndim() + 1, -1);
       out[0] = params.max_iterations;
       for (int i = 1; i < out.ndim(); i++)
         out[i] = g_out_shape[i - 1];
@@ -817,7 +817,7 @@ static bool WhileLoopShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  mxnet::ShapeVector cond_out_shape{mxnet::TShape(1U)};  // this means: [(1, )]
+  mxnet::ShapeVector cond_out_shape{mxnet::TShape(1, 1)};  // this means: [(1, )]
   mxnet::ShapeVector func_out_shape(params.num_outputs);
   CHECK(params.sync_in_out(in_shape, out_shape, is_udf));
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, params.cond_input_locs, 0, false);
@@ -1107,7 +1107,7 @@ static bool CondShape(const nnvm::NodeAttrs& attrs,
     }
     return g.GetAttr<size_t>("shape_num_unknown_nodes") == 0;
   };
-  ShapeVector cond_out_shape{mxnet::TShape(1U)};  // this means: [(1, )]
+  ShapeVector cond_out_shape{mxnet::TShape(1, 1)};  // this means: [(1, )]
   ShapeVector then_out_shape(params.num_outputs);
   ShapeVector else_out_shape(params.num_outputs);
   bool succ_0 = infer_subg(attrs.subgraphs[0], &cond_out_shape, \

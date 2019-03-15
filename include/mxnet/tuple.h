@@ -383,14 +383,11 @@ class TShape : public Tuple<dim_t> {
     this->SetDim(-1);
   }
   /*!
-   * constructor to construct a shape with all 1.
-   * TODO(junwu): The value should default to -1. Need to keep 1 for now
-   * for backward compatibility. Change it to -1 in the future when we can
-   * break backward compatibility.
+   * constructor to construct a shape with all `value`.
    * \param ndim the number of dimension
    * \param value the dimension size for all dims
    */
-  inline TShape(int ndim, int value = 1) {  // NOLINT(*)
+  inline TShape(int ndim, int value) {  // NOLINT(*)
     this->SetDim(ndim);
     if (ndim > 0) {
       std::fill_n(begin(), ndim, value);
@@ -635,7 +632,7 @@ inline DstIter ShapeTypeCast(const SrcIter begin,
 template<typename SrcIter>
 inline TShape ShapeTypeCast(const SrcIter begin, const SrcIter end) {
   size_t ndim = std::distance(begin, end);
-  TShape res(ndim);
+  TShape res(ndim, -1);
   ShapeTypeCast(begin, end, res.begin());
   return res;
 }

@@ -91,7 +91,7 @@ static bool SoftmaxOutputShape(const nnvm::NodeAttrs& attrs,
   if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
     if (param.multi_output) {
       mxnet::TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
-      mxnet::TShape lshape2(dshape.ndim() - 1);
+      mxnet::TShape lshape2(dshape.ndim() - 1, -1);
       lshape2[0] = dshape[0];
       for (int i = 2; i < dshape.ndim(); ++i)
         lshape2[i-1] = dshape[i];
@@ -109,7 +109,7 @@ static bool SoftmaxOutputShape(const nnvm::NodeAttrs& attrs,
         throw InferShapeError(os.str(), softmaxout_enum::kLabel);
       }
     } else {
-      mxnet::TShape label_shape(dshape.ndim() - 1);
+      mxnet::TShape label_shape(dshape.ndim() - 1, -1);
       for (int i = 0; i + 1 < dshape.ndim(); ++i)
         label_shape[i] = dshape[i];
       SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);

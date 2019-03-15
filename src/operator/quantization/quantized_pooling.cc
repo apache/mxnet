@@ -45,7 +45,7 @@ bool QuantizedPoolingShape(const nnvm::NodeAttrs& attrs,
       << "QuantizedPoolingOp only supports NCHW layout for now, saw " << layout;
   // NCHW layout
   const int N = 0, H = 2, W = 3, C = 1;
-  mxnet::TShape oshape(4);
+  mxnet::TShape oshape(4, -1);
   CHECK_EQ(param.kernel.ndim(), 2) << "QuantizedPoolingOp only supports 2D pooling for now";
   CHECK(param.kernel[0] <= dshape[H] + 2 * param.pad[0])
       << "kernel size (" << param.kernel[0]

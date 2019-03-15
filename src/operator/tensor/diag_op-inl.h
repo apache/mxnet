@@ -91,12 +91,12 @@ inline mxnet::TShape DiagShapeImpl(const mxnet::TShape& ishape, const int k,
     std::swap(x1, x2);
   }
 
-  int32_t n_dim = static_cast<int32_t>(ishape.ndim()) - 1;
-  mxnet::TShape oshape(n_dim);
+  int32_t n_dim = ishape.ndim() - 1;
+  mxnet::TShape oshape(n_dim, -1);
 
   // remove axis1 and axis2 and append the new axis to the end
   uint32_t idx = 0;
-  for (int32_t i = 0; i <= n_dim; ++i) {
+  for (int i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
     }

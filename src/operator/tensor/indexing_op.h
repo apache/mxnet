@@ -151,14 +151,14 @@ inline bool EmbeddingOpShape(const nnvm::NodeAttrs& attrs,
                                                            param.output_dim));
   out_attrs->clear();
 
-  mxnet::TShape oshape(dshape.ndim()+1);
+  mxnet::TShape oshape(dshape.ndim()+1, -1);
   for (int i = 0; i < dshape.ndim(); ++i) {
     oshape[i] = dshape[i];
   }
   oshape[dshape.ndim()] = param.output_dim;
 
   out_attrs->push_back(oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 template<typename ParamType>
@@ -687,13 +687,13 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
   if (param.mode == take_::kRaise) {
     LOG(FATAL) << "Raise is not supported for the time being...";
   }
-  CHECK(param.axis >= -1 * (int)arrshape.ndim() && param.axis < (int)arrshape.ndim())
+  CHECK(param.axis >= -1 * arrshape.ndim() && param.axis < arrshape.ndim())
     << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
 
   out_attrs->clear();
 
   const index_t actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
-  mxnet::TShape oshape(idxshape.ndim() + arrshape.ndim() - 1);
+  mxnet::TShape oshape(idxshape.ndim() + arrshape.ndim() - 1, -1);
   for (index_t i = 0; i < idxshape.ndim(); ++i) {
     oshape[i + actual_axis] = idxshape[i];
   }
@@ -705,7 +705,7 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
     }
   }
   out_attrs->push_back(oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 inline bool TakeOpType(const nnvm::NodeAttrs& attrs,
@@ -1170,6 +1170,7 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   // The shape of indices
   const mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!shape_is_known(ishape)) return false;
 
   int depth = 0;
   double on_value = 1.0;
@@ -1177,13 +1178,13 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   int dtype = mshadow::kFloat32;
   GetOneHotParams(param, &depth, &on_value, &off_value, &dtype);
 
-  mxnet::TShape oshape(ishape.ndim() + 1);
+  mxnet::TShape oshape(ishape.ndim() + 1, -1);
   for (index_t i = 0; i < ishape.ndim(); ++i) {
     oshape[i] = ishape[i];
   }
   oshape[oshape.ndim()-1] = depth;
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
@@ -1270,7 +1271,7 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
   CHECK_LE(ishape[0], 10)
     << "gather_nd supports indexing along at most 10 dimensions.";
 
-  mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0]);
+  mxnet::TShape oshape(ishape.ndim() - 1 + dshape.ndim() - ishape[0], -1);
 
   for (int i = 0; i < ishape.ndim() - 1; ++i) oshape[i] = ishape[i+1];
   for (int i = 0; i < dshape.ndim() - ishape[0]; ++i) {
@@ -1278,7 +1279,7 @@ inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
   }
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-  return true;
+  return shape_is_known(oshape);
 }
 
 inline bool GatherNDType(const nnvm::NodeAttrs& attrs,

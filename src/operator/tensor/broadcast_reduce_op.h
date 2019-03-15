@@ -71,7 +71,7 @@ struct NormParam : public dmlc::Parameter<NormParam> {
   DMLC_DECLARE_PARAMETER(NormParam) {
     DMLC_DECLARE_FIELD(ord).set_default(2)
       .describe("Order of the norm. Currently ord=1 and ord=2 is supported.");
-    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<mxnet::TShape>(0))
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<mxnet::TShape>())
       .describe(R"code(The axis or axes along which to perform the reduction.
       The default, `axis=()`, will compute over all elements into a
       scalar array with shape `(1,)`.
@@ -165,7 +165,7 @@ inline int CheckAxis(int axis, int ndim) {
 }
 
 inline mxnet::TShape AxisShapeCompact(mxnet::TShape shape, int *axis, bool allow_2d) {
-  int ndim = static_cast<int>(shape.ndim());
+  int ndim = shape.ndim();
   index_t leading = 1, trailing = 1, M = shape[*axis];
   for (int i = 0; i < *axis; ++i) leading *= shape[i];
   for (int i = *axis + 1; i < ndim; ++i) trailing *= shape[i];
@@ -186,7 +186,7 @@ inline mxnet::TShape ReduceAxisShapeImpl(const mxnet::TShape& ishape,
                                          bool keepdims) {
   if (!axis || ishape.ndim() == 1) {
     if (keepdims) {
-      return mxnet::TShape(ishape.ndim());
+      return mxnet::TShape(ishape.ndim(), 1);
     }
     return mshadow::Shape1(1);
   }
@@ -198,7 +198,7 @@ inline mxnet::TShape ReduceAxisShapeImpl(const mxnet::TShape& ishape,
     return oshape;
   }
 
-  mxnet::TShape oshape(ishape.ndim() - 1);
+  mxnet::TShape oshape(ishape.ndim() - 1, 1);
   for (int i = 0; i < new_axis; ++i) oshape[i] = ishape[i];
   for (int i = new_axis+1; i < static_cast<int>(ishape.ndim()); ++i) {
     oshape[i-1] = ishape[i];
@@ -226,9 +226,9 @@ inline mxnet::TShape ReduceAxesShapeImpl(const mxnet::TShape& ishape,
   // if axis doesn't have value, treat it same mxnet::TShape().
   if (!axis.has_value() || axis.value().ndim() == 0) {
     if (keepdims) {
-      return mxnet::TShape(ishape.ndim());
+      return mxnet::TShape(ishape.ndim(), 1);
     } else {
-      return mxnet::TShape(1);
+      return mxnet::TShape(1, 1);
     }
   }
   // axis has value
@@ -256,9 +256,9 @@ inline mxnet::TShape ReduceAxesShapeImpl(const mxnet::TShape& ishape,
   if (keepdims) {
     oshape = mxnet::TShape(ishape);
   } else if (exclude) {
-    oshape = mxnet::TShape(axes.ndim());
+    oshape = mxnet::TShape(axes.ndim(), -1);
   } else {
-    oshape = mxnet::TShape(std::max<index_t>(1, ishape.ndim() - axes.ndim()));
+    oshape = mxnet::TShape(std::max(1, ishape.ndim() - axes.ndim()), -1);
   }
 
   if (keepdims && exclude) {
@@ -423,9 +423,9 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
 
 inline void BroadcastReduceShapeCompact(const mxnet::TShape& big, const mxnet::TShape& small,
                                         mxnet::TShape *new_big, mxnet::TShape *new_small) {
-  index_t idim = std::max<index_t>(big.ndim(), MXNET_SPECIAL_MAX_NDIM);
-  *new_big = mxnet::TShape(idim);
-  *new_small = mxnet::TShape(idim);
+  const int idim = std::max(big.ndim(), MXNET_SPECIAL_MAX_NDIM);
+  *new_big = mxnet::TShape(idim, 1);
+  *new_small = mxnet::TShape(idim, 1);
   index_t j = 0;
   if (small.Size() == 1) {
     (*new_big)[j++] = big.Size();
