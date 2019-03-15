@@ -265,9 +265,7 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
   out_shape[0] = params.max_num_vertices + 1;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i, out_shape);
-    success = success &&
-              out_attrs->at(i).ndim() != 0U &&
-              out_attrs->at(i).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i));
   }
   // sub_csr
   mxnet::TShape out_csr_shape(2);
@@ -275,18 +273,14 @@ static bool CSRNeighborUniformSampleShape(const nnvm::NodeAttrs& attrs,
   out_csr_shape[1] = in_attrs->at(0)[1];
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + num_subgraphs, out_csr_shape);
-    success = success &&
-              out_attrs->at(i + num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + num_subgraphs));
   }
   // sub_layer
   mxnet::TShape out_layer_shape(1);
   out_layer_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_layer_shape);
-    success = success &&
-              out_attrs->at(i + 2*num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + 2 * num_subgraphs));
   }
 
   return success;
@@ -323,9 +317,7 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
   out_shape[0] = params.max_num_vertices + 1;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i, out_shape);
-    success = success &&
-              out_attrs->at(i).ndim() != 0U &&
-              out_attrs->at(i).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i));
   }
   // sub_csr
   mxnet::TShape out_csr_shape(2);
@@ -333,27 +325,21 @@ static bool CSRNeighborNonUniformSampleShape(const nnvm::NodeAttrs& attrs,
   out_csr_shape[1] = in_attrs->at(0)[1];
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + num_subgraphs, out_csr_shape);
-    success = success &&
-              out_attrs->at(i + num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + num_subgraphs));
   }
   // sub_probability
   mxnet::TShape out_prob_shape(1);
   out_prob_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 2*num_subgraphs, out_prob_shape);
-    success = success &&
-              out_attrs->at(i + 2*num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + 2*num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + 2 * num_subgraphs));
   }
   // sub_layer
   mxnet::TShape out_layer_shape(1);
   out_layer_shape[0] = params.max_num_vertices;
   for (size_t i = 0; i < num_subgraphs; i++) {
     SHAPE_ASSIGN_CHECK(*out_attrs, i + 3*num_subgraphs, out_prob_shape);
-    success = success &&
-              out_attrs->at(i + 3*num_subgraphs).ndim() != 0U &&
-              out_attrs->at(i + 3*num_subgraphs).Size() != 0U;
+    success = success && !mxnet::op::shape_is_none(out_attrs->at(i + 3 * num_subgraphs));
   }
 
   return success;
@@ -1199,7 +1185,7 @@ inline bool EdgeIDShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(1));
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 2, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0));
 }
 
 inline bool EdgeIDType(const nnvm::NodeAttrs& attrs,
@@ -1357,7 +1343,7 @@ inline bool DGLAdjacencyShape(const nnvm::NodeAttrs& attrs,
 
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U;
+  return !mxnet::op::shape_is_none(out_attrs->at(0));
 }
 
 inline bool DGLAdjacencyType(const nnvm::NodeAttrs& attrs,
