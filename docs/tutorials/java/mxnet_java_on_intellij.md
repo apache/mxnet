@@ -102,27 +102,16 @@ Set the project's location. The rest of the settings can be left as their defaul
 After clicking Finish, you will be presented with the project's first view.
 The project's `pom.xml` will be open for editing.
 
-**Step 3.** The Java packages are currently available as nightly builds on Maven. Add the following Maven repository to your `pom.xml` to fetch the Java packages :
- 
-```html
-<repositories>
-    <repository>
-      <id>Apache Snapshot</id>
-      <url>https://repository.apache.org/content/groups/snapshots</url>
-    </repository>
-</repositories>
-```
-
-Also, add this under the `dependencies` tag :
+**Step 3.** The Java packages are currently available on Maven. Add the following under the `dependencies` tag :
 
 ```html
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>1.4.0-SNAPSHOT</version>
+  <version>1.4.0</version>
 </dependency>
 ```
-The official Java Packages will be released with the release of MXNet 1.4 and will be available on  [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
+The official Java Packages have been released as part of MXNet 1.4 and are available on the [MXNet Maven package repository](https://search.maven.org/#search%7Cga%7C1%7Cg%3A%22org.apache.mxnet%22).
 
 Note :
 - Change the osx-x86_64 to linux-x86_64 if your platform is linux.

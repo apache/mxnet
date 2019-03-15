@@ -85,12 +85,11 @@ function mx_get_last_error()
 end
 
 "Utility macro to call MXNet API functions"
-macro mxcall(fv, argtypes, args...)
-  f = eval(fv)
+macro mxcall(f, argtypes, args...)
   args = map(esc, args)
   quote
-    _mxret = ccall(($(QuoteNode(f)), $MXNET_LIB),
-                   Cint, $argtypes, $(args...))
+    _mxret = ccall(($f, $MXNET_LIB),
+                   Cint, $(esc(argtypes)), $(args...))
     if _mxret != 0
       err_msg = mx_get_last_error()
       throw(MXError(err_msg))

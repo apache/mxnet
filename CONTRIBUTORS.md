@@ -217,6 +217,7 @@ List of Contributors
 * [Ming Yang](http://ufoym.com)
 * [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
 * [Neo Chien](https://github.com/cchung100m)
+* [Wujie Zhou](https://github.com/eureka7mt)
 
 Label Bot
 ---------
