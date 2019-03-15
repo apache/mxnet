@@ -186,8 +186,7 @@ def test_multiple_waitalls():
 @with_seed()
 def test_opencv_exception():
     def check_resize():
-        fname = mx.test_utils.download(url)
-        img = mx.image.imread(fname)
+        img = mx.nd.ones((1200, 1600, 3))
         img = mx.image.imresize(img, 320, 320, interp=-1)
         img.asnumpy()
     assert_raises(MXNetError, check_resize)
