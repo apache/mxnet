@@ -381,10 +381,17 @@ class Optimizer(object):
                     self.wd_mult[name] = float(attr[name]['__wd_mult__'])
         self.wd_mult.update(args_wd_mult)
 
-    def set_current_context(self, ctx):
-        if ctx not in self._all_index_update_counts:
-            self._all_index_update_counts[ctx] = {}
-        self._index_update_count = self._all_index_update_counts[ctx]
+    def _set_current_context(self, device_id):
+        """Sets the number of the currently handled device.
+
+        Parameters
+        ----------
+        device_id : int
+            The number of current device.
+        """
+        if device_id not in self._all_index_update_counts:
+            self._all_index_update_counts[device_id] = {}
+        self._index_update_count = self._all_index_update_counts[device_id]
 
     def _update_count(self, index):
         """Updates num_update.
@@ -1630,7 +1637,7 @@ class Updater(object):
             grads = grad
             weights = weight
         if weights:
-            self.optimizer.set_current_context(weights[0].context.device_id)
+            self.optimizer._set_current_context(weights[0].context.device_id)
         for i, idx in enumerate(indices):
             # convert ctypes.char_p.value back to python str if needed
             if isinstance(idx, bytes):
