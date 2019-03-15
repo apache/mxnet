@@ -51,10 +51,11 @@ class Train():
         """
         Description : module for building network
         """
-        self.net = WaveNet(mu=self.mu, n_residue=self.n_residue, n_skip=self.n_skip,\
+        self.net = WaveNet(input_length=self.seq_size, mu=self.mu, n_residue=self.n_residue, n_skip=self.n_skip,\
          dilation_depth=self.dilation_depth, n_repeat=self.n_repeat)
         #parameter initialization
         self.net.collect_params().initialize(ctx=self.ctx)
+#         self.net.hybridize()
         #set optimizer
         self.trainer = gluon.Trainer(self.net.collect_params(), optimizer='adam',\
         optimizer_params={'learning_rate':0.01})
@@ -81,6 +82,9 @@ class Train():
             for _ in range(self.batch_size):
                 batch = next(g)
                 x = batch[:-1]
+                x = nd.array(x, ctx=self.ctx)
+                x = nd.one_hot(x, self.mu)
+                x = nd.transpose(x.expand_dims(0), axes=(0, 2, 1))
                 with autograd.record():
                     logits = self.net(x)
                     sz = logits.shape[0]

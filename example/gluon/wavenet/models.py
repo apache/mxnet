@@ -21,25 +21,10 @@ Module: WaveNet network block
 """
 from mxnet import nd
 from mxnet.gluon import nn
+from mxnet import nd as F
 # pylint: disable=invalid-name, too-many-arguments, arguments-differ, attribute-defined-outside-init, too-many-instance-attributes, invalid-sequence-index, no-self-use
 
-class One_Hot(nn.Block):
-    """
-    Description : generate one hot result
-    """
-    def __init__(self, depth):
-        super(One_Hot, self).__init__()
-        self.depth = depth
-
-    def forward(self, X_in):
-        with X_in.context:
-            self.ones = nd.one_hot(nd.arange(self.depth), self.depth)
-            return self.ones[X_in, :]
-
-    def __repr__(self):
-        return self.__class__.__name__ + "({})".format(self.depth)
-
-class WaveNet(nn.Block):
+class WaveNet(nn.HybridBlock):
     """
     mu: audio quantization size
     n_residue: residue channels
@@ -47,17 +32,18 @@ class WaveNet(nn.Block):
     dilation_depth : set the dilation depth for dilation layer
     n_repeat: set number of repeat for dilation layer
     """
-    def __init__(self, mu=256, n_residue=32, n_skip=512, dilation_depth=10, n_repeat=5):
+    def __init__(self, input_length, mu=256, n_residue=32, n_skip=512, dilation_depth=10, n_repeat=5):
         super(WaveNet, self).__init__()
+        self.mu = mu
+        self.input_length = input_length
         self.dilation_depth = dilation_depth
         self.dilations = [2**i for i in range(dilation_depth)] * n_repeat
         with self.name_scope():
-            self.one_hot = One_Hot(mu)
             self.from_input = nn.Conv1D(in_channels=mu, channels=n_residue, kernel_size=1)
-            self.conv_sigmoid = nn.Sequential()
-            self.conv_tanh = nn.Sequential()
-            self.skip_scale = nn.Sequential()
-            self.residue_scale = nn.Sequential()
+            self.conv_sigmoid = nn.HybridSequential()
+            self.conv_tanh = nn.HybridSequential()
+            self.skip_scale = nn.HybridSequential()
+            self.residue_scale = nn.HybridSequential()
             for d in self.dilations:
                 self.conv_sigmoid.add(nn.Conv1D(in_channels=n_residue,\
                  channels=n_residue, kernel_size=2, dilation=d))
@@ -70,48 +56,65 @@ class WaveNet(nn.Block):
             self.conv_post_1 = nn.Conv1D(in_channels=n_skip, channels=n_skip, kernel_size=1)
             self.conv_post_2 = nn.Conv1D(in_channels=n_skip, channels=mu, kernel_size=1)
 
-    def forward(self, x):
-        with x.context:
-            output = self.preprocess(x)
-            skip_connections = [] # save for generation purposes
-            for s, t, skip_scale, residue_scale in zip(self.conv_sigmoid, self.conv_tanh,\
-             self.skip_scale, self.residue_scale):
-                output, skip = self.residue_forward(output, s, t,\
-                 skip_scale, residue_scale)
-                skip_connections.append(skip)
-            # sum up skip connections
-            output = sum([s[:, :, -output.shape[2]:] for s in skip_connections])
-            output = self.postprocess(output)
+    def hybrid_forward(self, F, x):
+        output = self.preprocess(x)
+        skip_connections = [] # save for generation purposes
+        idx = 1
+        for s, t, skip_scale, residue_scale in zip(self.conv_sigmoid, self.conv_tanh, self.skip_scale, self.residue_scale):
+            output, skip = self.residue_forward(output, s, t, skip_scale, residue_scale, idx)
+            skip_connections.append(skip)
+            idx = idx + 1
+        # sum up skip connections
+        # previous code : output = sum([s[:,:,-output.shape[2]:] for s in skip_connections])
+        output_length = self.calc_output_size(idx)
+        output = sum([F.slice_axis(s, axis=2, begin=0, end=output_length) for s in skip_connections])
+        output = self.postprocess(output)
         return output
 
     def preprocess(self, x):
         """
         Description : module for preprocess
         """
-        output = nd.transpose(self.one_hot(x).expand_dims(0), axes=(0, 2, 1))
-        output = self.from_input(output)
+        output = self.from_input(x)
         return output
 
     def postprocess(self, x):
         """
         Description : module for postprocess
         """
-        output = nd.relu(x)
+        output = F.relu(x)
         output = self.conv_post_1(output)
-        output = nd.relu(output)
+        output = F.relu(output)
         output = self.conv_post_2(output)
-        output = nd.reshape(output, (output.shape[1], output.shape[2]))
-        output = nd.transpose(output, axes=(1, 0))
+        output = F.reshape(output, (output.shape[1], output.shape[2]))
+        output = F.transpose(output, axes=(1, 0))
         return output
 
-    def residue_forward(self, x, conv_sigmoid, conv_tanh, skip_scale, residue_scale):
+    def residue_forward(self, x, conv_sigmoid, conv_tanh, skip_scale, residue_scale, idx):
         """
         Description : module for residue forward
         """
         output = x
         output_sigmoid, output_tanh = conv_sigmoid(output), conv_tanh(output)
-        output = nd.sigmoid(output_sigmoid) * nd.tanh(output_tanh)
+        #replace code for output = F.sigmoid(output_sigmoid) * F.tanh(output_tanh)
+        output = F.multiply(F.sigmoid(output_sigmoid), F.tanh(output_tanh))
+
         skip = skip_scale(output)
+        
         output = residue_scale(output)
-        output = output + x[:, :, -output.shape[2]:]
+
+        end_length =  self.calc_output_size(idx-1)
+        start_length = end_length - self.calc_output_size(idx)
+        # replace code for output = output + x[:, :, -output.shape[2]:]
+        output = output + F.slice_axis(x, axis=2, begin=start_length, end=end_length)
+
         return output, skip
+    
+    def calc_output_size(self, idx):
+        output_length = self.input_length - 1
+        
+        for di in self.dilations[:idx]:
+            output_length = output_length - di
+        return output_length
+            
+        
