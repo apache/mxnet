@@ -121,7 +121,7 @@ inline bool storage_type_is_none(const int& x) {
 
 /*! \brief check if shape is scalar({1}). */
 inline bool shape_is_scalar(const mxnet::TShape& x) {
-  return x.ndim() == 1 && x.Size() == 1;
+  return x.ndim() == 0;
 }
 
 /*! \brief get string representation of shape */

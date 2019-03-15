@@ -71,7 +71,7 @@ struct NormParam : public dmlc::Parameter<NormParam> {
   DMLC_DECLARE_PARAMETER(NormParam) {
     DMLC_DECLARE_FIELD(ord).set_default(2)
       .describe("Order of the norm. Currently ord=1 and ord=2 is supported.");
-    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<mxnet::TShape>())
+    DMLC_DECLARE_FIELD(axis).set_default(dmlc::optional<mxnet::TShape>(0))
       .describe(R"code(The axis or axes along which to perform the reduction.
       The default, `axis=()`, will compute over all elements into a
       scalar array with shape `(1,)`.
@@ -212,7 +212,7 @@ inline bool ReduceAxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
-  if (ishape.ndim() == 0) return false;
+  if (!shape_is_known(ishape)) return false;
 
   const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
@@ -294,7 +294,7 @@ inline bool ReduceAxesShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*in_attrs)[0].ndim() == 0) return false;
+  if (!shape_is_known((*in_attrs)[0])) return false;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
@@ -307,7 +307,7 @@ inline bool NormShape(const nnvm::NodeAttrs& attrs,
                       mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*in_attrs)[0].ndim() == 0) return false;
+  if (!shape_is_known((*in_attrs)[0])) return false;
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      ReduceAxesShapeImpl((*in_attrs)[0], param.axis,
@@ -320,7 +320,7 @@ inline bool BroadcastAxesShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if ((*in_attrs)[0].ndim() == 0) return false;
+  if (!shape_is_known((*in_attrs)[0])) return false;
   const BroadcastAxesParam& param = nnvm::get<BroadcastAxesParam>(attrs.parsed);
   CHECK_EQ(param.axis.ndim() , param.size.ndim());
   mxnet::TShape &ishape = (*in_attrs)[0];
@@ -339,7 +339,7 @@ inline bool BroadcastToShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
-  if (ishape.ndim() == 0) return false;
+  if (!shape_is_known(ishape)) return false;
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
   CHECK_EQ(ishape.ndim(), param.shape.ndim())
     << "Operand of shape " << ishape << " cannot be broadcasted to " << param.shape;
@@ -364,7 +364,7 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& lhs_shape = (*in_attrs)[0];
   mxnet::TShape& rhs_shape = (*in_attrs)[1];
 
-  if ((lhs_shape.ndim() == 0) || (lhs_shape.ndim() == 0)) {
+  if (!shape_is_known(lhs_shape) || !shape_is_known(lhs_shape)) {
     return false;
   }
 
@@ -377,7 +377,7 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
       << "Operand of shape " << lhs_shape << " cannot be broadcasted to " << rhs_shape;
 
     oshape = mxnet::TShape(rhs_shape);
-    for (index_t i = 0; i < lhs_shape.ndim(); ++i) {
+    for (int i = 0; i < lhs_shape.ndim(); ++i) {
       if (rhs_shape[i] != 0) {
         CHECK(lhs_shape[i] == rhs_shape[i] || lhs_shape[i] == 1)
           << "Array cannot be broadcasted from " << lhs_shape << " to " << rhs_shape;
@@ -396,7 +396,7 @@ inline bool BroadcastLikeShape(const nnvm::NodeAttrs& attrs,
       << "Empty axes tuple is not allowed";
 
     oshape = mxnet::TShape(lhs_shape);
-    for (index_t i = 0; i < lhs_axes.ndim(); ++i) {
+    for (int i = 0; i < lhs_axes.ndim(); ++i) {
       auto copyfrom = lhs_axes[i];
       if (copyfrom < 0) {
         copyfrom =  lhs_shape.ndim() + copyfrom;
@@ -451,12 +451,10 @@ inline void BroadcastReduceShapeCompact(const mxnet::TShape& big, const mxnet::T
       ++j;
     }
   }
-  if (j <= 2) {
-    new_small->assign(&(*new_small)[0], &(*new_small)[2]);
-    new_big->assign(&(*new_big)[0], &(*new_big)[2]);
-  } else if (j <= MXNET_SPECIAL_MAX_NDIM) {
-    new_small->assign(&(*new_small)[0], &(*new_small)[MXNET_SPECIAL_MAX_NDIM]);
-    new_big->assign(&(*new_big)[0], &(*new_big)[MXNET_SPECIAL_MAX_NDIM]);
+  if (j <= MXNET_SPECIAL_MAX_NDIM) {
+    const int ndim = (j <= 2? 2 : MXNET_SPECIAL_MAX_NDIM);
+    new_small->assign(new_small->begin(), new_small->begin() + ndim);
+    new_big->assign(new_big->begin(), new_big->begin() + ndim);
   } else {
     LOG(FATAL) << "Too many reduction axes from " << big << " to " << small;
   }

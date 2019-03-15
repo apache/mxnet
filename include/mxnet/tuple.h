@@ -199,7 +199,7 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline ValueType& operator[](int i) {
-    CHECK(i >= 0 && i < ndim());
+    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
     return begin()[i];
   }
   /*!
@@ -208,7 +208,7 @@ class Tuple {
    * \return the corresponding dimension size
    */
   inline const ValueType& operator[](int i) const {
-    CHECK(i >= 0 && i < ndim());
+    CHECK(i >= 0 && i < ndim()) << "index = " << i << " must be in range [0, " << ndim() << ")";
     return begin()[i];
   }
   /*!
@@ -273,12 +273,14 @@ class Tuple {
         return is;
       }
     }
-    // Handle empty tuple
+    // Handle empty tuple. A tensor whose shape is an empty tuple
+    // represents a scalar with ndim = 0.
     while (isspace(is.peek())) {
       is.get();
     }
     if (is.peek() == ')' || is.peek() == ']') {
       is.get();
+      t.SetDim(0);
       return is;
     }
     // Handle non-empty tuple
@@ -352,7 +354,7 @@ class Tuple {
       delete [] data_heap_;
       data_heap_ = new ValueType[ndim];
       num_heap_allocated_ = ndim;
-    } else if (ndim == -1 && data_heap_ != nullptr) {
+    } else if (ndim <= 0 && data_heap_ != nullptr) {
       delete [] data_heap_;
       data_heap_ = nullptr;
       num_heap_allocated_ = 0;

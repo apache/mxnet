@@ -176,9 +176,9 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   }
   if (j <= broadcast::MAX_DIM) {
     BROADCAST_NDIM_SWITCH(j, NDim, {
-      new_lshape->assign(&(*new_lshape)[0], &(*new_lshape)[NDim]);
-      new_rshape->assign(&(*new_rshape)[0], &(*new_rshape)[NDim]);
-      new_oshape->assign(&(*new_oshape)[0], &(*new_oshape)[NDim]);
+      new_lshape->assign(new_lshape->begin(), new_lshape->begin() + NDim);
+      new_rshape->assign(new_rshape->begin(), new_rshape->begin() + NDim);
+      new_oshape->assign(new_oshape->begin(), new_oshape->begin() + NDim);
     });
   } else {
     LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;
