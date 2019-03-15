@@ -249,11 +249,7 @@ def check_call(ret):
         return value from API calls.
     """
     if ret != 0:
-        # error code for std::exception
-        if ret == -2:
-            raise Exception(py_str(_LIB.MXGetLastError()))
-        else:
-            raise MXNetError(py_str(_LIB.MXGetLastError()))
+        raise MXNetError(py_str(_LIB.MXGetLastError()))
 
 
 if sys.version_info[0] < 3:
