@@ -215,7 +215,7 @@ class CheckpointHandler(EventHandler):
             else:
                 if self.verbose > 0:
                     logging.info('\nEpoch %d: saving model to %s', epoch, self.filepath)
-                    self._estimator.net.save_parameters(self.filepath)
+                self._estimator.net.save_parameters(self.filepath)
 
 
 class EarlyStoppingHandler(EventHandler):
