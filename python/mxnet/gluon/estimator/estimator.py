@@ -94,7 +94,7 @@ class Estimator(object):
             # only record the latest metric numbers after each batch
             self.train_stats['batch_' + metric.name] = 0.
         for metric in self.test_metrics:
-            self.train_stats['test_' + metric.name] = []
+            self.train_stats['val_' + metric.name] = []
         self.train_loss_metrics = []
         self.test_loss_metrics = []
         # using the metric wrapper for loss to record loss value
@@ -102,7 +102,7 @@ class Estimator(object):
             self.train_loss_metrics.append(Loss(l.name))
             self.test_loss_metrics.append(Loss(l.name))
             self.train_stats['train_' + l.name] = []
-            self.train_stats['test_' + l.name] = []
+            self.train_stats['val_' + l.name] = []
             # only record the latest loss numbers after each batch
             self.train_stats['batch_' + l.name] = 0.
 
@@ -168,7 +168,7 @@ class Estimator(object):
         label = gluon.utils.split_and_load(label, ctx_list=ctx, batch_axis=0)
         return data, label
 
-    def _test(self, val_data, batch_fn=None):
+    def _evaluate(self, val_data, batch_fn=None):
         for metric in self.test_metrics + self.test_loss_metrics:
             metric.reset()
 
@@ -192,9 +192,6 @@ class Estimator(object):
                 metric.update(label, pred)
             for loss, loss_metric, in zip(losses, self.test_loss_metrics):
                 loss_metric.update(0, [l for l in loss])
-
-        for metric in self.test_metrics + self.test_loss_metrics:
-            self.train_stats['test_' + metric.name].append(metric.get()[1])
 
     def fit(self, train_data,
             val_data=None,
@@ -298,13 +295,16 @@ class Estimator(object):
                     handler.batch_end()
 
             if do_validation:
-                self._test(val_data, batch_fn)
+                self._evaluate(val_data, batch_fn)
 
             for metric in self.train_metrics + self.train_loss_metrics:
                 self.train_stats['train_' + metric.name].append(metric.get()[1])
+            for metric in self.test_metrics + self.test_loss_metrics:
+                self.train_stats['val_' + metric.name].append(metric.get()[1])
+
             # epoch end
             for handler in event_handlers:
-                handler.epoch_end(do_validation)
+                handler.epoch_end()
 
             if self.stop_training:
                 break
