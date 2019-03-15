@@ -229,7 +229,8 @@ class RandomResizedCrop(Block):
 
 
 class CropResize(HybridBlock):
-    """Crop the input image with and optionally resize it.
+    r"""Crop the input image with and optionally resize it.
+
     Makes a crop of the original image then optionally resize it to the specified size.
     Parameters
     ----------
@@ -244,11 +245,15 @@ class CropResize(HybridBlock):
     size : int or tuple of (w, h)
         Optional, resize to new size after cropping
     interp : int, optional
-        Optional, interpolation method. See opencv for details.
+        Optional, interpolation method. See opencv for details
+
+
     Inputs:
         - **data**: input tensor with (H x W x C) or (N x H x W x C) shape.
+
     Outputs:
-        - **out**: output tensor with (H x W x C) or (N x H x W x C) shape.
+        - **out**: input tensor with (H x W x C) or (N x H x W x C) shape.
+
     Examples
     --------
     >>> transformer = vision.transforms.Crop(0, 0, 100, 100)
