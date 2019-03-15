@@ -677,13 +677,13 @@ def test_moveaxis():
             assert actual == (1, 2, 3, 4)
 
     def test_move_multiples():
-        x = mx.nd.zeros((0, 1, 2, 3))
+        x = mx.nd.zeros((4, 1, 2, 3))
         for source, destination, expected in [
-            ([0, 1], [2, 3], (2, 3, 0, 1)),
-            ([2, 3], [0, 1], (2, 3, 0, 1)),
-            ([0, 1, 2], [2, 3, 0], (2, 3, 0, 1)),
-            ([3, 0], [1, 0], (0, 3, 1, 2)),
-            ([0, 3], [0, 1], (0, 3, 1, 2)),
+            ([0, 1], [2, 3], (2, 3, 4, 1)),
+            ([2, 3], [0, 1], (2, 3, 4, 1)),
+            ([0, 1, 2], [2, 3, 0], (2, 3, 4, 1)),
+            ([3, 0], [1, 0], (4, 3, 1, 2)),
+            ([0, 3], [0, 1], (4, 3, 1, 2)),
         ]:
             actual = mx.nd.moveaxis(x, source, destination).shape
             assert actual == expected
@@ -702,7 +702,7 @@ def test_moveaxis():
     test_move_new_position()
     test_preserve_order()
     test_move_multiples()
-    #test_errors()
+    test_errors()
 
 
 @with_seed()
