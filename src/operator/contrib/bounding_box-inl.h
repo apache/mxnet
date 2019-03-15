@@ -94,7 +94,9 @@ inline bool BoxNMSShape(const nnvm::NodeAttrs& attrs,
   const BoxNMSParam& param = nnvm::get<BoxNMSParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 2U);
-  if (in_attrs->at(0).ndim() == 0U && out_attrs->at(0).ndim() == 0U) {
+  // TODO(@junrushao1994): verify with Joshua Z. Zhang about this operator
+  if (mxnet::op::shape_is_none(in_attrs->at(0))
+   && mxnet::op::shape_is_none(out_attrs->at(0))) {
     return false;
   }
 

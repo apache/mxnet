@@ -69,11 +69,11 @@ struct DeformableConvolutionParam : public dmlc::Parameter<DeformableConvolution
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(DeformableConvolutionParam) {
     DMLC_DECLARE_FIELD(kernel).describe("Convolution kernel size: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape(0))
       .describe("Convolution stride: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape(0))
       .describe("Convolution dilate: (h, w) or (d, h, w). Defaults to 1 for each dimension.");
-    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape(0))
       .describe("Zero pad for convolution: (h, w) or (d, h, w). Defaults to no padding.");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
       .describe("Convolution filter(channel) number");
@@ -347,9 +347,9 @@ class DeformableConvolutionProp : public OperatorProperty {
     param_.Init(kwargs);
     if (param_.kernel.ndim() == 2) {
       param_.layout = param_.layout ? param_.layout.value() : mshadow::kNCHW;
-      if (param_.stride.ndim() == 0) param_.stride = Shape2(1, 1);
-      if (param_.dilate.ndim() == 0) param_.dilate = Shape2(1, 1);
-      if (param_.pad.ndim() == 0) param_.pad = Shape2(0, 0);
+      if (mxnet::op::shape_is_none(param_.stride)) param_.stride = Shape2(1, 1);
+      if (mxnet::op::shape_is_none(param_.dilate)) param_.dilate = Shape2(1, 1);
+      if (mxnet::op::shape_is_none(param_.pad)) param_.pad = Shape2(0, 0);
     } else {
       LOG(FATAL) << "not implemented";
     }
@@ -371,7 +371,7 @@ class DeformableConvolutionProp : public OperatorProperty {
     out_shape->resize(1, mxnet::TShape());
     const mxnet::TShape &dshp = (*in_shape)[conv::kData];
     const mxnet::TShape &oshp = (*in_shape)[conv::kOffset];
-    if (dshp.ndim() == 0) return false;
+    if (mxnet::op::shape_is_none(dshp)) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv
       CHECK_EQ(dshp.ndim(), 4U) \

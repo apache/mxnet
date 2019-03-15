@@ -45,7 +45,7 @@ inline bool GroupAdagradShape(const nnvm::NodeAttrs &attrs,
   SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
   SHAPE_ASSIGN_CHECK(*in_attrs, 1, out_attrs->at(0));
 
-  return out_attrs->at(0).ndim() != 0U && out_attrs->at(0).Size() != 0U &&
+  return !mxnet::op::shape_is_none(out_attrs->at(0)) &&
          (in_attrs->at(0)[0] == in_attrs->at(1)[0]) &&
          (in_attrs->at(0)[0] == in_attrs->at(2)[0]);
 }
