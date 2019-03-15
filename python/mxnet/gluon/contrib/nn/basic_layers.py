@@ -18,8 +18,10 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Custom neural network layers in model_zoo."""
+
 __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
-           'SyncBatchNorm']
+           'SyncBatchNorm', 'PixelShuffle1D', 'PixelShuffle2D',
+           'PixelShuffle3D']
 
 import warnings
 from .... import nd, test_utils
@@ -238,3 +240,180 @@ class SyncBatchNorm(BatchNorm):
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         return F.contrib.SyncBatchNorm(x, gamma, beta, running_mean, running_var,
                                        name='fwd', **self._kwargs)
+
+class PixelShuffle1D(HybridBlock):
+
+    r"""Pixel-shuffle layer for upsampling in 1 dimension.
+
+    Pixel-shuffling is the operation of taking groups of values along
+    the *channel* dimension and regrouping them into blocks of pixels
+    along the ``W`` dimension, thereby effectively multiplying that dimension
+    by a constant factor in size.
+
+    For example, a feature map of shape :math:`(fC, W)` is reshaped
+    into :math:`(C, fW)` by forming little value groups of size :math:`f`
+    and arranging them in a grid of size :math:`W`.
+
+    Parameters
+    ----------
+    factor : int or 1-tuple of int
+        Upsampling factor, applied to the ``W`` dimension.
+
+    Inputs:
+        - **data**: Tensor of shape ``(N, f*C, W)``.
+    Outputs:
+        - **out**: Tensor of shape ``(N, C, W*f)``.
+
+    Examples
+    --------
+    >>> pxshuf = PixelShuffle1D(2)
+    >>> x = mx.nd.zeros((1, 8, 3))
+    >>> pxshuf(x).shape
+    (1, 4, 6)
+    """
+
+    def __init__(self, factor):
+        super(PixelShuffle1D, self).__init__()
+        self._factor = int(factor)
+
+    def hybrid_forward(self, F, x):
+        """Perform pixel-shuffling on the input."""
+        f = self._factor
+                                             # (N, C*f, W)
+        x = F.reshape(x, (0, -4, -1, f, 0))  # (N, C, f, W)
+        x = F.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
+        x = F.reshape(x, (0, 0, -3))         # (N, C, W*f)
+        return x
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._factor)
+
+
+class PixelShuffle2D(HybridBlock):
+
+    r"""Pixel-shuffle layer for upsampling in 2 dimensions.
+
+    Pixel-shuffling is the operation of taking groups of values along
+    the *channel* dimension and regrouping them into blocks of pixels
+    along the ``H`` and ``W`` dimensions, thereby effectively multiplying
+    those dimensions by a constant factor in size.
+
+    For example, a feature map of shape :math:`(f^2 C, H, W)` is reshaped
+    into :math:`(C, fH, fW)` by forming little :math:`f \times f` blocks
+    of pixels and arranging them in an :math:`H \times W` grid.
+
+    Pixel-shuffling together with regular convolution is an alternative,
+    learnable way of upsampling an image by arbitrary factors. It is reported
+    to help overcome checkerboard artifacts that are common in upsampling with
+    transposed convolutions (also called deconvolutions). See the paper
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_
+    for further details.
+
+    Parameters
+    ----------
+    factor : int or 2-tuple of int
+        Upsampling factors, applied to the ``H`` and ``W`` dimensions,
+        in that order.
+
+    Inputs:
+        - **data**: Tensor of shape ``(N, f1*f2*C, H, W)``.
+    Outputs:
+        - **out**: Tensor of shape ``(N, C, H*f1, W*f2)``.
+
+    Examples
+    --------
+    >>> pxshuf = PixelShuffle2D((2, 3))
+    >>> x = mx.nd.zeros((1, 12, 3, 5))
+    >>> pxshuf(x).shape
+    (1, 2, 6, 15)
+    """
+
+    def __init__(self, factor):
+        super(PixelShuffle2D, self).__init__()
+        try:
+            self._factors = (int(factor),) * 2
+        except TypeError:
+            self._factors = tuple(int(fac) for fac in factor)
+            assert len(self._factors) == 2, "wrong length {}".format(len(self._factors))
+
+    def hybrid_forward(self, F, x):
+        """Perform pixel-shuffling on the input."""
+        f1, f2 = self._factors
+                                                      # (N, f1*f2*C, H, W)
+        x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
+        x = F.reshape(x, (0, 0, -4, f1, f2, 0, 0))    # (N, C, f1, f2, H, W)
+        x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+        x = F.reshape(x, (0, 0, -3, -3))              # (N, C, H*f1, W*f2)
+        return x
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._factors)
+
+
+class PixelShuffle3D(HybridBlock):
+
+    r"""Pixel-shuffle layer for upsampling in 3 dimensions.
+
+    Pixel-shuffling (or voxel-shuffling in 3D) is the operation of taking
+    groups of values along the *channel* dimension and regrouping them into
+    blocks of voxels along the ``D``, ``H`` and ``W`` dimensions, thereby
+    effectively multiplying those dimensions by a constant factor in size.
+
+    For example, a feature map of shape :math:`(f^3 C, D, H, W)` is reshaped
+    into :math:`(C, fD, fH, fW)` by forming little :math:`f \times f \times f`
+    blocks of voxels and arranging them in a :math:`D \times H \times W` grid.
+
+    Pixel-shuffling together with regular convolution is an alternative,
+    learnable way of upsampling an image by arbitrary factors. It is reported
+    to help overcome checkerboard artifacts that are common in upsampling with
+    transposed convolutions (also called deconvolutions). See the paper
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_
+    for further details.
+
+    Parameters
+    ----------
+    factor : int or 3-tuple of int
+        Upsampling factors, applied to the ``D``, ``H`` and ``W``
+        dimensions, in that order.
+
+    Inputs:
+        - **data**: Tensor of shape ``(N, f1*f2*f3*C, D, H, W)``.
+    Outputs:
+        - **out**: Tensor of shape ``(N, C, D*f1, H*f2, W*f3)``.
+
+    Examples
+    --------
+    >>> pxshuf = PixelShuffle3D((2, 3, 4))
+    >>> x = mx.nd.zeros((1, 48, 3, 5, 7))
+    >>> pxshuf(x).shape
+    (1, 2, 6, 15, 28)
+    """
+
+    def __init__(self, factor):
+        super(PixelShuffle3D, self).__init__()
+        try:
+            self._factors = (int(factor),) * 3
+        except TypeError:
+            self._factors = tuple(int(fac) for fac in factor)
+            assert len(self._factors) == 3, "wrong length {}".format(len(self._factors))
+
+    def hybrid_forward(self, F, x):
+        """Perform pixel-shuffling on the input."""
+        # `transpose` doesn't support 8D, need other implementation
+        f1, f2, f3 = self._factors
+                                                              # (N, C*f1*f2*f3, D, H, W)
+        x = F.reshape(x, (0, -4, -1, f1 * f2 * f3, 0, 0, 0))  # (N, C, f1*f2*f3, D, H, W)
+        x = F.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
+        x = F.reshape(x, (0, 0, 0, -4, f1, f2*f3, 0, 0))      # (N, C, D, f1, f2*f3, H, W)
+        x = F.reshape(x, (0, 0, -3, 0, 0, 0))                 # (N, C, D*f1, f2*f3, H, W)
+        x = F.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
+        x = F.reshape(x, (0, 0, 0, 0, -4, f2, f3, 0))         # (N, C, D*f1, H, f2, f3, W)
+        x = F.reshape(x, (0, 0, 0, -3, 0, 0))                 # (N, C, D*f1, H*f2, f3, W)
+        x = F.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
+        x = F.reshape(x, (0, 0, 0, 0, -3))                    # (N, C, D*f1, H*f2, W*f3)
+        return x
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._factors)

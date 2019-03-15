@@ -62,11 +62,11 @@ def sample_multinomial(attrs, inputs, proto_obj):
     new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
     return 'sample_multinomial', new_attrs, inputs
 
-
 # Arithmetic Operations
 def add(attrs, inputs, proto_obj):
     """Adding two tensors"""
     new_attr = {}
+
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
         broadcast_axis = attrs['axis']
         op_value = translation_utils._fix_broadcast('broadcast_add', inputs,
@@ -77,6 +77,7 @@ def add(attrs, inputs, proto_obj):
 def subtract(attrs, inputs, proto_obj):
     """Subtracting two tensors"""
     new_attr = {}
+
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
         broadcast_axis = attrs['axis']
         op_value = translation_utils._fix_broadcast('broadcast_sub', inputs,
@@ -84,10 +85,10 @@ def subtract(attrs, inputs, proto_obj):
         return op_value, new_attr, inputs
     return 'broadcast_sub', new_attr, inputs
 
-
 def multiply(attrs, inputs, proto_obj):
     """Multiply two tensors"""
     new_attr = {}
+
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
         broadcast_axis = attrs['axis']
         op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
@@ -98,6 +99,7 @@ def multiply(attrs, inputs, proto_obj):
 def divide(attrs, inputs, proto_obj):
     """Divide two tensors"""
     new_attr = {}
+
     if 'broadcast' in attrs and attrs['broadcast'] == 1:
         broadcast_axis = attrs['axis']
         op_value = translation_utils._fix_broadcast('broadcast_div', inputs,

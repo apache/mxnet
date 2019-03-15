@@ -68,7 +68,7 @@ struct MXAPIThreadLocalEntry {
   /*! \brief holder for NDArray handles */
   std::vector<NDArray*> ndinputs, ndoutputs;
   /*! \brief result holder for returning shapes */
-  std::vector<TShape> arg_shapes, out_shapes, aux_shapes;
+  mxnet::ShapeVector arg_shapes, out_shapes, aux_shapes;
   /*! \brief result holder for returning type flags */
   std::vector<int> arg_types, out_types, aux_types;
   /*! \brief result holder for returning storage types */
@@ -83,7 +83,7 @@ struct MXAPIThreadLocalEntry {
   std::vector<bool> save_inputs, save_outputs;
   // helper function to setup return value of shape array
   inline static void SetupShapeArrayReturnWithBuffer(
-      const std::vector<TShape> &shapes,
+      const mxnet::ShapeVector &shapes,
       std::vector<mx_uint> *ndim,
       std::vector<const mx_uint*> *data,
       std::vector<uint32_t> *buffer) {

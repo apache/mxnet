@@ -500,6 +500,9 @@ void train(const std::string file, int batch_size, int max_epoch, int start_epoc
     std::string filepath = prefix + "-" + std::to_string(epoch) + ".params";
     SaveCheckpoint(filepath, RNN, exe);
   }
+
+  delete exe;
+  delete opt;
 }
 
 /*The original example, rnn_cell_demo.py, uses default Xavier as initalizer, which relies on
@@ -577,6 +580,9 @@ void trainWithBuiltInRNNOp(const std::string file, int batch_size, int max_epoch
     std::string filepath = prefix + "-" + std::to_string(epoch) + ".params";
     SaveCheckpoint(filepath, RNN, exe);
   }
+
+  delete exe;
+  delete opt;
 }
 
 void predict(std::wstring* ptext, int sequence_length, const std::string param_file,
@@ -639,6 +645,8 @@ void predict(std::wstring* ptext, int sequence_length, const std::string param_f
     next = charIndices[n];
     ptext->push_back(next);
   }
+
+  delete exe;
 }
 
 void predictWithBuiltInRNNOp(std::wstring* ptext, int sequence_length, const std::string param_file,
@@ -693,6 +701,8 @@ void predictWithBuiltInRNNOp(std::wstring* ptext, int sequence_length, const std
     next = charIndices[n];
     ptext->push_back(next);
   }
+
+  delete exe;
 }
 
 int main(int argc, char** argv) {

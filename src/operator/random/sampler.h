@@ -96,8 +96,8 @@ struct UniformSampler {
 template<typename xpu>
 struct SampleRandIntKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> gen,
-                                  const int N, const int step,
+  MSHADOW_XINLINE static void Map(index_t id, RandGenerator<xpu, OType> gen,
+                                  const index_t N, const index_t step,
                                   index_t nParm, index_t nSample,
                                   const IType *lower, const IType *upper, OType *out) {
     RNG_KERNEL_LOOP(xpu, OType, id, gen, N, step, {

@@ -37,7 +37,7 @@ namespace custom_function {
 struct CustomFunctionParam {
   size_t num_args, num_outs;
   std::shared_ptr<MXCallbackList> info;
-  std::vector<TShape> out_shapes;
+  std::vector<mxnet::TShape> out_shapes;
   std::vector<int> out_dtypes;
 };
 
@@ -64,7 +64,7 @@ std::vector<nnvm::NodeEntry> Gradient(
 
 OpStatePtr CreateState(const nnvm::NodeAttrs& attrs,
                        Context ctx,
-                       const std::vector<TShape>& ishape,
+                       const mxnet::ShapeVector& ishape,
                        const std::vector<int>& itype) {
   LOG(FATAL) << "Not reached";
   return OpStatePtr::Create<void*>(nullptr);
@@ -141,9 +141,9 @@ NNVM_REGISTER_OP(_CustomFunction)
     const CustomFunctionParam& params = nnvm::get<CustomFunctionParam>(attrs.parsed);
     return params.num_outs;
   })
-.set_attr<nnvm::FInferShape>("FInferShape",
-  [](const NodeAttrs& attrs, std::vector<TShape> *in_shape,
-     std::vector<TShape> *out_shape) {
+.set_attr<mxnet::FInferShape>("FInferShape",
+  [](const NodeAttrs& attrs, mxnet::ShapeVector *in_shape,
+     mxnet::ShapeVector *out_shape) {
     const CustomFunctionParam& params = nnvm::get<CustomFunctionParam>(attrs.parsed);
     *out_shape = params.out_shapes;
     return true;

@@ -142,13 +142,13 @@ class BilinearSamplerProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, grid]";
-    const TShape &dshape = (*in_shape)[bs::kData];
-    const TShape &lshape = (*in_shape)[bs::kGrid];
+    const mxnet::TShape &dshape = (*in_shape)[bs::kData];
+    const mxnet::TShape &lshape = (*in_shape)[bs::kGrid];
     if (dshape.ndim() == 0) return false;
     CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
@@ -226,7 +226,7 @@ class BilinearSamplerProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

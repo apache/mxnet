@@ -141,8 +141,8 @@ void IndexCopyBackward(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool IndexCopyShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_attrs,
-                           std::vector<TShape> *out_attrs) {
+                           mxnet::ShapeVector *in_attrs,
+                           mxnet::ShapeVector *out_attrs) {
   // inputs[0]: original tensor
   // inputs[1]: index vector
   // inputs[2]: copied tensor

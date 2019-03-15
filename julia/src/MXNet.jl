@@ -50,8 +50,6 @@ export SymbolicNode,
 
 # ndarray.jl
 export NDArray,
-       clip,
-       clip!,
        context,
        expand_dims,
        @inplace,
@@ -139,6 +137,7 @@ export to_graphviz
 
 include("base.jl")
 
+include("runtime.jl")
 include("context.jl")
 include("util.jl")
 

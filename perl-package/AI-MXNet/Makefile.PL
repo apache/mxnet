@@ -36,7 +36,7 @@ my %WriteMakefileArgs = (
   "LICENSE" => "apache_2_0",
   "NAME" => "AI::MXNet",
   "PREREQ_PM" => {
-    "AI::MXNetCAPI" => "1.33",
+    "AI::MXNetCAPI" => "1.4",
     "AI::NNVMCAPI" => "1.3",
     "Function::Parameters" => "1.0705",
     "Hash::Ordered" => "0.012",
@@ -46,7 +46,7 @@ my %WriteMakefileArgs = (
     "GraphViz" => "2.14"
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.33",
+  "VERSION" => "1.4",
   "test" => {
     "TESTS" => "t/*.t"
   }

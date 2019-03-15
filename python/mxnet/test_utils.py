@@ -23,7 +23,6 @@ import gzip
 import struct
 import traceback
 import numbers
-import subprocess
 import sys
 import os
 import errno
@@ -212,6 +211,7 @@ def _get_powerlaw_dataset_csr(num_rows, num_cols, density=0.1, dtype=None):
                          " for this shape (%s,%s)" % (density, num_rows, num_cols))
     else:
         return mx.nd.array(output_arr).tostype("csr")
+
 
 def assign_each(the_input, function):
     """Return ndarray composed of passing each array value through some function"""
@@ -1391,14 +1391,7 @@ def list_gpus():
         If there are n GPUs, then return a list [0,1,...,n-1]. Otherwise returns
         [].
     """
-    re = ''
-    nvidia_smi = ['nvidia-smi', '/usr/bin/nvidia-smi', '/usr/local/nvidia/bin/nvidia-smi']
-    for cmd in nvidia_smi:
-        try:
-            re = subprocess.check_output([cmd, "-L"], universal_newlines=True)
-        except (subprocess.CalledProcessError, OSError):
-            pass
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
+    return range(mx.util.get_gpu_count())
 
 def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     """Download an given URL

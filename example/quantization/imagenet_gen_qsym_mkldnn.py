@@ -180,6 +180,7 @@ if __name__ == '__main__':
         sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
     sym = sym.get_backend_symbol('MKLDNN')
+    sym = sym.get_backend_symbol('MKLDNN_FC')
 
     # get batch size
     batch_size = args.batch_size
@@ -207,19 +208,18 @@ if __name__ == '__main__':
     if args.model == 'imagenet1k-resnet-152':
         rgb_mean = '0,0,0'
         rgb_std = '1,1,1'
-        excluded_sym_names += ['flatten0', 'fc1']
+        excluded_sym_names += ['flatten0']
         if exclude_first_conv:
             excluded_sym_names += ['conv0']
     elif args.model == 'imagenet1k-inception-bn':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '1,1,1'
-        excluded_sym_names += ['flatten', 'fc1']
+        excluded_sym_names += ['flatten']
         if exclude_first_conv:
             excluded_sym_names += ['conv_1']
     elif args.model in ['resnet50_v1', 'resnet101_v1']:
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
-        excluded_sym_names += ['resnetv10_dense0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['resnetv10_conv0_fwd']
     elif args.model == 'squeezenet1.0':
@@ -232,14 +232,12 @@ if __name__ == '__main__':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
         excluded_sym_names += ['mobilenet0_flatten0_flatten0',
-                               'mobilenet0_dense0_fwd',
                                'mobilenet0_pool0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['mobilenet0_conv0_fwd']
     elif args.model == 'inceptionv3':
         rgb_mean = '123.68,116.779,103.939'
         rgb_std = '58.393, 57.12, 57.375'
-        excluded_sym_names += ['inception30_dense0_fwd']
         if exclude_first_conv:
             excluded_sym_names += ['inception30_conv0_fwd']
     elif args.model == 'custom':
@@ -305,6 +303,7 @@ if __name__ == '__main__':
                              % calib_mode)
         sym_name = '%s-symbol.json' % (prefix + suffix)
     qsym = qsym.get_backend_symbol('MKLDNN_POST_QUANTIZE')
+    qsym = qsym.get_backend_symbol('MKLDNN_POST_FC_QUANTIZE')
     save_symbol(sym_name, qsym, logger)
     param_name = '%s-%04d.params' % (prefix + '-quantized', epoch)
     save_params(param_name, qarg_params, aux_params, logger)

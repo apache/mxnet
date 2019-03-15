@@ -263,7 +263,7 @@ class FComputeExExecutor : public OpExecutor {
 
 void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   using nnvm::DTypeVector;
-  using nnvm::ShapeVector;
+  using mxnet::ShapeVector;
   using nnvm::FMutateInputs;
 
   static auto& fcreate_op_state = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -272,7 +272,7 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   static auto& is_layer_backward = nnvm::Op::GetAttr<bool>("TIsLayerOpBackward");
 
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
-  const auto& vshape = g.GetAttr<ShapeVector>("shape");
+  const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   // get the graph
@@ -293,7 +293,7 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   }
   CHECK(dispatch_modes[i] != DispatchMode::kUndefined);
   if (fcreate_op_state.count(op)) {
-    std::vector<TShape> ishape;
+    mxnet::ShapeVector ishape;
     std::vector<int> itype;
     for (const auto& e : inode.inputs) {
       ishape.emplace_back(vshape[idx.entry_id(e)]);

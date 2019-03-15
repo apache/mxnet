@@ -48,7 +48,7 @@ class L2NormalizationOpCPU : public L2NormalizationOp<cpu, DType> {
     CHECK_EQ(in_data.size(), 1U);
     CHECK_EQ(out_data.size(), 2U);
     Stream<cpu> *s = ctx.get_stream<cpu>();
-    TShape orig_shape = in_data[l2_normalization::kData].shape_;
+    mxnet::TShape orig_shape = in_data[l2_normalization::kData].shape_;
     auto omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (this->param_.mode == l2_normalization::kInstance) {
       Shape<2> dshape = Shape2(orig_shape[0],
@@ -133,7 +133,7 @@ Operator* CreateOp<cpu>(L2NormalizationParam param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
-Operator* L2NormalizationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator* L2NormalizationProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                                 std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, this->param_, in_type->at(0));
 }

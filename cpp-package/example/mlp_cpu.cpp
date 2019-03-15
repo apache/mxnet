@@ -139,6 +139,7 @@ int main(int argc, char** argv) {
   }
 
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return 0;
 }
