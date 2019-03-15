@@ -721,6 +721,7 @@ def test_arange():
                         dtype="int32").asnumpy()
     assert_almost_equal(pred, gt)
 
+
 @with_seed()
 def test_order():
     ctx = default_context()
