@@ -218,6 +218,7 @@ List of Contributors
 * [Satya Krishna Gorti](https://github.com/satyakrishnagorti)
 * [Neo Chien](https://github.com/cchung100m)
 * [Wujie Zhou](https://github.com/eureka7mt)
+* [Zak Jost](https://github.com/zjost)
 
 Label Bot
 ---------
