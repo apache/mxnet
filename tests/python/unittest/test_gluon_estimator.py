@@ -21,7 +21,7 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.estimator import estimator
-from common import (with_seed)
+from common import setup_module, with_seed, assertRaises
 
 def get_model():
     net = nn.Sequential()
@@ -124,7 +124,6 @@ def test_initializer():
         est = estimator.Estimator(net=net,
                                   loss=loss,
                                   metrics=acc,
-                                  trainers=trainer,
                                   context=ctx)
         assert len(w) == 2
     est.fit(train_data=train_data,
@@ -157,7 +156,6 @@ def test_initializer():
                                   trainers=trainer,
                                   context=ctx)
 
-
 @with_seed()
 def test_trainer():
     net = get_model()
@@ -188,7 +186,7 @@ def test_trainer():
         est = estimator.Estimator(net=net,
                                   loss=loss,
                                   metrics=acc,
-                                  trainer=trainer,
+                                  trainers=trainer,
                                   context=ctx)
 
 @with_seed
