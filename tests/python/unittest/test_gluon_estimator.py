@@ -15,21 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
+''' Unit tests for Gluon Estimator '''
+
 import warnings
 from nose.tools import assert_raises
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.estimator import estimator
-from common import setup_module, with_seed, assertRaises
 
 def get_model():
     net = nn.Sequential()
-    net.add(nn.Dense(4, activation='tanh', flatten=False))
+    net.add(nn.Dense(4, activation='relu', flatten=False))
     return net
 
-@with_seed()
 def test_fit():
+    ''' test estimator with different train data types '''
     net = get_model()
     num_epochs = 1
     batch_size = 4
@@ -65,8 +66,8 @@ def test_fit():
                 batch_size=batch_size)
 
 
-@with_seed()
 def test_validation():
+    ''' test different validation data types'''
     net = get_model()
     num_epochs = 1
     batch_size = 4
@@ -105,9 +106,8 @@ def test_validation():
                 epochs=num_epochs,
                 batch_size=batch_size)
 
-
-@with_seed()
 def test_initializer():
+    ''' test with no initializer, inconsistent initializer '''
     net = get_model()
     num_epochs = 1
     batch_size = 4
@@ -119,13 +119,10 @@ def test_initializer():
     loss = gluon.loss.L2Loss()
     acc = mx.metric.Accuracy()
     # no initializer
-    # catch no init and no trainer warning
-    with warnings.catch_warnings(record=True) as w:
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics=acc,
-                                  context=ctx)
-        assert len(w) == 2
+    est = estimator.Estimator(net=net,
+                              loss=loss,
+                              metrics=acc,
+                              context=ctx)
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
@@ -134,7 +131,7 @@ def test_initializer():
     net = get_model()
     net.initialize(mx.init.Xavier(), ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    # catch no trainer and reinit warning
+    # catch reinit warning
     with warnings.catch_warnings(record=True) as w:
         est = estimator.Estimator(net=net,
                                   loss=loss,
@@ -142,22 +139,13 @@ def test_initializer():
                                   initializer=mx.init.MSRAPrelu(),
                                   trainers=trainer,
                                   context=ctx)
-        assert len(w) == 2
+        assert len(w) == 1
     est.fit(train_data=train_data,
             epochs=num_epochs,
             batch_size=batch_size)
-    # input invalid initializer
-    net = get_model()
-    with assert_raises(ValueError):
-        est = estimator.Estimator(net=net,
-                                  loss=loss,
-                                  metrics=acc,
-                                  initializer='xavier',
-                                  trainers=trainer,
-                                  context=ctx)
 
-@with_seed()
 def test_trainer():
+    ''' test with no trainer and invalid trainer '''
     net = get_model()
     num_epochs = 1
     batch_size = 4
@@ -189,8 +177,8 @@ def test_trainer():
                                   trainers=trainer,
                                   context=ctx)
 
-@with_seed
 def test_metric():
+    ''' test with no metric, list of metrics, invalid metric '''
     net = get_model()
     num_epochs = 1
     batch_size = 4
@@ -228,39 +216,19 @@ def test_metric():
                                   trainers=trainer,
                                   context=ctx)
 
-@with_seed
 def test_loss():
+    ''' test with no loss, invalid loss '''
     net = get_model()
-    num_epochs = 1
-    batch_size = 4
     ctx = mx.cpu()
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
     acc = mx.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    # input no loss, catch warning
-    with warnings.catch_warnings(record=True) as w:
+    # input no loss
+    with assert_raises(ValueError):
         est = estimator.Estimator(net=net,
                                   trainers=trainer,
                                   metrics=acc,
                                   context=ctx)
-        assert len(w) == 1
-    est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
-    # input list of losses
-    loss = [gluon.loss.L2Loss(), gluon.loss.L2Loss()]
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=acc,
-                              trainers=trainer,
-                              context=ctx)
-    est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
     # input invalid loss
     with assert_raises(ValueError):
         est = estimator.Estimator(net=net,
@@ -268,63 +236,3 @@ def test_loss():
                                   metrics=acc,
                                   trainers=trainer,
                                   context=ctx)
-
-@with_seed()
-def test_batch_size():
-    net = get_model()
-    num_epochs = 1
-    batch_size = 4
-    ctx = mx.cpu()
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
-    loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
-    net.initialize(ctx=ctx)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=acc,
-                              trainers=trainer,
-                              context=ctx)
-    # check auto infer batch size
-    est.fit(train_data=train_data,
-            epochs=num_epochs)
-
-    # check invalid batch size
-    with assert_raises(ValueError):
-        est.fit(train_data=train_data,
-                epochs=num_epochs,
-                batch_size=batch_size+1)
-
-@with_seed()
-def test_context():
-    # GPU needed??
-    net = get_model()
-    num_epochs = 1
-    batch_size = 4
-    ctx = mx.cpu()
-    in_data = mx.nd.random.uniform(shape=(10, 3))
-    out_data = mx.nd.random.uniform(shape=(10, 4))
-    dataset = gluon.data.dataset.ArrayDataset(in_data, out_data)
-    train_data = gluon.data.DataLoader(dataset, batch_size=batch_size)
-    loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
-    net.initialize(ctx=ctx)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    # input no context
-    est = estimator.Estimator(net=net,
-                              loss=loss,
-                              metrics=acc,
-                              trainers=trainer)
-    est.fit(train_data=train_data,
-            epochs=num_epochs,
-            batch_size=batch_size)
-    # input list of context
-
-    # input invalid context
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

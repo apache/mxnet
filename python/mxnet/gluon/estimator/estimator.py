@@ -65,8 +65,10 @@ class Estimator(object):
             self.loss = [loss]
         else:
             self.loss = loss or []
+            if not self.loss:
+                raise ValueError("No loss specified, refer to gluon.loss.Loss")
             for l in self.loss:
-                if not isinstance(loss, gluon.loss.Loss):
+                if not isinstance(l, gluon.loss.Loss):
                     raise ValueError("loss must be a Loss or a list of Loss, refer to gluon.loss.Loss")
 
         if isinstance(metrics, EvalMetric):
@@ -138,11 +140,13 @@ class Estimator(object):
             self.trainers = [trainers]
         else:
             self.trainers = trainers or []
-        if not self.trainers:
-            warnings.warn("No trainer specified, default SGD optimizer "
-                          "with learning rate 0.001 is used.")
-            self.trainers = [gluon.Trainer(self.net.collect_params(),
-                                           'sgd', {'learning_rate': 0.001})]
+            if not self.trainers:
+                warnings.warn("No trainer specified, default SGD optimizer "
+                              "with learning rate 0.001 is used.")
+                self.trainers = [gluon.Trainer(self.net.collect_params(),
+                                               'sgd', {'learning_rate': 0.001})]
+            else:
+                raise ValueError("Invalid trainer specified, please provide a valid gluon.Trainer")
 
     def _is_initialized(self):
         param_dict = self.net.collect_params()
