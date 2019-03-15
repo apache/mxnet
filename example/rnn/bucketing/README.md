@@ -1,6 +1,32 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 RNN Example
 ===========
 This folder contains RNN examples using high level mxnet.rnn interface.
+
+--------------
+
+## Gluon Implementation
+
+You can check this improved [Gluon implementation](http://gluon-nlp.mxnet.io/model_zoo/language_model/index.html#word-language-model) in gluon-nlp, the largest LSTM model reaches a perplexity of 65.62.
+
+--------------
+
 
 ## Data
 1) Review the license for the Sherlock Holmes dataset and ensure that you agree to it. Then uncomment the lines in the 'get_sherlockholmes_data.sh' script that download the dataset.
@@ -23,11 +49,11 @@ This folder contains RNN examples using high level mxnet.rnn interface.
 
   For Python2 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
+      $ python [cudnn_rnn_bucketing.py](cudnn_rnn_bucketing.py) --gpus 0,1,2,3
 
   For Python3 (GPU support only): can take 50+ minutes on AWS-EC2-p2.16xlarge
 
-      $ python3 [cudnn_lstm_bucketing.py](cudnn_lstm_bucketing.py) --gpus 0,1,2,3
+      $ python3 [cudnn_rnn_bucketing.py](cudnn_rnn_bucketing.py) --gpus 0,1,2,3
 
 
 ### Performance Note:

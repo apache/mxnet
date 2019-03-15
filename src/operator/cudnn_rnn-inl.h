@@ -26,6 +26,8 @@
 #ifndef MXNET_OPERATOR_CUDNN_RNN_INL_H_
 #define MXNET_OPERATOR_CUDNN_RNN_INL_H_
 
+#define USE_CUDNN_LSTM_PROJ MXNET_USE_CUDNN == 1 && CUDNN_VERSION >= 7200
+
 #include <mxnet/storage.h>
 #include <vector>
 #include <map>
@@ -38,7 +40,7 @@ namespace mxnet {
 namespace op {
 #if defined(__CUDACC__) && MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 5
 template<typename DType>
-class CuDNNRNNOp : public Operator{
+class CuDNNRNNOp : public Operator {
  public:
   explicit CuDNNRNNOp(RNNParam param) {
     this->param_ = param;
@@ -69,6 +71,32 @@ class CuDNNRNNOp : public Operator{
       default:
         LOG(FATAL) << "Not implmented";
     }
+#if USE_CUDNN_LSTM_PROJ
+    if (param_.projection_size.has_value()) {
+      CHECK_EQ(param_.mode, rnn_enum::kLstm)
+        << "Projection is only supported for LSTM.";
+      CHECK_GE(param_.state_size, param_.projection_size.value())
+        << "State size must be larger than projection size.";
+    }
+#else
+    CHECK(!param_.projection_size.has_value())
+      << "Projection is only supported for LSTM with CuDNN version later than 7.1.1.";
+#endif
+#if USE_CUDNN_LSTM_PROJ
+    if (param_.lstm_state_clip_min.has_value()
+        || param_.lstm_state_clip_max.has_value()) {
+      CHECK_EQ(param_.mode, rnn_enum::kLstm)
+        << "State clipping is only supported for LSTM.";
+      CHECK(param_.lstm_state_clip_min.has_value() && param_.lstm_state_clip_max.has_value())
+        << "lstm_state_clip_min and lstm_state_clip_max must be specified together.";
+      CHECK_GE(param_.lstm_state_clip_max.value(), param_.lstm_state_clip_min.value())
+        << "lstm_state_clip_max must be greater or equal to lstm_state_clip_min";
+    }
+#else
+    CHECK(!param_.lstm_state_clip_min.has_value()
+          && !param_.lstm_state_clip_max.has_value())
+      << "State clipping is only supported for LSTM with CuDNN version later than 7.2.1.";
+#endif
     // RNN Direction
     direction_ = param_.bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL;
     // Other
@@ -92,6 +120,13 @@ class CuDNNRNNOp : public Operator{
 
     CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
     CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
+
+    #if USE_CUDNN_LSTM_PROJ
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&y_data_desc_));
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dx_data_desc_));
+    CUDNN_CALL(cudnnCreateRNNDataDescriptor(&dy_data_desc_));
+    #endif
   }
 
   ~CuDNNRNNOp() {
@@ -123,6 +158,12 @@ class CuDNNRNNOp : public Operator{
         Storage::Get()->Free(dropout_states_);
       }
     }
+    #if USE_CUDNN_LSTM_PROJ
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(x_data_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(y_data_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dx_data_desc_));
+    CUDNN_CALL(cudnnDestroyRNNDataDescriptor(dy_data_desc_));
+    #endif
   }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -169,7 +210,89 @@ class CuDNNRNNOp : public Operator{
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
+    #if USE_CUDNN_LSTM_PROJ
+    std::vector<int> seqLengthArray(param_.batch_size_, param_.seq_length_);
+    CUDNN_CALL(cudnnSetRNNDataDescriptor(x_data_desc_,
+                                         dtype_,
+                                         CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                         param_.seq_length_,
+                                         param_.batch_size_,
+                                         param_.input_size_,
+                                         seqLengthArray.data(),
+                                         nullptr));
+    int out_size =
+      (param_.projection_size.has_value()) ? param_.projection_size.value() : param_.state_size;
+    out_size = (param_.bidirectional) ? (out_size * 2) : out_size;
+    CUDNN_CALL(cudnnSetRNNDataDescriptor(y_data_desc_,
+                                         dtype_,
+                                         CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                         param_.seq_length_,
+                                         param_.batch_size_,
+                                         out_size,
+                                         seqLengthArray.data(),
+                                         nullptr));
     if (ctx.is_train) {
+      CUDNN_CALL(cudnnSetRNNDataDescriptor(dx_data_desc_,
+                                           dtype_,
+                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                           param_.seq_length_,
+                                           param_.batch_size_,
+                                           param_.input_size_,
+                                           seqLengthArray.data(),
+                                           nullptr));
+      CUDNN_CALL(cudnnSetRNNDataDescriptor(dy_data_desc_,
+                                           dtype_,
+                                           CUDNN_RNN_DATA_LAYOUT_SEQ_MAJOR_PACKED,
+                                           param_.seq_length_,
+                                           param_.batch_size_,
+                                           out_size,
+                                           seqLengthArray.data(),
+                                           nullptr));
+    }
+    #endif
+
+    #if USE_CUDNN_LSTM_PROJ
+    bool clip_state = param_.lstm_state_clip_min.has_value();
+    bool clip_nan = param_.lstm_state_clip_nan;
+    CUDNN_CALL(cudnnRNNSetClip(s->dnn_handle_,
+                               rnn_desc_,
+                               clip_state ? CUDNN_RNN_CLIP_MINMAX : CUDNN_RNN_CLIP_NONE,
+                               clip_nan ? CUDNN_NOT_PROPAGATE_NAN : CUDNN_PROPAGATE_NAN,
+                               clip_state ? param_.lstm_state_clip_min.value() : 0.0,
+                               clip_state ? param_.lstm_state_clip_max.value() : 0.0));
+    #endif
+
+    if (ctx.is_train) {
+      #if USE_CUDNN_LSTM_PROJ
+      CUDNN_CALL(cudnnRNNForwardTrainingEx(s->dnn_handle_,
+                                           rnn_desc_,
+                                           x_data_desc_,
+                                           x.dptr_,
+                                           hx_desc_,
+                                           hx.dptr_,
+                                           cx_desc_,
+                                           cx_ptr,
+                                           w_desc_,
+                                           w.dptr_,
+                                           y_data_desc_,
+                                           y.dptr_,
+                                           hy_desc_,
+                                           hy_ptr,
+                                           cy_desc_,
+                                           cy_ptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           nullptr,
+                                           temp_space.dptr_,
+                                           workspace_byte_,
+                                           reserve_space_.dptr,
+                                           reserve_space_byte_));
+      #else
       CUDNN_CALL(cudnnRNNForwardTraining(s->dnn_handle_,
                                          rnn_desc_,
                                          param_.seq_length_,
@@ -191,8 +314,36 @@ class CuDNNRNNOp : public Operator{
                                          workspace_byte_,
                                          reserve_space_.dptr,
                                          reserve_space_byte_));
+      #endif
     } else {
-      // inference mode
+      #if USE_CUDNN_LSTM_PROJ
+      CUDNN_CALL(cudnnRNNForwardInferenceEx(s->dnn_handle_,
+                                            rnn_desc_,
+                                            x_data_desc_,
+                                            x.dptr_,
+                                            hx_desc_,
+                                            hx.dptr_,
+                                            cx_desc_,
+                                            cx_ptr,
+                                            w_desc_,
+                                            w.dptr_,
+                                            y_data_desc_,
+                                            y.dptr_,
+                                            hy_desc_,
+                                            hy_ptr,
+                                            cy_desc_,
+                                            cy_ptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            nullptr,
+                                            temp_space.dptr_,
+                                            workspace_byte_));
+      #else
       CUDNN_CALL(cudnnRNNForwardInference(s->dnn_handle_,
                                           rnn_desc_,
                                           param_.seq_length_,
@@ -212,6 +363,7 @@ class CuDNNRNNOp : public Operator{
                                           cy_ptr,
                                           temp_space.dptr_,
                                           workspace_byte_));
+      #endif
     }
   }
 
@@ -283,6 +435,52 @@ class CuDNNRNNOp : public Operator{
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[rnn_enum::kTempSpace].get_space_typed<gpu, 1, DType>(
                               mshadow::Shape1(temp_size), s);
+    #if USE_CUDNN_LSTM_PROJ
+    CUDNN_CALL(cudnnRNNBackwardDataEx(s->dnn_handle_,
+                                      rnn_desc_,
+                                      y_data_desc_,
+                                      y.dptr_,
+                                      dy_data_desc_,
+                                      dy.dptr_,
+                                      nullptr,
+                                      nullptr,
+                                      dhy_desc_,
+                                      dhy_ptr,
+                                      dcy_desc_,
+                                      dcy_ptr,
+                                      w_desc_,
+                                      w.dptr_,
+                                      hx_desc_,
+                                      hx.dptr_,
+                                      cx_desc_,
+                                      cx_ptr,
+                                      dx_data_desc_,
+                                      dx.dptr_,
+                                      dhx_desc_,
+                                      dhx.dptr_,
+                                      dcx_desc_,
+                                      dcx_ptr,
+                                      nullptr,
+                                      nullptr,
+                                      temp_space.dptr_,
+                                      workspace_byte_,
+                                      reserve_space_.dptr,
+                                      reserve_space_byte_));
+    CUDNN_CALL(cudnnRNNBackwardWeightsEx(s->dnn_handle_,
+                                         rnn_desc_,
+                                         x_data_desc_,
+                                         x.dptr_,
+                                         hx_desc_,
+                                         hx.dptr_,
+                                         y_data_desc_,
+                                         y.dptr_,
+                                         temp_space.dptr_,
+                                         workspace_byte_,
+                                         dw_desc_,
+                                         dw.dptr_,
+                                         reserve_space_.dptr,
+                                         reserve_space_byte_));
+    #else
     CUDNN_CALL(cudnnRNNBackwardData(s->dnn_handle_,
                                     rnn_desc_,
                                     param_.seq_length_,
@@ -325,6 +523,7 @@ class CuDNNRNNOp : public Operator{
                                        dw.dptr_,
                                        reserve_space_.dptr,
                                        reserve_space_byte_));
+    #endif
   }
 
  private:
@@ -367,8 +566,6 @@ class CuDNNRNNOp : public Operator{
         dimA[0] = param_.batch_size_;
         dimA[1] = param_.input_size_;
         dimA[2] = 1;
-        dimA[0] = param_.batch_size_;
-        dimA[1] = param_.input_size_;
         strideA[0] = dimA[2] * dimA[1];
         strideA[1] = dimA[2];
         strideA[2] = 1;
@@ -391,10 +588,10 @@ class CuDNNRNNOp : public Operator{
         strideA[2] = 1;
 
         CUDNN_CALL(cudnnSetTensorNdDescriptor(y_vec[i],
-                                             dtype_,
-                                             3,
-                                             dimA,
-                                             strideA));
+                                              dtype_,
+                                              3,
+                                              dimA,
+                                              strideA));
         CUDNN_CALL(cudnnSetTensorNdDescriptor(dy_vec[i],
                                               dtype_,
                                               3,
@@ -413,42 +610,85 @@ class CuDNNRNNOp : public Operator{
       strideA[0] = dimA[2] * dimA[1];
       strideA[1] = dimA[2];
       strideA[2] = 1;
+      #if USE_CUDNN_LSTM_PROJ
+      int dimB[3];
+      int strideB[3];
+      dimB[0] = param_.num_layers * (param_.bidirectional ? 2 : 1);
+      dimB[1] = param_.batch_size_;
+      dimB[2] = param_.projection_size.has_value() ?
+                param_.projection_size.value() : param_.state_size;
+      strideB[0] = dimB[2] * dimB[1];
+      strideB[1] = dimB[2];
+      strideB[2] = 1;
+      #endif
 
+      #if USE_CUDNN_LSTM_PROJ
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
+                                            dtype_,
+                                            3,
+                                            dimB,
+                                            strideB));
+      #else
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hx_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(cx_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #if USE_CUDNN_LSTM_PROJ
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
+                                            dtype_,
+                                            3,
+                                            dimB,
+                                            strideB));
+      #else
       CUDNN_CALL(cudnnSetTensorNdDescriptor(hy_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(cy_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #if USE_CUDNN_LSTM_PROJ
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
+                                            dtype_,
+                                            3,
+                                            dimB,
+                                            strideB));
+      #else
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhx_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dcx_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #if USE_CUDNN_LSTM_PROJ
+      CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
+                                            dtype_,
+                                            3,
+                                            dimB,
+                                            strideB));
+      #else
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dhy_desc_,
                                             dtype_,
                                             3,
                                             dimA,
                                             strideA));
+      #endif
       CUDNN_CALL(cudnnSetTensorNdDescriptor(dcy_desc_,
                                             dtype_,
                                             3,
@@ -459,7 +699,7 @@ class CuDNNRNNOp : public Operator{
       if (param_.p > 0) {
         CUDNN_CALL(cudnnDropoutGetStatesSize(s->dnn_handle_, &dropout_byte_));
         dropout_size_ = dropout_byte_ / sizeof(DType);
-        dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU());
+        dropout_states_ = Storage::Get()->Alloc(dropout_byte_, Context::GPU(s->dev_id));
       } else {
         dropout_states_ = {};
         dropout_byte_ = 0;
@@ -470,33 +710,46 @@ class CuDNNRNNOp : public Operator{
                                            seed_));
       // RNN descriptors
       #if CUDNN_MAJOR >= 6
-        cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
-        CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
-                                            rnn_desc_,
-                                            param_.state_size,
-                                            param_.num_layers,
-                                            dropout_desc_,
-                                            input_mode_,
-                                            direction_,
-                                            mode_,
-                                            rnn_algo,
-                                            dtype_));
+      cudnnRNNAlgo_t rnn_algo = CUDNN_RNN_ALGO_STANDARD;
+      CUDNN_CALL(cudnnSetRNNDescriptor_v6(s->dnn_handle_,
+                                          rnn_desc_,
+                                          param_.state_size,
+                                          param_.num_layers,
+                                          dropout_desc_,
+                                          input_mode_,
+                                          direction_,
+                                          mode_,
+                                          rnn_algo,
+                                          dtype_));
       #else
-        CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
-                                         param_.state_size,
-                                         param_.num_layers,
-                                         dropout_desc_,
-                                         input_mode_,
-                                         direction_,
-                                         mode_,
-                                         dtype_));
+      CUDNN_CALL(cudnnSetRNNDescriptor(rnn_desc_,
+                                       param_.state_size,
+                                       param_.num_layers,
+                                       dropout_desc_,
+                                       input_mode_,
+                                       direction_,
+                                       mode_,
+                                       dtype_));
       #endif
       #if CUDNN_MAJOR >= 7
         cudnnMathType_t math_type = CUDNN_DEFAULT_MATH;
         if (cudnn_tensor_core_ && rnn_algo == CUDNN_RNN_ALGO_STANDARD) {
           math_type = CUDNN_TENSOR_OP_MATH;
         }
+      #if CUDNN_VERSION >= 7200
+            if (GetEnvAllowTensorCore() && GetEnvAllowTensorCoreConversion() &&
+                (DataType<DType>::kFlag != kFloat16))
+              math_type = CUDNN_TENSOR_OP_MATH_ALLOW_CONVERSION;
+      #endif
         CUDNN_CALL(cudnnSetRNNMatrixMathType(rnn_desc_, math_type));
+      #endif
+      #if USE_CUDNN_LSTM_PROJ
+      if (param_.projection_size.has_value()) {
+        CUDNN_CALL(cudnnSetRNNProjectionLayers(s->dnn_handle_,
+                                               rnn_desc_,
+                                               param_.projection_size.value(),
+                                               0));
+      }
       #endif
       // Get temp space sizes
       CUDNN_CALL(cudnnGetRNNWorkspaceSize(s->dnn_handle_,
@@ -511,7 +764,7 @@ class CuDNNRNNOp : public Operator{
                                                 &reserve_space_byte_));
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
-      reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU());
+      reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
 
       // Check that number of params are correct
       size_t cudnn_param_size;
@@ -586,6 +839,9 @@ class CuDNNRNNOp : public Operator{
   size_t workspace_byte_, reserve_space_byte_, dropout_byte_;
   int workspace_size_, dropout_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;
+  #if USE_CUDNN_LSTM_PROJ
+  cudnnRNNDataDescriptor_t x_data_desc_, y_data_desc_, dx_data_desc_, dy_data_desc_;
+  #endif
   cudnnTensorDescriptor_t hx_desc_, cx_desc_;
   cudnnTensorDescriptor_t hy_desc_, cy_desc_;
   cudnnTensorDescriptor_t dhx_desc_, dcx_desc_;

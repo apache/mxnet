@@ -33,7 +33,7 @@
 #endif
 
 /*! \brief inverse standard deviation <-> variance */
-#define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/sqrt((__var$) + DType(__eps$)))
+#define VARIANCE_TO_INVSTD(__var$,    __eps$)   (1.0/std::sqrt((__var$) + DType(__eps$)))
 #define INVSTD_TO_VARIANCE(__invstd$, __eps$)   ((1.0 / ((__invstd$) * (__invstd$))) - (__eps$))
 
 namespace mxnet {
@@ -317,13 +317,13 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
 DMLC_REGISTER_PARAMETER(BatchNormParam);
 
 static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
-                           std::vector<TShape> *in_shape,
-                           std::vector<TShape> *out_shape) {
+                           mxnet::ShapeVector *in_shape,
+                           mxnet::ShapeVector *out_shape) {
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 3U);
-  const TShape &dshape = in_shape->at(batchnorm::kData);
+  const mxnet::TShape &dshape = in_shape->at(batchnorm::kData);
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -336,10 +336,10 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  in_shape->at(batchnorm::kGamma) = TShape(Shape1(channelCount));
-  in_shape->at(batchnorm::kBeta) = TShape(Shape1(channelCount));
-  in_shape->at(batchnorm::kInMovingMean) = TShape(Shape1(channelCount));  // kMovingMean
-  in_shape->at(batchnorm::kInMovingVar) = TShape(Shape1(channelCount));  // kMovingVar
+  in_shape->at(batchnorm::kGamma) = mxnet::TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kBeta) = mxnet::TShape(Shape1(channelCount));
+  in_shape->at(batchnorm::kInMovingMean) = mxnet::TShape(Shape1(channelCount));  // kMovingMean
+  in_shape->at(batchnorm::kInMovingVar) = mxnet::TShape(Shape1(channelCount));  // kMovingVar
 
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
@@ -363,7 +363,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
       dtype_param = mshadow::DataType<AccRealX>::kFlag; });
   std::vector<std::string> args{"data", "gamma", "beta", "mean", "var"};
   CHECK_LE(in_type->size(), args.size());
-  for (index_t i = 1; i < in_type->size(); ++i) {
+  for (size_t i = 1; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype_param;
     } else {
@@ -381,7 +381,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
-  TShape shape = input.shape();
+  mxnet::TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
       && shape[param.axis] % 8 == 0
@@ -418,7 +418,7 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
 
-  TShape shape = inputs[0].shape();
+  mxnet::TShape shape = inputs[0].shape();
   // MKLDNN batchnorm only works well on the special MKLDNN layout.
   if (SupportMKLDNNBN(inputs[0], param)
       && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
@@ -567,10 +567,9 @@ axis to be the last item in the input shape.
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
 then set ``gamma`` to 1 and its gradient to 0.
 
-Note::
-
-When fix_gamma is set to True, no sparse support is provided. If fix_gamma is set to False,
-the sparse tensors will fallback.
+.. Note::
+  When ``fix_gamma`` is set to True, no sparse support is provided. If ``fix_gamma is`` set to False,
+  the sparse tensors will fallback.
 
 )code" ADD_FILELINE)
 .set_num_inputs(5)
@@ -592,7 +591,7 @@ the sparse tensors will fallback.
 .set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
   return std::vector<uint32_t>{3, 4};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", BatchNormShape)
+.set_attr<mxnet::FInferShape>("FInferShape", BatchNormShape)
 .set_attr<nnvm::FInferType>("FInferType", BatchNormType)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 .set_attr<FCompute>("FCompute<cpu>", BatchNormCompute<cpu>)

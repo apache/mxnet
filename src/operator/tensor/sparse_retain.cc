@@ -19,7 +19,7 @@
 
 /*!
  * \file sparse_retain.cc
- * \brief
+ * \brief CPU implementation of sparse_retain operator
 */
 
 #include "./sparse_retain-inl.h"
@@ -57,7 +57,7 @@ The storage type of ``retain`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SparseRetainOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SparseRetainOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SparseRetainOpType)
 .set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)

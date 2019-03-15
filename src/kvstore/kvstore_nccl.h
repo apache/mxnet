@@ -342,7 +342,7 @@ class KVStoreNCCL : public KVStoreLocal {
       } else {
         auto& buf = merge_buf_[key];
         int root = src.ctx().dev_id;
-        assert(root == buf.ctx().dev_id);
+        assert(root == buf.merged.ctx().dev_id);
         root_id = FindRootId(dst, root);
 
         // Check whether we got the same set of devices
@@ -428,8 +428,9 @@ class KVStoreNCCL : public KVStoreLocal {
         mutate_vars.push_back(ptr(dst[i])->var());
     }
     Engine::Get()->PushSync([this](RunContext rctx) {
+        mxnet::common::cuda::DeviceStore device_store;
         for (auto cur : nccl_data_) {
-          CUDA_CALL(cudaSetDevice(cur.second.dev_id));
+          device_store.SetDevice(cur.second.dev_id);
           CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
         }
       },
@@ -442,7 +443,7 @@ class KVStoreNCCL : public KVStoreLocal {
   }
 
   // Initialize single key
-  void InitKey(int key, const NDArrayStorageType stype, const TShape& shape,
+  void InitKey(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) {
     if (stype == kDefaultStorage) {
       key_attrs_.push_back(std::make_tuple(key, shape, dtype));
@@ -479,22 +480,23 @@ class KVStoreNCCL : public KVStoreLocal {
     std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
     std::vector<ncclComm_t> comms(devs.size());
     ncclCommInitAll(&(comms[0]), devs.size(), &(device_ids_[0]));
+    mxnet::common::cuda::DeviceStore device_store;
     for (size_t i = 0; i < devs.size(); ++i) {
       NCCLEntry e;
       e.dev_id = device_ids_[i];
       e.comm = comms[i];
       e.rank = i;
-      cudaSetDevice(e.dev_id);
+      device_store.SetDevice(e.dev_id);
       cudaStreamCreate(&(e.stream));
       nccl_data_[device_ids_[i]] = e;
     }
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   void InitMergeBuffer(const std::vector<Context>& devs) {
     for (size_t i = 0; i < key_attrs_.size(); ++i) {
       int key  = std::get<0>(key_attrs_[i]);
-      TShape s = std::get<1>(key_attrs_[i]);
+      mxnet::TShape s = std::get<1>(key_attrs_[i]);
       int type = std::get<2>(key_attrs_[i]);
       auto& buf = merge_buf_[key];
       // always use devs[0] as root

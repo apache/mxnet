@@ -34,8 +34,8 @@ import operator
 from functools import reduce # pylint: disable=redefined-builtin
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
-from ..base import c_array, c_array_buf, c_handle_array, mx_real_t
-from ..base import mx_uint, NDArrayHandle, check_call
+from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
+from ..base import mx_uint, NDArrayHandle, check_call, DLPackHandle
 from ..base import ctypes2buffer
 from ..context import Context, current_context
 from . import _internal
@@ -46,7 +46,8 @@ __all__ = ["NDArray", "concatenate", "_DTYPE_NP_TO_MX", "_DTYPE_MX_TO_NP", "_GRA
            "ones", "add", "arange", "eye", "divide", "equal", "full", "greater", "greater_equal",
            "imdecode", "lesser", "lesser_equal", "logical_and", "logical_or", "logical_xor",
            "maximum", "minimum", "moveaxis", "modulo", "multiply", "not_equal", "onehot_encode",
-           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram"]
+           "power", "subtract", "true_divide", "waitall", "_new_empty_handle", "histogram",
+           "split_v2", "to_dlpack_for_read", "to_dlpack_for_write", "from_dlpack"]
 
 _STORAGE_TYPE_UNDEFINED = -1
 _STORAGE_TYPE_DEFAULT = 0
@@ -156,6 +157,13 @@ def waitall():
     """Wait for all async operations to finish in MXNet.
 
     This function is used for benchmarking only.
+
+    .. warning::
+
+       If your code has exceptions, `waitall` can cause silent failures.
+       For this reason you should avoid `waitall` in your code.
+       Use it only if you are confident that your code is error free.
+       Then make sure you call `wait_to_read` on all outputs after `waitall`.
     """
     check_call(_LIB.MXNDArrayWaitAll())
 
@@ -178,7 +186,6 @@ fixed-size items.
     # See C++ side of definition(kTVMNDArrayTypeCode) at include/mxmet/tensor_blob.h
     _tvm_tcode = 19
     # pylint: disable= no-member, undefined-variable
-
     @property
     def _tvm_handle(self):
         return self.handle.value
@@ -399,7 +406,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
+        key : int, mxnet.ndarray.slice, list, np.ndarray, NDArray, or tuple of all previous types
             The indexing key.
         value : scalar or array-like object that can be broadcast to the shape of self[key]
             The value to set.
@@ -467,7 +474,7 @@ fixed-size items.
 
         Parameters
         ----------
-        key : int, slice, list, np.ndarray, NDArray, or tuple of all previous types
+        key : int, mxnet.ndarray.slice, list, np.ndarray, NDArray, or tuple of all previous types
             Indexing key.
 
         Examples
@@ -866,10 +873,10 @@ fixed-size items.
             except:
                 raise TypeError('array must consist of array-like data,' +
                                 'type %s is not supported' % str(type(array)))
-        source_array = np.ascontiguousarray(source_array, dtype=self.dtype)
+        source_array = np.asarray(source_array, dtype=self.dtype, order='C')
         if source_array.shape != self.shape:
             raise ValueError('Shape inconsistent: expected %s vs got %s'%(
-                str(self.shape), str(source_array.shape)))
+                str(source_array.shape), str(self.shape)))
         check_call(_LIB.MXNDArraySyncCopyFromCPU(
             self.handle,
             source_array.ctypes.data_as(ctypes.c_void_p),
@@ -998,7 +1005,7 @@ fixed-size items.
 
               Example::
 
-              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be
+              - without reverse=1, for input shape = (10,5,4), shape = (-1,0), output shape would be \
                 (40,5).
               - with reverse=1, output shape will be (50,4).
 
@@ -1125,6 +1132,14 @@ fixed-size items.
         this array as data.
         """
         return op.split(self, *args, **kwargs)
+
+    def split_v2(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split_v2`.
+
+        The arguments are the same as for :py:func:`split_v2`, with
+        this array as data.
+        """
+        return split_v2(self, *args, **kwargs)
 
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
@@ -1678,6 +1693,14 @@ fixed-size items.
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def softmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmin`.
+
+        The arguments are the same as for :py:func:`softmin`, with
+        this array as data.
+        """
+        return op.softmin(self, *args, **kwargs)
+
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
 
@@ -2205,6 +2228,52 @@ fixed-size items.
         """
         return op.cast_storage(self, stype=stype)
 
+    def to_dlpack_for_read(self):
+        """Returns a reference view of NDArray that represents as DLManagedTensor until
+        all previous write operations on the current array are finished.
+
+        Returns
+        -------
+        PyCapsule (the pointer of DLManagedTensor)
+            a reference view of NDArray that represents as DLManagedTensor.
+
+        Examples
+        --------
+        >>> x = mx.nd.ones((2,3))
+        >>> y = mx.nd.to_dlpack_for_read(x)
+        >>> type(y)
+        <class 'PyCapsule'>
+        >>> z = mx.nd.from_dlpack(y)
+        >>> z
+        [[1. 1. 1.]
+         [1. 1. 1.]]
+        <NDArray 2x3 @cpu(0)>
+        """
+        return to_dlpack_for_read(self)
+
+    def to_dlpack_for_write(self):
+        """Returns a reference view of NDArray that represents as DLManagedTensor until
+        all previous read/write operations on the current array are finished.
+
+        Returns
+        -------
+        PyCapsule (the pointer of DLManagedTensor)
+            a reference view of NDArray that represents as DLManagedTensor.
+
+        Examples
+        --------
+        >>> x = mx.nd.ones((2,3))
+        >>> w = mx.nd.to_dlpack_for_write(x)
+        >>> type(w)
+        <class 'PyCapsule'>
+        >>> u = mx.nd.from_dlpack(w)
+        >>> u += 1
+        >>> x
+        [[2. 2. 2.]
+         [2. 2. 2.]]
+        <NDArray 2x3 @cpu(0)>
+        """
+        return to_dlpack_for_write(self)
 
 def _get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
@@ -2444,10 +2513,10 @@ def moveaxis(tensor, source, destination):
     ----------
     tensor : mx.nd.array
         The array which axes should be reordered
-    source : int
-        Original position of the axes to move.
-    destination : int
-        Destination position for each of the original axes.
+    source : int or sequence of int
+        Original position of the axes to move. Can be negative but must be unique.
+    destination : int or sequence of int
+        Destination position for each of the original axes. Can be negative but must be unique.
 
     Returns
     -------
@@ -2459,23 +2528,36 @@ def moveaxis(tensor, source, destination):
     >>> X = mx.nd.array([[1, 2, 3], [4, 5, 6]])
     >>> mx.nd.moveaxis(X, 0, 1).shape
     (3L, 2L)
+
+    >>> X = mx.nd.zeros((3, 4, 5))
+    >>> mx.nd.moveaxis(X, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
     """
-    axes = list(range(tensor.ndim))
     try:
-        axes.pop(source)
+        source = np.core.numeric.normalize_axis_tuple(source, tensor.ndim)
     except IndexError:
         raise ValueError('Source should verify 0 <= source < tensor.ndim'
                          'Got %d' % source)
     try:
-        axes.insert(destination, source)
+        destination = np.core.numeric.normalize_axis_tuple(destination, tensor.ndim)
     except IndexError:
-        raise ValueError('Destination should verify 0 <= destination < tensor.ndim'
-                         'Got %d' % destination)
-    return op.transpose(tensor, axes)
+        raise ValueError('Destination should verify 0 <= destination < tensor.ndim (%d).'
+                         % tensor.ndim, 'Got %d' % destination)
+
+    if len(source) != len(destination):
+        raise ValueError('`source` and `destination` arguments must have '
+                         'the same number of elements')
+
+    order = [n for n in range(tensor.ndim) if n not in source]
+
+    for dest, src in sorted(zip(destination, source)):
+        order.insert(dest, src)
+
+    return op.transpose(tensor, order)
 
 
 # pylint: disable= no-member, protected-access, too-many-arguments, redefined-outer-name
-def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dtype=mx_real_t):
+def arange(start, stop=None, step=1.0, repeat=1, infer_range=None, ctx=None, dtype=mx_real_t):
     """Returns evenly spaced values within a given interval.
 
     Values are generated within the half-open interval [`start`, `stop`). In other
@@ -2493,6 +2575,9 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dt
         Spacing between values. The default step size is 1.
     repeat : int, optional
         Number of times to repeat each element. The default repeat count is 1.
+    infer_range : boolean, optional
+        When set to True, infer the stop position from the start, step,
+        repeat, and output tensor size.
     ctx : Context, optional
         Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
@@ -2516,10 +2601,13 @@ def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, ctx=None, dt
     >>> mx.nd.arange(2, 6, step=2, repeat=3, dtype='int32').asnumpy()
     array([2, 2, 2, 4, 4, 4], dtype=int32)
     """
+    if infer_range is not None:
+        warnings.warn('`infer_range` argument has been deprecated',
+                      DeprecationWarning)
     if ctx is None:
         ctx = current_context()
     return _internal._arange(start=start, stop=stop, step=step, repeat=repeat,
-                             infer_range=infer_range, dtype=dtype, ctx=str(ctx))
+                             infer_range=False, dtype=dtype, ctx=str(ctx))
 # pylint: enable= no-member, protected-access, too-many-arguments
 
 
@@ -2585,9 +2673,9 @@ def add(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be added.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be added.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2647,9 +2735,9 @@ def subtract(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be subtracted.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be subtracted.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2708,9 +2796,9 @@ def multiply(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be multiplied.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be multiplied.
         If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2769,9 +2857,9 @@ def divide(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array in division.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array in division.
         The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2826,9 +2914,9 @@ def modulo(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array in modulo.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array in modulo.
         The arrays to be taken modulo. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
@@ -2945,9 +3033,9 @@ def maximum(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3002,9 +3090,9 @@ def minimum(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3063,9 +3151,9 @@ def equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3127,9 +3215,9 @@ def not_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3194,9 +3282,9 @@ def greater(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3258,9 +3346,9 @@ def greater_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3322,9 +3410,9 @@ def lesser(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3386,9 +3474,9 @@ def lesser_equal(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First array to be compared.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second array to be compared. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3449,9 +3537,9 @@ def logical_and(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3509,9 +3597,9 @@ def logical_or(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3569,9 +3657,9 @@ def logical_xor(lhs, rhs):
 
     Parameters
     ----------
-    lhs : scalar or array
+    lhs : scalar or mxnet.ndarray.array
         First input of the function.
-    rhs : scalar or array
+    rhs : scalar or mxnet.ndarray.array
          Second input of the function. If ``lhs.shape != rhs.shape``, they must be
         broadcastable to a common shape.
 
@@ -3837,6 +3925,12 @@ def histogram(a, bins=10, range=None):
         Values outside the range are ignored. The first element of the range must be less than or
         equal to the second. range affects the automatic bin computation as well, the range will
         be equally divided by the number of bins.
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
     """
 
     # pylint: disable= no-member, protected-access
@@ -3851,3 +3945,173 @@ def histogram(a, bins=10, range=None):
         return _internal._histogram(data=a, bin_cnt=bins, range=range)
     raise ValueError("bins argument should be either an integer or an NDArray")
     # pylint: enable= no-member, protected-access, redefined-builtin
+
+def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
+    """Split an array into multiple sub-arrays.
+
+    Parameters
+    ----------
+    ary : NDArray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or tuple of ints
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+        - ary[:2]
+        - ary[2:3]
+        - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    squeeze_axis: boolean, optional
+        Whether to squeeze the axis of sub-arrays or not, only useful when size
+        of the sub-arrays are 1 on the `axis`. Default is False.
+
+    Returns
+    -------
+    NDArray
+        A created array.
+
+    """
+    indices = []
+    axis_size = ary.shape[axis]
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+        if axis_size % sections:
+            raise ValueError('array split does not result in an equal division')
+        section_size = int(axis_size / sections)
+        indices = [i * section_size for i in range(sections)]
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    return _internal._split_v2(ary, indices, axis, squeeze_axis)
+
+PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
+_c_str_dltensor = c_str('dltensor')
+_c_str_used_dltensor = c_str('used_dltensor')
+
+def _dlpack_deleter(pycapsule):
+    pycapsule = ctypes.c_void_p(pycapsule)
+    if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
+        ptr = ctypes.c_void_p(
+            ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
+        check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
+
+_c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
+
+def to_dlpack_for_read(data):
+    """Returns a reference view of NDArray that represents as DLManagedTensor until
+       all previous write operations on the current array are finished.
+
+    Parameters
+    ----------
+    data: NDArray
+        input data.
+
+    Returns
+    -------
+    PyCapsule (the pointer of DLManagedTensor)
+        a reference view of NDArray that represents as DLManagedTensor.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.to_dlpack_for_read(x)
+    >>> type(y)
+    <class 'PyCapsule'>
+    >>> z = mx.nd.from_dlpack(y)
+    >>> z
+    [[1. 1. 1.]
+     [1. 1. 1.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    data.wait_to_read()
+    dlpack = DLPackHandle()
+    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
+    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
+
+def to_dlpack_for_write(data):
+    """Returns a reference view of NDArray that represents as DLManagedTensor until
+       all previous read/write operations on the current array are finished.
+
+    Parameters
+    ----------
+    data: NDArray
+        input data.
+
+    Returns
+    -------
+    PyCapsule (the pointer of DLManagedTensor)
+        a reference view of NDArray that represents as DLManagedTensor.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> w = mx.nd.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.nd.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    [[2. 2. 2.]
+     [2. 2. 2.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
+    dlpack = DLPackHandle()
+    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
+    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
+
+def from_dlpack(dlpack):
+    """Returns a NDArray backed by a dlpack tensor.
+
+    Parameters
+    ----------
+    dlpack: PyCapsule (the pointer of DLManagedTensor)
+        input data
+
+    Returns
+    -------
+    NDArray
+        a NDArray backed by a dlpack tensor
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3))
+    >>> y = mx.nd.to_dlpack_for_read(x)
+    >>> type(y)
+    <class 'PyCapsule'>
+    >>> z = mx.nd.from_dlpack(y)
+    >>> type(z)
+    <class 'mxnet.ndarray.ndarray.NDArray'>
+    >>> z
+    [[ 1.  1.  1.]
+     [ 1.  1.  1.]]
+    <NDArray 2x3 @cpu(0)>
+
+    >>> w = mx.nd.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.nd.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    [[2. 2. 2.]
+     [2. 2. 2.]]
+    <NDArray 2x3 @cpu(0)>
+    """
+    handle = NDArrayHandle()
+    dlpack = ctypes.py_object(dlpack)
+    assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
+        'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
+    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
+    check_call(_LIB.MXNDArrayFromDLPack(dlpack_handle, ctypes.byref(handle)))
+    # Rename PyCapsule (DLPack)
+    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
+    # delete the deleter of the old dlpack
+    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
+    return NDArray(handle=handle)

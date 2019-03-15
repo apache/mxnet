@@ -15,21 +15,35 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import bz2
+import os
+import shutil
 
+import mxnet as mx
 import numpy as np
 from sklearn.datasets import load_svmlight_file
 
+
 # Download data file
-# from subprocess import call
 # YearPredictionMSD dataset: https://archive.ics.uci.edu/ml/datasets/yearpredictionmsd
-# call(['wget', 'https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/YearPredictionMSD.bz2'])
-# call(['bzip2', '-d', 'YearPredictionMSD.bz2'])
 
 
-def read_year_prediction_data(fileName):
+def get_year_prediction_data(dirname=None):
     feature_dim = 90
+    if dirname is None:
+        dirname = os.path.join(os.path.dirname(__file__), 'data')
+    filename = 'YearPredictionMSD'
+    download_filename = os.path.join(dirname, "%s.bz2" % filename)
+    extracted_filename = os.path.join(dirname, filename)
+    if not os.path.isfile(download_filename):
+        print("Downloading data...")
+        mx.test_utils.download('https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/regression/%s.bz2' % filename, dirname=dirname)
+    if not os.path.isfile(extracted_filename):
+        print("Extracting data...")
+        with bz2.BZ2File(download_filename) as fr, open(extracted_filename,"wb") as fw:
+            shutil.copyfileobj(fr,fw)
     print("Reading data from disk...")
-    train_features, train_labels = load_svmlight_file(fileName, n_features=feature_dim, dtype=np.float32)
+    train_features, train_labels = load_svmlight_file(extracted_filename, n_features=feature_dim, dtype=np.float32)
     train_features = train_features.todense()
 
     # normalize the data: subtract means and divide by standard deviations

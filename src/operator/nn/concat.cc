@@ -33,17 +33,17 @@ namespace mxnet {
 namespace op {
 
 static bool ConcatShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *in_shape,
-                        std::vector<TShape> *out_shape) {
+                        mxnet::ShapeVector *in_shape,
+                        mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-  TShape dshape;
+  mxnet::TShape dshape;
   index_t size = 0;
   bool has_zero = false;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
-    TShape tmp = (*in_shape)[i];
+    mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
       axis = CheckAxis(param_.dim, tmp.ndim());
       has_zero = tmp[axis] == 0 || has_zero;
@@ -53,7 +53,7 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
     }
   }
 
-  TShape tmp = (*out_shape)[0];
+  mxnet::TShape tmp = (*out_shape)[0];
   if (tmp.ndim()) {
     axis = CheckAxis(param_.dim, tmp.ndim());
     tmp[axis] = 0;
@@ -79,27 +79,30 @@ static bool ConcatShape(const nnvm::NodeAttrs& attrs,
 // The first (and sometimes the second) input may be unknown on the target axis.
 // If the two inputs are unknown, they always have the same shape.
 static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
-                                std::vector<TShape> *in_shape,
-                                std::vector<TShape> *out_shape) {
+                                mxnet::ShapeVector *in_shape,
+                                mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-  TShape dshape;
+  mxnet::TShape dshape;
   index_t size = 0;
-  int num_zero = 0;
+  std::vector<int> zero_indices;
   int axis = -1;
   for (int i = 0; i < param_.num_args; ++i) {
-    TShape tmp = (*in_shape)[i];
+    mxnet::TShape tmp = (*in_shape)[i];
     if (tmp.ndim()) {
       axis = CheckAxis(param_.dim, tmp.ndim());
-      num_zero += tmp[axis] == 0;
-      size += tmp[axis];
+      if (tmp[axis] == 0) {
+        zero_indices.emplace_back(i);
+      } else {
+        size += tmp[axis];
+      }
       tmp[axis] = 0;
       shape_assign(&dshape, tmp);
     }
   }
 
-  TShape tmp = (*out_shape)[0];
+  mxnet::TShape tmp = (*out_shape)[0];
   if (tmp.ndim()) {
     axis = CheckAxis(param_.dim, tmp.ndim());
     tmp[axis] = 0;
@@ -113,18 +116,18 @@ static bool RNNParamConcatShape(const nnvm::NodeAttrs& attrs,
         << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
   }
 
-  if (!num_zero) dshape[axis] = size;
+  if (zero_indices.empty()) dshape[axis] = size;
   CHECK(shape_assign(&(*out_shape)[0], dshape))
       << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
-  if ((*out_shape)[0][axis] != 0 && num_zero) {
+  if ((*out_shape)[0][axis] != 0 && !zero_indices.empty()) {
     int residual = (*out_shape)[0][axis] - size;
     CHECK_GE(residual, 0)
         << "Input size already exceeds output size. Residual: " << residual;
-    CHECK(num_zero <= 2 && num_zero >= 0)
-        << "Expecting 1 or 2 inputs that need shape inference. Got: " << num_zero;
+    CHECK(zero_indices.size() <= 2 && zero_indices.size() >= 0)
+        << "Expecting 1 or 2 inputs that need shape inference. Got: " << zero_indices.size();
     bool need_infer = !(*out_shape)[0].Size();
-    for (int i = 0; i < num_zero; i++) {
-      (*in_shape)[i*2][axis] = residual / num_zero;
+    for (int i : zero_indices) {
+      (*in_shape)[i][axis] = residual / zero_indices.size();
       need_infer = need_infer || !(*in_shape)[i].Size();
     }
     return !need_infer;
@@ -139,12 +142,12 @@ static bool ConcatType(const nnvm::NodeAttrs& attrs,
   const ConcatParam& param_ = nnvm::get<ConcatParam>(attrs.parsed);
   int dtype = -1;
 
-  for (size_t i = 0; i < in_type->size(); ++i) {
+  for (int i : *in_type) {
     if (dtype == -1) {
-      dtype = in_type->at(i);
+      dtype = i;
     } else {
-      CHECK(in_type->at(i) == dtype ||
-            in_type->at(i) == -1) <<
+      CHECK(i == dtype ||
+          i == -1) <<
           "Non-uniform data type in Concat";
     }
   }
@@ -370,7 +373,7 @@ Example::
 .set_attr<bool>("TIsMKLDNN", true)
 #endif
 CONCAT_FORWARD_ATTRS
-.set_attr<nnvm::FInferShape>("FInferShape", ConcatShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 
@@ -403,7 +406,7 @@ NNVM_REGISTER_OP(_rnn_param_concat)
 })
 #endif
 CONCAT_FORWARD_ATTRS
-.set_attr<nnvm::FInferShape>("FInferShape", RNNParamConcatShape)
+.set_attr<mxnet::FInferShape>("FInferShape", RNNParamConcatShape)
 .add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
 .add_arguments(ConcatParam::__FIELDS__());
 

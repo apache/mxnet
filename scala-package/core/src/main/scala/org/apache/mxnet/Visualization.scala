@@ -21,6 +21,7 @@ import scala.util.parsing.json._
 import java.io.File
 import java.io.PrintWriter
 import scala.collection.mutable.ArrayBuffer
+import scala.language.postfixOps
 
 object Visualization {
 
@@ -198,9 +199,9 @@ object Visualization {
       case None => null
       case Some(map) => map.asInstanceOf[Map[String, Any]]
     }
-    require(conf != null)
+    require(conf != null, "Invalid json")
 
-    require(conf.contains("nodes"))
+    require(conf.contains("nodes"), "Invalid json")
     val nodes = conf("nodes").asInstanceOf[List[Any]]
 
     // default attributes of node

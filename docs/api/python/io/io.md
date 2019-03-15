@@ -1,9 +1,26 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Data Loading API
 
 ## Overview
 
 This document summarizes supported data formats and iterator APIs to read the
-data including
+data including:
 
 ```eval_rst
 .. autosummary::
@@ -58,6 +75,7 @@ A detailed tutorial is available at
     io.CSVIter
     io.LibSVMIter
     io.ImageRecordIter
+    io.ImageRecordInt8Iter
     io.ImageRecordUInt8Iter
     io.MNISTIter
     recordio.MXRecordIO
@@ -68,8 +86,7 @@ A detailed tutorial is available at
 
 ## Helper classes and functions
 
-
-Data structures and other iterators provided in the ``mxnet.io`` packages.
+### Data structures and other iterators
 
 ```eval_rst
 .. autosummary::
@@ -83,7 +100,7 @@ Data structures and other iterators provided in the ``mxnet.io`` packages.
     io.MXDataIter
 ```
 
-Functions to read and write RecordIO files.
+### Functions to read and write RecordIO files
 
 ```eval_rst
 .. autosummary::
@@ -95,7 +112,7 @@ Functions to read and write RecordIO files.
     recordio.pack_img
 ```
 
-## Develop a new iterator
+## How to develop a new iterator
 
 Writing a new data iterator in Python is straightforward. Most MXNet
 training/inference programs accept an iterable object with ``provide_data``
@@ -133,7 +150,7 @@ Parsing and performing another pre-processing such as augmentation may be expens
 If performance is critical, we can implement a data iterator in C++. Refer to
 [src/io](https://github.com/dmlc/mxnet/tree/master/src/io) for examples.
 
-### Change batch layout
+### How to change the batch layout
 
 By default, the backend engine treats the first dimension of each data and label variable in data
 iterators as the batch size (i.e. `NCHW` or `NT` layout). In order to override the axis for batch size,
@@ -151,10 +168,36 @@ The backend engine will recognize the index of `N` in the `layout` as the axis f
 
 <script type="text/javascript" src='../../../_static/js/auto_module_index.js'></script>
 
+### mxnet.io - Data Iterators
+
 ```eval_rst
 .. automodule:: mxnet.io
-    :members:
+    :noindex:
+    :members: NDArrayIter, CSVIter, LibSVMIter, ImageRecordIter, ImageRecordUInt8Iter, MNISTIter
+```
+
+### mxnet.io - Helper Classes & Functions
+
+```eval_rst
+.. automodule:: mxnet.io
+    :noindex:
+    :members: DataBatch, DataDesc, DataIter, MXDataIter, PrefetchingIter, ResizeIter
+```
+
+### mxnet.recordio
+
+```eval_rst
+.. currentmodule:: mxnet.recordio
+
 .. automodule:: mxnet.recordio
     :members:
+
 ```
+
+```eval_rst
+.. _name: mxnet.symbol.Symbol.name
+.. _shape: mxnet.ndarray.NDArray.shape
+
+```
+
 <script>auto_index("api-reference");</script>

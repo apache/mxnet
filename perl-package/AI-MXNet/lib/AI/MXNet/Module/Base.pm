@@ -27,6 +27,7 @@ package AI::MXNet::Module::Base;
 use Mouse;
 use AI::MXNet::Base;
 use Time::HiRes qw(time);
+use Storable qw(dclone);
 
 =head1 NAME
 
@@ -350,7 +351,7 @@ method iter_predict(AI::MXNet::DataIter $eval_data, Maybe[Int] :$num_batch=, Boo
 
     Parameters
     ----------
-    $eval_data  : AI::MXNet::DataIter
+    $eval_data  : AI::MXNet::DataIter|AcceptableInput (PDL|NDArray)
     :$num_batch= : Maybe[Int]
         Default is undef, indicating running all the batches in the data iterator.
     :$merge_batches=1 : Bool
@@ -363,6 +364,8 @@ method iter_predict(AI::MXNet::DataIter $eval_data, Maybe[Int] :$num_batch=, Boo
 
     Returns
     -------
+    If the input is AI::MXNet::NDArray|PDL then the return value is AI::MXNet::NDArray.
+
     When $merge_batches is 1 (by default), the return value will be an array ref
     [$out1, $out2, $out3] where each element is concatenation of the outputs for
     all the mini-batches. If $always_output_list` also is 0 (by default),
@@ -378,13 +381,21 @@ method iter_predict(AI::MXNet::DataIter $eval_data, Maybe[Int] :$num_batch=, Boo
 =cut
 
 method predict(
-    AI::MXNet::DataIter $eval_data,
+    AI::MXNet::DataIter|AcceptableInput $eval_data,
     Maybe[Int] :$num_batch=, Bool :$merge_batches=1, Bool :$reset=1, Bool :$always_output_list=0
 )
 {
     assert($self->binded and $self->params_initialized);
+    if(not blessed $eval_data or not $eval_data->isa('AI::MXNet::DataIter'))
+    {
+        if(not blessed $eval_data or not $eval_data->isa('AI::MXNet::NDArray'))
+        {
+            $eval_data = AI::MXNet::NDArray->array($eval_data);
+        }
+        $self->forward(AI::MXNet::DataBatch->new(data => [$eval_data]));
+        return $self->get_outputs->[0];
+    }
     $eval_data->reset() if $reset;
-
     my @output_list;
     my $nbatch = 0;
     while(my $eval_batch = <$eval_data>)
@@ -533,6 +544,7 @@ method fit(
     }
     $eval_metric = AI::MXNet::Metric->create($eval_metric)
         unless blessed $eval_metric;
+    my $epoch_eval_metric = dclone($eval_metric);
 
     ################################################################################
     # training loop
@@ -541,6 +553,7 @@ method fit(
     {
         my $tic = time;
         $eval_metric->reset;
+        $epoch_eval_metric->reset;
         my $nbatch = 0;
         my $end_of_batch = 0;
         my $next_data_batch = <$train_data>;
@@ -559,10 +572,11 @@ method fit(
             {
                 $end_of_batch = 1;
             }
-            $self->update_metric($eval_metric, $data_batch->label);
+            $self->update_metric($epoch_eval_metric, $data_batch->label);
             $monitor->toc_print if $monitor;
             if(defined $batch_end_callback)
             {
+                $self->update_metric($eval_metric, $data_batch->label);
                 my $batch_end_params = AI::MXNet::BatchEndParam->new(
                     epoch       => $epoch,
                     nbatch      => $nbatch,
@@ -576,7 +590,7 @@ method fit(
             $nbatch++;
         }
         # one epoch of training is finished
-        my $name_value = $eval_metric->get_name_value;
+        my $name_value = $epoch_eval_metric->get_name_value;
         while(my ($name, $val) = each %{ $name_value })
         {
             $self->logger->info('Epoch[%d] Train-%s=%f', $epoch, $name, $val);

@@ -18,7 +18,7 @@
 #
 # Dockerfile to run MXNet on Ubuntu 16.04 for CPU
 
-FROM nvidia/cuda:9.0-cudnn7-devel
+FROM nvidia/cuda:10.0-cudnn7-devel
 
 WORKDIR /work/deps
 

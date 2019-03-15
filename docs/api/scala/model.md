@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet Scala Model API
 
 The model API provides a simplified way to train neural networks using common best practices.
@@ -21,10 +38,10 @@ The following example creates a two-layer neural network.
 ```scala
     // configure a two layer neuralnetwork
     val data = Symbol.Variable("data")
-    val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> data, "num_hidden" -> 128))
-    val act1 = Symbol.Activation(name = "relu1")()(Map("data" -> fc1, "act_type" -> "relu"))
-    val fc2 = Symbol.FullyConnected(name = "fc2")()(Map("data" -> act1, "num_hidden" -> 64))
-    val softmax = Symbol.SoftmaxOutput(name = "sm")()(Map("data" -> fc2))
+    val fc1 = Symbol.api.FullyConnected(data, num_hidden = 128, name = "fc1")
+    val act1 = Symbol.api.Activation(Some(fc1), "relu", "relu1")
+    val fc2 = Symbol.api.FullyConnected(Some(act1), num_hidden = 64, name = "fc2")
+    val softmax = Symbol.api.SoftmaxOutput(Some(fc2), name = "sm")
 
     // Construct the FeedForward model and fit on the input training data
     val model = FeedForward.newBuilder(softmax)

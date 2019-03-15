@@ -51,10 +51,10 @@ enum ConvolutionV1OpCudnnTune {kOff, kLimited, kFastest};
 }
 
 struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
-  TShape kernel;
-  TShape stride;
-  TShape dilate;
-  TShape pad;
+  mxnet::TShape kernel;
+  mxnet::TShape stride;
+  mxnet::TShape dilate;
+  mxnet::TShape pad;
   uint32_t num_filter;
   uint32_t num_group;
   uint64_t workspace;
@@ -64,11 +64,11 @@ struct ConvolutionV1Param : public dmlc::Parameter<ConvolutionV1Param> {
   dmlc::optional<int> layout;
   DMLC_DECLARE_PARAMETER(ConvolutionV1Param) {
     DMLC_DECLARE_FIELD(kernel).describe("convolution kernel size: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(stride).set_default(TShape())
+    DMLC_DECLARE_FIELD(stride).set_default(mxnet::TShape())
     .describe("convolution stride: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(dilate).set_default(TShape())
+    DMLC_DECLARE_FIELD(dilate).set_default(mxnet::TShape())
     .describe("convolution dilate: (h, w) or (d, h, w)");
-    DMLC_DECLARE_FIELD(pad).set_default(TShape())
+    DMLC_DECLARE_FIELD(pad).set_default(mxnet::TShape())
     .describe("pad for convolution: (h, w) or (d, h, w)");
     DMLC_DECLARE_FIELD(num_filter).set_range(1, 100000)
     .describe("convolution filter(channel) number");
@@ -335,12 +335,10 @@ class ConvolutionV1Op : public Operator {
                                      oshape[2] * oshape[3]);
     // param_.workspace is in elements of sizeof(DType)
     // if param_.workspace is set to zero the nstep_ equals ishape[0] (batch)
-    nstep_ = std::max(
-        std::min(
-            static_cast<index_t>(
-                param_.workspace / (shape_colunit_.Size() + shape_dstunit_.Size())),
-            ishape[0]),
-        1U);
+    nstep_ = std::max<index_t>(
+        std::min(static_cast<index_t>(param_.workspace) /
+          (shape_colunit_.Size() + shape_dstunit_.Size()), ishape[0]),
+      1);
 
     mshadow::Shape<2> scol = mshadow::Shape2(shape_colunit_[0],
                                              shape_colunit_[1] * nstep_);
@@ -359,8 +357,8 @@ class ConvolutionV1Op : public Operator {
 
 template<typename xpu>
 Operator* CreateOp(ConvolutionV1Param param, int dtype,
-                   std::vector<TShape> *in_shape,
-                   std::vector<TShape> *out_shape,
+                   mxnet::ShapeVector *in_shape,
+                   mxnet::ShapeVector *out_shape,
                    Context ctx);
 
 #if DMLC_USE_CXX11
@@ -395,9 +393,9 @@ class ConvolutionV1Prop : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     if (!param_.no_bias) {
       CHECK_EQ(in_shape->size(), 3U) << "Input:[data, weight, bias]";
@@ -405,8 +403,8 @@ class ConvolutionV1Prop : public OperatorProperty {
       CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
     }
     // CHECK_EQ(out_shape->size(), 1) << "Output: [output]";
-    out_shape->resize(1, TShape());
-    const TShape &dshp = (*in_shape)[conv_v1::kData];
+    out_shape->resize(1, mxnet::TShape());
+    const mxnet::TShape &dshp = (*in_shape)[conv_v1::kData];
     if (dshp.ndim() ==  0) return false;
     if (param_.kernel.ndim() == 2) {
       // 2d conv_v1
@@ -502,7 +500,7 @@ class ConvolutionV1Prop : public OperatorProperty {
     CHECK_GE(in_type->size(), 1);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
@@ -532,12 +530,12 @@ class ConvolutionV1Prop : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -546,7 +544,7 @@ class ConvolutionV1Prop : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

@@ -120,6 +120,13 @@ def test_symbol_infer_type():
     assert out == [np.float32]
     assert aux == []
 
+    # partial infer type
+    arg, out, aux = mlp.infer_type_partial()
+    assert arg == [None, np.float32, np.float32, np.float32]
+    assert out == [np.float32]
+    assert aux == []
+
+
 def test_symbol_infer_shape():
     num_hidden = 128
     num_dim    = 64
@@ -150,6 +157,19 @@ def test_symbol_infer_shape():
     assert arg_shapes['x2h_weight'] == (num_hidden, num_dim)
     assert arg_shapes['h2h_weight'] == (num_hidden, num_hidden)
 
+    # Partial shape inference with some unknown dimensions
+    data_shape = (1, 0, 0, 0)
+    data = mx.sym.Variable('data', shape=data_shape)
+    weight = mx.sym.Variable('weight')
+    cdata = mx.sym.cast(data, dtype='float16')
+    cweight = mx.sym.cast(weight, dtype='float16')
+    test = mx.sym.Convolution(data=cdata, weight=cweight, pad=(3, 3), num_filter=64, stride=(2, 2), no_bias=True, kernel=(7, 7))
+
+    arg, _, _ = test.infer_shape_partial()
+    arg_shapes = dict(zip(test.list_arguments(), arg))
+    assert arg_shapes['data'] == data_shape
+    assert arg_shapes['weight'] == (64, 0, 7, 7)
+
 
 def test_symbol_infer_shape_var():
     "Test specifying shape information when constructing a variable"
@@ -177,7 +197,7 @@ def test_symbol_fluent():
                     'degrees', 'radians', 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh',
                     'exp', 'expm1', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
                     'square', 'reciprocal' 'reshape_like', 'cbrt', 'rcbrt', 'relu', 'sigmoid',
-                    'softmax', 'log_softmax', 'rint', 'ceil', 'floor', 'trunc', 'fix'])
+                    'softmax', 'log_softmax', 'softmin', 'rint', 'ceil', 'floor', 'trunc', 'fix'])
 
     def check_fluent_regular(func, kwargs, shape=(5, 17, 1), equal_nan=False):
         with mx.name.NameManager():
@@ -196,7 +216,7 @@ def test_symbol_fluent():
 
     for func in ['arccosh', 'arcsin', 'arccos', 'arctan', 'tan', 'sinh', 'cosh', 'tanh',
                  'arcsinh', 'arctanh', 'log', 'log10', 'log2', 'log1p', 'sqrt', 'rsqrt',
-                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax']:
+                 'cbrt', 'rcbrt', 'relu', 'sigmoid', 'softmax', 'log_softmax', 'softmin']:
         check_fluent_regular(func, {}, equal_nan=True)
 
     for func in ['expand_dims', 'flip', 'sort', 'topk', 'argsort', 'argmax', 'argmin']:

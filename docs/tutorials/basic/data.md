@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Iterators - Loading data
 In this tutorial, we focus on how to feed data into a training or inference program.
 Most training and inference modules in MXNet accept data iterators,
@@ -16,7 +33,8 @@ To complete this tutorial, we need:
 $ pip install opencv-python requests matplotlib jupyter
 ```
 
-## MXNet Data Iterator  
+## MXNet Data Iterator
+
 Data Iterators in *MXNet* are similar to Python iterator objects.
 In Python, the function `iter` allows fetching items sequentially by calling  `next()` on
  iterable objects such as a Python `list`.
@@ -312,8 +330,10 @@ print(mx.recordio.unpack_img(s))
 ```
 
 #### Using tools/im2rec.py
-You can also convert raw images into *RecordIO* format using the ``im2rec.py`` utility script that is provided in the MXNet [src/tools](https://github.com/dmlc/mxnet/tree/master/tools) folder.
+You can also convert raw images into *RecordIO* format using the [__im2rec.py__](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) utility script that is provided in the MXNet [src/tools](https://github.com/dmlc/mxnet/tree/master/tools) folder.
 An example of how to use the script for converting to *RecordIO* format is shown in the `Image IO` section below.
+
+* Note that there is a C++ API implementation of [im2rec](https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc), please refer to [RecordIO FAQ](https://mxnet.incubator.apache.org/faq/recordio.html) for more information.
 
 ## Image IO
 

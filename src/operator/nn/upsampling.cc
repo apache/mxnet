@@ -32,11 +32,11 @@ namespace mxnet {
 namespace op {
 
 static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
-                            std::vector<TShape> *in_shape, std::vector<TShape> *out_shape) {
+                            mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape) {
   const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_shape->size(), 1U);
-  const TShape &dshape = (*in_shape)[0];
-  TShape oshape = dshape;
+  const mxnet::TShape &dshape = (*in_shape)[0];
+  mxnet::TShape oshape = dshape;
   if (param_.sample_type == up_enum::kNearest) {
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
     oshape[1] = 0;
@@ -92,7 +92,7 @@ static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
   CHECK_NE(dtype, -1) << "First input must have specified type";
-  for (index_t i = 0; i < in_type->size(); ++i) {
+  for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
     } else {
@@ -136,7 +136,7 @@ NNVM_REGISTER_OP(UpSampling)
     [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"output"};
 })
-.set_attr<nnvm::FInferShape>("FInferShape", UpSamplingShape)
+.set_attr<mxnet::FInferShape>("FInferShape", UpSamplingShape)
 .set_attr<nnvm::FInferType>("FInferType", UpSamplingType)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   const UpSamplingParam& param = nnvm::get<UpSamplingParam>(n.parsed);

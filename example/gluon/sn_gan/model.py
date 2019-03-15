@@ -17,11 +17,11 @@
 
 # This example is inspired by https://github.com/jason71995/Keras-GAN-Library,
 # https://github.com/kazizzad/DCGAN-Gluon-MxNet/blob/master/MxnetDCGAN.ipynb
-# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py
+# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dc_gan/dcgan.py
 
 import mxnet as mx
 from mxnet import nd
-from mxnet import gluon
+from mxnet import gluon, autograd
 from mxnet.gluon import Block
 
 
@@ -68,7 +68,8 @@ class SNConv2D(Block):
         if sigma == 0.:
             sigma = EPSILON
 
-        self.params.setattr('u', _u)
+        with autograd.pause():
+            self.u.set_data(_u)
 
         return w / sigma
 

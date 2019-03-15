@@ -30,6 +30,7 @@
 #include <dmlc/base.h>
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
+#include <mxnet/storage.h>
 #include <vector>
 #include <functional>
 #include <condition_variable>
@@ -182,7 +183,7 @@ class ThreadedVar final
  private:
   // TODO(hotpxl) change this to spinlock for faster runtime
   // TODO(hotpxl) consider rename head
-  /*! \brief inetrnal mutex of the ThreadedVar */
+  /*! \brief internal mutex of the ThreadedVar */
   std::mutex mutex_;
   /*!
    * \brief number of pending reads operation in the variable.
@@ -306,6 +307,8 @@ class ThreadedEngine : public Engine {
     objpool_varblk_ref_ = common::ObjectPool<VersionedVarBlock>::_GetSharedRef();
     objpool_var_ref_    = common::ObjectPool<ThreadedVar>::_GetSharedRef();
 
+    storage_ref_ = Storage::_GetSharedRef();
+
     // Get a ref to the profiler so that it doesn't get killed before us
     profiler::Profiler::Get(&profiler_);
   }
@@ -352,7 +355,8 @@ class ThreadedEngine : public Engine {
       LOG(INFO) << "ExecuteOprBlock " << opr_block
                 << "shutdown_phase=" << shutdown_phase_;
     }
-    if (!shutdown_phase_) {
+    // still run cleanup in shutdown_phase
+    if (!shutdown_phase_ || threaded_opr->prop == FnProperty::kDeleteVar) {
       try {
         OnStart(threaded_opr);
         if (debug_info) {
@@ -403,6 +407,10 @@ class ThreadedEngine : public Engine {
     BulkStatus& bulk_status = *BulkStatusStore::Get();
     std::swap(bulk_status.bulk_size, bulk_size);
     if (bulk_status.count >= bulk_status.bulk_size) BulkFlush();
+    if (!bulk_status.functions) {
+      bulk_status.functions.reset(new std::vector<SyncFn>());
+    }
+    bulk_status.functions->reserve(bulk_size);
     return bulk_size;
   }
 
@@ -416,7 +424,7 @@ class ThreadedEngine : public Engine {
     /*! \brief context of current ops */
     Context ctx;
     /*! \brief current op functions */
-    SyncFn fn;
+    std::shared_ptr<std::vector<SyncFn>> functions;
     /*! \brief constant variables */
     std::vector<VarHandle> const_vars;
     /*! \brief mutable variables */
@@ -465,21 +473,19 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr);
+  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
+                               const dmlc::Error* error);
   /*! \brief append an operator to bulk */
   inline void BulkAppend(SyncFn exec_fn, Context exec_ctx,
                          std::vector<VarHandle> const& const_vars,
                          std::vector<VarHandle> const& mutable_vars) {
     BulkStatus& bulk_status = *BulkStatusStore::Get();
+    if (!bulk_status.functions) {
+      bulk_status.functions.reset(new std::vector<SyncFn>());
+    }
+    bulk_status.functions->push_back(exec_fn);
     if (!bulk_status.count) {
       bulk_status.ctx = exec_ctx;
-      bulk_status.fn = std::move(exec_fn);
-    } else {
-      auto prev_fn = std::move(bulk_status.fn);
-      bulk_status.fn = [exec_fn, prev_fn](RunContext rctx) {
-          prev_fn(rctx);
-          exec_fn(rctx);
-        };
     }
 
     ++bulk_status.count;
@@ -496,13 +502,23 @@ class ThreadedEngine : public Engine {
     if (!bulk_status.count) return;
     bulk_status.count = 0;
     DeduplicateVarHandle(&bulk_status.const_vars, &bulk_status.mutable_vars);
-    SyncFn fn = std::move(bulk_status.fn);
-    this->PushAsync([fn](RunContext ctx, CallbackOnComplete on_complete) {
-        fn(ctx);
+    auto functions = bulk_status.functions;
+    this->PushAsync([functions](RunContext ctx, CallbackOnComplete on_complete) {
+        ctx.is_bulk = true;
+        for (auto& fn : *functions) {
+          fn(ctx);
+        }
+        ctx.is_bulk = false;
+        bool is_gpu = ctx.ctx.dev_mask() == gpu::kDevMask;
+        if (is_gpu) {
+          ctx.get_stream<gpu>()->Wait();
+        }
         on_complete();
       }, bulk_status.ctx, bulk_status.const_vars, bulk_status.mutable_vars,
       FnProperty::kNormal, 0, "ImperativeBulk");
 
+    bulk_status.functions.reset(new std::vector<SyncFn>());
+    bulk_status.functions->reserve(bulk_status.bulk_size);
     bulk_status.const_vars.clear();
     bulk_status.mutable_vars.clear();
   }
@@ -535,6 +551,12 @@ class ThreadedEngine : public Engine {
   std::shared_ptr<common::ObjectPool<OprBlock> >          objpool_blk_ref_;
   std::shared_ptr<common::ObjectPool<VersionedVarBlock> > objpool_varblk_ref_;
   std::shared_ptr<common::ObjectPool<ThreadedVar> >       objpool_var_ref_;
+
+  /*!
+   * \brief Async destruction of some objects is relied on storage,
+   *  prevent it from being destructed too early
+   */
+  std::shared_ptr<Storage> storage_ref_;
 
 #if MXNET_USE_CUDA
   /*! \brief Number of GPU devices available */

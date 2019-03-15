@@ -34,8 +34,8 @@ if [ ! -d "$image_path" ]; then
 fi
 
 if [ ! -f "$data_path" ]; then
-  wget http://data.mxnet.io/models/imagenet-11k/resnet-152/resnet-152-0000.params -P $data_path
-  wget http://data.mxnet.io/models/imagenet-11k/resnet-152/resnet-152-symbol.json -P $data_path
-  wget http://data.mxnet.io/models/imagenet-11k/synset.txt -P $data_path
-  wget https://s3.amazonaws.com/model-server/inputs/kitten.jpg -P $image_path
+  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/resnet-152-0000.params -o $data_path/resnet-152-0000.params
+  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/resnet-152-symbol.json -o $data_path/resnet-152-symbol.json
+  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/synset.txt -o $data_path/synset.txt
+  curl https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/resnet152/kitten.jpg -o $image_path/kitten.jpg
 fi

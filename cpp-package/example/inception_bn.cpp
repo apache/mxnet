@@ -91,7 +91,8 @@ Symbol InceptionFactoryB(Symbol data, int num_3x3red, int num_3x3,
                         Shape(1, 1), name + "_double_3x3_1");
   Symbol pooling = Pooling("max_pool_" + name + "_pool", data,
                            Shape(3, 3), PoolingPoolType::kMax,
-                           false, false, PoolingPoolingConvention::kValid, Shape(2, 2));
+                           false, false, PoolingPoolingConvention::kValid,
+                           Shape(2, 2), Shape(1, 1));
   std::vector<Symbol> lst;
   lst.push_back(c3x3);
   lst.push_back(cd3x3);
@@ -141,23 +142,44 @@ Symbol InceptionSymbol(int num_classes) {
   return SoftmaxOutput("softmax", fc1, data_label);
 }
 
+NDArray ResizeInput(NDArray data, const Shape new_shape) {
+  NDArray pic = data.Reshape(Shape(0, 1, 28, 28));
+  NDArray pic_1channel;
+  Operator("_contrib_BilinearResize2D")
+    .SetParam("height", new_shape[2])
+    .SetParam("width", new_shape[3])
+    (pic).Invoke(pic_1channel);
+  NDArray output;
+  Operator("tile")
+    .SetParam("reps", Shape(1, 3, 1, 1))
+    (pic_1channel).Invoke(output);
+  return output;
+}
+
 int main(int argc, char const *argv[]) {
   int batch_size = 40;
-  int max_epoch = 100;
-  float learning_rate = 1e-4;
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
+  float learning_rate = 1e-2;
   float weight_decay = 1e-4;
 
-  auto ctx = Context::gpu();
-#if MXNET_USE_CPU
-  ctx = Context::cpu();
+  /*context*/
+  auto ctx = Context::cpu();
+  int num_gpu;
+  MXGetGPUCount(&num_gpu);
+#if !MXNET_USE_CPU
+  if (num_gpu > 0) {
+    ctx = Context::gpu();
+  }
 #endif
 
   auto inception_bn_net = InceptionSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 224, 224), ctx);
-  args_map["data_label"] = NDArray(Shape(batch_size), ctx);
+  const Shape data_shape = Shape(batch_size, 3, 224, 224),
+              label_shape = Shape(batch_size);
+  args_map["data"] = NDArray(data_shape, ctx);
+  args_map["data_label"] = NDArray(label_shape, ctx);
   inception_bn_net.InferArgsMap(ctx, &args_map, args_map);
 
   std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
@@ -167,12 +189,22 @@ int main(int argc, char const *argv[]) {
                                         };
 
   auto train_iter =  MXDataIter("MNISTIter");
-  setDataIter(&train_iter, "Train", data_files, batch_size);
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
 
   auto val_iter = MXDataIter("MNISTIter");
-  setDataIter(&val_iter, "Label", data_files, batch_size);
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
 
-  Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  // initialize parameters
+  Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2);
+  for (auto &arg : args_map) {
+    xavier(arg.first, &arg.second);
+  }
+
+  Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10)
@@ -182,12 +214,15 @@ int main(int argc, char const *argv[]) {
   auto *exec = inception_bn_net.SimpleBind(ctx, args_map);
   auto arg_names = inception_bn_net.ListArguments();
 
+  // Create metrics
+  Accuracy train_acc, val_acc;
   for (int iter = 0; iter < max_epoch; ++iter) {
     LG << "Epoch: " << iter;
     train_iter.Reset();
+    train_acc.Reset();
     while (train_iter.Next()) {
       auto data_batch = train_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
 
@@ -200,22 +235,25 @@ int main(int argc, char const *argv[]) {
       }
 
       NDArray::WaitAll();
+      train_acc.Update(data_batch.label, exec->outputs[0]);
     }
 
-    Accuracy acu;
     val_iter.Reset();
+    val_acc.Reset();
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
       exec->Forward(false);
       NDArray::WaitAll();
-      acu.Update(data_batch.label, exec->outputs[0]);
+      val_acc.Update(data_batch.label, exec->outputs[0]);
     }
-    LG << "Accuracy: " << acu.Get();
+    LG << "Train Accuracy: " << train_acc.Get();
+    LG << "Validation Accuracy: " << val_acc.Get();
   }
   delete exec;
+  delete opt;
   MXNotifyShutdown();
   return 0;
 }

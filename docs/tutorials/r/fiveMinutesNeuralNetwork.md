@@ -1,7 +1,24 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Develop a Neural Network with MXNet in Five Minutes
 =============================================
 
-This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package. Instructions to install R and MXNet's R package in different environments can be found [here](http://mxnet.incubator.apache.org/install/index.html?platform=Linux&language=R&processor=CPU). 
+This tutorial is designed for new users of the `mxnet` package for R. It shows how to construct a neural network to do regression in 5 minutes. It shows how to perform classification and regression tasks, respectively. The data we use is in the `mlbench` package. Instructions to install R and MXNet's R package in different environments can be found [here](http://mxnet.incubator.apache.org/install/index.html?platform=Linux&language=R&processor=CPU).
 
 ## Classification
 
@@ -88,7 +105,7 @@ Note that `mx.set.seed` controls the random process in `mxnet`. You can see the 
 
 To get an idea of what is happening, view the computation graph from R:
 
- ```{r}
+ ```r
     graph.viz(model$symbol)
  ```
 

@@ -35,12 +35,11 @@ if [ ! -d "$image_path" ]; then
 fi
 
 if [ ! -f "$data_path" ]; then
-    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json -P $data_path
-    wget https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params -P $data_path
-    wget https://raw.githubusercontent.com/awslabs/mxnet-model-server/master/examples/ssd/synset.txt -P $data_path
-    cd $image_path
-    wget https://cloud.githubusercontent.com/assets/3307514/20012566/cbb53c76-a27d-11e6-9aaa-91939c9a1cd5.jpg -O 000001.jpg
-    wget https://cloud.githubusercontent.com/assets/3307514/20012567/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg -O dog.jpg
-    wget https://cloud.githubusercontent.com/assets/3307514/20012563/cbb41382-a27d-11e6-92a9-18dab4fd1ad3.jpg -O person.jpg
+    curl https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-symbol.json -o $data_path/resnet50_ssd_model-symbol.json
+    curl https://s3.amazonaws.com/model-server/models/resnet50_ssd/resnet50_ssd_model-0000.params -o $data_path/resnet50_ssd_model-0000.params
+    curl https://s3.amazonaws.com/model-server/models/resnet50_ssd/synset.txt -o $data_path/synset.txt
+    curl https://cloud.githubusercontent.com/assets/3307514/20012566/cbb53c76-a27d-11e6-9aaa-91939c9a1cd5.jpg -o $image_path/000001.jpg
+    curl https://cloud.githubusercontent.com/assets/3307514/20012567/cbb60336-a27d-11e6-93ff-cbc3f09f5c9e.jpg -o $image_path/dog.jpg
+    curl https://cloud.githubusercontent.com/assets/3307514/20012563/cbb41382-a27d-11e6-92a9-18dab4fd1ad3.jpg -o $image_path/person.jpg
 fi
 

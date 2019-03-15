@@ -22,11 +22,12 @@ __all__ = ['VariationalDropoutCell', 'LSTMPCell']
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell, HybridRecurrentCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
 from ... import tensor_types
+from ....base import _as_list
 
 class VariationalDropoutCell(ModifierCell):
     """
     Applies Variational Dropout on base cell.
-    (https://arxiv.org/pdf/1512.05287.pdf,
+    (https://arxiv.org/pdf/1512.05287.pdf, \
      https://www.stat.berkeley.edu/~tsmoon/files/Conference/asru2015.pdf).
 
     Variational dropout uses the same dropout mask across time-steps. It can be applied to RNN
@@ -197,24 +198,29 @@ class VariationalDropoutCell(ModifierCell):
 class LSTMPCell(HybridRecurrentCell):
     r"""Long-Short Term Memory Projected (LSTMP) network cell.
     (https://arxiv.org/abs/1402.1128)
+
     Each call computes the following function:
+
     .. math::
         \begin{array}{ll}
         i_t = sigmoid(W_{ii} x_t + b_{ii} + W_{ri} r_{(t-1)} + b_{ri}) \\
         f_t = sigmoid(W_{if} x_t + b_{if} + W_{rf} r_{(t-1)} + b_{rf}) \\
-        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg}}) \\
+        g_t = \tanh(W_{ig} x_t + b_{ig} + W_{rc} r_{(t-1)} + b_{rg}) \\
         o_t = sigmoid(W_{io} x_t + b_{io} + W_{ro} r_{(t-1)} + b_{ro}) \\
         c_t = f_t * c_{(t-1)} + i_t * g_t \\
         h_t = o_t * \tanh(c_t) \\
         r_t = W_{hr} h_t
         \end{array}
+
     where :math:`r_t` is the projected recurrent activation at time `t`,
-    math:`h_t` is the hidden state at time `t`, :math:`c_t` is the
+    :math:`h_t` is the hidden state at time `t`, :math:`c_t` is the
     cell state at time `t`, :math:`x_t` is the input at time `t`, and :math:`i_t`,
     :math:`f_t`, :math:`g_t`, :math:`o_t` are the input, forget, cell, and
     out gates, respectively.
+
     Parameters
     ----------
+
     hidden_size : int
         Number of units in cell state symbol.
     projection_size : int
@@ -234,7 +240,7 @@ class LSTMPCell(HybridRecurrentCell):
         to zero.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
-    prefix : str, default 'lstmp_'
+    prefix : str, default ``'lstmp_``'
         Prefix for name of `Block`s
         (and name of weight if params is `None`).
     params : Parameter or None
@@ -315,3 +321,117 @@ class LSTMPCell(HybridRecurrentCell):
 
         return next_r, [next_r, next_c]
     # pylint: enable= arguments-differ
+
+
+def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
+                   layout='TNC', valid_length=None):
+    """Unrolls an RNN cell across time steps.
+
+    Currently, 'TNC' is a preferred layout. unroll on the input of this layout
+    runs much faster.
+
+    Parameters
+    ----------
+    cell : an object whose base class is RNNCell.
+        The RNN cell to run on the input sequence.
+    inputs : Symbol
+        It should have shape (batch_size, length, ...) if `layout` is 'NTC',
+        or (length, batch_size, ...) if `layout` is 'TNC'.
+    begin_state : nested list of Symbol
+        The initial states of the RNN sequence.
+    drop_inputs : float, default 0.
+        The dropout rate for inputs. Won't apply dropout if it equals 0.
+    drop_outputs : float, default 0.
+        The dropout rate for outputs. Won't apply dropout if it equals 0.
+    layout : str, optional
+        `layout` of input symbol. Only used if inputs
+        is a single Symbol.
+    valid_length : Symbol, NDArray or None
+        `valid_length` specifies the length of the sequences in the batch without padding.
+        This option is especially useful for building sequence-to-sequence models where
+        the input and output sequences would potentially be padded.
+        If `valid_length` is None, all sequences are assumed to have the same length.
+        If `valid_length` is a Symbol or NDArray, it should have shape (batch_size,).
+        The ith element will be the length of the ith sequence in the batch.
+        The last valid state will be return and the padded outputs will be masked with 0.
+        Note that `valid_length` must be smaller or equal to `length`.
+
+    Returns
+    -------
+    outputs : Symbol
+        the output of the RNN from this unrolling.
+
+    states : list of Symbol
+        The new state of this RNN after this unrolling.
+        The type of this symbol is same as the output of `begin_state`.
+
+    Examples
+    --------
+    >>> seq_len = 3
+    >>> batch_size = 2
+    >>> input_size = 5
+    >>> cell = mx.gluon.rnn.LSTMCell(input_size, prefix='rnn_')
+    >>> cell.initialize(ctx=mx.cpu())
+    >>> rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
+    >>> state_shape = (batch_size, input_size)
+    >>> states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(2)]
+    >>> valid_length = mx.nd.array([2, 3])
+    >>> output, states = mx.gluon.contrib.rnn.rnn_cell.dynamic_unroll(cell, rnn_data, states,
+                                                                      valid_length=valid_length,
+                                                                      layout='TNC')
+    >>> print(output)
+    [[[ 0.00767238  0.00023103  0.03973929 -0.00925503 -0.05660512]
+      [ 0.00881535  0.05428379 -0.02493718 -0.01834097  0.02189514]]
+     [[-0.00676967  0.01447039  0.01287002 -0.00574152 -0.05734247]
+      [ 0.01568508  0.02650866 -0.04270559 -0.04328435  0.00904011]]
+     [[ 0.          0.          0.          0.          0.        ]
+      [ 0.01055336  0.02734251 -0.03153727 -0.03742751 -0.01378113]]]
+     <NDArray 3x2x5 @cpu(0)>
+    """
+
+    # Merge is always True, so we don't need length.
+    inputs, axis, F, _ = _format_sequence(0, inputs, layout, True)
+    if axis != 0:
+        axes = list(range(len(layout)))
+        tmp = axes[0]
+        axes[0] = axes[axis]
+        axes[axis] = tmp
+        inputs = F.transpose(inputs, axes=axes)
+    states = begin_state
+
+    if drop_inputs:
+        inputs = F.Dropout(inputs, p=drop_inputs, axes=(axis,))
+
+    if valid_length is None:
+        def loop_body(inputs, states):
+            return cell(inputs, states)
+    else:
+        zeros = []
+        for s in states:
+            zeros.append(F.zeros_like(s))
+        states = list(_as_list(states))
+        states.append(F.zeros((1)))
+        def loop_body(inputs, states):
+            cell_states = states[:-1]
+            iter_no = states[-1]
+            out, new_states = cell(inputs, cell_states)
+            for i, state in enumerate(cell_states):
+                new_states[i] = F.where(F.broadcast_greater(valid_length, iter_no),
+                                        new_states[i], state)
+            new_states.append(iter_no + 1)
+            return out, new_states
+
+    outputs, states = F.contrib.foreach(loop_body, inputs, states)
+    if drop_outputs:
+        outputs = F.Dropout(outputs, p=drop_outputs, axes=(axis,))
+    if valid_length is not None:
+        if axis != 0:
+            outputs = F.transpose(outputs, axes)
+        outputs = F.SequenceMask(outputs, sequence_length=valid_length,
+                                 use_sequence_length=True, axis=axis)
+        # the last state is the iteration number. We don't need it.
+        return outputs, states[:-1]
+    else:
+        if axis != 0:
+            outputs = F.transpose(outputs, axes)
+        return outputs, states

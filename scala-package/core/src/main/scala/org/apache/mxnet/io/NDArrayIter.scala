@@ -61,8 +61,10 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
            dataBatchSize: Int = 1, shuffle: Boolean = false,
            lastBatchHandle: String = "pad",
            dataName: String = "data", labelName: String = "label") {
-    this(IO.initDataDesc(data, allowEmpty = false, dataName, MX_REAL_TYPE, Layout.UNDEFINED),
-      IO.initDataDesc(label, allowEmpty = true, labelName, MX_REAL_TYPE, Layout.UNDEFINED),
+    this(IO.initDataDesc(data, allowEmpty = false, dataName,
+      if (data == null || data.isEmpty)  MX_REAL_TYPE else data(0).dtype, Layout.UNDEFINED),
+      IO.initDataDesc(label, allowEmpty = true, labelName,
+        if (label == null || label.isEmpty)  MX_REAL_TYPE else label(0).dtype, Layout.UNDEFINED),
       dataBatchSize, shuffle, lastBatchHandle)
   }
 
@@ -174,7 +176,8 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
   private def _padData(ndArray: NDArray): NDArray = {
     val padNum = cursor + dataBatchSize - numData
     val shape = Shape(dataBatchSize) ++ ndArray.shape.slice(1, ndArray.shape.size)
-    val newArray = NDArray.zeros(shape)
+    // The new NDArray  has to be created such that it inherits dtype from the passed in array
+    val newArray = NDArray.zeros(shape, dtype = ndArray.dtype)
     NDArrayCollector.auto().withScope {
       val batch = ndArray.slice(cursor, numData)
       val padding = ndArray.slice(0, padNum)
@@ -237,11 +240,11 @@ class NDArrayIter(data: IndexedSeq[(DataDesc, NDArray)],
 
 
   // The name and shape of data provided by this iterator
-  @deprecated
+  @deprecated("Please use provideDataDesc instead", "1.3.0")
   override def provideData: ListMap[String, Shape] = _provideData
 
   // The name and shape of label provided by this iterator
-  @deprecated
+  @deprecated("Please use provideLabelDesc instead", "1.3.0")
   override def provideLabel: ListMap[String, Shape] = _provideLabel
 
   // Provide type:DataDesc of the data
@@ -272,7 +275,7 @@ object NDArrayIter {
      */
     def addData(name: String, data: NDArray): Builder = {
       this.data = this.data ++ IndexedSeq((new DataDesc(name,
-        data.shape, DType.Float32, Layout.UNDEFINED), data))
+        data.shape, data.dtype, Layout.UNDEFINED), data))
       this
     }
 
@@ -284,7 +287,7 @@ object NDArrayIter {
      */
     def addLabel(name: String, label: NDArray): Builder = {
       this.label = this.label ++ IndexedSeq((new DataDesc(name,
-        label.shape, DType.Float32, Layout.UNDEFINED), label))
+        label.shape, label.dtype, Layout.UNDEFINED), label))
       this
     }
 

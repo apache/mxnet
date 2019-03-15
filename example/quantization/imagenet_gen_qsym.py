@@ -92,7 +92,7 @@ if __name__ == '__main__':
                              ' thresholds. This mode is expected to produce the best inference accuracy of all three'
                              ' kinds of quantized models if the calibration dataset is representative enough of the'
                              ' inference dataset.')
-    parser.add_argument('--quantized-dtype', type=str, default='int8', 
+    parser.add_argument('--quantized-dtype', type=str, default='int8',
                         choices=['int8', 'uint8'],
                         help='quantization destination data type for input data')
     args = parser.parse_args()
@@ -155,6 +155,16 @@ if __name__ == '__main__':
         if args.ctx == 'gpu':
             calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1
                                                                      or name.find('fc') != -1)
+            excluded_sym_names += ['ch_concat_3a_chconcat',
+                                   'ch_concat_3b_chconcat',
+                                   'ch_concat_3c_chconcat',
+                                   'ch_concat_4a_chconcat',
+                                   'ch_concat_4b_chconcat',
+                                   'ch_concat_4c_chconcat',
+                                   'ch_concat_4d_chconcat',
+                                   'ch_concat_4e_chconcat',
+                                   'ch_concat_5a_chconcat',
+                                   'ch_concat_5b_chconcat']
         else:
             calib_layer = lambda name: name.endswith('_output') and (name.find('conv') != -1)
             excluded_sym_names += ['flatten', 'fc1']

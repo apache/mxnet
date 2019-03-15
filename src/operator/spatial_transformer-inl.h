@@ -51,17 +51,20 @@ enum SpatialTransformerSamplerType {kBilinear};
 }
 
 struct SpatialTransformerParam : public dmlc::Parameter<SpatialTransformerParam> {
-  TShape target_shape;
+  mxnet::TShape target_shape;
   int transform_type;
   int sampler_type;
+  dmlc::optional<bool> cudnn_off;
   DMLC_DECLARE_PARAMETER(SpatialTransformerParam) {
     int shape[] = {0, 0};
-    DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
+    DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape(shape, shape + 2))
         .describe("output shape(h, w) of spatial transformer: (y, x)");
     DMLC_DECLARE_FIELD(transform_type).add_enum("affine", st::kAffine)
         .describe("transformation type");
     DMLC_DECLARE_FIELD(sampler_type).add_enum("bilinear", st::kBilinear)
         .describe("sampling type");
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>())
+        .describe("whether to turn cudnn off");
   }
 };
 
@@ -101,11 +104,11 @@ class SpatialTransformerOp : public Operator {
     }
     Copy(grid_dst, workspace, grid_dst.stream_);
     for (index_t batch = 0; batch < data.size(0); batch++) {
-        if (param_.transform_type == st::kAffine) {
-          // Legacy approach shown here for comparison:
-          //    grid_src[batch] = dot(loc[batch], grid_dst);
-          linalg_gemm(loc[batch], grid_dst, grid_src[batch], false, false, s);
-        }
+      if (param_.transform_type == st::kAffine) {
+        // Legacy approach shown here for comparison:
+        //    grid_src[batch] = dot(loc[batch], grid_dst);
+        linalg_gemm(loc[batch], grid_dst, grid_src[batch], false, false, s);
+      }
     }
     if (param_.sampler_type == st::kBilinear) {
       BilinearSamplingForward(out, data, grid_src);
@@ -136,11 +139,11 @@ class SpatialTransformerOp : public Operator {
       BilinearSamplingBackward(gdata, grid_src, grad, data);
     }
     for (index_t batch = 0; batch < data.size(0); batch++) {
-        if (param_.transform_type == st::kAffine) {
-          // Legacy approach shown here for comparison:
-          //   gloc[batch] = dot(grid_src[batch], grid_dst.T());
-          linalg_gemm(grid_src[batch], grid_dst, gloc[batch], false, true, s);
-        }
+      if (param_.transform_type == st::kAffine) {
+        // Legacy approach shown here for comparison:
+        //   gloc[batch] = dot(grid_src[batch], grid_dst.T());
+        linalg_gemm(grid_src[batch], grid_dst, gloc[batch], false, true, s);
+      }
     }
   }
 
@@ -178,15 +181,15 @@ class SpatialTransformerProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, loc]";
     CHECK_EQ(param_.transform_type, st::kAffine) << "only supports affine transform currently";
     CHECK_EQ(param_.sampler_type, st::kBilinear) << "only supports bilinear sampling currently";
-    const TShape &dshape = (*in_shape)[st::kData];
-    const TShape &lshape = (*in_shape)[st::kLoc];
+    const mxnet::TShape &dshape = (*in_shape)[st::kData];
+    const mxnet::TShape &lshape = (*in_shape)[st::kLoc];
     if (dshape.ndim() ==  0) return false;
     CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
@@ -213,12 +216,12 @@ class SpatialTransformerProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int i_type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = i_type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(i_type == dtype ||
+              i_type == -1) <<
                 "Non-uniform data type in SpatialTransformer";
         }
       }
@@ -260,13 +263,13 @@ class SpatialTransformerProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
   #if CUDNN_MAJOR >= 5
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
   #endif
@@ -276,7 +279,7 @@ class SpatialTransformerProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

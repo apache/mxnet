@@ -48,29 +48,6 @@ class StorageImpl : public Storage {
   static int num_gpu_device;
 #endif  // MXNET_USE_CUDA
 
-  static void ActivateDevice(Context ctx) {
-    switch (ctx.dev_type) {
-      case Context::kCPU:
-      case Context::kCPUPinned:
-        break;
-      case Context::kCPUShared: {
-#if defined(ANDROID) || defined(__ANDROID__)
-        LOG(FATAL) << "Unimplemented device";
-#endif  // defined(ANDROID) || defined(__ANDROID__)
-      }
-        break;
-      case Context::kGPU: {
-#if MXNET_USE_CUDA
-          if (num_gpu_device > 0) {
-            CUDA_CALL(cudaSetDevice(ctx.real_dev_id()));
-          }
-#endif  // MXNET_USE_CUDA
-          break;
-        }
-      default:
-        LOG(FATAL) << "Unimplemented device";
-    }
-  }
   // internal storage managers
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
@@ -94,6 +71,8 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
           case Context::kCPUShared: {
 #if !defined(ANDROID) && !defined(__ANDROID__)
             ptr = new storage::CPUSharedStorageManager();
+#else
+            LOG(FATAL) << "Unimplemented device";
 #endif  // !defined(ANDROID) && !defined(__ANDROID__)
             break;
           }
@@ -143,7 +122,6 @@ void StorageImpl::Alloc(Storage::Handle* handle) {
         return ptr;
       });
 
-  this->ActivateDevice(handle->ctx);
   manager->Alloc(handle);
   profiler_.OnAlloc(*handle);
 }
@@ -156,7 +134,7 @@ void StorageImpl::Free(Storage::Handle handle) {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
-  this->ActivateDevice(ctx);
+
   manager->Free(handle);
   profiler_.OnFree(handle);
 }
@@ -169,7 +147,7 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
         LOG(FATAL) <<  "Cannot Free space to a device you have not allocated";
         return nullptr;
       });
-  this->ActivateDevice(ctx);
+
   manager->DirectFree(handle);
   profiler_.OnFree(handle);
 }

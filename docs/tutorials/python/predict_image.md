@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Predict with pre-trained models
 
 This tutorial explains how to recognize objects in an image with a pre-trained model, and how to perform feature extraction.
@@ -69,6 +86,7 @@ def get_image(url, show=False):
     img = mx.image.imresize(img, 224, 224) # resize
     img = img.transpose((2, 0, 1)) # Channel first
     img = img.expand_dims(axis=0) # batchify
+    img = img.astype('float32') # for gpu context
     return img
 
 def predict(url):

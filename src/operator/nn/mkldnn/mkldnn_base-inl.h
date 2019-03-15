@@ -60,7 +60,7 @@
 #include "mxnet/op_attr_types.h"
 using namespace mkldnn;
 namespace mxnet {
-extern bool EnableMkldnnWarnGenerated();
+
 // =====  CpuEngine =======================================
 // cpu_engine singleton
 class CpuEngine {
@@ -115,7 +115,7 @@ struct data_type_enum<uint8_t> {
   enum { type = mkldnn::memory::data_type::u8 };
 };
 
-static inline bool SupportMKLDNNArray(int dtype, const TShape &shape) {
+static inline bool SupportMKLDNNArray(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   bool support = ndim == 1 || ndim == 2 || ndim == 4;
   support = support && (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32
@@ -127,9 +127,14 @@ static inline bool SupportStorageMKLDNN(int stype) {
   return stype == kDefaultStorage;
 }
 
-static inline bool SupportMKLDNN(int dtype, const TShape &shape) {
+static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
+}
+
+static inline bool SupportMKLDNNQuantize(int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kUint8;
 }
 
 static inline bool SupportMKLDNN(const NDArray &input) {
@@ -142,6 +147,23 @@ static inline bool MKLDNNEnvSet() {
   return is_mkldnn_enabled;
 }
 
+static inline int GetMKLDNNCacheSize() {
+  static int mkldnn_cache_size = dmlc::GetEnv("MXNET_MKLDNN_CACHE_NUM", -1);
+  return mkldnn_cache_size;
+}
+
+// TODO(alex): (MXNET-1075) Will remove env variable and calculate cache size during runtime
+template<typename S, typename I, typename H>
+static typename std::unordered_map<S, I, H>::iterator AddToCache(
+    std::unordered_map<S, I, H>* cache, const S &key, const I &item) {
+  int mkldnn_cache_size = GetMKLDNNCacheSize();
+  if (mkldnn_cache_size != -1 && static_cast<int>(cache->size()) > mkldnn_cache_size)
+    cache->erase(cache->begin());
+  auto ins_return = cache->insert(std::pair<S, I>(key, item));
+  CHECK(ins_return.second);
+  return ins_return.first;
+}
+
 /*
  * This is to align address to a certain alignment.
  */
@@ -152,11 +174,14 @@ struct ActivationParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
+struct SoftmaxOutputParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
+bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input);
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param);
-}
+bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param);
+}  // namespace op
 
 static int GetTypeSize(int dtype) {
   int size = -1;
@@ -167,6 +192,9 @@ static int GetTypeSize(int dtype) {
 }
 
 static inline size_t GetArraySize(const NDArray &arr) {
+  if (arr.IsMKLDNNData()) {
+    return arr.GetMKLDNNData()->get_primitive_desc().get_size();
+  }
   return arr.shape().Size() * GetTypeSize(arr.dtype());
 }
 
@@ -186,30 +214,66 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   }
 }
 
-inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int ndim) {
-  mkldnn::memory::dims dims(ndim);
-  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
-  return mkldnn::memory::desc{dims, get_mkldnn_type(arr.dtype()),
-                              mkldnn::memory::format::any};
+static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
+  auto mkldnn_dtype = static_cast<mkldnn::memory::data_type>(dtype);
+  switch (mkldnn_dtype) {
+    case mkldnn::memory::data_type::f32:
+      return mshadow::kFloat32;
+    case mkldnn::memory::data_type::s32:
+      return mshadow::kInt32;
+    case mkldnn::memory::data_type::s8:
+      return mshadow::kInt8;
+    case mkldnn::memory::data_type::u8:
+      return mshadow::kUint8;
+    default:
+      LOG(FATAL) << "unknown MKLDNN type";
+      return mshadow::kFloat32;
+  }
 }
 
-inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr) {
-  return GetMemDesc(arr, arr.shape().ndim());
+static inline size_t GetMemDescSize(const mkldnn::memory::desc &md) {
+  if (md.data.ndims == 0) return 0;
+
+  size_t ret = 1;
+  for (int i = 0; i < md.data.ndims; i++) {
+    ret *= md.data.dims[i];
+  }
+
+  ret *= mshadow::mshadow_sizeof(get_mxnet_type(md.data.data_type));
+  return ret;
+}
+
+inline static mkldnn::memory::desc GetMemDesc(const NDArray &arr, int dtype = -1) {
+  int ndim = arr.shape().ndim();
+  mkldnn::memory::dims dims(ndim);
+  dtype = (dtype == -1) ? arr.dtype() : dtype;
+  for (size_t i = 0; i < dims.size(); i++) dims[i] = arr.shape()[i];
+  return mkldnn::memory::desc{dims, get_mkldnn_type(dtype), mkldnn::memory::format::any};
 }
 
 inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
-                                                 int num_groups) {
+                                                 int num_groups,
+                                                 bool quantized = false) {
+  int dtype = quantized ? mshadow::kInt8 : arr.dtype();
   if (num_groups == 1) {
-    return GetMemDesc(arr);
+    return GetMemDesc(arr, dtype);
   } else {
-    CHECK_EQ(arr.shape().ndim(), 4U);
-    mkldnn::memory::dims tz = mkldnn::memory::dims{ num_groups,
-      static_cast<int>(arr.shape()[0] / num_groups),
-      static_cast<int>(arr.shape()[1]),
-      static_cast<int>(arr.shape()[2]),
-      static_cast<int>(arr.shape()[3])};
-    return mkldnn::memory::desc{tz, get_mkldnn_type(arr.dtype()),
-                                mkldnn::memory::format::any};
+    auto ndim = arr.shape().ndim();
+    CHECK((ndim == 3) || (ndim == 4))
+        << "MKL-DNN weight currectly supports 3d and 4d layout";
+    auto tz = mkldnn::memory::dims{0};
+    const int N = 0, H = 2, W = 3, C = 1;
+    if (ndim == 3) {
+      tz = mkldnn::memory::dims{
+          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
+          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H])};
+    } else {
+      tz = mkldnn::memory::dims{
+          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
+          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
+          static_cast<int>(arr.shape()[W])};
+    }
+    return mkldnn::memory::desc{tz, get_mkldnn_type(dtype), mkldnn::memory::format::any};
   }
 }
 
@@ -328,6 +392,24 @@ typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
 void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
+ * Here we want to get MKLDNN memory whose primitive desc is exactly the same as
+ * the given one. operator== can't guarantee that. == can return true even if
+ * the formats are different. I need to double check its format.
+ */
+static inline mkldnn::memory *GetMKLDNNExact(
+    const mkldnn::memory *mem, mkldnn::memory::primitive_desc desc) {
+  mkldnn::memory::primitive_desc src_desc = mem->get_primitive_desc();
+  if (desc == src_desc && desc.desc().data.format == src_desc.desc().data.format) {
+    return const_cast<mkldnn::memory *>(mem);
+  } else {
+    std::shared_ptr<mkldnn::memory> ret(new mkldnn::memory(
+            desc, mem->get_data_handle()));
+    MKLDNNStream::Get()->RegisterMem(ret);
+    return ret.get();
+  }
+}
+
+/*
  * These two functions try to create MKLDNN memory in an NDArray based on `req'.
  * The difference is that the first function can create MKLDNN memory with
  * special layouts in an NDArray, while the second one can only create MKLDNN
@@ -368,6 +450,8 @@ static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
   }
 }
 
+const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups);
+
 const mkldnn::memory *GetWeights(const NDArray &arr,
                                  const mkldnn::memory::primitive_desc &target_pd,
                                  int num_groups);
@@ -377,7 +461,7 @@ mkldnn_memory_format_t GetDefaultFormat(int num_dims);
 mkldnn::memory::primitive_desc GetPrimitiveDesc(mkldnn::memory::primitive_desc pd,
                                                 mkldnn_memory_format_t format);
 
-inline bool same_shape(const TShape &shape, const mkldnn_dims_t dims, int ndims) {
+inline bool same_shape(const mxnet::TShape &shape, const mkldnn_dims_t dims, int ndims) {
   if (shape.ndim() != (size_t)ndims)
     return false;
   for (int i = 0; i < ndims; i++)
@@ -396,7 +480,7 @@ inline bool same_shape(const mkldnn::memory::desc &desc1,
   return true;
 }
 
-inline bool same_shape(const TShape &shape, int dtype,
+inline bool same_shape(const mxnet::TShape &shape, int dtype,
                        const mkldnn::memory::desc &desc) {
   return same_shape(shape, desc.data.dims, desc.data.ndims)
       && get_mkldnn_type(dtype) == desc.data.data_type;
@@ -469,7 +553,7 @@ class MKLDNNMemory {
     return mem->get_primitive_desc() == pd;
   }
 
-  bool SameFormat(const TShape &shape, int dtype) const {
+  bool SameFormat(const mxnet::TShape &shape, int dtype) const {
     return same_shape(shape, dtype, desc);
   }
 
@@ -509,6 +593,9 @@ class OpCheck {
            const std::vector<mxnet::NDArray> &inputs_,
            const std::vector<mxnet::OpReqType> &req,
            const std::vector<mxnet::NDArray> &outputs_);
+
+  void CopyResult(const std::vector<mxnet::NDArray> &outputs_,
+                  const std::vector<size_t>& indice);
 };
 
 bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
@@ -525,6 +612,8 @@ bool MKLDNNStorageType(const nnvm::NodeAttrs &attrs,
 
 #define MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs)    \
     if (debug) check.Run(fn, attrs, ctx, inputs, req, outputs);
+#define MKLDNN_OPCHECK_COPY_RESULT(outputs, indice) \
+    if (debug) check.CopyResult(outputs, indice);
 
 }  // namespace mxnet
 #endif

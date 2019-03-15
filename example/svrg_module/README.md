@@ -1,7 +1,26 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 ## SVRGModule Example
+
 SVRGModule is an extension to the Module API that implements SVRG optimization, which stands for Stochastic
 Variance Reduced Gradient. SVRG is an optimization technique that complements SGD and has several key
 properties: 
+
 * Employs explicit variance reduction by using a different update rule compared to SGD.
 * Ability to use relatively large learning rate, which leads to faster convergence compared to SGD.
 * Guarantees for fast convergence for smooth and strongly convex functions.
@@ -18,7 +37,9 @@ training script.
 
 ##### Dataset
 YearPredictionMSD: contains predictions of the release year of a song from audio features. It has over 
-400,000 samples with 90 features. Please uncomment data downloading script from data_reader.py to download the data. 
+400,000 samples with 90 features. It will be automatically downloaded on first execution and cached.
+
+YearPredictionMSD dataset: https://archive.ics.uci.edu/ml/datasets/yearpredictionmsd
 
 #### Benchmarks:
 An initial set of benchmarks has been performed on YearPredictionDatasetMSD with linear regression model.  A jupyter 

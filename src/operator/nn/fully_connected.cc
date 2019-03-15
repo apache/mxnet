@@ -33,8 +33,8 @@ namespace mxnet {
 namespace op {
 
 static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
-                                std::vector<TShape> *in_shape,
-                                std::vector<TShape> *out_shape) {
+                                mxnet::ShapeVector *in_shape,
+                                mxnet::ShapeVector *out_shape) {
   const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   if (!param.no_bias) {
@@ -43,8 +43,8 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, weight]";
   }
   CHECK_EQ(out_shape->size(), 1U);
-  TShape dshape = (*in_shape)[fullc::kData];
-  TShape oshape = (*out_shape)[0];
+  mxnet::TShape dshape = (*in_shape)[fullc::kData];
+  mxnet::TShape oshape = (*out_shape)[0];
   // require data to be known
   if (dshape.ndim() ==  0) return false;
 
@@ -63,7 +63,7 @@ static bool FullyConnectedShape(const nnvm::NodeAttrs& attrs,
   }
 
   if (!param.flatten) {
-    TShape result_shape(dshape);
+    mxnet::TShape result_shape(dshape);
     result_shape[dshape.ndim()-1] = param.num_hidden;
     SHAPE_ASSIGN_CHECK(*out_shape, 0, result_shape);
   } else {
@@ -213,10 +213,9 @@ inline static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   uint32_t out_expected = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), out_expected);
-
-  bool dispatched = false;
   // TODO(zhengda) let's disable MKLDNN for FullyConnected for now.
   // It seems there is a bug.
+  bool dispatched = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);
@@ -295,7 +294,7 @@ If ``no_bias`` is set to be true, then the ``bias`` term is ignored.
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 #endif
-.set_attr<nnvm::FInferShape>("FInferShape", FullyConnectedShape)
+.set_attr<mxnet::FInferShape>("FInferShape", FullyConnectedShape)
 .set_attr<nnvm::FInferType>("FInferType", FullyConnectedType)
 .set_attr<FCompute>("FCompute<cpu>", FullyConnectedCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", FullyConnectedComputeExCPU)

@@ -142,13 +142,13 @@ class BilinearSamplerProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, grid]";
-    const TShape &dshape = (*in_shape)[bs::kData];
-    const TShape &lshape = (*in_shape)[bs::kGrid];
+    const mxnet::TShape &dshape = (*in_shape)[bs::kData];
+    const mxnet::TShape &lshape = (*in_shape)[bs::kGrid];
     if (dshape.ndim() == 0) return false;
     CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
@@ -176,12 +176,12 @@ class BilinearSamplerProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(type == dtype ||
+              type == -1) <<
                 "Non-uniform data type in BilinearSampler";
         }
       }
@@ -226,7 +226,7 @@ class BilinearSamplerProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

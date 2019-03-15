@@ -17,7 +17,7 @@
 
 # This example is inspired by https://github.com/jason71995/Keras-GAN-Library,
 # https://github.com/kazizzad/DCGAN-Gluon-MxNet/blob/master/MxnetDCGAN.ipynb
-# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dcgan.py
+# https://github.com/apache/incubator-mxnet/blob/master/example/gluon/dc_gan/dcgan.py
 
 
 import os
@@ -50,7 +50,7 @@ parser.add_argument('--use-gpu', action='store_true',
                     help='use gpu for training.')
 parser.add_argument('--clip_gr', type=float, default=10.0,
                     help='Clip the gradient by projecting onto the box. default is 10.0.')
-parser.add_argument('--z-dim', type=int, default=10,
+parser.add_argument('--z-dim', type=int, default=100,
                     help='dimension of the latent z vector. default is 100.')
 opt = parser.parse_args()
 

@@ -48,7 +48,7 @@ from ._internal import SymbolBase, _set_symbol_class
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "maximum", "minimum", "hypot", "eye", "zeros", "ones", "full", "arange",
-           "histogram"]
+           "histogram", "split_v2"]
 
 
 class Symbol(SymbolBase):
@@ -882,6 +882,81 @@ class Symbol(SymbolBase):
             List of auxiliary state types.
             The order is same as the order of list_auxiliary_states().
         """
+        try:
+            res = self._infer_type_impl(False, *args, **kwargs)
+            if res[1] is None:
+                arg_shapes, _, _ = self._infer_type_impl(True, *args, **kwargs)
+                arg_names = self.list_arguments()
+                unknowns = []
+                for name, dtype in zip(arg_names, arg_shapes):
+                    if not dtype:
+                        if len(unknowns) >= 10:
+                            unknowns.append('...')
+                            break
+                        unknowns.append('%s: %s' % (name, str(dtype)))
+                warnings.warn(
+                    "Cannot decide type for the following arguments. " +
+                    "Consider providing them as input:\n\t" +
+                    "\n\t".join(unknowns), stacklevel=2)
+            return res
+        except MXNetError:
+            print("infer_type error. Arguments:")
+            for i, arg in enumerate(args):
+                print("  #%d: %s" % (i, arg))
+            for k, v in kwargs.items():
+                print("  %s: %s" % (k, v))
+            raise
+
+    def infer_type_partial(self, *args, **kwargs):
+        """Infers the type partially.
+
+        This functions works the same way as `infer_type`,
+        except that this function can return partial results.
+
+        In the following example, information about fc2 is not available. So, `infer_shape`
+        will return a tuple of `None` values but `infer_shape_partial` will return partial values.
+
+        Example
+        -------
+        >>> data = mx.sym.Variable('data')
+        >>> prev = mx.sym.Variable('prev')
+        >>> casted_prev  = mx.sym.cast(prev, dtype='float32')
+        >>> out  = mx.sym.Activation(data=mx.sym.elemwise_add(data, casted_prev), act_type='relu')
+        >>> out.list_arguments()
+        ['data', 'prev']
+        >>> out.infer_type(data='float32')
+        (None, None, None)
+        >>> out.infer_type_partial(data='float32')
+        ([numpy.float32, None], [numpy.float32], [])
+        >>> # infers type if you give information about prev
+        >>> out.infer_type(data='float32', prev='float16')
+        ([numpy.float32, numpy.float16], [numpy.float32], [])
+
+        Parameters
+        ----------
+        *args :
+            Type of known arguments in a positional way.
+            Unknown type can be marked as None.
+
+        **kwargs :
+            Keyword arguments of known types.
+
+        Returns
+        -------
+        arg_types : list of numpy.dtype or None
+            List of argument types.
+            The order is same as the order of list_arguments().
+        out_types : list of numpy.dtype or None
+            List of output types.
+            The order is same as the order of list_outputs().
+        aux_types : list of numpy.dtype or None
+            List of auxiliary state types.
+            The order is same as the order of list_auxiliary_states().
+        """
+        return self._infer_type_impl(True, *args, **kwargs)
+
+    def _infer_type_impl(self, partial, *args, **kwargs):
+        """The actual implementation for calling type inference API."""
         # pylint: disable=too-many-locals
         if len(args) != 0 and len(kwargs) != 0:
             raise ValueError('Can only specify known argument \
@@ -912,7 +987,11 @@ class Symbol(SymbolBase):
         aux_type_size = mx_uint()
         aux_type_data = ctypes.POINTER(ctypes.c_int)()
         complete = ctypes.c_int()
-        check_call(_LIB.MXSymbolInferType(
+        if partial:
+            infer_func = _LIB.MXSymbolInferTypePartial
+        else:
+            infer_func = _LIB.MXSymbolInferType
+        check_call(infer_func(
             self.handle,
             mx_uint(len(sdata)),
             keys,
@@ -1347,7 +1426,7 @@ class Symbol(SymbolBase):
         shared_buffer : Dict of string to `NDArray`
             The dict mapping argument names to the `NDArray` that can be reused for initializing
             the current executor. This buffer will be checked for reuse if one argument name
-            of the current executor is not found in `shared_arg_names`. The `NDArray`s are
+            of the current executor is not found in `shared_arg_names`. The `NDArray` s are
             expected have default storage type.
 
         kwargs : Dict of str->shape
@@ -1854,6 +1933,14 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.split(self, *args, **kwargs)
+
+    def split_v2(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`split_v2`.
+
+        The arguments are the same as for :py:func:`split_v2`, with
+        this array as data.
+        """
+        return split_v2(self, *args, **kwargs)
 
     def slice(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`slice`.
@@ -2423,6 +2510,14 @@ class Symbol(SymbolBase):
         """
         return op.log_softmax(self, *args, **kwargs)
 
+    def softmin(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`softmin`.
+
+        The arguments are the same as for :py:func:`softmin`, with
+        this array as data.
+        """
+        return op.softmin(self, *args, **kwargs)
+
     def squeeze(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`squeeze`.
 
@@ -2430,6 +2525,23 @@ class Symbol(SymbolBase):
         this array as data.
         """
         return op.squeeze(self, *args, **kwargs)
+
+    def get_backend_symbol(self, backend):
+        """Return symbol for target backend.
+
+        Parameters
+        ----------
+        backend : str
+            The backend names.
+
+        Returns
+        -------
+        out : Symbol
+            The created Symbol for target backend.
+        """
+        out = SymbolHandle()
+        check_call(_LIB.MXGenBackendSubgraph(self.handle, c_str(backend), ctypes.byref(out)))
+        return Symbol(out)
 
     def wait_to_read(self):
         raise NotImplementedForSymbol(self.wait_to_read, None)
@@ -2800,6 +2912,7 @@ def hypot(left, right):
     else:
         raise TypeError('types (%s, %s) not supported' % (str(type(left)), str(type(right))))
 
+
 def eye(N, M=0, k=0, dtype=None, **kwargs):
     """Returns a new symbol of 2-D shpae, filled with ones on the diagonal and zeros elsewhere.
 
@@ -2890,17 +3003,25 @@ def full(shape, val, dtype=None, **kwargs):
 def arange(start, stop=None, step=1.0, repeat=1, infer_range=False, name=None, dtype=None):
     """Returns evenly spaced values within a given interval.
 
+    Values are generated within the half-open interval [`start`, `stop`). In other
+    words, the interval includes `start` but excludes `stop`. The function is
+    similar to the built-in Python function `range` and to `numpy.arange`,
+    but returns a `Symbol`.
+
     Parameters
     ----------
-    start : number
+    start : number, optional
         Start of interval. The interval includes this value. The default start value is 0.
-    stop : number, optional
+    stop : number
         End of interval. The interval does not include this value.
     step : number, optional
         Spacing between values.
     repeat : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
+    infer_range : boolean, optional
+        When set to True, infer the stop position from the start, step,
+        repeat, and output tensor size.
     dtype : str or numpy.dtype, optional
         The value type of the inner value, default to ``np.float32``.
 
@@ -2930,6 +3051,11 @@ def histogram(a, bins=10, range=None, **kwargs):
         Values outside the range are ignored. The first element of the range must be less than or
         equal to the second. range affects the automatic bin computation as well, the range will
         be equally divided by the number of bins.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
     """
     if isinstance(bins, Symbol):
         return _internal._histogram(data=a, bins=bins, **kwargs)
@@ -2938,5 +3064,45 @@ def histogram(a, bins=10, range=None, **kwargs):
             raise ValueError("null range is not supported in symbol mode")
         return _internal._histogram(data=a, bin_cnt=bins, range=range, **kwargs)
     raise ValueError("bins argument should be either an integer or an NDArray")
+
+def split_v2(ary, indices_or_sections, axis=0, squeeze_axis=False):
+    """Split an array into multiple sub-arrays.
+
+    Parameters
+    ----------
+    ary : NDArray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or tuple of ints
+        If `indices_or_sections` is an integer, N, the array will be divided
+        into N equal arrays along `axis`.  If such a split is not possible,
+        an error is raised.
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+        - ary[:2]
+        - ary[2:3]
+        - ary[3:]
+        If an index exceeds the dimension of the array along `axis`,
+        an empty sub-array is returned correspondingly.
+    axis : int, optional
+        The axis along which to split, default is 0.
+    squeeze_axis: boolean, optional
+        Whether to squeeze the axis of sub-arrays or not, only useful when size
+        of the sub-arrays are 1 on the `axis`. Default is False.
+
+    Returns
+    -------
+    out : Symbol
+        The created Symbol
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, tuple):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    return _internal._split_v2(ary, indices, axis, squeeze_axis, sections)
 
 _set_symbol_class(Symbol)

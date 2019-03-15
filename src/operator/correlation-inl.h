@@ -78,6 +78,7 @@ class CorrelationOp : public Operator {
     using namespace mshadow;
     CHECK_EQ(in_data.size(), 2U);
     CHECK_EQ(out_data.size(), 3U);
+    CHECK_NE(param_.kernel_size % 2, 0) << "kernel size should be odd number";
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 4, DType> data1 = in_data[Correlation::kData1].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> data2 = in_data[Correlation::kData2].get<xpu, 4, DType>(s);
@@ -98,9 +99,9 @@ class CorrelationOp : public Operator {
     border_size_ = param_.max_displacement + kernel_radius_;
     stride1 = param_.stride1;
     stride2 = param_.stride2;
-    top_width_ = ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
+    top_width_ = std::ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
      / static_cast<float>(stride1));
-    top_height_ = ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
+    top_height_ = std::ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
      / static_cast<float>(stride1));
     neighborhood_grid_radius_ = param_.max_displacement / stride2;
     neighborhood_grid_width_ = neighborhood_grid_radius_ * 2 + 1;
@@ -185,13 +186,13 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
   std::map<std::string, std::string> GetParams() const override {
     return param_.__DICT__();
   }
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data1, data2]";
-    TShape dshape1 = in_shape->at(Correlation::kData1);
-    TShape dshape2 = in_shape->at(Correlation::kData2);
+    mxnet::TShape dshape1 = in_shape->at(Correlation::kData1);
+    mxnet::TShape dshape2 = in_shape->at(Correlation::kData2);
     CHECK_EQ(dshape1.ndim(), 4U) << "data should be a 4D tensor";
     CHECK_EQ(dshape2.ndim(), 4U) << "data should be a 4D tensor";
     int paddedbottomheight;
@@ -211,9 +212,9 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
     border_size_ = param_.max_displacement + kernel_radius_;
     stride1 = param_.stride1;
     stride2 = param_.stride2;
-    top_width_ = ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
+    top_width_ = std::ceil(static_cast<float>(paddedbottomwidth - border_size_ * 2)\
      / static_cast<float>(stride1));
-    top_height_ = ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
+    top_height_ = std::ceil(static_cast<float>(paddedbottomheight - border_size_ * 2)\
      / static_cast<float>(stride1));
     neighborhood_grid_radius_ = param_.max_displacement / stride2;
     neighborhood_grid_width_ = neighborhood_grid_radius_ * 2 + 1;
@@ -265,7 +266,7 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

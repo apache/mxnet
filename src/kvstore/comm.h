@@ -50,7 +50,7 @@ class Comm {
    * \brief init key with the data shape and storage shape
    */
   virtual void Init(int key, const NDArrayStorageType stype,
-                    const TShape& shape, int dtype = mshadow::kFloat32) = 0;
+                    const mxnet::TShape& shape, int dtype = mshadow::kFloat32) = 0;
   /**
    * \brief returns src[0] + .. + src[src.size()-1]
    */
@@ -110,7 +110,7 @@ class CommCPU : public Comm {
   }
   virtual ~CommCPU() { }
 
-  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+  void Init(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int type = mshadow::kFloat32) override {
     // Delayed allocation - the dense merged buffer might not be used at all if push()
     // only sees sparse arrays
@@ -231,9 +231,9 @@ class CommCPU : public Comm {
       << "BroadcastRowSparse expects row-sparse src NDArray";
     CHECK_EQ(src.ctx().dev_mask(), Context::kCPU)
       << "BroadcastRowSparse with src on gpu context not supported";
-    for (size_t i = 0; i < dst.size(); ++i) {
-      NDArray* out = dst[i].first;
-      NDArray row_id = dst[i].second;
+    for (const auto& dst_kv : dst) {
+      NDArray* out = dst_kv.first;
+      NDArray row_id = dst_kv.second;
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
                << "BroadcastRowSparse expects row_sparse dst NDArray";
       CHECK_EQ(row_id.ctx().dev_mask(), Context::kCPU)
@@ -456,7 +456,7 @@ class CommDevice : public Comm {
 
   virtual ~CommDevice() { }
 
-  void Init(int key, const NDArrayStorageType stype, const TShape& shape,
+  void Init(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) override {
     sorted_key_attrs_.emplace_back(key, shape, dtype);
     inited_ = false;
@@ -568,9 +568,9 @@ class CommDevice : public Comm {
                                   false, buf.merged.dtype());
         buf.residual[i] = 0;
         int64_t small_size = gc_->GetCompressedSize(buf.merged.shape().Size());
-        buf.compressed_recv_buf[i] = NDArray(TShape{small_size}, buf.merged.ctx(),
+        buf.compressed_recv_buf[i] = NDArray(mxnet::TShape{small_size}, buf.merged.ctx(),
                                         false, buf.merged.dtype());
-        buf.compressed_send_buf[i] = NDArray(TShape{small_size}, src[i].ctx(),
+        buf.compressed_send_buf[i] = NDArray(mxnet::TShape{small_size}, src[i].ctx(),
                                         false, buf.merged.dtype());
       }
     }
@@ -621,9 +621,9 @@ class CommDevice : public Comm {
     CHECK_EQ(src.storage_type(), kRowSparseStorage)
       << "BroadcastRowSparse expects row-sparse src NDArray";
 
-    for (size_t i = 0; i < dst.size(); ++i) {
-      NDArray* out = dst[i].first;
-      NDArray row_id = dst[i].second;
+    for (const auto& dst_kv : dst) {
+      NDArray* out = dst_kv.first;
+      NDArray row_id = dst_kv.second;
       CHECK_EQ(out->storage_type(), kRowSparseStorage)
                << "BroadcastRowSparse expects row_sparse dst NDArray";
       CHECK_EQ(row_id.ctx(), src.ctx())
@@ -673,7 +673,7 @@ class CommDevice : public Comm {
     }
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   // try to allocate buff on device evenly
   void InitMergeBuffer(const std::vector<Context>& devs) {
     std::sort(sorted_key_attrs_.begin(), sorted_key_attrs_.end(), [](
@@ -686,17 +686,17 @@ class CommDevice : public Comm {
       ctx_info[d.dev_id] = std::make_pair(d, 0);
     }
 
-    for (size_t i = 0; i < sorted_key_attrs_.size(); ++i) {
-      const int key  = std::get<0>(sorted_key_attrs_[i]);
-      const TShape& shape = std::get<1>(sorted_key_attrs_[i]);
-      const int type = std::get<2>(sorted_key_attrs_[i]);
+    for (auto& sorted_key_attr : sorted_key_attrs_) {
+      const int key  = std::get<0>(sorted_key_attr);
+      const mxnet::TShape& shape = std::get<1>(sorted_key_attr);
+      const int type = std::get<2>(sorted_key_attr);
       auto& buf = merge_buf_[key];
       Context ctx;
       size_t min_size = std::numeric_limits<size_t>::max();
-      for (auto it = ctx_info.begin(); it != ctx_info.end(); ++it) {
-        size_t size = it->second.second;
+      for (auto& ctx_info_kv : ctx_info) {
+        size_t size = ctx_info_kv.second.second;
         if (size <= min_size) {
-          ctx = it->second.first;
+          ctx = ctx_info_kv.second.first;
           min_size = size;
         }
       }
@@ -723,8 +723,10 @@ class CommDevice : public Comm {
     int n = static_cast<int>(gpus.size());
     int enabled = 0;
     std::vector<int> p2p(n*n);
+
     for (int i = 0; i < n; ++i) {
-      cudaSetDevice(gpus[i]);
+      // Restores active device to what it was before EnableP2P
+      mxnet::common::cuda::DeviceStore device_store(gpus[i]);
       for (int j = 0; j < n; j++) {
         int access;
         cudaDeviceCanAccessPeer(&access, gpus[i], gpus[j]);

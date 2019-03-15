@@ -50,7 +50,7 @@ enum GridGeneratorTransformType {kAffine, kWarp};
 
 struct GridGeneratorParam : public dmlc::Parameter<GridGeneratorParam> {
   int transform_type;
-  TShape target_shape;
+  mxnet::TShape target_shape;
   DMLC_DECLARE_PARAMETER(GridGeneratorParam) {
     int shape[] = {0, 0};
     DMLC_DECLARE_FIELD(transform_type)
@@ -59,7 +59,7 @@ struct GridGeneratorParam : public dmlc::Parameter<GridGeneratorParam> {
     .describe("The type of transformation. For `affine`, input data should be an affine matrix "
               "of size (batch, 6). For `warp`, input data should be an optical flow of size "
               "(batch, 2, h, w).");
-    DMLC_DECLARE_FIELD(target_shape).set_default(TShape(shape, shape + 2))
+    DMLC_DECLARE_FIELD(target_shape).set_default(mxnet::TShape(shape, shape + 2))
     .describe("Specifies the output shape (H, W). This is required if transformation type is "
               "`affine`. If transformation type is `warp`, this parameter is ignored.");
   }
@@ -126,7 +126,7 @@ class GridGeneratorOp : public Operator {
         Assign(out, req[grid::kOut],
                (data + broadcast_with_axis(grid_dst, -1, data.shape_[0])) /
                  broadcast_to(reshape(workspace, Shape4(1, 2, 1, 1)),
-                              TShape(data.shape_)) - scalar<DType>(1));
+                              mxnet::TShape(data.shape_)) - scalar<DType>(1));
         break;
       }
     }
@@ -169,7 +169,7 @@ class GridGeneratorOp : public Operator {
         workspace[1] = scalar<DType>((DType(gdata.size(2)) - 1.0) / 2.0);
         Assign(gdata, req[grid::kData],
                grad / broadcast_to(reshape(workspace, Shape4(1, 2, 1, 1)),
-                                   TShape(gdata.shape_)));
+                                   mxnet::TShape(gdata.shape_)));
         break;
       }
     }
@@ -209,12 +209,12 @@ class GridGeneratorProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1U) << "Input:[data]";
-    const TShape &lshape = (*in_shape)[grid::kData];
+    const mxnet::TShape &lshape = (*in_shape)[grid::kData];
     if (lshape.ndim() ==  0) return false;
     out_shape->clear();
     switch (param_.transform_type) {
@@ -248,12 +248,12 @@ class GridGeneratorProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(type == dtype ||
+              type == -1) <<
                 "Non-uniform data type in GridGenerator";
         }
       }
@@ -300,7 +300,7 @@ class GridGeneratorProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-    const std::vector<TShape> &in_shape) const override {
+    const mxnet::ShapeVector &in_shape) const override {
     switch (param_.transform_type) {
     case grid::kAffine: {
       return{};
@@ -313,7 +313,7 @@ class GridGeneratorProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     switch (param_.transform_type) {
       case grid::kAffine: {
         return {};
@@ -330,7 +330,7 @@ class GridGeneratorProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

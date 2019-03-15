@@ -88,6 +88,17 @@ struct SoftmaxOutputParam : public dmlc::Parameter<SoftmaxOutputParam> {
               "one-hot encoding of the gold label and distributed uniformly to"
               "all other labels.");
   };
+
+  bool operator==(const SoftmaxOutputParam& other) const {
+    return this->grad_scale == other.grad_scale &&
+           this->ignore_label == other.ignore_label &&
+           this->multi_output == other.multi_output &&
+           this->use_ignore == other.use_ignore &&
+           this->preserve_shape == other.preserve_shape &&
+           this->normalization == other.normalization &&
+           this->out_grad == other.out_grad &&
+           this->smooth_alpha == other.smooth_alpha;
+  }
 };
 
 template<typename xpu, typename DType>
@@ -267,9 +278,43 @@ class SoftmaxOutputOp : public Operator {
   SoftmaxOutputParam param_;
 };  // class SoftmaxOutputOp
 
-// Decalre Factory function, used for dispatch specialization
 template<typename xpu>
-Operator* CreateOp(SoftmaxOutputParam param, int dtype);
+void SoftmaxOutputCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx, const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
+  const std::vector<TBlob> no_use_but_adapt_origin_api;
+  CHECK_EQ(inputs.size(), 2U);
+
+  MSHADOW_REAL_TYPE_SWITCH(inputs[softmaxout_enum::kData].type_flag_, DType, {
+    SoftmaxOutputOp<xpu, DType> op(param);
+    op.Forward(ctx, inputs, req, outputs, no_use_but_adapt_origin_api);
+  });
+}
+
+template<typename xpu>
+void SoftmaxOutputGradCompute(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
+  const SoftmaxOutputParam& param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
+  const std::vector<TBlob> no_use_but_adapt_origin_api;
+  CHECK_EQ(inputs.size(), 2U);
+
+  std::vector<TBlob> out_grad{inputs[0]};
+  std::vector<TBlob> out_data{inputs[0]};
+  std::vector<TBlob> in_data(inputs.begin(), inputs.end());
+  int dtype = inputs[0].type_flag_;
+  const std::vector<TBlob> &in_grad = outputs;
+
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    SoftmaxOutputOp<xpu, DType> op(param);
+    op.Backward(ctx, out_grad, in_data, out_data, req, in_grad, no_use_but_adapt_origin_api);
+  });
+}
+
 
 #if DMLC_USE_CXX11
 class SoftmaxOutputProp : public OperatorProperty {
@@ -286,23 +331,23 @@ class SoftmaxOutputProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, label]";
-    const TShape &dshape = in_shape->at(0);
+    const mxnet::TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
 
     // label.shape == data.shape: use probability as label
     if (dshape != (*in_shape)[softmaxout_enum::kLabel]) {
       if (param_.multi_output) {
-        TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
-        TShape lshape2(dshape.ndim() - 1);
+        mxnet::TShape lshape1 = Shape2(dshape[0], dshape.Size()/dshape[0]/dshape[1]);
+        mxnet::TShape lshape2(dshape.ndim() - 1);
         lshape2[0] = dshape[0];
         for (index_t i = 2; i < dshape.ndim(); ++i)
           lshape2[i-1] = dshape[i];
-        TShape lshape3 = dshape;
+        mxnet::TShape lshape3 = dshape;
         lshape3[1] = 1;
         if (in_shape->at(softmaxout_enum::kLabel).ndim() == 0) {
           in_shape->at(softmaxout_enum::kLabel) = lshape1;
@@ -316,7 +361,7 @@ class SoftmaxOutputProp : public OperatorProperty {
           throw InferShapeError(os.str(), softmaxout_enum::kLabel);
         }
       } else {
-        TShape label_shape(dshape.ndim() - 1);
+        mxnet::TShape label_shape(dshape.ndim() - 1);
         for (index_t i = 0; i + 1 < dshape.ndim(); ++i)
           label_shape[i] = dshape[i];
         SHAPE_ASSIGN_CHECK(*in_shape, softmaxout_enum::kLabel, label_shape);
@@ -333,7 +378,7 @@ class SoftmaxOutputProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
@@ -381,17 +426,12 @@ class SoftmaxOutputProp : public OperatorProperty {
     return {{in_data[softmaxout_enum::kData], out_data[softmaxout_enum::kOut]}};
   }
 
-  std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
-    return {ResourceRequest::kTempSpace};
-  }
-
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  protected:
@@ -414,4 +454,23 @@ class DeprecatedSoftmaxProp : public SoftmaxOutputProp {
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::SoftmaxOutputParam> {
+  size_t operator()(const mxnet::op::SoftmaxOutputParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.grad_scale);
+    ret = dmlc::HashCombine(ret, val.ignore_label);
+    ret = dmlc::HashCombine(ret, val.multi_output);
+    ret = dmlc::HashCombine(ret, val.use_ignore);
+    ret = dmlc::HashCombine(ret, val.preserve_shape);
+    ret = dmlc::HashCombine(ret, val.normalization);
+    ret = dmlc::HashCombine(ret, val.out_grad);
+    ret = dmlc::HashCombine(ret, val.smooth_alpha);
+    return ret;
+  }
+};
+}  // namespace std
+
 #endif  // MXNET_OPERATOR_SOFTMAX_OUTPUT_INL_H_

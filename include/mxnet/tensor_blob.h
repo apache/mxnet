@@ -69,7 +69,7 @@ class TBlob {
   /*! \brief pointer to the data */
   void *dptr_;
   /*! \brief shape of the tensor */
-  TShape shape_;
+  mxnet::TShape shape_;
   /*! \brief type flag of the tensor blob */
   int type_flag_;
 
@@ -87,7 +87,7 @@ class TBlob {
    * \param dev_id the device id
    */
   template<typename DType>
-  TBlob(DType *dptr, const TShape &shape, int dev_mask, int dev_id = -1)
+  TBlob(DType *dptr, const mxnet::TShape &shape, int dev_mask, int dev_id = -1)
       : dptr_(dptr), shape_(shape),
         type_flag_(mshadow::DataType<DType>::kFlag) {
     SetDLTensor(dev_mask, dev_id);
@@ -100,9 +100,42 @@ class TBlob {
    * \param type_flag the type flag. Can be one of enum mshadow::dtype
    * \param dev_id the device id
    */
-  TBlob(void *dptr, const TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
+  TBlob(void *dptr, const mxnet::TShape &shape, int dev_mask, int type_flag, int dev_id = -1)
       : dptr_(dptr), shape_(shape), type_flag_(type_flag) {
     SetDLTensor(dev_mask, dev_id);
+  }
+  /*!
+   * \brief constructor that construct TBlob from DLTensor
+   * \param DLTensor Object
+   */
+  explicit TBlob(const DLTensor &dltensor)
+      : dptr_(dltensor.data),
+        shape_(mxnet::TShape(dltensor.shape, dltensor.shape + dltensor.ndim)),
+        type_flag_(DLDataTypeTransform(dltensor.dtype)),
+        dltensor_(dltensor) {
+    // compactness check for DLTensor
+    if (dltensor.strides != nullptr) {
+      // check strides
+      const int &ndim = dltensor.ndim;
+      const int64_t *shape = dltensor.shape;
+      const int64_t *strides = dltensor.strides;
+      if (ndim >= 1) {
+        bool err = false;
+        if (strides[ndim - 1] != 1) {
+          err = true;
+        } else {
+          for (int i = ndim - 2; i >= 0; --i) {
+            if (strides[i] != shape[i + 1] * strides[i + 1]) {
+              err = true;
+              break;
+            }
+          }
+        }
+        if (err) {
+          LOG(FATAL) << "Unsupported DLPack because MXNet only support compact tensor now";
+        }
+      }
+    }
   }
   /*!
    * \brief constructor from tensor
@@ -142,7 +175,7 @@ class TBlob {
    * \param shape desired shape
    * \return reshaped blob
    */
-  inline TBlob reshape(const TShape& shape) const {
+  inline TBlob reshape(const mxnet::TShape& shape) const {
     CHECK_EQ(this->shape_.Size(), shape.Size()) << "Shape size mismatch "
     << this->shape_.Size() << " v.s. "  << shape.Size();
     TBlob ret(this->dptr_, shape, this->dev_mask(), this->type_flag_, this->dev_id());
@@ -254,7 +287,7 @@ class TBlob {
     CHECK(Device::kDevMask == this->dev_mask())
       << "TBlob.get: device type do not match specified type";
     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
-    CHECK_EQ(this->shape_.Size(), shape.Size())
+    CHECK_EQ(this->shape_.Size(), static_cast<size_t>(shape.Size()))
       << "TBlob.get_with_shape: new and old shape do not match total elements";
     return mshadow::Tensor<Device, dim, DType>(dptr<DType>(), shape,
                                                shape[dim - 1], stream);
@@ -336,6 +369,36 @@ class TBlob {
       }
     }
   }
+  static int DLDataTypeTransform(DLDataType dldata_type) {
+    if (dldata_type.lanes != 1) {
+      LOG(FATAL) << "Unsupported DLDataType whose lanes != 1";
+    }
+    switch (dldata_type.code) {
+      case kDLFloat:
+        switch (dldata_type.bits) {
+          case 16: return mshadow::kFloat16;
+          case 32: return mshadow::kFloat32;
+          case 64: return mshadow::kFloat64;
+        }
+        break;
+      case kDLUInt:
+        switch (dldata_type.bits) {
+          case 8: return mshadow::kUint8;
+        }
+        break;
+      case kDLInt:
+        switch (dldata_type.bits) {
+          case 8: return mshadow::kInt8;
+          case 32: return mshadow::kInt32;
+          case 64: return mshadow::kInt64;
+        }
+        break;
+    }
+    LOG(FATAL) << "Unknown DLDataType{" << dldata_type.code
+               << ", " << dldata_type.bits
+               << ", " << dldata_type.lanes << "}";
+    return mshadow::kFloat32;
+  }
 
   inline void SetDLTensor(int dev_mask, int dev_id) {
     dltensor_.data = dptr_;
@@ -343,7 +406,7 @@ class TBlob {
     dltensor_.ndim = shape_.ndim();
     dltensor_.dtype = DTypeTransform(type_flag_);
     dltensor_.shape = shape_.data();
-    dltensor_.strides = NULL;
+    dltensor_.strides = nullptr;
     dltensor_.byte_offset = 0;
   }
 
@@ -354,7 +417,7 @@ class TBlob {
 }  // namespace mxnet
 
 namespace dmlc {
-// Add a few patches to support TShape in dmlc/parameter.
+// Add a few patches to support mxnet::TShape in dmlc/parameter.
 DMLC_DECLARE_TYPE_NAME(mxnet::TShape, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<int>, "Shape(tuple)");
 DMLC_DECLARE_TYPE_NAME(nnvm::Tuple<dmlc::optional<int>>, "Shape(tuple)");

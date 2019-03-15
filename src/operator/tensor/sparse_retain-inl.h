@@ -19,7 +19,7 @@
 
 /*!
  * \file sparse_retain-inl.h
- * \brief
+ * \brief Function definition of sparse_retain operator
 */
 #ifndef MXNET_OPERATOR_TENSOR_SPARSE_RETAIN_INL_H_
 #define MXNET_OPERATOR_TENSOR_SPARSE_RETAIN_INL_H_
@@ -44,13 +44,13 @@ enum SparseRetainOpOutputs {kOut};
 }  // namespace sr
 
 inline bool SparseRetainOpShape(const nnvm::NodeAttrs& attrs,
-                                std::vector<TShape> *in_attrs,
-                                std::vector<TShape> *out_attrs) {
+                                mxnet::ShapeVector *in_attrs,
+                                mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U)
     << "sparse_retain operator takes 2 arguments (" << in_attrs->size() << " given)";
   CHECK_EQ(out_attrs->size(), 1U);
 
-  TShape tshape((*in_attrs)[sr::kArr]);
+  mxnet::TShape tshape((*in_attrs)[sr::kArr]);
   shape_assign(&tshape, (*out_attrs)[sr::kOut]);
   SHAPE_ASSIGN_CHECK(*in_attrs, sr::kArr, tshape);
   SHAPE_ASSIGN_CHECK(*out_attrs, sr::kOut, tshape);

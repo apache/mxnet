@@ -25,9 +25,6 @@ import sys
 import mxnet as mx
 import logging
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils import get_data
-
 import sd_module
 
 def get_conv(
@@ -121,8 +118,7 @@ n_epoch = 2
 batch_size = 100
 
 basedir = os.path.dirname(__file__)
-get_data.get_mnist(os.path.join(basedir, "data"))
-
+mx.test_utils.get_mnist_ubyte()
 train = mx.io.MNISTIter(
         image=os.path.join(basedir, "data", "train-images-idx3-ubyte"),
         label=os.path.join(basedir, "data", "train-labels-idx1-ubyte"),

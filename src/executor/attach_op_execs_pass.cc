@@ -58,12 +58,10 @@ class StorageFallbackOpExecutor : public OpExecutor {
     if (!init_) {
       pre_temp_buf_.clear();
       post_temp_buf_.clear();
-      for (size_t i = 0; i < in_array.size(); i++) {
-        auto &nd = in_array[i];
+      for (const auto& nd : in_array) {
         pre_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
       }
-      for (size_t i = 0; i < out_array.size(); i++) {
-        auto &nd = out_array[i];
+      for (const auto& nd : out_array) {
         post_temp_buf_.emplace_back(nd.shape(), nd.ctx(), true, nd.dtype());
       }
       init_ = true;
@@ -159,9 +157,13 @@ class StatefulComputeExExecutor : public OpExecutor {
     op_ctx.run_ctx = rctx;
 #if MXNET_USE_MKLDNN == 1
     InvalidateOutputs(out_array, req);
-    CreateDefaultInputs(in_array, &in_array_fallback);
-    fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
-    return;
+    // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
+    const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
+    if (!is_mkldnn.get(attrs_.op, false)) {
+      CreateDefaultInputs(in_array, &in_array_fallback);
+      fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
+      return;
+    }
 #endif
     fcompute_(state_, op_ctx, in_array, req, out_array);
   }
@@ -180,12 +182,14 @@ class StatefulComputeExExecutor : public OpExecutor {
     return state_;
   }
 
-  explicit StatefulComputeExExecutor(const OpStatePtr& state,
+  explicit StatefulComputeExExecutor(const NodeAttrs& attrs,
+                                     const OpStatePtr& state,
                                      const FStatefulComputeEx& fcompute,
                                      ExecType exec_type)
-      : state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+      : attrs_(attrs), state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
+  NodeAttrs attrs_;
   OpStatePtr state_;
   FStatefulComputeEx fcompute_;
   ExecType exec_type_;
@@ -259,7 +263,7 @@ class FComputeExExecutor : public OpExecutor {
 
 void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   using nnvm::DTypeVector;
-  using nnvm::ShapeVector;
+  using mxnet::ShapeVector;
   using nnvm::FMutateInputs;
 
   static auto& fcreate_op_state = nnvm::Op::GetAttr<FCreateOpState>("FCreateOpState");
@@ -268,7 +272,7 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   static auto& is_layer_backward = nnvm::Op::GetAttr<bool>("TIsLayerOpBackward");
 
   const auto& vdtype = g.GetAttr<DTypeVector>("dtype");
-  const auto& vshape = g.GetAttr<ShapeVector>("shape");
+  const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& vctx = g.GetAttr<ContextVector>("context");
   const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   // get the graph
@@ -289,7 +293,7 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
   }
   CHECK(dispatch_modes[i] != DispatchMode::kUndefined);
   if (fcreate_op_state.count(op)) {
-    std::vector<TShape> ishape;
+    mxnet::ShapeVector ishape;
     std::vector<int> itype;
     for (const auto& e : inode.inputs) {
       ishape.emplace_back(vshape[idx.entry_id(e)]);
@@ -302,7 +306,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
         op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-      ret[i] = std::make_shared<StatefulComputeExExecutor>(state, fcompute_ex, exec_type);
+      ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs, state,
+                                                           fcompute_ex, exec_type);
     } else {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);
@@ -322,7 +327,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, size_t i) {
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
       ret[i] = std::make_shared<StatefulComputeExExecutor>(
-          ret[fwd_id].get()->state(), fcompute_ex, exec_type);
+          inode.source->attrs, ret[fwd_id].get()->state(), fcompute_ex,
+          exec_type);
     } else {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);

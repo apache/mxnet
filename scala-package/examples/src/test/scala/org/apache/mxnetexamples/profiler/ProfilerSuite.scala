@@ -25,8 +25,7 @@ import org.apache.mxnet.Profiler
 import org.apache.mxnet.Context
 
 /**
-  * Integration test for imageClassifier example.
-  * This will run as a part of "make scalatest"
+  * Integration test for profiler example.
   */
 class ProfilerSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ProfilerSuite])

@@ -26,30 +26,84 @@
 #define MXNET_OPERATOR_IMAGE_IMAGE_RANDOM_INL_H_
 
 
-#include <mxnet/base.h>
 #include <algorithm>
-#include <vector>
 #include <cmath>
 #include <limits>
-#include <algorithm>
+#include <tuple>
 #include <utility>
+#include <vector>
+#include "mxnet/base.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace op {
 namespace image {
 
+using namespace mshadow;
+
+#if MXNET_USE_CUDA
+// NOTE: Kernel launch/map was extremely costly.
+// Hence, we use separate CUDA kernels for these operators.
+template<typename DType, typename T1, typename T2>
+void ToTensorImplCUDA(mshadow::Stream<gpu> *s,
+                      const T1 input,
+                      const T2 output,
+                      const int req,
+                      const float normalize_factor);
+
+template<typename DType>
+void NormalizeImplCUDA(mshadow::Stream<gpu> *s,
+                       const DType *input,
+                       DType *output,
+                       const int req,
+                       const int N,
+                       const int C,
+                       const int H,
+                       const int W,
+                       const float mean_d0,
+                       const float mean_d1,
+                       const float mean_d2,
+                       const float std_d0,
+                       const float std_d1,
+                       const float std_d2);
+
+template<typename DType>
+void NormalizeBackwardImplCUDA(mshadow::Stream<gpu> *s,
+                               const DType *out_grad,
+                               DType *in_grad,
+                               const int req,
+                               const int N,
+                               const int C,
+                               const int H,
+                               const int W,
+                               const float std_d0,
+                               const float std_d1,
+                               const float std_d2);
+#endif  // MXNET_USE_CUDA
+
+// Shape and Type inference for image to tensor operator
 inline bool ToTensorShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape &shp = (*in_attrs)[0];
+
+  mxnet::TShape &shp = (*in_attrs)[0];
   if (!shp.ndim()) return false;
-  CHECK_EQ(shp.ndim(), 3)
-      << "Input image must have shape (height, width, channels), but got " << shp;
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({shp[2], shp[0], shp[1]}));
+
+  CHECK((shp.ndim() == 3) || (shp.ndim() == 4))
+      << "Input image must have shape (height, width, channels), or "
+      << "(N, height, width, channels) but got " << shp;
+  if (shp.ndim() == 3) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({shp[2], shp[0], shp[1]}));
+  } else if (shp.ndim() == 4) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({shp[0], shp[3], shp[1], shp[2]}));
+  }
+
   return true;
 }
 
@@ -62,55 +116,149 @@ inline bool ToTensorType(const nnvm::NodeAttrs& attrs,
   return (*in_attrs)[0] != -1;
 }
 
-void ToTensor(const nnvm::NodeAttrs &attrs,
-                     const OpContext &ctx,
-                     const std::vector<TBlob> &inputs,
-                     const std::vector<OpReqType> &req,
-                     const std::vector<TBlob> &outputs) {
-  CHECK_EQ(req[0], kWriteTo)
-    << "`to_tensor` does not support inplace";
-
-  int length = inputs[0].shape_[0] * inputs[0].shape_[1];
-  int channel = inputs[0].shape_[2];
-
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    float* output = outputs[0].dptr<float>();
-    DType* input = inputs[0].dptr<DType>();
-
-    for (int l = 0; l < length; ++l) {
-      for (int c = 0; c < channel; ++c) {
-        output[c*length + l] = static_cast<float>(input[l*channel + c]) / 255.0f;
+// Operator Implementation
+template<typename DType, int req>
+inline void ToTensor(float* out_data, const DType* in_data,
+                     const int length,
+                     const int channels,
+                     const float normalize_factor,
+                     const int step) {
+  // Microsoft Visual C++ compiler does not support omp collapse
+  #ifdef _MSC_VER
+    #pragma omp parallel for
+  #else
+    #pragma omp parallel for collapse(2)
+  #endif  // _MSC_VER
+  for (int c = 0; c < channels; ++c) {
+      for (int i = 0; i < length; ++i) {
+        KERNEL_ASSIGN(out_data[step + c*length + i], req,
+                      (in_data[step + i*channels + c]) / normalize_factor);
       }
-    }
+  }
+}
+
+inline void ToTensorImpl(const std::vector<TBlob> &inputs,
+                         const std::vector<TBlob> &outputs,
+                         const std::vector<OpReqType> &req,
+                         const int length,
+                         const int channel,
+                         const float normalize_factor,
+                         const int step) {
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      float* output = outputs[0].dptr<float>();
+      DType* input = inputs[0].dptr<DType>();
+      ToTensor<DType, req_type>(output, input, length, channel,
+                                normalize_factor, step);
+    });
   });
+}
+
+template<typename xpu>
+void ToTensorOpForward(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  // We do not use temp buffer when performance the operation.
+  // Hence, this check is necessary.
+  CHECK_EQ(req[0], kWriteTo)
+    << "`to_tensor` does not support inplace updates";
+
+  const float normalize_factor = 255.0f;
+
+  if (std::is_same<xpu, gpu>::value) {
+  #if MXNET_USE_CUDA
+      mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          if (inputs[0].ndim() == 3) {
+            Tensor<gpu, 3, DType> input = inputs[0].get<gpu, 3, DType>(s);
+            Tensor<gpu, 3, float> output = outputs[0].get<gpu, 3, float>(s);
+            ToTensorImplCUDA<DType, Tensor<gpu, 3, DType>, Tensor<gpu, 3, float>>
+            (s, input, output, req_type, normalize_factor);
+          } else {
+            Tensor<gpu, 4, DType> input = inputs[0].get<gpu, 4, DType>(s);
+            Tensor<gpu, 4, float> output = outputs[0].get<gpu, 4, float>(s);
+            ToTensorImplCUDA<DType, Tensor<gpu, 4, DType>, Tensor<gpu, 4, float>>
+            (s, input, output, req_type, normalize_factor);
+          }
+        });
+      });
+  #else
+    LOG(FATAL) << "Compile with USE_CUDA=1 to use ToTensor operator on GPU.";
+  #endif  // MXNET_USE_CUDA
+  } else if (inputs[0].ndim() == 3) {
+    // 3D Input - (h, w, c)
+    const int length = inputs[0].shape_[0] * inputs[0].shape_[1];
+    const int channel = static_cast<int>(inputs[0].shape_[2]);
+    const int step = 0;
+    ToTensorImpl(inputs, outputs, req, length,
+                 channel, normalize_factor, step);
+  } else if (inputs[0].ndim() == 4) {
+    // 4D input (n, h, w, c)
+    const int batch_size = inputs[0].shape_[0];
+    const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+    const int channel = static_cast<int>(inputs[0].shape_[3]);
+    const int step = channel * length;
+
+    #pragma omp parallel for
+    for (auto n = 0; n < batch_size; ++n) {
+      ToTensorImpl(inputs, outputs, req, length, channel,
+                   normalize_factor, n*step);
+    }
+  }
 }
 
 struct NormalizeParam : public dmlc::Parameter<NormalizeParam> {
   nnvm::Tuple<float> mean;
   nnvm::Tuple<float> std;
+
   DMLC_DECLARE_PARAMETER(NormalizeParam) {
     DMLC_DECLARE_FIELD(mean)
-    .describe("Sequence of mean for each channel.");
+    .set_default(nnvm::Tuple<float> {0.0f, 0.0f, 0.0f, 0.0f})
+    .describe("Sequence of means for each channel. "
+              "Default value is 0.");
     DMLC_DECLARE_FIELD(std)
-    .describe("Sequence of standard deviations for each channel.");
+    .set_default(nnvm::Tuple<float> {1.0f, 1.0f, 1.0f, 1.0f})
+    .describe("Sequence of standard deviations for each channel. "
+              "Default value is 1.");
   }
 };
 
-inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+// Shape and Type inference for image Normalize operator
+
+// Shape inference
+inline bool NormalizeOpShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+
   const auto& dshape = (*in_attrs)[0];
   if (!dshape.ndim()) return false;
 
-  CHECK_EQ(dshape.ndim(), 3)
-      << "Input tensor must have shape (channels, height, width), but got "
-      << dshape;
-  auto nchannels = dshape[0];
-  CHECK(nchannels == 3 || nchannels == 1)
+  CHECK((dshape.ndim() == 3) || (dshape.ndim() == 4))
+      << "Input tensor must have shape (channels, height, width), or "
+      << "(N, channels, height, width), but got " << dshape;
+
+  uint32_t nchannels;
+  if (dshape.ndim() == 3) {
+    nchannels = dshape[0];
+    CHECK(nchannels == 3 || nchannels == 1)
       << "The first dimension of input tensor must be the channel dimension with "
       << "either 1 or 3 elements, but got input with shape " << dshape;
-  CHECK(param.mean.ndim() == 1 || param.mean.ndim() == nchannels)
+  } else if (dshape.ndim() == 4) {
+    nchannels = dshape[1];
+    CHECK(nchannels == 3 || nchannels == 1)
+      << "The second dimension of input tensor must be the channel dimension with "
+      << "either 1 or 3 elements, but got input with shape " << dshape;
+  }
+
+  CHECK((param.mean.ndim() == 1) || (param.mean.ndim() == nchannels))
       << "Invalid mean for input with shape " << dshape
       << ". mean must have either 1 or " << nchannels
       << " elements, but got " << param.mean;
@@ -123,28 +271,254 @@ inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-void Normalize(const nnvm::NodeAttrs &attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
+// Type Inference
+inline bool NormalizeOpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+  return out_attrs->at(0) != -1;
+}
+
+template<typename DType, int req>
+inline void Normalize(DType* out_data,
+                      const DType* in_data,
+                      const int length,
+                      const int channels,
+                      const int step,
+                      const std::vector<float> mean,
+                      const std::vector<float> std) {
+  // Microsoft Visual C++ compiler does not support omp collapse
+  #ifdef _MSC_VER
+    #pragma omp parallel for
+  #else
+    #pragma omp parallel for collapse(2)
+  #endif  // _MSC_VER
+  for (int c = 0; c < channels; ++c) {
+    for (int i = 0; i < length; ++i) {
+      KERNEL_ASSIGN(out_data[step + c*length + i], req,
+                    (in_data[step + c*length + i] - mean[c]) / std[c]);
+    }
+  }
+}
+
+inline void NormalizeImpl(const std::vector<TBlob> &inputs,
+                          const std::vector<TBlob> &outputs,
+                          const std::vector<OpReqType> &req,
+                          const int length,
+                          const int channels,
+                          const int step,
+                          const std::vector<float> mean,
+                          const std::vector<float> std) {
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      DType* input = inputs[0].dptr<DType>();
+      DType* output = outputs[0].dptr<DType>();
+      Normalize<DType, req_type>(output, input, length, channels, step,
+                                 mean, std);
+    });
+  });
+}
+
+template<typename xpu>
+void NormalizeOpForward(const nnvm::NodeAttrs &attrs,
+                        const OpContext &ctx,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
   const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
 
-  int nchannels = inputs[0].shape_[0];
-  int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+  // Mean and Std can be 1 or 3D only.
+  std::vector<float> mean(3);
+  std::vector<float> std(3);
+  if (param.mean.ndim() == 1) {
+    mean[0] = mean[1] = mean[3] = param.mean[0];
+  } else {
+    mean[0] = param.mean[0];
+    mean[1] = param.mean[1];
+    mean[2] = param.mean[2];
+  }
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    DType* input = inputs[0].dptr<DType>();
-    DType* output = outputs[0].dptr<DType>();
+  if (param.std.ndim() == 1) {
+    std[0] = std[1] = std[2] = param.std[0];
+  } else {
+    std[0] = param.std[0];
+    std[1] = param.std[1];
+    std[2] = param.std[2];
+  }
 
-    for (int i = 0; i < nchannels; ++i) {
-      DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
-      DType std = param.std[param.std.ndim() > 1 ? i : 0];
-      for (int j = 0; j < length; ++j) {
-        output[i*length + j] = (input[i*length + j] - mean) / std;
-      }
+  if (std::is_same<xpu, gpu>::value) {
+    #if MXNET_USE_CUDA
+      mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          int N, C, H, W;
+          DType *input = nullptr;
+          DType *output = nullptr;
+          if (inputs[0].ndim() == 3) {
+            N = 1;
+            C = static_cast<int>(inputs[0].shape_[0]);
+            H = static_cast<int>(inputs[0].shape_[1]);
+            W = static_cast<int>(inputs[0].shape_[2]);
+            input = (inputs[0].get<gpu, 3, DType>(s)).dptr_;
+            output = (outputs[0].get<gpu, 3, DType>(s)).dptr_;
+          } else {
+            N = static_cast<int>(inputs[0].shape_[0]);
+            C = static_cast<int>(inputs[0].shape_[1]);
+            H = static_cast<int>(inputs[0].shape_[2]);
+            W = static_cast<int>(inputs[0].shape_[3]);
+            input = (inputs[0].get<gpu, 4, DType>(s)).dptr_;
+            output = (outputs[0].get<gpu, 4, DType>(s)).dptr_;
+          }
+          NormalizeImplCUDA<DType>(s, input, output, req_type,
+                                   N, C, H, W,
+                                   mean[0], mean[1], mean[2],
+                                   std[0], std[1], std[2]);
+        });
+      });
+    #else
+      LOG(FATAL) << "Compile with USE_CUDA=1 to use Normalize operator on GPU.";
+    #endif  // MXNET_USE_CUDA
+  } else if (inputs[0].ndim() == 3) {
+    // 3D input (c, h, w)
+    const int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+    const int channel = static_cast<int>(inputs[0].shape_[0]);
+    const int step = 0;
+    NormalizeImpl(inputs, outputs, req, length, channel, step, mean, std);
+  } else if (inputs[0].ndim() == 4) {
+    // 4D input (n, c, h, w)
+    const int batch_size = inputs[0].shape_[0];
+    const int length = inputs[0].shape_[2] * inputs[0].shape_[3];
+    const int channel = static_cast<int>(inputs[0].shape_[1]);
+    const int step = channel * length;
+
+    #pragma omp parallel for
+    for (auto n = 0; n < batch_size; ++n) {
+      NormalizeImpl(inputs, outputs, req, length, channel, n*step, mean, std);
     }
-  });
+  }
+}
+
+// Backward function
+template<typename DType, int req>
+inline void NormalizeBackward(const DType* out_grad,
+                              DType* in_grad,
+                              const int length,
+                              const int channels,
+                              const int step,
+                              const std::vector<float> std) {
+  // Microsoft Visual C++ compiler does not support omp collapse
+  #ifdef _MSC_VER
+    #pragma omp parallel for
+  #else
+    #pragma omp parallel for collapse(2)
+  #endif  // _MSC_VER
+  for (int c = 0; c < channels; ++c) {
+    for (int i = 0; i < length; ++i) {
+      KERNEL_ASSIGN(in_grad[step + c*length + i], req,
+                    out_grad[step + c*length + i] * (1.0 / std[c]));
+    }
+  }
+}
+
+inline void NormalizeBackwardImpl(const std::vector<TBlob> &inputs,
+                                  const std::vector<TBlob> &outputs,
+                                  const std::vector<OpReqType> &req,
+                                  const int length,
+                                  const int channels,
+                                  const int step,
+                                  const std::vector<float> std
+                                  ) {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        DType* out_grad = inputs[0].dptr<DType>();
+        DType* in_grad = outputs[0].dptr<DType>();
+        NormalizeBackward<DType, req_type>(out_grad, in_grad, length,
+                                           channels, step, std);
+      });
+    });
+}
+
+template<typename xpu>
+void NormalizeOpBackward(const nnvm::NodeAttrs &attrs,
+                         const OpContext &ctx,
+                         const std::vector<TBlob> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &outputs) {
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  // Std can be 1 or 3D only.
+  std::vector<float> std(3);
+  if (param.std.ndim() == 1) {
+    std[0] = std[1] = std[2] = param.std[0];
+  } else {
+    std[0] = param.std[0];
+    std[1] = param.std[1];
+    std[2] = param.std[2];
+  }
+
+  // Note: inputs[0] is out_grad
+  const TBlob& in_data = inputs[1];
+
+  if (std::is_same<xpu, gpu>::value) {
+    #if MXNET_USE_CUDA
+      mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          int N, C, H, W;
+          DType *in_grad = nullptr;
+          DType *out_grad = nullptr;
+          if (in_data.ndim() == 3) {
+            N = 1;
+            C = static_cast<int>(in_data.shape_[0]);
+            H = static_cast<int>(in_data.shape_[1]);
+            W = static_cast<int>(in_data.shape_[2]);
+            out_grad = (inputs[0].get<gpu, 3, DType>(s)).dptr_;
+            in_grad = (outputs[0].get<gpu, 3, DType>(s)).dptr_;
+          } else {
+            N = static_cast<int>(in_data.shape_[0]);
+            C = static_cast<int>(in_data.shape_[1]);
+            H = static_cast<int>(in_data.shape_[2]);
+            W = static_cast<int>(in_data.shape_[3]);
+            out_grad = (inputs[0].get<gpu, 4, DType>(s)).dptr_;
+            in_grad = (outputs[0].get<gpu, 4, DType>(s)).dptr_;
+          }
+          NormalizeBackwardImplCUDA<DType>(s, out_grad, in_grad, req_type,
+                                           N, C, H, W,
+                                           std[0], std[1], std[2]);
+        });
+      });
+    #else
+      LOG(FATAL) << "Compile with USE_CUDA=1 to use Normalize backward operator on GPU.";
+    #endif  // MXNET_USE_CUDA
+  } else if (in_data.ndim() == 3) {
+    // 3D input (c, h, w)
+    const int length = in_data.shape_[1] * in_data.shape_[2];
+    const int channel = static_cast<int>(in_data.shape_[0]);
+    const int step = 0;
+    NormalizeBackwardImpl(inputs, outputs, req, length, channel, step, std);
+  } else if (in_data.ndim() == 4) {
+    // 4D input (n, c, h, w)
+    const int batch_size = in_data.shape_[0];
+    const int length = in_data.shape_[2] * in_data.shape_[3];
+    const int channel = static_cast<int>(in_data.shape_[1]);
+    const int step = channel * length;
+
+    #pragma omp parallel for
+    for (auto n = 0; n < batch_size; ++n) {
+      NormalizeBackwardImpl(inputs, outputs, req, length, channel, n*step, std);
+    }
+  }
 }
 
 template<typename DType>
@@ -158,9 +532,9 @@ inline uint8_t saturate_cast(const float& src) {
 }
 
 inline bool ImageShape(const nnvm::NodeAttrs& attrs,
-                       std::vector<TShape> *in_attrs,
-                       std::vector<TShape> *out_attrs) {
-  TShape& dshape = (*in_attrs)[0];
+                       mxnet::ShapeVector *in_attrs,
+                       mxnet::ShapeVector *out_attrs) {
+  mxnet::TShape& dshape = (*in_attrs)[0];
   CHECK_EQ(dshape.ndim(), 3)
       << "Input image must have shape (height, width, channels), but got " << dshape;
   auto nchannels = dshape[dshape.ndim()-1];
@@ -172,7 +546,7 @@ inline bool ImageShape(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename DType, int axis>
-void FlipImpl(const TShape &shape, DType *src, DType *dst) {
+void FlipImpl(const mxnet::TShape &shape, DType *src, DType *dst) {
   int head = 1, mid = shape[axis], tail = 1;
   for (int i = 0; i < axis; ++i) head *= shape[i];
   for (uint32_t i = axis+1; i < shape.ndim(); ++i) tail *= shape[i];
@@ -190,7 +564,7 @@ void FlipImpl(const TShape &shape, DType *src, DType *dst) {
   }
 }
 
-void FlipLeftRight(const nnvm::NodeAttrs &attrs,
+inline void FlipLeftRight(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -202,7 +576,7 @@ void FlipLeftRight(const nnvm::NodeAttrs &attrs,
   });
 }
 
-void FlipTopBottom(const nnvm::NodeAttrs &attrs,
+inline void FlipTopBottom(const nnvm::NodeAttrs &attrs,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -214,7 +588,7 @@ void FlipTopBottom(const nnvm::NodeAttrs &attrs,
   });
 }
 
-void RandomFlipLeftRight(
+inline void RandomFlipLeftRight(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -235,7 +609,7 @@ void RandomFlipLeftRight(
   });
 }
 
-void RandomFlipTopBottom(
+inline void RandomFlipTopBottom(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
     const std::vector<TBlob> &inputs,
@@ -287,7 +661,7 @@ inline void AdjustBrightnessImpl(const float& alpha_b,
   });
 }
 
-void RandomBrightness(const nnvm::NodeAttrs &attrs,
+inline void RandomBrightness(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
@@ -405,7 +779,7 @@ inline void RandomSaturation(const nnvm::NodeAttrs &attrs,
   AdjustSaturationImpl(alpha_s, ctx, inputs, req, outputs);
 }
 
-void RGB2HLSConvert(const float& src_r,
+inline void RGB2HLSConvert(const float& src_r,
                     const float& src_g,
                     const float& src_b,
                     float *dst_h,
@@ -418,10 +792,10 @@ void RGB2HLSConvert(const float& src_r,
   float diff;
 
   vmax = vmin = r;
-  vmax = fmax(vmax, g);
-  vmax = fmax(vmax, b);
-  vmin = fmin(vmin, g);
-  vmin = fmin(vmin, b);
+  vmax = std::fmax(vmax, g);
+  vmax = std::fmax(vmax, b);
+  vmin = std::fmin(vmin, g);
+  vmin = std::fmin(vmin, b);
 
   diff = vmax - vmin;
   l = (vmax + vmin) * 0.5f;
@@ -443,7 +817,7 @@ void RGB2HLSConvert(const float& src_r,
   *dst_s = s;
 }
 
-void HLS2RGBConvert(const float& src_h,
+inline void HLS2RGBConvert(const float& src_h,
                     const float& src_l,
                     const float& src_s,
                     float *dst_r,
@@ -494,7 +868,7 @@ void HLS2RGBConvert(const float& src_h,
   *dst_r = r * 255.f;
 }
 
-void AdjustHueImpl(float alpha,
+inline void AdjustHueImpl(float alpha,
                    const OpContext &ctx,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
@@ -521,7 +895,7 @@ void AdjustHueImpl(float alpha,
   });
 }
 
-void RandomHue(const nnvm::NodeAttrs &attrs,
+inline void RandomHue(const nnvm::NodeAttrs &attrs,
                const OpContext &ctx,
                const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req,
@@ -554,7 +928,7 @@ struct RandomColorJitterParam : public dmlc::Parameter<RandomColorJitterParam> {
   }
 };
 
-void RandomColorJitter(const nnvm::NodeAttrs &attrs,
+inline void RandomColorJitter(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
@@ -623,7 +997,7 @@ struct RandomLightingParam : public dmlc::Parameter<RandomLightingParam> {
   }
 };
 
-void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
+inline void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
                         const OpContext &ctx,
                         const std::vector<TBlob> &inputs,
                         const std::vector<OpReqType> &req,
@@ -658,7 +1032,7 @@ void AdjustLightingImpl(const nnvm::Tuple<float>& alpha,
   });
 }
 
-void AdjustLighting(const nnvm::NodeAttrs &attrs,
+inline void AdjustLighting(const nnvm::NodeAttrs &attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
                     const std::vector<OpReqType> &req,
@@ -668,7 +1042,7 @@ void AdjustLighting(const nnvm::NodeAttrs &attrs,
   AdjustLightingImpl(param.alpha, ctx, inputs, req, outputs);
 }
 
-void RandomLighting(const nnvm::NodeAttrs &attrs,
+inline void RandomLighting(const nnvm::NodeAttrs &attrs,
                     const OpContext &ctx,
                     const std::vector<TBlob> &inputs,
                     const std::vector<OpReqType> &req,
@@ -693,7 +1067,7 @@ void RandomLighting(const nnvm::NodeAttrs &attrs,
     [](const NodeAttrs& attrs){                                             \
       return std::vector<std::pair<int, int> >{{0, 0}};                     \
     })                                                                      \
-  .set_attr<nnvm::FInferShape>("FInferShape", ImageShape)                   \
+  .set_attr<mxnet::FInferShape>("FInferShape", ImageShape)                   \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)             \
   .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })   \
   .add_argument("data", "NDArray-or-Symbol", "The input.")

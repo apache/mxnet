@@ -80,32 +80,46 @@ class MKLDNNPoolingFwd {
             const int padding_l, const int padding_r);
 };
 
+class MKLDNNPoolingBwd {
+  std::shared_ptr<const mkldnn::pooling_backward> bwd;
+  std::shared_ptr<mkldnn::memory> diff_dst;
+  std::shared_ptr<mkldnn::memory> diff_src;
+  std::shared_ptr<mkldnn::memory> ws;
+  bool with_workspace;
+
+ public:
+  const mkldnn::pooling_backward::primitive_desc pd;
+
+  MKLDNNPoolingBwd(const pooling_backward::primitive_desc &pdesc,
+                   bool with_ws);
+
+  ~MKLDNNPoolingBwd() {}
+  void SetNewMem(const mxnet::NDArray *workspace,
+                 const mxnet::NDArray &out_grad,
+                 const mkldnn::memory *diff_src_mem);
+  const mkldnn::pooling_backward &GetBwd();
+  const mkldnn::pooling_backward::primitive_desc &GetPd();
+};
+
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return param.kernel.ndim() == 2 &&
          (param.pool_type == pool_enum::kMaxPooling ||
-          param.pool_type == pool_enum::kAvgPooling);
+          param.pool_type == pool_enum::kAvgPooling) &&
+         (!param.layout.has_value() || param.layout.value() == mshadow::kNCHW);
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
-                                 const TShape &dshape) {
+                                 const mxnet::TShape &dshape) {
   bool ret = SupportMKLDNNPooling(param);
   if (!ret)
     return false;
 
-  if (param.pooling_convention == pool_enum::kValid)
+  if (param.pooling_convention == pool_enum::kValid) {
     return true;
-  else
-    return false;
-
-// need to support pooling convention full
-// https://issues.apache.org/jira/browse/MXNET-33
-#if 0
-  if (((dshape[2] + 2 * param.pad[0] - param.kernel[0]) % param.stride[0] == 0) &&
-      ((dshape[3] + 2 * param.pad[1] - param.kernel[1]) % param.stride[1] == 0))
-    return true;
-  else
-    return false;
-#endif
+  } else {
+    // currently, only max-pooling is supported for full convention
+    return param.pool_type == pool_enum::kMaxPooling;
+  }
 }
 
 inline bool MKLDNNRequireWorkspace(const PoolingParam &param) {

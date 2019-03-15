@@ -24,75 +24,79 @@
             [org.apache.clojure-mxnet.random :as random]
             [org.apache.clojure-mxnet.shape :as mx-shape]
             [org.apache.clojure-mxnet.symbol :as sym]
-            [mikera.image.core :as img]
-            [mikera.image.filters :as img-filter]
-            [think.image.pixel :as pixel]
+            [clojure.java.io :as io]
+            [clojure.java.shell :refer [sh]]
+            [opencv4.core :as cv]
+            [opencv4.utils :as cvu]
             [neural-style.model-vgg-19 :as model-vgg-19])
   (:gen-class));; An Implementation of the paper A Neural Algorithm of Artistic Style
  ;;by Leon A. Gatys, Alexander S. Ecker, and Matthias Bethge
+
+(when-not (.exists (io/file "input"))
+  (do (println "Retrieving data...") (sh "./download.sh")))
 
 (def content-image "input/IMG_4343.jpg")
 (def style-image "input/starry_night.jpg")
 (def model-path "model/vgg19.params")
 (def max-long-edge 600) ;; resize the content image
 (def style-weight 1) ;; the weight for the style image
-(def content-weight 5) ;; the weight for the content image
-(def blur-radius 1) ;; the blur filter radius
+(def content-weight 3) ;; the weight for the content image
+(def blur-radius 5) ;; the blur filter radius
 (def output-dir "output")
-(def lr 10) ;; the learning rate
+(def lr 10.0) ;; the learning rate
 (def tv-weight 0.01) ;; the magnitude on the tv loss
 (def num-epochs 1000)
-(def num-channels 3)
 
-(defn image->ndarray [simg]
-  (let [h (img/height simg)
-        w (img/width simg)
-        pixels (img/get-pixels simg)
-        ;; normalize the pixels for vgg19
-        rgb-pixels (reduce (fn [result pixel]
-                             (let [[rs gs bs] result
-                                   [r g b _] (pixel/unpack-pixel pixel)]
-                               [(conj rs (- r 123.68))
-                                (conj gs (- g 116.779))
-                                (conj bs (- b 103.939))]))
-                           [[] [] []]
-                           pixels)]
-    (println "The resized image is size " {:height h :width w})
-    (-> rgb-pixels
-        (flatten)
-        (ndarray/array [1 num-channels h w]))))
+;;;;
+; IMAGE MANIPULATION
+;;;;
+
+(defn image->ndarray 
+  "normalize the pixels for vgg19"
+  [simg]
+  (let [h (.height simg) w (.width simg)]
+    (println "The nd image size is:" {:height h :width w})
+    (-> simg 
+      (cv/convert-to! cv/CV_8SC3 0.5) 
+      (cv/add! (cv/new-scalar -103.939 -116.779 -123.68) ) 
+      (cvu/mat->flat-rgb-array)
+      (ndarray/array [1 (.channels simg) h w]))))
+
+(defn ndarray->image [img]
+  (let [nd (ndarray/->vec img)
+        [_ _ h w] (mx-shape/->vec (ndarray/shape img))
+        to-cv1 (fn [bytes h w] (cv/>> (cv/new-mat h w cv/CV_8S) (byte-array bytes)))
+        byte-arrays (reverse (partition (* h w) nd))
+        mats (map #(to-cv1 % h w) byte-arrays)]
+    (-> mats
+        (cv/merge! (cv/new-mat h w cv/CV_8SC3))
+        (cv/add! (cv/new-scalar 103.939 116.779 123.68))
+        (cv/convert-to! cv/CV_8UC3 2))))
 
 (defn preprocess-content-image [path short-edge]
-  (let [simg (img/load-image path)
-        _ (println "The content image is size " {:height (img/height simg) :width (img/width simg)})
-        factor (/ short-edge (img/width simg))
-        resized-img (img/resize simg (* (img/width simg) factor) (* (img/height simg) factor))
-        new-height (img/height resized-img)
-        new-width (img/width resized-img)]
-    (image->ndarray resized-img)))
+  (-> path 
+    (cv/imread)
+    (#(cvu/resize-by % (/ short-edge (.width %))))
+    (image->ndarray)))
 
 (defn preprocess-style-image [path shape-vec]
-  (let [[_ _ h w] shape-vec
-        simg (img/load-image path)
-        _ (println "The image is size " {:height (img/height simg) :width (img/width simg)})
-        resized-img (img/resize simg w h)]
-    (image->ndarray resized-img)))
+  (let [[_ _ h w] shape-vec]
+    (println "The style image is size " {:height h :width w})
+    (-> path 
+      (cv/imread)
+      (cv/resize! (cv/new-size w h))
+      (image->ndarray))))
 
-(defn postprocess-image [img]
-  (let [datas (ndarray/->vec img)
-        image-shape (mx-shape/->vec (ndarray/shape img))
-        spatial-size (* (get image-shape 2) (get image-shape 3))
-        [rs gs bs] (doall (partition spatial-size datas))
-        pixels  (mapv (fn [r g b]
-                        (pixel/pack-pixel
-                         (int (+ r 123.68))
-                         (int (+ g 116.779))
-                         (int (+ b 103.939))
-                         (int 255)))
-                      rs gs bs)
-        new-image (img/new-image (get image-shape 3) (get image-shape 2))
-        _  (img/set-pixels new-image (int-array pixels))]
-    new-image))
+(defn save-image [img filename radius blur?]
+  (println "Saving image:" filename)
+  (-> img 
+    (ndarray->image)
+    (#(if blur? (cv/blur! % (cv/new-size blur-radius blur-radius)) %))
+    (cv/imwrite filename)))
+
+;;;;
+; TRAINING
+;;;;
 
 (defn style-gram-symbol [input-size style]
   (let [[_ output-shape _] (sym/infer-shape style {:data [1 3 (first input-size) (second input-size)]})
@@ -120,27 +124,6 @@
         content-loss (sym/sum (sym/square (sym/- cvar content)))]
     {:style-loss (sym/group gram-loss) :content-loss content-loss}))
 
-(defn old-clip [v]
-  (mapv (fn [a] (cond
-                  (neg? a) 0
-                  (> a 255) 255
-                  :else a))
-        v))
-
-(defn clip [a]
-  (cond
-    (neg? a) 0
-    (> a 255) 255
-    :else a))
-
-(defn save-image [img filename radius blur?]
-  (let [filtered-image (if blur?
-                         ((img-filter/box-blur blur-radius blur-radius) (postprocess-image img))
-                         (postprocess-image img))]
-    (do
-      ;(img/show filtered-image) ;; Uncomment to have the image display 
-      (img/write filtered-image filename "png"))))
-
 (defn get-tv-grad-executor [img ctx tv-weight]
   (when (pos? tv-weight)
     (let [img-shape (mx-shape/->vec (ndarray/shape img))
@@ -157,9 +140,10 @@
           out (ndarray/* out tv-weight)]
       (sym/bind out ctx {"img" img "kernel" kernel}))))
 
-(defn train [devs]
-
-  (let [dev (first devs)
+(defn train 
+  ([devs] (train devs 30)) 
+  ([devs n-epochs]
+    (let [dev (first devs)
         content-np (preprocess-content-image content-image max-long-edge)
         content-np-shape (mx-shape/->vec (ndarray/shape content-np))
         style-np (preprocess-style-image style-image content-np-shape)
@@ -193,7 +177,7 @@
         ;;;train
 
         ;;initialize with random noise
-        img (ndarray/- (random/uniform 0 255 content-np-shape dev) 128)
+        img (ndarray/- (random/uniform 0 255 content-np-shape {:ctx dev}) 128)
         ;;; img (random/uniform -0.1 0.1 content-np-shape dev)
         ;; img content-np
         lr-sched (lr-scheduler/factor-scheduler 10 0.9)
@@ -212,7 +196,7 @@
         tv-grad-executor (get-tv-grad-executor img dev tv-weight)
         eps 0.0
         e 0]
-    (doseq [i (range 20)]
+    (doseq [i (range n-epochs)]
       (ndarray/set (:data model-executor) img)
       (-> (:executor model-executor)
           (executor/forward)
@@ -237,8 +221,9 @@
         (println "Epoch " i  "relative change " eps)
         (when (zero? (mod i 2))
           (save-image (ndarray/copy img) (str output-dir "/out_" i ".png") blur-radius true)))
-
-      (ndarray/set old-img img))))
+      (ndarray/set old-img img))
+    (save-image (ndarray/copy img) (str output-dir "/final.png") 0 false)
+    (ndarray->image img))))
 
 (defn -main [& args]
   ;;; Note this only works on cpu right now

@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # A Beginner's Guide to Implementing Operators in MXNet Backend
 
 ## Introduction
@@ -55,7 +72,7 @@ Next, we are going to
 for registering `a`, `b`, and `c` in `quadratic_op-inl.h`.
 2. Define type and shape inference functions in `quadratic_op-inl.h`.
 3. Define forward and backward functions in `quadratic_op-inl.h`.
-4. Register the operator using [nnvm](https://github.com/dmlc/nnvm)
+4. Register the operator using [nnvm](https://docs.tvm.ai/dev/nnvm_overview.html)
 in `quadratic_op.cc` and `quadratic_op.cu` for
 CPU and GPU computing, respectively.
 
@@ -135,7 +152,7 @@ The last line of the above code snippet is a tuple of three lists returned
 by `d.infer_shape()`. The first list contains all the argument shapes
 of `a`, `b`, and `c`. The second contains the output shape of `d`. The
 third one represents the shapes of auxiliary states, which is not used
-in this case, and thus is empty. 
+in this case, and thus is empty.
 In this example, we only specified values for variable `a`'s first dimension
 and `c`'s second dimension. The `0` in shape `(2, 0)` indicates that the size
 of the second dimension is unknown, same meaning for shape `(0, 3)`.
@@ -158,8 +175,8 @@ element-wise multiplication and addition.
 For our `quadratic` operator, shape inference possesses quite similar logic.
 ```cpp
 inline bool QuadraticOpShape(const nnvm::NodeAttrs& attrs,
-                             std::vector<TShape>* in_attrs,
-                             std::vector<TShape>* out_attrs) {
+                             mxnet::ShapeVector* in_attrs,
+                             mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -199,8 +216,8 @@ The function `QuadraticOpShape` posted here is for the purpose of illustration o
 ```cpp
 template<int n_in, int n_out>
 inline bool ElemwiseShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs);
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs);
 ```
 
 The same logic goes for data type inference. We will leave the analysis of
@@ -318,7 +335,10 @@ parallel computation on both CPU and GPU. This allows most of
 the simple operators to share the same piece of code for CPU and GPU as
 parallelization approaches are often identical on both types of devices.
 The kernel function is defined as the following, where the function
-`Map` is executed by each thread for each input element. To explain a little
+`Map` is executed by each thread for each input element. The `out_data.Size()`,
+in the `Kernel::Launch` function corresponds to the factor by which the
+workload will get parallelized among the different threads, which here
+corresponds to the size of the output array. To explain a little
 bit more on the two macros used in the kernel struct: (1) `MSHADOW_XINLINE` is
 a consolidated macro for inlining functions compiled by both CPU and GPU
 compilers. It enables CPU and GPU computing to share the same piece of code.
@@ -434,10 +454,13 @@ NNVM_REGISTER_OP(quadratic)                                                     
 where :math:`x` is an input tensor and all operations
 in the function are element-wise.
 
-Example::
-  x = [[1, 2], [3, 4]]
-  y = quadratic(data=x, a=1, b=2, c=3)
-  y = [[6, 11], [18, 27]]
+Example:
+
+  .. code-block:: python
+     :emphasize-lines: 1,3
+     x = [[1, 2], [3, 4]]
+     y = quadratic(data=x, a=1, b=2, c=3)
+     y = [[6, 11], [18, 27]]
 
 )code" ADD_FILELINE)                                                               // 4
 .set_attr_parser(ParamParser<QuadraticParam>)                                      // 5
@@ -471,8 +494,11 @@ NNVM_REGISTER_OP(_backward_quadratic)                                           
 of `Op` type and save it in the operator manager and return a reference
 of the just created operator object.
 - Lines 3-4: Add description as an operator attribute
-including examples of the operator. The documentation engine would extract
+including examples of the operator. The documentation engine will extract
 this description and display it on the documentation web page.
+`emphasize-lines` is optional.
+For more examples and troubleshooting with doc strings, refer to the [MXNet
+developer wiki's Documentation Guide](https://cwiki.apache.org/confluence/display/MXNET/Documentation+Guide).
 - Line 5: Set parameter struct parser for the operator. It is used for parsing
 the parameters `a`, `b`, and `c` input from frontend.
 - Line 6: Set the number of inputs for the operator.
@@ -486,9 +512,9 @@ in the computational graph. MXNet would
 add the missing argument with name `quadratic0_data`, where the prefix
 `quadratic0` is the operator name appended with an index and the postfix
 `data` comes from the return value of the user defined `FListInputName` function.
-Users still can generate an executor for the `quand_func` like the following:
+Users still can generate an executor for the `quad_func` like the following:
 ```python
-quand_exe = quand_func.simple_bind(ctx=mx.cpu(), quandratic0_data=(1,))
+quad_exe = quad_func.simple_bind(ctx=mx.cpu(), quadratic0_data=(1,))
 ```
 - Line 12: Register shape inference function.
 - Line 13: Register type inference function.
@@ -543,22 +569,21 @@ If you use python, when you type `import mxnet as mx`, two python
 functions for invoking your backend implementation are
 generated on the fly: one is for imperative programming
 registered as `mxnet.ndarray.quadratic` or `mx.nd.quadratic` for short;
-the other one is for symbolic
-programming registered under module `mxnet.symbol.quadratic`
-or `mx.sym.quadratic` for short.
+the other one is for symbolic programming registered under
+module `mxnet.symbol.quadratic` or `mx.sym.quadratic` for short.
 
 In order to unit test it in frontend, we need to add the following code
-to the python file `test_operator.py`. Note that while testing the
-forward pass is straightforward using `mx.nd.quadratic`, testing
-the backward involves a bit of more efforts. We create a
-`quadratic` symbol and feed it into the utility function `check_numeric_gradient`.
-The utility function will perform a perturbation on the input
-and calculate the response rate of the output using the
-[finite difference method](https://en.wikipedia.org/wiki/Finite_difference_method).
-Then it will compare the gradient from the backward pass with
-the values from the finite difference method. The test
-will be successful once the comparison satisfies user specified
-relative and absolute thresholds.
+to the python file `test_operator.py`. A typical operator implementation
+tests for both the `symbol` API and the `ndarray` API. The following test
+has both these tests. The imperative API test, tests for the `ndarray` API,
+`mx.nd.contrib.quadratic`. The `symbol` API test, tests for the complete
+functionality of the operator - the forward pass and the backward
+pass. To facilitate the testing of these functionalities we use three
+helper functions available in the `mxnet.test_utils` module:
+ - `check_symbolic_forward`
+ - `check_symbolic_backward`
+ - `check_numeric_gradient`
+
 ```python
 def test_quadratic_function():
     def f(x, a, b, c):
@@ -567,29 +592,72 @@ def test_quadratic_function():
     a = np.random.random_sample()
     b = np.random.random_sample()
     c = np.random.random_sample()
-    for ndim in range(1, 6):
-        # check forward
-        shape = rand_shape_nd(ndim, 5)
-        data = rand_ndarray(shape=shape, stype='default')
-        data_np = data.asnumpy()
-        expected = f(data_np, a, b, c)
-        output = mx.nd.quadratic(data, a=a, b=b, c=c)
-        assert_almost_equal(output.asnumpy(), expected)
+    data = mx.symbol.Variable('data')
+    quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+    for dtype in [np.float16, np.float32, np.float64]:
+        for ndim in range(1, 6):
+            shape = rand_shape_nd(ndim, 5)
+            data_np = np.random.randn(*shape).astype(dtype)
+            expected = f(data_np, a, b, c)
+            backward_expected = 2 * a * data_np + b
 
-        # check backward using finite difference
-        data = mx.sym.Variable('data')
-        quad_sym = mx.sym.quadratic(data=data, a=a, b=b, c=c)
-        check_numeric_gradient(quad_sym, [data_np])
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            assert_almost_equal(output.asnumpy(),expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check forward
+            check_symbolic_forward(quad_sym, [data_np], [expected],
+                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward
+            check_symbolic_backward(quad_sym, [data_np], [np.ones(expected.shape)],
+                                        [backward_expected],
+                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                        atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward using finite difference
+            check_numeric_gradient(quad_sym, [data_np], atol=0.001)
 ```
-Note that here we used `mx.nd.quadratic` to test the forward function
-and `check_numeric_gradient` to test the backward function. In MXNet,
-two other utility functions are also commonly used: `check_symbolic_forward`
-and `check_symbolic_backward`. By using them in unit tests,
-users need to pass in the operator symbols and expected results
-for comparison. Please also note that
-we highly recommend adding `check_numeric_gradient` test for every operator
-with backward function implemented as it eliminates the possibility
-of passing incorrect expected results into `check_symbolic_backward`.
+
+In the above test we create a `quadratic` symbol and feed it into the three
+utility functions. The `check_symbolic_forward` and `check_symbolic_backward`
+tests the computed values against the expected values that we pass
+as an argument to the function. The `check_numeric_gradient` utility function
+performs [gradient checking](http://ufldl.stanford.edu/tutorial/supervised/DebuggingGradientChecking/)
+to verify the implementation for the backward function of the operator.
+It will perform a perturbation on the input and calculate the response
+rate of the output using the
+[finite difference method](https://en.wikipedia.org/wiki/Finite_difference_method).
+Then it will compare the gradient from the backward pass with the values
+from the finite difference method. All three of these tests will be successful
+once the comparison satisfies user specified `rtol` and `atol` values. Here `rtol`
+and `atol` expand to relative tolerance and absolute tolerance respectively. They
+are used to specify how far the computed values can deviate from the expected values.
+They are defined as follows
+```
+abs(Expected_Value - Computed_Value) < RTOL * abs(Expected_Value) + ATOL
+```
+
+For example, if `rtol` is `1e-5` and `atol` is `1e-5` and the expected value is
+`1.5623145`, then the computed value should lie within the range of
+`(1.562288876855, 1.562340123145)` else the test will fail. Make sure you
+tune the `rtol` and `atol` values accordingly. Giving very low values for `rtol`
+and `atol` will likely make the test very flaky. It is recommended that you
+use the flakiness checker tool to check if the test you have written is flaky
+or not. You can run the flakiness checker tool for the above test with the
+following command -
+
+```bash
+python tools/flakiness_checker.py test_operator.test_quadratic_function
+```
+
+Please note that for `check_symbolic_forward` and `check_symbolic_backward` we pass
+both the operator symbols and expected results for comparison, for
+`check_numeric_gradient` we only pass the operator symbol, as the
+`check_numeric_gradient` computes the expected value using finite difference
+method. Which is why it is highly recommended to add `check_numeric_gradient`
+test for every operator with backward function implemented as it eliminates
+the possibility of passing incorrect expected results into `check_symbolic_backward`.
 
 
 ## Summary
@@ -601,8 +669,8 @@ using nnvm. Congratulations! You now know how to add operators.
 We welcome your contributions to MXNet.
 
 **Note**: Source code in the tutorial can be found in
-[quadratic_op-inl.h](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op-inl.h),
-[quadratic_op.cc](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op.cc),
-[quadratic_op.cu](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/src/operator/tensor/quadratic_op.cu),
+[quadratic_op-inl.h](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op-inl.h),
+[quadratic_op.cc](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cc),
+[quadratic_op.cu](https://github.com/apache/incubator-mxnet/blob/master/src/operator/contrib/quadratic_op.cu),
 and
-[test_operator.py](https://github.com/reminisce/mxnet/blob/add_op_example_for_tutorial/tests/python/unittest/test_operator.py#L4008).
+[test_operator.py](https://github.com/apache/incubator-mxnet/blob/master/tests/python/unittest/test_operator.py#L6514).

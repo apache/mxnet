@@ -101,4 +101,5 @@ if broken_links_count == 0:
 else:
     print(broken_links_summary)
     print("END - Broken links summary")
-
+    # Fail the job as we found the broken links
+    sys.exit(-1)

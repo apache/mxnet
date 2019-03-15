@@ -77,7 +77,7 @@ class NativeOp : public Operator {
     s->Wait();
     param_.pinfo->forward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
         tags.data(), param_.pinfo->p_forward);
-    for (index_t i = 0; i < out_data.size(); ++i) {
+    for (size_t i = 0; i < out_data.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
@@ -111,7 +111,7 @@ class NativeOp : public Operator {
     s->Wait();
     param_.pinfo->backward(ptrs.size(), ptrs.data(), ndims.data(), shapes.data(),
         tags.data(), param_.pinfo->p_backward);
-    for (index_t i = 0; i < in_grad.size(); ++i) {
+    for (size_t i = 0; i < in_grad.size(); ++i) {
       CHECK_NE(req[i], kAddTo) << "NativeOp doesn't support AddTo for output";
       if (req[i] != kNullOp) {
         std::stringstream ss;
@@ -130,13 +130,13 @@ class NativeOp : public Operator {
   std::vector<uint32_t*> shapes;
   std::vector<uint32_t> shapes_buffer_;
   std::vector<int> tags;
-  std::map<std::string, std::pair<TShape, mshadow::Tensor<cpu, 2> > > buffer_map;
+  std::map<std::string, std::pair<mxnet::TShape, mshadow::Tensor<cpu, 2> > > buffer_map;
 
   virtual void SyncBuffer(const TBlob &tblob,
                           const std::string &name,
                           mshadow::Stream<xpu> *stream) {
     using namespace mshadow;
-    std::map<std::string, std::pair<TShape, mshadow::Tensor<cpu, 2> > >::iterator buffer =
+    std::map<std::string, std::pair<mxnet::TShape, mshadow::Tensor<cpu, 2> > >::iterator buffer =
       buffer_map.find(name);
     if (buffer == buffer_map.end() || buffer->second.first != tblob.shape_) {
       if (buffer != buffer_map.end()) {
@@ -144,7 +144,7 @@ class NativeOp : public Operator {
         buffer_map.erase(buffer);
       }
       buffer_map[name] =
-        std::pair<TShape, Tensor<cpu, 2> >(tblob.shape_,
+        std::pair<mxnet::TShape, Tensor<cpu, 2> >(tblob.shape_,
                                          NewTensor<cpu>(tblob.shape_.FlatTo2D(),
                                                         0.0f,
                                                         false));
@@ -185,7 +185,7 @@ class NativeOpProp : public OperatorProperty {
     param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }
@@ -195,7 +195,7 @@ class NativeOpProp : public OperatorProperty {
     param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
     std::vector<std::string> ret;
     for (int i = 0; args[i] != NULL; ++i) {
-      ret.push_back(args[i]);
+      ret.emplace_back(args[i]);
     }
     return ret;
   }
@@ -206,9 +206,9 @@ class NativeOpProp : public OperatorProperty {
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.Init(kwargs);
-    for (auto iter = kwargs.begin(); iter != kwargs.end(); ++iter) {
-      if (iter->first == "info") {
-        sscanf(iter->second.c_str(), "%p", &param_.pinfo);
+    for (const auto& kwarg : kwargs) {
+      if (kwarg.first == "info") {
+        sscanf(kwarg.second.c_str(), "%p", &param_.pinfo);
       }
     }
     param_.num_inputs_ = ListArguments().size();
@@ -220,30 +220,30 @@ class NativeOpProp : public OperatorProperty {
   }
 
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     std::vector<uint32_t*> shapes;
     std::vector<int> ndims;
     size_t size = 0;
     for (const auto& s : *in_shape) size += s.ndim();
     std::vector<uint32_t> shapes_buffer(size);
     uint32_t *ptr = shapes_buffer.data();
-    for (auto iter = in_shape->begin(); iter != in_shape->end(); ++iter) {
+    for (const auto& shape : *in_shape) {
       shapes.push_back(ptr);
-      ndims.push_back(iter->ndim());
-      ptr = nnvm::ShapeTypeCast(iter->begin(), iter->end(), ptr);
+      ndims.push_back(shape.ndim());
+      ptr = nnvm::ShapeTypeCast(shape.begin(), shape.end(), ptr);
     }
     shapes.resize(param_.num_inputs_+param_.num_outputs_);
     ndims.resize(param_.num_inputs_+param_.num_outputs_);
     param_.pinfo->infer_shape(shapes.size(), ndims.data(), shapes.data(),
           param_.pinfo->p_infer_shape);
     for (unsigned i = 0; i < in_shape->size(); ++i) {
-      SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
+      SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
     }
     out_shape->clear();
     for (unsigned i = param_.num_inputs_; i < shapes.size(); ++i) {
-      out_shape->push_back(TShape(shapes[i], shapes[i]+ndims[i]));
+      out_shape->push_back(mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
     }
     return true;
   }

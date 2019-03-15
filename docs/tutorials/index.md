@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Tutorials
 
 ```eval_rst
@@ -6,8 +23,10 @@
 
    basic/index.md
    c++/index.md
+   control_flow/index.md
    embedded/index.md
    gluon/index.md
+   java/index.md
    nlp/index.md
    onnx/index.md
    python/index.md
@@ -15,6 +34,7 @@
    scala/index.md
    sparse/index.md
    speech_recognition/index.md
+   tensorrt/index.md
    unsupervised_learning/index.md
    vision/index.md
 ```
@@ -56,6 +76,7 @@ Select API:&nbsp;
     * [Logistic Regression](/tutorials/gluon/logistic_regression_explained.html)
     * [Word-level text generation with RNN, LSTM and GRU](http://gluon.mxnet.io/chapter05_recurrent-neural-networks/rnns-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
     * [Visual Question Answering](http://gluon.mxnet.io/chapter08_computer-vision/visual-question-answer.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
+   * [Image similiarity search with InfoGAN](/tutorials/gluon/info_gan.html)
 * Practitioner Guides
     * [Gotchas using NumPy](/tutorials/gluon/gotchas_numpy_in_mxnet.html)
     * [Multi-GPU training](http://gluon.mxnet.io/chapter07_distributed-learning/multiple-gpus-gluon.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>
@@ -69,11 +90,15 @@ Select API:&nbsp;
     * [Advanced Learning Rate Schedules](/tutorials/gluon/learning_rate_schedules_advanced.html)
     * [Profiling MXNet Models](/tutorials/python/profiler.html)
     * [Module to Gluon API](/tutorials/python/module_to_gluon.html)<span style="color:red"> (new!)<span></span></span>
+    * [Hybridize Gluon models with control flows](/tutorials/control_flow/ControlFlowTutorial.html)
+    * [Gluon end to end from training to inference](/tutorials/gluon/gluon_from_experiment_to_deployment.html)
+
 * API Guides
     * Core APIs
         * NDArray
             * [NDArray API](/tutorials/gluon/ndarray.html) ([Alternative](http://gluon.mxnet.io/chapter01_crashcourse/ndarray.html) <img src="https://upload.wikimedia.org/wikipedia/commons/6/6a/External_link_font_awesome.svg" alt="External link" height="15px" style="margin: 0px 0px 3px 3px;"/>)
             * [Advanced NDArray API](/tutorials/basic/ndarray.html)
+            * [Difference between reshape and transpose](/tutorials/basic/reshape_transpose.html)
             * [NDArray Indexing](https://mxnet.incubator.apache.org/tutorials/basic/ndarray_indexing.html)
             * Sparse NDArray
                 * [Sparse Gradient Updates (RowSparseNDArray)](/tutorials/sparse/row_sparse.html)
@@ -119,6 +144,7 @@ Select API:&nbsp;
     * [Fine-Tuning a pre-trained ImageNet model with a new dataset](/faq/finetune.html)
     * [Large-Scale Multi-Host Multi-GPU Image Classification](/tutorials/vision/large_scale_classification.html)
     * [Importing an ONNX model into MXNet](/tutorials/onnx/super_resolution.html)
+    * [Optimizing Deep Learning Computation Graphs with TensorRT](/tutorials/tensorrt/inference_with_trt.html)
 * API Guides
     * Core APIs
         * NDArray
@@ -153,10 +179,23 @@ Select API:&nbsp;
 * [MXNet-Scala  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/scala/org/apache/mxnetexamples)
 <hr>
 
+## Java Tutorials
+* Getting Started
+    * [Developer Environment Setup on IntelliJ IDE](/tutorials/java/mxnet_java_on_intellij.html)
+* [Multi Object Detection using pre-trained Single Shot Detector (SSD) Model](/tutorials/java/ssd_inference.html)
+* [MXNet-Java  Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/src/main/java/org/apache/mxnetexamples/javaapi/infer)
+<hr>
+
 ## C++ Tutorials
 
 * Models
     * [MNIST Handwritten Digit Recognition with Fully Connected Network](/tutorials/c%2B%2B/basics.html)
+
+* Backends
+    * [Subgraph API](/tutorials/c%2B%2B/subgraphAPI.html)
+
+* Inference
+    * [C++ Inference](/tutorials/c%2B%2B/mxnet_cpp_inference_tutorial.html)
 
 <hr>
 

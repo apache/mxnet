@@ -32,6 +32,7 @@ _parser = argparse.ArgumentParser(description='Benchmark foreach and while_loop 
 _parser.add_argument('--benchmark', choices=["foreach", "while_loop"], required=True)
 _parser.add_argument('--warmup_rounds', type=int, default=20)
 _parser.add_argument('--test_rounds', type=int, default=100)
+_parser.add_argument('--gpu', type=bool, default=False)
 args = _parser.parse_args()
 
 
@@ -66,8 +67,7 @@ class WhileRNN(gluon.HybridBlock):
             loop_vars=states,
             max_iterations=self.length,
         )
-        assert len(out) == 1
-        return out[0]
+        return out
 
 
 def _zeros(shape, ctx):
@@ -79,12 +79,7 @@ def _array(shape, ctx):
 
 
 def _get_gpus():
-    try:
-        re = subprocess.check_output(["nvidia-smi", "-L"], universal_newlines=True)
-    except OSError:
-        return []
-    return range(len([i for i in re.split('\n') if 'GPU' in i]))
-
+    return range(mx.util.get_gpu_count())
 
 def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
     obj = {"foreach": ForeachRNN, "while_loop": WhileRNN}[args.benchmark]
@@ -124,7 +119,9 @@ def main():
     cell_types = [gluon.rnn.RNNCell,
                   gluon.rnn.GRUCell,
                   gluon.rnn.LSTMCell]
-    ctxs = [mx.cpu(0)] + [mx.gpu(i) for i in _get_gpus()]
+    ctxs = [mx.cpu(0)]
+    if args.gpu:
+        ctxs = ctxs + [mx.gpu(i) for i in _get_gpus()]
     seq_lens = [100]
     batch_sizes = [1, 32]
     hidden_dims = [512]

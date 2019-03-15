@@ -40,12 +40,13 @@ bool check_datafiles(const std::vector<std::string> &data_files) {
     }
   }
   return true;
-  }
+}
 
-bool setDataIter(MXDataIter *iter , std::string useType,
+bool setDataIter(MXDataIter *iter , const std::string &useType,
               const std::vector<std::string> &data_files, int batch_size) {
-    if (!check_datafiles(data_files))
+    if (!check_datafiles(data_files)) {
         return false;
+    }
 
     iter->SetParam("batch_size", batch_size);
     iter->SetParam("shuffle", 1);

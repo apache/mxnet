@@ -31,14 +31,14 @@ namespace op {
 
 template<>
 Operator* CreateOp<cpu>(SwapAxisParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     op = new SwapAxisOp<cpu, DType>(param);
   });
   return op;
 }
 
-Operator* SwapAxisProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator* SwapAxisProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                          std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }

@@ -455,7 +455,7 @@ class Profiler {
   /*! \brief filename to output profile file */
   std::string filename_ = "profile.json";
   /*! \brief profile statistics consist of multiple device statistics */
-  DeviceStats* profile_stat;
+  std::unique_ptr<DeviceStats[]> profile_stat;
   /*! \brief Stats not associated directly with a device */
   DeviceStats  general_stats_;
   /*! \brief Map category -> pid */
@@ -1081,8 +1081,8 @@ struct ProfileOperator : public ProfileEvent {
    * \brief Operator attributes
    */
   struct Attributes {
-    std::vector<nnvm::TShape> inputs_;
-    std::vector<nnvm::TShape> outputs_;
+    std::vector<mxnet::TShape> inputs_;
+    std::vector<mxnet::TShape> outputs_;
     std::unordered_map<std::string, std::string> attr_;
     std::string to_string() const {
       std::stringstream ss;
@@ -1230,7 +1230,7 @@ inline size_t Profiler::DeviceIndex(mxnet::Context::DeviceType dev_type, int32_t
 
 /*!
  * \brief Explicit 'Profiler::AddProfileStat' override for 'OprExecStat'
- * \param opr_stat Unique pointert to the operator statistic
+ * \param opr_stat Unique pointer to the operator statistic
  */
 template<>
 inline void Profiler::AddProfileStat<ProfileOperator::OprExecStat>(

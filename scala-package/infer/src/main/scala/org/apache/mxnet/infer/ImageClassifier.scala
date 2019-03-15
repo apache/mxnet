@@ -17,7 +17,8 @@
 
 package org.apache.mxnet.infer
 
-import org.apache.mxnet.{Context, DataDesc, NDArray, Shape}
+import org.apache.mxnet.DType.DType
+import org.apache.mxnet._
 
 import scala.collection.mutable.ListBuffer
 
@@ -65,24 +66,33 @@ class ImageClassifier(modelPathPrefix: String,
   protected[infer] val height = inputShape(inputLayout.indexOf('H'))
   protected[infer] val width = inputShape(inputLayout.indexOf('W'))
 
+  def outputShapes: IndexedSeq[(String, Shape)] = predictor.outputShapes
+
   /**
     * To classify the image according to the provided model
     *
     * @param inputImage       Path prefix of the input image
     * @param topK             Number of result elements to return, sorted by probability
+    * @param dType            The precision at which to run the inference.
+    *                         specify the DType as DType.Float64 for Double precision.
+    *                         Defaults to DType.Float32
     * @return                 List of list of tuples of (Label, Probability)
     */
-  def classifyImage(inputImage: BufferedImage,
-                    topK: Option[Int] = None): IndexedSeq[IndexedSeq[(String, Float)]] = {
+  def classifyImage
+  (inputImage: BufferedImage, topK: Option[Int] = None, dType: DType = DType.Float32):
+  IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val scaledImage = ImageClassifier.reshapeImage(inputImage, width, height)
-    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
+    val imageShape = inputShape.drop(1)
+    val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape, dType)
+    val imgWithBatchNum = NDArray.api.expand_dims(pixelsNDArray, 0)
     inputImage.flush()
     scaledImage.flush()
-
-    val output = super.classifyWithNDArray(IndexedSeq(pixelsNDArray), topK)
-
     handler.execute(pixelsNDArray.dispose())
+
+    val output = super.classifyWithNDArray(IndexedSeq(imgWithBatchNum), topK)
+
+    handler.execute(imgWithBatchNum.dispose())
 
     IndexedSeq(output(0))
   }
@@ -92,19 +102,24 @@ class ImageClassifier(modelPathPrefix: String,
     *
     * @param inputBatch       Input array of buffered images
     * @param topK             Number of result elements to return, sorted by probability
+    * @param dType            The precision at which to run the inference.
+    *                         specify the DType as DType.Float64 for Double precision.
+    *                         Defaults to DType.Float32
     * @return                 List of list of tuples of (Label, Probability)
     */
-  def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None):
-  IndexedSeq[IndexedSeq[(String, Float)]] = {
+  def classifyImageBatch(inputBatch: Traversable[BufferedImage], topK: Option[Int] = None,
+   dType: DType = DType.Float32): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
-    val imageBatch = ListBuffer[NDArray]()
-    for (image <- inputBatch) {
-      val scaledImage = ImageClassifier.reshapeImage(image, width, height)
-      val pixelsNDArray = ImageClassifier.bufferedImageToPixels(scaledImage, inputShape)
-      imageBatch += pixelsNDArray
-    }
+    val inputBatchSeq = inputBatch.toIndexedSeq
+    val imageBatch = inputBatchSeq.indices.par.map(idx => {
+      val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
+      val imageShape = inputShape.drop(1)
+      val imgND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape, dType)
+      val imgWithBatch = NDArray.api.expand_dims(imgND, 0).get
+      handler.execute(imgND.dispose())
+      imgWithBatch
+    }).toList
     val op = NDArray.concatenate(imageBatch)
-
     val result = super.classifyWithNDArray(IndexedSeq(op), topK)
     handler.execute(op.dispose())
     handler.execute(imageBatch.foreach(_.dispose()))
@@ -147,11 +162,29 @@ object ImageClassifier {
     * returned by this method after the use.
     * </p>
     * @param resizedImage     BufferedImage to get pixels from
-    * @param inputImageShape  Input shape; for example for resnet it is (1,3,224,224).
+    *
+    * @param inputImageShape  Input shape; for example for resnet it is (3,224,224).
                               Should be same as inputDescriptor shape.
-    * @return                 NDArray pixels array
+    * @param dType            The DataType of the NDArray created from the image
+    *                         that should be returned.
+    *                         Currently it defaults to Dtype.Float32
+    * @return                 NDArray pixels array with shape (3, 224, 224) in CHW format
     */
-  def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape): NDArray = {
+  def bufferedImageToPixels(resizedImage: BufferedImage, inputImageShape: Shape,
+                            dType : DType = DType.Float32): NDArray = {
+
+      if (dType == DType.Float64) {
+        val result = getFloatPixelsArray(resizedImage)
+        NDArray.array(result.map(_.toDouble), shape = inputImageShape)
+      }
+      else {
+        val result = getFloatPixelsArray(resizedImage)
+        NDArray.array(result, shape = inputImageShape)
+      }
+  }
+
+  private def getFloatPixelsArray(resizedImage: BufferedImage): Array[Float] = {
+
     // Get height and width of the image
     val w = resizedImage.getWidth()
     val h = resizedImage.getHeight()
@@ -161,7 +194,6 @@ object ImageClassifier {
 
     // 3 times height and width for R,G,B channels
     val result = new Array[Float](3 * h * w)
-
     var row = 0
     // copy pixels to array vertically
     while (row < h) {
@@ -179,11 +211,10 @@ object ImageClassifier {
       }
       row += 1
     }
+
     resizedImage.flush()
 
-    // creating NDArray according to the input shape
-    val pixelsArray = NDArray.array(result, shape = inputImageShape)
-    pixelsArray
+    result
   }
 
   /**

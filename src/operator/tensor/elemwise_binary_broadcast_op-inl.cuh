@@ -17,6 +17,10 @@
  * under the License.
  */
 
+/*!
+ * \file elemwise_binary_broadcast_op-inl.cuh
+ * \brief CUDA specific Function definition of elementwise binary broadcast operators
+ */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_CUH_
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_CUH_
 #include <mxnet/operator_util.h>
@@ -36,7 +40,7 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                const std::vector<OpReqType>& req,
                                const std::vector<TBlob>& outputs) {
   using namespace broadcast;
-  TShape new_lshape, new_rshape, new_oshape;
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
   if (!ndim) {

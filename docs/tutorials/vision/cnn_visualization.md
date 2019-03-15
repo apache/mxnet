@@ -1,16 +1,38 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Visualizing Decisions of Convolutional Neural Networks
 
-Convolutional Neural Networks have made a lot of progress in Computer Vision. Their accuracy is as good as humans in some tasks. However it remains hard to explain the predictions of convolutional neural networks, as they lack the interpretability offered by other models, for example decision trees.
+Convolutional Neural Networks have made a lot of progress in Computer Vision. Their accuracy is as good as humans in some tasks. However, it remains difficult to explain the predictions of convolutional neural networks, as they lack the interpretability offered by other models such as decision trees.
 
-It is often helpful to be able to explain why a model made the prediction it made. For example when a model misclassifies an image, it is hard to say why without visualizing the network's decision.
+It is often helpful to be able to explain why a model made the prediction it made. For example, when a model misclassifies an image, without visualizing the network's decision, it is hard to say why the misclassification was made.
 
 <img align="right" src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/example/cnn_visualization/volcano_barn_spider.png" alt="Explaining the misclassification of volcano as spider" width=500px/>
 
-Visualizations also help build confidence about the predictions of a model. For example, even if a model correctly predicts birds as birds, we would want to confirm that the model bases its decision on the features of bird and not on the features of some other object that might occur together with birds in the dataset (like leaves).
+Visualizations can also build confidence about the predictions of a model. For example, even if a model correctly predicts birds as birds, we would want to confirm that the model bases its decision on the features of bird and not on the features of some other object that might occur together with birds in the dataset (like leaves).
 
-In this tutorial, we show how to visualize the predictions made by convolutional neural networks using [Gradient-weighted Class Activation Mapping](https://arxiv.org/abs/1610.02391). Unlike many other visualization methods, Grad-CAM can be used on a wide variety of CNN model families - CNNs with fully connected layers, CNNs used for structural outputs (e.g. captioning), CNNs used in tasks with multi-model input (e.g. VQA) or reinforcement learning without architectural changes or re-training.
+In this tutorial we show how to visualize the predictions made by convolutional neural networks using [Gradient-weighted Class Activation Mapping](https://arxiv.org/abs/1610.02391). Unlike many other visualization methods, Grad-CAM can be used on a wide variety of CNN model families - CNNs with fully connected layers, CNNs used for structural outputs (e.g. captioning), CNNs used in tasks with multi-model input (e.g. VQA) or reinforcement learning without architectural changes or re-training.
 
-In the rest of this notebook, we will explain how to visualize predictions made by [VGG-16](https://arxiv.org/abs/1409.1556). We begin by importing the required dependencies. `gradcam` module contains the implementation of visualization techniques used in this notebook.
+In the rest of this notebook, we will explain how to visualize predictions made by [VGG-16](https://arxiv.org/abs/1409.1556). We begin by importing the required dependencies. 
+
+## Prerequesites
+* OpenCV is required by `gradcam` (below) and can be installed with pip using `pip opencv-python`.
+
+* the `gradcam` module contains the implementation of visualization techniques used in this notebook. `gradcam` can be installed to a temporary directory by executing the following code block.
 
 ```python
 from __future__ import print_function
@@ -22,7 +44,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 gradcam_file = "gradcam.py" 
-base_url = "https://raw.githubusercontent.com/indhub/mxnet/cnnviz/example/cnn_visualization/{}?raw=true"
+base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/vision/cnn_visualization/{}?raw=true"
 mx.test_utils.download(base_url.format(gradcam_file), fname=gradcam_file)
 import gradcam
 ```
@@ -99,12 +121,18 @@ def get_vgg(num_layers, ctx=mx.cpu(), root=os.path.join('~', '.mxnet', 'models')
     # Get the number of convolution layers and filters
     layers, filters = vgg_spec[num_layers]
 
-    # Build the VGG network
+    # Build the modified VGG network
     net = VGG(layers, filters, **kwargs)
-
-    # Load pretrained weights from model zoo
-    from mxnet.gluon.model_zoo.model_store import get_model_file
-    net.load_params(get_model_file('vgg%d' % num_layers, root=root), ctx=ctx)
+    net.initialize(ctx=ctx)
+    
+    # Get the pretrained model
+    vgg = mx.gluon.model_zoo.vision.get_vgg(num_layers, pretrained=True, ctx=ctx)
+    
+    # Set the parameters in the new network
+    params = vgg.collect_params()
+    for key in params:
+        param = params[key]
+        net.collect_params()[net.prefix+key.replace(vgg.prefix, '')].set_data(param.data())
 
     return net
 
@@ -145,7 +173,8 @@ def show_images(pred_str, images):
     for i in range(num_images):
         fig.add_subplot(rows, cols, i+1)
         plt.xlabel(titles[i])
-        plt.imshow(images[i], cmap='gray' if i==num_images-1 else None)
+        img = images[i].astype(np.uint8)
+        plt.imshow(img, cmap='gray' if i==num_images-1 else None)
     plt.show()
 ```
 
@@ -174,6 +203,7 @@ Next, we'll write a method to get an image, preprocess it, predict category and 
 1. **Grad-CAM:** This is a heatmap superimposed on the input image showing which part(s) of the image contributed most to the CNN's decision.
 2. **Guided Grad-CAM:** Guided Grad-CAM shows which exact pixels contributed the most to the CNN's decision.
 3. **Saliency map:** Saliency map is a monochrome image showing which pixels contributed the most to the CNN's decision. Sometimes, it is easier to see the areas in the image that most influence the output in a monochrome image than in a color image.
+
 
 ```python
 def visualize(net, img_path, conv_layer_name):

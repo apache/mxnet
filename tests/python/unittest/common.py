@@ -15,7 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
+from __future__ import print_function
 import sys, os, logging
+import multiprocessing as mp
 import mxnet as mx
 import numpy as np
 import random
@@ -39,6 +41,7 @@ def assertRaises(expected_exception, func, *args, **kwargs):
         # Did not raise exception
         assert False, "%s did not raise %s" % (func.__name__, expected_exception.__name__)
 
+
 def default_logger():
     """A logger used to output seed information to nosetests logs."""
     logger = logging.getLogger(__name__)
@@ -50,6 +53,7 @@ def default_logger():
         if (logger.getEffectiveLevel() == logging.NOTSET):
             logger.setLevel(logging.INFO)
     return logger
+
 
 @contextmanager
 def random_seed(seed=None):
@@ -95,16 +99,17 @@ def random_seed(seed=None):
         random.seed(next_seed)
 
 
-def assert_raises_cudnn_disabled():
+def assert_raises_cudnn_not_satisfied(min_version):
     def test_helper(orig_test):
         @make_decorator(orig_test)
         def test_new(*args, **kwargs):
-            cudnn_disabled = (os.getenv('CUDNN_OFF_TEST_ONLY') == "true")
-            if not cudnn_disabled or mx.context.current_context().device_type == 'cpu':
+            cudnn_off = os.getenv('CUDNN_OFF_TEST_ONLY') == 'true'
+            cudnn_env_version = os.getenv('CUDNN_VERSION', None if cudnn_off else '7.3.1')
+            cudnn_test_disabled = cudnn_off or cudnn_env_version < min_version
+            if not cudnn_test_disabled or mx.context.current_context().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
-                errors = (MXNetError, RuntimeError)
-                assert_raises(errors, orig_test, *args, **kwargs)
+                assert_raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
         return test_new
     return test_helper
 
@@ -179,6 +184,7 @@ def with_seed(seed=None):
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
+
 
 def setup_module():
     """
@@ -264,3 +270,48 @@ def teardown():
     It waits for all operations in one file to finish before carrying on the next.
     """
     mx.nd.waitall()
+
+
+def run_in_spawned_process(func, env, *args):
+    """
+    Helper function to run a test in its own process.
+
+    Avoids issues with Singleton- or otherwise-cached environment variable lookups in the backend.
+    Adds a seed as first arg to propagate determinism.
+
+    Parameters
+    ----------
+
+    func : function to run in a spawned process.
+    env : dict of additional environment values to set temporarily in the environment before exec.
+    args : args to pass to the function.
+
+    Returns
+    -------
+    Whether the python version supports running the function as a spawned process.
+
+    This routine calculates a random seed and passes it into the test as a first argument.  If the
+    test uses random values, it should include an outer 'with random_seed(seed):'.  If the
+    test needs to return values to the caller, consider use of shared variable arguments.
+    """
+    try:
+        mpctx = mp.get_context('spawn')
+    except:
+        print('SKIP: python%s.%s lacks the required process fork-exec support ... ' %
+              sys.version_info[0:2], file=sys.stderr, end='')
+        return False
+    else:
+        seed = np.random.randint(0,1024*1024*1024)
+        orig_environ = os.environ.copy()
+        try:
+            for (key, value) in env.items():
+                os.environ[key] = str(value)
+            # Prepend seed as first arg
+            p = mpctx.Process(target=func, args=(seed,)+args)
+            p.start()
+            p.join()
+            assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
+        finally:
+            os.environ.clear()
+            os.environ.update(orig_environ)
+    return True

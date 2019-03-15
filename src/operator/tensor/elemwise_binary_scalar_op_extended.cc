@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
- * \brief CPU Implementation of unary function.
+ * \file elemwise_binary_scalar_op_extended.cc
+ * \brief CPU Implementation of extended binary scalar functions.
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
@@ -111,7 +111,7 @@ Example::
       attrs->parsed = 1.0;
     }
   })
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
                                 [](const NodeAttrs& attrs){

@@ -38,11 +38,11 @@ namespace mxnet {
 namespace op {
 
 struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
-  TShape shape;
+  mxnet::TShape shape;
   int dtype;
   DMLC_DECLARE_PARAMETER(MultiSampleParam) {
     DMLC_DECLARE_FIELD(shape)
-      .set_default(TShape())
+      .set_default(mxnet::TShape())
       .describe("Shape to be sampled from each random distribution.");
     DMLC_DECLARE_FIELD(dtype)
     .add_enum("None", -1)
@@ -56,8 +56,8 @@ struct MultiSampleParam : public dmlc::Parameter<MultiSampleParam> {
 };
 
 inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
-                               std::vector<TShape>* in_attrs,
-                               std::vector<TShape>* out_attrs) {
+                               mxnet::ShapeVector* in_attrs,
+                               mxnet::ShapeVector* out_attrs) {
   CHECK_GT(in_attrs->size(), 0)
     << "sampling operator takes 1 or 2 arguments (" << in_attrs->size() << " given)";
   CHECK_LT(in_attrs->size(), 3)
@@ -65,21 +65,21 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1);
   // Get shape to be sampled for each parameter set.
   const MultiSampleParam& param = nnvm::get<MultiSampleParam>(attrs.parsed);
-  TShape sshape = param.shape;
+  mxnet::TShape sshape = param.shape;
   for (size_t i = 0; i < sshape.ndim(); ++i) {
     CHECK_GT(sshape[i], 0) << "shape parameter must be non-zero within each dimension";
   }
   // Examine output shape whether it is already defined.
-  TShape tshape((*out_attrs)[0]);
+  mxnet::TShape tshape((*out_attrs)[0]);
   // The illegal case of tshape.ndim() <= sshape.ndim() will
   // automatically crash when we back-propagate from inputs to outputs.
   if (tshape.ndim() > sshape.ndim()) {
     // Promote down by removing last dimensions which represent the samples.
-    tshape = TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
+    tshape = mxnet::TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
   // Shape assignemnt/checking for inputs.
-  for (size_t i = 0; i < in_attrs->size(); ++i) {
-    if ( !shape_assign(&tshape, (*in_attrs)[i])) return false;
+  for (const auto& in_attr : *in_attrs) {
+    if ( !shape_assign(&tshape, in_attr)) return false;
   }
   for (size_t i = 0; i < in_attrs->size(); ++i) {
     SHAPE_ASSIGN_CHECK(*in_attrs, i, tshape);
@@ -88,7 +88,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
     // Shape assignment/check for propagation from inputs to output.
     std::vector<int> cshape(tshape.begin(), tshape.end());
     cshape.insert(cshape.end(), sshape.begin(), sshape.end());
-    TShape oshape(cshape.begin(), cshape.end());
+    mxnet::TShape oshape(cshape.begin(), cshape.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
   return true;
@@ -105,8 +105,8 @@ inline bool MultiSampleOpType(const nnvm::NodeAttrs& attrs,
 
   // All inputs must have same type.
   int dtype = -1;
-  for (size_t i = 0; i < in_attrs->size(); ++i) {
-    if (!type_assign(&dtype, (*in_attrs)[i])) return false;
+  for (int in_attr : *in_attrs) {
+    if (!type_assign(&dtype, in_attr)) return false;
   }
   for (size_t i = 0; i < in_attrs->size(); ++i) {
     TYPE_ASSIGN_CHECK(*in_attrs, i, dtype);

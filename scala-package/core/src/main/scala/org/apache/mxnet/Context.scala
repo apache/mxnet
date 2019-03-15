@@ -17,6 +17,8 @@
 
 package org.apache.mxnet
 
+import scala.language.implicitConversions
+
 object Context {
   val devtype2str = Map(1 -> "cpu", 2 -> "gpu", 3 -> "cpu_pinned")
   val devstr2type = Map("cpu" -> 1, "gpu" -> 2, "cpu_pinned" -> 3)
@@ -36,11 +38,12 @@ object Context {
 }
 
 /**
- * Constructing a context.
-
- * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
- * @param deviceId (default=0) The device id of the device, needed for GPU
- */
+  * Constructing a context which is used to specify the device and device type that will
+  * be utilized by the engine.
+  *
+  * @param deviceTypeName {'cpu', 'gpu'} String representing the device type
+  * @param deviceId (default=0) The device id of the device, needed for GPU
+  */
 class Context(deviceTypeName: String, val deviceId: Int = 0) extends Serializable {
   val deviceTypeid: Int = Context.devstr2type(deviceTypeName)
 
@@ -59,9 +62,9 @@ class Context(deviceTypeName: String, val deviceId: Int = 0) extends Serializabl
   }
 
   /**
-   * Return device type of current context.
-   * @return device_type
-   */
+    * Return device type of current context.
+    * @return device_type
+    */
   def deviceType: String = Context.devtype2str(deviceTypeid)
 
   override def toString: String = {

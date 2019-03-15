@@ -149,13 +149,13 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(CorrelationParam param, int dtype) {
-  Operator* op = NULL;
+  Operator* op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new CorrelationOp<cpu, DType>(param);
   });
   return op;
 }
-Operator* CorrelationProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator* CorrelationProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                             std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }

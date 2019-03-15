@@ -39,7 +39,7 @@ my %WriteMakefileArgs = (
     "AI::MXNet" => "1.31",
   },
   "TEST_REQUIRES" => {},
-  "VERSION" => "1.32",
+  "VERSION" => "1.33",
   "test" => {
     "TESTS" => "t/*.t"
   }

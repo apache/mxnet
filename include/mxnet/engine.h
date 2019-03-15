@@ -25,7 +25,6 @@
 #ifndef MXNET_ENGINE_H_
 #define MXNET_ENGINE_H_
 
-#include <dmlc/base.h>
 #if DMLC_USE_CXX11
 #include <algorithm>
 #include <memory>
@@ -75,15 +74,15 @@ class CallbackOnComplete {
  public:
   // use implicit copy and assign
   /*! \brief involve the callback */
-  inline void operator()() const {
-    (*callback_)(engine_, param_);
+  inline void operator()(const dmlc::Error* error = nullptr) const {
+    (*callback_)(engine_, param_, error);
   }
 
  private:
   /*! \brief engine can see content of callback */
   friend class ::mxnet::Engine;
   /*! \brief the real callback */
-  void (*callback_)(Engine *, void *);
+  void (*callback_)(Engine *, void *, const dmlc::Error *);
   /*! \brief the engine class passed to callback */
   Engine* engine_;
   /*! \brief the parameter set on callback */
@@ -276,7 +275,7 @@ class MXNET_API Engine {
    * \param param the paramter passed to callback.
    */
   inline CallbackOnComplete CreateCallback(
-      void (*callback)(Engine *, void *), void *param) {
+      void (*callback)(Engine *, void *, const dmlc::Error *), void *param) {
     CallbackOnComplete ret;
     ret.callback_ = callback;
     ret.engine_ = this;

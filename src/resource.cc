@@ -27,13 +27,14 @@
 #include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
+#include <mxnet/random_generator.h>
 #include <mxnet/resource.h>
 #include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
 #include "./common/lazy_alloc_array.h"
-#include "./common/random_generator.h"
 #include "./common/utils.h"
+#include "./common/cuda_utils.h"
 
 namespace mxnet {
 namespace resource {
@@ -92,11 +93,14 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_PARALLEL_RAND_COPY", 1);
     gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_PARALLEL_RAND_COPY", 4);
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+    gpu_cudnn_dropout_state_copy_ = dmlc::GetEnv("MXNET_GPU_CUDNN_DROPOUT_STATE_COPY", 4);
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
         Context::CPU(), global_seed_));
-    cpu_space_.reset(new ResourceTempSpace(
+    cpu_space_.reset(new ResourceTempSpace<ResourceRequest::kTempSpace>(
         Context::CPU(), cpu_temp_space_copy_));
     cpu_parallel_rand_.reset(new ResourceParallelRandom<cpu>(
         Context::CPU(), cpu_native_rand_copy_, global_seed_));
@@ -110,6 +114,9 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_rand_.Clear();
     gpu_space_.Clear();
     gpu_parallel_rand_.Clear();
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+    gpu_cudnn_dropout_state_.Clear();
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
 #endif
     if (engine_ref_ != nullptr) {
       engine_ref_ = nullptr;
@@ -139,7 +146,7 @@ class ResourceManagerImpl : public ResourceManager {
         }
         case ResourceRequest::kTempSpace: {
           return gpu_space_.Get(ctx.dev_id, [ctx, this]() {
-              return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
+              return new ResourceTempSpace<ResourceRequest::kTempSpace>(ctx, gpu_temp_space_copy_);
             })->GetNext();
         }
         case ResourceRequest::kParallelRandom: {
@@ -147,6 +154,14 @@ class ResourceManagerImpl : public ResourceManager {
             return new ResourceParallelRandom<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
           })->GetNext();
         }
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+        case ResourceRequest::kCuDNNDropoutDesc: {
+          return gpu_cudnn_dropout_state_.Get(ctx.dev_id, [ctx, this]() {
+            return new ResourceTempSpace<ResourceRequest::kCuDNNDropoutDesc>(
+                ctx, gpu_cudnn_dropout_state_copy_);
+          })->GetNext();
+        }
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
 #else
@@ -231,7 +246,8 @@ class ResourceManagerImpl : public ResourceManager {
     }
   };
 
-  // temporal space resource.
+  // temporary space resource.
+  template<ResourceRequest::Type req>
   struct ResourceTempSpace {
     /*! \brief the context of the device */
     Context ctx;
@@ -248,7 +264,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].var = Engine::Get()->NewVariable();
         resource[i].id = static_cast<int32_t>(i);
         resource[i].ptr_ = &space[i];
-        resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
+        resource[i].req = ResourceRequest(req);
         space[i].ctx = ctx;
         CHECK_EQ(space[i].handle.size, 0U);
       }
@@ -372,16 +388,23 @@ class ResourceManagerImpl : public ResourceManager {
   /*! \brief CPU random number resources */
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
-  std::unique_ptr<ResourceTempSpace> cpu_space_;
+  std::unique_ptr<ResourceTempSpace<ResourceRequest::kTempSpace>> cpu_space_;
   /*! \brief CPU parallel random number resources */
   std::unique_ptr<ResourceParallelRandom<cpu> > cpu_parallel_rand_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;
   /*! \brief temp space for GPU */
-  common::LazyAllocArray<ResourceTempSpace> gpu_space_;
+  common::LazyAllocArray<ResourceTempSpace<ResourceRequest::kTempSpace>> gpu_space_;
   /*! \brief GPU parallel (on device) random number resources */
   common::LazyAllocArray<ResourceParallelRandom<gpu> > gpu_parallel_rand_;
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+  /*! \brief number of copies in GPU cudnn dropout descriptor resources */
+  int gpu_cudnn_dropout_state_copy_;
+  /*! \brief GPU parallel (on device) random number resources */
+  common::LazyAllocArray<ResourceTempSpace<ResourceRequest::kCuDNNDropoutDesc>>
+    gpu_cudnn_dropout_state_;
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
 #endif
 };
 }  // namespace resource
@@ -393,6 +416,36 @@ void* Resource::get_space_internal(size_t size) const {
 void* Resource::get_host_space_internal(size_t size) const {
   return static_cast<resource::SpaceAllocator*>(ptr_)->GetHostSpace(size);
 }
+
+#if MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
+void Resource::get_cudnn_dropout_desc(
+    cudnnDropoutDescriptor_t* dropout_desc,
+    mshadow::Stream<gpu> *stream,
+    const float dropout,
+    uint64_t seed) const {
+
+  CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
+  auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
+  CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
+    << "The device id of cudnn dropout state space doesn't match that from stream.";
+  if (!state_space->handle.size) {
+    // not initialized yet.
+    size_t dropout_state_size;
+    CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
+    CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                         dropout,
+                                         state_space->GetSpace(dropout_state_size),
+                                         dropout_state_size,
+                                         seed));
+  } else {
+    CUDNN_CALL(cudnnRestoreDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                             dropout,
+                                             state_space->handle.dptr,
+                                             state_space->handle.size,
+                                             seed));
+  }
+}
+#endif  // MXNET_USE_CUDNN == 1 && CUDNN_MAJOR >= 7
 
 ResourceManager* ResourceManager::Get() {
   typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;

@@ -17,7 +17,19 @@
 
 (ns org.apache.clojure-mxnet.optimizer
   (:refer-clojure :exclude [update])
-  (:import (org.apache.mxnet.optimizer SGD DCASGD NAG AdaDelta RMSProp AdaGrad Adam SGLD)))
+  (:require  
+   [clojure.spec.alpha :as s]
+   [org.apache.clojure-mxnet.util :as util])
+  (:import 
+   (org.apache.mxnet.optimizer SGD DCASGD NAG AdaDelta RMSProp AdaGrad Adam SGLD)
+   (org.apache.mxnet FactorScheduler)))
+
+(s/def ::learning-rate number?)
+(s/def ::momentum number?)
+(s/def ::wd number?)
+(s/def ::clip-gradient number?)
+(s/def ::lr-scheduler #(instance? FactorScheduler %))
+(s/def ::sgd-opts (s/keys :opt-un [::learning-rate ::momentum ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn sgd
   "A very simple SGD optimizer with momentum and weight regularization."
@@ -26,9 +38,13 @@
           momentum 0.0
           wd 0.0001
           clip-gradient 0}}]
+   (util/validate! ::sgd-opts opts "Incorrect sgd optimizer options")
    (new SGD (float learning-rate) (float momentum) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (sgd {})))
+
+(s/def ::lambda number?)
+(s/def ::dcasgd-opts (s/keys :opt-un [::learning-rate ::momentum ::lambda ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn dcasgd
   "DCASGD optimizer with momentum and weight regularization.
@@ -40,9 +56,12 @@
           lambda 0.04
           wd 0.0
           clip-gradient 0}}]
+   (util/validate! ::sgd-opts opts "Incorrect dcasgd optimizer options")
    (new DCASGD (float learning-rate) (float lambda) (float momentum) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (dcasgd {})))
+
+(s/def ::nag-opts (s/keys :opt-un [::learning-rate ::momentum ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn nag
   "SGD with nesterov.
@@ -53,9 +72,15 @@
           momentum 0.0
           wd 0.0001
           clip-gradient 0}}]
+   (util/validate! ::nag-opts opts "Incorrect nag optimizer options")
    (new NAG (float learning-rate) (float momentum) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (nag {})))
+
+(s/def ::rho number?)
+(s/def ::rescale-gradient number?)
+(s/def ::epsilon number?)
+(s/def ::ada-delta-opts (s/keys :opt-un [::rho ::rescale-gradient ::epsilon ::wd ::clip-gradient]))
 
 (defn ada-delta
   "AdaDelta optimizer as described in Matthew D. Zeiler, 2012.
@@ -66,9 +91,14 @@
           epsilon 1e-8
           wd 0.0
           clip-gradient 0}}]
+   (util/validate! ::ada-delta-opts opts "Incorrect ada-delta optimizer options")
    (new AdaDelta (float rho) (float rescale-gradient) (float epsilon) (float wd) (float clip-gradient)))
   ([]
    (ada-delta {})))
+
+(s/def gamma1 number?)
+(s/def gamma2 number?)
+(s/def ::rms-prop-opts (s/keys :opt-un [::learning-rate ::rescale-gradient ::gamma1 ::gamma2 ::wd ::clip-gradient]))
 
 (defn rms-prop
   "RMSProp optimizer as described in Tieleman & Hinton, 2012.
@@ -80,17 +110,20 @@
    -  wd L2 regularization coefficient add to all the weights
    -  clip-gradient clip gradient in range [-clip_gradient, clip_gradient]
    -  lr-scheduler The learning rate scheduler"
-  ([{:keys [learning-rate rescale-gradient gamma1 gamma2 wd lr-scheduler clip-gradient]
+  ([{:keys [learning-rate rescale-gradient gamma1 gamma2 wd lr-scheduler clip-gradient] :as opts
      :or {learning-rate 0.002
           rescale-gradient 1.0
           gamma1 0.95
           gamma2 0.9
           wd 0.0
           clip-gradient 0}}]
+   (util/validate! ::rms-prop-opts opts "Incorrect rms-prop optimizer options")
    (new RMSProp (float learning-rate) (float rescale-gradient) (float gamma1)
         (float gamma2) (float wd) lr-scheduler (float clip-gradient)))
   ([]
    (rms-prop {})))
+
+(s/def ::ada-grad-opts (s/keys :opt-un [::learning-rate ::rescale-gradient ::epsilon ::wd]))
 
 (defn ada-grad
   " AdaGrad optimizer as described in Duchi, Hazan and Singer, 2011.
@@ -101,14 +134,19 @@
                 Default value is set to 1e-7.
    - rescale-gradient rescaling factor of gradient.
    - wd L2 regularization coefficient add to all the weights"
-  ([{:keys [learning-rate rescale-gradient epsilon wd]
+  ([{:keys [learning-rate rescale-gradient epsilon wd] :as opts
      :or {learning-rate 0.05
           rescale-gradient 1.0
           epsilon 1e-7
           wd 0.0}}]
+   (util/validate! ::ada-grad-opts opts "Incorrect ada-grad optimizer options")
    (new AdaGrad (float learning-rate) (float rescale-gradient) (float epsilon) (float wd)))
   ([]
    (ada-grad {})))
+
+(s/def ::beta1 number?)
+(s/def ::beta2 number?)
+(s/def ::adam-opts (s/keys :opt-un [::learning-rate ::beta1 ::beta2 ::epsilon ::decay-factor ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn adam
   "Adam optimizer as described in [King2014]
@@ -125,7 +163,7 @@
    - wd L2 regularization coefficient add to all the weights
    - clip-gradient  clip gradient in range [-clip_gradient, clip_gradient]
    - lr-scheduler The learning rate scheduler"
-  ([{:keys [learning-rate beta1 beta2 epsilon decay-factor wd clip-gradient lr-scheduler]
+  ([{:keys [learning-rate beta1 beta2 epsilon decay-factor wd clip-gradient lr-scheduler] :as opts
      :or {learning-rate 0.002
           beta1 0.9
           beta2 0.999
@@ -133,10 +171,13 @@
           decay-factor (- 1 1e-8)
           wd 0
           clip-gradient 0}}]
+   (util/validate! ::adam-opts opts "Incorrect adam optimizer options")
    (new Adam (float learning-rate) (float beta1) (float beta2) (float epsilon)
         (float decay-factor) (float wd) (float clip-gradient) lr-scheduler))
   ([]
    (adam {})))
+
+(s/def ::sgld-opts (s/keys :opt-un [::learning-rate ::rescale-gradient ::wd ::clip-gradient ::lr-scheduler]))
 
 (defn sgld
   "Stochastic Langevin Dynamics Updater to sample from a distribution.
@@ -146,11 +187,12 @@
   - wd L2 regularization coefficient add to all the weights
   - clip-gradient Float, clip gradient in range [-clip_gradient, clip_gradient]
   - lr-scheduler The learning rate scheduler"
-  ([{:keys [learning-rate rescale-gradient wd clip-gradient lr-scheduler]
+  ([{:keys [learning-rate rescale-gradient wd clip-gradient lr-scheduler] :as opts
      :or {learning-rate 0.01
           rescale-gradient 1
           wd 0.0001
           clip-gradient 0}}]
+   (util/validate! ::sgld-opts opts "Incorrect sgld optimizer options")
    (new SGLD (float learning-rate) (float rescale-gradient) (float wd)
         (float clip-gradient) lr-scheduler))
   ([]

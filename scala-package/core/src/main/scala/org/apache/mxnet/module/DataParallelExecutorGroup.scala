@@ -101,10 +101,10 @@ private object DataParallelExecutorGroup {
         gradReq: String, argNames: IndexedSeq[String], paramNames: IndexedSeq[String],
         fixedParamNames: Set[String], dataNames: Seq[String], inputsNeedGrad: Boolean)
         : Map[String, String] = {
-      require(argNames != null)
-      require(paramNames != null)
-      require(fixedParamNames != null)
-      require(dataNames != null)
+      require(argNames != null, "Invalid argNames")
+      require(paramNames != null, "Invalid paramNames")
+      require(fixedParamNames != null, "Invalid fixedParamNames")
+      require(dataNames != null, "Invalid dataNames")
       argNames.map(k => {
         if (paramNames.contains(k)) {
           (k, if (fixedParamNames.contains(k)) "null" else gradReq)
@@ -139,13 +139,13 @@ private object DataParallelExecutorGroup {
     }
 
     def setDataShapes(shapes: IndexedSeq[DataDesc]): Builder = {
-      require(shapes != null)
+      require(shapes != null, "Invalid shapes")
       this.dataShapes = shapes
       this
     }
 
     def setDataShapesByName(shapes: IndexedSeq[(String, Shape)]): Builder = {
-      require(shapes != null)
+      require(shapes != null, "Invalid shapes")
       this.dataShapes = shapes.map { case (k, s) => new DataDesc(k, s) }
       this
     }
@@ -188,7 +188,7 @@ private object DataParallelExecutorGroup {
     }
 
     def setGradReq(gradReq: Map[String, String]): Builder = {
-      require(dataShapes != null)
+      require(dataShapes != null, "dataShapes must be set first")
       val gradReqTmp = mutable.HashMap.empty[String, String]
       val dataNames = dataShapes.map(_.name)
       for (k <- argNames) {
@@ -206,7 +206,7 @@ private object DataParallelExecutorGroup {
     }
 
     def setGradReq(gradReq: String): Builder = {
-      require(dataShapes != null)
+      require(dataShapes != null, "dataShapes must be set first")
       val dataNames = dataShapes.map(_.name)
       this.gradReqs = Builder.convertGradReq(
         gradReq, argNames, paramNames, fixedParamNames, dataNames, inputsNeedGrad)
@@ -214,7 +214,9 @@ private object DataParallelExecutorGroup {
     }
 
     def setGradReq(gradReq: Seq[(String, String)]): Builder = {
-      require(gradReq.size == argNames.size)
+      require(gradReq.size == argNames.size,
+        s"provided number of gradReq (${gradReq.size}) do not match number of args " +
+          s"(${argNames.size})")
       this.gradReqs = gradReq.toMap
       this
     }
@@ -276,8 +278,8 @@ class DataParallelExecutorGroup private[module](
     fixedParamNames: Set[String] = Set.empty[String],
     gradReq: Map[String, String] = null) {
 
-  require(symbol != null)
-  require(contexts != null)
+  require(symbol != null, "Undefined symbol")
+  require(contexts != null, "Undefined context")
 
   private val argNames = symbol.listArguments()
   private val auxNames = symbol.listAuxiliaryStates()
@@ -329,7 +331,7 @@ class DataParallelExecutorGroup private[module](
    *                   the shapes for the input data or label.
    */
   private def decideSlices(dataShapes: Seq[DataDesc]): Seq[Int] = {
-    require(dataShapes.size > 0)
+    require(dataShapes.size > 0, "dataShapes must be non empty")
     val majorAxis = dataShapes.map(data => DataDesc.getBatchAxis(Option(data.layout)))
 
     for ((dataDesc, axis) <- dataShapes.zip(majorAxis)) {
@@ -341,7 +343,7 @@ class DataParallelExecutorGroup private[module](
             s"but ${dataDesc.name} has shape ${dataDesc.shape}")
         } else {
           this.batchSize = batchSize
-          require(this.workLoadList != null)
+          require(this.workLoadList != null, "Undefined workLoadList")
           this.slices = ExecutorManager.splitInputSlice(this.batchSize, this.workLoadList)
         }
       }
@@ -489,9 +491,9 @@ class DataParallelExecutorGroup private[module](
     DataParallelExecutorGroup.loadData(dataBatch, dataArrays, dataLayouts)
     val isTrainOpt = isTrain.getOrElse(this.forTraining)
     labelArrays.foreach(labels => {
-      require(!isTrainOpt || dataBatch.label != null)
+      require(!isTrainOpt || dataBatch.label != null, "label must be defined if in training phase")
       if (dataBatch.label != null) {
-        require(labelLayouts != null)
+        require(labelLayouts != null, "label layouts are undefined")
         DataParallelExecutorGroup.loadLabel(dataBatch, labels, labelLayouts)
       }
     })
@@ -515,7 +517,7 @@ class DataParallelExecutorGroup private[module](
    * Get outputs of the previous forward computation.
    * @return In the case when data-parallelism is used,
    *         the outputs will be collected from multiple devices.
-   *         The results will look like `[[out1_dev1, out1_dev2], [out2_dev1, out2_dev2]]`,
+   *         The results will look like `[ [out1_dev1, out1_dev2], [out2_dev1, out2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   def getOutputs(): IndexedSeq[IndexedSeq[NDArray]] = {
@@ -537,11 +539,11 @@ class DataParallelExecutorGroup private[module](
    * Get the gradients to the inputs, computed in the previous backward computation.
    * @return In the case when data-parallelism is used,
    *         the grads will be collected from multiple devices.
-   *         The results will look like `[[grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2]]`,
+   *         The results will look like `[ [grad1_dev1, grad1_dev2], [grad2_dev1, grad2_dev2] ]`,
    *         those `NDArray` might live on different devices.
    */
   def getInputGrads(): IndexedSeq[IndexedSeq[NDArray]] = {
-    require(inputsNeedGrad)
+    require(inputsNeedGrad, "Cannot get InputGrads when inputNeedGrad is set to false")
     inputGradArrays.map(_.toIndexedSeq)
   }
 
@@ -632,13 +634,17 @@ class DataParallelExecutorGroup private[module](
       = dataShapesSliced.toMap ++ labelShapesSliced.getOrElse(Map.empty[String, Shape])
 
     val (argShapes, _, auxShapes) = symbol.inferShape(inputShapes)
-    require(argShapes != null, "shape inference failed")
+    require(argShapes != null, "Shape inference failed." +
+      s"Known shapes are $inputShapes for symbol arguments ${symbol.listArguments()} " +
+      s"and aux states ${symbol.listAuxiliaryStates()}")
 
     val inputTypesGot = inputTypes.getOrElse(inputShapes.map { case (k, v) =>
       (k, Base.MX_REAL_TYPE)
     })
     val (argTypes, _, auxTypes) = symbol.inferType(inputTypesGot)
-    require(argTypes != null, "type inference failed")
+    require(argTypes != null, "Type inference failed." +
+      s"Known types as $inputTypes for symbol arguments ${symbol.listArguments()} " +
+      s"and aux states ${symbol.listAuxiliaryStates()}")
 
     val argArrays = ArrayBuffer.empty[NDArray]
     val gradArrayMap = mutable.HashMap.empty[String, NDArray]
@@ -659,8 +665,12 @@ class DataParallelExecutorGroup private[module](
               argArr
             case Some(sharedExecInst) =>
               val argArr = sharedExecInst.argDict(name)
-              require(argArr.shape == argShapes(j))
-              require(argArr.dtype == argTypes(j))
+              require(argArr.shape == argShapes(j),
+                s"Shape ${argArr.shape} of argument $name does not match " +
+                  s"inferred shape ${argShapes(j)}")
+              require(argArr.dtype == argTypes(j),
+                s"Type ${argArr.dtype} of argument $name does not match " +
+                  s"inferred type ${argTypes(j)}")
               if (gradReqRun(name) != "null") {
                 gradArrayMap.put(name, sharedExecInst.gradDict(name))
               }
@@ -687,8 +697,12 @@ class DataParallelExecutorGroup private[module](
         }.toArray
         case Some(sharedExecInst) =>
           for ((arr, j) <- sharedExecInst.auxArrays.zipWithIndex) {
-            require(auxShapes(j) == arr.shape)
-            require(auxTypes(j) == arr.dtype)
+            require(auxShapes(j) == arr.shape,
+              s"Shape ${arr.shape} of aux variable ${auxNames(j)} does not match " +
+                s"inferred shape ${auxShapes(j)}")
+            require(auxTypes(j) == arr.dtype,
+              s"Type ${arr.dtype} of aux variable ${auxNames(j)} does not match " +
+                s"inferred type ${auxTypes(j)}")
           }
           sharedExecInst.auxArrays.map(identity)
       }
@@ -729,7 +743,8 @@ class DataParallelExecutorGroup private[module](
       val argArr = sharedDataArrays(name)
       if (argArr.shape.product >= argShape.product) {
         // nice, we can directly re-use this data blob
-        require(argArr.dtype == argType)
+        require(argArr.dtype == argType,
+          s"Type ${argArr.dtype} of argument $name does not match infered type ${argType}")
         argArr.reshape(argShape)
       } else {
         DataParallelExecutorGroup.logger.warn(s"bucketing: data $name has a shape $argShape," +

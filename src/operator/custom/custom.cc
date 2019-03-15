@@ -75,13 +75,13 @@ inline void AllocateNDArrayCopy(NDArray** nd,
 template<CustomOpPropCallbacks Type>
 std::vector<std::string> List(const NodeAttrs& attrs) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
-  char ** args = NULL;
+  char ** args = nullptr;
   CHECK(reinterpret_cast<CustomOpListFunc>(
     params.info->callbacks[Type])(
       &args, params.info->contexts[Type]));
   std::vector<std::string> ret;
-  for (int i = 0; args[i] != NULL; ++i) {
-    ret.push_back(args[i]);
+  for (int i = 0; args[i] != nullptr; ++i) {
+    ret.emplace_back(args[i]);
   }
   return ret;
 }
@@ -91,7 +91,7 @@ void AttrParser(NodeAttrs* attrs) {
   CustomParam& params = nnvm::get<CustomParam>(attrs->parsed);
 
   std::vector<const char*> keys, vals;
-  for (auto &p : attrs->dict) {
+  for (auto& p : attrs->dict) {
     if (p.first == "op_type") {
       params.op_type = p.second;
     } else {
@@ -128,8 +128,8 @@ void AttrParser(NodeAttrs* attrs) {
 }
 
 bool InferShape(const NodeAttrs& attrs,
-                std::vector<TShape> *in_shape,
-                std::vector<TShape> *out_shape) {
+                mxnet::ShapeVector *in_shape,
+                mxnet::ShapeVector *out_shape) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
   size_t total = params.num_args + params.num_outs + params.num_auxs;
@@ -153,19 +153,19 @@ bool InferShape(const NodeAttrs& attrs,
           params.info->contexts[kCustomOpPropInferShape]));
 
   for (size_t i = 0; i < params.num_args; ++i) {
-    SHAPE_ASSIGN_CHECK(*in_shape, i, TShape(shapes[i], shapes[i]+ndims[i]));
+    SHAPE_ASSIGN_CHECK(*in_shape, i, mxnet::TShape(shapes[i], shapes[i]+ndims[i]));
   }
 
   size_t base = params.num_args;
   for (size_t i = 0; i < params.num_outs; ++i) {
     SHAPE_ASSIGN_CHECK(*out_shape, i,
-        TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
+        mxnet::TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
   }
 
   base = params.num_args + params.num_outs;
   for (size_t i = 0; i < params.num_auxs; ++i) {
     SHAPE_ASSIGN_CHECK(*in_shape, params.num_args+i,
-        TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
+        mxnet::TShape(shapes[base+i], shapes[base+i]+ndims[base+i]));
   }
   return true;
 }
@@ -185,7 +185,7 @@ bool InferType(const NodeAttrs& attrs,
   for (size_t i = 0; i < params.num_args; ++i) {
     types.push_back((*in_type)[i]);
   }
-  for (const auto &i : *out_type) {
+  for (const auto& i : *out_type) {
     types.push_back(i);
   }
   for (size_t i = 0; i < params.num_auxs; ++i) {
@@ -238,14 +238,14 @@ std::vector<nnvm::NodeEntry> Gradient(
   }
 
   std::vector<nnvm::NodeEntry> ret;
-  for (index_t i = 0; i < params.num_args; ++i) {
-    ret.emplace_back(nnvm::NodeEntry{g, i, 0});
+  for (size_t i = 0; i < params.num_args; ++i) {
+    ret.emplace_back(nnvm::NodeEntry{g, static_cast<uint32_t>(i), 0});
   }
   if (params.num_auxs) {
     nnvm::NodePtr ng = nnvm::Node::Create();
     ng->attrs.op = nnvm::Op::Get("_NoGradient");
     ng->attrs.name = "NoGradient";
-    for (index_t i = 0; i < params.num_auxs; ++i) {
+    for (size_t i = 0; i < params.num_auxs; ++i) {
       ret.emplace_back(nnvm::NodeEntry{ng, 0, 0});
     }
   }
@@ -255,7 +255,7 @@ std::vector<nnvm::NodeEntry> Gradient(
 
 
 OpStatePtr CreateState(const NodeAttrs& attrs, Context ctx,
-                       const std::vector<TShape>& in_shape,
+                       const mxnet::ShapeVector& in_shape,
                        const std::vector<int>& in_type) {
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
@@ -387,11 +387,11 @@ void BackwardEx(const OpStatePtr& state, const OpContext& ctx,
     cpys.push_back(*nd);
     ptrs[params.bwd_idx[i]] = reinterpret_cast<void*>(nd);
   }
-  for (size_t i = 0; i < ptrs.size(); ++i) {
+  for (auto& ptr : ptrs) {
     NDArray* nd;
-    if (ptrs[i] == nullptr) {
+    if (ptr == nullptr) {
         nd = new NDArray();
-        ptrs[i] = reinterpret_cast<void*>(nd);
+      ptr = reinterpret_cast<void*>(nd);
     }
   }
   for (size_t i = 0; i < outputs.size(); ++i) {
@@ -457,8 +457,8 @@ inline bool BackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     stypes[i] = (*iattr)[i];
   }
 
-  for (size_t i = 0; i < oattr->size(); i++) {
-    stypes.push_back((*oattr)[i]);
+  for (int i : *oattr) {
+    stypes.push_back(i);
     tags.push_back(2);
   }
 
@@ -554,7 +554,7 @@ Please check the tutorial here: http://mxnet.io/faq/new_op.html.
     return params.num_outs;
   })
 .set_attr_parser(AttrParser)
-.set_attr<nnvm::FInferShape>("FInferShape", InferShape)
+.set_attr<mxnet::FInferShape>("FInferShape", InferShape)
 .set_attr<nnvm::FInferType>("FInferType", InferType)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
     std::vector<std::string> args = List<kCustomOpPropListArguments>(attrs);

@@ -25,19 +25,22 @@ ls -l ../../lib/
 ./get_data.sh
 
 cp ../../build/cpp-package/example/lenet .
-./lenet 10
+./lenet 1
 
 cp ../../build/cpp-package/example/alexnet .
 ./alexnet 1
 
 cp ../../build/cpp-package/example/lenet_with_mxdataiter .
-./lenet_with_mxdataiter 5
+./lenet_with_mxdataiter 1
 
 cp ../../build/cpp-package/example/resnet .
-./resnet 5
+./resnet 1
+
+cp ../../build/cpp-package/example/inception_bn .
+./inception_bn 1
 
 cp ../../build/cpp-package/example/mlp .
-./mlp
+./mlp 150
 
 cp ../../build/cpp-package/example/mlp_cpu .
 ./mlp_cpu
@@ -50,3 +53,13 @@ cp ../../build/cpp-package/example/mlp_gpu .
 
 cp ../../build/cpp-package/example/test_score .
 ./test_score 0.93
+
+sh unittests/unit_test_mlp_csv.sh
+
+cd inference
+cp ../../../build/cpp-package/example/inception_inference .
+./unit_test_inception_inference.sh
+
+cp ../../../build/cpp-package/example/sentiment_analysis_rnn .
+./unit_test_sentiment_analysis_rnn.sh
+cd ..

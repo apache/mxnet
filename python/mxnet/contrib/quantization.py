@@ -40,7 +40,7 @@ from ..context import cpu, Context
 from ..module import Module
 
 
-def _quantize_params(qsym, params):
+def _quantize_params(qsym, params, th_dict):
     """Given a quantized symbol and a dict of params that have not been quantized,
     generate quantized params. Currently only supports quantizing the arg_params
     with names of `weight` or `bias`, not aux_params. If `qsym` contains symbols
@@ -53,6 +53,7 @@ def _quantize_params(qsym, params):
     qsym : Symbol
         Quantized symbol from FP32 symbol.
     params : dict of str->NDArray
+    th_dict: dict of min/max pairs of layers' output
     """
     inputs_name = qsym.list_arguments()
     quantized_params = {}
@@ -69,11 +70,17 @@ def _quantize_params(qsym, params):
             quantized_params[name+'_max'] = vmax
         elif name in params:
             quantized_params[name] = params[name]
+        elif name.endswith(('_min')):
+            output = name[: - len('_min')]
+            if output in th_dict:
+                quantized_params[name] = ndarray.array([th_dict[output][0]])
+        elif name.endswith(('_max')):
+            output = name[: - len('_min')]
+            if output in th_dict:
+                quantized_params[name] = ndarray.array([th_dict[output][1]])
     return quantized_params
 
-
-def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
-                     quantized_dtype='int8'):
+def _quantize_symbol(sym, excluded_symbols=None, offline_params=None, quantized_dtype='int8'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -81,8 +88,9 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
     ----------
     sym : Symbol
         FP32 neural network symbol.
-    excluded_symbols : list of symbols
-        Nodes in the network that users do not want to replace with a symbol of INT8 data type.
+    excluded_sym_names : list of strings
+        A list of strings representing the names of the symbols that users want to excluding
+        from being quantized.
     offline_params : list of strs
         Names of the parameters that users want to quantize offline. It's always recommended to
         quantize parameters offline so that quantizing parameters during the inference can be
@@ -91,12 +99,11 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
         The quantized destination type for input data.
     """
     num_excluded_symbols = 0
-    excluded_handles = []
     if excluded_symbols is not None:
         assert isinstance(excluded_symbols, list)
         num_excluded_symbols = len(excluded_symbols)
-        for s in excluded_symbols:
-            excluded_handles.append(s.handle)
+    else:
+        excluded_symbols = []
 
     num_offline = 0
     offline = []
@@ -109,10 +116,11 @@ def _quantize_symbol(sym, excluded_symbols=None, offline_params=None,
     check_call(_LIB.MXQuantizeSymbol(sym.handle,
                                      ctypes.byref(out),
                                      mx_uint(num_excluded_symbols),
-                                     c_array(SymbolHandle, excluded_handles),
+                                     c_str_array(excluded_symbols),
                                      mx_uint(num_offline),
                                      c_array(ctypes.c_char_p, offline),
-                                     c_str(quantized_dtype)))
+                                     c_str(quantized_dtype),
+                                     ctypes.c_bool(True)))
     return Symbol(out)
 
 
@@ -140,7 +148,6 @@ class _LayerOutputCollector(object):
         else:
             self.nd_dict[name] = [arr]
 
-
 class _LayerOutputMinMaxCollector(object):
     """Saves layer output min and max values in a dict with layer names as keys.
     The collected min and max values will be directly used as thresholds for quantization.
@@ -166,9 +173,8 @@ class _LayerOutputMinMaxCollector(object):
         else:
             self.min_max_dict[name] = (min_range, max_range)
         if self.logger is not None:
-            self.logger.info("Collecting layer %s output min_range=%f, max_range=%f"
+            self.logger.info("Collecting layer %s min_range=%f, max_range=%f"
                              % (name, min_range, max_range))
-
 
 def _calibrate_quantized_sym(qsym, th_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
@@ -199,7 +205,7 @@ def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logge
     if not isinstance(data, DataIter):
         raise ValueError('Only supports data as a type of DataIter, while received type %s'
                          % str(type(data)))
-    mod._exec_group.execs[0].set_monitor_callback(collector.collect)
+    mod._exec_group.execs[0].set_monitor_callback(collector.collect, monitor_all=True)
     num_batches = 0
     num_examples = 0
     for batch in data:
@@ -252,7 +258,7 @@ def _smooth_distribution(p, eps=0.0001):
 
 
 # pylint: disable=line-too-long
-def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
+def _get_optimal_threshold(arr, quantized_dtype, num_bins=8001, num_quantized_bins=255):
     """Given a dataset, find the optimal threshold for quantizing it.
     The reference distribution is `q`, and the candidate distribution is `p`.
     `q` is a truncated version of the original distribution.
@@ -279,11 +285,13 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
     max_val = np.max(arr)
     th = max(abs(min_val), abs(max_val))
 
+    if min_val >= 0 and quantized_dtype in ['auto', 'uint8']:
+        # We need to move negative bins to positive bins to fit uint8 range.
+        num_quantized_bins = num_quantized_bins * 2 + 1
+
     hist, hist_edges = np.histogram(arr, bins=num_bins, range=(-th, th))
     zero_bin_idx = num_bins // 2
     num_half_quantized_bins = num_quantized_bins // 2
-    assert np.allclose(hist_edges[zero_bin_idx] + hist_edges[zero_bin_idx + 1],
-                       0, rtol=1e-5, atol=1e-7)
 
     thresholds = np.zeros(num_bins // 2 + 1 - num_quantized_bins // 2)
     divergence = np.zeros_like(thresholds)
@@ -344,7 +352,7 @@ def _get_optimal_threshold(arr, num_bins=8001, num_quantized_bins=255):
 # pylint: enable=line-too-long
 
 
-def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logger=None):
+def _get_optimal_thresholds(nd_dict, quantized_dtype, num_bins=8001, num_quantized_bins=255, logger=None):
     """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
     if stats is None:
         raise ImportError('scipy.stats is required for running entropy mode of calculating'
@@ -360,10 +368,13 @@ def _get_optimal_thresholds(nd_dict, num_bins=8001, num_quantized_bins=255, logg
     for name in layer_names:
         assert name in nd_dict
         min_val, max_val, min_divergence, opt_th = \
-            _get_optimal_threshold(nd_dict[name], num_bins=num_bins,
+            _get_optimal_threshold(nd_dict[name], quantized_dtype, num_bins=num_bins,
                                    num_quantized_bins=num_quantized_bins)
         del nd_dict[name]  # release the memory of ndarray
-        th_dict[name] = (-opt_th, opt_th)
+        if min_val < 0:
+            th_dict[name] = (-opt_th, opt_th)
+        else:
+            th_dict[name] = (0, opt_th)
         if logger is not None:
             logger.info('layer=%s, min_val=%f, max_val=%f, min_divergence=%f, optimal_threshold=%f'
                         % (name, min_val, max_val, min_divergence, opt_th))
@@ -407,7 +418,6 @@ def _load_params(params, logger=logging):
     else:
         raise ValueError('Unsupported params provided. Must be either a path to the param file or'
                          ' a pair of dictionaries representing arg_params and aux_params')
-
 
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
@@ -465,7 +475,8 @@ def quantize_model(sym, arg_params, aux_params,
         all the layers' outputs that need requantization will be collected.
     quantized_dtype : str
         The quantized destination type for input data. Currently support 'int8'
-        and 'uint8', default value is 'int8'.
+        , 'uint8' and 'auto'. 'auto' means automatically select output type according to calibration result.
+        Default value is 'int8'.
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -481,24 +492,16 @@ def quantize_model(sym, arg_params, aux_params,
         raise ValueError('excluded_sym_names must be a list of strings representing'
                          ' the names of the symbols that will not be quantized,'
                          ' while received type %s' % str(type(excluded_sym_names)))
-    excluded_syms = []
-    if excluded_sym_names is not None:
-        for sym_name in excluded_sym_names:
-            nodes = sym.get_internals()
-            idx = nodes.list_outputs().index(sym_name + '_output')
-            excluded_syms.append(nodes[idx])
-    logger.info('Quantizing symbol')
 
-    if quantized_dtype not in ('int8', 'uint8'):
+    logger.info('Quantizing symbol')
+    if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
-                         ' expected `int8` or `uint8`' % quantized_dtype)
-    qsym = _quantize_symbol(sym, excluded_symbols=excluded_syms,
+                         ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
+    qsym = _quantize_symbol(sym, excluded_symbols=excluded_sym_names,
                             offline_params=list(arg_params.keys()),
                             quantized_dtype=quantized_dtype)
 
-    logger.info('Quantizing parameters')
-    qarg_params = _quantize_params(qsym, arg_params)
-
+    th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
             raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
@@ -507,8 +510,6 @@ def quantize_model(sym, arg_params, aux_params,
         if not isinstance(calib_data, DataIter):
             raise ValueError('calib_data must be of DataIter type when calib_mode=%s,'
                              ' while received type %s' % (calib_mode, str(type(calib_data))))
-        if calib_layer is None:
-            calib_layer = lambda name: name.endswith('_output')
 
         mod = Module(symbol=sym, data_names=data_names, label_names=label_names, context=ctx)
         if len(calib_data.provide_label) > 0:
@@ -524,7 +525,7 @@ def quantize_model(sym, arg_params, aux_params,
                                                            logger=logger)
             logger.info('Collected layer outputs from FP32 model using %d examples' % num_examples)
             logger.info('Calculating optimal thresholds for quantization')
-            th_dict = _get_optimal_thresholds(nd_dict, logger=logger)
+            th_dict = _get_optimal_thresholds(nd_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict, num_examples = _collect_layer_output_min_max(
                 mod, calib_data, include_layer=calib_layer, max_num_examples=num_calib_examples,
@@ -536,5 +537,8 @@ def quantize_model(sym, arg_params, aux_params,
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)
         logger.info('Calibrating quantized symbol')
         qsym = _calibrate_quantized_sym(qsym, th_dict)
+
+    logger.info('Quantizing parameters')
+    qarg_params = _quantize_params(qsym, arg_params, th_dict)
 
     return qsym, qarg_params, aux_params

@@ -61,9 +61,9 @@ struct LRNParam : public dmlc::Parameter<LRNParam> {
 
   bool operator==(const LRNParam& other) const {
     return (this->nsize == other.nsize &&
-            fabs(this->alpha - other.alpha) < 1e-6 &&
-            fabs(this->beta  - other.beta)  < 1e-6 &&
-            fabs(this->knorm - other.knorm) < 1e-6);
+            std::fabs(this->alpha - other.alpha) < 1e-6 &&
+            std::fabs(this->beta  - other.beta)  < 1e-6 &&
+            std::fabs(this->knorm - other.knorm) < 1e-6);
   }
 };  // struct LRNParam
 

@@ -60,6 +60,8 @@ double name(double a, double b) { \
   return ::name(a, b); \
 }
 
+MXNET_UNARY_MATH_FUNC(erf)
+
 MXNET_UNARY_MATH_FUNC(exp)
 
 MXNET_UNARY_MATH_FUNC(expm1)

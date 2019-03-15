@@ -216,18 +216,65 @@
     The following components are provided under an Apache 2.0 license.
 
     1. MXNet Cpp-package - For details, /cpp-package/LICENSE
+         Copyright (c) 2015-2016 by Contributors 
     2. MXNet rcnn - For details, see, example/rcnn/LICENSE
-    3. scala-package - For details, see, scala-package/LICENSE
-    4. Warp-CTC - For details, see, src/operator/contrib/ctc_include/LICENSE
+         Copyright (c) 2014, 2015, The Regents of the University of California (Regents)
+    3. MXNet scala-package - For details, see, scala-package/LICENSE
+         Copyright (c) 2014, 2015, the respective contributors
+    4. Warp-CTC - For details, see, 3rdparty/ctc_include/LICENSE
+         Copyright 2015-2016, Baidu USA LLC.
     5. 3rdparty/dlpack - For details, see, 3rdparty/dlpack/LICENSE
+         Copyright 2017 by Contributors
     6. 3rdparty/dmlc-core - For details, see, 3rdparty/dmlc-core/LICENSE
+         Copyright (c) 2015 by Contributors 
+         Copyright 2015 by dmlc-core developers
+         Copyright by Contributors 
     7. 3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
+         Copyright (c) 2014-2016 by Contributors
+         Copyright by Contributors
     8. 3rdparty/tvm - For details, see, 3rdparty/tvm/LICENSE
-    9. 3rdparty/tvm/dmlc-core - For details, see, 3rdparty/tvm/dmlc-core/LICENSE
-    10. 3rdparty/tvm/nnvm - For details, see, 3rdparty/tvm/nnvm/LICENSE
+         Copyright (c) 2016-2018 by Contributors
+         Copyright 2018 by Contributors
+         Copyright (c) 2018 by Xilinx, Contributors
+    9. 3rdparty/tvm/dmlc-core - For details, see, 3rdparty/tvm/3rdparty/dmlc-core/LICENSE
+         Copyright (c) 2015 by Contributors 
+    10. 3rdparty/tvm/dlpack - For details, see, 3rdparty/tvm/3rdparty/dlpack/LICENSE
+         Copyright (c) 2015-2017 by Contributors
+         Copyright by Contributors
     11. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
+          Copyright 2015 Carnegie Mellon University
+          Copyright 2016, ps-lite developers
+          Copyright (c) 2015-2016 by Contributors
+          Copyright by Contributors
     12. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
+          Copyright (c) 2017-2018 Intel Corporation
+          Copyright 2016-2018 Intel Corporation
+          Copyright 2018 YANDEX LLC
     13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
+          Copyright [2007-2009] Neal Norwitz
+          Portions Copyright [2007-2009] Google Inc.
+    14. MXNet clojure-package - For details, see, contrib/clojure-package/LICENSE
+          Copyright 2018 by Contributors
+    15. MXNet R-package - For details, see, R-package/LICENSE
+          Copyright (c) 2015 by Contributors
+    16. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
+          Copyright 2015 Google Inc. All rights reserved.
+          Copyright 2016 Ismael Jimenez Martinez. All rights reserved.
+          Copyright 2017 Roman Lebedev. All rights reserved.
+    17. Dockerfiles - For details, see docker/Dockerfiles/License.md
+    18. MXNet Julia Package - For details, see julia/LICENSE.md
+          Copyright (c) 2015-2018 by Chiyuan Zhang
+    19. Benchdnn - For details, see 3rdparty/mkldnn/tests/benchdnn/README.md
+          Copyright 2017-2018 Intel Corporation
+    20. MXNet perl-package - For details, see perl-package/README
+    21. MXNet perl-package AI-MXNET - For details, see perl-package/AI-MXNet/README
+    22. MXNet perl-package AI-MXNET Gluon Contrib - For details, see perl-package/AI-MXNet-Gluon-Contrib/README
+    23. MXNet perl-package AI-MXNET Gluon ModelZoo - For details, see perl-package/AI-MXNet-Gluon-ModelZoo/README
+    24. MXNet perl-package AI-MXNETCAPI - For details, see perl-package/AI-MXNetCAPI/README
+    25. MXNet perl-package AI-NNVMCAPI - For details, see perl-package/AI-NNVMCAPI/README
+    26. Cephes Library Functions - For details, see src/operator/special_functions-inl.h
+          Copyright (c) 2015 by Contributors
+          Copyright 1984, 1987, 1992 by Stephen L. Moshier
 
 
     =======================================================================================
@@ -235,75 +282,111 @@
     =======================================================================================
 
     1. Fast R-CNN  - For details, see example/rcnn/LICENSE
+         Copyright (c) Microsoft Corporation
     2. Faster R-CNN - For details, see example/rcnn/LICENSE
+         Copyright (c) 2015 Microsoft Corporation
     3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
+         Copyright (c) 2017 Riddhiman Dasgupta, Sheng Zha
     4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
-    5. HalideIR - For details, see nnvm/tvm/HalideIR/LICENSE
+         Copyright (c) 1997-2016 Intel Corporation
+    6. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
+         Copyright (c) 2016 HalideIR contributors
+         Copyright (c) 2012-2014 MIT CSAIL, Google Inc., and other contributors
+         Copyright (c) 2016-2018 by Contributors
+    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
+         Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
+         Copyright (c) 2018 Open Neural Network Exchange
+    8. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
+         Copyright (c) Facebook, Inc. and Microsoft Corporation.
+    9. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
+         Licensed MIT © Zeno Rocha
+    10. clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
+         Licensed MIT © Zeno Rocha
 
 
     =======================================================================================
-    NVIDIA Licenses
+    3-clause BSD licenses
     =======================================================================================
 
-    1. Moderngpu
-    For details, see, src/operator/contrib/ctc_include/contrib/moderngpu/LICENSE
+    1. Xbyak - For details, see 3rdparty/mkldnn/src/cpu/xbyak/COPYRIGHT
+         Copyright (c) 2007 MITSUNARI Shigeo
+         Copyright 2016-2018 Intel Corporation
+    2. gtest - For details, see, 3rdparty/mkldnn/tests/gtests/gtest/LICENSE
+         Copyright 2005-2008, Google Inc.
+    3. Moderngpu - For details, see, 3rdparty/ctc_include/contrib/moderngpu/LICENSE
+         Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+    4. CUB Library - For details, see, 3rdparty/cub/LICENSE.TXT
+         Copyright (c) 2010-2011, Duane Merrill.  All rights reserved.
+         Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+    5. CUB mersenne.h - For details, see 3rdparty/cub/test/mersenne.h
+         Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
+    6. Googlemock - For details, see, 3rdparty/googletest/googlemock/LICENSE
+         Copyright 2006-2015, Google Inc.
+    7. Googletest - For details, see, 3rdparty/googletest/googletest/LICENSE
+         Copyright 2005-2015, Google Inc.
+    8. OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
+         Copyright (c) 2011, 2012 University of Houston System
 
-    /******************************************************************************
-    * Redistribution and use in source and binary forms, with or without
-    * modification, are permitted provided that the following conditions are met:
-    *     * Redistributions of source code must retain the above copyright
-    *       notice, this list of conditions and the following disclaimer.
-    *     * Redistributions in binary form must reproduce the above copyright
-    *       notice, this list of conditions and the following disclaimer in the
-    *       documentation and/or other materials provided with the distribution.
-    *     * Neither the name of the NVIDIA CORPORATION nor the
-    *       names of its contributors may be used to endorse or promote products
-    *       derived from this software without specific prior written permission.
-    *
-    * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-    * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-    * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-    * ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY
-    * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-    * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-    *
-    ******************************************************************************/
 
-    2. CUB Library
-    For details, see, 3rdparty/cub/LICENSE.TXT
+    =======================================================================================
+    2-clause BSD licenses
+    =======================================================================================
 
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are met:
-       *  Redistributions of source code must retain the above copyright
-          notice, this list of conditions and the following disclaimer.
-       *  Redistributions in binary form must reproduce the above copyright
-          notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
-       *  Neither the name of the NVIDIA CORPORATION nor the
-          names of its contributors may be used to endorse or promote products
-          derived from this software without specific prior written permission.
+    1. Sphinx JavaScript utilties for the full-text search - For details, see, docs/_static/searchtools_custom.js
+         Copyright (c) 2007-2017 by the Sphinx team
+    2. blockingconcurrentqueue.h - For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
+         ©2015-2016 Cameron Desrochers
+    3. concurrentqueue.h - For details, see, 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
+         Copyright (c) 2013-2016, Cameron Desrochers.
+    4. MSCOCO Toolbox - For details, see, example/ssd/dataset/pycocotools/coco.py
+         Code written by Piotr Dollar and Tsung-Yi Lin, 2014.
+    5. PyBind11 FindEigen3.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake
+         Copyright (c) 2006, 2007 Montel Laurent, <montel@kde.org>
+         Copyright (c) 2008, 2009 Gael Guennebaud, <g.gael@free.fr>
+         Copyright (c) 2009 Benoit Jacob <jacob.benoit.1@gmail.com>
+    6. PyBind11 FindPythonLibsNew.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
+         Copyright 2001-2009 Kitware, Inc.
+         Copyright 2012 Continuum Analytics, Inc.
 
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-    DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE FOR ANY
-    DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
     =======================================================================================
     Other Licenses
     =======================================================================================
 
-    1. Caffe
-    For details, see, example/rcnn/LICENSE
+    1. Caffe - For details, see, example/rcnn/LICENSE
+         Copyright (c) 2014, 2015, The Regents of the University of California (Regents)
+         Copyright (c) 2014, 2015, the respective contributors
+    2. pool.h - For details, see, src/operator/nn/pool.h
+         Copyright (c) 2014-2017 The Regents of the University of California (Regents)
+         Copyright (c) 2014-2017, the respective contributors
+    3. pool.cuh - For details, see, src/operator/nn/pool.cuh
+         Copyright (c) 2014-2017 The Regents of the University of California (Regents)
+         Copyright (c) 2014-2017, the respective contributors
+    4. im2col.h - For details, see, src/operator/nn/im2col.h
+         Copyright (c) 2014-2017 The Regents of the University of California (Regents)
+         Copyright (c) 2014-2017, the respective contributors
+    5. im2col.cuh - For details, see, src/operator/nn/im2col.cuh
+         Copyright (c) 2014-2017 The Regents of the University of California (Regents)
+         Copyright (c) 2014-2017, the respective contributors
+
+    6. deformable_im2col.h - For details, see, src/operator/contrib/nn/deformable_im2col.h
+         Copyright (c) 2014-2017 The Regents of the University of California (Regents)
+         Copyright (c) 2014-2017, the respective contributors
+
+    7. deformable_im2col.cuh - For details, see, src/operator/contrib/nn/deformable_im2col.cuh
+         Copyright (c) 2014-2017 The Regents of the University of California (Regents)
+         Copyright (c) 2014-2017, the respective contributors
+
+
+    COPYRIGHT
+
+    Caffe uses a shared copyright model: each contributor holds copyright over
+    their contributions to Caffe. The project versioning records all such
+    contribution and copyright details. If a contributor wants to further mark
+    their specific copyright on a particular contribution, they should indicate
+    their copyright solely in the commit message of the change when it is
+    committed.
 
     LICENSE
 
@@ -335,8 +418,9 @@
 
     =======================================================================================
 
-    2. MS COCO API
+    8. MS COCO API
     For details, see, example/rcnn/LICENSE
+    Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
@@ -364,155 +448,15 @@
 
     =======================================================================================
 
-    3. Sphinx JavaScript utilties for the full-text search
-    For details, see, docs/_static/searchtools_custom.js
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are
-    met:
-
-    * Redistributions of source code must retain the above copyright
-     notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above copyright
-     notice, this list of conditions and the following disclaimer in the
-     documentation and/or other materials provided with the distribution.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-    HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-    =======================================================================================
-
-    4. FindCrypto.cmake
-    For details, see, 3rdparty/dmlc-core/cmake/Modules/FindCrypto.cmake,
-    Redistribution and use is allowed according to the terms of the BSD license.
-
-    =======================================================================================
-
-    5. Googlemock
-    For details, see, 3rdparty/googletest/googlemock/LICENSE
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are
-    met:
-
-        * Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-        * Redistributions in binary form must reproduce the above
-    copyright notice, this list of conditions and the following disclaimer
-    in the documentation and/or other materials provided with the
-    distribution.
-        * Neither the name of Google Inc. nor the names of its
-    contributors may be used to endorse or promote products derived from
-    this software without specific prior written permission.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-    =======================================================================================
-
-    6. Googletest
-    For details, see, 3rdparty/googletest/googletest/LICENSE
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions are
-    met:
-
-        * Redistributions of source code must retain the above copyright
-    notice, this list of conditions and the following disclaimer.
-        * Redistributions in binary form must reproduce the above
-    copyright notice, this list of conditions and the following disclaimer
-    in the documentation and/or other materials provided with the
-    distribution.
-        * Neither the name of Google Inc. nor the names of its
-    contributors may be used to endorse or promote products derived from
-    this software without specific prior written permission.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-    OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-    LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-    DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-    THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-    =======================================================================================
-
-    7. OpenMP Testsuite
-    For details, see, 3rdparty/openmp/testsuite/LICENSE
-
-    Redistribution and use in source and binary forms, with or without
-    modification, are permitted provided that the following conditions
-    are met:
-
-    o Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-
-    o Redistributions in binary form must reproduce the above copyright
-      notice, this list of conditions and the following disclaimer in the
-      documentation and/or other materials provided with the distribution.
-
-    o Neither the name of the University of Houston System nor the names of its
-      contributors may be used to
-      endorse or promote products derived from this software without specific
-      prior written permission.
-
-    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-    A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-    HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-    SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
-    TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
-    PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-    LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
-    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-    =======================================================================================
-
-    8. Semaphore implementation in blockingconcurrentqueue.h
+    9. Semaphore implementation in blockingconcurrentqueue.h
     This file uses a semaphore implementation under the terms of its separate zlib license.
     For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
+    Copyright Jeff Preshing
 
     =======================================================================================
 
-    9. blockingconcurrentqueue.h
-    This file is Distributed under the terms of the simplified BSD license.
-    For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
-
-    =======================================================================================
-
-    10. concurrentqueue.h
-    This file is Distributed under the terms of the simplified BSD license.
-    For details, see, 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
-
-    =======================================================================================
-
-    11. ONNX Export module
-    For details, see, python/mxnet/contrib/onnx/_export/LICENSE
+    10. ONNX Export module
+    For details, see, python/mxnet/contrib/onnx/mx2onnx/LICENSE
 
     # Licensed to the Apache Software Foundation (ASF) under one
     # or more contributor license agreements.  See the NOTICE file
@@ -559,4 +503,206 @@
     #  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+    =======================================================================================
 
+    11. ONNX python bindings
+    For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/LICENSE
+      Copyright (c) 2015-2017 Wenzel Jakob <wenzel.jakob@epfl.ch>, All rights reserved.
+      Copyright (c) 2016 Trent Houliston <trent@houliston.me> and Wenzel Jakob <wenzel.jakob@epfl.ch>
+      Copyright (c) 2016-2017 Jason Rhinelander <jason@imaginary.ca>
+      Copyright (c) 2016 Klemens Morgenstern <klemens.morgenstern@ed-chemnitz.de> and Wenzel Jakob <wenzel.jakob@epfl.ch>
+      Copyright (c) 2017 Henry F. Schreiner
+      Copyright (c) 2016 Sergey Lyskov and Wenzel Jakob
+      Copyright (c) 2016 Ben North <ben@redfrontdoor.org>
+      Copyright (c) 2016 Klemens D. Morgenstern
+      Copyright (c) 2016 Pim Schellart <P.Schellart@princeton.edu>
+      Copyright (c) 2016 Ivan Smirnov <i.s.smirnov@gmail.com>
+      Copyright (c) 2016 Sergey Lyskov
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this
+       list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+
+    3. Neither the name of the copyright holder nor the names of its contributors
+       may be used to endorse or promote products derived from this software
+       without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    You are under no obligation whatsoever to provide any bug fixes, patches, or
+    upgrades to the features, functionality or performance of the source code
+    ("Enhancements") to anyone; however, if you choose to make your Enhancements
+    available either publicly, or directly to the author of this software, without
+    imposing a separate written license agreement for such Enhancements, then you
+    hereby grant the following license: a non-exclusive, royalty-free perpetual
+    license to install, use, modify, prepare derivative works, incorporate into
+    other computer software, distribute, and sublicense such enhancements or
+    derivative works thereof, in binary and source code form.
+
+    =======================================================================================
+
+    12. Clang
+    For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/clang/LICENSE.TXT
+
+    LLVM Release License
+    University of Illinois/NCSA
+    Open Source License
+
+    Copyright (c) 2007-2012 University of Illinois at Urbana-Champaign.
+    All rights reserved.
+
+    Developed by:
+
+        LLVM Team
+
+        University of Illinois at Urbana-Champaign
+
+        http://llvm.org
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal with
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+    of the Software, and to permit persons to whom the Software is furnished to do
+    so, subject to the following conditions:
+
+        * Redistributions of source code must retain the above copyright notice,
+          this list of conditions and the following disclaimers.
+
+        * Redistributions in binary form must reproduce the above copyright notice,
+          this list of conditions and the following disclaimers in the
+          documentation and/or other materials provided with the distribution.
+
+        * Neither the names of the LLVM Team, University of Illinois at
+          Urbana-Champaign, nor the names of its contributors may be used to
+          endorse or promote products derived from this Software without specific
+          prior written permission.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+    CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
+    SOFTWARE.
+
+    The LLVM software contains code written by third parties.  Such software will
+    have its own individual LICENSE.TXT file in the directory in which it appears.
+    This file will describe the copyrights, license, and restrictions which apply
+    to that code.
+
+    The disclaimer of warranty in the University of Illinois Open Source License
+    applies to all code in the LLVM Distribution, and nothing in any of the
+    other licenses gives permission to use the names of the LLVM Team or the
+    University of Illinois to endorse or promote products derived from this
+    Software.
+
+    The following pieces of software have additional or alternate copyrights,
+    licenses, and/or restrictions:
+
+    Program             Directory
+    -------             ---------
+    <none yet>
+
+    =======================================================================================
+
+    13. MKL BLAS
+    For details, see, [Intel® Simplified license](https://software.intel.com/en-us/license/intel-simplified-software-license) and MKLDNN_README.md
+
+    Copyright (c) 2018 Intel Corporation.
+
+    Use and Redistribution.  You may use and redistribute the software (the “Software”), without modification, provided the following conditions are met:
+
+    * Redistributions must reproduce the above copyright notice and the following terms of use in the Software and in the documentation and/or other materials provided with the distribution.
+
+    * Neither the name of Intel nor the names of its suppliers may be used to endorse or promote products derived from this Software without specific prior written permission.
+
+    * No reverse engineering, decompilation, or disassembly of this Software is permitted.
+
+    Limited patent license.  Intel grants you a world-wide, royalty-free, non-exclusive license under patents it now or hereafter owns or controls to make, have made, use, import, offer to sell and sell (“Utilize”) this Software, but solely to the extent that any such patent is necessary to Utilize the Software alone. The patent license shall not apply to any combinations which include this software.  No hardware per se is licensed hereunder.
+
+    Third party and other Intel programs.  “Third Party Programs” are the files listed in the “third-party-programs.txt” text file that is included with the Software and may include Intel programs under separate license terms. Third Party Programs, even if included with the distribution of the Materials, are governed by separate license terms and those license terms solely govern your use of those programs. 
+
+    DISCLAIMER.  THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT ARE DISCLAIMED. THIS SOFTWARE IS NOT INTENDED FOR USE IN SYSTEMS OR APPLICATIONS WHERE FAILURE OF THE SOFTWARE MAY CAUSE PERSONAL INJURY OR DEATH AND YOU AGREE THAT YOU ARE FULLY RESPONSIBLE FOR ANY CLAIMS, COSTS, DAMAGES, EXPENSES, AND ATTORNEYS’ FEES ARISING OUT OF ANY SUCH USE, EVEN IF ANY CLAIM ALLEGES THAT INTEL WAS NEGLIGENT REGARDING THE DESIGN OR MANUFACTURE OF THE MATERIALS.
+
+    LIMITATION OF LIABILITY. IN NO EVENT WILL INTEL BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. YOU AGREE TO INDEMNIFY AND HOLD INTEL HARMLESS AGAINST ANY CLAIMS AND EXPENSES RESULTING FROM YOUR USE OR UNAUTHORIZED USE OF THE SOFTWARE.
+
+    No support.  Intel may make changes to the Software, at any time without notice, and is not obligated to support, update or provide training for the Software.
+
+    Termination. Intel may terminate your right to use the Software in the event of your breach of this Agreement and you fail to cure the breach within a reasonable period of time.
+
+    Feedback.  Should you provide Intel with comments, modifications, corrections, enhancements or other input (“Feedback”) related to the Software Intel will be free to use, disclose, reproduce, license or otherwise distribute or exploit the Feedback in its sole discretion without any obligations or restrictions of any kind, including without limitation, intellectual property rights or licensing obligations.
+
+    Compliance with laws.  You agree to comply with all relevant laws and regulations governing your use, transfer, import or export (or prohibition thereof) of the Software.
+
+    Governing law.  All disputes will be governed by the laws of the United States of America and the State of Delaware without reference to conflict of law principles and subject to the exclusive jurisdiction of the state or federal courts sitting in the State of Delaware, and each party agrees that it submits to the personal jurisdiction and venue of those courts and waives any objections. The United Nations Convention on Contracts for the International Sale of Goods (1980) is specifically excluded and will not apply to the Software.
+
+    *Other names and brands may be claimed as the property of others.
+
+    =======================================================================================
+
+    14. FindJeMalloc.cmake
+    For details, see, cmake/Modules/FindJeMalloc.cmake
+
+    Licensed to the Apache Software Foundation (ASF) under one
+    or more contributor license agreements.  See the NOTICE file
+    distributed with this work for additional information
+    regarding copyright ownership.  The ASF licenses this file
+    to you under the Apache License, Version 2.0 (the
+    "License"); you may not use this file except in compliance
+    with the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing,
+    software distributed under the License is distributed on an
+    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+    KIND, either express or implied.  See the License for the
+    specific language governing permissions and limitations
+    under the License.
+
+
+    Copyright (c)      2014 Thomas Heller
+    Copyright (c) 2007-2012 Hartmut Kaiser
+    Copyright (c) 2010-2011 Matt Anderson
+    Copyright (c) 2011      Bryce Lelbach
+
+    Distributed under the Boost Software License, Version 1.0.
+    Boost Software License - Version 1.0 - August 17th, 2003
+
+    Permission is hereby granted, free of charge, to any person or organization
+    obtaining a copy of the software and accompanying documentation covered by
+    this license (the "Software") to use, reproduce, display, distribute,
+    execute, and transmit the Software, and to prepare derivative works of the
+    Software, and to permit third-parties to whom the Software is furnished to
+    do so, all subject to the following:
+
+    The copyright notices in the Software and this entire statement, including
+    the above license grant, this restriction and the following disclaimer,
+    must be included in all copies of the Software, in whole or in part, and
+    all derivative works of the Software, unless such copies or derivative
+    works are solely in the form of machine-executable object code generated by
+    a source language processor.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT
+    SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
+    FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.

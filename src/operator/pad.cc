@@ -668,13 +668,13 @@ namespace mxnet {
 namespace op {
 template <>
 Operator *CreateOp<cpu>(PadParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new PadOp<cpu, DType>(param); })
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *PadProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *PadProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                     std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }

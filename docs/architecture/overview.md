@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet System Architecture
 
 ![System Overview](https://raw.githubusercontent.com/dmlc/dmlc.github.io/master/img/mxnet/system/overview.png)
@@ -284,9 +301,9 @@ The `OperatorProperty` interface consists of:
 * **InferShape:**
 
 ```c++
-           virtual bool InferShape(std::vector<TShape> *in_shape,
-                                   std::vector<TShape> *out_shape,
-                                   std::vector<TShape> *aux_shape) const = 0;
+           virtual bool InferShape(mxnet::ShapeVector *in_shape,
+                                   mxnet::ShapeVector *out_shape,
+                                   mxnet::ShapeVector *aux_shape) const = 0;
 ```
 
 This interface has two purposes:
@@ -305,9 +322,9 @@ MXNet defines two interfaces to achieve this:
 
 ```c++
            virtual std::vector<ResourceRequest> ForwardResource(
-               const std::vector<TShape> &in_shape) const;
+               const mxnet::ShapeVector &in_shape) const;
            virtual std::vector<ResourceRequest> BackwardResource(
-               const std::vector<TShape> &in_shape) const;
+               const mxnet::ShapeVector &in_shape) const;
 ```
   The `ResourceRequest` structure (in `resource.h`) currently contains only a type flag:
 
@@ -456,7 +473,7 @@ To do so, you could define a `ConvolutionParam` structure, as follows:
 ```c++
     #include <dmlc/parameter.h>
     struct ConvolutionParam : public dmlc::Parameter<ConvolutionParam> {
-      TShape kernel, stride, pad;
+      mxnet::TShape kernel, stride, pad;
       uint32_t num_filter, num_group, workspace;
       bool no_bias;
     };
@@ -565,10 +582,10 @@ must be provided before any calculation occurs.
 let's check input data shape consistency and provide output shape.
 
 ```cpp
-    typedef TShape (*UnaryShapeFunction)(const TShape& src,
+    typedef mxnet::TShape (*UnaryShapeFunction)(const mxnet::TShape& src,
                                          const EnvArguments& env);
-    typedef TShape (*BinaryShapeFunction)(const TShape&                                         const TShape& rhs,lhs,
-
+    typedef mxnet::TShape (*BinaryShapeFunction)(const mxnet::TShape& lhs,
+                                          const mxnet::TShape& rhs,
                                           const EnvArguments& env);
 ```
 You can use `mshadow::TShape` to check input data shape and designate output data shape.
@@ -594,9 +611,10 @@ In our smooth l1 loss example, it's okay to use the default behavior whereby the
 Written explicitly, it is:
 
 ```cpp
-    inline TShape SmoothL1Shape_(const TShape& src,
+    inline mxnet::TShape SmoothL1Shape_(const mxnet::TShape& src,
                                  const EnvArguments& env) {
-      return TShape(src);
+      return mxnet::TShape(src);
+    }
 ```
 
 ### Define Functions

@@ -83,7 +83,8 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       (outputs[0].type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
       << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
+    // VectorDot() with fp16 is not supported in mshadow. Dispatch to dot() instead.
+    if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1 && inputs[0].type_flag_ != kFloat16) {
       CHECK_NE(req[0], kAddTo) << "AddTo not yet supported";
       Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
       VectorDot(out,
@@ -791,6 +792,14 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
               s, num_threads, data_out.dptr<DType>());
         }
         num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+        bool dynamic = false;
+        const dim_t large_matrix_threshold = 1024 * 10;
+        if (data_out.shape_[0] > large_matrix_threshold) {
+          dynamic = true;
+          // each unit of work processes at least 1024 elements in the output
+          const dim_t unit_work_per_thread = 1024;
+          num_threads = data_out.Size() / unit_work_per_thread;
+        }
         dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
         if (trans_lhs) {
           mxnet_op::Kernel<DotCsrTransDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
@@ -798,10 +807,17 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
               col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
               lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
         } else {
-          mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
-              data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-              col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
-              data_out.shape_[0], data_out.shape_[1]);
+          if (dynamic) {
+            mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::LaunchDynamic(s, num_threads,
+                data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
+                data_out.shape_[0], data_out.shape_[1]);
+          } else {
+            mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
+                data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
+                data_out.shape_[0], data_out.shape_[1]);
+          }
         }
       });
     });
@@ -1184,33 +1200,37 @@ inline void DotDnsCsrDnsImpl(const OpContext& ctx, const cpu& cpu_dev,
 }
 
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_attrs,
-                     std::vector<TShape> *out_attrs) {
+                     mxnet::ShapeVector *in_attrs,
+                     mxnet::ShapeVector *out_attrs) {
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
   } else {
     bool Ta = param.transpose_a, Tb = param.transpose_b;
-    TShape L[2], R[2];
+    mxnet::TShape L[2], R[2];
     if (Ta) {
       L[0] = mshadow::Shape1(lshape[0]);
-      L[1] = lshape.ndim() > 1 ? TShape(&lshape[1], &lshape[lshape.ndim()]) : TShape(1);
+      L[1] = lshape.ndim() > 1 ?
+             mxnet::TShape(&lshape[1], &lshape[lshape.ndim()]) : mxnet::TShape(1);
     } else {
-      L[0] = lshape.ndim() > 1 ? TShape(&lshape[0], &lshape[lshape.ndim()-1]) : TShape(1);
+      L[0] = lshape.ndim() > 1 ?
+             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1);
       L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
     }
     if (Tb) {
-      R[0] = rshape.ndim() > 1 ? TShape(&rshape[0], &rshape[rshape.ndim()-1]) : TShape(1);
+      R[0] = rshape.ndim() > 1 ?
+             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1);
       R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
     } else {
       R[0] = mshadow::Shape1(rshape[0]);
-      R[1] = rshape.ndim() > 1 ? TShape(&rshape[1], &rshape[rshape.ndim()]) : TShape(1);
+      R[1] = rshape.ndim() > 1 ?
+             mxnet::TShape(&rshape[1], &rshape[rshape.ndim()]) : mxnet::TShape(1);
     }
 
     if (L[!Ta].Size() != 0 && R[Tb].Size() != 0) {
@@ -1220,7 +1240,7 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
     std::vector<index_t> buf;
     if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
     if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
-    TShape oshape(buf.begin(), buf.end());
+    mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
   return true;
@@ -1452,13 +1472,13 @@ void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
   if (lshape.ndim() == 3 && rshape.ndim() == 3) {
     CHECK(lshape[0] == rshape[0])
       << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape

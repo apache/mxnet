@@ -88,16 +88,7 @@ class Dataset(object):
         Dataset
             The transformed dataset.
         """
-        def base_fn(x, *args):
-            if args:
-                return (fn(x),) + args
-            return fn(x)
-        return self.transform(base_fn, lazy)
-
-    def _fork(self):
-        """Protective operations required when launching multiprocess workers."""
-        # for non file descriptor related datasets, just skip
-        pass
+        return self.transform(_TransformFirstClosure(fn), lazy)
 
 
 class SimpleDataset(Dataset):
@@ -133,6 +124,16 @@ class _LazyTransformDataset(Dataset):
             return self._fn(*item)
         return self._fn(item)
 
+
+class _TransformFirstClosure(object):
+    """Use callable object instead of nested function, it can be pickled."""
+    def __init__(self, fn):
+        self._fn = fn
+
+    def __call__(self, x, *args):
+        if args:
+            return (self._fn(x),) + args
+        return self._fn(x)
 
 class ArrayDataset(Dataset):
     """A dataset that combines multiple dataset-like objects, e.g.
@@ -180,9 +181,6 @@ class RecordFileDataset(Dataset):
     def __init__(self, filename):
         self.idx_file = os.path.splitext(filename)[0] + '.idx'
         self.filename = filename
-        self._fork()
-
-    def _fork(self):
         self._record = recordio.MXIndexedRecordIO(self.idx_file, self.filename, 'r')
 
     def __getitem__(self, idx):

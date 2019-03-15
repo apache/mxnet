@@ -98,6 +98,37 @@ def test_mkldnn_engine_threading():
         assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
         break
 
+@with_seed()
+def test_mkldnn_reshape():
+    def test_reshape_after_conv(dst_shape):
+        shape = (1,1,4,4)
+        data = mx.symbol.Variable('data')
+        conv = mx.symbol.Convolution(data=data, num_filter=16, kernel=(1, 1), pad=(0, 0), stride=(1, 1))
+        res = mx.symbol.reshape(data=conv, shape=dst_shape)
+        exe = res.simple_bind(mx.cpu(), data=shape, grad_req='null')
+
+        val1 = np.random.uniform(-1, 1, (4, 4))
+        val2 = np.random.uniform(-1, 1, (1, 1, 1, 1))
+        val3 = np.random.uniform(-1 ,1, (1))
+
+        exe.arg_arrays[0][:] = val1
+        exe.arg_arrays[1][:] = val2
+        exe.arg_arrays[2][:] = val3
+        outputs = exe.forward(is_train=False)[0].asnumpy()
+
+        conv_exe = conv.simple_bind(mx.cpu(), data=shape, grad_req='null')
+        conv_exe.arg_arrays[0][:] = val1
+        conv_exe.arg_arrays[1][:] = val2
+        conv_exe.arg_arrays[2][:] = val3
+        data_npy = conv_exe.forward(is_train=False)[0].asnumpy()
+        assert_almost_equal(outputs, data_npy.reshape(dst_shape))
+
+
+    # Test mkldnn reshape (Using shape)
+    test_cases = [(256), (16, 16), (4, 4, 16), (4, 4, 4, 4)]
+    for test_case in test_cases:
+        test_reshape_after_conv(test_case)
+
 
 @with_seed()
 def test_reshape_before_conv():
@@ -281,7 +312,6 @@ def test_pooling():
         check_pooling_training(stype)
 
 
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/12377")
 @with_seed()
 def test_activation():
     def check_activation_training(stype):
@@ -292,13 +322,14 @@ def test_activation():
             in_location = [mx.nd.array(data_tmp).tostype(stype)]
 
             test = mx.symbol.Activation(data, act_type="relu")
-            check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
+            check_numeric_gradient(test, in_location, numeric_eps=1e-5, rtol=0.16, atol=1e-4)
 
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_activation_training(stype)
 
 
+@with_seed()
 def test_convolution():
     def check_convolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10)]:
@@ -323,6 +354,8 @@ def test_convolution():
         check_convolution_training(stype)
 
 
+@with_seed()
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10)]:
@@ -380,6 +413,21 @@ def test_fullyconnected():
     stypes = ['row_sparse', 'default']
     for stype in stypes:
         check_fullyconnected_training(stype)
+
+def test_softmax_with_large_inputs():
+    def softmax_forward(input_data, true_output):
+        data = mx.sym.Variable('data')
+        out1 = data.softmax(axis=1)
+        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1.forward()[0].wait_to_read()
+        ndarr = exec1.outputs[0][0][0][0]
+        nparr = ndarr.asnumpy()
+        assert_almost_equal(nparr, true_output, rtol=1e-5, atol=1e-5)
+
+    softmax_forward(mx.nd.array([[[[-1e30,-1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[1e30,1e30]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
+    softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
 def test_non_mkldnn_fcomputeex():

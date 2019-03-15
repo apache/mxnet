@@ -33,6 +33,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "jni_helper_func.h"
 
 JavaVM *_jvm;
@@ -420,6 +421,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyFromCPU
   int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
                                      static_cast<const mx_float *>(sourcePtr), arrSize);
   env->ReleaseFloatArrayElements(sourceArr, sourcePtr, 0);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFloat64NDArraySyncCopyFromCPU
+  (JNIEnv *env, jobject obj, jlong arrayPtr, jdoubleArray sourceArr, jint arrSize) {
+  jdouble *sourcePtr = env->GetDoubleArrayElements(sourceArr, NULL);
+  int ret = MXNDArraySyncCopyFromCPU(reinterpret_cast<NDArrayHandle>(arrayPtr),
+                                     static_cast<const double *>(sourcePtr), arrSize);
+  env->ReleaseDoubleArrayElements(sourceArr, sourcePtr, 0);
   return ret;
 }
 
@@ -1581,26 +1591,29 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferShape
   env->ReleaseIntArrayElements(jargShapeData, argShapeData, 0);
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
-  jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+  if (ret == 0) {
+    jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+    jmethodID listAppend = env->GetMethodID(listClass,
+      "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
 
-  if (FillSymbolInferShape(env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
-    // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-    return -1;
-  }
-  if (FillSymbolInferShape(
-        env, listAppend, joutShapeData, outShapeSize, outShapeNdim, outShapeData)) {
-    // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-    return -1;
-  }
-  if (FillSymbolInferShape(
-        env, listAppend, jauxShapeData, auxShapeSize, auxShapeNdim, auxShapeData)) {
-    // TODO(Yizhi): out of memory error thrown, return a specific error code ?
-    return -1;
-  }
+    if (FillSymbolInferShape(
+          env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {
+      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+      return -1;
+    }
+    if (FillSymbolInferShape(
+          env, listAppend, joutShapeData, outShapeSize, outShapeNdim, outShapeData)) {
+      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+      return -1;
+    }
+    if (FillSymbolInferShape(
+          env, listAppend, jauxShapeData, auxShapeSize, auxShapeNdim, auxShapeData)) {
+      // TODO(Yizhi): out of memory error thrown, return a specific error code ?
+      return -1;
+    }
 
-  SetIntField(env, jcomplete, complete);
+    SetIntField(env, jcomplete, complete);
+  }
 
   // release allocated memory
   if (jkeys != NULL) {

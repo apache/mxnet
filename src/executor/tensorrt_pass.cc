@@ -31,7 +31,7 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/operator.h>
 #include <nnvm/graph_attr_types.h>
-#include <onnx/onnx.pb.h>
+#include <onnx/onnx_pb.h>
 
 #include "../operator/contrib/nnvm_to_onnx-inl.h"
 #include "./exec_pass.h"
@@ -324,10 +324,10 @@ nnvm::NodePtr ConvertNnvmGraphToOnnx(const nnvm::Graph &g,
                                      std::unordered_map<std::string, NDArray>* const params_map) {
   auto p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get("_trt_op");
-  op::TRTParam trt_param = op::nnvm_to_onnx::ConvertNnvmGraphToOnnx(g, params_map);
-  p->attrs.dict["serialized_output_map"] = trt_param.serialized_output_map;
-  p->attrs.dict["serialized_input_map"]  = trt_param.serialized_input_map;
-  p->attrs.dict["serialized_onnx_graph"] = trt_param.serialized_onnx_graph;
+  op::ONNXParam onnx_param = op::nnvm_to_onnx::ConvertNnvmGraphToOnnx(g, params_map);
+  p->attrs.dict["serialized_output_map"] = onnx_param.serialized_output_map;
+  p->attrs.dict["serialized_input_map"]  = onnx_param.serialized_input_map;
+  p->attrs.dict["serialized_onnx_graph"] = onnx_param.serialized_onnx_graph;
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
@@ -343,17 +343,17 @@ Graph UpdateSubgraphAttrs(Graph&& subgraph, const Graph& g,
   const auto& idx     = g.indexed_graph();
   const auto& sub_idx = subgraph.indexed_graph();
 
-  const auto& shape               = g.GetAttr<nnvm::ShapeVector>("shape");
+  const auto& shape               = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& dtype               = g.GetAttr<nnvm::DTypeVector>("dtype");
   const auto& storage_type        = g.GetAttr<StorageTypeVector>("storage_type");
-  const auto& shape_inputs        = g.GetAttr<nnvm::ShapeVector>("shape_inputs");
+  const auto& shape_inputs        = g.GetAttr<mxnet::ShapeVector>("shape_inputs");
   const auto& dtype_inputs        = g.GetAttr<nnvm::DTypeVector>("dtype_inputs");
   const auto& storage_type_inputs = g.GetAttr<StorageTypeVector>("storage_type_inputs");
 
-  nnvm::ShapeVector sub_shape(sub_idx.num_node_entries());
+  mxnet::ShapeVector sub_shape(sub_idx.num_node_entries());
   nnvm::DTypeVector sub_dtype(sub_idx.num_node_entries());
   StorageTypeVector sub_storage_type(sub_idx.num_node_entries());
-  nnvm::ShapeVector sub_shape_inputs(sub_idx.input_nodes().size());
+  mxnet::ShapeVector sub_shape_inputs(sub_idx.input_nodes().size());
   nnvm::DTypeVector sub_dtype_inputs(sub_idx.input_nodes().size());
   StorageTypeVector sub_storage_type_inputs(sub_idx.input_nodes().size());
 

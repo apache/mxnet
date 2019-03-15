@@ -28,18 +28,26 @@
 namespace mxnet {
 namespace op {
 template <>
-Operator *CreateOp<cpu>(SequenceLastParam param, int dtype) {
-  Operator *op = NULL;
-  MSHADOW_TYPE_SWITCH(dtype, DType,
-                           { op = new SequenceLastOp<cpu, DType>(param); })
+Operator *CreateOp<cpu>(SequenceLastParam param, int dtype, int itype) {
+  Operator *op = nullptr;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+      MSHADOW_TYPE_SWITCH(itype, IType, {
+          op = new SequenceLastOp<cpu, DType, IType>(param);
+        });
+    });
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
-                                             std::vector<TShape> *in_shape,
+                                             mxnet::ShapeVector *in_shape,
                                              std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  if (in_type->size() >= 2 && (*in_type)[1] != -1) {
+    DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
+  }
+
+  // sequence_length not passed in, so fall back to using input array dtype for second argument
+  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[0]);
 }
 
 DMLC_REGISTER_PARAMETER(SequenceLastParam);

@@ -26,23 +26,23 @@ from mxnet.test_utils import *
 import unittest
 
 def test_box_nms_op():
-    def test_box_nms_forward(data, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1, cid=0,
-                         force=False, in_format='corner', out_format='corner'):
+    def test_box_nms_forward(data, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1, cid=0, bid=-1,
+                             force=False, in_format='corner', out_format='corner'):
         for dtype in ['float16', 'float32', 'float64']:
             data = mx.nd.array(data, dtype=dtype)
             out = mx.contrib.nd.box_nms(data, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
-                                    coord_start=coord, score_index=score, id_index=cid,
-                                    force_suppress=force, in_format=in_format, out_format=out_format)
+                                        coord_start=coord, score_index=score, id_index=cid, background_id=bid,
+                                        force_suppress=force, in_format=in_format, out_format=out_format)
             assert_almost_equal(out.asnumpy(), expected.astype(dtype), rtol=1e-3, atol=1e-3)
 
     def test_box_nms_backward(data, grad, expected, thresh=0.5, valid=0, topk=-1, coord=2, score=1,
-                          cid=0, force=False, in_format='corner', out_format='corner'):
+                              cid=0, bid=-1, force=False, in_format='corner', out_format='corner'):
         in_var = mx.sym.Variable('data')
         arr_data = mx.nd.array(data)
         arr_grad = mx.nd.empty(arr_data.shape)
         op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
-                                coord_start=coord, score_index=score, id_index=cid,
-                                force_suppress=force, in_format=in_format, out_format=out_format)
+                                    coord_start=coord, score_index=score, id_index=cid, background_id=bid,
+                                    force_suppress=force, in_format=in_format, out_format=out_format)
         exe = op.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(grad))
@@ -91,8 +91,8 @@ def test_box_nms_op():
              [0, 0.3, 0.1, 0.1, 0.14, 0.14], [2, 0.6, 0.5, 0.5, 0.7, 0.8]]
 
     # case1
-    force=True
-    thresh=0.5
+    force = True
+    thresh = 0.5
     expected = [[2, 0.6, 0.5, 0.5, 0.7, 0.8], [0, 0.5, 0.1, 0.1, 0.2, 0.2],
                 [0, 0.3, 0.1, 0.1, 0.14, 0.14], [-1, -1, -1, -1, -1, -1]]
     grad = np.random.rand(4, 6)
@@ -176,6 +176,29 @@ def test_box_nms_op():
     test_box_nms_forward(np.array(boxes8), np.array(expected8), force=force, thresh=thresh, valid=valid, topk=topk)
     test_box_nms_backward(np.array(boxes8), grad8, expected_in_grad8, force=force, thresh=thresh, valid=valid, topk=topk)
 
+    # case9: background id filter out
+    # default background id -1
+    boxes9 = [[0, 0.5, 0.1, 0.1, 0.2, 0.2], [0, 0.4, 0.1, 0.1, 0.2, 0.2],
+              [1, 0.3, 0.1, 0.1, 0.14, 0.14], [-1, 0.6, 0.5, 0.5, 0.7, 0.8]]
+    expected9 = [[0, 0.5, 0.1, 0.1, 0.2, 0.2], [1, 0.3, 0.1, 0.1, 0.14, 0.14],
+                 [-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]]
+    force = True
+    thresh = 0.5
+    grad9 = np.random.rand(4, 6)
+    expected_in_grad9 = grad9[(0, 2, 1, 3), :]
+    expected_in_grad9[(1, 3), :] = 0
+    test_box_nms_forward(np.array(boxes9), np.array(expected9), force=force, thresh=thresh)
+    test_box_nms_backward(np.array(boxes9), grad9, expected_in_grad9, force=force, thresh=thresh)
+    # set background id
+    background_id = 0
+    expected9 = [[-1, 0.6, 0.5, 0.5, 0.7, 0.8], [1, 0.3, 0.1, 0.1, 0.14, 0.14],
+                 [-1, -1, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1]]
+    grad9 = np.random.rand(4, 6)
+    expected_in_grad9 = grad9[(2, 3, 1, 0), :]
+    expected_in_grad9[(0, 1), :] = 0
+    test_box_nms_forward(np.array(boxes9), np.array(expected9), force=force, thresh=thresh, bid=background_id)
+    test_box_nms_backward(np.array(boxes9), grad9, expected_in_grad9, force=force, thresh=thresh, bid=background_id)
+
 def test_box_iou_op():
     def numpy_box_iou(a, b, fmt='corner'):
         def area(left, top, right, bottom):
@@ -244,6 +267,59 @@ def test_bipartite_matching_op():
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [1, -1, 0], [2, 0], 1e-12, False)
     assert_match([[0.5, 0.6], [0.1, 0.2], [0.3, 0.4]], [-1, 0, 1], [1, 2], 100, True)
 
+def test_multibox_target_op():
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]], ctx=default_context()).reshape((1, -1, 4))
+    cls_pred = mx.nd.array(list(range(10)), ctx=default_context()).reshape((1, -1, 2))
+    label = mx.nd.array([1, 0.1, 0.1, 0.5, 0.6], ctx=default_context()).reshape((1, -1, 5))
+
+    loc_target, loc_mask, cls_target = \
+        mx.nd.contrib.MultiBoxTarget(anchors, label, cls_pred,
+                                     overlap_threshold=0.5,
+                                     negative_mining_ratio=3,
+                                     negative_mining_thresh=0.4)
+    expected_loc_target = np.array([[5.0, 2.5000005, 3.4657357, 4.581454, 0., 0., 0., 0.]])
+    expected_loc_mask = np.array([[1, 1, 1, 1, 0, 0, 0, 0]])
+    expected_cls_target = np.array([[2, 0]])
+    assert_allclose(loc_target.asnumpy(), expected_loc_target, rtol=1e-5, atol=1e-5)
+    assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
+    assert_array_equal(cls_target.asnumpy(), expected_cls_target)
+
+def test_gradient_multiplier_op():
+    # We use the quadratic function in combination with gradient multiplier
+    def f(x, a, b, c):
+        return a * x**2 + b * x + c
+
+    a = np.random.random_sample()
+    b = np.random.random_sample()
+    c = np.random.random_sample()
+    m = np.random.random_sample() - 0.5
+    
+    data = mx.symbol.Variable('data')
+    quad_sym = mx.sym.contrib.quadratic(data=data, a=a, b=b, c=c)
+    gr_q_sym = mx.sym.contrib.gradientmultiplier(quad_sym, scalar=m)
+
+    for dtype in [np.float16, np.float32, np.float64]:
+        for ndim in range(1, 6):
+            shape = rand_shape_nd(ndim, 5)
+            data_np = np.random.randn(*shape).astype(dtype)
+            expected = f(data_np, a, b, c)
+            backward_expected = (2 * a * data_np + b) * m
+
+            # check imperative forward
+            output = mx.nd.contrib.quadratic(mx.nd.array(data_np), a=a, b=b, c=c)
+            output = mx.nd.contrib.gradientmultiplier(output, scalar=m)
+            assert_almost_equal(output.asnumpy(), expected,
+                                rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check forward
+            check_symbolic_forward(gr_q_sym, [data_np], [expected],
+                                    rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                    atol=1e-2 if dtype is np.float16 else 1e-5)
+            # check backward
+            check_symbolic_backward(gr_q_sym, [data_np], [np.ones(expected.shape)],
+                                        [backward_expected],
+                                        rtol=1e-2 if dtype is np.float16 else 1e-5,
+                                        atol=1e-2 if dtype is np.float16 else 1e-5)
 
 if __name__ == '__main__':
     import nose

@@ -20,8 +20,9 @@
 
 import os
 import mxnet as mx
+from mxnet import gluon
 
-def load_mldata_iter(filename, batch_size):
+def load_mldataset(filename):
     """Not particularly fast code to parse the text file and load it into three NDArray's
     and product an NDArrayIter
     """
@@ -39,8 +40,7 @@ def load_mldata_iter(filename, batch_size):
     user = mx.nd.array(user)
     item = mx.nd.array(item)
     score = mx.nd.array(score)
-    return mx.io.NDArrayIter(data={'user':user,'item':item},label={'score':score},
-                             batch_size=batch_size, shuffle=True)
+    return gluon.data.ArrayDataset(user, item, score)
 
 def ensure_local_data(prefix):
     if not os.path.exists("%s.zip" % prefix):
@@ -49,12 +49,12 @@ def ensure_local_data(prefix):
         os.system("unzip %s.zip" % prefix)
 
 
-def get_data_iter(batch_size, prefix='ml-100k'):
+def get_dataset(prefix='ml-100k'):
     """Returns a pair of NDArrayDataIter, one for train, one for test.
     """
     ensure_local_data(prefix)
-    return (load_mldata_iter('./%s/u1.base' % prefix, batch_size),
-            load_mldata_iter('./%s/u1.test' % prefix, batch_size))
+    return (load_mldataset('./%s/u1.base' % prefix),
+            load_mldataset('./%s/u1.test' % prefix))
 
 def max_id(fname):
     mu = 0

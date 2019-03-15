@@ -89,6 +89,10 @@ USE_NCCL_PATH = NONE
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 #whether use libjpeg-turbo for image decode without OpenCV wrapper
 USE_LIBJPEG_TURBO = 0
@@ -98,8 +102,10 @@ USE_LIBJPEG_TURBO_PATH = NONE
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# whether use MKL-DNN library
-USE_MKLDNN = 0
+# whether use MKL-DNN library: 0 = disabled, 1 = enabled
+# if USE_MKLDNN is not defined, MKL-DNN will be enabled by default on x86 Linux.
+# you can disable it explicity with USE_MKLDNN = 0
+USE_MKLDNN =
 
 # whether use NNPACK library
 USE_NNPACK = 0
@@ -179,8 +185,20 @@ USE_OPERATOR_TUNING = 1
 # Use gperftools if found
 USE_GPERFTOOLS = 1
 
+# path to gperftools (tcmalloc) library in case of a non-standard installation
+USE_GPERFTOOLS_PATH =
+
+# Link gperftools statically
+USE_GPERFTOOLS_STATIC =
+
 # Use JEMalloc if found, and not using gperftools
 USE_JEMALLOC = 1
+
+# path to jemalloc library in case of a non-standard installation
+USE_JEMALLOC_PATH =
+
+# Link jemalloc statically
+USE_JEMALLOC_STATIC =
 
 #----------------------------
 # additional operators

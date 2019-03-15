@@ -324,42 +324,26 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 
 #else
 
-  // use pragma message instead of warning
-  #pragma message("Warning: lapack usage not enabled, linalg-operators will not be available." \
-     " Ensure that lapack library is installed and build with USE_LAPACK=1 to get lapack" \
-     " functionalities.")
+
 
   #define MXNET_LAPACK_ROW_MAJOR 101
   #define MXNET_LAPACK_COL_MAJOR 102
 
   // Define compilable stubs.
   #define MXNET_LAPACK_CWRAPPER1(func, dtype) \
-  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda) { \
-    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
-    return 1; \
-  }
+  int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda);
 
   #define MXNET_LAPACK_CWRAPPER2(func, dtype) \
-  inline int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
-                                 int lda, dtype* tau, dtype* work, int lwork) { \
-    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
-    return 1; \
-  }
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
+                                 int lda, dtype* tau, dtype* work, int lwork);
 
   #define MXNET_LAPACK_CWRAPPER3(func, dtype) \
-  inline int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, \
+  int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, \
                                  int lda, dtype *w, dtype *work, int lwork, \
-                                 int *iwork, int liwork) { \
-    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
-    return 1; \
-  }
+                                 int *iwork, int liwork);
 
   #define MXNET_LAPACK_UNAVAILABLE(func) \
-  inline int mxnet_lapack_##func(...) { \
-    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
-    return 1; \
-  }
-
+  int mxnet_lapack_##func(...);
   MXNET_LAPACK_CWRAPPER1(spotrf, float)
   MXNET_LAPACK_CWRAPPER1(dpotrf, double)
   MXNET_LAPACK_CWRAPPER1(spotri, float)
@@ -375,7 +359,10 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 
   MXNET_LAPACK_CWRAPPER3(ssyevd, float)
   MXNET_LAPACK_CWRAPPER3(dsyevd, double)
-
+  #undef MXNET_LAPACK_CWRAPPER1
+  #undef MXNET_LAPACK_CWRAPPER2
+  #undef MXNET_LAPACK_CWRAPPER3
+  #undef MXNET_LAPACK_UNAVAILABLE
 #endif
 
 template <typename DType>

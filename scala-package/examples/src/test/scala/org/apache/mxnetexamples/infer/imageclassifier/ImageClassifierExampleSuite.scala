@@ -20,17 +20,13 @@ package org.apache.mxnetexamples.infer.imageclassifier
 import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.net.URL
-
-import org.apache.commons.io.FileUtils
-import org.apache.mxnet.{Context, NDArrayCollector}
+import org.apache.mxnet.Context
 import org.apache.mxnetexamples.Util
 
 import sys.process.Process
 
 /**
   * Integration test for imageClassifier example.
-  * This will run as a part of "make scalatest"
   */
 class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
   private val logger = LoggerFactory.getLogger(classOf[ImageClassifierExampleSuite])
@@ -64,7 +60,7 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     }
 
     val output = ImageClassifierExample.runInferenceOnSingleImage(modelDirPath + "resnet-18",
-        inputImagePath, context)
+     inputImagePath, context)
 
     val outputList = ImageClassifierExample.runInferenceOnBatchOfImage(modelDirPath + "resnet-18",
         inputImageDir, context)

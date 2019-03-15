@@ -163,14 +163,14 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(BilinearSamplerParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new BilinearSamplerOp<cpu, DType>(param);
   })
   return op;
 }
 
-Operator *BilinearSamplerProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *BilinearSamplerProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }

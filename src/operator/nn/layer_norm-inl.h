@@ -82,7 +82,7 @@ void LayerNormCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   // Reshape gamma and beta to be broadcastable
-  TShape new_param_shape(inputs[0].shape_.begin(), inputs[0].shape_.end());
+  mxnet::TShape new_param_shape(inputs[0].shape_.begin(), inputs[0].shape_.end());
   for (int i = 0; i < inputs[0].ndim(); i++) {
     if (i != axis) {
       new_param_shape[i] = 1;
@@ -91,7 +91,7 @@ void LayerNormCompute(const nnvm::NodeAttrs& attrs,
   const TBlob gamma = inputs[1].reshape(new_param_shape);
   const TBlob beta = inputs[2].reshape(new_param_shape);
   // Compute necessary data for the reduce operation.
-  TShape red_src_shape, red_dst_shape;
+  mxnet::TShape red_src_shape, red_dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, outputs[layernorm::kMean].shape_,
                               &red_src_shape, &red_dst_shape);
   const TBlob in_data = inputs[0].reshape(red_src_shape);
@@ -172,7 +172,7 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK(axis >= 0 && axis < inputs[0].ndim()) << "Channel axis out of range: " << param.axis;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   // Reshape gamma to be broadcastable
-  TShape new_param_shape(inputs[0].shape_.begin(), inputs[0].shape_.end());
+  mxnet::TShape new_param_shape(inputs[0].shape_.begin(), inputs[0].shape_.end());
   for (int i = 0; i < inputs[0].ndim(); i++) {
     if (i != axis) {
       new_param_shape[i] = 1;
@@ -184,7 +184,7 @@ void LayerNormGradCompute(const nnvm::NodeAttrs& attrs,
   const TBlob mean = inputs[3];
   const TBlob std = inputs[4];
   // Prepare the necessary shapes for reduction
-  TShape red_src_shape, red_dst_shape, red_exclude_src_shape, red_exclude_dst_shape;
+  mxnet::TShape red_src_shape, red_dst_shape, red_exclude_src_shape, red_exclude_dst_shape;
   BroadcastReduceShapeCompact(ograd.shape_, mean.shape_, &red_src_shape, &red_dst_shape);
   BroadcastReduceShapeCompact(ograd.shape_, gamma.shape_,
                               &red_exclude_src_shape, &red_exclude_dst_shape);

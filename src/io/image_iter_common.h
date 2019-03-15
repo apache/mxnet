@@ -42,7 +42,7 @@ class ImageLabelMap {
    * \param label_width predefined label_width
    */
   explicit ImageLabelMap(const char *path_imglist,
-                         mshadow::index_t label_width,
+                         index_t label_width,
                          bool silent) {
     this->label_width = label_width;
     image_index_.clear();
@@ -58,7 +58,7 @@ class ImageLabelMap {
       // skip space
       while (isspace(*p) && p != end) ++p;
       image_index_.push_back(static_cast<size_t>(atol(p)));
-      for (size_t i = 0; i < label_width; ++i) {
+      for (index_t i = 0; i < label_width; ++i) {
         // skip till space
         while (!isspace(*p) && p != end) ++p;
         // skip space
@@ -118,19 +118,23 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   /*! \brief label-width */
   int label_width;
   /*! \brief input shape */
-  TShape data_shape;
+  mxnet::TShape data_shape;
   /*! \brief number of threads */
   int preprocess_threads;
   /*! \brief whether to remain silent */
   bool verbose;
   /*! \brief partition the data into multiple parts */
   int num_parts;
-  /*! \brief the index of the part will read*/
+  /*! \brief the index of the part will read */
   int part_index;
-  /*! \brief the size of a shuffle chunk*/
+  /*! \brief device id used to create context for internal NDArray */
+  int device_id;
+  /*! \brief the size of a shuffle chunk */
   size_t shuffle_chunk_size;
-  /*! \brief the seed for chunk shuffling*/
+  /*! \brief the seed for chunk shuffling */
   int shuffle_chunk_seed;
+  /*! \brief random seed for augmentations */
+  dmlc::optional<int> seed_aug;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
@@ -161,17 +165,24 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("Virtually partition the data into these many parts.");
     DMLC_DECLARE_FIELD(part_index).set_default(0)
         .describe("The *i*-th virtual partition to be read.");
+    DMLC_DECLARE_FIELD(device_id).set_default(0)
+        .describe("The device id used to create context for internal NDArray. "\
+                  "Setting device_id to -1 will create Context::CPU(0). Setting "
+                  "device_id to valid positive device id will create "
+                  "Context::CPUPinned(device_id). Default is 0.");
     DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
         .describe("The data shuffle buffer size in MB. Only valid if shuffle is true.");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
         .describe("The random seed for shuffling");
+    DMLC_DECLARE_FIELD(seed_aug).set_default(dmlc::optional<int>())
+        .describe("Random seed for augmentations.");
   }
 };
 
 // Batch parameters
 struct BatchParam : public dmlc::Parameter<BatchParam> {
   /*! \brief label width */
-  index_t batch_size;
+  uint32_t batch_size;
   /*! \brief use round roubin to handle overflow batch */
   bool round_batch;
   // declare parameters

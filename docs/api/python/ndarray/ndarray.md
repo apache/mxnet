@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # NDArray API
 
 ```eval_rst
@@ -587,15 +604,17 @@ The `ndarray` package provides several classes:
 .. autosummary::
     :nosignatures:
 
-    mxnet.ndarray.random.uniform
-    mxnet.ndarray.random.normal
-    mxnet.ndarray.random.gamma
-    mxnet.ndarray.random.exponential
-    mxnet.ndarray.random.poisson
-    mxnet.ndarray.random.negative_binomial
-    mxnet.ndarray.random.generalized_negative_binomial
-    mxnet.ndarray.random.multinomial
-    mxnet.ndarray.random.shuffle
+    random.exponential
+    random.gamma
+    random.generalized_negative_binomial
+    random.multinomial
+    random.negative_binomial
+    random.normal
+    random.poisson
+    random.randint
+    random.randn
+    random.shuffle
+    random.uniform
     mxnet.random.seed
 ```
 
@@ -656,6 +675,8 @@ The `ndarray` package provides several classes:
     log_softmax
     relu
     sigmoid
+    erf
+    erfinv
 ```
 
 ### More
@@ -706,9 +727,14 @@ The `ndarray` package provides several classes:
     :members:
     :imported-members:
     :special-members:
-    :exclude-members: CachedOp, NDArray
+    :exclude-members: CachedOp, NDArray, save, load
+
+.. automodule:: mxnet.ndarray
+    :noindex:
+    :members: save, load
 
 .. automodule:: mxnet.random
+    :noindex:
     :members:
 
 ```

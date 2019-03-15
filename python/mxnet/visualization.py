@@ -57,9 +57,22 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
         Rotal length of printed lines
     positions: list
         Relative or absolute positions of log elements in each line.
+
     Returns
     ------
     None
+
+    Notes
+    -----
+    If ``mxnet`` is imported, the visualization module can be used in its short-form.
+    For example, if we ``import mxnet`` as follows::
+
+        import mxnet
+
+    this method in visualization module can be used in its short-form as::
+
+        mxnet.viz.print_summary(...)
+
     """
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be Symbol")
@@ -157,6 +170,8 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
             if show_shape:
                 num_filter = shape_dict[key][1]
                 cur_param = int(num_filter) * 2
+        elif op == 'Embedding':
+            cur_param = int(node["attrs"]['input_dim']) * int(node["attrs"]['output_dim'])
         if not pre_node:
             first_connection = ''
         else:
@@ -193,7 +208,7 @@ def print_summary(symbol, shape=None, line_length=120, positions=[.44, .64, .74,
     print('Total params: %s' % total_params)
     print('_' * line_length)
 
-def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs={},
+def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None, node_attrs={},
                  hide_weights=True):
     """Creates a visualization (Graphviz digraph object) of the given computation graph.
     Graphviz must be installed for this function to work.
@@ -209,14 +224,20 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         Specifies the shape of the input tensors. If specified, the visualization will include
         the shape of the tensors between the nodes. `shape` is a dictionary mapping
         input symbol names (str) to the corresponding tensor shape (tuple).
+    dtype: dict, optional
+        Specifies the type of the input tensors. If specified, the visualization will include
+        the type of the tensors between the nodes. `dtype` is a dictionary mapping
+        input symbol names (str) to the corresponding tensor type (e.g. `numpy.float32`).
     node_attrs: dict, optional
         Specifies the attributes for nodes in the generated visualization. `node_attrs` is
-        a dictionary of Graphviz attribute names and values. For example,
-            ``node_attrs={"shape":"oval","fixedsize":"false"}``
-            will use oval shape for nodes and allow variable sized nodes in the visualization.
+        a dictionary of Graphviz attribute names and values. For example::
+
+            node_attrs={"shape":"oval","fixedsize":"false"}
+
+        will use oval shape for nodes and allow variable sized nodes in the visualization.
     hide_weights: bool, optional
-        If True (default), then inputs with names of form *_weight (corresponding to weight
-        tensors) or *_bias (corresponding to bias vectors) will be hidden for a cleaner
+        If True (default), then inputs with names of form *_weight* (corresponding to weight
+        tensors) or *_bias* (corresponding to bias vectors) will be hidden for a cleaner
         visualization.
 
     Returns
@@ -234,6 +255,18 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
     >>> digraph = mx.viz.plot_network(net, shape={'data':(100,200)},
     ... node_attrs={"fixedsize":"false"})
     >>> digraph.view()
+
+    Notes
+    -----
+    If ``mxnet`` is imported, the visualization module can be used in its short-form.
+    For example, if we ``import mxnet`` as follows::
+
+        import mxnet
+
+    this method in visualization module can be used in its short-form as::
+
+        mxnet.viz.plot_network(...)
+
     """
     # todo add shape support
     try:
@@ -242,14 +275,19 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
         raise ImportError("Draw network requires graphviz library")
     if not isinstance(symbol, Symbol):
         raise TypeError("symbol must be a Symbol")
-    draw_shape = False
-    if shape is not None:
-        draw_shape = True
-        interals = symbol.get_internals()
-        _, out_shapes, _ = interals.infer_shape(**shape)
+    internals = symbol.get_internals()
+    draw_shape = shape is not None
+    if draw_shape:
+        _, out_shapes, _ = internals.infer_shape(**shape)
         if out_shapes is None:
             raise ValueError("Input shape is incomplete")
-        shape_dict = dict(zip(interals.list_outputs(), out_shapes))
+        shape_dict = dict(zip(internals.list_outputs(), out_shapes))
+    draw_type = dtype is not None
+    if draw_type:
+        _, out_types, _ = internals.infer_type(**dtype)
+        if out_types is None:
+            raise ValueError("Input type is incomplete")
+        type_dict = dict(zip(internals.list_outputs(), out_types))
     conf = json.loads(symbol.tojson())
     nodes = conf["nodes"]
     # check if multiple nodes have the same name
@@ -341,7 +379,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                 input_node = nodes[item[0]]
                 input_name = input_node["name"]
                 if input_name not in hidden_nodes:
-                    attr = {"dir": "back", 'arrowtail':'open'}
+                    attr = {"dir": "back", 'arrowtail':'open', 'label': ''}
                     # add shapes
                     if draw_shape:
                         if input_node["op"] != "null":
@@ -358,6 +396,19 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, node_attrs
                             shape = shape_dict[key][1:]
                             label = "x".join([str(x) for x in shape])
                             attr["label"] = label
+                    if draw_type:
+                        if input_node["op"] != "null":
+                            key = input_name + "_output"
+                            if "attrs" in input_node:
+                                params = input_node["attrs"]
+                                if "num_outputs" in params:
+                                    key += str(int(params["num_outputs"]) - 1)
+                            dtype = type_dict[key]
+                            attr["label"] += '(' + dtype.__name__ + ')'
+                        else:
+                            key = input_name
+                            dtype = type_dict[key]
+                            attr["label"] += '(' + dtype.__name__ + ')'
                     dot.edge(tail_name=name, head_name=input_name, **attr)
 
     return dot

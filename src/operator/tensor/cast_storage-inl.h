@@ -19,7 +19,7 @@
 
 /*!
  * \file cast_storage-inl.h
- * \brief cast_storage implementation for dense and sparse tensors
+ * \brief CPU implementation of cast_storage operator for dense and sparse tensors
  */
 #ifndef MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_H_
 #define MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_H_
@@ -340,7 +340,7 @@ void CastStorageCsrCsrImpl(const OpContext& ctx, const NDArray& csr,
     FillZerosCsrImpl(s, *output);
     return;
   }
-  std::vector<TShape> aux_shapes({csr.aux_shape(csr::kIndPtr), csr.aux_shape(csr::kIdx)});
+  mxnet::ShapeVector aux_shapes({csr.aux_shape(csr::kIndPtr), csr.aux_shape(csr::kIdx)});
   output->CheckAndAlloc(aux_shapes);
   const TBlob& val = output->data();
   const TBlob& indptr = output->aux_data(csr::kIndPtr);

@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Optimizing Memory Consumption in Deep Learning
 
 Over the last ten years, a constant trend in deep learning
@@ -312,18 +329,9 @@ that are already optimized for big operations,
 you can reduce memory consumption roughly *by half*.
 You can reduce memory usage even more
 if you are optimizing a fine-grained computation network
-used by symbolic libraries, such as Theano.
+used by symbolic libraries, such as Theano. Most of the ideas in this article inspired the design of _MXNet_.
 
-Most of the ideas in this article inspired the design of _MXNet_.
-We've also provided a [Memory Cost Estimation Script](https://github.com/dmlc/mxnet/tree/master/example/memcost),
-which you can use to see how much memory you need under different scenarios.
-
-The script has an option called `forward_only`,
-which shows the cost of running only the forward pass.
-You will find that cost when using this option
-is extremely low compared to others.
-This is simply because there's  more memory reuse
-if you run only the forward pass.
+Also, you will notice that memory cost, for forward pass only execution, is extremely low compared to running both forward and backward pass. This is simply because there's  more memory reuse if you run only the forward pass.
 
 So here are two takeaways:
 

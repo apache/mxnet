@@ -250,6 +250,8 @@ TEST(row_wise_kronecker, FourInputMatrices) {
   FreeSpace(&result);
 }
 
+
+#if MXNET_USE_LAPACK == 1
 TEST(khatri_rao, OneInputMatrix) {
   // Input matrices of shape (2, 4) which is also the expected result
   DType mat[8] {1, 2, 3, 4, 5, 6, 7, 8};
@@ -444,5 +446,6 @@ TEST(inv_khatri_rao, ThreeInputMatricesTranposed) {
   FreeSpace(&kr_t);
   FreeSpace(&actual_dot);
 }
+#endif  // MXNET_USE_LAPACK == 1
 }  // namespace op
 }  // namespace mxnet

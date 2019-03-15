@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Developing a Character-level Language model
 
 This tutorial shows how to train a character-level language model with a multilayer recurrent neural network (RNN) using Scala. This model takes one text file as input and trains an RNN that learns to predict the next character in the sequence. In this tutorial, you train a multilayer LSTM (Long Short-Term Memory) network that generates relevant text using Barack Obama's speech patterns.
@@ -54,11 +71,7 @@ In this tutorial, you will accomplish the following:
 
 ## Prerequisites
 
-To complete this tutorial, you need:
-
-- MXNet. See the instructions for your operating system in [Setup and Installation](http://mxnet.io/install/index.html)
-- [Scala 2.11.8](https://www.scala-lang.org/download/2.11.8.html)
-- [Maven 3](https://maven.apache.org/install.html)
+To complete this tutorial, setup and run the scala interpreter by following the [instructions](https://mxnet.incubator.apache.org/install/scala_setup.html#interpreter).
 
 ## Download the Data
 
@@ -129,7 +142,7 @@ To prepare the data:
     ```scala
         scala> // Build  a vocabulary of what char we have in the content
         scala> def buildVocab(path: String): Map[String, Int] = {
-                val content = readContent(dataPath).split("\n")
+                val content = readContent(path).split("\n")
                 var idx = 1 // 0 is left for zero padding
                 var theVocab = Map[String, Int]()
                 for (line <- content) {

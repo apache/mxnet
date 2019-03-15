@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet - Scala API
 
 MXNet supports the Scala programming language. The MXNet Scala package brings flexible and efficient GPU
@@ -19,6 +36,7 @@ See the [MXNet Scala API Documentation](docs/index.html#org.apache.mxnet.package
    symbol.md
 ```
 
+
 ## Image Classification with the Scala Infer API
 The Infer API can be used for single and batch image classification. More information can be found at the following locations:
 
@@ -32,20 +50,19 @@ The Infer API can be used for single and batch image classification. More inform
 You can perform tensor or matrix computation in pure Scala:
 
 ```scala
-   scala> import org.apache.mxnet._
    import org.apache.mxnet._
 
-   scala> val arr = NDArray.ones(2, 3)
-   arr: org.apache.mxnet.NDArray = org.apache.mxnet.NDArray@f5e74790
+   val arr = NDArray.ones(2, 3)
+   // arr: org.apache.mxnet.NDArray = org.apache.mxnet.NDArray@f5e74790
 
-   scala> arr.shape
-   res0: org.apache.mxnet.Shape = (2,3)
+   arr.shape
+   // org.apache.mxnet.Shape = (2,3)
 
-   scala> (arr * 2).toArray
-   res2: Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
+   (arr * 2).toArray
+   // Array[Float] = Array(2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
 
-   scala> (arr * 2).shape
-   res3: org.apache.mxnet.Shape = (2,3)
+   (arr * 2).shape
+   // org.apache.mxnet.Shape = (2,3)
 ```
 
 

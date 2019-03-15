@@ -71,7 +71,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(SVMOutputParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new SVMOutputOp<cpu, DType>(param);
   })
@@ -79,7 +79,7 @@ Operator *CreateOp<cpu>(SVMOutputParam param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *SVMOutputProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *SVMOutputProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }
