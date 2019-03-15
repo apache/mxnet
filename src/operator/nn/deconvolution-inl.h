@@ -375,7 +375,7 @@ class DeconvolutionOp {
       TShape({o_pad[0], o_pad[1]}) : TShape({0, o_pad[0]});
     auto kernel = param_.kernel.ndim() == 2 ? param_.kernel : TShape({1, param_.kernel[0]});
     auto kernel_size = kernel.Size();
-  
+
     Shape<3> wmat_shape =
         Shape3(param_.num_group,
                data.shape_[1] / param_.num_group,
