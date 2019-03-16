@@ -102,12 +102,13 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
   }
 
   /**
-    * Goes multiple scopes deep to make sure we can move across multiple levels correctly
+    * Tests passing a scope to using and creating new resources within.
     */
   test("test moving scope of native resource to scope of another") {
     var a: TestNativeResource = null
     var b: TestNativeResource = null
     var c: TestNativeResource = null
+    var d: TestNativeResource = null
 
     ResourceScope.using() {
       a = new TestNativeResource()
@@ -115,6 +116,10 @@ class ResourceScopeSuite extends FunSuite with BeforeAndAfterAll with Matchers {
         b = new TestNativeResource()
         ResourceScope.using(a.scope.get) {
           c = new TestNativeResource()
+          ResourceScope.using() {
+            d = new TestNativeResource()
+          }
+          assert(d.isDisposed == true)
         }
         assert(b.isDisposed == false)
         assert(c.isDisposed == false)

@@ -47,6 +47,7 @@ class ResourceScope extends AutoCloseable {
     * the associated`'org.apache.mxnet.NativeResource.close()` method
     */
   override def close(): Unit = {
+    print("in close\n")
     ResourceScope.removeFromThreadLocal(this)
     resourceQ.foreach(resource => if (resource != null) resource.dispose(false) )
     resourceQ.clear()
@@ -105,8 +106,16 @@ object ResourceScope {
   // TODO: we should move to the Scala util's Using method when we move to Scala 2.13
   def using[A](scope: ResourceScope = null)(body: => A): A = {
 
-    val curScope = if (scope != null) scope else new ResourceScope()
+    val curScope = if (scope != null) {
+      ResourceScope.addToThreadLocal(scope)
+      scope
+    } else new ResourceScope()
 
+    if (scope != null) {
+      print("in non null using\n")
+    } else {
+      print("in null using\n")
+    }
     @inline def resourceInGeneric(g: scala.collection.Iterable[_]) = {
       g.foreach( n =>
         n match {
@@ -146,11 +155,19 @@ object ResourceScope {
     } finally {
       var toThrow: Throwable = retThrowable
       if (retThrowable eq null) {
-        if (scope == null) curScope.close()
+        if (scope == null) {
+          curScope.close()
+        } else {
+          ResourceScope.removeFromThreadLocal(scope)
+        }
       }
       else {
         try {
-          if (scope == null) curScope.close
+          if (scope == null) {
+            curScope.close
+          } else {
+            ResourceScope.removeFromThreadLocal(scope)
+          }
         } catch {
           case closeThrowable: Throwable =>
             if (NonFatal(retThrowable) && !NonFatal(closeThrowable)) toThrow = closeThrowable
@@ -181,7 +198,8 @@ object ResourceScope {
     * @param r ResourceScope to remove
     */
   private[mxnet] def removeFromThreadLocal(r: ResourceScope): Unit = {
-    threadLocalScopes.get() -= r
+    // threadLocalScopes.get() -= r
+    threadLocalScopes.get().remove(threadLocalScopes.get().lastIndexOf(r))
   }
 
   /**
