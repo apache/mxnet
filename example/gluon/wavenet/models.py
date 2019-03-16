@@ -21,7 +21,6 @@ Module: WaveNet network block
 """
 from mxnet import nd
 from mxnet.gluon import nn
-from mxnet import nd as F
 # pylint: disable=invalid-name, too-many-arguments, arguments-differ, attribute-defined-outside-init, too-many-instance-attributes, invalid-sequence-index, no-self-use
 
 class WaveNet(nn.HybridBlock):
@@ -61,14 +60,14 @@ class WaveNet(nn.HybridBlock):
         skip_connections = [] # save for generation purposes
         idx = 1
         for s, t, skip_scale, residue_scale in zip(self.conv_sigmoid, self.conv_tanh, self.skip_scale, self.residue_scale):
-            output, skip = self.residue_forward(output, s, t, skip_scale, residue_scale, idx)
+            output, skip = self.residue_forward(F, output, s, t, skip_scale, residue_scale, idx)
             skip_connections.append(skip)
             idx = idx + 1
         # sum up skip connections
         # previous code : output = sum([s[:,:,-output.shape[2]:] for s in skip_connections])
         output_length = self.calc_output_size(idx)
         output = sum([F.slice_axis(s, axis=2, begin=0, end=output_length) for s in skip_connections])
-        output = self.postprocess(output)
+        output = self.postprocess(F, output)
         return output
 
     def preprocess(self, x):
@@ -78,7 +77,7 @@ class WaveNet(nn.HybridBlock):
         output = self.from_input(x)
         return output
 
-    def postprocess(self, x):
+    def postprocess(self, F, x):
         """
         Description : module for postprocess
         """
@@ -86,18 +85,18 @@ class WaveNet(nn.HybridBlock):
         output = self.conv_post_1(output)
         output = F.relu(output)
         output = self.conv_post_2(output)
-        output = F.reshape(output, (output.shape[1], output.shape[2]))
+        output = output.squeeze()
         output = F.transpose(output, axes=(1, 0))
         return output
 
-    def residue_forward(self, x, conv_sigmoid, conv_tanh, skip_scale, residue_scale, idx):
+    def residue_forward(self, F, x, conv_sigmoid, conv_tanh, skip_scale, residue_scale, idx):
         """
         Description : module for residue forward
         """
         output = x
         output_sigmoid, output_tanh = conv_sigmoid(output), conv_tanh(output)
         #replace code for output = F.sigmoid(output_sigmoid) * F.tanh(output_tanh)
-        output = F.multiply(F.sigmoid(output_sigmoid), F.tanh(output_tanh))
+        output = F.sigmoid(output_sigmoid) * F.tanh(output_tanh)
 
         skip = skip_scale(output)
         

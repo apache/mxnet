@@ -55,7 +55,7 @@ class Train():
          dilation_depth=self.dilation_depth, n_repeat=self.n_repeat)
         #parameter initialization
         self.net.collect_params().initialize(ctx=self.ctx)
-#         self.net.hybridize()
+        self.net.hybridize()
         #set optimizer
         self.trainer = gluon.Trainer(self.net.collect_params(), optimizer='adam',\
         optimizer_params={'learning_rate':0.01})
