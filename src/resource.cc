@@ -432,6 +432,9 @@ void Resource::get_cudnn_dropout_desc(
     // not initialized yet.
     size_t dropout_state_size;
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
+    // reserve GPU space
+    Storage::Get()->DirectFree(
+      Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
     CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
                                          dropout,
                                          state_space->GetSpace(dropout_state_size),
